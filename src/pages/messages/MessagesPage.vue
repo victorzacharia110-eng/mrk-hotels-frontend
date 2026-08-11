@@ -1,0 +1,4775 @@
+<template>
+  <div class="dashboard-page container">
+    <div class="page-head">
+      <div>
+        <h1><i class="fas fa-comments"></i> {{ $t('messages.title') }}</h1>
+        <p class="muted">{{ $t('messages.subtitle') }}</p>
+      </div>
+      <div class="head-actions">
+        <button class="btn btn-secondary" @click="openWorkspace()"><i class="fas fa-briefcase"></i> {{
+          $t('messages.workspace') }}</button>
+        <button class="btn btn-secondary" @click="refreshAll"><i class="fas fa-rotate"></i> {{ $t('common.refresh')
+          }}</button>
+        <button class="btn btn-primary" @click="openNewMessage"><i class="fas fa-paper-plane"></i> {{
+          $t('messages.newMessage') }}</button>
+        <button class="btn btn-primary btn-group" @click="openNewGroup"><i class="fas fa-users"></i> {{
+          $t('messages.newGroup') }}</button>
+      </div>
+    </div>
+
+    <div v-if="success" class="alert alert-success">{{ success }}</div>
+    <div v-if="error" class="alert alert-error">{{ error }}</div>
+
+    <div class="chat-shell">
+      <!-- Conversation + group list -->
+      <aside class="chat-list" :class="{ 'hidden-xs': activeChat }">
+        <div class="chat-list-search">
+          <input v-model="listSearch" type="text" class="input" :placeholder="$t('messages.searchPlaceholder')"
+            @input="onListSearch" />
+        </div>
+
+        <button class="chat-item status-entry" @click="openMyStatus">
+          <span class="avatar status-my" :class="myStatusHas ? 'status-ring unviewed' : ''">
+            {{ initials(me.full_name) }}
+            <span class="status-add" :title="$t('statuses.newStatus')" @click.stop="openStatusCompose">
+              <i class="fas fa-plus"></i>
+            </span>
+          </span>
+          <span class="chat-item-body">
+            <span class="chat-item-top">
+              <strong>{{ $t('statuses.myStatus') }}</strong>
+            </span>
+            <span class="chat-item-sub">
+              <span class="muted chat-preview">{{ myStatusHas ? $t('statuses.viewHint') : $t('statuses.addStatusHint')
+                }}</span>
+            </span>
+          </span>
+        </button>
+
+        <div v-if="loadingConvs" class="alert alert-info">{{ $t('common.loading') }}</div>
+
+        <div v-else-if="!chats.length" class="chat-empty muted">
+          {{ $t('messages.noConversations') }}
+        </div>
+
+        <button v-for="chat in chats" :key="chat.kind + chat.id" class="chat-item"
+          :class="{ active: chat.kind === activeKind && chat.id === activeId }" @click="openChat(chat)">
+          <span class="avatar"
+            :class="[chat.kind === 'group' ? 'avatar-group' : (chat.scope === 'global' ? 'avatar-global' : ''), avatarStatusClass(chat)]"
+            @click.stop="avatarStatusClass(chat) ? openUserStatus(chat.participant_id) : null">
+            <i v-if="chat.kind === 'group'" class="fas fa-users"></i>
+            <template v-else>{{ initials(chat.name) }}</template>
+          </span>
+          <span class="chat-item-body">
+            <span class="chat-item-top">
+              <strong>{{ chat.name }}</strong>
+              <span class="muted">{{ formatTime(chat.last_message_at || chat.created_at) }}</span>
+            </span>
+            <span class="chat-item-sub">
+              <span class="muted chat-preview">{{ lastPreview(chat) }}</span>
+              <span v-if="chat.unread_count > 0" class="unread-badge">{{ chat.unread_count }}</span>
+            </span>
+            <span class="chat-item-meta">
+              <span class="badge" :class="chat.scope === 'global' ? 'badge-purple' : 'badge-blue'">
+                <i class="fas" :class="chat.scope === 'global' ? 'fa-globe' : 'fa-building'"></i>
+                {{ chat.scope === 'global' ? $t('messages.global') : $t('messages.hotel') }}
+              </span>
+              <span v-if="chat.kind === 'group'" class="muted hotel-name">
+                <i class="fas fa-user"></i> {{ chat.member_count || 0 }}
+              </span>
+              <span v-else-if="chat.scope === 'global' && chat.hotel_name" class="muted hotel-name">
+                {{ chat.hotel_name }}
+              </span>
+            </span>
+          </span>
+        </button>
+
+        <div v-if="hasMore" class="chat-load-more">
+          <button class="btn btn-sm btn-secondary" :disabled="loadingConvs" @click="loadMoreChats">
+            {{ $t('common.next') }}
+          </button>
+        </div>
+      </aside>
+
+      <!-- Thread -->
+      <section class="chat-thread" :class="{ 'hidden-xs': !activeChat }">
+        <template v-if="activeChat">
+          <header class="chat-thread-head">
+            <button class="btn btn-sm btn-secondary back-btn" @click="closeThread">
+              <i class="fas fa-arrow-left"></i>
+            </button>
+            <span class="avatar"
+              :class="[activeChat.kind === 'group' ? 'avatar-group' : (activeChat.scope === 'global' ? 'avatar-global' : ''), avatarStatusClass(activeChat)]"
+              @click="avatarStatusClass(activeChat) ? openUserStatus(activeChat.participant_id) : null">
+              <i v-if="activeChat.kind === 'group'" class="fas fa-users"></i>
+              <template v-else>{{ initials(activeChat.name) }}</template>
+            </span>
+            <div class="chat-thread-who">
+              <strong>{{ activeChat.name }}</strong>
+              <div>
+                <span class="badge" :class="activeChat.scope === 'global' ? 'badge-purple' : 'badge-blue'">
+                  <i class="fas" :class="activeChat.scope === 'global' ? 'fa-globe' : 'fa-building'"></i>
+                  {{ activeChat.scope === 'global' ? $t('messages.global') : $t('messages.hotel') }}
+                </span>
+                <span v-if="activeChat.kind === 'group'" class="muted">
+                  {{ $t('messages.memberCount', { count: activeChat.member_count || 0 }) }}
+                </span>
+                <span v-else-if="activeChat.hotel_name" class="muted">{{ activeChat.hotel_name }}</span>
+              </div>
+            </div>
+            <button v-if="activeChat.kind === 'group'" class="btn btn-sm btn-secondary members-btn"
+              @click="openGroupManage">
+              <i class="fas fa-user-group"></i> {{ $t('messages.membersManage') }}
+            </button>
+            <template v-else>
+              <button class="btn btn-sm btn-secondary members-btn" :title="$t('messages.audioCall')"
+                @click="callManager.startCall('audio', activeChat.id, activeChat.name)">
+                <i class="fas fa-phone"></i>
+              </button>
+              <button class="btn btn-sm btn-secondary members-btn" :title="$t('messages.videoCall')"
+                @click="callManager.startCall('video', activeChat.id, activeChat.name)">
+                <i class="fas fa-video"></i>
+              </button>
+            </template>
+            <button class="btn btn-sm btn-secondary members-btn" :title="$t('messages.searchInChat')"
+              @click="openSearchPanel">
+              <i class="fas fa-magnifying-glass"></i>
+            </button>
+            <button class="btn btn-sm btn-secondary members-btn" :title="$t('messages.pinnedMessages')"
+              @click="openPinnedPanel">
+              <i class="fas fa-thumbtack"></i>
+            </button>
+            <button class="btn btn-sm btn-secondary members-btn" :title="$t('messages.linkRoom')"
+              @click="openRoomLinkModal">
+              <i class="fas fa-hotel"></i>
+            </button>
+            <button class="btn btn-sm btn-secondary members-btn" :title="$t('messages.exportChat')"
+              @click="exportHistory">
+              <i class="fas fa-file-export"></i>
+            </button>
+            <button class="btn btn-sm btn-secondary members-btn"
+              :title="isChatMuted() ? $t('messages.unmuteChat') : $t('messages.muteChat')" @click="muteCurrentChat">
+              <i :class="isChatMuted() ? 'fas fa-volume-high' : 'fas fa-volume-xmark'"></i>
+            </button>
+          </header>
+
+          <div v-if="loadingMsgs" class="alert alert-info">{{ $t('common.loading') }}</div>
+
+          <div v-else class="chat-messages">
+            <div v-if="!messages.length" class="chat-empty muted">{{ $t('messages.noMessages') }}</div>
+            <div v-for="msg in messages" :key="msg.message_id || msg.group_message_id" class="bubble"
+              :id="'msg-' + (msg.message_id || msg.group_message_id)"
+              :class="[msg.sender_id === me.user_id ? 'mine' : 'theirs', msg.priority === 'urgent' ? 'urgent' : '', isStarred(msg) ? 'starred-bubble' : '']"
+              @contextmenu.prevent="openMsgMenu(msg, $event)">
+              <div v-if="msg.sender_id !== me.user_id && activeChat.kind === 'group'" class="bubble-sender">
+                {{ msg.sender?.full_name || '' }}
+              </div>
+              <div v-if="msg.deleted" class="deleted-note">
+                <i class="fas fa-trash"></i> {{ $t('messages.messageDeleted') }}
+              </div>
+              <template v-else>
+                <div class="bubble-tags">
+                  <span v-if="isPinned(msg)" class="bubble-tag tag-pin" :title="$t('messages.pinnedMessages')">
+                    <i class="fas fa-thumbtack"></i>
+                  </span>
+                  <span v-if="msg.priority === 'urgent'" class="bubble-tag tag-urgent">
+                    <i class="fas fa-flag"></i> {{ $t('messages.urgent') }}
+                  </span>
+                  <span v-if="msg.is_task" class="bubble-tag tag-task">
+                    <i class="fas fa-check-double"></i> {{ $t('messages.task') }}
+                  </span>
+                </div>
+                <div v-if="msg.forwarded_from" class="forwarded-note">
+                  <i class="fas fa-forward"></i> {{ $t('messages.forwarded') }}
+                </div>
+                <div v-if="msg.reply_to" class="reply-quote" @click.stop="scrollToMessage(msg)">
+                  <span v-if="msg.reply_to.sender_id === me.user_id" class="reply-quote-author">{{ $t('messages.you')
+                    }}</span>
+                  <span v-else class="reply-quote-author">{{ msg.reply_to.sender?.full_name ||
+                    $t('messages.unknownSender') }}</span>
+                  <span class="reply-quote-text">{{ msg.reply_to.body || $t('messages.attachment') }}</span>
+                </div>
+                <div class="bubble-text">
+                  <button v-if="msg.view_once && !msg.media_url && !msg.viewed_at && msg.sender_id !== me.user_id"
+                    class="view-once-btn" :disabled="viewOnceLoading === msgId(msg)" @click="openViewOnce(msg)">
+                    <i class="fas fa-eye"></i>
+                    {{ viewOnceLoading === msgId(msg) ? $t('common.loading') : $t('messages.viewOnceTap') }}
+                  </button>
+                  <div v-else-if="msg.view_once && !msg.media_url && msg.viewed_at" class="view-once-open">
+                    <i class="fas fa-check-circle"></i> {{ $t('messages.viewOnceOpened') }}
+                  </div>
+                  <div v-else-if="msg.view_once && !msg.media_url" class="view-once-open">
+                    <i class="fas fa-lock"></i> {{ $t('messages.viewOnceMine') }}
+                  </div>
+                  <audio v-if="msg.type === 'audio' && msg.media_url" controls :src="msg.media_url"
+                    class="bubble-audio"></audio>
+                  <img v-else-if="msg.type === 'image' && msg.media_url" :src="msg.media_url" class="bubble-image"
+                    alt="attachment" />
+                  <a v-else-if="msg.type === 'file' && msg.media_url" :href="msg.media_url" target="_blank"
+                    rel="noopener" class="bubble-file">
+                    <i class="fas fa-paperclip"></i> {{ msg.body || $t('messages.attachment') }}
+                  </a>
+                  <span v-if="msg.body && !msg.view_once">
+                    <template v-for="(part, i) in renderBody(msg)" :key="i">
+                      <span v-if="part.isMention" class="mention-chip">@{{ part.text }}</span>
+                      <template v-else>{{ part.text }}</template>
+                    </template>
+                  </span>
+                  <div v-if="msg.translation && msg.translation !== msg.body" class="translation-box">
+                    <i class="fas fa-language"></i> {{ msg.translation }}
+                    <span class="muted"> ({{ msg.translated_lang }})</span>
+                  </div>
+                </div>
+                <div v-if="msg.poll" class="bubble-poll">
+                  <strong class="poll-question">{{ msg.poll.question }}</strong>
+                  <span class="poll-count muted">{{ msg.poll.total_votes || 0 }} {{ $t('messages.votes') }}</span>
+                  <div v-for="opt in msg.poll.options" :key="opt.poll_option_id" class="poll-option"
+                    :class="{ mine: msg.poll.my_vote === opt.poll_option_id }" @click.stop="votePoll(msg, opt)">
+                    <span class="poll-option-label">{{ opt.label }}</span>
+                    <span class="poll-option-pct">{{ opt.pct ?? 0 }}%</span>
+                    <span class="poll-option-bar" :style="{ width: (opt.pct ?? 0) + '%' }"></span>
+                    <span v-if="msg.poll.my_vote === opt.poll_option_id" class="poll-check"><i
+                        class="fas fa-check"></i></span>
+                  </div>
+                </div>
+                <div class="bubble-reactions" v-if="msg.reactions?.length">
+                  <span v-for="r in msg.reactions" :key="r.reaction" class="bubble-reaction" :class="{ mine: r.mine }"
+                    @click.stop="toggleReaction(msg, r.reaction)">
+                    {{ r.reaction }}<span class="bubble-reaction-count">{{ r.count }}</span>
+                  </span>
+                </div>
+              </template>
+              <div class="bubble-meta">
+                <span>{{ msg.sender_id === me.user_id ? $t('messages.you') : (msg.sender?.full_name || '') }}</span>
+                <span>·</span>
+                <span>{{ formatTime(msg.created_at) }}</span>
+                <button v-if="translateLoading === (msg.message_id || msg.group_message_id)" class="bubble-translate"
+                  disabled>
+                  <i class="fas fa-language"></i>
+                </button>
+                <button v-else-if="msg.body" class="bubble-translate" :title="$t('messages.translate')"
+                  @click.stop="translateMessage(msg)">
+                  <i class="fas fa-language"></i>
+                </button>
+                <span v-if="msg.sender_id === me.user_id" class="ticks">
+                  <i v-if="msgTicks(msg) === 'read'" class="fas fa-check-double tick-read"
+                    :title="seenByTitle(msg)"></i>
+                  <i v-else-if="msgTicks(msg) === 'delivered'" class="fas fa-check tick"
+                    :title="$t('messages.delivered')"></i>
+                </span>
+                <button class="bubble-more" :title="$t('messages.more')" @click.stop="openMsgMenu(msg, $event)">
+                  <i class="fas fa-ellipsis-h"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <form class="chat-composer" @submit.prevent="sendMessage">
+            <template v-if="recordingPreview">
+              <audio controls :src="recordingUrl" class="bubble-audio"></audio>
+              <div class="recording-actions">
+                <button type="button" class="btn btn-sm btn-danger" @click="cancelRecording">
+                  <i class="fas fa-xmark"></i> {{ $t('common.cancel') }}
+                </button>
+                <button type="button" class="btn btn-sm btn-primary" :disabled="sending" @click="sendRecording">
+                  <i class="fas fa-paper-plane"></i> {{ $t('messages.send') }}
+                </button>
+              </div>
+            </template>
+
+            <div v-else-if="filePreview" class="attachment-preview">
+              <img v-if="filePreview.type.startsWith('image/')" :src="filePreviewUrl" class="attachment-preview-media"
+                alt="preview" />
+              <video v-else-if="filePreview.type.startsWith('video/')" :src="filePreviewUrl" controls
+                class="attachment-preview-media"></video>
+              <audio v-else-if="filePreview.type.startsWith('audio/')" :src="filePreviewUrl" controls
+                class="bubble-audio"></audio>
+              <div v-else class="attachment-preview-file">
+                <i class="fas fa-file"></i>
+                <div>
+                  <strong>{{ filePreview.name }}</strong>
+                  <span>{{ formatFileSize(filePreview.size) }}</span>
+                </div>
+              </div>
+              <label v-if="filePreview.type.startsWith('image/') || filePreview.type.startsWith('video/')"
+                class="view-once-toggle">
+                <input v-model="fileViewOnce" type="checkbox" />
+                <i class="fas fa-eye"></i> {{ $t('messages.viewOnceSend') }}
+              </label>
+              <div class="recording-actions">
+                <button type="button" class="btn btn-sm btn-danger" @click="cancelFilePreview">
+                  <i class="fas fa-xmark"></i> {{ $t('common.cancel') }}
+                </button>
+                <button type="button" class="btn btn-sm btn-primary" :disabled="sending" @click="sendFilePreview">
+                  <i class="fas fa-paper-plane"></i> {{ $t('messages.send') }}
+                </button>
+              </div>
+            </div>
+
+            <template v-else>
+              <button type="button" class="icon-btn emoji-toggle" :title="$t('messages.emoji')"
+                @click="showEmojiPicker = !showEmojiPicker">
+                <i class="fas fa-face-smile"></i>
+              </button>
+              <button type="button" class="icon-btn" :title="$t('messages.attachment')" @click="fileInput?.click()">
+                <i class="fas fa-paperclip"></i>
+              </button>
+              <input ref="fileInput" type="file" class="hidden-input" @change="onFilePicked" />
+              <textarea ref="draftInput" v-model="draft" rows="1" class="textarea"
+                :placeholder="$t('messages.typeMessage')" @input="onDraftInput"
+                @keydown.enter.exact.prevent="sendMessage"></textarea>
+              <button v-if="isRecording" type="button" class="icon-btn recording" @click="stopRecording">
+                <i class="fas fa-stop"></i>
+                <span class="rec-timer">{{ recSeconds }}s</span>
+              </button>
+              <button v-else type="button" class="icon-btn mic" :title="$t('messages.recordVoice')"
+                @click="startRecording">
+                <i class="fas fa-microphone"></i>
+              </button>
+              <button type="button" class="icon-btn" :class="{ active: showPollBuilder }" :title="$t('messages.poll')"
+                @click="showPollBuilder = !showPollBuilder">
+                <i class="fas fa-square-poll-vertical"></i>
+              </button>
+              <button type="button" class="icon-btn" :class="{ active: showScheduler }"
+                :title="$t('messages.scheduleMessage')" @click="showScheduler = !showScheduler">
+                <i class="fas fa-clock"></i>
+              </button>
+              <button type="button" class="icon-btn" :class="{ active: showTemplatePicker }"
+                :title="$t('messages.templates')" @click="openTemplatePicker">
+                <i class="fas fa-rectangle-list"></i>
+              </button>
+              <button type="button" class="icon-btn" :class="{ active: sendPriority === 'urgent' }"
+                :title="sendPriority === 'urgent' ? $t('messages.priorityNormal') : $t('messages.priorityUrgent')"
+                @click="togglePriority">
+                <i class="fas fa-flag"></i>
+              </button>
+              <button type="submit" class="btn btn-primary composer-send"
+                :disabled="sending || (!draft.trim() && !isRecording)">
+                <i class="fas fa-paper-plane"></i>
+                <span class="composer-send-label">{{ sending ? $t('messages.sending') : $t('messages.send') }}</span>
+              </button>
+            </template>
+
+            <div v-if="showEmojiPicker" class="emoji-picker">
+              <button v-for="emoji in EMOJIS" :key="emoji" type="button" class="emoji-item"
+                @click="insertEmoji(emoji)">{{ emoji
+                }}</button>
+            </div>
+
+            <div v-if="mentionSuggestions.length" class="mention-picker">
+              <button v-for="u in mentionSuggestions" :key="u.user_id" type="button" class="mention-item"
+                @mousedown.prevent="applyMention(u)">
+                <span class="avatar">{{ initials(u.full_name) }}</span>
+                <span class="mention-item-name">@{{ u.full_name }}</span>
+              </button>
+            </div>
+
+            <div v-if="replyTo" class="reply-bar">
+              <div class="reply-bar-body">
+                <span class="reply-bar-author">
+                  {{ replyTo.sender_id === me.user_id ? $t('messages.you') : (replyTo.sender?.full_name ||
+                    $t('messages.unknownSender')) }}
+                </span>
+                <span class="reply-bar-text">{{ replyTo.body || $t('messages.attachment') }}</span>
+              </div>
+              <button type="button" class="icon-btn" @click="cancelReply"><i class="fas fa-xmark"></i></button>
+            </div>
+
+            <div v-if="showPollBuilder" class="poll-builder">
+              <input v-model="pollQuestion" type="text" class="input"
+                :placeholder="$t('messages.pollQuestionPlaceholder')" />
+              <div v-for="(opt, i) in pollOptions" :key="i" class="poll-builder-option">
+                <input v-model="pollOptions[i]" type="text" class="input"
+                  :placeholder="`${$t('messages.pollOptionPlaceholder')} ${i + 1}`" />
+                <button type="button" class="icon-btn" @click="removePollOption(i)"><i
+                    class="fas fa-xmark"></i></button>
+              </div>
+              <div class="poll-builder-actions">
+                <button type="button" class="btn btn-sm btn-secondary" @click="addPollOption">
+                  <i class="fas fa-plus"></i> {{ $t('messages.addOption') }}
+                </button>
+                <label class="poll-multiple-toggle">
+                  <input v-model="pollMultiple" type="checkbox" />
+                  {{ $t('messages.multipleVotes') }}
+                </label>
+              </div>
+            </div>
+
+            <div v-if="showScheduler" class="schedule-bar">
+              <input v-model="scheduleAt" type="datetime-local" class="input" />
+              <button type="button" class="btn btn-sm btn-primary" :disabled="savingFeature" @click="scheduleMessage">
+                <i class="fas fa-clock"></i> {{ $t('messages.schedule') }}
+              </button>
+              <button type="button" class="btn btn-sm btn-secondary" @click="closeScheduler"><i
+                  class="fas fa-xmark"></i></button>
+            </div>
+
+            <div v-if="showTemplatePicker" class="template-picker">
+              <div class="template-picker-head">
+                <select v-model="templateCategory" class="input" @change="loadTemplates">
+                  <option value="">{{ $t('messages.allCategories') }}</option>
+                  <option value="general">{{ $t('messages.catGeneral') }}</option>
+                  <option value="housekeeping">{{ $t('messages.catHousekeeping') }}</option>
+                  <option value="frontdesk">{{ $t('messages.catFrontdesk') }}</option>
+                </select>
+                <button type="button" class="btn btn-sm btn-secondary" @click="closeTemplatePicker"><i
+                    class="fas fa-xmark"></i></button>
+              </div>
+              <button v-for="tpl in templates" :key="tpl.id" type="button" class="template-item"
+                @click="insertTemplate(tpl)">
+                <strong>{{ tpl.name }}</strong>
+                <span class="muted">{{ tpl.body }}</span>
+              </button>
+              <div v-if="!templates.length" class="muted template-empty">{{ $t('messages.noTemplates') }}</div>
+            </div>
+          </form>
+        </template>
+
+        <div v-else class="chat-thread-placeholder">
+          <i class="fas fa-comments"></i>
+          <p class="muted">{{ $t('messages.noConversations') }}</p>
+          <div class="placeholder-actions">
+            <button class="btn btn-primary" @click="openNewMessage"><i class="fas fa-paper-plane"></i> {{
+              $t('messages.newMessage') }}</button>
+            <button class="btn btn-primary btn-group" @click="openNewGroup"><i class="fas fa-users"></i> {{
+              $t('messages.newGroup') }}</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- New direct message modal -->
+    <div v-if="showNew" class="modal-overlay" @click.self="closeNewMessage">
+      <div class="modal new-message-modal">
+        <div class="modal-head">
+          <h2><i class="fas fa-paper-plane"></i> {{ $t('messages.newMessage') }}</h2>
+          <button class="modal-close" @click="closeNewMessage"><i class="fas fa-xmark"></i></button>
+        </div>
+
+        <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
+
+        <p class="muted">{{ $t('messages.selectScope') }}</p>
+        <div class="scope-cards">
+          <button class="scope-card" :class="{ selected: newScope === 'hotel' }" @click="switchScope('hotel')">
+            <span class="scope-icon"><i class="fas fa-building"></i></span>
+            <span>
+              <strong>{{ $t('messages.hotelMessaging') }}</strong>
+              <span class="muted">{{ $t('messages.hintHotel', { hotel: hotelName }) }}</span>
+            </span>
+          </button>
+          <button class="scope-card" :class="{ selected: newScope === 'global' }" @click="switchScope('global')">
+            <span class="scope-icon"><i class="fas fa-globe"></i></span>
+            <span>
+              <strong>{{ $t('messages.globalMessaging') }}</strong>
+              <span class="muted">{{ $t('messages.hintGlobal') }}</span>
+            </span>
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label>{{ $t('common.search') }}</label>
+          <input v-model="userSearch" type="text" class="input"
+            :placeholder="newScope === 'global' ? $t('messages.searchGlobal') : $t('messages.searchColleagues')"
+            @input="searchUsers" />
+        </div>
+
+        <div v-if="searchingUsers" class="alert alert-info">{{ $t('common.loading') }}</div>
+
+        <div v-else-if="userResults.length" class="user-results">
+          <button v-for="u in userResults" :key="u.user_id" class="user-result" @click="startConversation(u)"
+            :disabled="startingWith === u.user_id">
+            <span class="avatar">{{ initials(u.full_name) }}</span>
+            <span class="user-result-body">
+              <strong>{{ u.full_name }}</strong>
+              <span class="muted">
+                {{ roleLabel(u.user_role) }}
+                <span v-if="u.hotel_name"> · {{ u.hotel_name }}</span>
+              </span>
+            </span>
+            <i class="fas fa-paper-plane user-result-go"></i>
+          </button>
+        </div>
+
+        <div v-else-if="userSearch.trim()" class="chat-empty muted">{{ $t('messages.noUsers') }}</div>
+      </div>
+    </div>
+
+    <!-- New group modal -->
+    <div v-if="showNewGroup" class="modal-overlay" @click.self="closeNewGroup">
+      <div class="modal new-message-modal">
+        <div class="modal-head">
+          <h2><i class="fas fa-users"></i> {{ $t('messages.createGroup') }}</h2>
+          <button class="modal-close" @click="closeNewGroup"><i class="fas fa-xmark"></i></button>
+        </div>
+
+        <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
+
+        <div class="form-group">
+          <label>{{ $t('messages.groupName') }} *</label>
+          <input v-model="groupName" type="text" class="input" :placeholder="$t('messages.groupNamePlaceholder')" />
+        </div>
+
+        <label class="task-group-toggle">
+          <input v-model="isTaskGroupCreation" type="checkbox" />
+          <i class="fas fa-check-double"></i> {{ $t('messages.taskGroup') }}
+        </label>
+        <div v-if="isTaskGroupCreation" class="form-group">
+          <label>{{ $t('messages.taskType') }}</label>
+          <select v-model="taskGroupType" class="input">
+            <option value="housekeeping">{{ $t('messages.taskTypeHousekeeping') }}</option>
+            <option value="laundry">{{ $t('messages.taskTypeLaundry') }}</option>
+            <option value="food">{{ $t('messages.taskTypeFood') }}</option>
+          </select>
+        </div>
+
+        <p class="muted">{{ $t('messages.selectScope') }}</p>
+        <div class="scope-cards">
+          <button class="scope-card" :class="{ selected: groupScope === 'hotel' }" @click="groupScope = 'hotel'">
+            <span class="scope-icon"><i class="fas fa-building"></i></span>
+            <span>
+              <strong>{{ $t('messages.hotelMessaging') }}</strong>
+              <span class="muted">{{ $t('messages.hintHotel', { hotel: hotelName }) }}</span>
+            </span>
+          </button>
+          <button class="scope-card" :class="{ selected: groupScope === 'global' }" @click="groupScope = 'global'">
+            <span class="scope-icon"><i class="fas fa-globe"></i></span>
+            <span>
+              <strong>{{ $t('messages.globalMessaging') }}</strong>
+              <span class="muted">{{ $t('messages.hintGlobal') }}</span>
+            </span>
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label>{{ $t('messages.addMembers') }} <span class="muted">({{ $t('messages.selectMembersHint')
+              }})</span></label>
+          <input v-model="groupUserSearch" type="text" class="input"
+            :placeholder="groupScope === 'global' ? $t('messages.searchGlobal') : $t('messages.searchColleagues')"
+            @input="searchGroupUsers" />
+        </div>
+
+        <div v-if="searchingGroupUsers" class="alert alert-info">{{ $t('common.loading') }}</div>
+
+        <div v-else-if="groupUserResults.length" class="user-results">
+          <label v-for="u in groupUserResults" :key="u.user_id" class="user-result user-result-select">
+            <input v-model="selectedGroupUsers" type="checkbox" :value="u.user_id" class="checkbox" />
+            <span class="avatar">{{ initials(u.full_name) }}</span>
+            <span class="user-result-body">
+              <strong>{{ u.full_name }}</strong>
+              <span class="muted">
+                {{ roleLabel(u.user_role) }}
+                <span v-if="u.hotel_name"> · {{ u.hotel_name }}</span>
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <div v-else-if="groupUserSearch.trim()" class="chat-empty muted">{{ $t('messages.noUsers') }}</div>
+
+        <div class="modal-foot">
+          <button type="button" class="btn btn-secondary" @click="closeNewGroup">{{ $t('common.cancel') }}</button>
+          <button type="button" class="btn btn-primary" :disabled="creatingGroup || !groupName.trim()"
+            @click="createGroup">
+            <i class="fas fa-users"></i> {{ creatingGroup ? $t('common.saving') : $t('messages.createGroup') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group members / manage modal -->
+    <div v-if="showGroupManage" class="modal-overlay" @click.self="closeGroupManage">
+      <div class="modal new-message-modal">
+        <div class="modal-head">
+          <h2><i class="fas fa-user-group"></i> {{ $t('messages.membersManage') }} — {{ activeChat?.name }}</h2>
+          <button class="modal-close" @click="closeGroupManage"><i class="fas fa-xmark"></i></button>
+        </div>
+
+        <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
+        <div v-if="modalSuccess" class="alert alert-success">{{ modalSuccess }}</div>
+
+        <div class="form-group">
+          <label>{{ $t('messages.addMembers') }}</label>
+          <input v-model="groupUserSearch" type="text" class="input"
+            :placeholder="activeChat?.scope === 'global' ? $t('messages.searchGlobal') : $t('messages.searchColleagues')"
+            @input="searchGroupUsers" />
+        </div>
+
+        <div v-if="searchingGroupUsers" class="alert alert-info">{{ $t('common.loading') }}</div>
+
+        <div v-else-if="groupUserResults.length" class="user-results">
+          <label v-for="u in groupUserResults" :key="u.user_id" class="user-result user-result-select">
+            <input v-model="selectedGroupUsers" type="checkbox" :value="u.user_id" class="checkbox" />
+            <span class="avatar">{{ initials(u.full_name) }}</span>
+            <span class="user-result-body">
+              <strong>{{ u.full_name }}</strong>
+              <span class="muted">{{ roleLabel(u.user_role) }}</span>
+            </span>
+          </label>
+          <div class="user-results-foot">
+            <button class="btn btn-sm btn-primary" :disabled="addingMembers || !selectedGroupUsers.length"
+              @click="addSelectedMembers">
+              <i class="fas fa-user-plus"></i> {{ $t('messages.addSelected') }}
+            </button>
+          </div>
+        </div>
+
+        <div v-else-if="groupUserSearch.trim()" class="chat-empty muted">{{ $t('messages.noUsers') }}</div>
+
+        <h3 class="members-title"><i class="fas fa-users"></i> {{ $t('messages.membersManage') }}</h3>
+        <div v-if="groupMembers.length" class="user-results">
+          <div v-for="m in groupMembers" :key="m.user_id" class="user-result">
+            <span class="avatar">{{ initials(m.full_name) }}</span>
+            <span class="user-result-body">
+              <strong>{{ m.full_name }}</strong>
+              <span class="muted">
+                {{ roleLabel(m.user_role) }}
+                <span v-if="m.user_id === me.user_id"> · {{ $t('messages.you') }}</span>
+              </span>
+            </span>
+            <button v-if="m.user_id === me.user_id" class="btn btn-sm btn-danger" :disabled="removingMember"
+              @click="removeMember(m.user_id)">
+              <i class="fas fa-sign-out-alt"></i> {{ $t('messages.leaveGroup') }}
+            </button>
+            <button v-else-if="isGroupCreator" class="btn btn-sm btn-secondary" :disabled="removingMember"
+              @click="removeMember(m.user_id)">
+              <i class="fas fa-user-minus"></i> {{ $t('messages.removeMember') }}
+            </button>
+          </div>
+        </div>
+        <div v-else class="chat-empty muted">{{ $t('messages.noGroups') }}</div>
+      </div>
+    </div>
+
+    <!-- Message context menu -->
+    <div v-if="msgMenu.open && msgMenu.msg" class="msg-menu" :style="{ left: msgMenu.x + 'px', top: msgMenu.y + 'px' }"
+      @click.stop>
+      <div class="msg-menu-reactions">
+        <button v-for="e in REACTION_EMOJIS" :key="e" class="emoji-item" :title="$t('messages.react')"
+          @click="toggleReaction(msgMenu.msg, e)">{{ e }}</button>
+      </div>
+      <button class="msg-menu-item" @click="deleteMessage(msgMenu.msg, 'me')">
+        <i class="fas fa-user-minus"></i> {{ $t('messages.deleteForMe') }}
+      </button>
+      <button v-if="canDeleteEveryone(msgMenu.msg)" class="msg-menu-item danger"
+        @click="deleteMessage(msgMenu.msg, 'everyone')">
+        <i class="fas fa-trash"></i> {{ $t('messages.deleteEveryone') }}
+      </button>
+      <div class="msg-menu-divider"></div>
+      <button class="msg-menu-item" @click="startReply(msgMenu.msg)">
+        <i class="fas fa-reply"></i> {{ $t('messages.reply') }}
+      </button>
+      <button class="msg-menu-item" @click="togglePin(msgMenu.msg)">
+        <i class="fas fa-thumbtack"></i>
+        {{ isPinned(msgMenu.msg) ? $t('messages.unpinMessage') : $t('messages.pinMessage') }}
+      </button>
+      <button class="msg-menu-item" @click="toggleStar(msgMenu.msg)">
+        <i class="fas fa-star"></i>
+        {{ isStarred(msgMenu.msg) ? $t('messages.unstarMessage') : $t('messages.starMessage') }}
+      </button>
+      <button class="msg-menu-item" @click="openForwardPicker(msgMenu.msg)">
+        <i class="fas fa-forward"></i> {{ $t('messages.forward') }}
+      </button>
+      <button v-if="msgMenu.msg.body" class="msg-menu-item" @click="saveAsTemplate(msgMenu.msg)">
+        <i class="fas fa-rectangle-list"></i> {{ $t('messages.saveAsTemplate') }}
+      </button>
+      <button v-if="msgMenu.msg.body && !msgMenu.msg.view_once" class="msg-menu-item"
+        @click="translateMessage(msgMenu.msg)">
+        <i class="fas fa-language"></i> {{ $t('messages.translate') }}
+      </button>
+      <button v-if="msgMenu.msg.priority !== 'urgent'" class="msg-menu-item" @click="escalateMessage(msgMenu.msg)">
+        <i class="fas fa-bell"></i> {{ $t('messages.escalate') }}
+      </button>
+      <button v-if="activeKind === 'group' && groupInfo?.is_task_group" class="msg-menu-item"
+        @click="convertToTask(msgMenu.msg)">
+        <i class="fas fa-check-double"></i> {{ $t('messages.convertToTask') }}
+      </button>
+    </div>
+
+    <!-- View-once media viewer -->
+    <div v-if="viewOncePreview" class="modal-overlay" @click.self="closeViewOncePreview">
+      <div class="view-once-viewer">
+        <button class="modal-close" @click="closeViewOncePreview"><i class="fas fa-xmark"></i></button>
+        <img v-if="viewOncePreview.url" :src="viewOncePreview.url" alt="view-once" />
+        <p class="muted">{{ $t('messages.viewOnceOpened') }}</p>
+      </div>
+    </div>
+
+    <!-- Call overlay -->
+    <div v-if="callManager.call.visible" class="call-overlay">
+      <div class="call-card" :class="{ 'call-video': callManager.call.kind === 'video' }">
+        <video v-if="callManager.call.kind === 'video' && callManager.remoteVideoUrl" autoplay playsinline
+          :src="callManager.remoteVideoUrl" class="call-remote"></video>
+        <video v-if="callManager.call.kind === 'video' && callManager.localVideoUrl" autoplay playsinline muted
+          :src="callManager.localVideoUrl" class="call-local"></video>
+
+        <div class="call-body">
+          <span class="avatar avatar-call">{{ initials(callManager.call.peerName) }}</span>
+          <strong class="call-name">{{ callManager.call.peerName }}</strong>
+          <span class="muted call-sub">
+            <template v-if="callManager.call.status === 'ringing'">
+              {{ callManager.call.direction === 'outgoing' ? $t('messages.calling') : $t('messages.incomingCall', {
+                kind: callManager.call.kind }) }}
+            </template>
+            <template v-else>{{ callManager.formatElapsed(callManager.elapsed) }}</template>
+          </span>
+        </div>
+
+        <div class="call-actions">
+          <template v-if="callManager.call.status === 'ringing' && callManager.call.direction === 'incoming'">
+            <button class="call-btn call-btn-decline" @click="callManager.declineIncoming">
+              <i class="fas fa-phone-slash"></i>
+            </button>
+            <button class="call-btn call-btn-accept" @click="callManager.acceptIncoming">
+              <i class="fas fa-phone"></i>
+            </button>
+          </template>
+          <template v-else>
+            <button v-if="callManager.call.kind === 'video'" class="call-btn"
+              :class="{ 'call-btn-off': callManager.camOff }" @click="callManager.toggleCamera">
+              <i class="fas" :class="callManager.camOff ? 'fa-video-slash' : 'fa-video'"></i>
+            </button>
+            <button class="call-btn" :class="{ 'call-btn-off': callManager.muted }" @click="callManager.toggleMute">
+              <i class="fas" :class="callManager.muted ? 'fa-microphone-slash' : 'fa-microphone'"></i>
+            </button>
+            <button class="call-btn call-btn-decline" @click="callManager.hangup()">
+              <i class="fas fa-phone-slash"></i>
+            </button>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- Forward picker -->
+    <div v-if="showForward" class="modal-overlay" @click.self="closeForwardPicker">
+      <div class="modal forward-modal">
+        <div class="modal-head">
+          <h2><i class="fas fa-forward"></i> {{ $t('messages.forward') }}</h2>
+          <button class="modal-close" @click="closeForwardPicker"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
+        <div class="form-group">
+          <input v-model="forwardSearch" type="text" class="input" :placeholder="$t('messages.searchChats')"
+            @input="searchForwardTargets" />
+        </div>
+        <div class="forward-list">
+          <button v-for="target in forwardResults" :key="target.kind + target.id" class="forward-item"
+            :disabled="forwarding" @click="forwardTo(target)">
+            <span class="avatar" :class="target.kind === 'group' ? 'avatar-group' : ''">
+              <i v-if="target.kind === 'group'" class="fas fa-users"></i>
+              <template v-else>{{ initials(target.name) }}</template>
+            </span>
+            <span class="forward-item-name">{{ target.name }}</span>
+            <i class="fas fa-paper-plane forward-go"></i>
+          </button>
+          <div v-if="!forwardResults.length" class="muted forward-empty">{{ $t('messages.noChats') }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pinned messages panel -->
+    <div v-if="showPinned" class="modal-overlay" @click.self="closePinnedPanel">
+      <div class="modal side-modal">
+        <div class="modal-head">
+          <h2><i class="fas fa-thumbtack"></i> {{ $t('messages.pinnedMessages') }}</h2>
+          <button class="modal-close" @click="closePinnedPanel"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="side-list">
+          <button v-for="m in pinnedMsgs" :key="m.message_id" class="side-item" @click="closePinnedPanel">
+            <span class="side-item-meta">{{ m.sender?.full_name || $t('messages.you') }}</span>
+            <span class="side-item-body">{{ m.body || $t('messages.attachment') }}</span>
+            <span class="muted">{{ formatTime(m.created_at) }}</span>
+          </button>
+          <div v-if="!pinnedMsgs.length" class="muted side-empty">{{ $t('messages.noPinned') }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search in chat panel -->
+    <div v-if="showSearchPanel" class="modal-overlay" @click.self="closeSearchPanel">
+      <div class="modal side-modal">
+        <div class="modal-head">
+          <h2><i class="fas fa-magnifying-glass"></i> {{ $t('messages.searchInChat') }}</h2>
+          <button class="modal-close" @click="closeSearchPanel"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="form-group">
+          <div class="search-inline">
+            <input v-model="searchQuery" type="text" class="input" :placeholder="$t('messages.searchQueryPlaceholder')"
+              @keydown.enter="runSearch" />
+            <button class="btn btn-primary" :disabled="searchingMessages" @click="runSearch">
+              <i class="fas fa-magnifying-glass"></i>
+            </button>
+          </div>
+        </div>
+        <div class="side-list">
+          <button v-for="m in searchResults" :key="m.message_id" class="side-item" @click="focusResult(m)">
+            <span class="side-item-meta">{{ m.sender?.full_name || $t('messages.you') }} · {{ formatTime(m.created_at) }}</span>
+            <span class="side-item-body">{{ m.body || $t('messages.attachment') }}</span>
+          </button>
+          <div v-if="searchingMessages" class="muted side-empty">{{ $t('common.loading') }}</div>
+          <div v-else-if="searchQuery && !searchResults.length" class="muted side-empty">{{ $t('messages.noResults') }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Link room modal -->
+    <div v-if="showRoomLinkModal" class="modal-overlay" @click.self="closeRoomLinkModal">
+      <div class="modal forward-modal">
+        <div class="modal-head">
+          <h2><i class="fas fa-hotel"></i> {{ $t('messages.linkRoom') }}</h2>
+          <button class="modal-close" @click="closeRoomLinkModal"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
+        <div class="form-group">
+          <input v-model="roomLinkSearch" type="text" class="input" :placeholder="$t('messages.searchRoomsPlaceholder')"
+            @input="searchRooms" />
+        </div>
+        <div class="forward-list">
+          <button v-for="room in roomLinkResults" :key="room.room_id" class="forward-item" @click="linkRoom(room)">
+            <span class="avatar avatar-room"><i class="fas fa-bed"></i></span>
+            <span class="forward-item-name">{{ room.room_number }} <span class="muted">{{ room.room_type || '' }}</span></span>
+            <i class="fas fa-link forward-go"></i>
+          </button>
+          <div v-if="!roomLinkResults.length" class="muted forward-empty">{{ $t('messages.noRooms') }}</div>
+        </div>
+        <div v-if="roomLinks.length" class="room-link-list">
+          <div v-for="link in roomLinks" :key="link.id" class="room-link-item">
+            <i class="fas fa-bed"></i> {{ link.room?.room_number || link.room_number }}
+            <button class="icon-btn" :title="$t('common.remove')" @click="unlinkRoom(link.id)">
+              <i class="fas fa-xmark"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Workspace panel (tenant-wide features) -->
+    <div v-if="showWorkspace" class="modal-overlay" @click.self="closeWorkspace">
+      <div class="modal workspace-modal">
+        <div class="modal-head">
+          <h2><i class="fas fa-briefcase"></i> {{ $t('messages.workspace') }}</h2>
+          <button class="modal-close" @click="closeWorkspace"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
+        <div class="workspace-tabs">
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'announcements' }" @click="workspaceTab = 'announcements'">
+            <i class="fas fa-bullhorn"></i> {{ $t('messages.announcements') }}
+          </button>
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'meetings' }" @click="workspaceTab = 'meetings'">
+            <i class="fas fa-calendar-days"></i> {{ $t('messages.meetings') }}
+          </button>
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'handovers' }" @click="workspaceTab = 'handovers'">
+            <i class="fas fa-arrows-rotate"></i> {{ $t('messages.handovers') }}
+          </button>
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'guest' }" @click="workspaceTab = 'guest'">
+            <i class="fas fa-envelope"></i> {{ $t('messages.guestSms') }}
+          </button>
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'nearby' }" @click="workspaceTab = 'nearby'; loadNearbyStaff()">
+            <i class="fas fa-location-dot"></i> {{ $t('messages.nearbyStaff') }}
+          </button>
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'escalations' }" @click="workspaceTab = 'escalations'; loadEscalations()">
+            <i class="fas fa-bell"></i> {{ $t('messages.escalations') }}
+          </button>
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'sos' }" @click="workspaceTab = 'sos'; loadSos()">
+            <i class="fas fa-shield-heart"></i> {{ $t('messages.sosAlerts') }}
+          </button>
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'scheduled' }" @click="workspaceTab = 'scheduled'; loadScheduled()">
+            <i class="fas fa-clock"></i> {{ $t('messages.scheduledMessages') }}
+          </button>
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'starred' }" @click="workspaceTab = 'starred'; loadStarred()">
+            <i class="fas fa-star"></i> {{ $t('messages.starredMessages') }}
+          </button>
+          <button v-if="isAdmin" class="workspace-tab" :class="{ active: workspaceTab === 'retention' }" @click="workspaceTab = 'retention'; loadPolicies()">
+            <i class="fas fa-shield"></i> {{ $t('messages.retention') }}
+          </button>
+        </div>
+
+        <div class="workspace-body">
+          <div v-if="workspaceTab === 'announcements'" class="ws-tab">
+            <div class="ws-compose">
+              <input v-model="announcementTitle" type="text" class="input" :placeholder="$t('messages.announcementTitle')" />
+              <textarea v-model="announcementBody" rows="2" class="textarea" :placeholder="$t('messages.announcementBodyPlaceholder')"></textarea>
+              <div class="ws-compose-actions">
+                <select v-model="announcementPriority" class="input">
+                  <option value="normal">{{ $t('messages.priorityNormal') }}</option>
+                  <option value="urgent">{{ $t('messages.priorityUrgent') }}</option>
+                </select>
+                <button class="btn btn-primary btn-sm" :disabled="savingFeature || !announcementBody.trim()" @click="postAnnouncement">
+                  <i class="fas fa-paper-plane"></i> {{ $t('messages.post') }}
+                </button>
+              </div>
+            </div>
+            <div v-for="a in announcements" :key="a.id" class="ws-card" :class="{ urgent: a.priority === 'urgent' }">
+              <div class="ws-card-head">
+                <strong>{{ a.title || $t('messages.announcement') }}</strong>
+                <span class="muted">{{ formatTime(a.created_at) }}</span>
+              </div>
+              <p class="ws-card-body">{{ a.body }}</p>
+              <div class="ws-card-foot">
+                <span class="muted">
+                  {{ a.acknowledgements_count || 0 }} {{ $t('messages.acknowledged') }}
+                </span>
+                <button v-if="!(a.acknowledgements || []).length" class="btn btn-sm btn-secondary" @click="ackAnnouncement(a.id)">
+                  <i class="fas fa-check"></i> {{ $t('messages.acknowledge') }}
+                </button>
+                <span v-else class="badge badge-green"><i class="fas fa-check"></i> {{ $t('messages.acknowledged') }}</span>
+              </div>
+            </div>
+            <div v-if="!announcements.length" class="muted side-empty">{{ $t('messages.noAnnouncements') }}</div>
+          </div>
+
+          <div v-if="workspaceTab === 'meetings'" class="ws-tab">
+            <div class="ws-compose">
+              <input v-model="meetingTitle" type="text" class="input" :placeholder="$t('messages.meetingTitlePlaceholder')" />
+              <input v-model="meetingStart" type="datetime-local" class="input" />
+              <input v-model="meetingUserSearch" type="text" class="input" :placeholder="$t('messages.searchInvitees')"
+                @input="searchMeetingUsers" />
+              <div v-if="meetingUserResults.length" class="mention-picker static">
+                <button v-for="u in meetingUserResults" :key="u.user_id" type="button" class="mention-item"
+                  @mousedown.prevent="toggleMeetingInvitee(u)">
+                  <span class="avatar">{{ initials(u.full_name) }}</span>
+                  <span class="mention-item-name">@{{ u.full_name }}</span>
+                  <i v-if="meetingInvitees.some((x) => x.user_id === u.user_id)" class="fas fa-check"></i>
+                </button>
+              </div>
+              <div v-if="meetingInvitees.length" class="meeting-invitees">
+                <span v-for="u in meetingInvitees" :key="u.user_id" class="invitee-chip">
+                  {{ u.full_name }} <i class="fas fa-xmark" @click="toggleMeetingInvitee(u)"></i>
+                </span>
+              </div>
+              <button class="btn btn-primary btn-sm" :disabled="savingFeature || !meetingTitle.trim() || !meetingStart"
+                @click="createMeeting">
+                <i class="fas fa-calendar-plus"></i> {{ $t('messages.scheduleMeeting') }}
+              </button>
+            </div>
+            <div v-for="m in meetings" :key="m.id" class="ws-card">
+              <div class="ws-card-head">
+                <strong>{{ m.title }}</strong>
+                <span class="muted">{{ formatTime(m.start_at) }}</span>
+              </div>
+              <div class="ws-card-body">
+                <span class="muted">{{ m.organizer?.full_name }}</span>
+                <span class="invitee-chip" :class="inv.status" v-for="inv in m.invitees" :key="inv.id">
+                  {{ inv.user?.full_name }} · {{ inv.status }}
+                </span>
+              </div>
+              <div v-if="m.my_invitee" class="ws-card-foot">
+                <button class="btn btn-sm btn-primary" :disabled="m.my_invitee.status === 'accepted'" @click="respondMeeting(m, 'accepted')">
+                  <i class="fas fa-check"></i> {{ $t('messages.accept') }}
+                </button>
+                <button class="btn btn-sm btn-secondary" :disabled="m.my_invitee.status === 'declined'" @click="respondMeeting(m, 'declined')">
+                  <i class="fas fa-xmark"></i> {{ $t('messages.decline') }}
+                </button>
+              </div>
+            </div>
+            <div v-if="!meetings.length" class="muted side-empty">{{ $t('messages.noMeetings') }}</div>
+          </div>
+
+          <div v-if="workspaceTab === 'handovers'" class="ws-tab">
+            <div class="ws-compose">
+              <input v-model="handoverTitle" type="text" class="input" :placeholder="$t('messages.handoverTitle')" />
+              <textarea v-model="handoverNotes" rows="2" class="textarea" :placeholder="$t('messages.handoverNotesPlaceholder')"></textarea>
+              <button class="btn btn-primary btn-sm" :disabled="savingFeature || !handoverNotes.trim()" @click="createHandover">
+                <i class="fas fa-arrows-rotate"></i> {{ $t('messages.postHandover') }}
+              </button>
+            </div>
+            <div v-for="h in handovers" :key="h.id" class="ws-card">
+              <div class="ws-card-head">
+                <strong>{{ h.title || $t('messages.shiftHandover') }}</strong>
+                <span class="muted">{{ formatTime(h.created_at) }}</span>
+              </div>
+              <p class="ws-card-body">{{ h.notes }}</p>
+              <div class="ws-card-foot">
+                <span class="muted">{{ h.creator?.full_name || '' }} → {{ $t('messages.nextShift') }}</span>
+                <button v-if="h.status !== 'acknowledged'" class="btn btn-sm btn-secondary" @click="ackHandover(h.id)">
+                  <i class="fas fa-check"></i> {{ $t('messages.acknowledge') }}
+                </button>
+                <span v-else class="badge badge-green"><i class="fas fa-check"></i> {{ $t('messages.acknowledged') }}</span>
+              </div>
+            </div>
+            <div v-if="!handovers.length" class="muted side-empty">{{ $t('messages.noHandovers') }}</div>
+          </div>
+
+          <div v-if="workspaceTab === 'guest'" class="ws-tab">
+            <div class="ws-compose">
+              <input v-model="guestPhone" type="text" class="input" :placeholder="$t('messages.guestPhonePlaceholder')" />
+              <textarea v-model="guestBody" rows="2" class="textarea" :placeholder="$t('messages.guestBodyPlaceholder')"></textarea>
+              <button class="btn btn-primary btn-sm" :disabled="savingFeature || !guestPhone.trim() || !guestBody.trim()"
+                @click="sendGuestMessage">
+                <i class="fas fa-envelope"></i> {{ $t('messages.sendGuestSms') }}
+              </button>
+            </div>
+            <div v-for="g in guestMessages" :key="g.id" class="ws-card">
+              <div class="ws-card-head">
+                <strong>{{ g.phone }}</strong>
+                <span class="muted">{{ formatTime(g.created_at) }}</span>
+              </div>
+              <p class="ws-card-body">{{ g.body }}</p>
+              <div class="ws-card-foot">
+                <span class="badge" :class="g.status === 'delivered' ? 'badge-green' : 'badge-blue'">{{ g.status }}</span>
+              </div>
+            </div>
+            <div v-if="!guestMessages.length" class="muted side-empty">{{ $t('messages.noGuestMessages') }}</div>
+          </div>
+
+          <div v-if="workspaceTab === 'nearby'" class="ws-tab">
+            <div class="ws-compose">
+              <div class="ws-compose-actions">
+                <input v-model="myLocation" type="text" class="input" :placeholder="$t('messages.myLocationPlaceholder')" />
+                <input v-model="myFloor" type="text" class="input" :placeholder="$t('messages.myFloorPlaceholder')" />
+                <button class="btn btn-primary btn-sm" @click="updateMyLocation">
+                  <i class="fas fa-location-dot"></i> {{ $t('messages.updateLocation') }}
+                </button>
+              </div>
+            </div>
+            <div v-for="s in nearbyStaff" :key="s.user_id" class="ws-card">
+              <div class="ws-card-head">
+                <span class="avatar">{{ initials(s.user?.full_name || '?') }}</span>
+                <strong>{{ s.user?.full_name || '' }}</strong>
+                <span class="muted">{{ s.updated_at ? formatTime(s.updated_at) : '' }}</span>
+              </div>
+              <div class="ws-card-body">
+                <span class="badge badge-blue"><i class="fas fa-location-dot"></i> {{ s.zone || '—' }}</span>
+                <span v-if="s.floor" class="badge badge-blue">{{ s.floor }}</span>
+              </div>
+            </div>
+            <div v-if="!nearbyStaff.length" class="muted side-empty">{{ $t('messages.noNearby') }}</div>
+          </div>
+
+          <div v-if="workspaceTab === 'escalations'" class="ws-tab">
+            <div v-for="e in escalations" :key="e.id" class="ws-card">
+              <div class="ws-card-head">
+                <strong>{{ e.escalated_by ? e.escalated_by.full_name : (e.escalatedBy?.full_name || '') }}</strong>
+                <span class="badge badge-red">{{ $t('messages.urgent') }}</span>
+                <span class="muted">{{ formatTime(e.escalated_at || e.created_at) }}</span>
+              </div>
+              <p class="ws-card-body">{{ e.message?.body || $t('messages.attachment') }}</p>
+              <div class="ws-card-foot">
+                <span class="muted">{{ $t('messages.open') }}</span>
+                <button class="btn btn-sm btn-secondary" @click="resolveEscalation(e.id)">
+                  <i class="fas fa-check"></i> {{ $t('messages.resolve') }}
+                </button>
+              </div>
+            </div>
+            <div v-if="!escalations.length" class="muted side-empty">{{ $t('messages.noEscalations') }}</div>
+          </div>
+
+          <div v-if="workspaceTab === 'sos'" class="ws-tab">
+            <button class="btn btn-danger btn-block" :disabled="savingFeature" @click="initiateSos">
+              <i class="fas fa-shield-heart"></i> {{ $t('messages.initiateSos') }}
+            </button>
+            <div v-for="s in sosAlerts" :key="s.id" class="ws-card" :class="{ urgent: s.status === 'active' }">
+              <div class="ws-card-head">
+                <strong>{{ s.initiator?.full_name || '' }}</strong>
+                <span class="badge" :class="s.status === 'active' ? 'badge-red' : 'badge-green'">{{ s.status }}</span>
+                <span class="muted">{{ formatTime(s.created_at) }}</span>
+              </div>
+              <div class="ws-card-body">
+                <span v-if="s.message" class="badge badge-blue"><i class="fas fa-location-dot"></i> {{ s.message }}</span>
+              </div>
+              <div class="ws-card-foot">
+                <span class="muted">{{ s.ack_count || 0 }} {{ $t('messages.acknowledged') }}</span>
+                <button v-if="s.status === 'active' && !(s.ack_user_ids || []).includes(me.user_id)" class="btn btn-sm btn-secondary" @click="ackSos(s.id)">
+                  <i class="fas fa-check"></i> {{ $t('messages.acknowledge') }}
+                </button>
+                <button v-if="s.status === 'active'" class="btn btn-sm btn-danger" @click="resolveSos(s.id)">
+                  <i class="fas fa-check-double"></i> {{ $t('messages.resolve') }}
+                </button>
+              </div>
+            </div>
+            <div v-if="!sosAlerts.length" class="muted side-empty">{{ $t('messages.noSos') }}</div>
+          </div>
+
+          <div v-if="workspaceTab === 'scheduled'" class="ws-tab">
+            <div v-for="s in scheduledList" :key="s.id" class="ws-card">
+              <div class="ws-card-head">
+                <strong>{{ $t('messages.scheduledMessage') }}</strong>
+                <span class="muted">{{ formatTime(s.send_at) }}</span>
+              </div>
+              <p class="ws-card-body">{{ s.body }}</p>
+              <div class="ws-card-foot">
+                <span class="badge badge-blue">{{ s.recurrence || 'none' }}</span>
+                <button class="btn btn-sm btn-danger" @click="cancelScheduled(s.id)">
+                  <i class="fas fa-xmark"></i> {{ $t('messages.cancelSchedule') }}
+                </button>
+              </div>
+            </div>
+            <div v-if="!scheduledList.length" class="muted side-empty">{{ $t('messages.noScheduled') }}</div>
+          </div>
+
+          <div v-if="workspaceTab === 'starred'" class="ws-tab">
+            <div v-for="m in starredMsgs" :key="m.message_id" class="ws-card">
+              <div class="ws-card-head">
+                <strong>{{ m.sender?.full_name || $t('messages.you') }}</strong>
+                <span class="muted">{{ formatTime(m.created_at) }}</span>
+              </div>
+              <p class="ws-card-body">{{ m.body || $t('messages.attachment') }}</p>
+            </div>
+            <div v-if="!starredMsgs.length" class="muted side-empty">{{ $t('messages.noStarred') }}</div>
+          </div>
+
+          <div v-if="workspaceTab === 'retention'" class="ws-tab">
+            <div class="ws-compose">
+              <div class="ws-compose-actions">
+                <input v-model="retentionDays" type="number" min="1" class="input" />
+                <button class="btn btn-primary btn-sm" :disabled="savingFeature" @click="saveRetention">
+                  <i class="fas fa-shield"></i> {{ $t('messages.addPolicy') }}
+                </button>
+              </div>
+            </div>
+            <div v-for="p in policies" :key="p.id" class="ws-card">
+              <div class="ws-card-head">
+                <strong>{{ p.scope }}</strong>
+                <span class="muted">{{ p.days }} {{ $t('messages.days') }}</span>
+              </div>
+              <div class="ws-card-foot">
+                <button class="btn btn-sm btn-danger" @click="deleteRetention(p.id)"><i class="fas fa-trash"></i></button>
+              </div>
+            </div>
+            <div v-if="!policies.length" class="muted side-empty">{{ $t('messages.noPolicies') }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOS floating button -->
+    <button class="sos-floating" :class="{ active: activeSos }" @click="openSosPanel">
+      <i class="fas fa-shield-heart"></i>
+    </button>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { conversationApi, groupApi, messageActionApi, statusApi } from '@/api'
+import {
+  featuresApi,
+  templateApi,
+  scheduledApi,
+  announcementApi,
+  escalationApi,
+  handoverApi,
+  preferenceApi,
+  retentionApi,
+  roomLinkApi,
+  taskGroupApi,
+  staffLocationApi,
+  guestMessageApi,
+  meetingApi,
+  sosApi,
+} from '@/api'
+import { initEcho, getEcho, destroyEcho } from '@/plugins/echo'
+import { useCallManager } from '@/composables/useCallManager'
+
+const { t } = useI18n()
+const router = useRouter()
+const authStore = useAuthStore()
+const me = computed(() => authStore.user || {})
+const isAdmin = computed(() => ['superadmin', 'hotel_admin'].includes(me.value.user_role))
+const hotelName = computed(() => authStore.user?.tenant?.hotel_name || 'MRK Hotels')
+
+const EMOJIS = [
+  '😀', '😄', '😁', '😂', '🤣', '😊', '😇', '🙂', '😉', '😍',
+  '🤩', '😘', '😎', '🤗', '🤔', '🙃', '😴', '🥳', '😢', '😭',
+  '😡', '😱', '😅', '🤯', '😷', '🥺', '😤', '🤠', '😈', '💀',
+  '👍', '👎', '👏', '🙌', '🤝', '💪', '👌', '✌️', '🤙', '🙏',
+  '❤️', '🧡', '💛', '💚', '💙', '💜', '💯', '🔥', '✨', '⭐',
+  '🎉', '🎊', '🎂', '🏆', '🚀', '🎯', '💰', '📌', '✅', '❌',
+  '⏰', '📅', '📞', '📧', '📷', '🔒', '☕', '🍕', '🍔', '🍺',
+  '😴', '🎧', '💼', '🏨', '🛎️', '🗝️', '🧳', '🛏️', '🚿', '🍽️',
+]
+
+const REACTION_EMOJIS = ['❤️', '👍', '👏', '😄', '😮', '😂']
+
+const conversations = ref([])
+const groups = ref([])
+const convPage = ref(1)
+const groupPage = ref(1)
+const convMeta = ref(null)
+const groupMeta = ref(null)
+const activeKind = ref('direct')
+const activeId = ref(null)
+const messages = ref([])
+const groupInfo = ref(null)
+const draft = ref('')
+const sending = ref(false)
+const loadingConvs = ref(false)
+const loadingMsgs = ref(false)
+const listSearch = ref('')
+const error = ref('')
+const success = ref('')
+
+const showNew = ref(false)
+const newScope = ref('hotel')
+const userSearch = ref('')
+const userResults = ref([])
+const searchingUsers = ref(false)
+const startingWith = ref(null)
+
+const showNewGroup = ref(false)
+const groupName = ref('')
+const groupScope = ref('hotel')
+const groupUserSearch = ref('')
+const groupUserResults = ref([])
+const selectedGroupUsers = ref([])
+const searchingGroupUsers = ref(false)
+const creatingGroup = ref(false)
+
+const showGroupManage = ref(false)
+const addingMembers = ref(false)
+const removingMember = ref(false)
+const modalError = ref('')
+const modalSuccess = ref('')
+
+const fileInput = ref(null)
+const draftInput = ref(null)
+const showEmojiPicker = ref(false)
+const filePreview = ref(null)
+const filePreviewUrl = ref('')
+const isRecording = ref(false)
+const recordingBlob = ref(null)
+const recordingUrl = ref('')
+const recordingPreview = ref(false)
+const recSeconds = ref(0)
+let mediaRecorder = null
+let recStream = null
+let audioChunks = []
+let recTimer = null
+let recMimeType = 'audio/webm'
+
+let searchTimer = null
+
+let activeThreadChannel = null
+
+const msgMenu = ref({ open: false, x: 0, y: 0, msg: null })
+const viewOnceLoading = ref('')
+const viewOncePreview = ref(null)
+const fileViewOnce = ref(false)
+const mentionSuggestions = ref([])
+const mentionQuery = ref('')
+let mentionTriggerPos = -1
+
+// --- Feature state ---
+const replyTo = ref(null)
+const sendPriority = ref('normal')
+const showPollBuilder = ref(false)
+const pollQuestion = ref('')
+const pollOptions = ref([])
+const pollMultiple = ref(false)
+const showTemplatePicker = ref(false)
+const templates = ref([])
+const templateCategory = ref('')
+const showScheduler = ref(false)
+const scheduleAt = ref('')
+const showForward = ref(false)
+const forwardMsg = ref(null)
+const forwardSearch = ref('')
+const forwardResults = ref([])
+const forwarding = ref(false)
+const showSearchPanel = ref(false)
+const searchQuery = ref('')
+const searchResults = ref([])
+const searchingMessages = ref(false)
+const translateLoading = ref('')
+const pinnedMsgs = ref([])
+const showPinned = ref(false)
+const starredMsgs = ref([])
+const showWorkspace = ref(false)
+const workspaceTab = ref('announcements')
+const announcements = ref([])
+const meetings = ref([])
+const handovers = ref([])
+const escalations = ref([])
+const nearbyStaff = ref([])
+const guestMessages = ref([])
+const roomLinks = ref([])
+const policies = ref([])
+const preferences = ref([])
+const scheduledList = ref([])
+const meetingTitle = ref('')
+const meetingStart = ref('')
+const meetingInvitees = ref([])
+const meetingUserSearch = ref('')
+const meetingUserResults = ref([])
+const handoverTitle = ref('')
+const handoverNotes = ref('')
+const handoverFrom = ref('')
+const handoverTo = ref('')
+const announcementTitle = ref('')
+const announcementBody = ref('')
+const announcementPriority = ref('normal')
+const guestPhone = ref('')
+const guestBody = ref('')
+const retentionDays = ref(30)
+const taskGroupType = ref('housekeeping')
+const isTaskGroupCreation = ref(false)
+const sosAlerts = ref([])
+const showSosPanel = ref(false)
+const activeSos = ref(null)
+const myLocation = ref('')
+const myFloor = ref('')
+const showRoomLinkModal = ref(false)
+const roomLinkSearch = ref('')
+const roomLinkResults = ref([])
+const savingFeature = ref(false)
+
+const callManager = useCallManager({
+  notify: (key) => {
+    success.value = t(`messages.${key}`)
+    setTimeout(() => {
+      if (success.value === t(`messages.${key}`)) success.value = ''
+    }, 4000)
+  },
+})
+
+const activeChat = computed(() =>
+  chats.value.find((c) => c.kind === activeKind.value && c.id === activeId.value) || null,
+)
+
+const statusByUser = ref({})
+const myStatusHas = ref(false)
+
+async function loadStatusMap() {
+  try {
+    const res = await statusApi.index({ per_page: 100 })
+    const map = {}
+    let mine = false
+    for (const s of res.data.data || []) {
+      if (s.user_id === me.value.user_id) {
+        mine = true
+        continue
+      }
+      const entry = map[s.user_id] || (map[s.user_id] = { has: true, viewed: true })
+      if (!s.viewed) entry.viewed = false
+    }
+    statusByUser.value = map
+    myStatusHas.value = mine
+  } catch {
+    // statuses are optional adornment; a failed fetch must not break chat
+  }
+}
+
+function avatarStatusClass(chat) {
+  if (chat.kind !== 'direct') return ''
+  const st = statusByUser.value[chat.participant_id]
+  if (!st) return ''
+  return st.viewed ? 'status-ring viewed' : 'status-ring unviewed'
+}
+
+function openUserStatus(userId) {
+  if (!userId) return
+  router.push({ name: 'hotel-statuses', query: { user: userId } })
+}
+
+function openMyStatus() {
+  if (myStatusHas.value) {
+    router.push({ name: 'hotel-statuses', query: { user: me.value.user_id } })
+  } else {
+    openStatusCompose()
+  }
+}
+
+function openStatusCompose() {
+  router.push({ name: 'hotel-statuses', query: { compose: 1 } })
+}
+
+const chats = computed(() => {
+  const all = [
+    ...conversations.value.map((c) => ({
+      kind: 'direct',
+      id: c.conversation_id,
+      name: c.other_participant?.full_name || '—',
+      participant_id: c.other_participant?.user_id,
+      scope: c.scope,
+      hotel_name: c.other_participant?.hotel_name,
+      unread_count: c.unread_count || 0,
+      last_message_at: c.last_message_at || c.created_at,
+      last_message: c.last_message,
+      created_at: c.created_at,
+    })),
+    ...groups.value.map((g) => ({
+      kind: 'group',
+      id: g.group_conversation_id,
+      name: g.name,
+      scope: g.scope,
+      unread_count: g.unread_count || 0,
+      member_count: g.member_count || 0,
+      last_message_at: g.last_message_at || g.created_at,
+      last_message: g.last_message,
+      created_at: g.created_at,
+    })),
+  ]
+  return all.sort((a, b) => String(b.last_message_at || '').localeCompare(String(a.last_message_at || '')))
+})
+
+const hasMore = computed(() =>
+  (convMeta.value?.next_page_url || groupMeta.value?.next_page_url) ? true : false,
+)
+
+const groupMembers = computed(() => groupInfo.value?.members || [])
+
+const isGroupCreator = computed(() => activeChat.value?.kind === 'group' && groupInfo.value?.created_by === me.value.user_id)
+
+const mentionableUsers = computed(() => {
+  if (!activeId.value) return []
+  if (activeKind.value === 'group') {
+    return groupMembers.value.filter((m) => m.user_id !== me.value.user_id)
+  }
+  const other = activeChat.value
+  return other ? [{ user_id: other.id, full_name: other.name }] : []
+})
+
+function initials(name) {
+  return (name || '?')
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+}
+
+function roleLabel(role) {
+  const map = {
+    hotel_admin: t('common.roles.hotelAdmin'),
+    manager: t('common.roles.manager'),
+    accountant: t('common.roles.accountant'),
+    receptionist: t('common.roles.receptionist'),
+    procurement_officer: t('common.roles.procurementOfficer'),
+    housekeeping: t('common.roles.housekeeping'),
+    kitchen: t('common.roles.kitchen'),
+    waiter: t('common.roles.waiter'),
+    bartender: t('common.roles.bartender'),
+    staff: t('common.roles.staff'),
+  }
+  return map[role] || role
+}
+
+function formatTime(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const now = new Date()
+  const today = d.toDateString() === now.toDateString()
+  if (today) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (d.toDateString() === yesterday.toDateString()) return t('messages.yesterday')
+  return d.toLocaleDateString([], { day: '2-digit', month: 'short' })
+}
+
+function lastPreview(chat) {
+  const lm = chat.last_message
+  if (!lm) return ''
+  const who = lm.sender_id === me.value.user_id ? `${t('messages.you')}: ` : ''
+  if (lm.deleted) return `${who}${t('messages.messageDeleted')}`
+  if (lm.view_once && !lm.media_url) return `${who}🕐 ${t('messages.viewOnceMessage')}`
+  if (lm.type === 'audio') return `${who}🎤 ${t('messages.previewAudio')}`
+  if (lm.type === 'image') return `${who}🖼️ ${t('messages.previewImage')}`
+  if (lm.type === 'file') return `${who}📎 ${t('messages.previewFile')}`
+  return `${who}${lm.body || ''}`
+}
+
+function msgTicks(msg) {
+  if (activeKind.value === 'group') {
+    if (msg.read_by_count > 0) return 'read'
+    if (msg.delivered_at) return 'delivered'
+    return null
+  }
+  if (msg.read_at) return 'read'
+  if (msg.delivered_at) return 'delivered'
+  return null
+}
+
+function seenByTitle(msg) {
+  if (activeKind.value === 'group' && msg.read_by_count > 0) {
+    return t('messages.seenBy', { count: msg.read_by_count })
+  }
+  return t('messages.read')
+}
+
+function msgId(msg) {
+  return activeKind.value === 'group' ? msg.group_message_id : msg.message_id
+}
+
+function messageType() {
+  return activeKind.value === 'group' ? 'group' : 'conversation'
+}
+
+function canDeleteEveryone(msg) {
+  return msg.sender_id === me.value.user_id || (activeKind.value === 'group' && isGroupCreator.value)
+}
+
+function openMsgMenu(msg, event) {
+  msgMenu.value = { open: true, x: event.clientX, y: event.clientY, msg }
+  document.addEventListener('click', closeMsgMenu, { once: true })
+}
+
+function closeMsgMenu() {
+  msgMenu.value = { open: false, x: 0, y: 0, msg: null }
+}
+
+async function deleteMessage(msg, scope) {
+  closeMsgMenu()
+  try {
+    const id = msgId(msg)
+    if (activeKind.value === 'group') await messageActionApi.deleteGroupMessage(activeId.value, id, scope)
+    else await messageActionApi.deleteConversationMessage(activeId.value, id, scope)
+    applyDeletedLocally(msg, scope)
+  } catch (err) {
+    error.value = flattenError(err)
+  }
+}
+
+function applyDeletedLocally(msg, scope) {
+  const idx = messages.value.indexOf(msg)
+  if (scope === 'me') {
+    if (idx > -1) messages.value.splice(idx, 1)
+    refreshThreadPreview()
+  } else {
+    msg.deleted = true
+    msg.body = null
+    msg.media_url = null
+    msg.media_mime = null
+    const chat = activeChat.value
+    if (chat) {
+      chat.last_message = {
+        sender_id: msg.sender_id,
+        type: msg.type,
+        body: null,
+        media_url: null,
+        deleted: true,
+        created_at: msg.created_at,
+      }
+    }
+  }
+}
+
+function refreshThreadPreview() {
+  const chat = activeChat.value
+  if (!chat) return
+  const last = messages.value[messages.value.length - 1]
+  chat.last_message = last ? { sender_id: last.sender_id, type: last.type, body: last.body, media_url: last.media_url, view_once: last.view_once, deleted: last.deleted, created_at: last.created_at } : null
+  chat.last_message_at = last ? last.created_at : chat.created_at
+}
+
+async function toggleReaction(msg, emoji) {
+  try {
+    const res = await messageActionApi.toggleReaction(messageType(), msgId(msg), emoji)
+    msg.reactions = res.data.reactions || []
+  } catch (err) {
+    error.value = flattenError(err)
+  }
+}
+
+async function openViewOnce(msg) {
+  if (msg.viewed_at || msg.deleted || msg.sender_id === me.value.user_id) return
+  viewOnceLoading.value = msgId(msg)
+  try {
+    const res = activeKind.value === 'group'
+      ? await messageActionApi.openGroupViewOnce(activeId.value, msg.group_message_id)
+      : await messageActionApi.openViewOnce(activeId.value, msg.message_id)
+    msg.viewed_at = res.data.viewed_at
+    viewOncePreview.value = { url: res.data.media_url, msg }
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    viewOnceLoading.value = ''
+  }
+}
+
+function closeViewOncePreview() {
+  viewOncePreview.value = null
+}
+
+// --- Feature actions ---
+function isPinned(msg) {
+  return !!msg.pinned_at || pinnedMsgs.value.some((p) => p.message_id === msgId(msg))
+}
+function isStarred(msg) {
+  return !!msg.starred_at || starredMsgs.value.some((s) => s.message_id === msgId(msg))
+}
+
+async function togglePin(msg) {
+  closeMsgMenu()
+  const was = isPinned(msg)
+  try {
+    const res = was
+      ? await featuresApi.unpin({ message_type: messageType(msg), message_id: msgId(msg) })
+      : await featuresApi.pin({ message_type: messageType(msg), message_id: msgId(msg) })
+    msg.pinned_at = res.data.pinned ? new Date().toISOString() : null
+    loadPinned()
+    toast(res.data.pinned ? t('messages.pinned') : t('messages.unpinned'))
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+
+async function toggleStar(msg) {
+  closeMsgMenu()
+  const was = isStarred(msg)
+  try {
+    const res = was
+      ? await featuresApi.unstar({ message_type: messageType(msg), message_id: msgId(msg) })
+      : await featuresApi.star({ message_type: messageType(msg), message_id: msgId(msg) })
+    msg.starred_at = res.data.starred ? new Date().toISOString() : null
+    loadStarred()
+    toast(res.data.starred ? t('messages.starred') : t('messages.unstarred'))
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+
+async function loadPinned() {
+  if (!activeId.value) return
+  try {
+    const res = await featuresApi.pinned({ message_type: activeKind.value, chat_id: activeId.value })
+    pinnedMsgs.value = res.data.data || []
+  } catch (e) { }
+}
+
+async function loadStarred() {
+  try {
+    const res = await featuresApi.starred()
+    starredMsgs.value = res.data.data || []
+  } catch (e) { }
+}
+
+function openPinnedPanel() {
+  showPinned.value = true
+  loadPinned()
+}
+function closePinnedPanel() {
+  showPinned.value = false
+}
+
+async function votePoll(msg, option) {
+  try {
+    const res = await featuresApi.vote({
+      message_type: messageType(msg),
+      message_id: msgId(msg),
+      poll_id: msg.poll.poll_id,
+      option_id: option.poll_option_id,
+    })
+    msg.poll = { ...msg.poll, ...res.data.poll }
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+
+async function translateMessage(msg) {
+  const id = msgId(msg)
+  if (translateLoading.value === id) return
+  translateLoading.value = id
+  try {
+    const res = await featuresApi.translate({
+      message_type: messageType(msg),
+      message_id: id,
+      text: msg.body,
+    })
+    msg.translation = res.data.translation
+    msg.translated_lang = res.data.to_lang
+  } catch (err) {
+    modalError.value = flattenError(err)
+  } finally {
+    translateLoading.value = ''
+  }
+}
+
+async function saveAsTemplate(msg) {
+  closeMsgMenu()
+  try {
+    await templateApi.store({ name: msg.body.slice(0, 40), category: 'general', body: msg.body })
+    toast(t('messages.templateSaved'))
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+
+async function loadTemplates() {
+  try {
+    const res = await templateApi.index({ category: templateCategory.value || undefined })
+    templates.value = res.data.data || []
+  } catch (e) { }
+}
+function openTemplatePicker() {
+  showTemplatePicker.value = true
+  loadTemplates()
+}
+function closeTemplatePicker() {
+  showTemplatePicker.value = false
+}
+function insertTemplate(tpl) {
+  draft.value = (draft.value ? draft.value + ' ' : '') + tpl.body
+  closeTemplatePicker()
+  requestAnimationFrame(() => draftInput.value?.focus())
+}
+
+function openScheduler() {
+  showScheduler.value = true
+}
+function closeScheduler() {
+  showScheduler.value = false
+}
+async function scheduleMessage() {
+  if (!scheduleAt.value || !draft.value.trim()) {
+    modalError.value = t('messages.scheduleNeedsDate')
+    return
+  }
+  savingFeature.value = true
+  try {
+    const api = activeKind.value === 'group' ? groupApi : conversationApi
+    await scheduledApi.store({
+      recipient_type: activeKind.value === 'group' ? 'group' : 'conversation',
+      recipient_id: activeId.value,
+      body: draft.value.trim(),
+      send_at: new Date(scheduleAt.value).toISOString(),
+    })
+    draft.value = ''
+    closeScheduler()
+    loadScheduled()
+    toast(t('messages.scheduled'))
+  } catch (err) {
+    modalError.value = flattenError(err)
+  } finally {
+    savingFeature.value = false
+  }
+}
+
+async function loadScheduled() {
+  try {
+    const res = await scheduledApi.index()
+    scheduledList.value = res.data.data || []
+  } catch (e) { }
+}
+async function cancelScheduled(id) {
+  try {
+    await scheduledApi.destroy(id)
+    scheduledList.value = scheduledList.value.filter((s) => s.id !== id)
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+
+function openForwardPicker(msg) {
+  forwardMsg.value = msg
+  showForward.value = true
+  forwardSearch.value = ''
+  forwardResults.value = []
+  searchForwardTargets()
+}
+function closeForwardPicker() {
+  showForward.value = false
+  forwardMsg.value = null
+}
+async function searchForwardTargets() {
+  try {
+    const [c, g] = await Promise.all([
+      conversationApi.index({ search: forwardSearch.value, per_page: 10 }),
+      groupApi.index({ search: forwardSearch.value, per_page: 10 }),
+    ])
+    forwardResults.value = [
+      ...(c.data.data || []).map((x) => ({ kind: 'conversation', id: x.conversation_id, name: x.participant_name || t('messages.directChat') })),
+      ...(g.data.data || []).map((x) => ({ kind: 'group', id: x.group_conversation_id, name: x.name })),
+    ]
+  } catch (e) { }
+}
+async function forwardTo(target) {
+  forwarding.value = true
+  try {
+    await featuresApi.forward({
+      message_type: messageType(forwardMsg.value),
+      message_id: msgId(forwardMsg.value),
+      target_type: target.kind,
+      target_id: target.id,
+    })
+    toast(t('messages.forwarded'))
+    closeForwardPicker()
+  } catch (err) {
+    modalError.value = flattenError(err)
+  } finally {
+    forwarding.value = false
+  }
+}
+
+function openSearchPanel() {
+  showSearchPanel.value = true
+  searchQuery.value = ''
+  searchResults.value = []
+}
+function closeSearchPanel() {
+  showSearchPanel.value = false
+}
+async function runSearch() {
+  if (!searchQuery.value.trim() || !activeId.value) return
+  searchingMessages.value = true
+  try {
+    const res = await featuresApi.search({
+      query: searchQuery.value.trim(),
+      message_type: activeKind.value,
+      chat_id: activeId.value,
+    })
+    searchResults.value = res.data.data || []
+  } catch (err) {
+    modalError.value = flattenError(err)
+  } finally {
+    searchingMessages.value = false
+  }
+}
+function focusResult(m) {
+  closeSearchPanel()
+  const el = document.getElementById('msg-' + m.message_id)
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+async function exportHistory() {
+  try {
+    const res = await featuresApi.exportCsv({
+      message_type: activeKind.value,
+      chat_id: activeId.value,
+    })
+    const blob = new Blob([res.data], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'chat-export.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+
+function openRoomLinkModal() {
+  showRoomLinkModal.value = true
+  roomLinkSearch.value = ''
+  roomLinkResults.value = []
+  searchRooms()
+}
+function closeRoomLinkModal() {
+  showRoomLinkModal.value = false
+}
+async function searchRooms() {
+  try {
+    const res = await roomLinkApi.searchRooms(roomLinkSearch.value)
+    roomLinkResults.value = res.data.data || res.data || []
+  } catch (e) { }
+}
+async function linkRoom(room) {
+  try {
+    const res = await roomLinkApi.store({
+      chat_type: activeKind.value,
+      chat_id: activeId.value,
+      room_id: room.room_id,
+    })
+    if (!roomLinks.value.some((l) => l.id === res.data.item.id)) roomLinks.value.push(res.data.item)
+    closeRoomLinkModal()
+    loadRoomLinks()
+    toast(t('messages.roomLinked'))
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+async function unlinkRoom(id) {
+  try {
+    await roomLinkApi.destroy(id)
+    roomLinks.value = roomLinks.value.filter((l) => l.id !== id)
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+async function loadRoomLinks() {
+  try {
+    const res = await roomLinkApi.index({ chat_type: activeKind.value, chat_id: activeId.value })
+    roomLinks.value = res.data.data || []
+  } catch (e) { }
+}
+
+async function convertToTask(msg) {
+  closeMsgMenu()
+  if (!confirm(t('messages.confirmConvertTask'))) return
+  try {
+    const res = await taskGroupApi.convert(activeId.value, msgId(msg), { task_type: taskGroupType.value })
+    toast(t('messages.taskConverted'))
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+
+function openWorkspace(tab) {
+  workspaceTab.value = tab || 'announcements'
+  showWorkspace.value = true
+  loadWorkspace()
+}
+function closeWorkspace() {
+  showWorkspace.value = false
+}
+async function loadWorkspace() {
+  loadAnnouncements()
+  loadMeetings()
+  loadHandovers()
+  loadEscalations()
+  loadNearbyStaff()
+  loadGuestMessages()
+  loadSos()
+  loadPolicies()
+  loadPreferences()
+  loadScheduled()
+}
+async function loadAnnouncements() {
+  try {
+    const res = await announcementApi.index()
+    announcements.value = res.data.data || []
+  } catch (e) { }
+}
+async function postAnnouncement() {
+  if (!announcementBody.value.trim()) return
+  savingFeature.value = true
+  try {
+    await announcementApi.store({
+      title: announcementTitle.value.trim() || null,
+      body: announcementBody.value.trim(),
+      priority: announcementPriority.value,
+    })
+    announcementTitle.value = ''
+    announcementBody.value = ''
+    loadAnnouncements()
+    toast(t('messages.announcementPosted'))
+  } catch (err) {
+    modalError.value = flattenError(err)
+  } finally {
+    savingFeature.value = false
+  }
+}
+async function ackAnnouncement(id) {
+  try {
+    await announcementApi.acknowledge(id)
+    loadAnnouncements()
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+async function loadMeetings() {
+  try {
+    const res = await meetingApi.index()
+    meetings.value = res.data.data || []
+  } catch (e) { }
+}
+async function searchMeetingUsers() {
+  if (!meetingUserSearch.value) {
+    meetingUserResults.value = []
+    return
+  }
+  try {
+    const res = await meetingApi.searchUsers(meetingUserSearch.value)
+    meetingUserResults.value = res.data.data || res.data || []
+  } catch (e) { }
+}
+function toggleMeetingInvitee(user) {
+  const i = meetingInvitees.value.findIndex((u) => u.user_id === user.user_id)
+  if (i >= 0) meetingInvitees.value.splice(i, 1)
+  else meetingInvitees.value.push(user)
+}
+async function createMeeting() {
+  if (!meetingTitle.value.trim() || !meetingStart.value) {
+    modalError.value = t('messages.meetingNeedsFields')
+    return
+  }
+  savingFeature.value = true
+  try {
+    await meetingApi.store({
+      title: meetingTitle.value.trim(),
+      start_at: new Date(meetingStart.value).toISOString(),
+      invitee_ids: meetingInvitees.value.map((u) => u.user_id),
+    })
+    meetingTitle.value = ''
+    meetingStart.value = ''
+    meetingInvitees.value = []
+    loadMeetings()
+    toast(t('messages.meetingCreated'))
+  } catch (err) {
+    modalError.value = flattenError(err)
+  } finally {
+    savingFeature.value = false
+  }
+}
+async function respondMeeting(m, status) {
+  try {
+    await meetingApi.respond(m.id, { status })
+    loadMeetings()
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+async function loadHandovers() {
+  try {
+    const res = await handoverApi.index()
+    handovers.value = res.data.data || []
+  } catch (e) { }
+}
+async function createHandover() {
+  if (!handoverNotes.value.trim()) return
+  savingFeature.value = true
+  try {
+    await handoverApi.store({
+      title: handoverTitle.value.trim() || null,
+      notes: handoverNotes.value.trim(),
+    })
+    handoverTitle.value = ''
+    handoverNotes.value = ''
+    loadHandovers()
+    toast(t('messages.handoverPosted'))
+  } catch (err) {
+    modalError.value = flattenError(err)
+  } finally {
+    savingFeature.value = false
+  }
+}
+async function ackHandover(id) {
+  try {
+    await handoverApi.acknowledge(id)
+    loadHandovers()
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+async function loadNearbyStaff() {
+  try {
+    const res = await staffLocationApi.nearby()
+    nearbyStaff.value = res.data.data || res.data || []
+  } catch (e) { }
+}
+async function updateMyLocation() {
+  try {
+    await staffLocationApi.update({ zone: myLocation.value, floor: myFloor.value || null })
+    toast(t('messages.locationUpdated'))
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+async function loadGuestMessages() {
+  try {
+    const res = await guestMessageApi.index()
+    guestMessages.value = res.data.data || []
+  } catch (e) { }
+}
+async function sendGuestMessage() {
+  if (!guestPhone.value.trim() || !guestBody.value.trim()) return
+  savingFeature.value = true
+  try {
+    await guestMessageApi.store({ phone: guestPhone.value.trim(), body: guestBody.value.trim() })
+    guestBody.value = ''
+    loadGuestMessages()
+    toast(t('messages.guestSmsSent'))
+  } catch (err) {
+    modalError.value = flattenError(err)
+  } finally {
+    savingFeature.value = false
+  }
+}
+async function loadEscalations() {
+  try {
+    const res = await escalationApi.index()
+    escalations.value = res.data.data || []
+  } catch (e) { }
+}
+async function escalateMessage(msg) {
+  closeMsgMenu()
+  try {
+    await escalationApi.store({
+      message_type: messageType(msg),
+      message_id: msgId(msg),
+    })
+    toast(t('messages.escalated'))
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+async function resolveEscalation(id) {
+  try {
+    await escalationApi.resolve(id, { resolution: t('messages.escalationResolved') })
+    loadEscalations()
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+async function loadPolicies() {
+  try {
+    const res = await retentionApi.index()
+    policies.value = res.data.data || []
+  } catch (e) { }
+}
+async function saveRetention() {
+  savingFeature.value = true
+  try {
+    await retentionApi.store({ scope: 'global', days: retentionDays.value })
+    loadPolicies()
+    toast(t('messages.retentionSaved'))
+  } catch (err) {
+    modalError.value = flattenError(err)
+  } finally {
+    savingFeature.value = false
+  }
+}
+async function deleteRetention(id) {
+  try {
+    await retentionApi.destroy(id)
+    loadPolicies()
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+async function loadPreferences() {
+  try {
+    const res = await preferenceApi.index()
+    preferences.value = res.data.data || []
+  } catch (e) { }
+}
+async function savePreference(pref) {
+  try {
+    await preferenceApi.store({
+      scope: activeKind.value === 'group' ? 'group' : 'conversation',
+      target_id: activeId.value,
+      muted: pref.muted,
+      push_enabled: pref.push_enabled,
+    })
+    toast(t('messages.preferenceSaved'))
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+async function muteCurrentChat() {
+  const pref = preferences.value.find(
+    (p) => p.message_type === activeKind.value && p.chat_id === activeId.value,
+  )
+  const next = !(pref && pref.mutes)
+  try {
+    await preferenceApi.store({
+      scope: activeKind.value === 'group' ? 'group' : 'conversation',
+      target_id: activeId.value,
+      muted: next,
+    })
+    loadPreferences()
+    toast(next ? t('messages.muted') : t('messages.unmuted'))
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+function isChatMuted() {
+  const scope = activeKind.value === 'group' ? 'group' : 'conversation'
+  return preferences.value.some((p) => p.scope === scope && p.target_id === activeId.value && p.muted)
+}
+async function loadSos() {
+  try {
+    const res = await sosApi.index()
+    sosAlerts.value = res.data.data || []
+  } catch (e) { }
+}
+function openSosPanel() {
+  openWorkspace('sos')
+}
+function closeSosPanel() {
+  showWorkspace.value = false
+}
+async function initiateSos() {
+  if (!confirm(t('messages.confirmSos'))) return
+  savingFeature.value = true
+  try {
+    const res = await sosApi.initiate({ message: myLocation.value || null })
+    activeSos.value = res.data.sos_alert
+    toast(t('messages.sosInitiated'))
+  } catch (err) {
+    modalError.value = flattenError(err)
+  } finally {
+    savingFeature.value = false
+  }
+}
+async function ackSos(id) {
+  try {
+    await sosApi.acknowledge(id)
+    loadSos()
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+async function resolveSos(id) {
+  try {
+    await sosApi.resolve(id, { resolution: t('messages.sosResolvedDefault') })
+    loadSos()
+    if (activeSos.value && activeSos.value.id === id) activeSos.value = null
+  } catch (err) {
+    modalError.value = flattenError(err)
+  }
+}
+function toast(text) {
+  if (window.toast) window.toast(text)
+}
+
+function mentionName(userId) {
+  const u = mentionableUsers.value.find((x) => x.user_id === userId)
+  return u ? u.full_name : null
+}
+
+function renderBody(msg) {
+  const body = msg.body || ''
+  const names = (msg.mentions || []).map((m) => mentionName(m.user_id)).filter(Boolean)
+  if (!names.length) return [{ text: body, isMention: false }]
+  const esc = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const pattern = new RegExp('(@(?:' + esc.join('|') + '))\\b', 'gi')
+  const parts = []
+  let last = 0
+  let m
+  while ((m = pattern.exec(body)) !== null) {
+    if (m.index > last) parts.push({ text: body.slice(last, m.index), isMention: false })
+    parts.push({ text: body.slice(m.index + 1, m.index + m[1].length), isMention: true })
+    last = m.index + m[1].length
+  }
+  if (last < body.length) parts.push({ text: body.slice(last), isMention: false })
+  return parts
+}
+
+function collectMentions(body) {
+  const ids = []
+  for (const u of mentionableUsers.value) {
+    const pattern = new RegExp(`@${u.full_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i')
+    if (pattern.test(body)) ids.push(u.user_id)
+  }
+  return ids
+}
+
+function onDraftInput() {
+  const el = draftInput.value
+  const caret = el?.selectionStart ?? draft.value.length
+  const before = draft.value.slice(0, caret)
+  const match = before.match(/(^|\s)@([\w\s]*)$/)
+  if (match) {
+    mentionTriggerPos = match.index + match[1].length
+    mentionQuery.value = match[2]
+    mentionSuggestions.value = mentionableUsers.value.filter((u) =>
+      u.full_name.toLowerCase().startsWith(mentionQuery.value.toLowerCase()),
+    )
+  } else {
+    mentionSuggestions.value = []
+    mentionTriggerPos = -1
+  }
+}
+
+function applyMention(user) {
+  if (mentionTriggerPos < 0) return
+  const before = draft.value.slice(0, mentionTriggerPos)
+  const rest = draft.value.slice(mentionTriggerPos + 1 + mentionQuery.value.length)
+  draft.value = before + '@' + user.full_name + ' '
+  if (rest) draft.value += rest
+  mentionSuggestions.value = []
+  mentionTriggerPos = -1
+  requestAnimationFrame(() => draftInput.value?.focus())
+}
+
+function flattenError(err) {
+  const errors = err.response?.data?.errors
+  if (errors) return Object.values(errors).flat().join(' ')
+  return err.response?.data?.message || t('common.actionFailed')
+}
+
+function scrollToBottom() {
+  requestAnimationFrame(() => {
+    const el = document.querySelector('.chat-messages')
+    if (el) el.scrollTop = el.scrollHeight
+  })
+}
+
+function scrollToMessage(msg) {
+  const id = msg.reply_to?.message_id
+  if (!id) return
+  const el = document.getElementById('msg-' + id)
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+function toGroupItem(g) {
+  return {
+    kind: 'group',
+    id: g.group_conversation_id,
+    name: g.name,
+    scope: g.scope,
+    unread_count: g.unread_count || 0,
+    member_count: g.member_count || 0,
+    last_message_at: g.last_message_at || g.created_at,
+    last_message: g.last_message,
+    created_at: g.created_at,
+  }
+}
+
+async function loadConversations(page = 1, replace = true) {
+  loadingConvs.value = true
+  error.value = ''
+  try {
+    const res = await conversationApi.index({ page, per_page: 20, search: listSearch.value })
+    const items = res.data.data || []
+    if (replace) conversations.value = items
+    else {
+      const ids = new Set(conversations.value.map((c) => c.conversation_id))
+      conversations.value.push(...items.filter((c) => !ids.has(c.conversation_id)))
+    }
+    convPage.value = page
+    convMeta.value = res.data
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    loadingConvs.value = false
+  }
+}
+
+async function loadGroups(page = 1, replace = true) {
+  loadingConvs.value = true
+  error.value = ''
+  try {
+    const res = await groupApi.index({ page, per_page: 20, search: listSearch.value })
+    const items = res.data.data || []
+    if (replace) groups.value = items
+    else {
+      const ids = new Set(groups.value.map((g) => g.group_conversation_id))
+      groups.value.push(...items.filter((g) => !ids.has(g.group_conversation_id)))
+    }
+    groupPage.value = page
+    groupMeta.value = res.data
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    loadingConvs.value = false
+  }
+}
+
+function loadMoreChats() {
+  if (convMeta.value?.next_page_url && convPage.value < (convMeta.value.last_page || 1)) {
+    loadConversations(convPage.value + 1, false)
+  }
+  if (groupMeta.value?.next_page_url && groupPage.value < (groupMeta.value.last_page || 1)) {
+    loadGroups(groupPage.value + 1, false)
+  }
+}
+
+function onListSearch() {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(async () => {
+    await loadConversations(1)
+    await loadGroups(1)
+  }, 400)
+}
+
+async function openChat(chat) {
+  activeKind.value = chat.kind
+  activeId.value = chat.id
+  subscribeThread()
+  loadingMsgs.value = true
+  error.value = ''
+  recordingPreview.value = false
+  cancelRecording()
+  cancelFilePreview()
+  showEmojiPicker.value = false
+  mentionSuggestions.value = []
+  mentionTriggerPos = -1
+  viewOncePreview.value = null
+  replyTo.value = null
+  showPinned.value = false
+  showSearchPanel.value = false
+  pinnedMsgs.value = []
+  loadPinned()
+  loadRoomLinks()
+  loadPreferences()
+  try {
+    if (chat.kind === 'group') {
+      const res = await groupApi.show(chat.id)
+      messages.value = res.data.messages || []
+      groupInfo.value = res.data.group || null
+      if (groupInfo.value) {
+        chat.last_message_at = groupInfo.value.last_message_at || chat.last_message_at
+        chat.member_count = groupInfo.value.member_count || chat.member_count
+      }
+    } else {
+      const res = await conversationApi.show(chat.id)
+      messages.value = res.data.messages || []
+      chat.last_message_at = res.data.conversation?.last_message_at || chat.last_message_at
+      groupInfo.value = null
+    }
+    scrollToBottom()
+    markReadSilently()
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    loadingMsgs.value = false
+  }
+}
+
+function closeThread() {
+  if (activeThreadChannel) {
+    activeThreadChannel.unsubscribe()
+    activeThreadChannel = null
+  }
+  activeId.value = null
+  messages.value = []
+  groupInfo.value = null
+  mentionSuggestions.value = []
+  mentionTriggerPos = -1
+  viewOncePreview.value = null
+}
+
+function markReadSilently() {
+  if (!activeId.value) return
+  if (activeKind.value === 'group') {
+    groupApi.markRead(activeId.value).catch(() => { })
+    const chat = activeChat.value
+    if (chat) chat.unread_count = 0
+  } else {
+    conversationApi.markRead(activeId.value).catch(() => { })
+    const chat = activeChat.value
+    if (chat) chat.unread_count = 0
+    messages.value.forEach((m) => {
+      if (m.sender_id !== me.value.user_id) m.read_at = new Date().toISOString()
+    })
+  }
+}
+
+function updateActiveChatPreview(item) {
+  const chat = activeChat.value
+  if (!chat) return
+  chat.last_message_at = item.created_at
+  chat.last_message = {
+    sender_id: item.sender_id,
+    type: item.type,
+    body: item.body,
+    media_url: item.media_url,
+    view_once: item.view_once,
+    deleted: item.deleted,
+    created_at: item.created_at,
+  }
+  chat.unread_count = 0
+}
+
+async function sendMessage() {
+  const body = draft.value.trim()
+  if (!body || !activeId.value) return
+  sending.value = true
+  error.value = ''
+  try {
+    const api = activeKind.value === 'group' ? groupApi : conversationApi
+    const payload = { body, mention_ids: collectMentions(body), priority: sendPriority.value }
+    if (replyTo.value) {
+      payload.reply_to_id = msgId(replyTo.value)
+    }
+    if (showPollBuilder.value && pollQuestion.value.trim() && pollOptions.value.filter((o) => o.trim()).length >= 2) {
+      payload.poll = {
+        question: pollQuestion.value.trim(),
+        options: pollOptions.value.filter((o) => o.trim()).map((o) => o.trim()),
+        multiple: pollMultiple.value,
+      }
+    }
+    const res = await api.send(activeId.value, payload)
+    messages.value.push(res.data.item)
+    draft.value = ''
+    clearComposerExtras()
+    updateActiveChatPreview(res.data.item)
+    scrollToBottom()
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    sending.value = false
+  }
+}
+
+function clearComposerExtras() {
+  replyTo.value = null
+  showPollBuilder.value = false
+  pollQuestion.value = ''
+  pollOptions.value = []
+  pollMultiple.value = false
+  showTemplatePicker.value = false
+  showScheduler.value = false
+  scheduleAt.value = ''
+}
+
+function startReply(msg) {
+  replyTo.value = msg
+  closeMsgMenu()
+  requestAnimationFrame(() => draftInput.value?.focus())
+}
+
+function cancelReply() {
+  replyTo.value = null
+}
+
+function togglePriority() {
+  sendPriority.value = sendPriority.value === 'urgent' ? 'normal' : 'urgent'
+}
+
+function addPollOption() {
+  pollOptions.value.push('')
+}
+
+function removePollOption(index) {
+  pollOptions.value.splice(index, 1)
+}
+
+function sendFormData(fd, onDone) {
+  sending.value = true
+  error.value = ''
+  const api = activeKind.value === 'group' ? groupApi : conversationApi
+  return api
+    .send(activeId.value, fd)
+    .then((res) => {
+      messages.value.push(res.data.item)
+      updateActiveChatPreview(res.data.item)
+      scrollToBottom()
+      if (onDone) onDone(res)
+    })
+    .catch((err) => {
+      error.value = flattenError(err)
+    })
+    .finally(() => {
+      sending.value = false
+    })
+}
+
+function onFilePicked(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+  if (file.size > 10 * 1024 * 1024) {
+    error.value = t('messages.fileTooLarge')
+    return
+  }
+  if (filePreviewUrl.value) URL.revokeObjectURL(filePreviewUrl.value)
+  filePreview.value = file
+  filePreviewUrl.value = URL.createObjectURL(file)
+  showEmojiPicker.value = false
+}
+
+function cancelFilePreview() {
+  if (filePreviewUrl.value) URL.revokeObjectURL(filePreviewUrl.value)
+  filePreview.value = null
+  filePreviewUrl.value = ''
+  fileViewOnce.value = false
+}
+
+function sendFilePreview() {
+  const file = filePreview.value
+  if (!file || !activeId.value) return
+  const fd = new FormData()
+  fd.append('media', file)
+  if (fileViewOnce.value) fd.append('view_once', 'true')
+  if (file.type?.startsWith('audio/')) fd.append('type', 'audio')
+  else if (file.type?.startsWith('image/')) fd.append('type', 'image')
+  else fd.append('type', 'file')
+  const url = filePreviewUrl.value
+  sendFormData(fd).then(() => {
+    if (url) URL.revokeObjectURL(url)
+    filePreview.value = null
+    filePreviewUrl.value = ''
+    fileViewOnce.value = false
+  })
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return ''
+  const kb = bytes / 1024
+  if (kb < 1024) return `${Math.round(kb)} KB`
+  return `${(kb / 1024).toFixed(1)} MB`
+}
+
+function insertEmoji(emoji) {
+  const el = draftInput.value
+  const start = el?.selectionStart ?? draft.value.length
+  const end = el?.selectionEnd ?? draft.value.length
+  draft.value = draft.value.slice(0, start) + emoji + draft.value.slice(end)
+  if (el) {
+    requestAnimationFrame(() => {
+      el.focus()
+      el.selectionStart = el.selectionEnd = start + emoji.length
+    })
+  }
+}
+
+async function startRecording() {
+  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+    error.value = t('messages.recordingUnsupported')
+    return
+  }
+  cancelFilePreview()
+  showEmojiPicker.value = false
+  try {
+    recStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    mediaRecorder = new MediaRecorder(recStream)
+    recMimeType = mediaRecorder.mimeType || 'audio/webm'
+    audioChunks = []
+    recordingBlob.value = null
+    recordingUrl.value = ''
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size) audioChunks.push(e.data)
+    }
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(audioChunks, { type: recMimeType })
+      recordingBlob.value = blob
+      recordingUrl.value = URL.createObjectURL(blob)
+    }
+    mediaRecorder.start()
+    isRecording.value = true
+    recSeconds.value = 0
+    recTimer = setInterval(() => {
+      recSeconds.value += 1
+    }, 1000)
+  } catch {
+    error.value = t('messages.recordingUnsupported')
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    try {
+      mediaRecorder.stop()
+    } catch {
+      // Already stopped by the stream ending.
+    }
+  }
+  if (recStream) recStream.getTracks().forEach((tr) => tr.stop())
+  clearInterval(recTimer)
+  isRecording.value = false
+  recStream = null
+  recordingPreview.value = true
+}
+
+function cancelRecording() {
+  clearInterval(recTimer)
+  if (recStream) recStream.getTracks().forEach((tr) => tr.stop())
+  isRecording.value = false
+  recStream = null
+  mediaRecorder = null
+  recordingBlob.value = null
+  recordingUrl.value = ''
+  recSeconds.value = 0
+  recordingPreview.value = false
+}
+
+function sendRecording() {
+  if (!recordingBlob.value || !activeId.value) return
+  const fd = new FormData()
+  fd.append('media', recordingBlob.value, `voice-${Date.now()}.webm`)
+  fd.append('type', 'audio')
+  const url = recordingUrl.value
+  sendFormData(fd).then(() => {
+    if (url) URL.revokeObjectURL(url)
+    recordingPreview.value = false
+    recordingBlob.value = null
+    recordingUrl.value = ''
+    recSeconds.value = 0
+  })
+}
+
+async function refreshAll() {
+  await Promise.all([loadConversations(1), loadGroups(1), loadStatusMap()])
+}
+
+function subscribeUserChannel() {
+  const echo = getEcho()
+  if (!echo || !me.value.user_id) return
+  echo.private(`user.${me.value.user_id}`).listen('.preview.updated', handlePreviewUpdated)
+  echo.private(`user.${me.value.user_id}`).listen('.message.deleted', handleUserMessageDeleted)
+  echo.private(`user.${me.value.user_id}`).listen('.call.invited', callManager.handleCallInvited)
+  echo.private(`user.${me.value.user_id}`).listen('.status.posted', handleStatusPosted)
+  echo.private(`user.${me.value.user_id}`).listen('.meeting.invited', handleMeetingInvited)
+  echo.private(`user.${me.value.user_id}`).listen('.meeting.response', handleMeetingResponse)
+  echo.private(`tenant.${me.value.tenant_id}`).listen('.announcement.posted', handleAnnouncementPosted)
+  echo.private(`tenant.${me.value.tenant_id}`).listen('.announcement.acknowledged', handleAnnouncementPosted)
+  echo.private(`tenant.${me.value.tenant_id}`).listen('.sos.initiated', handleSosInitiated)
+  echo.private(`tenant.${me.value.tenant_id}`).listen('.sos.resolved', handleSosResolved)
+  echo.private(`tenant.${me.value.tenant_id}`).listen('.handover.posted', handleHandoverPosted)
+  echo.private(`tenant.${me.value.tenant_id}`).listen('.handover.acknowledged', handleHandoverPosted)
+  echo.private(`tenant.${me.value.tenant_id}`).listen('.staff.location.updated', handleStaffLocationUpdated)
+  echo.private(`tenant.${me.value.tenant_id}`).listen('.guest.message', handleGuestMessagePosted)
+  echo.private(`tenant.${me.value.tenant_id}`).listen('.message.escalated', handleMessageEscalated)
+}
+
+function handleAnnouncementPosted() {
+  loadAnnouncements()
+}
+function handleSosInitiated(data) {
+  loadSos()
+  if (data?.user_id !== me.value.user_id) {
+    toast(t('messages.sosIncoming'))
+  }
+}
+function handleSosResolved() {
+  loadSos()
+}
+function handleHandoverPosted() {
+  loadHandovers()
+}
+function handleMeetingInvited() {
+  loadMeetings()
+  toast(t('messages.meetingInvited'))
+}
+function handleMeetingResponse() {
+  loadMeetings()
+}
+function handleStaffLocationUpdated() {
+  if (workspaceTab.value === 'nearby') loadNearbyStaff()
+}
+function handleGuestMessagePosted() {
+  loadGuestMessages()
+  toast(t('messages.guestMessageIncoming'))
+}
+function handleMessageEscalated() {
+  loadEscalations()
+  toast(t('messages.escalationIncoming'))
+}
+
+function handleStatusPosted(data) {
+  const s = data?.status
+  if (!s?.user_id) return
+  if (s.user_id === me.value.user_id) {
+    myStatusHas.value = true
+    return
+  }
+  statusByUser.value = {
+    ...statusByUser.value,
+    [s.user_id]: { has: true, viewed: false },
+  }
+}
+
+function handlePreviewUpdated(data) {
+  const isDirect = data.kind === 'direct'
+  const isActive = activeKind.value === data.kind && activeId.value === data.id
+  const list = isDirect ? conversations.value : groups.value
+  const item = list.find((c) => (isDirect ? c.conversation_id === data.id : c.group_conversation_id === data.id))
+  if (item) {
+    item.last_message = data.last_message || null
+    item.last_message_at = data.last_message_at || item.last_message_at
+    item.unread_count = isActive ? 0 : data.unread_count || 0
+  } else if (isDirect) {
+    loadConversations(1)
+  } else {
+    loadGroups(1)
+  }
+}
+
+function subscribeThread() {
+  const echo = getEcho()
+  if (activeThreadChannel) {
+    activeThreadChannel.unsubscribe()
+    activeThreadChannel = null
+  }
+  if (!echo || !activeId.value) return
+  if (activeKind.value === 'group') {
+    activeThreadChannel = echo.private(`group.${activeId.value}`)
+    activeThreadChannel.listen('.group.message.sent', handleGroupMessageSent)
+  } else {
+    activeThreadChannel = echo.private(`conversation.${activeId.value}`)
+    activeThreadChannel.listen('.message.sent', handleMessageSent)
+  }
+  activeThreadChannel.listen('.message.deleted', handleMessageDeleted)
+  activeThreadChannel.listen('.message.reaction.updated', handleReactionUpdated)
+  activeThreadChannel.listen('.message.viewed_once', handleViewedOnce)
+  activeThreadChannel.listen('.reply.sent', handleReplySent)
+  activeThreadChannel.listen('.message.pinned', (data) => setPinnedLocally(data, true))
+  activeThreadChannel.listen('.message.unpinned', (data) => setPinnedLocally(data, false))
+  activeThreadChannel.listen('.poll.created', handlePollVoted)
+  activeThreadChannel.listen('.poll.voted', handlePollVoted)
+  activeThreadChannel.listen('.task.converted', handleTaskConverted)
+}
+
+function setPinnedLocally(data, pinned) {
+  const msg = messages.value.find((m) => msgId(m) === data.message_id)
+  if (msg) {
+    msg.pinned_at = pinned ? new Date().toISOString() : null
+    loadPinned()
+  }
+}
+
+function handleReplySent(data) {
+  const item = data?.item
+  if (!item) return
+  const isGroup = activeKind.value === 'group'
+  const id = isGroup ? item.group_message_id : item.message_id
+  if (item.sender_id === me.value.user_id) return
+  if (messages.value.some((m) => msgId(m) === id)) return
+  messages.value.push(item)
+  if (isGroup) {
+    if (activeId.value !== item.group_conversation_id) return
+    markReadSilently()
+  } else {
+    if (activeId.value !== item.conversation_id) return
+    markReadSilently()
+  }
+  scrollToBottom()
+}
+
+function handlePollVoted(data) {
+  const msg = messages.value.find((m) => m.poll && m.poll.poll_id === (data.poll_id || data.poll?.poll_id))
+  if (!msg) return
+  if (data.poll) {
+    msg.poll = { ...msg.poll, ...data.poll, options: data.poll.options }
+  } else {
+    const options = data.options || []
+    msg.poll.options = msg.poll.options.map((o) => {
+      const fresh = options.find((x) => x.poll_option_id === o.poll_option_id)
+      return fresh ? { ...o, votes: fresh.votes, pct: fresh.pct } : o
+    })
+    msg.poll.total_votes = data.total_votes
+  }
+}
+
+function handleTaskConverted(data) {
+  const msg = messages.value.find((m) => msgId(m) === data.message_id)
+  if (msg) {
+    msg.is_task = true
+    msg.task_kind = data.task?.kind || msg.task_kind
+    msg.task_status = data.task?.status || 'pending'
+  }
+}
+
+function handleUserMessageDeleted(data) {
+  if (data.scope !== 'me' || !data.channel_id) return
+  const inThread = activeKind.value === data.message_type && activeId.value === data.channel_id
+  if (!inThread) return
+  removeMessageLocally(data.message_id, data.message_type)
+}
+
+function handleMessageDeleted(data) {
+  const msg = messages.value.find((m) => msgId(m) === data.message_id)
+  if (!msg) return
+  if (data.scope === 'everyone') {
+    applyDeletedLocally(msg, 'everyone')
+  } else if (data.deleted_by === me.value.user_id) {
+    removeMessageLocally(data.message_id, data.message_type)
+  }
+}
+
+function handleReactionUpdated(data) {
+  const msg = messages.value.find((m) => msgId(m) === data.message_id)
+  if (msg) msg.reactions = data.reactions || []
+}
+
+function handleViewedOnce(data) {
+  const msg = messages.value.find((m) => msgId(m) === data.message_id)
+  if (msg) msg.viewed_at = data.viewed_at
+}
+
+function removeMessageLocally(id, kind) {
+  const key = kind === 'group' ? 'group_message_id' : 'message_id'
+  const idx = messages.value.findIndex((m) => m[key] === id)
+  if (idx > -1) {
+    messages.value.splice(idx, 1)
+    refreshThreadPreview()
+  }
+}
+
+function handleMessageSent(item) {
+  if (activeKind.value !== 'direct' || activeId.value !== item.conversation_id) return
+  if (messages.value.some((m) => m.message_id === item.message_id)) return
+  messages.value.push(item)
+  if (item.sender_id !== me.value.user_id) markReadSilently()
+  scrollToBottom()
+}
+
+function handleGroupMessageSent(item) {
+  if (activeKind.value !== 'group' || activeId.value !== item.group_conversation_id) return
+  if (messages.value.some((m) => m.group_message_id === item.group_message_id)) return
+  messages.value.push(item)
+  scrollToBottom()
+}
+
+function openNewMessage() {
+  showNew.value = true
+  modalError.value = ''
+  modalSuccess.value = ''
+  userSearch.value = ''
+  userResults.value = []
+  newScope.value = 'hotel'
+}
+
+function closeNewMessage() {
+  showNew.value = false
+}
+
+function switchScope(scope) {
+  newScope.value = scope
+  userSearch.value = ''
+  userResults.value = []
+}
+
+async function searchUsers() {
+  clearTimeout(searchTimer)
+  const q = userSearch.value.trim()
+  if (!q) {
+    userResults.value = []
+    return
+  }
+  searchTimer = setTimeout(async () => {
+    searchingUsers.value = true
+    try {
+      const res = await conversationApi.users({ scope: newScope.value, search: q, per_page: 20 })
+      userResults.value = res.data.data || []
+    } catch {
+      userResults.value = []
+    } finally {
+      searchingUsers.value = false
+    }
+  }, 300)
+}
+
+async function startConversation(user) {
+  startingWith.value = user.user_id
+  modalError.value = ''
+  modalSuccess.value = ''
+  try {
+    const res = await conversationApi.store({ recipient_id: user.user_id, scope: newScope.value })
+    const conv = res.data.conversation
+    success.value = t('messages.started')
+    showNew.value = false
+    startingWith.value = null
+    await loadConversations(1)
+    openChat({
+      kind: 'direct',
+      id: conv.conversation_id,
+      name: conv.other_participant?.full_name || '—',
+      scope: conv.scope,
+      hotel_name: conv.other_participant?.hotel_name,
+      unread_count: 0,
+      last_message_at: conv.last_message_at || conv.created_at,
+      last_message: conv.last_message,
+      created_at: conv.created_at,
+    })
+  } catch (err) {
+    modalError.value = flattenError(err)
+    startingWith.value = null
+  }
+}
+
+function openNewGroup() {
+  showNewGroup.value = true
+  modalError.value = ''
+  groupName.value = ''
+  groupScope.value = 'hotel'
+  groupUserSearch.value = ''
+  groupUserResults.value = []
+  selectedGroupUsers.value = []
+}
+
+function closeNewGroup() {
+  showNewGroup.value = false
+}
+
+async function searchGroupUsers() {
+  clearTimeout(searchTimer)
+  const q = groupUserSearch.value.trim()
+  if (!q) {
+    groupUserResults.value = []
+    return
+  }
+  searchTimer = setTimeout(async () => {
+    searchingGroupUsers.value = true
+    try {
+      const res = await conversationApi.users({ scope: groupScope.value, search: q, per_page: 20 })
+      groupUserResults.value = res.data.data || []
+    } catch {
+      groupUserResults.value = []
+    } finally {
+      searchingGroupUsers.value = false
+    }
+  }, 300)
+}
+
+async function createGroup() {
+  const name = groupName.value.trim()
+  if (!name) return
+  creatingGroup.value = true
+  modalError.value = ''
+  try {
+    const res = isTaskGroupCreation.value
+      ? await taskGroupApi.store({ name, task_type: taskGroupType.value, member_ids: selectedGroupUsers.value })
+      : await groupApi.store({
+          name,
+          scope: groupScope.value,
+          member_ids: selectedGroupUsers.value,
+        })
+    success.value = t('messages.groupCreated')
+    const group = res.data.group
+    showNewGroup.value = false
+    creatingGroup.value = false
+    isTaskGroupCreation.value = false
+    await loadGroups(1)
+    openChat(toGroupItem(group))
+  } catch (err) {
+    modalError.value = flattenError(err)
+    creatingGroup.value = false
+  }
+}
+
+function openGroupManage() {
+  modalError.value = ''
+  modalSuccess.value = ''
+  groupUserSearch.value = ''
+  groupUserResults.value = []
+  selectedGroupUsers.value = []
+  showGroupManage.value = true
+}
+
+function closeGroupManage() {
+  showGroupManage.value = false
+}
+
+async function addSelectedMembers() {
+  if (!selectedGroupUsers.value.length || !activeId.value) return
+  addingMembers.value = true
+  modalError.value = ''
+  try {
+    const res = await groupApi.addMembers(activeId.value, { member_ids: selectedGroupUsers.value })
+    modalSuccess.value = t('messages.membersAdded')
+    groupInfo.value = res.data.group
+    selectedGroupUsers.value = []
+    groupUserResults.value = []
+    groupUserSearch.value = ''
+    const chat = activeChat.value
+    if (chat) chat.member_count = res.data.group?.member_count || chat.member_count
+  } catch (err) {
+    modalError.value = flattenError(err)
+  } finally {
+    addingMembers.value = false
+  }
+}
+
+async function removeMember(userId) {
+  if (!activeId.value) return
+  removingMember.value = true
+  modalError.value = ''
+  modalSuccess.value = ''
+  const isSelf = userId === me.value.user_id
+  try {
+    const res = await groupApi.removeMember(activeId.value, userId)
+    modalSuccess.value = isSelf ? t('messages.memberRemoved') : t('messages.memberRemoved')
+    if (isSelf) {
+      closeThread()
+      closeGroupManage()
+      await loadGroups(1)
+    } else {
+      groupInfo.value = res.data.group
+      const chat = activeChat.value
+      if (chat) chat.member_count = res.data.group?.member_count || chat.member_count
+    }
+  } catch (err) {
+    modalError.value = flattenError(err)
+  } finally {
+    removingMember.value = false
+  }
+}
+
+onMounted(() => {
+  initEcho()
+  subscribeUserChannel()
+  loadConversations(1)
+  loadGroups(1)
+  loadStatusMap()
+})
+
+onUnmounted(() => {
+  if (activeThreadChannel) {
+    activeThreadChannel.unsubscribe()
+    activeThreadChannel = null
+  }
+  callManager.dispose()
+  destroyEcho()
+  clearTimeout(searchTimer)
+  clearInterval(recTimer)
+  if (recStream) recStream.getTracks().forEach((tr) => tr.stop())
+})
+</script>
+
+<style scoped>
+.dashboard-page {
+  padding: 32px 20px;
+}
+
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.page-head h1 {
+  font-size: 24px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.page-head h1 i {
+  color: var(--brand);
+}
+
+.head-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.chat-shell {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 16px;
+  align-items: stretch;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  overflow: hidden;
+  min-height: 620px;
+}
+
+.chat-list {
+  border-right: 1px solid #eee;
+  display: flex;
+  flex-direction: column;
+  max-height: 700px;
+  overflow-y: auto;
+  background: #fbfcfe;
+}
+
+.chat-list-search {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  background: #fbfcfe;
+  z-index: 2;
+}
+
+.chat-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid #f4f4f4;
+  transition: background 0.15s;
+}
+
+.chat-item:hover {
+  background: #f3f6fb;
+}
+
+.chat-item.active {
+  background: #eaf4ff;
+  border-left: 3px solid var(--brand);
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-global {
+  background: #7d3c98;
+}
+
+.status-ring {
+  cursor: pointer;
+}
+
+.status-ring.unviewed {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 5px #25d366;
+}
+
+.status-ring.viewed {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 5px #c0c0c0;
+}
+
+.status-my {
+  position: relative;
+}
+
+.status-add {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  z-index: 2;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.status-add:hover {
+  background: var(--brand-dark);
+}
+
+.avatar-group {
+  background: #27ae60;
+}
+
+.avatar-group i {
+  font-size: 16px;
+}
+
+.chat-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.chat-item-top strong {
+  font-size: 14px;
+}
+
+.chat-item-sub {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.chat-preview {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.unread-badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.hotel-name {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-load-more {
+  padding: 12px;
+  text-align: center;
+}
+
+.chat-thread {
+  display: flex;
+  flex-direction: column;
+  min-height: 620px;
+}
+
+.chat-thread-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.chat-thread-who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-thread-who .muted {
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.back-btn {
+  display: none;
+}
+
+.members-btn {
+  flex-shrink: 0;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #f7f9fc;
+}
+
+.chat-empty {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.bubble {
+  max-width: 72%;
+  padding: 9px 13px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.bubble.mine {
+  align-self: flex-end;
+  background: var(--brand);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.bubble.theirs {
+  align-self: flex-start;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-bottom-left-radius: 4px;
+}
+
+.bubble-sender {
+  font-size: 11px;
+  font-weight: 700;
+  color: #7d3c98;
+  margin-bottom: 2px;
+}
+
+.bubble-meta {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 11px;
+  margin-top: 3px;
+  opacity: 0.75;
+}
+
+.ticks {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 2px;
+}
+
+.ticks .tick {
+  font-size: 11px;
+}
+
+.ticks .tick-read {
+  font-size: 11px;
+  color: #a3d8a3;
+}
+
+.bubble-audio {
+  width: 100%;
+  min-width: 200px;
+  height: 36px;
+  margin-bottom: 2px;
+}
+
+.bubble-image {
+  max-width: 260px;
+  max-height: 220px;
+  border-radius: 8px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.bubble-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+  text-decoration: underline;
+}
+
+.deleted-note {
+  font-style: italic;
+  opacity: 0.7;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.view-once-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px dashed rgba(128, 128, 128, 0.6);
+  background: rgba(128, 128, 128, 0.08);
+  color: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.view-once-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.mention-chip {
+  background: rgba(125, 60, 152, 0.15);
+  color: #7d3c98;
+  border-radius: 4px;
+  padding: 0 3px;
+  font-weight: 700;
+}
+
+.bubble.mine .mention-chip {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.bubble-reactions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.bubble-reaction {
+  background: #fff;
+  border: 1px solid #e2e2e2;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 13px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.bubble.mine .bubble-reaction {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #333;
+}
+
+.bubble-reaction.mine {
+  background: #eaf4ff;
+  border-color: var(--brand);
+}
+
+.bubble-reaction-count {
+  margin-left: 3px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.bubble-more {
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.45;
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 12px;
+}
+
+.bubble-more:hover {
+  opacity: 1;
+}
+
+.msg-menu {
+  position: fixed;
+  z-index: 60;
+  min-width: 180px;
+  background: #fff;
+  border: 1px solid #e2e2e2;
+  border-radius: 12px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.18);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.msg-menu-reactions {
+  display: flex;
+  gap: 2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 6px;
+}
+
+.msg-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.msg-menu-item:hover {
+  background: #f3f6fb;
+}
+
+.msg-menu-item.danger {
+  color: #c0392b;
+}
+
+.view-once-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #555;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.view-once-toggle input {
+  accent-color: var(--brand);
+}
+
+.view-once-viewer {
+  position: relative;
+  max-width: 640px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.view-once-viewer img {
+  max-width: 100%;
+  max-height: 70vh;
+  border-radius: 12px;
+}
+
+.mention-picker {
+  position: absolute;
+  left: 12px;
+  bottom: calc(100% + 8px);
+  width: 260px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #e2e2e2;
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  z-index: 20;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mention-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.mention-item:hover {
+  background: #f3f6fb;
+}
+
+.mention-item .avatar {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  font-size: 12px;
+}
+
+.mention-item-name {
+  font-size: 14px;
+}
+
+.call-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.call-card {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  min-height: 420px;
+  background: linear-gradient(180deg, #1b2a4a, #0f1830);
+  color: #fff;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 20px 22px;
+  overflow: hidden;
+}
+
+.call-video {
+  max-width: 760px;
+  min-height: 480px;
+}
+
+.call-remote {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.call-local {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 130px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  object-fit: cover;
+  background: #000;
+  z-index: 2;
+}
+
+.call-body {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar-call {
+  width: 84px;
+  height: 84px;
+  font-size: 28px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+.call-name {
+  font-size: 20px;
+}
+
+.call-sub {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 14px;
+}
+
+.call-actions {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+
+.call-btn {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.call-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.call-btn-accept {
+  background: #1e8e3e;
+}
+
+.call-btn-accept:hover {
+  background: #177a34;
+}
+
+.call-btn-decline {
+  background: #c0392b;
+}
+
+.call-btn-decline:hover {
+  background: #a93226;
+}
+
+.call-btn-off {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffb3a7;
+}
+
+.chat-composer {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border-top: 1px solid #eee;
+  align-items: center;
+  position: relative;
+}
+
+.chat-composer .textarea {
+  flex: 1;
+  resize: none;
+  min-height: 42px;
+  max-height: 120px;
+}
+
+.icon-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid #e2e2e2;
+  background: #fff;
+  color: var(--brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover {
+  background: #f3f6fb;
+}
+
+.icon-btn.emoji-toggle {
+  background: #fff8e6;
+  border-color: #f3d98b;
+  color: #b8860b;
+}
+
+.icon-btn.mic {
+  background: #eefaf1;
+  border-color: #cde9d6;
+  color: #1e8e3e;
+}
+
+.icon-btn.recording {
+  color: #fff;
+  background: #c0392b;
+  border-color: #c0392b;
+  animation: pulse 1.2s infinite;
+}
+
+.emoji-picker {
+  position: absolute;
+  left: 12px;
+  bottom: calc(100% + 8px);
+  width: 264px;
+  max-height: 220px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid #e2e2e2;
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  z-index: 20;
+}
+
+.emoji-item {
+  background: none;
+  border: none;
+  border-radius: 8px;
+  font-size: 20px;
+  line-height: 1;
+  padding: 6px 4px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.emoji-item:hover {
+  background: #f3f6fb;
+}
+
+.attachment-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.attachment-preview-media {
+  max-width: 160px;
+  max-height: 120px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.attachment-preview-file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.attachment-preview-file>i {
+  font-size: 34px;
+  color: var(--brand);
+  flex-shrink: 0;
+}
+
+.attachment-preview-file div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.attachment-preview-file strong {
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attachment-preview-file span {
+  font-size: 12px;
+  color: #888;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 0 8px rgba(192, 57, 43, 0);
+  }
+}
+
+.rec-timer {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.recording-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.recording-preview audio {
+  flex: 1;
+  min-width: 0;
+}
+
+.recording-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.hidden-input {
+  display: none;
+}
+
+.chat-thread-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #bbb;
+}
+
+.chat-thread-placeholder i {
+  font-size: 42px;
+}
+
+.placeholder-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.new-message-modal {
+  max-width: 540px;
+}
+
+.scope-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.scope-card {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  text-align: left;
+  padding: 12px;
+  border: 2px solid #eee;
+  border-radius: 8px;
+  background: #fff;
+  transition: all 0.15s;
+}
+
+.scope-card:hover {
+  border-color: #c9d6e8;
+}
+
+.scope-card.selected {
+  border-color: var(--brand);
+  background: #eaf4ff;
+}
+
+.scope-icon {
+  font-size: 18px;
+  color: var(--brand);
+}
+
+.scope-card span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scope-card .muted {
+  font-size: 12px;
+}
+
+.user-results {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+
+.user-result {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f4f4f4;
+  background: #fff;
+  transition: background 0.15s;
+}
+
+.user-result:last-child {
+  border-bottom: none;
+}
+
+.user-result:hover {
+  background: #f3f6fb;
+}
+
+.user-result:disabled {
+  opacity: 0.5;
+}
+
+.user-result-select {
+  cursor: pointer;
+}
+
+.user-result-select .checkbox {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  accent-color: var(--brand);
+}
+
+.user-results-foot {
+  padding: 10px;
+  border-top: 1px solid #eee;
+  text-align: right;
+}
+
+.user-result-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.user-result-body .muted {
+  font-size: 12px;
+}
+
+.user-result-go {
+  color: var(--brand);
+}
+
+.members-title {
+  font-size: 14px;
+  margin: 16px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.members-title i {
+  color: var(--brand);
+}
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 20px 16px;
+  }
+
+  .page-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .chat-shell {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .chat-list {
+    border-right: none;
+    max-height: none;
+  }
+
+  .chat-list.hidden-xs,
+  .chat-thread.hidden-xs {
+    display: none;
+  }
+
+  .back-btn {
+    display: inline-flex;
+  }
+
+  .chat-composer {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .chat-composer .icon-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .chat-composer .textarea {
+    min-height: 38px;
+    font-size: 15px;
+  }
+
+  .chat-composer .composer-send {
+    padding: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .chat-composer .composer-send-label {
+    display: none;
+  }
+
+  .scope-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .chat-composer {
+    gap: 4px;
+  }
+
+  .chat-composer .icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .chat-composer .composer-send {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+.task-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* ---- Feature UI ---- */
+.icon-btn.active {
+  color: var(--brand);
+  background: #eaf4ff;
+}
+
+.bubble-tags {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.bubble-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.tag-pin {
+  color: #7c6a00;
+  background: #fff7cc;
+}
+
+.tag-urgent {
+  color: #a00000;
+  background: #ffe3e3;
+}
+
+.tag-task {
+  color: #0a6b2d;
+  background: #dcfce7;
+}
+
+.bubble.urgent {
+  border-left: 3px solid #e11d48;
+}
+
+.bubble.starred-bubble {
+  background-image: linear-gradient(rgba(255, 213, 0, 0.05), rgba(255, 213, 0, 0.05));
+}
+
+.forwarded-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.reply-quote {
+  border-left: 3px solid var(--brand);
+  background: rgba(13, 110, 253, 0.06);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.reply-quote-author {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--brand);
+}
+
+.reply-quote-text {
+  font-size: 12px;
+  color: #444;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.translation-box {
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: #eef7ff;
+  border-radius: 6px;
+  font-size: 13px;
+  border-left: 3px solid #0dcaf0;
+}
+
+.bubble-translate {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 12px;
+}
+
+.bubble-translate:hover {
+  color: var(--brand);
+}
+
+.bubble-poll {
+  margin-top: 8px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.12);
+  padding-top: 8px;
+}
+
+.poll-question {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.poll-count {
+  display: block;
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.poll-option {
+  position: relative;
+  padding: 7px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.poll-option.mine {
+  border-color: var(--brand);
+}
+
+.poll-option-bar {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  background: rgba(13, 110, 253, 0.08);
+  z-index: 0;
+}
+
+.poll-option-label,
+.poll-option-pct,
+.poll-check {
+  position: relative;
+  z-index: 1;
+}
+
+.poll-option-pct {
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.poll-check {
+  color: var(--brand);
+}
+
+.reply-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #eef7ff;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+}
+
+.reply-bar-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.reply-bar-author {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--brand);
+}
+
+.reply-bar-text {
+  font-size: 12px;
+  color: #444;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.poll-builder {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.poll-builder-option {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.poll-builder-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.poll-multiple-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #555;
+  cursor: pointer;
+}
+
+.schedule-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.template-picker {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  padding: 10px;
+  margin-top: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.template-picker-head {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.template-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  padding: 8px;
+  border: none;
+  background: #f8fafc;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+
+.template-item:hover {
+  background: #eef7ff;
+}
+
+.template-empty {
+  padding: 10px;
+  text-align: center;
+}
+
+.msg-menu-divider {
+  height: 1px;
+  background: #eee;
+  margin: 4px 0;
+}
+
+.msg-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+}
+
+.msg-menu-item:hover {
+  background: #f0f4fa;
+}
+
+.msg-menu-item i {
+  width: 16px;
+  color: #5b6470;
+}
+
+.msg-menu-item.danger {
+  color: #dc3545;
+}
+
+.forward-modal {
+  width: 420px;
+  max-width: 92vw;
+}
+
+.forward-list {
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.forward-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fbfcfe;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+
+.forward-item:hover {
+  background: #eef7ff;
+}
+
+.forward-item-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.forward-go {
+  color: var(--brand);
+}
+
+.forward-empty,
+.side-empty {
+  padding: 14px;
+  text-align: center;
+}
+
+.avatar-room {
+  background: #eef0f3;
+  color: #6b7280;
+}
+
+.room-link-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.room-link-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.side-modal {
+  width: 460px;
+  max-width: 94vw;
+}
+
+.side-list {
+  max-height: 420px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.side-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fbfcfe;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+
+.side-item:hover {
+  background: #eef7ff;
+}
+
+.side-item-meta {
+  font-size: 11px;
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.side-item-body {
+  font-size: 13px;
+  color: #333;
+}
+
+.search-inline {
+  display: flex;
+  gap: 8px;
+}
+
+.workspace-modal {
+  width: 680px;
+  max-width: 95vw;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.workspace-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 12px;
+}
+
+.workspace-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  color: #444;
+}
+
+.workspace-tab.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
+.workspace-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.ws-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ws-compose {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ws-compose-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.ws-card {
+  border: 1px solid #eef0f3;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+
+.ws-card.urgent {
+  border-left: 3px solid #e11d48;
+}
+
+.ws-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ws-card-body {
+  margin: 8px 0;
+  color: #333;
+  font-size: 14px;
+}
+
+.ws-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meeting-invitees {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.invitee-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #eef7ff;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.invitee-chip i {
+  cursor: pointer;
+}
+
+.invitee-chip.accepted {
+  background: #dcfce7;
+  color: #0a6b2d;
+}
+
+.invitee-chip.declined {
+  background: #ffe3e3;
+  color: #a00000;
+}
+
+.mention-picker.static {
+  position: static;
+  box-shadow: none;
+}
+
+.sos-floating {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: none;
+  background: #e11d48;
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(225, 29, 72, 0.45);
+  z-index: 90;
+}
+
+.sos-floating.active {
+  animation: sos-pulse 1.4s infinite;
+}
+
+@keyframes sos-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 16px rgba(225, 29, 72, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(225, 29, 72, 0);
+  }
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.badge-red {
+  color: #a00000;
+  background: #ffe3e3;
+}
+
+.badge-orange {
+  color: #8a4b00;
+  background: #ffedd5;
+}
+
+.badge-green {
+  color: #0a6b2d;
+  background: #dcfce7;
+}
+</style>

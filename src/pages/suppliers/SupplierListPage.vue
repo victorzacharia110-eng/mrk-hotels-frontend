@@ -1,0 +1,520 @@
+<template>
+  <div class="dashboard-page container">
+    <div class="page-head">
+      <div>
+        <h1>{{ $t('suppliers.title') }}</h1>
+        <p class="muted">{{ $t('suppliers.subtitle') }}</p>
+      </div>
+      <div class="head-actions">
+        <button class="btn btn-secondary" @click="load"><i class="fas fa-rotate"></i> {{ $t('suppliers.refresh')
+          }}</button>
+        <button v-if="canOperate" class="btn btn-primary" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('suppliers.newSupplier')
+          }}</button>
+      </div>
+    </div>
+
+    <div v-if="success" class="alert alert-success">{{ success }}</div>
+    <div v-if="error" class="alert alert-error">{{ error }}</div>
+
+    <div class="card filter-bar">
+      <div class="filter-grid">
+        <div class="form-group">
+          <label>{{ $t('suppliers.status') }}</label>
+          <SearchableSelect v-model="filters.status" :options="supplierStatusOptions" :empty-label="$t('common.all')" @change="load" />
+        </div>
+        <div class="form-group">
+          <label>{{ $t('suppliers.category') }}</label>
+          <SearchableSelect v-model="filters.category" :options="categoryOptions" :empty-label="$t('common.all')" @change="load" />
+        </div>
+        <div class="form-group">
+          <label>{{ $t('common.search') }}</label>
+          <input v-model="filters.search" type="text" class="input" :placeholder="$t('suppliers.namePlaceholder')"
+            @input="triggerSearch" />
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-secondary btn-sm" @click="clearFilters"><i class="fas fa-filter-circle-xmark"></i> {{
+            $t('common.clear') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="loading" class="alert alert-info">{{ $t('suppliers.loading') }}</div>
+
+    <div v-else class="table-scroll">
+      <table class="table">
+      <thead>
+        <tr>
+          <th>{{ $t('suppliers.tableSupplier') }}</th>
+          <th>{{ $t('suppliers.tableContact') }}</th>
+          <th>{{ $t('suppliers.category') }}</th>
+          <th>{{ $t('suppliers.tableTerms') }}</th>
+          <th>{{ $t('suppliers.tableBalance') }}</th>
+          <th>{{ $t('suppliers.tableRating') }}</th>
+          <th>{{ $t('suppliers.status') }}</th>
+          <th>{{ $t('common.actions') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="s in suppliers" :key="s.supplier_id">
+          <td><strong>{{ s.supplier_name }}</strong>
+            <div class="muted">{{ s.address || '-' }}</div>
+          </td>
+          <td>
+            <div>{{ s.contact_person || '-' }}</div>
+            <div class="muted">{{ s.email || s.phone || '-' }}</div>
+          </td>
+          <td class="capitalize">{{ s.category.replace('_', ' ') }}</td>
+          <td>{{ s.payment_terms || '-' }}</td>
+          <td><span class="price">TZS {{ Number(s.current_balance || 0).toLocaleString() }}</span></td>
+          <td>{{ stars(s.rating) }}</td>
+          <td><span class="badge" :class="statusBadge(s.status)">{{ s.status }}</span></td>
+          <td>
+            <div class="actions">
+              <button v-if="canOperate" class="btn btn-sm btn-secondary" @click="openEdit(s)"><i class="fas fa-pen"></i></button>
+              <button v-if="canOperate" class="btn btn-sm btn-danger" @click="remove(s)"><i class="fas fa-trash"></i></button>
+            </div>
+          </td>
+        </tr>
+        <tr v-if="!suppliers.length && !loading">
+          <td colspan="8" class="muted">{{ $t('suppliers.empty') }}</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div v-if="meta.total > meta.per_page" class="pagination">
+      <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
+        $t('common.previous') }}</button>
+      <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
+      <button class="btn btn-sm btn-secondary" :disabled="!meta.next_page_url" @click="goPage(meta.current_page + 1)">{{
+        $t('common.next') }}</button>
+    </div>
+
+    <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+      <div class="modal">
+        <div class="modal-head">
+          <h2><i class="fas fa-truck"></i> {{ editing ? $t('suppliers.editSupplier') : $t('suppliers.newSupplier') }}
+          </h2>
+          <button class="modal-close" @click="closeModal"><i class="fas fa-xmark"></i></button>
+        </div>
+
+        <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
+
+        <form @submit.prevent="save">
+          <div class="form-grid">
+            <div class="form-group form-full">
+              <label>{{ $t('suppliers.supplierName') }}</label>
+              <input v-model="form.supplier_name" type="text" class="input" required />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('suppliers.contactPerson') }}</label>
+              <input v-model="form.contact_person" type="text" class="input" />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('suppliers.categoryRequired') }}</label>
+              <SearchableSelect v-model="form.category" :options="categoryOptions" required />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('suppliers.email') }}</label>
+              <input v-model="form.email" type="email" class="input" />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('suppliers.phone') }}</label>
+              <PhoneInput v-model="form.phone" v-model:countryCode="form.country_code" />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('suppliers.paymentTerms') }}</label>
+              <input v-model="form.payment_terms" type="text" class="input"
+                :placeholder="$t('suppliers.paymentTermsPlaceholder')" />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('suppliers.creditLimit') }}</label>
+              <input v-model.number="form.credit_limit" type="number" min="0" step="0.01" class="input" />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('suppliers.rating') }}</label>
+              <input v-model.number="form.rating" type="number" min="0" max="5" step="0.5" class="input" />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('suppliers.status') }}</label>
+              <SearchableSelect v-model="form.status" :options="supplierStatusOptions" />
+            </div>
+            <div class="form-group form-full">
+              <label>{{ $t('common.address') }}</label>
+              <input v-model="form.address" type="text" class="input" />
+            </div>
+            <div class="form-group form-full">
+              <label>{{ $t('common.notes') }}</label>
+              <textarea v-model="form.notes" rows="2" class="textarea"></textarea>
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button type="button" class="btn btn-secondary" @click="closeModal">{{ $t('common.cancel') }}</button>
+            <button type="submit" class="btn btn-primary" :disabled="saving">
+              <i class="fas fa-check"></i> {{ saving ? $t('common.saving') : $t('suppliers.saveSupplier') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted, computed } from 'vue'
+import { supplierApi } from '@/api'
+import { useI18n } from 'vue-i18n'
+import { useAuthStore } from '@/stores/auth'
+import PhoneInput from '@/components/PhoneInput.vue'
+import SearchableSelect from '@/components/SearchableSelect.vue'
+import { normalizePhoneNumber } from '@/utils/phone'
+
+const { t } = useI18n()
+const authStore = useAuthStore()
+const canOperate = computed(() => authStore.canOperate)
+
+const suppliers = ref([])
+const page = ref(1)
+const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
+const filters = reactive({ status: '', category: '', search: '' })
+const loading = ref(false)
+const error = ref('')
+const success = ref('')
+
+const showModal = ref(false)
+const editing = ref(false)
+const editingId = ref(null)
+const saving = ref(false)
+const modalError = ref('')
+const form = reactive({
+  supplier_name: '',
+  contact_person: '',
+  email: '',
+  phone: '',
+  country_code: 'TZ',
+  address: '',
+  category: 'other',
+  payment_terms: '',
+  credit_limit: 0,
+  rating: 0,
+  status: 'active',
+  notes: '',
+})
+
+const supplierStatusOptions = computed(() => [
+  { value: 'active', label: t('suppliers.active') },
+  { value: 'inactive', label: t('suppliers.inactive') },
+  { value: 'blocked', label: t('suppliers.statusBlocked') },
+])
+
+const categoryOptions = computed(() => [
+  { value: 'food_beverage', label: t('suppliers.categoryFnb') },
+  { value: 'housekeeping', label: t('suppliers.categoryHousekeeping') },
+  { value: 'maintenance', label: t('suppliers.categoryMaintenance') },
+  { value: 'office_supplies', label: t('suppliers.categoryOffice') },
+  { value: 'furniture', label: t('suppliers.categoryFurniture') },
+  { value: 'technology', label: t('suppliers.categoryTechnology') },
+  { value: 'other', label: t('suppliers.categoryOther') },
+])
+
+function statusBadge(s) {
+  const map = { active: 'badge-green', inactive: 'badge-gray', blocked: 'badge-red' }
+  return map[s] || 'badge-gray'
+}
+
+function stars(rating) {
+  const n = Number(rating) || 0
+  let out = ''
+  for (let i = 0; i < 5; i++) out += i < n ? '★' : '☆'
+  return out
+}
+
+async function load() {
+  loading.value = true
+  error.value = ''
+  try {
+    const res = await supplierApi.index({
+      status: filters.status,
+      category: filters.category,
+      search: filters.search,
+      page: page.value,
+      per_page: 15,
+    })
+    suppliers.value = res.data.data || []
+    meta.value = res.data
+  } catch (err) {
+    error.value = err.response?.data?.message || t('suppliers.loadError')
+  } finally {
+    loading.value = false
+  }
+}
+
+function goPage(p) {
+  page.value = p
+  load()
+}
+
+function clearFilters() {
+  page.value = 1
+  filters.status = ''
+  filters.category = ''
+  filters.search = ''
+  load()
+}
+
+function triggerSearch() {
+  page.value = 1
+  load()
+}
+
+function resetForm() {
+  editing.value = false
+  editingId.value = null
+  form.supplier_name = ''
+  form.contact_person = ''
+  form.email = ''
+  form.phone = ''
+  form.country_code = 'TZ'
+  form.address = ''
+  form.category = 'other'
+  form.payment_terms = ''
+  form.credit_limit = 0
+  form.rating = 0
+  form.status = 'active'
+  form.notes = ''
+}
+
+function openCreate() {
+  modalError.value = ''
+  resetForm()
+  showModal.value = true
+}
+
+function openEdit(s) {
+  modalError.value = ''
+  editing.value = true
+  editingId.value = s.supplier_id
+  form.supplier_name = s.supplier_name
+  form.contact_person = s.contact_person || ''
+  form.email = s.email || ''
+  form.phone = s.phone || ''
+  form.country_code = 'TZ'
+  form.address = s.address || ''
+  form.category = s.category
+  form.payment_terms = s.payment_terms || ''
+  form.credit_limit = s.credit_limit
+  form.rating = s.rating
+  form.status = s.status
+  form.notes = s.notes || ''
+  showModal.value = true
+}
+
+function closeModal() {
+  showModal.value = false
+}
+
+async function save() {
+  modalError.value = ''
+  saving.value = true
+  try {
+    if (editing.value) {
+      await supplierApi.update(editingId.value, { ...form, phone: normalizePhoneNumber(form.phone, form.country_code || 'TZ') })
+      success.value = t('suppliers.updateSuccess')
+    } else {
+      await supplierApi.store({ ...form, phone: normalizePhoneNumber(form.phone, form.country_code || 'TZ') })
+      success.value = t('suppliers.createSuccess')
+    }
+    showModal.value = false
+    await load()
+  } catch (err) {
+    modalError.value = flattenError(err)
+  } finally {
+    saving.value = false
+  }
+}
+
+async function remove(s) {
+  if (!window.confirm(t('suppliers.deleteMessage', { name: s.supplier_name }))) return
+  error.value = ''
+  try {
+    await supplierApi.destroy(s.supplier_id)
+    success.value = t('suppliers.deleted', { name: s.supplier_name })
+    await load()
+  } catch (err) {
+    error.value = flattenError(err)
+  }
+}
+
+function flattenError(err) {
+  const messages = err.response?.data?.errors
+  return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')
+}
+
+onMounted(load)
+</script>
+
+<style scoped>
+.dashboard-page {
+  padding: 32px 20px;
+}
+
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.page-head h1 {
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.head-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.filter-bar {
+  margin-bottom: 16px;
+  padding: 16px 20px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 1px;
+}
+
+.muted {
+  color: #888;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.capitalize {
+  text-transform: capitalize;
+}
+
+.price {
+  font-weight: 700;
+  color: #005EB8;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 28px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.modal-head h2 {
+  font-size: 20px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-head h2 i {
+  color: #005EB8;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.modal-close:hover {
+  color: #333;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.form-full {
+  grid-column: 1 / -1;
+}
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 20px 16px;
+  }
+
+  .page-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-full {
+    grid-column: auto;
+  }
+}
+</style>

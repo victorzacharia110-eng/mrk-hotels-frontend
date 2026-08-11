@@ -1,0 +1,157 @@
+<template>
+  <div class="container page-content">
+    <!-- Error banner when the hotel could not be loaded -->
+    <div v-if="error" class="alert alert-error">{{ error }}</div>
+
+    <!-- Rendered once the hotel has loaded -->
+    <div v-if="hotel">
+      <router-link :to="{ name: 'public-home' }" class="back-link">
+        <i class="fas fa-arrow-left"></i> {{ $t('hotelDetail.backToHotels') }}
+      </router-link>
+
+      <!-- Header card with hotel identity and a shortcut straight into booking -->
+      <div class="card detail-head">
+        <div class="detail-head-info">
+          <span class="detail-icon"><i class="fas fa-hotel"></i></span>
+          <div>
+            <h1>{{ hotel.hotel_name }}</h1>
+            <p class="muted">
+              <i class="fas fa-location-dot"></i>
+              {{ [hotel.address, hotel.city, hotel.country].filter(Boolean).join(', ') || $t('superadmin.locationNotSpecified') }}
+            </p>
+            <p v-if="hotel.phone" class="muted"><i class="fas fa-phone"></i> {{ hotel.phone }}</p>
+          </div>
+        </div>
+        <router-link :to="{ name: 'public-booking', query: { hotel_id: hotel.tenant_id } }" class="btn btn-primary">
+          {{ $t('home.bookNow') }}
+        </router-link>
+      </div>
+
+      <!-- List of the hotel's rooms, each showing status, type and nightly price -->
+      <div class="card">
+        <h2 class="card-title">{{ $t('hotelDetail.rooms') }} ({{ rooms.length }})</h2>
+        <div v-if="rooms.length" class="room-grid">
+          <article v-for="room in rooms" :key="room.room_id" class="room-card">
+            <span class="badge" :class="statusBadge(room.status)">{{ room.status }}</span>
+            <h3>{{ $t('bookingPage.room') }} {{ room.room_number }}</h3>
+            <p class="muted">{{ room.room_type }} &middot; {{ $t('rooms.floor') }} {{ room.floor }}</p>
+            <p class="muted">{{ $t('hotelDetail.capacity', { count: room.max_occupancy }) }}</p>
+            <p class="room-price">TZS {{ room.price_per_night.toLocaleString() }} {{ $t('home.perNight') }}</p>
+          </article>
+        </div>
+        <p v-else class="muted">{{ $t('hotelDetail.noRooms') }}</p>
+      </div>
+    </div>
+
+    <div v-else-if="loading" class="alert alert-info">{{ $t('superadmin.loadingHotel') }}</div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
+import { publicApi } from '@/api'
+
+const route = useRoute()
+const { t } = useI18n()
+const hotel = ref(null)
+const rooms = ref([])
+const loading = ref(false)
+const error = ref('')
+
+// Maps a room status to the CSS class used for its badge colour.
+function statusBadge(status) {
+  const map = {
+    available: 'badge-green',
+    occupied: 'badge-red',
+    cleaning: 'badge-yellow',
+    maintenance: 'badge-gray',
+  }
+  return map[status] || 'badge-gray'
+}
+
+// Fetches the hotel and its rooms by the tenant id in the URL.
+async function load() {
+  loading.value = true
+  error.value = ''
+  try {
+    const res = await publicApi.hotelShow(route.params.id)
+    hotel.value = res.data.hotel
+    rooms.value = res.data.available_rooms?.data || res.data.available_rooms || []
+  } catch (err) {
+    error.value = err.response?.data?.message || t('superadmin.failedToLoad')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(load)
+</script>
+
+<style scoped>
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: #005EB8;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.detail-head-info {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.detail-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: #fef5f5;
+  color: #005EB8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.muted {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.room-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.room-price {
+  margin-top: auto;
+  font-size: 15px;
+  font-weight: 700;
+  color: #005EB8;
+}
+</style>

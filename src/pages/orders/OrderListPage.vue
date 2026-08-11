@@ -1,0 +1,872 @@
+<template>
+  <div class="dashboard-page container">
+    <div class="page-head">
+      <div>
+        <h1>{{ $t('orders.title') }}</h1>
+        <p class="muted">{{ $t('orders.subtitle') }}</p>
+      </div>
+      <div class="head-actions">
+        <button class="btn btn-secondary" @click="load"><i class="fas fa-rotate"></i> {{ $t('orders.refresh') }}</button>
+        <button v-if="canOperate" class="btn btn-primary" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('orders.newOrder') }}</button>
+      </div>
+    </div>
+
+    <div v-if="success" class="alert alert-success">{{ success }}</div>
+    <div v-if="error" class="alert alert-error">{{ error }}</div>
+
+    <div class="card filter-bar">
+      <div class="filter-grid">
+        <div class="form-group">
+          <label>{{ $t('common.department') }}</label>
+          <SearchableSelect v-model="filters.department" :options="departmentOptions" :empty-label="$t('common.all')"
+            @change="load" />
+        </div>
+        <div class="form-group">
+          <label>{{ $t('common.status') }}</label>
+          <SearchableSelect v-model="filters.status" :options="statusOptions" :empty-label="$t('common.all')"
+            @change="load" />
+        </div>
+        <div class="form-group">
+          <label>{{ $t('orders.orderType') }}</label>
+          <SearchableSelect v-model="filters.order_type" :options="orderTypeOptions" :empty-label="$t('common.all')"
+            @change="load" />
+        </div>
+        <div class="form-group">
+          <label>{{ $t('orders.payment') }}</label>
+          <SearchableSelect v-model="filters.payment_status" :options="paymentStatusOptions" :empty-label="$t('common.all')"
+            @change="load" />
+        </div>
+        <div class="form-group">
+          <label>{{ $t('common.date') }}</label>
+          <input v-model="filters.date" type="date" class="input" @change="load" />
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-secondary btn-sm" @click="clearFilters"><i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="loading" class="alert alert-info">{{ $t('orders.loading') }}</div>
+
+    <div v-else class="table-scroll">
+      <table class="table">
+      <thead>
+        <tr>
+          <th>{{ $t('orders.tableOrder') }}</th>
+          <th>{{ $t('orders.tableLocation') }}</th>
+          <th>{{ $t('orders.tableGuestTable') }}</th>
+          <th>{{ $t('orders.waiter') }}</th>
+          <th>{{ $t('orders.orderType') }}</th>
+          <th>{{ $t('orders.items') }}</th>
+          <th>{{ $t('orders.total') }}</th>
+          <th>{{ $t('common.status') }}</th>
+          <th>{{ $t('orders.payment') }}</th>
+          <th>{{ $t('common.actions') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="order in orders" :key="order.order_id">
+          <td><strong>{{ order.order_number }}</strong><div class="muted">{{ order.order_id }}</div></td>
+          <td class="capitalize">{{ order.department }}</td>
+          <td>
+            <div>{{ order.guest_name || '-' }}</div>
+            <div class="muted">{{ order.table_number ? $t('orders.tableN', { number: order.table_number }) : order.room_number ? $t('orders.roomN', { number: order.room_number }) : '' }}</div>
+          </td>
+          <td>{{ order.waiter_name || '-' }}</td>
+          <td class="capitalize">{{ orderTypeLabel(order.order_type) }}</td>
+          <td>
+            <button class="link-btn" @click="openDetail(order)">{{ (order.items || []).length }} {{ $t('orders.itemsSuffix') }}</button>
+          </td>
+          <td><span class="price">TZS {{ Number(order.total_amount).toLocaleString() }}</span></td>
+          <td><span class="badge" :class="statusBadge(order.status)">{{ statusLabel(order.status) }}</span></td>
+          <td><span class="badge" :class="paymentBadge(order.payment_status)">{{ order.payment_status.replace('_', ' ') }}</span></td>
+          <td>
+            <div class="actions">
+              <!-- Status-dependent action buttons drive the order through its lifecycle -->
+              <template v-if="order.status === 'pending'">
+                <button class="btn btn-sm btn-danger" @click="setStatus(order, 'in_progress')">{{ $t('orders.actionStart') }}</button>
+              </template>
+              <template v-if="order.status === 'in_progress'">
+                <button class="btn btn-sm btn-warning" @click="setStatus(order, 'processing')">{{ $t('orders.actionProcess') }}</button>
+              </template>
+              <template v-if="order.status === 'processing'">
+                <button class="btn btn-sm btn-success" @click="setStatus(order, 'ready')">{{ $t('orders.actionReady') }}</button>
+              </template>
+              <template v-if="order.status === 'preparing'">
+                <button class="btn btn-sm btn-secondary" @click="setStatus(order, 'ready')">{{ $t('orders.actionReady') }}</button>
+              </template>
+              <template v-if="order.status === 'ready'">
+                <button class="btn btn-sm btn-secondary" @click="setStatus(order, 'served')">{{ $t('orders.actionServed') }}</button>
+              </template>
+              <button v-if="order.status === 'served'" class="btn btn-sm btn-success" @click="setStatus(order, 'completed')">{{ $t('orders.actionComplete') }}</button>
+              <button v-if="['pending', 'in_progress', 'processing', 'preparing', 'ready'].includes(order.status)" class="btn btn-sm btn-danger" @click="setStatus(order, 'cancelled')">{{ $t('common.cancel') }}</button>
+              <button v-if="order.payment_status === 'unpaid' && canCollect" class="btn btn-sm btn-success" @click="openPay(order)">
+                <i class="fas fa-money-bill-wave"></i> {{ $t('orders.actionCollect') }}
+              </button>
+              <button v-if="order.payment_status === 'unpaid' && order.room_number && canCollect" class="btn btn-sm btn-secondary" @click="billToRoom(order)">
+                {{ $t('orders.actionBillToRoom') }}
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr v-if="!orders.length && !loading">
+          <td colspan="10" class="muted">{{ $t('orders.empty') }}</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div v-if="meta.total > meta.per_page" class="pagination">
+      <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{ $t('common.previous') }}</button>
+      <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
+      <button class="btn btn-sm btn-secondary" :disabled="!meta.next_page_url" @click="goPage(meta.current_page + 1)">{{ $t('common.next') }}</button>
+    </div>
+
+    <!-- New order modal (department, guest, waiter, line items) -->
+    <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+      <div class="modal modal-lg">
+        <div class="modal-head">
+          <h2><i class="fas fa-utensils"></i> {{ $t('orders.newOrder') }}</h2>
+          <button class="modal-close" @click="closeModal"><i class="fas fa-xmark"></i></button>
+        </div>
+
+        <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
+
+        <form @submit.prevent="save">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>{{ $t('common.department') }} *</label>
+              <SearchableSelect v-model="form.department" :options="departmentOptions" required @change="onDepartmentChange" />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('orders.orderType') }} *</label>
+              <SearchableSelect v-model="form.order_type" :options="formOrderTypeOptions" required />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('orders.waiterName') }} *</label>
+              <SearchableSelect v-model="form.waiter_name" :options="waiterOptions" required force-search />
+            </div>
+            <div class="form-group form-full">
+              <label>{{ $t('orders.inHouseGuest') }}</label>
+              <SearchableSelect
+                v-model="form.guest_id"
+                :options="inHouseGuestOptions"
+                :empty-label="$t('orders.walkIn')"
+                @change="fillGuest"
+              />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('orders.tableNumber') }}</label>
+              <input v-model="form.table_number" type="text" class="input" />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('orders.roomNumber') }}</label>
+              <input v-model="form.room_number" type="text" class="input" />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('orders.guestOptional') }}</label>
+              <input v-model="form.guest_name" type="text" class="input" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>{{ $t('common.notes') }}</label>
+            <textarea v-model="form.notes" rows="2" class="textarea"></textarea>
+          </div>
+
+          <div class="items-head">
+            <h3>{{ $t('orders.items') }}</h3>
+            <button type="button" class="btn btn-sm btn-secondary" @click="addItem"><i class="fas fa-plus"></i> {{ $t('orders.addItem') }}</button>
+          </div>
+
+          <div v-for="(item, idx) in form.items" :key="idx" class="item-row">
+            <div class="item-grid">
+              <div class="form-group">
+                <label>{{ $t('orders.menuItem') }}</label>
+                <SearchableSelect v-model="item.menu_item_id" :options="menuItemOptions"
+                  :empty-label="$t('orders.selectItem')" required />
+              </div>
+              <div class="form-group">
+                <label>{{ $t('orders.quantity') }}</label>
+                <input v-model.number="item.quantity" type="number" min="1" class="input" required />
+              </div>
+              <div class="form-group item-remove">
+                <button type="button" class="btn btn-sm btn-danger" @click="removeItem(idx)"><i class="fas fa-trash"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-foot">
+            <button type="button" class="btn btn-secondary" @click="closeModal">{{ $t('common.cancel') }}</button>
+            <button type="submit" class="btn btn-primary" :disabled="saving">
+              <i class="fas fa-check"></i> {{ saving ? $t('orders.creating') : $t('orders.createOrder') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Collect payment modal for an unpaid order -->
+    <div v-if="showPay" class="modal-overlay" @click.self="showPay = false">
+      <div class="modal modal-sm">
+        <div class="modal-head">
+          <h2><i class="fas fa-money-bill-wave"></i> {{ $t('orders.collectPayment') }}</h2>
+          <button class="modal-close" @click="showPay = false"><i class="fas fa-xmark"></i></button>
+        </div>
+        <p class="muted">
+          {{ payOrder.order_number }} · <span class="price">TZS {{ Number(payOrder.total_amount).toLocaleString() }}</span>
+        </p>
+        <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
+        <form @submit.prevent="pay">
+          <div class="form-group">
+            <label>{{ $t('orders.method') }}</label>
+            <SearchableSelect v-model="payMethod" :options="paymentMethodOptions" />
+          </div>
+          <div class="modal-foot">
+            <button type="button" class="btn btn-secondary" @click="showPay = false">{{ $t('common.cancel') }}</button>
+            <button type="submit" class="btn btn-success" :disabled="saving">
+              <i class="fas fa-check"></i> {{ saving ? $t('orders.processing') : $t('orders.confirmPayment') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Order detail modal with per-item status actions -->
+    <div v-if="showDetail" class="modal-overlay" @click.self="showDetail = false">
+      <div class="modal modal-lg">
+        <div class="modal-head">
+          <h2><i class="fas fa-utensils"></i> {{ detail?.order_number }}</h2>
+          <button class="modal-close" @click="showDetail = false"><i class="fas fa-xmark"></i></button>
+        </div>
+        <p class="muted">
+          {{ detail?.department }} · {{ detail?.guest_name || '-' }} · {{ $t('orders.tableN', { number: detail?.table_number || '-' }) }} / {{ $t('orders.roomN', { number: detail?.room_number || '-' }) }}
+          <template v-if="detail?.prepared_user?.full_name">
+            · {{ $t('orders.preparedBy') }} {{ detail.prepared_user.full_name }}
+          </template>
+        </p>
+        <div class="table-scroll">
+          <table class="table">
+          <thead>
+            <tr>
+              <th>{{ $t('orders.item') }}</th>
+              <th>{{ $t('orders.qty') }}</th>
+              <th>{{ $t('orders.unitPrice') }}</th>
+              <th>{{ $t('orders.subtotal') }}</th>
+              <th>{{ $t('common.status') }}</th>
+              <th>{{ $t('common.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in detail?.items || []" :key="item.order_item_id">
+              <td><strong>{{ item.item_name }}</strong></td>
+              <td>{{ item.quantity }}</td>
+              <td>TZS {{ Number(item.unit_price).toLocaleString() }}</td>
+              <td><span class="price">TZS {{ Number(item.subtotal).toLocaleString() }}</span></td>
+              <td><span class="badge" :class="itemStatusBadge(item.status)">{{ itemStatusLabel(item.status) }}</span></td>
+              <td>
+            <div class="actions" v-if="canOperate">
+                  <template v-if="isOrderOpen && canOperate">
+                    <button v-if="item.status === 'pending'" class="btn btn-sm btn-warning" @click="markItem(item, 'ready')">{{ $t('orders.itemReady') }}</button>
+                    <button v-if="item.status === 'ready'" class="btn btn-sm btn-primary" @click="markItem(item, 'served')">{{ $t('orders.itemServed') }}</button>
+                  </template>
+                  <span v-else class="muted">—</span>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="detail">
+              <td colspan="4" class="text-right"><strong>{{ $t('orders.total') }}</strong></td>
+              <td><span class="price">TZS {{ Number(detail.total_amount).toLocaleString() }}</span></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useAuthStore } from '@/stores/auth'
+import { orderApi, menuItemApi } from '@/api'
+import SearchableSelect from '@/components/SearchableSelect.vue'
+import { PAYMENT_METHODS } from '@/utils/payments'
+
+const { t } = useI18n()
+const authStore = useAuthStore()
+
+// Permission gates: whether the user may operate and/or collect payments.
+const canCollect = computed(() => authStore.can(60) && authStore.canOperate)
+const canOperate = computed(() => authStore.canOperate)
+
+// List state: orders, menu items, pagination, filters, and load flags/messages.
+const orders = ref([])
+const menuItems = ref([])
+const page = ref(1)
+const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
+const filters = reactive({ department: '', status: '', order_type: '', payment_status: '', date: '' })
+const loading = ref(false)
+const error = ref('')
+const success = ref('')
+
+// Modal state: create form, payment modal, detail modal, and form option lists.
+const showModal = ref(false)
+const saving = ref(false)
+const modalError = ref('')
+const showPay = ref(false)
+const payOrder = ref(null)
+const payMethod = ref('cash')
+const showDetail = ref(false)
+const detail = ref(null)
+const inHouseGuests = ref([])
+const waiters = ref([])
+const form = reactive({ department: 'restaurant', order_type: 'dine_in', guest_id: '', waiter_name: '', table_number: '', room_number: '', guest_name: '', notes: '', items: [] })
+
+// Static dropdown options for filters and the create form.
+const departmentOptions = [
+  { value: 'restaurant', label: t('common.departments.restaurant') },
+  { value: 'bar', label: t('common.departments.bar') },
+]
+
+const statusOptions = [
+  { value: 'pending', label: t('orders.statusPending') },
+  { value: 'in_progress', label: t('orders.statusInProgress') },
+  { value: 'processing', label: t('orders.statusProcessing') },
+  { value: 'preparing', label: t('orders.statusPreparing') },
+  { value: 'ready', label: t('orders.statusReady') },
+  { value: 'served', label: t('orders.statusServed') },
+  { value: 'completed', label: t('orders.statusCompleted') },
+  { value: 'cancelled', label: t('orders.statusCancelled') },
+]
+
+const orderTypeOptions = [
+  { value: 'dine_in', label: t('orders.dineIn') },
+  { value: 'at_bar', label: t('orders.atBar') },
+  { value: 'hotel_menu', label: t('orders.hotelMenu') },
+]
+
+// Order types allowed for the selected department (bar vs restaurant).
+const formOrderTypeOptions = computed(() =>
+  form.department === 'bar'
+    ? orderTypeOptions.filter((o) => o.value !== 'dine_in')
+    : orderTypeOptions.filter((o) => o.value !== 'at_bar'),
+)
+
+/** Translates an order type code into its display label. */
+function orderTypeLabel(value) {
+  if (value === 'at_bar') return t('orders.atBar')
+  if (value === 'hotel_menu') return t('orders.hotelMenu')
+  return t('orders.dineIn')
+}
+
+const paymentStatusOptions = [
+  { value: 'unpaid', label: t('orders.paymentUnpaid') },
+  { value: 'paid', label: t('orders.paymentPaid') },
+  { value: 'billed_to_room', label: t('orders.paymentBilledToRoom') },
+]
+
+const paymentMethodOptions = PAYMENT_METHODS.map((m) => ({ value: m, label: t(`paymentFields.methods.${m}`) }))
+
+/** Menu items as selectable options (id → "name · price"). */
+const menuItemOptions = computed(() =>
+  menuItems.value.map((mi) => ({ value: mi.menu_item_id, label: `${mi.item_name} · TZS ${Number(mi.price).toLocaleString()}` })),
+)
+
+/** Waiters available for the selected department (bartenders for the bar). */
+const waiterOptions = computed(() => {
+  const dept = form.department
+  return waiters.value
+    .filter((w) =>
+      dept === 'bar'
+        ? w.role === 'bartender' || w.department === 'bar'
+        : w.role === 'waiter' || w.department === 'restaurant',
+    )
+    .map((w) => ({ value: w.full_name, label: w.full_name }))
+})
+
+/** In-house guests as selectable options (for billing to a room). */
+const inHouseGuestOptions = computed(() =>
+  inHouseGuests.value.map((g) => ({
+    value: g.guest_id,
+    label: `${g.guest_name} · ${t('orders.roomN', { number: g.room_number || '—' })}`,
+  })),
+)
+
+/** Returns a fresh blank order line item. */
+function emptyItem() {
+  return { menu_item_id: '', quantity: 1 }
+}
+
+/** Translates an order status code into its display label. */
+function statusLabel(s) {
+  const map = { pending: t('orders.statusPending'), in_progress: t('orders.statusInProgress'), processing: t('orders.statusProcessing'), preparing: t('orders.statusPreparing'), ready: t('orders.statusReady'), served: t('orders.statusServed'), completed: t('orders.statusCompleted'), cancelled: t('orders.statusCancelled') }
+  return map[s] || s
+}
+
+/** Maps an order status to its badge CSS class for the table. */
+function statusBadge(s) {
+  const map = { pending: 'badge-yellow', in_progress: 'badge-red', processing: 'badge-yellow', preparing: 'badge-blue', ready: 'badge-blue', served: 'badge-green', completed: 'badge-green', cancelled: 'badge-red' }
+  return map[s] || 'badge-gray'
+}
+
+/** Maps a payment status to its badge CSS class for the table. */
+function paymentBadge(s) {
+  const map = { unpaid: 'badge-red', paid: 'badge-green', billed_to_room: 'badge-blue' }
+  return map[s] || 'badge-gray'
+}
+
+/** Line items can be served only while the order is still open. */
+const isOrderOpen = computed(() => ['completed', 'cancelled'].includes(detail.value?.status) === false)
+
+/** Translates a line-item status code into its display label. */
+function itemStatusLabel(s) {
+  const map = { pending: t('orders.itemStatusPending'), ready: t('orders.itemStatusReady'), served: t('orders.itemStatusServed') }
+  return map[s] || s
+}
+
+/** Maps a line-item status to its badge CSS class. */
+function itemStatusBadge(s) {
+  const map = { pending: 'badge-yellow', ready: 'badge-blue', served: 'badge-green' }
+  return map[s] || 'badge-gray'
+}
+
+/** Advances a single line item (ready/served) in the open order.
+ * @param {object} item - the line item being updated
+ * @param {string} status - new status for the line item
+ */
+async function markItem(item, status) {
+  if (!detail.value) return
+  error.value = ''
+  try {
+    const res = await orderApi.markItemStatus(detail.value.order_id, item.order_item_id, status)
+    success.value = res.data.message || t('orders.itemUpdated', { status })
+    const updated = res.data.item
+    if (updated) {
+      item.status = updated.status
+      item.ready_at = updated.ready_at
+    }
+  } catch (err) {
+    error.value = flattenError(err)
+  }
+}
+
+/** Fetches the paged order list using the current filters. */
+async function load() {
+  loading.value = true
+  error.value = ''
+  try {
+    const res = await orderApi.index({
+      department: filters.department,
+      status: filters.status,
+      order_type: filters.order_type,
+      payment_status: filters.payment_status,
+      date: filters.date,
+      page: page.value,
+      per_page: 15,
+    })
+    orders.value = res.data.data || []
+    meta.value = res.data
+  } catch (err) {
+    error.value = err.response?.data?.message || t('orders.loadError')
+  } finally {
+    loading.value = false
+  }
+}
+
+/** Loads the available menu items for the create-order form. */
+async function loadMenu() {
+  try {
+    menuItems.value = (await menuItemApi.index({ is_available: true, department: form.department, per_page: 100 })).data.data || []
+  } catch {
+    // ignore
+  }
+}
+
+/** Moves to the given page and reloads. */
+function goPage(p) {
+  page.value = p
+  load()
+}
+
+/** Resets all filters and reloads from the first page. */
+function clearFilters() {
+  page.value = 1
+  filters.department = ''
+  filters.status = ''
+  filters.order_type = ''
+  filters.payment_status = ''
+  filters.date = ''
+  load()
+}
+
+/** Resets the form when the department changes (order type, waiter, items). */
+function onDepartmentChange() {
+  form.items = []
+  form.waiter_name = ''
+  form.order_type = form.department === 'bar' ? 'at_bar' : 'dine_in'
+  loadMenu()
+}
+
+/** In-house guests (to bill to a room) and waiters are fetched from the API. */
+async function loadFormOptions() {
+  try {
+    const res = await orderApi.formOptions()
+    inHouseGuests.value = res.data.in_house_guests || []
+    waiters.value = res.data.waiters || []
+  } catch {
+    // The form still works with the manual fields if this fails.
+  }
+}
+
+/** Picking an in-house guest fills the room and guest name automatically. */
+function fillGuest() {
+  const guest = inHouseGuests.value.find((g) => g.guest_id === form.guest_id)
+  if (!guest) return
+  form.guest_name = guest.guest_name || ''
+  form.room_number = guest.room_number || ''
+}
+
+/** Opens the create-order modal with a fresh, pre-filled form. */
+function openCreate() {
+  modalError.value = ''
+  form.department = 'restaurant'
+  form.order_type = 'dine_in'
+  form.guest_id = ''
+  form.waiter_name = ''
+  form.table_number = ''
+  form.room_number = ''
+  form.guest_name = ''
+  form.notes = ''
+  form.items = [emptyItem()]
+
+  // Automate the desk work: remember which waiter is on and which counter.
+  const current = authStore.user
+  if (current?.full_name && waiters.value.some((w) => w.full_name === current.full_name)) {
+    form.waiter_name = current.full_name
+  }
+  if (current?.department === 'bar') form.department = 'bar'
+  form.order_type = form.department === 'bar' ? 'at_bar' : 'dine_in'
+
+  loadFormOptions()
+  loadMenu()
+  showModal.value = true
+}
+
+/** Adds an empty line item row to the order form. */
+function addItem() {
+  form.items.push(emptyItem())
+}
+
+/** Removes the line item at the given index. */
+function removeItem(idx) {
+  form.items.splice(idx, 1)
+}
+
+/** Closes the create and payment modals. */
+function closeModal() {
+  showModal.value = false
+  showPay.value = false
+}
+
+/** Creates the order, sending only the filled-in line items. */
+async function save() {
+  modalError.value = ''
+  saving.value = true
+  try {
+    const res = await orderApi.store({
+      department: form.department,
+      order_type: form.order_type,
+      waiter_name: form.waiter_name,
+      table_number: form.table_number,
+      room_number: form.room_number,
+      guest_name: form.guest_name,
+      notes: form.notes,
+      items: form.items.filter((i) => i.menu_item_id),
+    })
+    success.value = res.data.message || t('orders.created')
+    showModal.value = false
+    await load()
+  } catch (err) {
+    modalError.value = flattenError(err)
+  } finally {
+    saving.value = false
+  }
+}
+
+/** Shows the order detail modal for the selected order. */
+function openDetail(order) {
+  detail.value = order
+  showDetail.value = true
+}
+
+/** Advances an order to the given status (with confirm for cancellation). */
+async function setStatus(order, status) {
+  if (status === 'cancelled' && !window.confirm(t('orders.deleteMessage', { orderNumber: order.order_number }))) return
+  error.value = ''
+  try {
+    const res = await orderApi.update(order.order_id, { status })
+    success.value = res.data.message || t('orders.statusChanged', { status })
+    await load()
+  } catch (err) {
+    error.value = flattenError(err)
+  }
+}
+
+/** Opens the collect-payment modal for the given order. */
+function openPay(order) {
+  modalError.value = ''
+  payOrder.value = order
+  payMethod.value = 'cash'
+  showPay.value = true
+}
+
+/** Records the payment for the selected order. */
+async function pay() {
+  modalError.value = ''
+  saving.value = true
+  try {
+    const res = await orderApi.pay(payOrder.value.order_id, { method: payMethod.value })
+    success.value = res.data.message || t('orders.paymentCollected')
+    showPay.value = false
+    await load()
+  } catch (err) {
+    modalError.value = flattenError(err)
+  } finally {
+    saving.value = false
+  }
+}
+
+/** Bills an unpaid room order to the guest's room account after confirmation. */
+async function billToRoom(order) {
+  if (!window.confirm(t('orders.billToRoomConfirm', { amount: order.order_number, number: order.room_number }))) return
+  error.value = ''
+  try {
+    const res = await orderApi.billToRoom(order.order_id, {})
+    success.value = res.data.message || t('orders.billedToRoom')
+    await load()
+  } catch (err) {
+    error.value = flattenError(err)
+  }
+}
+
+/** Flattens Laravel-style validation errors into a single readable message. */
+function flattenError(err) {
+  const messages = err.response?.data?.errors
+  return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')
+}
+
+onMounted(() => {
+  load()
+  loadMenu()
+  loadFormOptions()
+})
+</script>
+
+<style scoped>
+.dashboard-page {
+  padding: 32px 20px;
+}
+
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.page-head h1 {
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.head-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.filter-bar {
+  margin-bottom: 16px;
+  padding: 16px 20px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 1px;
+}
+
+.muted {
+  color: #888;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.price {
+  font-weight: 700;
+  color: #005EB8;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.link-btn {
+  color: #005EB8;
+  font-weight: 600;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.items-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 18px 0 12px;
+}
+
+.items-head h3 {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #005EB8;
+}
+
+.item-row {
+  border: 1px solid #f1f1f1;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.item-grid {
+  display: grid;
+  grid-template-columns: 3fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.item-remove {
+  padding-bottom: 1px;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 28px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.modal-sm {
+  max-width: 420px;
+}
+
+.modal-lg {
+  max-width: 820px;
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.modal-head h2 {
+  font-size: 20px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-head h2 i {
+  color: #005EB8;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.modal-close:hover {
+  color: #333;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 20px 16px;
+  }
+
+  .page-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
