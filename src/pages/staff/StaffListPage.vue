@@ -2,7 +2,8 @@
   Staff page (route: /app/staff, name: hotel-staff).
   Staff account management for a hotel: a filterable paginated list with
   role-based editing rules, a create/edit modal with profile picture and
-  attachments, plus invite, activate and deactivate actions.
+  attachments, plus invite, activate, deactivate and set-PIN actions
+  (the PIN enables the iPOS-style PIN sign-in mode on the login page).
 -->
 <template>
   <div class="dashboard-page container">
@@ -110,6 +111,8 @@
                 $t('common.edit') }}</button>
               <button v-if="u.is_active && !isSelf(u) && canEdit(u)" class="btn btn-sm btn-secondary" @click="invite(u)">{{
                 $t('staff.invite') }}</button>
+              <button v-if="u.is_active && !isSelf(u) && canEdit(u)" class="btn btn-sm btn-secondary"
+                @click="openPinModal(u)"><i class="fas fa-calculator"></i> {{ $t('staff.setPin') }}</button>
               <button v-if="u.is_active && !isSelf(u) && canEdit(u)" class="btn btn-sm btn-danger" @click="deactivate(u)">{{
                 $t('staff.deactivate') }}</button>
               <button v-if="!u.is_active && canEdit(u)" class="btn btn-sm btn-success" @click="activate(u)">{{ $t('staff.activate')
@@ -253,6 +256,42 @@
         </form>
       </div>
     </div>
+
+    <!-- Set-PIN modal: admin/manager assigns the 4-digit login PIN used by the PIN sign-in mode -->
+    <div v-if="showPinModal" class="modal-overlay" @click.self="closePinModal">
+      <div class="modal modal-pin">
+        <div class="modal-head">
+          <h2><i class="fas fa-calculator"></i> {{ $t('staff.setPinTitle') }}</h2>
+          <button class="modal-close" @click="closePinModal"><i class="fas fa-xmark"></i></button>
+        </div>
+
+        <p class="muted pin-subtitle">{{ $t('staff.setPinFor', { name: pinUser?.full_name }) }}</p>
+
+        <div v-if="pinError" class="alert alert-error">{{ pinError }}</div>
+
+        <!-- Both PIN entries are masked; validation requires 4 matching digits -->
+        <form @submit.prevent="savePin">
+          <div class="form-grid">
+            <div class="form-group form-full">
+              <label>{{ $t('staff.newPin') }}</label>
+              <input v-model="pinForm.pin" type="password" class="input pin-input" inputmode="numeric" maxlength="4"
+                autocomplete="off" :placeholder="$t('staff.pinPlaceholder')" />
+            </div>
+            <div class="form-group form-full">
+              <label>{{ $t('staff.confirmPin') }}</label>
+              <input v-model="pinForm.pin_confirmation" type="password" class="input pin-input" inputmode="numeric"
+                maxlength="4" autocomplete="off" :placeholder="$t('staff.pinPlaceholder')" />
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button type="button" class="btn btn-secondary" @click="closePinModal">{{ $t('common.cancel') }}</button>
+            <button type="submit" class="btn btn-primary" :disabled="pinSaving">
+              <i class="fas fa-check"></i> {{ pinSaving ? $t('common.saving') : $t('staff.savePin') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -350,6 +389,13 @@ const invitation = ref(null)
 const attachments = ref([])
 const newAttachmentFile = ref(null)
 const attachmentInput = ref(null)
+
+// Set-PIN modal state: the target staff row, the PIN pair and feedback flags.
+const showPinModal = ref(false)
+const pinUser = ref(null)
+const pinSaving = ref(false)
+const pinError = ref('')
+const pinForm = reactive({ pin: '', pin_confirmation: '' })
 
 const form = reactive({
   first_name: '',
@@ -570,6 +616,54 @@ function openEdit(u) {
 /** Closes the create/edit staff modal. */
 function closeModal() {
   showModal.value = false
+}
+
+/**
+ * Opens the set-PIN modal for a staff row with a blank PIN pair.
+ * @param {Object} u - The staff row whose login PIN is being set.
+ */
+function openPinModal(u) {
+  pinUser.value = u
+  pinForm.pin = ''
+  pinForm.pin_confirmation = ''
+  pinError.value = ''
+  showPinModal.value = true
+}
+
+/** Closes the set-PIN modal. */
+function closePinModal() {
+  showPinModal.value = false
+}
+
+/**
+ * Validates and saves the staff member's 4-digit login PIN. Both entries must
+ * be exactly 4 digits and match; failures surface the backend message or a
+ * flattened validation error inside the modal.
+ * @returns {Promise<void>}
+ */
+async function savePin() {
+  pinError.value = ''
+  if (!/^\d{4}$/.test(pinForm.pin)) {
+    pinError.value = t('staff.pinInvalid')
+    return
+  }
+  if (pinForm.pin !== pinForm.pin_confirmation) {
+    pinError.value = t('staff.pinMismatch')
+    return
+  }
+  pinSaving.value = true
+  try {
+    const res = await userApi.setPin(pinUser.value.user_id, {
+      pin: pinForm.pin,
+      pin_confirmation: pinForm.pin_confirmation,
+    })
+    success.value = res.data.message || t('staff.pinSet', { name: pinUser.value.full_name })
+    showPinModal.value = false
+  } catch (err) {
+    pinError.value = flattenError(err)
+  } finally {
+    pinSaving.value = false
+  }
 }
 
 /**
@@ -831,6 +925,22 @@ code {
   overflow-y: auto;
   padding: 28px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+/* The set-PIN dialog is much narrower than the create/edit staff modal */
+.modal-pin {
+  max-width: 420px;
+}
+
+.pin-subtitle {
+  margin-bottom: 16px;
+}
+
+/* Masked PIN entries read better centred with wide digit spacing */
+.pin-input {
+  text-align: center;
+  letter-spacing: 6px;
+  font-size: 18px;
 }
 
 .modal-head {

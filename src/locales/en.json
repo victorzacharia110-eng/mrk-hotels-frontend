@@ -578,10 +578,19 @@
     "signIn": "Sign In",
     "signInLoading": "Signing in...",
     "passwordRotated": "Your password was rotated. Use:",
+    "modePassword": "Password",
+    "modePin": "PIN",
+    "identifier": "Username or Registration Number",
+    "identifierPlaceholder": "Enter your username or registration number",
+    "enterPin": "Enter your 4-digit PIN",
+    "clearPin": "Clear PIN",
+    "backspacePin": "Delete last digit",
     "validation": {
       "emailRequired": "Email is required.",
       "emailInvalid": "Enter a valid email address.",
       "passwordRequired": "Password is required.",
+      "identifierRequired": "Username or registration number is required.",
+      "pinInvalid": "PIN must be exactly 4 digits.",
       "connectionFailed": "Connection failed. Please try again."
     }
   },
@@ -1414,7 +1423,17 @@
     "roleStaff": "Staff",
     "invitationSent": "Invitation sent to {email}. Default password is {password}.",
     "activated": "{name} activated.",
-    "deactivated": "{name} deactivated."
+    "deactivated": "{name} deactivated.",
+    "setPin": "Set PIN",
+    "setPinTitle": "Set Login PIN",
+    "setPinFor": "Set a 4-digit login PIN for {name}.",
+    "newPin": "New PIN (4 digits)",
+    "confirmPin": "Confirm PIN",
+    "pinPlaceholder": "4-digit PIN",
+    "savePin": "Save PIN",
+    "pinInvalid": "PIN must be exactly 4 digits.",
+    "pinMismatch": "The PINs do not match.",
+    "pinSet": "Login PIN set for {name}."
   },
   "bookingRequisitions": {
     "title": "Booking Requests",

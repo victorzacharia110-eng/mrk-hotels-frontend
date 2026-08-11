@@ -578,10 +578,19 @@
     "signIn": "Ingia",
     "signInLoading": "Inaingia...",
     "passwordRotated": "Neno la siri lilibadilishwa. Tumia:",
+    "modePassword": "Neno la Siri",
+    "modePin": "PIN",
+    "identifier": "Jina la Mtumiaji au Namba ya Usajili",
+    "identifierPlaceholder": "Weka jina la mtumiaji au namba yako ya usajili",
+    "enterPin": "Weka PIN yako ya tarakimu 4",
+    "clearPin": "Futa PIN",
+    "backspacePin": "Futa tarakimu ya mwisho",
     "validation": {
       "emailRequired": "Barua pepe inahitajika.",
       "emailInvalid": "Weka anwani halali ya barua pepe.",
       "passwordRequired": "Neno la siri linahitajika.",
+      "identifierRequired": "Jina la mtumiaji au namba ya usajili inahitajika.",
+      "pinInvalid": "PIN lazima iwe na tarakimu 4.",
       "connectionFailed": "Muunganisho umeshindikana. Tafadhali jaribu tena."
     }
   },
@@ -1414,7 +1423,17 @@
     "roleStaff": "Mfanyakazi",
     "invitationSent": "Aliko limetumwa kwa {email}. Neno la siri la msingi ni {password}.",
     "activated": "{name} amewashwa.",
-    "deactivated": "{name} amesimamishwa."
+    "deactivated": "{name} amesimamishwa.",
+    "setPin": "Weka PIN",
+    "setPinTitle": "Weka PIN ya Kuingia",
+    "setPinFor": "Weka PIN ya kuingia ya tarakimu 4 kwa {name}.",
+    "newPin": "PIN mpya (tarakimu 4)",
+    "confirmPin": "Thibitisha PIN",
+    "pinPlaceholder": "PIN ya tarakimu 4",
+    "savePin": "Hifadhi PIN",
+    "pinInvalid": "PIN lazima iwe na tarakimu 4.",
+    "pinMismatch": "PIN hazifanani.",
+    "pinSet": "PIN ya kuingia imewekwa kwa {name}."
   },
   "bookingRequisitions": {
     "title": "Maombi ya Uhifadhi",

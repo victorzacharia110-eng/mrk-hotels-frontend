@@ -81,6 +81,27 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
+   * Authenticates with a 4-digit staff PIN and stores the returned session.
+   * Mirrors login(); the identifier may be the user's username (email) or
+   * their registration number and the response shape is identical to /auth/login.
+   * @param {object} data - PIN login credentials (identifier, pin).
+   * @returns {Promise<object>} The login response payload.
+   */
+  async function loginPin(data) {
+    loading.value = true
+    try {
+      const response = await authApi.loginPin(data)
+      // A fresh login must not inherit an owner's previously selected hotel.
+      sessionStorage.removeItem('owner_viewing_hotel')
+      sessionStorage.removeItem('owner_viewing_hotel_name')
+      applyAuth(response.data)
+      return response.data
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
    * Ends the session server-side and wipes all local auth state.
    * @returns {Promise<void>}
    */
@@ -183,6 +204,7 @@ export const useAuthStore = defineStore('auth', () => {
     roleLevel,
     canOperate,
     login,
+    loginPin,
     logout,
     fetchProfile,
     changePassword,

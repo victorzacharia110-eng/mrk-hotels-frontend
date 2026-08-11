@@ -101,6 +101,15 @@ export const authApi = {
     return api.post(`${v1}/auth/login`, data)
   },
   /**
+   * Authenticates a user with their 4-digit staff PIN and returns the token + profile.
+   * Mirrors login(); the response shape is identical to /auth/login.
+   * @param {object} data - PIN login credentials (identifier: username/email or registration number, pin: 4 digits).
+   * @returns {Promise} Axios response with token, user and permissions.
+   */
+  loginPin(data) {
+    return api.post(`${v1}/auth/login-pin`, data)
+  },
+  /**
    * Ends the authenticated session on the server.
    * @returns {Promise} Axios response confirming logout.
    */
@@ -278,6 +287,15 @@ export const userApi = {
    */
   resetPassword(id) {
     return api.post(`${v1}/users/${id}/reset-password`)
+  },
+  /**
+   * Sets (or replaces) a staff member's 4-digit login PIN. Admin/manager only.
+   * @param {string|number} id - User identifier.
+   * @param {object} data - PIN payload (pin, pin_confirmation; both 4 digits).
+   * @returns {Promise} Axios response confirming the PIN was set.
+   */
+  setPin(id, data) {
+    return api.post(`${v1}/users/${id}/set-pin`, data)
   },
   /**
    * Attaches a file (e.g. ID copy) to a user.
