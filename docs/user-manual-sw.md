@@ -63,7 +63,18 @@ Kila nafasi inaona tu menyu inazohitaji:
 
 > **Ujumbe (Messages)** — sehemu ya 18 — unapatikana kwa kila mfanyakazi, ikijumuisha mazungumzo ya kikundi, **hali (statuses)**, **simu za sauti/video**, majibu (replies), kura (polls), pin/star, kusambaza mbele (forward), template za ujumbe, ujumbe ulioratibiwa, utafutaji, kupeleka nje (export), tafsiri ya EN↔SW, matangazo (announcements), mawasilisho ya zamu (handovers), mazungumzo yaliyounganishwa na chumba, mikutano, SMS kwa mgeni na **taarifa za SOS** — na ukurasa wa **Profaili** (sehemu ya 20) unaonyesha maelezo yote ya akaunti yako.
 
-<figure><img src="images/login.png" alt="Ukurasa wa kuingia"><figcaption>Ukurasa wa kuingia — weka barua pepe na nenosiri lako.</figcaption></figure>
+<figure><img src="images/login.png" alt="Ukurasa wa kuingia"><figcaption>Ukurasa wa kuingia — badilisha kati ya nenosiri na PIN.</figcaption></figure>
+
+### 2.4 Kuingia: nenosiri au PIN
+
+Ukurasa wa kuingia una **njia mbili** — badilisha kwa vifungo vya **Neno la Siri / PIN** juu ya fomu:
+
+- **Neno la Siri** (chaguo-msingi): weka barua pepe na nenosiri lako, kisha bofya **Ingia**.
+- **PIN**: kuingia haraka kwa terminali zinazoshirikiwa (mapokezi, baa, jikoni). Andika **jina la mtumiaji au namba yako ya usajili** (mf. `EMP-2026-0004`), kisha bonyeza **PIN yako ya tarakimu 4** kwenye kibodi cha skrini. Unaingizwa moja kwa moja mara tu tarakimu ya nne inapokamilika — hakuna kitufe cha kubofya. Tumia **C** kufuta PIN nzima na **⌫** kufuta tarakimu ya mwisho.
+
+> **Huna PIN bado?** PIN huwekwa na msimamizi au meneja wa hoteli kutoka ukurasa wa **Wafanyakazi** (sehemu ya 17) — huwezi kuiweka mwenyewe. Kama huna PIN, endelea kutumia njia ya nenosiri.
+>
+> Njia zote mbili ni salama vilevile: majaribio mengi yaliyoshindwa hufunga kuingia kwa muda, na PIN iliyokataliwa huanza upya kutoka kibodi tupu.
 
 ---
 
@@ -355,11 +366,12 @@ Moduli hii inasimamia shughuli za burudani zinazolipishwa:
 Ukurasa wa Wafanyakazi (msimamizi/meneja) unasimamia timu:
 
 - Ongeza mfanyakazi kwa nafasi yake (manager, accountant, receptionist, housekeeping, kitchen, waiter, bartender, staff, …).
-- Kila mfanyakazi anapata **namba ya mfanyakazi** (mf. `EMP-2026-0004`).
+- Kila mfanyakazi anapata **namba ya usajili** (mf. `EMP-2026-0004`) — huitumia pia kama kitambulisho cha kuingia kwa PIN (sehemu ya 2.4).
 - **Washa / zima** akaunti, **weka upya nenosiri**, na **waalike** wafanyakazi kuingia.
+- **Weka PIN ya kuingia ya tarakimu 4** kutoka kwenye mstari wa mfanyakazi (**Weka PIN**) ili atumie njia ya PIN kwenye terminali zinazoshirikiwa. Weka PIN mara mbili; huhifadhiwa kwa usalama na inaweza kubadilishwa wakati wowote. Unaweza kuweka PIN tu kwa nafasi zilizo sawa au chini ya yako — na sio yako mwenyewe.
 - Rekodi kitambulisho/viambatisho kwa kila mwanachama.
 
-<figure><img src="images/app-staff.png" alt="Ukurasa wa Wafanyakazi"><figcaption>Wafanyakazi — simamia timu, nafasi, akaunti, mialiko na kuweka upya nenosiri.</figcaption></figure>
+<figure><img src="images/app-staff.png" alt="Ukurasa wa Wafanyakazi"><figcaption>Wafanyakazi — simamia timu, nafasi, akaunti, mialiko, kuweka upya nenosiri na PIN za kuingia.</figcaption></figure>
 
 ---
 

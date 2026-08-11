@@ -63,7 +63,18 @@ Each role sees only the menus it needs:
 
 > **Messages** (section 18) is available to every employee — including group chats, **statuses**, **audio/video calls**, replies, polls, pinning/starring, forwarding, message templates, scheduled sends, search, export, EN↔SW translation, announcements, shift handovers, room-linked chats, meetings, guest SMS and **SOS alerts** — and the **Profile** page (section 20) shows your full account details.
 
-<figure><img src="images/login.png" alt="Sign in page"><figcaption>Sign-in page — enter your email and password.</figcaption></figure>
+<figure><img src="images/login.png" alt="Sign in page"><figcaption>Sign-in page — switch between password and PIN mode.</figcaption></figure>
+
+### 2.4 Signing in: password or PIN
+
+The sign-in page offers **two modes** — switch between them with the **Password / PIN** buttons at the top of the form:
+
+- **Password** (default): enter your email and password, then click **Sign In**.
+- **PIN**: quick sign-in for shared terminals (front desk, bar, kitchen). Type your **username or registration number** (e.g. `EMP-2026-0004`), then tap your **4-digit PIN** on the on-screen keypad. You are signed in automatically the moment the 4th digit is entered — there is no button to press. Use **C** to clear the whole PIN and **⌫** to delete the last digit.
+
+> **No PIN yet?** PINs are assigned by your hotel admin or manager from the **Staff** page (section 17) — you cannot set your own. Until you have one, keep using the password mode.
+>
+> Both modes are equally protected: too many failed attempts temporarily block sign-in, and a rejected PIN always restarts from an empty keypad.
 
 ---
 
@@ -355,11 +366,12 @@ The Fun & Games module manages paid recreational activities and games in the hot
 The Staff page (admin/manager) manages the team:
 
 - Add staff with their role (manager, accountant, receptionist, housekeeping, kitchen, waiter, bartender, staff, …).
-- Each staff member gets a **staff number** (e.g. `EMP-2026-0004`).
+- Each staff member gets a **registration number** (e.g. `EMP-2026-0004`) — it doubles as their identifier for PIN sign-in (section 2.4).
 - **Activate / deactivate** accounts, **reset passwords**, and **invite** staff to sign in.
+- **Set a 4-digit login PIN** from the staff row (**Set PIN**) so the member can use PIN sign-in on shared terminals. Enter the PIN twice; it is stored securely hashed and can be replaced at any time. You can only set PINs for roles at or below your own — and never your own.
 - Record ID/attachments for each member.
 
-<figure><img src="images/app-staff.png" alt="Staff page"><figcaption>Staff — manage the team, roles, accounts, invites and password resets.</figcaption></figure>
+<figure><img src="images/app-staff.png" alt="Staff page"><figcaption>Staff — manage the team, roles, accounts, invites, password resets and login PINs.</figcaption></figure>
 
 ---
 

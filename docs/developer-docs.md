@@ -83,6 +83,14 @@ A superadmin user (`superadmin@mrkhotels.test`) is created elsewhere (permission
 - Issues a token: `createToken('api-token', $user->isSuperadmin() ? ['*'] : [$user->user_role])` — **abilities are the user's role name**.
 - Returns `{ token, user }`.
 
+`AuthController::loginPin` (`POST /api/v1/auth/login-pin`) — iPOS-style quick sign-in for shared staff terminals:
+
+- Accepts `identifier` + `pin` (`digits:4`); the identifier matches the user's `email` **or** `registration_number`.
+- Unknown identifiers, unset PINs and wrong PINs all get one generic 401 (`Invalid credentials.`) so the endpoint cannot be used to enumerate staff accounts.
+- Applies the same gates as password login (active account, active/pending tenant), updates `last_login`, issues the identical token shape and audit-logs the login.
+- PINs live bcrypt-hashed in `users.login_pin` (nullable — `null` disables PIN login for the account) and are hidden from serialization.
+- PINs are assigned by senior staff via `UserController@setPin` (`POST /api/v1/users/{id}/set-pin`, level-80 group): validates `pin` + `pin_confirmation` (`digits:4`, `confirmed`), enforces `assertCanManage` on the target's role, rejects self-service with 422 (a profile self-service flow is planned), and audit-logs `pin_set`.
+
 Protected routes use `auth:sanctum`. Token abilities are currently informational; authorization is enforced by the `level:X` and role-permission middleware below.
 
 ### 4.2 Authorization middleware
@@ -120,7 +128,7 @@ All routes are under the `v1` prefix.
 | POST | `public/payments/initiate` | `PublicController@initiatePayment` — online payment entry point |
 | GET | `public/booking-requisitions/status` | `PublicController@bookingStatus` |
 
-**Public auth:** `POST auth/login`, `POST auth/register`.
+**Public auth:** `POST auth/login`, `POST auth/login-pin`, `POST auth/register` (all throttled by the shared `auth` limiter).
 
 **Payment webhook:** `POST payments/clickpesa/callback` — no auth, used by the ClickPesa sandbox.
 
@@ -131,7 +139,7 @@ All routes are under the `v1` prefix.
 | Auth | `auth/logout`, `auth/me`, `auth/change-password` | all |
 | Reports | `reports/dashboard`, `overview`, `occupancy`, `revenue`, `room-status`, `audit-logs` | 20 / 80 / 60 / 70 / 60 / 70 |
 | Messaging | `messages/users`, `messages/unread-count`, `messages/conversations`, `messages/conversations/{id}`, `.../messages`, `.../send`, `.../read`, `.../delete`, `.../react`, `messages/groups`, `messages/groups/{id}`, `.../messages`, `.../send`, `.../read`, `.../members`, `.../delete`, `.../react`, `messages/statuses`, `messages/calls`, `messages/calls/{id}/actions` **plus the 24 feature endpoints: replies/priority/polls, pin/star, templates, scheduled messages, forwarding, announcements, search, CSV export, translate, escalations, retention policies, notification preferences/DND, shift handovers, room-linked chats, task groups, staff presence (location/nearby), guest SMS bridge, meetings, SOS alerts** | 20+ |
-| Users (staff) | `users` CRUD + activate/invite/reset-password/attachments | 80 |
+| Users (staff) | `users` CRUD + activate/invite/reset-password/set-pin/attachments | 80 |
 | Rooms | `rooms` CRUD + status | 60 |
 | Guests | `guests` CRUD | 60 |
 | Reservations | `reservations` CRUD + `options` + check-in/check-out/no-show/cancel + `reservations/{id}/payment` | 60 |
@@ -215,15 +223,15 @@ All routes are under the `v1` prefix.
 
 ### 4.9 Migrations & seeders
 
-- ~56 migrations cover tenants, users, permissions, rooms, guests, reservations, payments, booking requisitions, housekeeping, F&B, laundry, fun & games, inventory, procurement, staff invitations/attachments, audit logs, **messages (reactions/view-once/delete fields), statuses (`statuses`/`status_views`/`status_reactions`), calls (`calls`/`call_events`)** plus the messaging feature set: `pin_star_templates_scheduled_tables` (pinned/starred/templates/scheduled), `polls_announcements_tables` (polls/poll_options/poll_votes/announcements + acknowledgements), `preferences_retention_escalation_handover_tables` (notification preferences, retention policies, escalations, handovers), `task_groups_staff_locations_guest_messages` (conversation_rooms, task_groups, staff_locations, guest_messages) and `meetings_sos_tables` (meetings, meeting_invitees, sos_alerts + `ack_user_ids`).
+- ~67 migrations cover tenants, users (incl. `add_login_pin_to_users_table` — the nullable, hashed 4-digit `users.login_pin` powering PIN sign-in), permissions, rooms, guests, reservations, payments, booking requisitions, housekeeping, F&B, laundry, fun & games, inventory, procurement, staff invitations/attachments, audit logs, **messages (reactions/view-once/delete fields), statuses (`statuses`/`status_views`/`status_reactions`), calls (`calls`/`call_events`)** plus the messaging feature set: `pin_star_templates_scheduled_tables` (pinned/starred/templates/scheduled), `polls_announcements_tables` (polls/poll_options/poll_votes/announcements + acknowledgements), `preferences_retention_escalation_handover_tables` (notification preferences, retention policies, escalations, handovers), `task_groups_staff_locations_guest_messages` (conversation_rooms, task_groups, staff_locations, guest_messages) and `meetings_sos_tables` (meetings, meeting_invitees, sos_alerts + `ack_user_ids`).
 - `TenantSeeder` seeds the demo tenant; `RolePermissionSeeder` sets up roles/permissions.
 
 ### 4.10 Testing
 
 - `phpunit.xml` uses in-memory SQLite (`:memory:`) for tests.
 - Base `Tests\TestCase` with `RefreshDatabase`.
-- Feature tests include `tests/Feature/PublicBookingPaymentFlowTest.php` (7 tests: availability methods, selcom default-off, pending booking creation, selcom confirms, bank awaiting-confirmation, selcom rejected when disabled, multi-room shared reference + batch confirm), `tests/Feature/ConversationTest.php` (direct messaging: scoping, resumes, unread counts, polling, delivery/read ticks, audio upload), `tests/Feature/GroupConversationTest.php` (11 tests: hotel/global groups, member guards, read receipts, media, add/remove/leave, unread badge feed), `tests/Feature/MessagingFeaturesTest.php` (**20 tests** covering the 24-feature set: replies + priority + polls, poll voting, pin/star, templates, scheduled messages, announcements + acknowledge, escalation + resolve, command auto-escalation, search, CSV export, translate, task-group conversion, meetings + responses, SOS flow, staff location/nearby, guest SMS, retention purge, **forwarding (incl. cross-chat access block), room search, meeting-invitee search**), `tests/Feature/OverviewPaginationTest.php` (3 tests: staff/in-house/housekeeping section filtering + pagination), `tests/Feature/InvoiceTest.php` (folio totals, regeneration keeps number and settles, PDF download, front-desk level, tenant scoping), `tests/Feature/PublicInvoiceDownloadTest.php` (reference + any phone spelling, wrong phone 404, pending reservation has no invoice, group booking, rate limit), `tests/Feature/TenantTest.php` (payment accounts, tax IDs, branding upload/removal), and `tests/Feature/RateLimitTest.php` (3 tests: login per-IP/per-email, public portal writes per-IP, messaging per-user).
-- Run: `php artisan test` (currently **175 passing, 619 assertions**).
+- Feature tests include `tests/Feature/PublicBookingPaymentFlowTest.php` (7 tests: availability methods, selcom default-off, pending booking creation, selcom confirms, bank awaiting-confirmation, selcom rejected when disabled, multi-room shared reference + batch confirm), `tests/Feature/ConversationTest.php` (direct messaging: scoping, resumes, unread counts, polling, delivery/read ticks, audio upload), `tests/Feature/GroupConversationTest.php` (11 tests: hotel/global groups, member guards, read receipts, media, add/remove/leave, unread badge feed), `tests/Feature/MessagingFeaturesTest.php` (**20 tests** covering the 24-feature set: replies + priority + polls, poll voting, pin/star, templates, scheduled messages, announcements + acknowledge, escalation + resolve, command auto-escalation, search, CSV export, translate, task-group conversion, meetings + responses, SOS flow, staff location/nearby, guest SMS, retention purge, **forwarding (incl. cross-chat access block), room search, meeting-invitee search**), `tests/Feature/OverviewPaginationTest.php` (3 tests: staff/in-house/housekeeping section filtering + pagination), `tests/Feature/InvoiceTest.php` (folio totals, regeneration keeps number and settles, PDF download, front-desk level, tenant scoping), `tests/Feature/PublicInvoiceDownloadTest.php` (reference + any phone spelling, wrong phone 404, pending reservation has no invoice, group booking, rate limit), `tests/Feature/TenantTest.php` (payment accounts, tax IDs, branding upload/removal), and `tests/Feature/RateLimitTest.php` (3 tests: login per-IP/per-email, public portal writes per-IP, messaging per-user), `tests/Feature/StaffPinLoginTest.php` (13 tests: PIN login by email and by registration number, wrong/unset/unknown-identifier rejections, disabled accounts, 4-digit validation, and the set-pin guards — role hierarchy, no self-service, confirmation required).
+- Run: `php artisan test` (currently **188 passing, 646 assertions**).
 
 ### 4.11 Realtime (Reverb + Echo)
 
@@ -239,7 +247,7 @@ Defined as named limiters in `AppServiceProvider::boot()` and applied in `routes
 | Limiter | Key | Budget | Applied to |
 | --- | --- | --- | --- |
 | `api` | user `user_id` (authed) / IP (guest) | 120 / min (authed), 30 / min (guest) | whole authenticated group (`auth:sanctum` → `tenant` → `throttle:api`) and `/api/broadcasting/auth` |
-| `auth` | IP + email | 5 / min | `auth/login`, `auth/register` — blocks credential stuffing |
+| `auth` | IP + email (or the PIN-login `identifier`) | 5 / min | `auth/login`, `auth/login-pin`, `auth/register` — blocks credential stuffing; both sign-in forms share one budget |
 | `public` | IP | 10 / min | portal writes & lookups: `public/booking-requisitions`, `public/reservations`, `public/payments/initiate`, `public/booking-requisitions/status`, `public/invoices/download` |
 | `messaging` | user `user_id` | 30 / min | messages, groups, reactions, statuses, calls (`level:20` group) |
 | `webhook` | IP | 60 / min | `payments/clickpesa/callback` (server-to-server; generous to avoid breaking payment verification) |
@@ -275,6 +283,7 @@ src/
 - `axios.js`: baseURL from `VITE_API_URL` (default `http://localhost:8000/api`); adds `Authorization: Bearer <auth_token>` from localStorage; flattens Laravel pagination (`data.data` + `meta` → top-level); on 401 clears the token and hard-redirects to `/login`.
 - `index.js` exposes typed endpoint groups under `/v1`: `publicApi`, `authApi`, `reportApi`, `userApi`, `roomApi`, `guestApi`, `reservationApi`, `paymentApi`, `housekeepingApi`, `inventoryApi`, `supplierApi`, `menuItemApi`, `orderApi`, `laundryApi`, `funGameApi`, `purchaseRequisitionApi`, `purchaseOrderApi`, `goodsReceivedNoteApi`, `bookingRequisitionApi`, `tenantApi`, `superadminReportApi`, `conversationApi`, `groupApi`, **`messageActionApi`** (react/delete/view-once), **`statusApi`** (post/list/view/like), **`callApi`** (start/accept/reject/decline/end/miss), **`featuresApi`** (reply/pin/star/polls/templates/scheduled/announcements/search/export/translate/escalate/retention/preferences/handovers/guest SMS/nearby/SOS/forward), **`roomLinkApi`** (index/searchRooms/link/unlink), **`taskGroupApi`** (store/convert), **`meetingApi`** (index/store/respond/searchUsers), **`sosApi`** (index/initiate/acknowledge/resolve).
 - `echo.js` sets up the `laravel-echo` instance from `VITE_REVERB_*` env vars, authorises private channels through the SPA's `axios` auth headers, and exports `echo` for the broadcast composables.
+- PIN sign-in: `authApi.loginPin({ identifier, pin })` mirrors `authApi.login` (same response shape); `userApi.setPin(id, { pin, pin_confirmation })` lets admins/managers assign staff login PINs from the Staff page.
 - `reportApi.overview(params)` sends per-section filters/pagination (`staff_search`, `role`, `status`, `in_house_search`, `upcoming_search`, `housekeeping_status`, `page`); nested sections return raw `{ data, links, meta }` (the interceptor only flattens top-level pagination).
 
 ### 5.3 Routing & access control
@@ -285,7 +294,7 @@ src/
 
 ### 5.4 Stores (Pinia)
 
-- `auth.js`: `token` (persisted via pinia-plugin-persistedstate `pick: ['token']`), `user`, `permissions`, `mustChangePassword`; `ROLE_LEVELS`; helpers `can()`, `hasPermission()`, `canAccess()`; actions `login`, `logout`, `fetchProfile`, `changePassword`.
+- `auth.js`: `token` (persisted via pinia-plugin-persistedstate `pick: ['token']`), `user`, `permissions`, `mustChangePassword`; `ROLE_LEVELS`; helpers `can()`, `hasPermission()`, `canAccess()`; actions `login`, `loginPin` (identical session handling to `login`, used by the PIN keypad mode), `logout`, `fetchProfile`, `changePassword`.
 - `session.js`: **5-minute idle timeout**; leaving the page (tab switch/minimise/close) logs out **immediately** — `visibilitychange` → `terminate()`, and `pagehide` clears the persisted token synchronously so a closed tab always returns to login; activity listeners; auto-logout → login page.
 - `messages.js` (Pinia): conversations + groups merged into one feed, unread counts, active thread state; subscribes to `MessageSent`/`MessageRead`/`MessageDeleted`/`MessageReacted` via Echo to update the UI live.
 
@@ -338,6 +347,12 @@ src/
 
 ### 6.1 Public
 
+**`POST /api/v1/auth/login-pin`**
+
+Body: `identifier` (username/email **or** registration number), `pin` (exactly 4 digits).
+
+Response: identical to password login — `200 { message, token, user }`. Unknown identifiers, unset PINs and wrong PINs all return one generic `401 { "message": "Invalid credentials." }`; throttled 5/min together with `auth/login` and `auth/register` under the shared `auth` limiter.
+
 **`GET /api/v1/public/hotels`**
 
 Params: `search` (hotel name/city LIKE), `country`, `city`, `guests` (min occupancy), `check_in`, `check_out`, `per_page`.
@@ -372,6 +387,7 @@ Returns the generated PDF (`Content-Disposition: attachment; filename=INV-….pd
 | --- | --- | --- |
 | GET | `/api/v1/auth/me` | Current user + permissions |
 | POST | `/api/v1/auth/logout` | Revoke current token |
+| POST | `/api/v1/users/{id}/set-pin` | Set a staff member's 4-digit login PIN (`pin` + `pin_confirmation`; level 80+, role-guarded, no self-service) |
 | GET | `/api/v1/reservations` | List (filters: status, booking_type, from, to, search) |
 | POST | `/api/v1/reservations` | Create reservation |
 | POST | `/api/v1/reservations/{id}/check-in` | Check in |
@@ -541,7 +557,7 @@ Captured from the running demo (MRK Grand Hotel + the platform superadmin). Publ
 
 ### 10.1 Public portal and sign-in
 
-<figure><img src="images/login.png" alt="Sign-in page"><figcaption>Sign-in page (`/login`).</figcaption></figure>
+<figure><img src="images/login.png" alt="Sign-in page"><figcaption>Sign-in page (`/login`) — dual-mode: email + password, or username/registration number + 4-digit PIN on the iPOS-style keypad.</figcaption></figure>
 
 <figure><img src="images/public-home.png" alt="Public portal home"><figcaption>Public booking portal home (`/`) — hotel directory, country/city filters, invoice download.</figcaption></figure>
 
