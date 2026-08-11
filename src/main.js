@@ -1,3 +1,11 @@
+/**
+ * Application entry point.
+ *
+ * Builds the root Vue app, registers Pinia (with persisted state), the router
+ * and vue-i18n, then mounts on #app. Global styles (Font Awesome + base.css)
+ * are imported here so every page shares them.
+ */
+
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'

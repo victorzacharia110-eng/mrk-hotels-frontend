@@ -1,5 +1,15 @@
+<!--
+  LaundryListPage.vue
+  Guest laundry order management. Features: service/status/payment/date filters,
+  order-number search, create/edit modal with dynamic line items and a live
+  estimated charge, quick status transitions (pending → ready → delivered,
+  cancel) and delete. Management actions gated by module 40 permissions.
+  Authenticated back-office route.
+-->
+
 <template>
   <div class="dashboard-page container">
+    <!-- Page header: refresh plus permission-gated "new order" button -->
     <div class="page-head">
       <div>
         <h1>{{ $t('laundry.title') }}</h1>
@@ -11,6 +21,7 @@
       </div>
     </div>
 
+    <!-- Global success / error feedback banners -->
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
@@ -47,6 +58,7 @@
       </div>
     </div>
 
+    <!-- Loading indicator shown while the list request is in flight -->
     <div v-if="loading" class="alert alert-info">{{ $t('laundry.loading') }}</div>
 
     <!-- Orders table with status workflow actions and payment badges -->
@@ -241,12 +253,14 @@ const form = reactive({
   notes: '',
 })
 
+// Laundry service types offered to guests (filter bar and form).
 const serviceOptions = [
   { value: 'wash', label: t('laundry.serviceWash') },
   { value: 'iron', label: t('laundry.serviceIron') },
   { value: 'dry_clean', label: t('laundry.serviceDryClean') },
 ]
 
+// Order workflow statuses (filter bar and form).
 const statusOptions = [
   { value: 'pending', label: t('laundry.statusPending') },
   { value: 'ready', label: t('laundry.statusReady') },
@@ -254,12 +268,14 @@ const statusOptions = [
   { value: 'cancelled', label: t('laundry.statusCancelled') },
 ]
 
+// Payment statuses shared with the F&B orders module (labels come from orders.*).
 const paymentStatusOptions = [
   { value: 'unpaid', label: t('orders.paymentUnpaid') },
   { value: 'paid', label: t('orders.paymentPaid') },
   { value: 'billed_to_room', label: t('orders.paymentBilledToRoom') },
 ]
 
+// Attendant dropdown options derived from the loaded user list.
 const userOptions = computed(() => users.value.map((u) => ({ value: u.user_id, label: u.full_name })))
 
 /** Maps an order status key to its translated display label. */

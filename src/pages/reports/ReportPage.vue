@@ -1,3 +1,8 @@
+<!--
+  Reports page (route: /app/reports, name: hotel-reports).
+  Hotel business reports: an overview tab (occupancy, revenue and room status
+  over a date range) plus a lazy-loaded, filterable audit log tab.
+-->
 <template>
   <div class="dashboard-page container">
     <div class="page-head">
@@ -49,6 +54,7 @@
     <div v-if="loading" class="alert alert-info">{{ $t('reports.loading') }}</div>
 
     <template v-else>
+      <!-- KPI summary cards for the selected period -->
       <div class="stats-grid">
         <div class="stat-card">
           <span class="stat-label">{{ $t('reports.occupancyAvg') }}</span>
@@ -68,6 +74,7 @@
         </div>
       </div>
 
+      <!-- Room status breakdown plus revenue by payment method, side by side -->
       <div class="dash-grid">
         <div class="card dash-section">
           <div class="section-header-row">
@@ -106,6 +113,7 @@
         </div>
       </div>
 
+      <!-- Daily occupancy rendered as a simple column chart -->
       <div class="card dash-section">
         <div class="section-header-row">
           <h2><i class="fas fa-chart-column"></i> {{ $t('reports.occupancyPerDay') }}</h2>
@@ -271,6 +279,7 @@ function actionBadge(action) {
   return map[action] || 'badge-gray'
 }
 
+// Display labels for each room status bucket in the breakdown grid.
 const ROOM_STATUS_LABELS = { total: t('reports.statusTotal'), available: t('reports.statusAvailable'), occupied: t('reports.statusOccupied'), cleaning: t('reports.statusCleaning'), maintenance: t('reports.statusMaintenance'), dirty: t('reports.statusDirty') }
 
 // Overview tab state: loading flags, date range and report datasets.

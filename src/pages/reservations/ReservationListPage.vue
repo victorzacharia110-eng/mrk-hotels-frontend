@@ -1,3 +1,10 @@
+<!--
+  Reservations page (route: /app/reservations, name: hotel-reservations).
+  Front-desk management of reservations: a tabbed (active / checked-out /
+  cancelled) filterable list, walk-in booking creation with live availability
+  and deposit capture, check-in/out with balance settlement, no-show/cancel
+  actions and a guarded permanent delete.
+-->
 <template>
   <div class="dashboard-page container">
     <div class="page-head">
@@ -18,6 +25,7 @@
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <!-- Lifecycle tabs: active (in-house/upcoming), checked-out and cancelled -->
     <div class="tabs">
       <button
         class="tab tab-active"
@@ -42,6 +50,7 @@
       </button>
     </div>
 
+    <!-- Status/type/date-range/search filters; each change reloads the list -->
     <div class="card filter-bar">
       <div class="filter-grid">
         <div class="form-group">
@@ -90,6 +99,7 @@
 
     <div v-if="loading" class="alert alert-info">{{ $t('reservations.loading') }}</div>
 
+    <!-- Reservation table; row actions depend on the reservation lifecycle status -->
     <div v-else class="table-scroll">
       <table class="table">
       <thead>
@@ -207,6 +217,7 @@
     </table>
     </div>
 
+    <!-- Pagination controls, only shown when there is more than one page -->
     <div v-if="meta.total > meta.per_page" class="pagination">
       <button
         class="btn btn-sm btn-secondary"
@@ -227,6 +238,7 @@
       </button>
     </div>
 
+    <!-- New reservation modal: guest, booking, room picker and payment sections -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal modal-lg">
         <div class="modal-head">
@@ -472,6 +484,7 @@
       </div>
     </div>
 
+    <!-- Check-out modal: reason plus balance settlement when money is still due -->
     <div v-if="showCheckout" class="modal-overlay" @click.self="closeCheckout">
       <div class="modal modal-sm">
         <div class="modal-head">
@@ -544,6 +557,7 @@
       </div>
     </div>
 
+    <!-- Read-only reservation detail modal with invoice download -->
     <div v-if="showDetail" class="modal-overlay" @click.self="showDetail = false">
       <div class="modal modal-lg">
         <div class="modal-head">
@@ -638,6 +652,7 @@
       </div>
     </div>
 
+    <!-- Permanent delete modal, guarded by typing the guest name in caps -->
     <div v-if="showDelete" class="modal-overlay" @click.self="closeDelete">
       <div class="modal modal-sm">
         <div class="modal-head">
@@ -691,6 +706,7 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 const canOperate = computed(() => authStore.canOperate)
 
+// Booking and room type vocabularies shared by the filters and the form.
 const BOOKING_TYPES = ['single', 'couple', 'family', 'group']
 const ROOM_TYPES = ['single', 'double', 'suite', 'deluxe', 'presidential']
 
@@ -729,6 +745,7 @@ const bookingSourceOptions = computed(() => [
   { value: 'ota', label: t('reservations.sourceOta') },
 ])
 
+// List state: reservation rows, guest lookup pool, tab, pagination and filters.
 const reservations = ref([])
 const guests = ref([])
 const guestSearching = ref(false)
@@ -748,6 +765,7 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 
+// Create-modal state: the form itself, availability search and feedback flags.
 const showModal = ref(false)
 const saving = ref(false)
 const modalError = ref('')
@@ -792,10 +810,19 @@ const computedTotal = ref(null)
 
 const selectedRooms = computed(() => form.selected_rooms)
 
+/**
+ * Returns true when the given room id is currently in the form's selection.
+ * @param {string} roomId - The room id to look up.
+ * @returns {boolean} Whether the room is selected.
+ */
 function isRoomSelected(roomId) {
   return form.selected_rooms.some((r) => r.room_id === roomId)
 }
 
+/**
+ * Adds or removes a room from the form's selection and refreshes the total.
+ * @param {Object} room - The availability room card that was clicked.
+ */
 function toggleRoom(room) {
   const index = form.selected_rooms.findIndex((r) => r.room_id === room.room_id)
   if (index >= 0) {
@@ -813,14 +840,29 @@ function toggleRoom(room) {
   computeTotal()
 }
 
+/**
+ * Translates a booking type code into its localised label.
+ * @param {string} type - The booking type (single, couple, family, group).
+ * @returns {string} The translated label, or an em dash when absent.
+ */
 function bookingTypeLabel(type) {
   return type ? t(`common.bookingTypes.${type}`) : '—'
 }
 
+/**
+ * Translates a room type code into its localised label.
+ * @param {string} type - The room type (single, double, suite, ...).
+ * @returns {string} The translated label, or an em dash when absent.
+ */
 function roomTypeLabel(type) {
   return type ? t(`common.roomTypes.${type}`) : '—'
 }
 
+/**
+ * Maps a reservation status to the CSS class used for its badge colour.
+ * @param {string} status - The reservation lifecycle status.
+ * @returns {string} The badge CSS class.
+ */
 function statusBadge(status) {
   return (
     {
@@ -834,10 +876,20 @@ function statusBadge(status) {
   )
 }
 
+/**
+ * Formats an ISO date string for display, keeping only the date part.
+ * @param {string} value - The ISO date string.
+ * @returns {string} The date part, or an em dash when absent.
+ */
 function formatDate(value) {
   return value ? String(value).slice(0, 10) : '—'
 }
 
+/**
+ * Formats a timestamp as a short localized date-time string.
+ * @param {string} value - The ISO date-time string.
+ * @returns {string} The formatted value, or an em dash when absent.
+ */
 function formatDateTime(value) {
   if (!value) return '—'
   const date = new Date(value)
@@ -851,6 +903,7 @@ function formatDateTime(value) {
   })
 }
 
+// Translation key suffix for each booking source code.
 const bookingSourceLabels = {
   walk_in: 'sourceWalkIn',
   phone: 'sourcePhone',
@@ -860,11 +913,21 @@ const bookingSourceLabels = {
   ota: 'sourceOta',
 }
 
+/**
+ * Translates a booking source code into its localised label.
+ * @param {string} source - The booking source (walk_in, phone, email, ...).
+ * @returns {string} The translated label, or an em dash when unknown.
+ */
 function bookingSourceLabel(source) {
   const key = bookingSourceLabels[source]
   return key ? t(`reservations.${key}`) : '—'
 }
 
+/**
+ * Flattens Laravel-style validation errors into a single readable message.
+ * @param {Error} err - The thrown request error.
+ * @returns {string} A space-joined error message or the generic failure text.
+ */
 function flattenError(err) {
   const messages = err.response?.data?.errors
   return messages
@@ -872,6 +935,7 @@ function flattenError(err) {
     : err.response?.data?.message || t('common.actionFailed')
 }
 
+/** Fetches the current page of reservations for the active tab and filters. */
 async function load() {
   loading.value = true
   error.value = ''
@@ -904,6 +968,7 @@ function switchTab(next) {
   load()
 }
 
+/** Pre-loads the guest pool used by the guest picker (non-critical on failure). */
 async function loadOptions() {
   try {
     const guestRes = await guestApi.index({ per_page: 100 })
@@ -925,6 +990,10 @@ const guestOptions = computed(() =>
 
 // Debounced so typing a name does not fire a request per keystroke.
 let guestSearchTimer
+/**
+ * Searches guests across every hotel as the receptionist types in the picker.
+ * @param {string} query - The search text; empty restores the default pool.
+ */
 function searchGuests(query) {
   clearTimeout(guestSearchTimer)
   const q = String(query || '').trim()
@@ -978,6 +1047,10 @@ async function recognizeGuest() {
   }
 }
 
+/**
+ * Pre-fills the form from a recognised guest (found by phone lookup).
+ * @param {Object} guest - The matched guest record.
+ */
 function fillGuestFromMatch(guest) {
   form.guest_id = guest.guest_id
   form.first_name = guest.first_name || ''
@@ -1012,6 +1085,7 @@ watch(
 
 // Debounced so typing a name does not fire a request per keystroke.
 let searchTimer
+/** Restarts the list search from page one (debounced from the search input). */
 function triggerSearch() {
   clearTimeout(searchTimer)
   searchTimer = setTimeout(() => {
@@ -1020,11 +1094,16 @@ function triggerSearch() {
   }, 350)
 }
 
+/**
+ * Moves to the given page and reloads the list.
+ * @param {number} target - The 1-based page number.
+ */
 function goPage(target) {
   page.value = target
   load()
 }
 
+/** Resets all filters and reloads from the first page. */
 function clearFilters() {
   page.value = 1
   filters.status = ''
@@ -1035,6 +1114,7 @@ function clearFilters() {
   load()
 }
 
+/** Opens the create modal with a blank form and refreshed guest options. */
 function openCreate() {
   modalError.value = ''
   computedTotal.value = null
@@ -1045,6 +1125,7 @@ function openCreate() {
   showModal.value = true
 }
 
+/** Closes the create modal and clears any recognised-guest hint. */
 function closeModal() {
   showModal.value = false
   recognizedGuest.value = null
@@ -1135,6 +1216,10 @@ watch(
   },
 )
 
+/**
+ * Creates one reservation per selected room, spreading any deposit paid at the
+ * desk evenly across them (the remainder lands on the last room).
+ */
 async function save() {
   modalError.value = ''
 
@@ -1281,11 +1366,19 @@ const isEarlyCheckout = computed(() => {
   return formatDate(target.check_out_date) > todayISO()
 })
 
+/**
+ * Opens the read-only detail modal for a reservation.
+ * @param {Object} r - The reservation row to inspect.
+ */
 function openDetail(r) {
   detail.value = r
   showDetail.value = true
 }
 
+/**
+ * Opens the check-out modal, pre-filling the settlement amount with the balance due.
+ * @param {Object} r - The reservation being checked out.
+ */
 function openCheckout(r) {
   checkoutTarget.value = r
   // The receptionist supplies the reason; there is no default.
@@ -1297,11 +1390,13 @@ function openCheckout(r) {
   showCheckout.value = true
 }
 
+/** Closes the check-out modal and clears its target. */
 function closeCheckout() {
   showCheckout.value = false
   checkoutTarget.value = null
 }
 
+/** Checks the guest out, attaching a settlement payment when a balance is due. */
 async function confirmCheckout() {
   const target = checkoutTarget.value
   if (!target) return
@@ -1333,6 +1428,13 @@ async function confirmCheckout() {
   }
 }
 
+/**
+ * Runs a reservation lifecycle action with an optional confirmation, then reloads.
+ * @param {Object} reservation - The reservation to act on.
+ * @param {Function} action - The reservationApi action (checkIn, cancel, noShow).
+ * @param {string} message - Fallback success message.
+ * @param {string} [confirmMessage] - When set, the action requires confirmation first.
+ */
 async function runAction(reservation, action, message, confirmMessage) {
   if (confirmMessage && !window.confirm(confirmMessage)) return
   error.value = ''
@@ -1346,6 +1448,7 @@ async function runAction(reservation, action, message, confirmMessage) {
   }
 }
 
+// Per-row lifecycle actions, all funnelled through the shared runAction helper.
 const checkIn = (r) =>
   runAction(
     r,
@@ -1381,18 +1484,24 @@ const deleteNameMatches = computed(() => {
   return expected.length > 0 && deleteName.value.trim().toUpperCase() === expected
 })
 
+/**
+ * Opens the permanent-delete modal for a checked-out or cancelled reservation.
+ * @param {Object} r - The reservation to delete.
+ */
 function openDelete(r) {
   deleteTarget.value = r
   deleteName.value = ''
   showDelete.value = true
 }
 
+/** Closes the delete modal and clears the typed confirmation name. */
 function closeDelete() {
   showDelete.value = false
   deleteTarget.value = null
   deleteName.value = ''
 }
 
+/** Permanently deletes the reservation once the typed guest name matches. */
 async function confirmDelete() {
   const target = deleteTarget.value
   if (!target || !deleteNameMatches.value) return

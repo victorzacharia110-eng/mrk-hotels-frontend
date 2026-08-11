@@ -1,5 +1,15 @@
+<!--
+  RequisitionListPage.vue
+  Purchase requisition register: departments request goods, managers approve
+  or reject them here. Features: status/priority/department filters, create
+  modal with dynamic line items and justification, reject-with-comments modal,
+  read-only detail modal, and cancel for pending records. Approval is gated by
+  permission 80; create/cancel by canOperate. Authenticated back-office route.
+-->
+
 <template>
   <div class="dashboard-page container">
+    <!-- Page header: refresh plus permission-gated "new requisition" button -->
     <div class="page-head">
       <div>
         <h1>{{ $t('requisitions.title') }}</h1>
@@ -13,9 +23,11 @@
       </div>
     </div>
 
+    <!-- Global success / error feedback banners -->
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <!-- Filter bar: status, priority and department (department searches as you type) -->
     <div class="card filter-bar">
       <div class="filter-grid">
         <div class="form-group">
@@ -40,8 +52,10 @@
       </div>
     </div>
 
+    <!-- Loading indicator shown while the list request is in flight -->
     <div v-if="loading" class="alert alert-info">{{ $t('requisitions.loading') }}</div>
 
+    <!-- Requisitions table: reference, department, requester, item count, total, priority and status badges -->
     <div v-else class="table-scroll">
       <table class="table">
       <thead>
@@ -71,6 +85,7 @@
           <td><span class="badge" :class="priorityBadge(pr.priority)">{{ pr.priority }}</span></td>
           <td><span class="badge" :class="statusBadge(pr.status)">{{ pr.status }}</span></td>
           <td>
+            <!-- Approve/reject/cancel actions, visible only for pending records with the right permission -->
             <div class="actions">
               <button v-if="pr.status === 'pending' && canApprove" class="btn btn-sm btn-success" @click="approve(pr)">
                 <i class="fas fa-check"></i> {{ $t('requisitions.approve') }}
@@ -91,6 +106,7 @@
     </table>
     </div>
 
+    <!-- Server-side pagination controls -->
     <div v-if="meta.total > meta.per_page" class="pagination">
       <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
         $t('common.previous') }}</button>

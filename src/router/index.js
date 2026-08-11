@@ -1,3 +1,15 @@
+/**
+ * Application router.
+ *
+ * Three areas: the public storefront + staff panel (StoreLayout; /app
+ * children are module-guarded via config/modules), the superadmin panel
+ * (/superadmin, role-guarded) and the owner panel (/owner, role-guarded).
+ * Every page is lazy-loaded through dynamic imports. Route meta fields:
+ * `requiresAuth` (login needed), `guest` (only while logged out), `role`
+ * (single role allowed) and `module` (key into the /app access matrix). The
+ * error handler reloads the tab once when a deploy invalidates old chunks.
+ */
+
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { moduleByKey } from '@/config/modules'

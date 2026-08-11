@@ -1,5 +1,15 @@
+<!--
+  IssueReportListPage.vue
+  Internal issue/maintenance report tracker. Any staff member can file a
+  report (category, priority, description) and follow its comment thread;
+  managers (module 80 permission) additionally see reporter identity, can
+  update status/resolution/assignee, and can send private targeted questions
+  to employees from the detail modal. Authenticated back-office route.
+-->
+
 <template>
   <div class="dashboard-page container">
+    <!-- Page header: refresh plus "new report" button (available to all staff) -->
     <div class="page-head">
       <div>
         <h1>{{ $t('issueReports.title') }}</h1>
@@ -11,6 +21,7 @@
       </div>
     </div>
 
+    <!-- Global success / error feedback banners -->
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
@@ -43,8 +54,10 @@
       </div>
     </div>
 
+    <!-- Loading indicator shown while the list request is in flight -->
     <div v-if="loading" class="alert alert-info">{{ $t('issueReports.loading') }}</div>
 
+    <!-- Reports table; the "reported by" column is only rendered for managers -->
     <div v-else class="table-scroll">
       <table class="table">
       <thead>
@@ -81,6 +94,7 @@
     </table>
     </div>
 
+    <!-- Server-side pagination controls -->
     <div v-if="meta.total > meta.per_page" class="pagination">
       <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{ $t('common.previous') }}</button>
       <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
@@ -272,6 +286,7 @@ const respondForm = reactive({ status: '', resolution: '', assigned_to: '' })
 const privateAsk = reactive({ directed_to: '', body: '' })
 const askingPrivate = ref(false)
 
+// Report categories (filter bar and create form).
 const categoryOptions = [
   { value: 'billing', label: t('issueReports.categoryBilling') },
   { value: 'reservation', label: t('issueReports.categoryReservation') },
@@ -283,6 +298,7 @@ const categoryOptions = [
   { value: 'other', label: t('issueReports.categoryOther') },
 ]
 
+// Priority levels from low to urgent (filter bar and create form).
 const priorityOptions = [
   { value: 'low', label: t('issueReports.priorityLow') },
   { value: 'normal', label: t('issueReports.priorityNormal') },
@@ -290,6 +306,7 @@ const priorityOptions = [
   { value: 'urgent', label: t('issueReports.priorityUrgent') },
 ]
 
+// Report workflow statuses (filter bar).
 const statusOptions = [
   { value: 'new', label: t('issueReports.statusNew') },
   { value: 'in_progress', label: t('issueReports.statusInProgress') },
@@ -297,10 +314,12 @@ const statusOptions = [
   { value: 'cancelled', label: t('issueReports.statusCancelled') },
 ]
 
+// Statuses a manager may set from the respond panel (currently all of them).
 const respondStatusOptions = computed(() =>
   statusOptions.filter((o) => o.value === 'new' || o.value === 'in_progress' || o.value === 'resolved' || o.value === 'cancelled'),
 )
 
+// Employee dropdown options used by the assign and private-question selectors.
 const userOptions = computed(() => users.value.map((u) => ({ value: u.user_id, label: u.full_name })))
 
 /** Maps a category key to its translated display label. */

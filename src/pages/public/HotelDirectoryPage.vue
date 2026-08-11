@@ -1,5 +1,11 @@
+<!--
+  Public hotel directory (route: /, name: public-home).
+  Landing page listing all bookable hotels with country/city filters; also hosts
+  the booking status tracker and invoice download self-service cards.
+-->
 <template>
   <div class="container page-content">
+    <!-- Hero banner with the storefront tagline -->
     <div class="hero">
       <h1>{{ $t('home.heroTitle') }}</h1>
       <p>{{ $t('home.heroSubtitle') }}</p>
@@ -57,6 +63,7 @@
       <p>{{ $t('home.noHotels') }}</p>
     </div>
 
+    <!-- Self-service tools: track a booking by reference, download an invoice -->
     <BookingStatusTracker />
 
     <InvoiceDownloadCard />
@@ -81,7 +88,7 @@ const filters = ref({
   city: '',
 })
 
-// Queries the API for hotels, passing the country/city filters when set.
+/** Queries the API for hotels, passing the country/city filters when set. */
 async function search() {
   loading.value = true
   error.value = ''

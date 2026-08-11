@@ -1,3 +1,9 @@
+<!--
+  Public booking page (route: /booking, name: public-booking).
+  Guest-facing flow to check room availability at a hotel, pick exact rooms,
+  submit a booking (held pending payment) and pay through the hotel's enabled
+  payment methods.
+-->
 <template>
   <div class="container page-content">
     <h1 class="page-title">{{ $t('bookingPage.title') }}</h1>
@@ -273,7 +279,11 @@ const availability = ref(null)
 const roomTypes = ['single', 'double', 'suite', 'deluxe', 'presidential']
 const bookingTypes = ['single', 'couple', 'family', 'group']
 
-// Translates a room type key into its localised label.
+/**
+ * Translates a room type key into its localised label.
+ * @param {string} type - The room type key (single, double, suite, ...).
+ * @returns {string} The translated label.
+ */
 function roomTypeLabel(type) {
   return t(`common.roomTypes.${type}`)
 }
@@ -339,8 +349,11 @@ const booking = ref({
   additional_guests: [],
 })
 
-// Resets the booking to sensible defaults whenever the guest changes the booking type,
-// and re-runs the current availability search since the type affects which rooms are offered.
+/**
+ * Resets the booking to sensible defaults whenever the guest changes the booking
+ * type, and re-runs the current availability search since the type affects
+ * which rooms are offered.
+ */
 function onBookingTypeChange() {
   const type = booking.value.booking_type
   booking.value.selected_rooms = []
@@ -367,12 +380,19 @@ function onBookingTypeChange() {
   if (availability.value) checkAvailability()
 }
 
-// Returns true when the given room id is currently in the guest's selection.
+/**
+ * Returns true when the given room id is currently in the guest's selection.
+ * @param {string} roomId - The room id to look up.
+ * @returns {boolean} Whether the room is selected.
+ */
 function isRoomSelected(roomId) {
   return booking.value.selected_rooms.some((r) => r.room_id === roomId)
 }
 
-// Adds or removes a room from the selection and keeps the requested room count in sync.
+/**
+ * Adds or removes a room from the selection and keeps the requested room count in sync.
+ * @param {Object} room - The availability room card that was clicked.
+ */
 function toggleRoom(room) {
   const index = booking.value.selected_rooms.findIndex((r) => r.room_id === room.room_id)
   if (index >= 0) {
@@ -394,7 +414,7 @@ const selectedCapacity = computed(() =>
   selectedRooms.value.reduce((sum, r) => sum + (r.max_occupancy || 1), 0),
 )
 
-// Appends a blank additional-guest row, pre-assigned to the first selected room.
+/** Appends a blank additional-guest row, pre-assigned to the first selected room. */
 function addGuest() {
   booking.value.additional_guests.push({
     first_name: '',
@@ -403,12 +423,15 @@ function addGuest() {
   })
 }
 
-// Removes the additional-guest row at the given index.
+/**
+ * Removes the additional-guest row at the given index.
+ * @param {number} index - Position of the guest row in `booking.additional_guests`.
+ */
 function removeGuest(index) {
   booking.value.additional_guests.splice(index, 1)
 }
 
-// Loads the list of hotels shown in the search form.
+/** Loads the list of hotels shown in the search form. */
 async function loadHotels() {
   try {
     const res = await publicApi.hotels()
@@ -418,7 +441,7 @@ async function loadHotels() {
   }
 }
 
-// Queries the API for available rooms and resets the previous booking selection.
+/** Queries the API for available rooms and resets the previous booking selection. */
 async function checkAvailability() {
   error.value = ''
   success.value = ''
@@ -437,8 +460,10 @@ async function checkAvailability() {
   }
 }
 
-// Validates the booking, then either holds exact rooms for payment or files a booking
-// request (requisition) that the hotel responds to.
+/**
+ * Validates the booking, then either holds exact rooms for payment or files a
+ * booking request (requisition) that the hotel responds to.
+ */
 async function submitBooking() {
   error.value = ''
   success.value = ''
@@ -565,7 +590,11 @@ async function payBooking() {
   }
 }
 
-// Flattens a validation-error object (or fallback message) into a single readable string.
+/**
+ * Flattens a validation-error object (or fallback message) into a single readable string.
+ * @param {Error} err - The thrown request error.
+ * @returns {string} A space-joined error message or the generic failure text.
+ */
 function flattenError(err) {
   const messages = err.response?.data?.errors
   return messages

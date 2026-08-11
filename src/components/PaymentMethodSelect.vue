@@ -1,3 +1,10 @@
+<!--
+  PaymentMethodSelect — payment method picker with a dependent provider
+  picker. The provider dropdown appears only for methods that need one
+  (mobile money, bank), and a notice tells the receptionist which payment
+  status the chosen method will create on save.
+-->
+
 <template>
   <div class="form-group">
     <label :for="`${uid}-method`">
@@ -68,6 +75,7 @@ const props = defineProps({
   methods: { type: Array, default: () => PAYMENT_METHODS },
 })
 
+// v-model updates for the parent's method and provider values.
 const emit = defineEmits(['update:method', 'update:provider'])
 
 const { t } = useI18n()

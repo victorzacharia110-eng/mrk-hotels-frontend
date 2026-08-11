@@ -1,3 +1,13 @@
+/**
+ * Shared axios instance for every API call.
+ *
+ * The base URL comes from VITE_API_URL and falls back to the local Laravel
+ * dev server. The request interceptor stamps the bearer token and the owner's
+ * tenant context (X-Tenant-ID) on outgoing calls; the response interceptor
+ * flattens Laravel pagination metadata onto the payload and forces a re-login
+ * when the session has expired (401).
+ */
+
 import axios from 'axios'
 
 // Shared axios instance for every API call in the app.

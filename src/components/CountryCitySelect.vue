@@ -1,3 +1,10 @@
+<!--
+  CountryCitySelect — cascading country and city pickers for booking/guest
+  forms. The parent owns three values: the ISO code (drives the city list),
+  the country name (stored by the API) and the city name. The city is a free
+  input with a datalist by default, or a full dropdown via `cityAsDropdown`.
+-->
+
 <template>
   <!-- Country -->
   <div class="form-group">
@@ -81,6 +88,7 @@ const props = defineProps({
   cityAsDropdown: { type: Boolean, default: false },
 })
 
+// v-model updates for the parent's countryCode, country name and city values.
 const emit = defineEmits(['update:countryCode', 'update:country', 'update:city'])
 
 const { t } = useI18n()

@@ -1,8 +1,20 @@
+<!--
+  AdminOverviewPage.vue
+  Hotel admin/owner overview (route /app/overview). Combines KPI stat cards,
+  an interactive staff directory with role/status filters, pagination and
+  activate/deactivate actions, an in-house guest list with balances and
+  check-out shortcuts, upcoming arrivals, and a housekeeping task list with
+  assign/confirm/verify/complete actions. Each section's filters reload the
+  overview API with debouncing. Authenticated back-office route.
+-->
+
 <template>
   <div class="dashboard-page container">
+    <!-- Loading indicator shown until the first overview payload arrives -->
     <div v-if="loading" class="alert alert-info">{{ $t('overview.loading') }}</div>
 
     <template v-else-if="data">
+      <!-- Header: page title and hotel name badge -->
       <div class="dash-header">
         <div>
           <h1>{{ $t('overview.title') }}</h1>
@@ -11,6 +23,7 @@
         <span class="role-badge"><i class="fas fa-user-shield"></i> {{ hotelName }}</span>
       </div>
 
+      <!-- Inline feedback banners (e.g. after toggling a staff account) -->
       <div v-if="error" class="alert alert-error">{{ error }}</div>
       <div v-if="success" class="alert alert-success">{{ success }}</div>
 
@@ -344,6 +357,7 @@ const housekeeperOptions = computed(() =>
   housekeepers.value.map((u) => ({ value: u.user_id, label: u.full_name })),
 )
 
+// Staff role options for the staff-section filter dropdown.
 const ROLES = [
   { value: 'hotel_admin', label: t('common.roles.hotelAdmin') },
   { value: 'manager', label: t('common.roles.manager') },
@@ -357,6 +371,7 @@ const ROLES = [
   { value: 'staff', label: t('common.roles.staff') },
 ]
 
+// Housekeeping task statuses used by the housekeeping filter dropdown.
 const HOUSE_STATUSES = {
   dirty: t('housekeeping.statusDirty'),
   in_progress: t('housekeeping.statusInProgress'),

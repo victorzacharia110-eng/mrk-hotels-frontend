@@ -1,5 +1,14 @@
+<!--
+  GoodsReceivedNoteListPage.vue
+  Goods Received Notes (GRN) register for procurement. Staff filter by purchase
+  order, inspection status and date range; new GRNs are captured in a modal whose
+  line items auto-fill from the selected PO, and each GRN has a read-only detail
+  view with received/rejected quantities. Authenticated back-office route.
+-->
+
 <template>
   <div class="dashboard-page container">
+    <!-- Page header: refresh plus permission-gated "new entry" button -->
     <div class="page-head">
       <div>
         <h1>{{ $t('goodsReceived.title') }}</h1>
@@ -11,9 +20,11 @@
       </div>
     </div>
 
+    <!-- Global success / error feedback banners -->
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <!-- Filter bar: purchase order, inspection status and received-date range -->
     <div class="card filter-bar">
       <div class="filter-grid">
         <div class="form-group">
@@ -38,8 +49,10 @@
       </div>
     </div>
 
+    <!-- Loading indicator shown while the list request is in flight -->
     <div v-if="loading" class="alert alert-info">{{ $t('goodsReceived.loading') }}</div>
 
+    <!-- GRN table: reference, linked PO/supplier, received date and inspection badge -->
     <div v-else class="table-scroll">
       <table class="table">
       <thead>
@@ -72,6 +85,7 @@
     </table>
     </div>
 
+    <!-- Server-side pagination controls -->
     <div v-if="meta.total > meta.per_page" class="pagination">
       <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{ $t('common.previous') }}</button>
       <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
@@ -229,10 +243,13 @@ const form = reactive({ po_id: '', inspection_status: 'pending', received_date: 
 // PO options, filtered to those that can still receive goods.
 const eligiblePos = computed(() => poOptions.value.filter((po) => ['approved', 'partially_received', 'received'].includes(po.status)))
 
+// All loaded POs as dropdown options (used by the filter bar).
 const purchaseOrderOptions = computed(() => poOptions.value.map((po) => ({ value: po.po_id, label: po.po_number })))
 
+// Only goods-receivable POs as dropdown options (used by the create form).
 const eligiblePurchaseOrderOptions = computed(() => eligiblePos.value.map((po) => ({ value: po.po_id, label: po.po_number })))
 
+// Inspection status options with translated labels (filter bar and form).
 const inspectionStatusOptions = computed(() => [
   { value: 'pending', label: t('goodsReceived.statusPending') },
   { value: 'passed', label: t('goodsReceived.inspectionPassed') },

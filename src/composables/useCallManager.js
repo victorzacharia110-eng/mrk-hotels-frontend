@@ -1,3 +1,11 @@
+/**
+ * WebRTC audio/video call manager composable.
+ *
+ * Signalling is relayed through the backend REST API and a private Echo
+ * channel (`call.{id}`); the media itself flows peer-to-peer. Used by the
+ * messages page to place, receive and control calls between staff members.
+ */
+
 import { ref } from 'vue'
 import { callApi } from '@/api'
 import { getEcho } from '@/plugins/echo'

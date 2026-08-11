@@ -1,5 +1,12 @@
+<!--
+  PhoneInput — phone number field with a searchable country picker.
+  Emits the live-formatted number and the selected ISO country code; changing
+  the country re-formats the typed digits under the new dialling conventions.
+-->
+
 <template>
   <div class="phone-input">
+    <!-- Country/dial-code picker. -->
     <SearchableSelect
       class="country-select"
       :model-value="countryCode"
@@ -7,6 +14,7 @@
       searchable
       @update:model-value="onCountryChange"
     />
+    <!-- Number field, formatted live as the user types. -->
     <input
       class="input number-input"
       type="tel"
@@ -41,6 +49,7 @@ const props = defineProps({
   disabled: { type: Boolean, default: false },
 })
 
+// v-model updates for the formatted phone number and the selected country code.
 const emit = defineEmits(['update:modelValue', 'update:countryCode'])
 
 // Country dropdown options built from the shared locations list, combining

@@ -1,3 +1,8 @@
+<!--
+  Accounting reports page (route: /app/accounting, name: hotel-accounting).
+  Tabbed financial reports for a hotel: trial balance, balance sheet and the
+  general ledger, each filterable by a from/to date range.
+-->
 <template>
   <div class="accounting-page container">
     <div class="page-head">
@@ -13,6 +18,7 @@
 
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <!-- Date range filter; the first field means "as of" for the balance sheet -->
     <div class="card filter-bar">
       <div class="filter-grid">
         <div class="form-group">

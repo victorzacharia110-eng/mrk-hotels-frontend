@@ -1,3 +1,9 @@
+<!--
+  ProviderLogo — brand tile for a payment provider (M-Pesa, CRDB, ...).
+  Shows the bundled logo image when one exists, otherwise a coloured tile with
+  the provider's initials. Comes in sm/md/lg sizes.
+-->
+
 <template>
   <span class="provider-logo" :class="sizeClass" :style="tileStyle">
     <img v-if="info?.logo" :src="info.logo" :alt="label" class="provider-logo-img" />

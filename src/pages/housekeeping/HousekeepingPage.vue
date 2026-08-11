@@ -1,5 +1,16 @@
+<!--
+  HousekeepingPage.vue
+  Housekeeping task board: one row per room cleaning task with pax, house
+  status, assignee, room status, arrival/departure and workflow status.
+  Features: status/house-status/room-status/room filters, create/edit task
+  modal, assign modal, full lifecycle actions (accept → start → complete →
+  confirm/verify, reopen), and a read-only detail modal. Management actions
+  gated by module 40 permissions. Authenticated back-office route.
+-->
+
 <template>
   <div class="dashboard-page container">
+    <!-- Page header: refresh plus permission-gated "new task" button -->
     <div class="page-head">
       <div>
         <h1>{{ $t('housekeeping.title') }}</h1>
@@ -13,6 +24,7 @@
       </div>
     </div>
 
+    <!-- Global success / error feedback banners -->
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
@@ -46,6 +58,7 @@
       </div>
     </div>
 
+    <!-- Loading indicator shown while the list request is in flight -->
     <div v-if="loading" class="alert alert-info">{{ $t('housekeeping.loading') }}</div>
 
     <!-- Task table: one row per housekeeping task with status/room badges and workflow actions -->

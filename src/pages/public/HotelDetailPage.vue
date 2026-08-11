@@ -1,3 +1,8 @@
+<!--
+  Public hotel detail page (route: /hotels/:id, name: public-hotel).
+  Guest-facing view of one hotel: location/contact header with a booking
+  shortcut, plus a grid of its rooms with status, type and nightly price.
+-->
 <template>
   <div class="container page-content">
     <!-- Error banner when the hotel could not be loaded -->
@@ -60,7 +65,11 @@ const rooms = ref([])
 const loading = ref(false)
 const error = ref('')
 
-// Maps a room status to the CSS class used for its badge colour.
+/**
+ * Maps a room status to the CSS class used for its badge colour.
+ * @param {string} status - The room status (available, occupied, cleaning, maintenance).
+ * @returns {string} The badge CSS class.
+ */
 function statusBadge(status) {
   const map = {
     available: 'badge-green',
@@ -71,7 +80,7 @@ function statusBadge(status) {
   return map[status] || 'badge-gray'
 }
 
-// Fetches the hotel and its rooms by the tenant id in the URL.
+/** Fetches the hotel and its rooms by the tenant id in the URL. */
 async function load() {
   loading.value = true
   error.value = ''

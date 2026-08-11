@@ -1,8 +1,16 @@
+<!--
+  InvoiceDownloadCard — guest self-service invoice download.
+  Verifies the guest with the booking reference plus the phone number on the
+  booking, then streams the invoice PDF from the public API and saves it
+  through the browser.
+-->
+
 <template>
   <div class="card invoice-card">
     <h2 class="card-title"><i class="fas fa-file-invoice"></i> {{ $t('invoiceDownload.title') }}</h2>
     <p class="muted">{{ $t('invoiceDownload.subtitle') }}</p>
 
+    <!-- Verification form: booking reference + phone used on the booking. -->
     <form class="invoice-form" @submit.prevent="download">
       <input
         v-model.trim="reference"
@@ -23,6 +31,7 @@
       </button>
     </form>
 
+    <!-- Outcome of the last download attempt. -->
     <div v-if="error" class="alert alert-error">{{ error }}</div>
     <div v-if="success" class="alert alert-success">{{ success }}</div>
   </div>

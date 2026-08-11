@@ -1,5 +1,18 @@
+<!--
+  MessagesPage.vue
+  WhatsApp-style staff messaging hub (route /app/messages). Direct and group
+  chats (hotel or global scope) with: text/media/voice messages, view-once
+  media, reactions, replies, pins, stars, polls, translation, templates,
+  scheduling, forwarding, in-chat search, CSV export, @mentions, calls,
+  status rings, room linking, and a tenant "workspace" panel (announcements,
+  meetings, shift handovers, escalations, nearby staff, guest SMS, retention
+  policies, notification preferences, SOS alerts). Realtime via Laravel Echo
+  (private user, tenant and per-thread channels).
+-->
+
 <template>
   <div class="dashboard-page container">
+    <!-- Page header: workspace shortcut, refresh, new message / new group -->
     <div class="page-head">
       <div>
         <h1><i class="fas fa-comments"></i> {{ $t('messages.title') }}</h1>
@@ -17,9 +30,11 @@
       </div>
     </div>
 
+    <!-- Global success / error feedback banners -->
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <!-- Two-pane chat layout: list on the left, active thread on the right (stacked on mobile) -->
     <div class="chat-shell">
       <!-- Conversation + group list -->
       <aside class="chat-list" :class="{ 'hidden-xs': activeChat }">
@@ -28,6 +43,7 @@
             @input="onListSearch" />
         </div>
 
+        <!-- "My status" entry pinned above the chat list (tap + to compose) -->
         <button class="chat-item status-entry" @click="openMyStatus">
           <span class="avatar status-my" :class="myStatusHas ? 'status-ring unviewed' : ''">
             {{ initials(me.full_name) }}
@@ -84,6 +100,7 @@
           </span>
         </button>
 
+        <!-- Load-more pager for the chat list -->
         <div v-if="hasMore" class="chat-load-more">
           <button class="btn btn-sm btn-secondary" :disabled="loadingConvs" @click="loadMoreChats">
             {{ $t('common.next') }}
@@ -94,6 +111,7 @@
       <!-- Thread -->
       <section class="chat-thread" :class="{ 'hidden-xs': !activeChat }">
         <template v-if="activeChat">
+          <!-- Thread header: participant info plus call/pinned/search/room-link/mute/group actions -->
           <header class="chat-thread-head">
             <button class="btn btn-sm btn-secondary back-btn" @click="closeThread">
               <i class="fas fa-arrow-left"></i>
@@ -155,6 +173,7 @@
 
           <div v-if="loadingMsgs" class="alert alert-info">{{ $t('common.loading') }}</div>
 
+          <!-- Message bubbles: text, media, view-once, polls, reactions, reply previews and read ticks -->
           <div v-else class="chat-messages">
             <div v-if="!messages.length" class="chat-empty muted">{{ $t('messages.noMessages') }}</div>
             <div v-for="msg in messages" :key="msg.message_id || msg.group_message_id" class="bubble"
@@ -264,6 +283,7 @@
             </div>
           </div>
 
+          <!-- Composer: recording/file previews, reply bar, priority toggle, attachments and emoji -->
           <form class="chat-composer" @submit.prevent="sendMessage">
             <template v-if="recordingPreview">
               <audio controls :src="recordingUrl" class="bubble-audio"></audio>
@@ -350,6 +370,7 @@
               </button>
             </template>
 
+            <!-- Emoji picker popover -->
             <div v-if="showEmojiPicker" class="emoji-picker">
               <button v-for="emoji in EMOJIS" :key="emoji" type="button" class="emoji-item"
                 @click="insertEmoji(emoji)">{{ emoji
@@ -375,6 +396,7 @@
               <button type="button" class="icon-btn" @click="cancelReply"><i class="fas fa-xmark"></i></button>
             </div>
 
+            <!-- Poll builder popover (question + dynamic options) -->
             <div v-if="showPollBuilder" class="poll-builder">
               <input v-model="pollQuestion" type="text" class="input"
                 :placeholder="$t('messages.pollQuestionPlaceholder')" />
@@ -1166,10 +1188,12 @@ import { useCallManager } from '@/composables/useCallManager'
 const { t } = useI18n()
 const router = useRouter()
 const authStore = useAuthStore()
+// Current-user shortcut, admin flag and tenant hotel name.
 const me = computed(() => authStore.user || {})
 const isAdmin = computed(() => ['superadmin', 'hotel_admin'].includes(me.value.user_role))
 const hotelName = computed(() => authStore.user?.tenant?.hotel_name || 'MRK Hotels')
 
+// Emoji palette offered by the composer picker (hotel-flavoured set).
 const EMOJIS = [
   '😀', '😄', '😁', '😂', '🤣', '😊', '😇', '🙂', '😉', '😍',
   '🤩', '😘', '😎', '🤗', '🤔', '🙃', '😴', '🥳', '😢', '😭',
@@ -1181,8 +1205,10 @@ const EMOJIS = [
   '😴', '🎧', '💼', '🏨', '🛎️', '🗝️', '🧳', '🛏️', '🚿', '🍽️',
 ]
 
+// Quick-reaction emoji set shown in the message context menu.
 const REACTION_EMOJIS = ['❤️', '👍', '👏', '😄', '😮', '😂']
 
+// Core chat state: conversation/group lists with pagination, the active thread, composer draft and list search.
 const conversations = ref([])
 const groups = ref([])
 const convPage = ref(1)
@@ -1201,6 +1227,7 @@ const listSearch = ref('')
 const error = ref('')
 const success = ref('')
 
+// "New direct message" modal state (hotel vs global scope user search).
 const showNew = ref(false)
 const newScope = ref('hotel')
 const userSearch = ref('')
@@ -1208,6 +1235,7 @@ const userResults = ref([])
 const searchingUsers = ref(false)
 const startingWith = ref(null)
 
+// "New group" modal state, including member selection.
 const showNewGroup = ref(false)
 const groupName = ref('')
 const groupScope = ref('hotel')
@@ -1217,12 +1245,14 @@ const selectedGroupUsers = ref([])
 const searchingGroupUsers = ref(false)
 const creatingGroup = ref(false)
 
+// Group management modal state (add/remove members) and its feedback messages.
 const showGroupManage = ref(false)
 const addingMembers = ref(false)
 const removingMember = ref(false)
 const modalError = ref('')
 const modalSuccess = ref('')
 
+// Composer extras: attachment picker/preview, emoji popover and voice-recording state (MediaRecorder handles are non-reactive lets).
 const fileInput = ref(null)
 const draftInput = ref(null)
 const showEmojiPicker = ref(false)
@@ -1239,10 +1269,13 @@ let audioChunks = []
 let recTimer = null
 let recMimeType = 'audio/webm'
 
+// Debounce handle shared by the list search and the user search inputs.
 let searchTimer = null
 
+// Echo channel of the currently open thread; unsubscribed on switch/unmount.
 let activeThreadChannel = null
 
+// Message context-menu position/target and view-once viewer state.
 const msgMenu = ref({ open: false, x: 0, y: 0, msg: null })
 const viewOnceLoading = ref('')
 const viewOncePreview = ref(null)
@@ -1315,6 +1348,7 @@ const roomLinkSearch = ref('')
 const roomLinkResults = ref([])
 const savingFeature = ref(false)
 
+// Voice/video call manager; call events surface as transient success banners.
 const callManager = useCallManager({
   notify: (key) => {
     success.value = t(`messages.${key}`)
@@ -1324,13 +1358,20 @@ const callManager = useCallManager({
   },
 })
 
+// The chat currently open in the thread pane (null when none is selected).
 const activeChat = computed(() =>
   chats.value.find((c) => c.kind === activeKind.value && c.id === activeId.value) || null,
 )
 
+// Status-ring state: per-user has/unviewed flags plus whether I have a live status.
 const statusByUser = ref({})
 const myStatusHas = ref(false)
 
+/**
+ * Loads the status map used to draw avatar rings. Failures are swallowed:
+ * statuses are decorative and must never break chat.
+ * @returns {Promise<void>}
+ */
 async function loadStatusMap() {
   try {
     const res = await statusApi.index({ per_page: 100 })
@@ -1351,6 +1392,11 @@ async function loadStatusMap() {
   }
 }
 
+/**
+ * Returns the status-ring class for a direct chat avatar ('viewed' | 'unviewed').
+ * @param {Object} chat - Unified chat-list item.
+ * @returns {string} Ring class, or '' for groups/users without a status.
+ */
 function avatarStatusClass(chat) {
   if (chat.kind !== 'direct') return ''
   const st = statusByUser.value[chat.participant_id]
@@ -1358,11 +1404,16 @@ function avatarStatusClass(chat) {
   return st.viewed ? 'status-ring viewed' : 'status-ring unviewed'
 }
 
+/**
+ * Navigates to the status viewer for the given user.
+ * @param {number} userId - The user whose status should be shown.
+ */
 function openUserStatus(userId) {
   if (!userId) return
   router.push({ name: 'hotel-statuses', query: { user: userId } })
 }
 
+/** Opens my own status viewer, or the status composer when I have none live. */
 function openMyStatus() {
   if (myStatusHas.value) {
     router.push({ name: 'hotel-statuses', query: { user: me.value.user_id } })
@@ -1371,10 +1422,12 @@ function openMyStatus() {
   }
 }
 
+/** Navigates to the status composer. */
 function openStatusCompose() {
   router.push({ name: 'hotel-statuses', query: { compose: 1 } })
 }
 
+// Unified chat list: direct conversations and groups normalized to one shape, newest activity first.
 const chats = computed(() => {
   const all = [
     ...conversations.value.map((c) => ({
@@ -1404,14 +1457,18 @@ const chats = computed(() => {
   return all.sort((a, b) => String(b.last_message_at || '').localeCompare(String(a.last_message_at || '')))
 })
 
+// True while either the conversation or the group list has another page.
 const hasMore = computed(() =>
   (convMeta.value?.next_page_url || groupMeta.value?.next_page_url) ? true : false,
 )
 
+// Members of the active group (empty for direct chats).
 const groupMembers = computed(() => groupInfo.value?.members || [])
 
+// True when the current user created the active group (grants moderation rights).
 const isGroupCreator = computed(() => activeChat.value?.kind === 'group' && groupInfo.value?.created_by === me.value.user_id)
 
+// Users that can be @-mentioned in the active thread (group members, or the direct counterpart).
 const mentionableUsers = computed(() => {
   if (!activeId.value) return []
   if (activeKind.value === 'group') {
@@ -1421,6 +1478,11 @@ const mentionableUsers = computed(() => {
   return other ? [{ user_id: other.id, full_name: other.name }] : []
 })
 
+/**
+ * Builds up to two uppercase initials for an avatar placeholder.
+ * @param {string} name - Full name to derive initials from.
+ * @returns {string} The initials, or '?' when no name is available.
+ */
 function initials(name) {
   return (name || '?')
     .split(' ')
@@ -1431,6 +1493,11 @@ function initials(name) {
     .toUpperCase()
 }
 
+/**
+ * Resolves a staff role key to its translated display label.
+ * @param {string} role - Role key (e.g. 'manager', 'housekeeping').
+ * @returns {string} Translated label, or the raw key when unknown.
+ */
 function roleLabel(role) {
   const map = {
     hotel_admin: t('common.roles.hotelAdmin'),
@@ -1447,6 +1514,11 @@ function roleLabel(role) {
   return map[role] || role
 }
 
+/**
+ * Formats a timestamp compactly: HH:mm today, "yesterday", else a short date.
+ * @param {string} iso - ISO datetime string.
+ * @returns {string} Display string ('' for missing/invalid input).
+ */
 function formatTime(iso) {
   if (!iso) return ''
   const d = new Date(iso)
@@ -1460,6 +1532,13 @@ function formatTime(iso) {
   return d.toLocaleDateString([], { day: '2-digit', month: 'short' })
 }
 
+/**
+ * Builds the one-line preview for a chat-list entry, with icon placeholders
+ * for deleted/view-once/audio/image/file messages and a "You:" prefix for
+ * messages sent by the current user.
+ * @param {Object} chat - Unified chat-list item carrying last_message.
+ * @returns {string} Preview text.
+ */
 function lastPreview(chat) {
   const lm = chat.last_message
   if (!lm) return ''
@@ -1472,6 +1551,12 @@ function lastPreview(chat) {
   return `${who}${lm.body || ''}`
 }
 
+/**
+ * Computes the WhatsApp-style tick state for an outgoing message.
+ * Groups use the aggregate read count; direct chats use read/delivered timestamps.
+ * @param {Object} msg - The message record.
+ * @returns {string|null} 'read' | 'delivered' | null.
+ */
 function msgTicks(msg) {
   if (activeKind.value === 'group') {
     if (msg.read_by_count > 0) return 'read'
@@ -1483,6 +1568,11 @@ function msgTicks(msg) {
   return null
 }
 
+/**
+ * Tooltip for the read tick: "seen by N" in groups, plain "read" otherwise.
+ * @param {Object} msg - The message record.
+ * @returns {string} Localized tooltip text.
+ */
 function seenByTitle(msg) {
   if (activeKind.value === 'group' && msg.read_by_count > 0) {
     return t('messages.seenBy', { count: msg.read_by_count })
@@ -1490,27 +1580,55 @@ function seenByTitle(msg) {
   return t('messages.read')
 }
 
+/**
+ * Returns the id field matching the active chat kind (direct vs group).
+ * @param {Object} msg - The message record.
+ * @returns {number|undefined} The message id for the active kind.
+ */
 function msgId(msg) {
   return activeKind.value === 'group' ? msg.group_message_id : msg.message_id
 }
 
+/**
+ * Returns the API message-type discriminator for the active chat kind.
+ * @returns {string} 'group' or 'conversation'.
+ */
 function messageType() {
   return activeKind.value === 'group' ? 'group' : 'conversation'
 }
 
+/**
+ * Checks delete-for-everyone rights: own messages always; group creators may
+ * also moderate other members' messages.
+ * @param {Object} msg - The message record.
+ * @returns {boolean}
+ */
 function canDeleteEveryone(msg) {
   return msg.sender_id === me.value.user_id || (activeKind.value === 'group' && isGroupCreator.value)
 }
 
+/**
+ * Opens the message context menu at the click position; the next document
+ * click closes it (once listener).
+ * @param {Object} msg - The message the menu acts on.
+ * @param {MouseEvent} event - The triggering click (provides x/y).
+ */
 function openMsgMenu(msg, event) {
   msgMenu.value = { open: true, x: event.clientX, y: event.clientY, msg }
   document.addEventListener('click', closeMsgMenu, { once: true })
 }
 
+/** Closes the message context menu and clears its target. */
 function closeMsgMenu() {
   msgMenu.value = { open: false, x: 0, y: 0, msg: null }
 }
 
+/**
+ * Deletes a message via the API, then mirrors the result locally.
+ * @param {Object} msg - The message to delete.
+ * @param {string} scope - 'me' (remove for myself) or 'everyone'.
+ * @returns {Promise<void>}
+ */
 async function deleteMessage(msg, scope) {
   closeMsgMenu()
   try {
@@ -1523,6 +1641,12 @@ async function deleteMessage(msg, scope) {
   }
 }
 
+/**
+ * Applies a deletion to local state: removes the row entirely for 'me',
+ * or scrubs body/media and flags it deleted for 'everyone'.
+ * @param {Object} msg - The local message object to mutate.
+ * @param {string} scope - 'me' | 'everyone'.
+ */
 function applyDeletedLocally(msg, scope) {
   const idx = messages.value.indexOf(msg)
   if (scope === 'me') {
@@ -1547,6 +1671,7 @@ function applyDeletedLocally(msg, scope) {
   }
 }
 
+/** Recomputes the active chat's list preview from the last remaining message. */
 function refreshThreadPreview() {
   const chat = activeChat.value
   if (!chat) return
@@ -1555,6 +1680,12 @@ function refreshThreadPreview() {
   chat.last_message_at = last ? last.created_at : chat.created_at
 }
 
+/**
+ * Toggles an emoji reaction on a message and stores the returned summary.
+ * @param {Object} msg - The message to react to.
+ * @param {string} emoji - The reaction emoji.
+ * @returns {Promise<void>}
+ */
 async function toggleReaction(msg, emoji) {
   try {
     const res = await messageActionApi.toggleReaction(messageType(), msgId(msg), emoji)
@@ -1564,6 +1695,12 @@ async function toggleReaction(msg, emoji) {
   }
 }
 
+/**
+ * Opens a view-once message: marks it viewed server-side and shows the media
+ * overlay. No-op for own, already-viewed or deleted messages.
+ * @param {Object} msg - The view-once message.
+ * @returns {Promise<void>}
+ */
 async function openViewOnce(msg) {
   if (msg.viewed_at || msg.deleted || msg.sender_id === me.value.user_id) return
   viewOnceLoading.value = msgId(msg)
@@ -1580,18 +1717,34 @@ async function openViewOnce(msg) {
   }
 }
 
+/** Closes the view-once media overlay. */
 function closeViewOncePreview() {
   viewOncePreview.value = null
 }
 
 // --- Feature actions ---
+/**
+ * Checks whether a message is pinned (flag on the record or in the pinned list).
+ * @param {Object} msg - The message record.
+ * @returns {boolean}
+ */
 function isPinned(msg) {
   return !!msg.pinned_at || pinnedMsgs.value.some((p) => p.message_id === msgId(msg))
 }
+/**
+ * Checks whether a message is starred (flag on the record or in the starred list).
+ * @param {Object} msg - The message record.
+ * @returns {boolean}
+ */
 function isStarred(msg) {
   return !!msg.starred_at || starredMsgs.value.some((s) => s.message_id === msgId(msg))
 }
 
+/**
+ * Pins or unpins a message and refreshes the pinned-panel data.
+ * @param {Object} msg - The message to pin/unpin.
+ * @returns {Promise<void>}
+ */
 async function togglePin(msg) {
   closeMsgMenu()
   const was = isPinned(msg)
@@ -1607,6 +1760,11 @@ async function togglePin(msg) {
   }
 }
 
+/**
+ * Stars or unstars a message and refreshes the starred list.
+ * @param {Object} msg - The message to star/unstar.
+ * @returns {Promise<void>}
+ */
 async function toggleStar(msg) {
   closeMsgMenu()
   const was = isStarred(msg)
@@ -1622,6 +1780,7 @@ async function toggleStar(msg) {
   }
 }
 
+/** Loads the pinned messages of the active thread. @returns {Promise<void>} */
 async function loadPinned() {
   if (!activeId.value) return
   try {
@@ -1630,6 +1789,7 @@ async function loadPinned() {
   } catch (e) { }
 }
 
+/** Loads the current user's starred messages. @returns {Promise<void>} */
 async function loadStarred() {
   try {
     const res = await featuresApi.starred()
@@ -1637,14 +1797,22 @@ async function loadStarred() {
   } catch (e) { }
 }
 
+/** Opens the pinned-messages panel, lazy-loading its data. */
 function openPinnedPanel() {
   showPinned.value = true
   loadPinned()
 }
+/** Closes the pinned-messages panel. */
 function closePinnedPanel() {
   showPinned.value = false
 }
 
+/**
+ * Casts a vote on a poll message and applies the returned poll state.
+ * @param {Object} msg - The message carrying the poll.
+ * @param {Object} option - The chosen poll option.
+ * @returns {Promise<void>}
+ */
 async function votePoll(msg, option) {
   try {
     const res = await featuresApi.vote({
@@ -1659,6 +1827,12 @@ async function votePoll(msg, option) {
   }
 }
 
+/**
+ * Translates a message body via the features API and stores the result on the
+ * message; guarded against double-clicks while a translation is in flight.
+ * @param {Object} msg - The message to translate.
+ * @returns {Promise<void>}
+ */
 async function translateMessage(msg) {
   const id = msgId(msg)
   if (translateLoading.value === id) return
@@ -1678,6 +1852,11 @@ async function translateMessage(msg) {
   }
 }
 
+/**
+ * Saves a message body as a reusable quick template (name = first 40 chars).
+ * @param {Object} msg - The message whose body becomes the template.
+ * @returns {Promise<void>}
+ */
 async function saveAsTemplate(msg) {
   closeMsgMenu()
   try {
@@ -1688,31 +1867,45 @@ async function saveAsTemplate(msg) {
   }
 }
 
+/** Loads message templates, filtered by the selected category when set. @returns {Promise<void>} */
 async function loadTemplates() {
   try {
     const res = await templateApi.index({ category: templateCategory.value || undefined })
     templates.value = res.data.data || []
   } catch (e) { }
 }
+/** Opens the template picker and loads the template list. */
 function openTemplatePicker() {
   showTemplatePicker.value = true
   loadTemplates()
 }
+/** Closes the template picker. */
 function closeTemplatePicker() {
   showTemplatePicker.value = false
 }
+/**
+ * Appends a template body to the draft and refocuses the composer.
+ * @param {Object} tpl - The selected template record.
+ */
 function insertTemplate(tpl) {
   draft.value = (draft.value ? draft.value + ' ' : '') + tpl.body
   closeTemplatePicker()
   requestAnimationFrame(() => draftInput.value?.focus())
 }
 
+/** Opens the message scheduler popover. */
 function openScheduler() {
   showScheduler.value = true
 }
+/** Closes the message scheduler popover. */
 function closeScheduler() {
   showScheduler.value = false
 }
+/**
+ * Schedules the current draft for later delivery; requires a send date and a
+ * non-empty draft. Clears the draft and refreshes the scheduled list on success.
+ * @returns {Promise<void>}
+ */
 async function scheduleMessage() {
   if (!scheduleAt.value || !draft.value.trim()) {
     modalError.value = t('messages.scheduleNeedsDate')
@@ -1738,12 +1931,18 @@ async function scheduleMessage() {
   }
 }
 
+/** Loads the user's scheduled (not yet sent) messages. @returns {Promise<void>} */
 async function loadScheduled() {
   try {
     const res = await scheduledApi.index()
     scheduledList.value = res.data.data || []
   } catch (e) { }
 }
+/**
+ * Cancels a scheduled message and removes it from the local list.
+ * @param {number} id - The scheduled-message id.
+ * @returns {Promise<void>}
+ */
 async function cancelScheduled(id) {
   try {
     await scheduledApi.destroy(id)
@@ -1753,6 +1952,10 @@ async function cancelScheduled(id) {
   }
 }
 
+/**
+ * Opens the forward picker holding the given message as the payload.
+ * @param {Object} msg - The message to forward.
+ */
 function openForwardPicker(msg) {
   forwardMsg.value = msg
   showForward.value = true
@@ -1760,10 +1963,12 @@ function openForwardPicker(msg) {
   forwardResults.value = []
   searchForwardTargets()
 }
+/** Closes the forward picker and releases the held message. */
 function closeForwardPicker() {
   showForward.value = false
   forwardMsg.value = null
 }
+/** Searches direct conversations and groups in parallel as forward targets. @returns {Promise<void>} */
 async function searchForwardTargets() {
   try {
     const [c, g] = await Promise.all([
@@ -1776,6 +1981,11 @@ async function searchForwardTargets() {
     ]
   } catch (e) { }
 }
+/**
+ * Forwards the held message to the chosen target chat.
+ * @param {Object} target - Forward target ({ kind: 'conversation'|'group', id }).
+ * @returns {Promise<void>}
+ */
 async function forwardTo(target) {
   forwarding.value = true
   try {
@@ -1794,14 +2004,17 @@ async function forwardTo(target) {
   }
 }
 
+/** Opens the in-chat search panel with a fresh query. */
 function openSearchPanel() {
   showSearchPanel.value = true
   searchQuery.value = ''
   searchResults.value = []
 }
+/** Closes the in-chat search panel. */
 function closeSearchPanel() {
   showSearchPanel.value = false
 }
+/** Runs the message search within the active chat. @returns {Promise<void>} */
 async function runSearch() {
   if (!searchQuery.value.trim() || !activeId.value) return
   searchingMessages.value = true
@@ -1818,12 +2031,17 @@ async function runSearch() {
     searchingMessages.value = false
   }
 }
+/**
+ * Closes the search panel and smooth-scrolls to the chosen result bubble.
+ * @param {Object} m - A search-result message (needs message_id for the DOM anchor).
+ */
 function focusResult(m) {
   closeSearchPanel()
   const el = document.getElementById('msg-' + m.message_id)
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
+/** Exports the active chat history as CSV and triggers a browser download. @returns {Promise<void>} */
 async function exportHistory() {
   try {
     const res = await featuresApi.exportCsv({
@@ -1842,21 +2060,29 @@ async function exportHistory() {
   }
 }
 
+/** Opens the room-link modal and pre-loads the room search. */
 function openRoomLinkModal() {
   showRoomLinkModal.value = true
   roomLinkSearch.value = ''
   roomLinkResults.value = []
   searchRooms()
 }
+/** Closes the room-link modal. */
 function closeRoomLinkModal() {
   showRoomLinkModal.value = false
 }
+/** Searches rooms by number for the link picker. @returns {Promise<void>} */
 async function searchRooms() {
   try {
     const res = await roomLinkApi.searchRooms(roomLinkSearch.value)
     roomLinkResults.value = res.data.data || res.data || []
   } catch (e) { }
 }
+/**
+ * Links a room to the active chat (used for service-request context).
+ * @param {Object} room - The room record to link.
+ * @returns {Promise<void>}
+ */
 async function linkRoom(room) {
   try {
     const res = await roomLinkApi.store({
@@ -1872,6 +2098,11 @@ async function linkRoom(room) {
     modalError.value = flattenError(err)
   }
 }
+/**
+ * Removes a room link from the active chat.
+ * @param {number} id - The room-link id.
+ * @returns {Promise<void>}
+ */
 async function unlinkRoom(id) {
   try {
     await roomLinkApi.destroy(id)
@@ -1880,6 +2111,7 @@ async function unlinkRoom(id) {
     modalError.value = flattenError(err)
   }
 }
+/** Loads the rooms linked to the active chat. @returns {Promise<void>} */
 async function loadRoomLinks() {
   try {
     const res = await roomLinkApi.index({ chat_type: activeKind.value, chat_id: activeId.value })
@@ -1887,6 +2119,11 @@ async function loadRoomLinks() {
   } catch (e) { }
 }
 
+/**
+ * Converts a message into a task on the (task) group after confirmation.
+ * @param {Object} msg - The message to convert.
+ * @returns {Promise<void>}
+ */
 async function convertToTask(msg) {
   closeMsgMenu()
   if (!confirm(t('messages.confirmConvertTask'))) return
@@ -1898,14 +2135,20 @@ async function convertToTask(msg) {
   }
 }
 
+/**
+ * Opens the tenant workspace panel on the given tab and loads its data.
+ * @param {string} [tab] - Workspace tab key (defaults to 'announcements').
+ */
 function openWorkspace(tab) {
   workspaceTab.value = tab || 'announcements'
   showWorkspace.value = true
   loadWorkspace()
 }
+/** Closes the workspace panel. */
 function closeWorkspace() {
   showWorkspace.value = false
 }
+/** Eagerly loads every workspace tab's data so tab switches are instant. @returns {Promise<void>} */
 async function loadWorkspace() {
   loadAnnouncements()
   loadMeetings()
@@ -1918,12 +2161,14 @@ async function loadWorkspace() {
   loadPreferences()
   loadScheduled()
 }
+/** Loads tenant announcements. @returns {Promise<void>} */
 async function loadAnnouncements() {
   try {
     const res = await announcementApi.index()
     announcements.value = res.data.data || []
   } catch (e) { }
 }
+/** Posts a new announcement (body required), then reloads the list. @returns {Promise<void>} */
 async function postAnnouncement() {
   if (!announcementBody.value.trim()) return
   savingFeature.value = true
@@ -1943,6 +2188,11 @@ async function postAnnouncement() {
     savingFeature.value = false
   }
 }
+/**
+ * Acknowledges an announcement and reloads the list.
+ * @param {number} id - The announcement id.
+ * @returns {Promise<void>}
+ */
 async function ackAnnouncement(id) {
   try {
     await announcementApi.acknowledge(id)
@@ -1951,12 +2201,14 @@ async function ackAnnouncement(id) {
     modalError.value = flattenError(err)
   }
 }
+/** Loads meetings the user is involved in. @returns {Promise<void>} */
 async function loadMeetings() {
   try {
     const res = await meetingApi.index()
     meetings.value = res.data.data || []
   } catch (e) { }
 }
+/** Searches inviteable users for the meeting form (clears results on empty query). @returns {Promise<void>} */
 async function searchMeetingUsers() {
   if (!meetingUserSearch.value) {
     meetingUserResults.value = []
@@ -1967,11 +2219,16 @@ async function searchMeetingUsers() {
     meetingUserResults.value = res.data.data || res.data || []
   } catch (e) { }
 }
+/**
+ * Toggles a user in/out of the meeting invitee selection.
+ * @param {Object} user - The user record to toggle.
+ */
 function toggleMeetingInvitee(user) {
   const i = meetingInvitees.value.findIndex((u) => u.user_id === user.user_id)
   if (i >= 0) meetingInvitees.value.splice(i, 1)
   else meetingInvitees.value.push(user)
 }
+/** Creates a meeting (title + start required) and reloads the list. @returns {Promise<void>} */
 async function createMeeting() {
   if (!meetingTitle.value.trim() || !meetingStart.value) {
     modalError.value = t('messages.meetingNeedsFields')
@@ -1995,6 +2252,12 @@ async function createMeeting() {
     savingFeature.value = false
   }
 }
+/**
+ * Responds to a meeting invitation (accept/decline), then reloads.
+ * @param {Object} m - The meeting record.
+ * @param {string} status - The response status.
+ * @returns {Promise<void>}
+ */
 async function respondMeeting(m, status) {
   try {
     await meetingApi.respond(m.id, { status })
@@ -2003,12 +2266,14 @@ async function respondMeeting(m, status) {
     modalError.value = flattenError(err)
   }
 }
+/** Loads shift handover notes. @returns {Promise<void>} */
 async function loadHandovers() {
   try {
     const res = await handoverApi.index()
     handovers.value = res.data.data || []
   } catch (e) { }
 }
+/** Posts a shift handover note (notes required), then reloads the list. @returns {Promise<void>} */
 async function createHandover() {
   if (!handoverNotes.value.trim()) return
   savingFeature.value = true
@@ -2027,6 +2292,11 @@ async function createHandover() {
     savingFeature.value = false
   }
 }
+/**
+ * Acknowledges a handover note and reloads the list.
+ * @param {number} id - The handover id.
+ * @returns {Promise<void>}
+ */
 async function ackHandover(id) {
   try {
     await handoverApi.acknowledge(id)
@@ -2035,12 +2305,14 @@ async function ackHandover(id) {
     modalError.value = flattenError(err)
   }
 }
+/** Loads staff who recently reported their location (nearby tab). @returns {Promise<void>} */
 async function loadNearbyStaff() {
   try {
     const res = await staffLocationApi.nearby()
     nearbyStaff.value = res.data.data || res.data || []
   } catch (e) { }
 }
+/** Publishes my current zone/floor so colleagues can find me. @returns {Promise<void>} */
 async function updateMyLocation() {
   try {
     await staffLocationApi.update({ zone: myLocation.value, floor: myFloor.value || null })
@@ -2049,12 +2321,14 @@ async function updateMyLocation() {
     modalError.value = flattenError(err)
   }
 }
+/** Loads outbound guest SMS messages. @returns {Promise<void>} */
 async function loadGuestMessages() {
   try {
     const res = await guestMessageApi.index()
     guestMessages.value = res.data.data || []
   } catch (e) { }
 }
+/** Sends an SMS to a guest phone number (phone + body required). @returns {Promise<void>} */
 async function sendGuestMessage() {
   if (!guestPhone.value.trim() || !guestBody.value.trim()) return
   savingFeature.value = true
@@ -2069,12 +2343,18 @@ async function sendGuestMessage() {
     savingFeature.value = false
   }
 }
+/** Loads open message escalations. @returns {Promise<void>} */
 async function loadEscalations() {
   try {
     const res = await escalationApi.index()
     escalations.value = res.data.data || []
   } catch (e) { }
 }
+/**
+ * Escalates a message to management.
+ * @param {Object} msg - The message to escalate.
+ * @returns {Promise<void>}
+ */
 async function escalateMessage(msg) {
   closeMsgMenu()
   try {
@@ -2087,6 +2367,11 @@ async function escalateMessage(msg) {
     modalError.value = flattenError(err)
   }
 }
+/**
+ * Marks an escalation resolved (default resolution text), then reloads.
+ * @param {number} id - The escalation id.
+ * @returns {Promise<void>}
+ */
 async function resolveEscalation(id) {
   try {
     await escalationApi.resolve(id, { resolution: t('messages.escalationResolved') })
@@ -2095,12 +2380,14 @@ async function resolveEscalation(id) {
     modalError.value = flattenError(err)
   }
 }
+/** Loads message retention policies. @returns {Promise<void>} */
 async function loadPolicies() {
   try {
     const res = await retentionApi.index()
     policies.value = res.data.data || []
   } catch (e) { }
 }
+/** Saves the global retention window (in days), then reloads policies. @returns {Promise<void>} */
 async function saveRetention() {
   savingFeature.value = true
   try {
@@ -2113,6 +2400,11 @@ async function saveRetention() {
     savingFeature.value = false
   }
 }
+/**
+ * Deletes a retention policy, then reloads the list.
+ * @param {number} id - The policy id.
+ * @returns {Promise<void>}
+ */
 async function deleteRetention(id) {
   try {
     await retentionApi.destroy(id)
@@ -2121,12 +2413,18 @@ async function deleteRetention(id) {
     modalError.value = flattenError(err)
   }
 }
+/** Loads the user's per-chat notification preferences. @returns {Promise<void>} */
 async function loadPreferences() {
   try {
     const res = await preferenceApi.index()
     preferences.value = res.data.data || []
   } catch (e) { }
 }
+/**
+ * Persists notification preferences for the active chat.
+ * @param {Object} pref - Preference flags ({ muted, push_enabled }).
+ * @returns {Promise<void>}
+ */
 async function savePreference(pref) {
   try {
     await preferenceApi.store({
@@ -2140,6 +2438,7 @@ async function savePreference(pref) {
     modalError.value = flattenError(err)
   }
 }
+/** Toggles the muted flag of the active chat and toasts the outcome. @returns {Promise<void>} */
 async function muteCurrentChat() {
   const pref = preferences.value.find(
     (p) => p.message_type === activeKind.value && p.chat_id === activeId.value,
@@ -2157,22 +2456,30 @@ async function muteCurrentChat() {
     modalError.value = flattenError(err)
   }
 }
+/**
+ * Checks whether the active chat is muted in the loaded preferences.
+ * @returns {boolean}
+ */
 function isChatMuted() {
   const scope = activeKind.value === 'group' ? 'group' : 'conversation'
   return preferences.value.some((p) => p.scope === scope && p.target_id === activeId.value && p.muted)
 }
+/** Loads SOS alerts for the tenant. @returns {Promise<void>} */
 async function loadSos() {
   try {
     const res = await sosApi.index()
     sosAlerts.value = res.data.data || []
   } catch (e) { }
 }
+/** Opens the workspace panel directly on the SOS tab. */
 function openSosPanel() {
   openWorkspace('sos')
 }
+/** Closes the SOS panel (i.e. the whole workspace panel). */
 function closeSosPanel() {
   showWorkspace.value = false
 }
+/** Triggers an SOS alert with my location after a confirmation prompt. @returns {Promise<void>} */
 async function initiateSos() {
   if (!confirm(t('messages.confirmSos'))) return
   savingFeature.value = true
@@ -2186,6 +2493,11 @@ async function initiateSos() {
     savingFeature.value = false
   }
 }
+/**
+ * Acknowledges an SOS alert (someone is responding), then reloads.
+ * @param {number} id - The SOS alert id.
+ * @returns {Promise<void>}
+ */
 async function ackSos(id) {
   try {
     await sosApi.acknowledge(id)
@@ -2194,6 +2506,12 @@ async function ackSos(id) {
     modalError.value = flattenError(err)
   }
 }
+/**
+ * Resolves an SOS alert with the default resolution text; also clears the
+ * floating banner when it was my own active alert.
+ * @param {number} id - The SOS alert id.
+ * @returns {Promise<void>}
+ */
 async function resolveSos(id) {
   try {
     await sosApi.resolve(id, { resolution: t('messages.sosResolvedDefault') })
@@ -2203,15 +2521,30 @@ async function resolveSos(id) {
     modalError.value = flattenError(err)
   }
 }
+/**
+ * Shows a transient toast via the globally registered helper, when available.
+ * @param {string} text - Message to display.
+ */
 function toast(text) {
   if (window.toast) window.toast(text)
 }
 
+/**
+ * Resolves a user id to a full name for @mention highlighting.
+ * @param {number} userId - The mentioned user's id.
+ * @returns {string|null} The full name, or null when not mentionable here.
+ */
 function mentionName(userId) {
   const u = mentionableUsers.value.find((x) => x.user_id === userId)
   return u ? u.full_name : null
 }
 
+/**
+ * Splits a message body into segments, flagging @mentions for highlighted
+ * rendering. Mention names are regex-escaped before matching.
+ * @param {Object} msg - The message record (uses body + mentions).
+ * @returns {Array<{text: string, isMention: boolean}>} Renderable segments.
+ */
 function renderBody(msg) {
   const body = msg.body || ''
   const names = (msg.mentions || []).map((m) => mentionName(m.user_id)).filter(Boolean)
@@ -2230,6 +2563,11 @@ function renderBody(msg) {
   return parts
 }
 
+/**
+ * Extracts the ids of users @-mentioned in a draft body.
+ * @param {string} body - The raw draft text.
+ * @returns {number[]} Mentioned user ids.
+ */
 function collectMentions(body) {
   const ids = []
   for (const u of mentionableUsers.value) {
@@ -2239,6 +2577,7 @@ function collectMentions(body) {
   return ids
 }
 
+/** Detects an active "@query" at the caret and fills the mention suggestion list. */
 function onDraftInput() {
   const el = draftInput.value
   const caret = el?.selectionStart ?? draft.value.length
@@ -2256,6 +2595,10 @@ function onDraftInput() {
   }
 }
 
+/**
+ * Replaces the partial @query at the caret with the chosen user's full name.
+ * @param {Object} user - The user picked from the suggestions.
+ */
 function applyMention(user) {
   if (mentionTriggerPos < 0) return
   const before = draft.value.slice(0, mentionTriggerPos)
@@ -2267,12 +2610,18 @@ function applyMention(user) {
   requestAnimationFrame(() => draftInput.value?.focus())
 }
 
+/**
+ * Flattens Laravel-style validation errors into a single readable message.
+ * @param {Object} err - The caught Axios error.
+ * @returns {string} Flattened error message (localized fallback included).
+ */
 function flattenError(err) {
   const errors = err.response?.data?.errors
   if (errors) return Object.values(errors).flat().join(' ')
   return err.response?.data?.message || t('common.actionFailed')
 }
 
+/** Scrolls the message list to the newest message (after the next paint). */
 function scrollToBottom() {
   requestAnimationFrame(() => {
     const el = document.querySelector('.chat-messages')
@@ -2280,6 +2629,10 @@ function scrollToBottom() {
   })
 }
 
+/**
+ * Scrolls to the message the given one replies to, when present in the DOM.
+ * @param {Object} msg - The message whose reply target should be revealed.
+ */
 function scrollToMessage(msg) {
   const id = msg.reply_to?.message_id
   if (!id) return
@@ -2287,6 +2640,11 @@ function scrollToMessage(msg) {
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
+/**
+ * Normalizes a raw group record into the unified chat-list item shape.
+ * @param {Object} g - The group record from the API.
+ * @returns {Object} A chat-list item ({ kind: 'group', ... }).
+ */
 function toGroupItem(g) {
   return {
     kind: 'group',
@@ -2301,6 +2659,12 @@ function toGroupItem(g) {
   }
 }
 
+/**
+ * Loads a page of direct conversations, honouring the list search.
+ * @param {number} [page=1] - Page to fetch.
+ * @param {boolean} [replace=true] - Replace the list; when false, append deduped.
+ * @returns {Promise<void>}
+ */
 async function loadConversations(page = 1, replace = true) {
   loadingConvs.value = true
   error.value = ''
@@ -2321,6 +2685,12 @@ async function loadConversations(page = 1, replace = true) {
   }
 }
 
+/**
+ * Loads a page of group conversations, honouring the list search.
+ * @param {number} [page=1] - Page to fetch.
+ * @param {boolean} [replace=true] - Replace the list; when false, append deduped.
+ * @returns {Promise<void>}
+ */
 async function loadGroups(page = 1, replace = true) {
   loadingConvs.value = true
   error.value = ''
@@ -2341,6 +2711,7 @@ async function loadGroups(page = 1, replace = true) {
   }
 }
 
+/** Appends the next page of whichever chat lists have more results. */
 function loadMoreChats() {
   if (convMeta.value?.next_page_url && convPage.value < (convMeta.value.last_page || 1)) {
     loadConversations(convPage.value + 1, false)
@@ -2350,6 +2721,7 @@ function loadMoreChats() {
   }
 }
 
+/** Debounced chat-list search (400ms) reloading both conversations and groups. */
 function onListSearch() {
   clearTimeout(searchTimer)
   searchTimer = setTimeout(async () => {
@@ -2358,6 +2730,12 @@ function onListSearch() {
   }, 400)
 }
 
+/**
+ * Opens a chat: resets thread-local UI (recording, previews, menus), subscribes
+ * to its realtime channel, loads messages (and group info), then marks it read.
+ * @param {Object} chat - The unified chat-list item to open.
+ * @returns {Promise<void>}
+ */
 async function openChat(chat) {
   activeKind.value = chat.kind
   activeId.value = chat.id
@@ -2402,6 +2780,7 @@ async function openChat(chat) {
   }
 }
 
+/** Closes the active thread, unsubscribing from its Echo channel first. */
 function closeThread() {
   if (activeThreadChannel) {
     activeThreadChannel.unsubscribe()
@@ -2415,6 +2794,7 @@ function closeThread() {
   viewOncePreview.value = null
 }
 
+/** Marks the active thread read in the background and mirrors the read state locally (ticks/unread badge). */
 function markReadSilently() {
   if (!activeId.value) return
   if (activeKind.value === 'group') {
@@ -2431,6 +2811,10 @@ function markReadSilently() {
   }
 }
 
+/**
+ * Updates the active chat's list preview with a just-sent message.
+ * @param {Object} item - The sent message record.
+ */
 function updateActiveChatPreview(item) {
   const chat = activeChat.value
   if (!chat) return
@@ -2447,6 +2831,11 @@ function updateActiveChatPreview(item) {
   chat.unread_count = 0
 }
 
+/**
+ * Sends the current draft to the active chat, attaching mentions, priority,
+ * an optional reply reference and an optional poll (>= 2 non-empty options).
+ * @returns {Promise<void>}
+ */
 async function sendMessage() {
   const body = draft.value.trim()
   if (!body || !activeId.value) return
@@ -2478,6 +2867,7 @@ async function sendMessage() {
   }
 }
 
+/** Resets composer extras (reply, poll, template picker, scheduler) after a successful send. */
 function clearComposerExtras() {
   replyTo.value = null
   showPollBuilder.value = false
@@ -2489,28 +2879,46 @@ function clearComposerExtras() {
   scheduleAt.value = ''
 }
 
+/**
+ * Enters reply mode for a message and focuses the composer.
+ * @param {Object} msg - The message being replied to.
+ */
 function startReply(msg) {
   replyTo.value = msg
   closeMsgMenu()
   requestAnimationFrame(() => draftInput.value?.focus())
 }
 
+/** Exits reply mode. */
 function cancelReply() {
   replyTo.value = null
 }
 
+/** Toggles the outgoing message priority between 'normal' and 'urgent'. */
 function togglePriority() {
   sendPriority.value = sendPriority.value === 'urgent' ? 'normal' : 'urgent'
 }
 
+/** Adds an empty option row to the poll builder. */
 function addPollOption() {
   pollOptions.value.push('')
 }
 
+/**
+ * Removes a poll-builder option row.
+ * @param {number} index - Index of the option to remove.
+ */
 function removePollOption(index) {
   pollOptions.value.splice(index, 1)
 }
 
+/**
+ * Shared upload path for attachments/voice notes: posts FormData to the active
+ * chat, appends the returned message and updates the list preview.
+ * @param {FormData} fd - The multipart payload.
+ * @param {Function} [onDone] - Optional callback after a successful send.
+ * @returns {Promise} The request promise chain.
+ */
 function sendFormData(fd, onDone) {
   sending.value = true
   error.value = ''
@@ -2531,6 +2939,11 @@ function sendFormData(fd, onDone) {
     })
 }
 
+/**
+ * Stages a picked file for preview before sending (10MB limit). The input is
+ * reset immediately so picking the same file twice still fires change.
+ * @param {Event} event - The file input change event.
+ */
 function onFilePicked(event) {
   const file = event.target.files?.[0]
   event.target.value = ''
@@ -2545,6 +2958,7 @@ function onFilePicked(event) {
   showEmojiPicker.value = false
 }
 
+/** Discards the staged attachment and revokes its object URL. */
 function cancelFilePreview() {
   if (filePreviewUrl.value) URL.revokeObjectURL(filePreviewUrl.value)
   filePreview.value = null
@@ -2552,6 +2966,7 @@ function cancelFilePreview() {
   fileViewOnce.value = false
 }
 
+/** Sends the staged attachment with an inferred type (audio/image/file) and the view-once flag. */
 function sendFilePreview() {
   const file = filePreview.value
   if (!file || !activeId.value) return
@@ -2570,6 +2985,11 @@ function sendFilePreview() {
   })
 }
 
+/**
+ * Formats a byte count as KB/MB for the attachment preview.
+ * @param {number} bytes - File size in bytes.
+ * @returns {string} Human-readable size ('' for 0/undefined).
+ */
 function formatFileSize(bytes) {
   if (!bytes) return ''
   const kb = bytes / 1024
@@ -2577,6 +2997,10 @@ function formatFileSize(bytes) {
   return `${(kb / 1024).toFixed(1)} MB`
 }
 
+/**
+ * Inserts an emoji at the composer caret and restores focus/selection.
+ * @param {string} emoji - The emoji to insert.
+ */
 function insertEmoji(emoji) {
   const el = draftInput.value
   const start = el?.selectionStart ?? draft.value.length
@@ -2590,6 +3014,11 @@ function insertEmoji(emoji) {
   }
 }
 
+/**
+ * Starts a voice-note recording via MediaRecorder and a 1s elapsed timer.
+ * Surfaces a localized error when mic access/APIs are unavailable.
+ * @returns {Promise<void>}
+ */
 async function startRecording() {
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
     error.value = t('messages.recordingUnsupported')
@@ -2623,6 +3052,7 @@ async function startRecording() {
   }
 }
 
+/** Stops the recording, releases the mic and opens the preview player. */
 function stopRecording() {
   if (mediaRecorder && mediaRecorder.state !== 'inactive') {
     try {
@@ -2638,6 +3068,7 @@ function stopRecording() {
   recordingPreview.value = true
 }
 
+/** Cancels the recording, releasing the mic and discarding all captured audio. */
 function cancelRecording() {
   clearInterval(recTimer)
   if (recStream) recStream.getTracks().forEach((tr) => tr.stop())
@@ -2650,6 +3081,7 @@ function cancelRecording() {
   recordingPreview.value = false
 }
 
+/** Sends the recorded voice note as an audio attachment, then resets the recorder. */
 function sendRecording() {
   if (!recordingBlob.value || !activeId.value) return
   const fd = new FormData()
@@ -2665,10 +3097,16 @@ function sendRecording() {
   })
 }
 
+/** Reloads conversations, groups and the status map in parallel. @returns {Promise<void>} */
 async function refreshAll() {
   await Promise.all([loadConversations(1), loadGroups(1), loadStatusMap()])
 }
 
+/**
+ * Subscribes to the user's private Echo channel (previews, deletions, calls,
+ * statuses, meetings) and the tenant channel (announcements, SOS, handovers,
+ * staff locations, guest messages, escalations).
+ */
 function subscribeUserChannel() {
   const echo = getEcho()
   if (!echo || !me.value.user_id) return
@@ -2689,40 +3127,59 @@ function subscribeUserChannel() {
   echo.private(`tenant.${me.value.tenant_id}`).listen('.message.escalated', handleMessageEscalated)
 }
 
+// --- Websocket event handlers (Echo broadcasts) ---
+
+/** Reloads announcements when one is posted or acknowledged. */
 function handleAnnouncementPosted() {
   loadAnnouncements()
 }
+/**
+ * Reloads SOS alerts on a new alert; toasts a warning when it is not my own.
+ * @param {Object} data - Broadcast payload ({ user_id }).
+ */
 function handleSosInitiated(data) {
   loadSos()
   if (data?.user_id !== me.value.user_id) {
     toast(t('messages.sosIncoming'))
   }
 }
+/** Reloads SOS alerts when one is resolved. */
 function handleSosResolved() {
   loadSos()
 }
+/** Reloads handovers when one is posted or acknowledged. */
 function handleHandoverPosted() {
   loadHandovers()
 }
+/** Reloads meetings and toasts when I am invited to one. */
 function handleMeetingInvited() {
   loadMeetings()
   toast(t('messages.meetingInvited'))
 }
+/** Reloads meetings when an invitee responds. */
 function handleMeetingResponse() {
   loadMeetings()
 }
+/** Refreshes the nearby-staff tab when a location update arrives (only while viewing it). */
 function handleStaffLocationUpdated() {
   if (workspaceTab.value === 'nearby') loadNearbyStaff()
 }
+/** Reloads guest messages and toasts on an inbound guest message. */
 function handleGuestMessagePosted() {
   loadGuestMessages()
   toast(t('messages.guestMessageIncoming'))
 }
+/** Reloads escalations and toasts when a message is escalated. */
 function handleMessageEscalated() {
   loadEscalations()
   toast(t('messages.escalationIncoming'))
 }
 
+/**
+ * Updates the status-ring map when a contact posts a status; my own status
+ * simply flips the myStatusHas flag.
+ * @param {Object} data - Broadcast payload ({ status }).
+ */
 function handleStatusPosted(data) {
   const s = data?.status
   if (!s?.user_id) return
@@ -2736,6 +3193,12 @@ function handleStatusPosted(data) {
   }
 }
 
+/**
+ * Applies a chat-list preview broadcast: updates the entry in place, or reloads
+ * the corresponding list when the chat is unknown locally. The open thread's
+ * unread count is kept at zero.
+ * @param {Object} data - Broadcast payload ({ kind, id, last_message, unread_count, ... }).
+ */
 function handlePreviewUpdated(data) {
   const isDirect = data.kind === 'direct'
   const isActive = activeKind.value === data.kind && activeId.value === data.id
@@ -2752,6 +3215,10 @@ function handlePreviewUpdated(data) {
   }
 }
 
+/**
+ * (Re)subscribes to the active thread's private Echo channel, replacing any
+ * previous subscription, and binds all per-message broadcast events.
+ */
 function subscribeThread() {
   const echo = getEcho()
   if (activeThreadChannel) {
@@ -2777,6 +3244,11 @@ function subscribeThread() {
   activeThreadChannel.listen('.task.converted', handleTaskConverted)
 }
 
+/**
+ * Applies a pin/unpin broadcast to the local message and refreshes the panel.
+ * @param {Object} data - Broadcast payload ({ message_id }).
+ * @param {boolean} pinned - New pinned state.
+ */
 function setPinnedLocally(data, pinned) {
   const msg = messages.value.find((m) => msgId(m) === data.message_id)
   if (msg) {
@@ -2785,6 +3257,11 @@ function setPinnedLocally(data, pinned) {
   }
 }
 
+/**
+ * Appends a reply broadcast from another participant to the open thread
+ * (deduped, marks read, scrolls down). Own replies arrive via the send path.
+ * @param {Object} data - Broadcast payload ({ item }).
+ */
 function handleReplySent(data) {
   const item = data?.item
   if (!item) return
@@ -2803,6 +3280,11 @@ function handleReplySent(data) {
   scrollToBottom()
 }
 
+/**
+ * Applies a poll created/voted broadcast to the matching message's poll state
+ * (full poll payload, or per-option vote counts).
+ * @param {Object} data - Broadcast payload ({ poll_id | poll, options, total_votes }).
+ */
 function handlePollVoted(data) {
   const msg = messages.value.find((m) => m.poll && m.poll.poll_id === (data.poll_id || data.poll?.poll_id))
   if (!msg) return
@@ -2818,6 +3300,10 @@ function handlePollVoted(data) {
   }
 }
 
+/**
+ * Flags a message as converted-to-task when the broadcast arrives.
+ * @param {Object} data - Broadcast payload ({ message_id, task }).
+ */
 function handleTaskConverted(data) {
   const msg = messages.value.find((m) => msgId(m) === data.message_id)
   if (msg) {
@@ -2827,6 +3313,11 @@ function handleTaskConverted(data) {
   }
 }
 
+/**
+ * Handles a 'me'-scope deletion broadcast on the user channel: removes the
+ * message locally when it belongs to the open thread.
+ * @param {Object} data - Broadcast payload ({ scope, channel_id, message_id, message_type }).
+ */
 function handleUserMessageDeleted(data) {
   if (data.scope !== 'me' || !data.channel_id) return
   const inThread = activeKind.value === data.message_type && activeId.value === data.channel_id
@@ -2834,6 +3325,11 @@ function handleUserMessageDeleted(data) {
   removeMessageLocally(data.message_id, data.message_type)
 }
 
+/**
+ * Handles a thread-level deletion broadcast: scrubs content for 'everyone',
+ * or removes the row when I deleted it for myself.
+ * @param {Object} data - Broadcast payload ({ message_id, message_type, scope, deleted_by }).
+ */
 function handleMessageDeleted(data) {
   const msg = messages.value.find((m) => msgId(m) === data.message_id)
   if (!msg) return
@@ -2844,16 +3340,29 @@ function handleMessageDeleted(data) {
   }
 }
 
+/**
+ * Applies a reaction-summary broadcast to the matching message.
+ * @param {Object} data - Broadcast payload ({ message_id, reactions }).
+ */
 function handleReactionUpdated(data) {
   const msg = messages.value.find((m) => msgId(m) === data.message_id)
   if (msg) msg.reactions = data.reactions || []
 }
 
+/**
+ * Stamps the viewed timestamp when a view-once message is opened (broadcast).
+ * @param {Object} data - Broadcast payload ({ message_id, viewed_at }).
+ */
 function handleViewedOnce(data) {
   const msg = messages.value.find((m) => msgId(m) === data.message_id)
   if (msg) msg.viewed_at = data.viewed_at
 }
 
+/**
+ * Removes a message from the open thread and refreshes the list preview.
+ * @param {number} id - The message id to remove.
+ * @param {string} kind - 'group' | 'conversation' (selects the id field).
+ */
 function removeMessageLocally(id, kind) {
   const key = kind === 'group' ? 'group_message_id' : 'message_id'
   const idx = messages.value.findIndex((m) => m[key] === id)
@@ -2863,6 +3372,11 @@ function removeMessageLocally(id, kind) {
   }
 }
 
+/**
+ * Appends an incoming direct-message broadcast to the open thread (deduped);
+ * marks the thread read when it came from the counterpart.
+ * @param {Object} item - The broadcast message record.
+ */
 function handleMessageSent(item) {
   if (activeKind.value !== 'direct' || activeId.value !== item.conversation_id) return
   if (messages.value.some((m) => m.message_id === item.message_id)) return
@@ -2871,6 +3385,10 @@ function handleMessageSent(item) {
   scrollToBottom()
 }
 
+/**
+ * Appends an incoming group-message broadcast to the open group thread (deduped).
+ * @param {Object} item - The broadcast group-message record.
+ */
 function handleGroupMessageSent(item) {
   if (activeKind.value !== 'group' || activeId.value !== item.group_conversation_id) return
   if (messages.value.some((m) => m.group_message_id === item.group_message_id)) return
@@ -2878,6 +3396,7 @@ function handleGroupMessageSent(item) {
   scrollToBottom()
 }
 
+/** Opens the new-direct-message modal with a fresh search state. */
 function openNewMessage() {
   showNew.value = true
   modalError.value = ''
@@ -2887,16 +3406,22 @@ function openNewMessage() {
   newScope.value = 'hotel'
 }
 
+/** Closes the new-direct-message modal. */
 function closeNewMessage() {
   showNew.value = false
 }
 
+/**
+ * Switches the new-message scope (hotel/global) and resets the search.
+ * @param {string} scope - The new scope key.
+ */
 function switchScope(scope) {
   newScope.value = scope
   userSearch.value = ''
   userResults.value = []
 }
 
+/** Debounced (300ms) user search for the new-message modal. @returns {Promise<void>} */
 async function searchUsers() {
   clearTimeout(searchTimer)
   const q = userSearch.value.trim()
@@ -2917,6 +3442,12 @@ async function searchUsers() {
   }, 300)
 }
 
+/**
+ * Creates (or reuses) a direct conversation with the chosen user, reloads the
+ * list and opens the thread.
+ * @param {Object} user - The user to chat with.
+ * @returns {Promise<void>}
+ */
 async function startConversation(user) {
   startingWith.value = user.user_id
   modalError.value = ''
@@ -2945,6 +3476,7 @@ async function startConversation(user) {
   }
 }
 
+/** Opens the new-group modal with a fresh form state. */
 function openNewGroup() {
   showNewGroup.value = true
   modalError.value = ''
@@ -2955,10 +3487,12 @@ function openNewGroup() {
   selectedGroupUsers.value = []
 }
 
+/** Closes the new-group modal. */
 function closeNewGroup() {
   showNewGroup.value = false
 }
 
+/** Debounced (300ms) member search for the new-group / manage-group modals. @returns {Promise<void>} */
 async function searchGroupUsers() {
   clearTimeout(searchTimer)
   const q = groupUserSearch.value.trim()
@@ -2979,6 +3513,11 @@ async function searchGroupUsers() {
   }, 300)
 }
 
+/**
+ * Creates the group — a task group when isTaskGroupCreation is set, otherwise a
+ * regular scoped group — then reloads the list and opens the new thread.
+ * @returns {Promise<void>}
+ */
 async function createGroup() {
   const name = groupName.value.trim()
   if (!name) return
@@ -3005,6 +3544,7 @@ async function createGroup() {
   }
 }
 
+/** Opens the group management modal (member add/remove) with a fresh state. */
 function openGroupManage() {
   modalError.value = ''
   modalSuccess.value = ''
@@ -3014,10 +3554,12 @@ function openGroupManage() {
   showGroupManage.value = true
 }
 
+/** Closes the group management modal. */
 function closeGroupManage() {
   showGroupManage.value = false
 }
 
+/** Adds the selected users to the active group and syncs the member count. @returns {Promise<void>} */
 async function addSelectedMembers() {
   if (!selectedGroupUsers.value.length || !activeId.value) return
   addingMembers.value = true
@@ -3038,6 +3580,12 @@ async function addSelectedMembers() {
   }
 }
 
+/**
+ * Removes a member from the active group; removing myself additionally closes
+ * the thread and reloads the group list.
+ * @param {number} userId - The member's user id.
+ * @returns {Promise<void>}
+ */
 async function removeMember(userId) {
   if (!activeId.value) return
   removingMember.value = true
@@ -3063,6 +3611,7 @@ async function removeMember(userId) {
   }
 }
 
+// Boot: connect Echo, subscribe to user/tenant channels and load the initial lists.
 onMounted(() => {
   initEcho()
   subscribeUserChannel()
@@ -3071,6 +3620,8 @@ onMounted(() => {
   loadStatusMap()
 })
 
+// Teardown: leave the thread channel, dispose the call manager, disconnect Echo
+// and release timers/the microphone so nothing leaks after navigation.
 onUnmounted(() => {
   if (activeThreadChannel) {
     activeThreadChannel.unsubscribe()

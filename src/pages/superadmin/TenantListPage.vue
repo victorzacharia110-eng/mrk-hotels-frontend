@@ -1,3 +1,8 @@
+<!--
+  Tenant list page (route: /superadmin/tenants, name: superadmin-tenants).
+  Superadmin management of tenant hotels: a searchable/filterable table with
+  approve, reject, suspend and reactivate actions, plus a create-hotel modal.
+-->
 <template>
   <div class="dashboard-page container">
     <div class="page-head">
@@ -96,6 +101,7 @@
         </tbody>
       </table>
 
+      <!-- Create-hotel onboarding modal -->
       <div v-if="showCreate" class="modal-overlay" @click.self="showCreate = false">
         <div class="modal">
           <div class="modal-head">
@@ -173,6 +179,7 @@ import { normalizePhoneNumber } from '@/utils/phone'
 
 const { t } = useI18n()
 
+// List state: tenant rows, filters (search text, status, plan) and feedback flags.
 const tenants = ref([])
 const search = ref('')
 const status = ref('')
@@ -181,6 +188,7 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 
+// Create-hotel modal state: visibility, in-flight flag, errors and the form fields.
 const showCreate = ref(false)
 const creating = ref(false)
 const createError = ref('')
@@ -198,6 +206,7 @@ const form = ref({
   subscription_plan: 'trial',
 })
 
+// Translated option lists for the status and plan dropdowns.
 const statusOptions = computed(() => [
   { value: 'pending', label: t('superadmin.statusPending') },
   { value: 'active', label: t('superadmin.statusActive') },
@@ -212,11 +221,17 @@ const planOptions = computed(() => [
   { value: 'enterprise', label: t('superadmin.planEnterprise') },
 ])
 
+/**
+ * Maps a tenant status to the CSS class used for its badge colour.
+ * @param {string} s - The tenant status (active, pending, suspended, cancelled).
+ * @returns {string} The badge CSS class.
+ */
 function statusBadge(s) {
   const map = { active: 'badge-green', pending: 'badge-yellow', suspended: 'badge-red', cancelled: 'badge-gray' }
   return map[s] || 'badge-gray'
 }
 
+/** Fetches the tenant list, honouring the current status/plan/search filters. */
 async function load() {
   loading.value = true
   error.value = ''
@@ -234,6 +249,7 @@ async function load() {
   }
 }
 
+/** Resets every filter and reloads the full tenant list. */
 function clearFilters() {
   status.value = ''
   plan.value = ''
@@ -241,12 +257,14 @@ function clearFilters() {
   load()
 }
 
+/** Opens the create-hotel modal, clearing previous input but keeping the plan default. */
 function openCreate() {
   createError.value = ''
   form.value = { ...form.value, hotel_name: '', subdomain: '', contact_person: '', email: '', phone: '', country_code: 'TZ', city: '', country: '', tin: '', vrn: '' }
   showCreate.value = true
 }
 
+/** Creates the tenant hotel (normalising the phone number) and reloads the list. */
 async function createHotel() {
   createError.value = ''
   creating.value = true
@@ -265,6 +283,12 @@ async function createHotel() {
   }
 }
 
+/**
+ * Runs a tenant lifecycle action, reloads the list and alerts the result.
+ * @param {string} id - The tenant id to act on.
+ * @param {Function} fn - The tenantApi action (approve, reject, suspend, reactivate).
+ * @param {string} message - Success message shown in the alert.
+ */
 async function runAction(id, fn, message) {
   error.value = ''
   try {
@@ -276,6 +300,7 @@ async function runAction(id, fn, message) {
   }
 }
 
+// Per-row lifecycle actions, all funnelled through the shared runAction helper.
 const approve = (tenant) => runAction(tenant.tenant_id, tenantApi.approve, t('superadmin.approvedMsg', { name: tenant.hotel_name }))
 const reject = (tenant) => runAction(tenant.tenant_id, tenantApi.reject, t('superadmin.rejectedMsg', { name: tenant.hotel_name }))
 const suspend = (tenant) => runAction(tenant.tenant_id, tenantApi.suspend, t('superadmin.suspendedMsg', { name: tenant.hotel_name }))

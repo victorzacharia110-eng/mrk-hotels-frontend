@@ -1,3 +1,9 @@
+<!--
+  Staff page (route: /app/staff, name: hotel-staff).
+  Staff account management for a hotel: a filterable paginated list with
+  role-based editing rules, a create/edit modal with profile picture and
+  attachments, plus invite, activate and deactivate actions.
+-->
 <template>
   <div class="dashboard-page container">
     <div class="page-head">
@@ -15,6 +21,7 @@
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <!-- Role/department/search/status filters; each change reloads the list -->
     <div class="card filter-bar">
       <div class="filter-grid">
         <div class="form-group">
@@ -58,6 +65,7 @@
 
     <div v-if="loading" class="alert alert-info">{{ $t('staff.loading') }}</div>
 
+    <!-- Staff table; row actions respect the role hierarchy via canEdit/isSelf -->
     <div v-else class="table-scroll">
       <table class="table">
       <thead>
@@ -116,6 +124,7 @@
     </table>
     </div>
 
+    <!-- Pagination controls, only shown when there is more than one page -->
     <div v-if="meta.total > meta.per_page" class="pagination">
       <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
         $t('common.previous') }}</button>
@@ -124,6 +133,7 @@
         $t('common.next') }}</button>
     </div>
 
+    <!-- Create/edit staff modal, including attachments while editing -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal">
         <div class="modal-head">
@@ -209,6 +219,7 @@
               </div>
             </div>
 
+            <!-- Attachment manager, only relevant for an existing staff member -->
             <div class="form-group form-full" v-if="editing">
               <label>{{ $t('staff.attachments') }}</label>
               <div v-if="attachments.length" class="attachment-list">
@@ -258,6 +269,7 @@ const { t } = useI18n()
 
 const authStore = useAuthStore()
 
+// Assignable staff roles, translated for the dropdowns.
 const ROLES = [
   { value: 'hotel_admin', label: t('common.roles.hotelAdmin') },
   { value: 'manager', label: t('common.roles.manager') },
@@ -271,6 +283,7 @@ const ROLES = [
   { value: 'staff', label: t('common.roles.staff') },
 ]
 
+// Department and position vocabularies used by the form dropdowns.
 const DEPARTMENTS = ['administration', 'cooking', 'laundry', 'restaurant', 'bar']
 const POSITIONS = [
   'manager',
@@ -288,6 +301,7 @@ const POSITIONS = [
   'general_staff',
 ]
 
+// Translated option lists for the department, position, status and flag dropdowns.
 const departmentOptions = computed(() =>
   DEPARTMENTS.map((d) => ({ value: d, label: t(`common.departments.${d}`) })),
 )
@@ -316,6 +330,7 @@ const isActiveOptions = computed(() => [
   { value: false, label: t('staff.inactive') },
 ])
 
+// List state: staff rows, pagination, filters and feedback flags.
 const users = ref([])
 const page = ref(1)
 const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
@@ -324,6 +339,7 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 
+// Modal state: create/edit dialog, upload/invitation feedback and attachments.
 const showModal = ref(false)
 const editing = ref(false)
 const editingId = ref(null)
@@ -352,8 +368,10 @@ const form = reactive({
   picture_preview: '',
 })
 
+// The branch (hotel tenant) the new or edited staff member will belong to.
 const branch = computed(() => authStore.user?.tenant || null)
 
+/** Resets the staff form, attachments and pending upload to the create defaults. */
 function resetForm() {
   form.first_name = ''
   form.last_name = ''
@@ -373,30 +391,60 @@ function resetForm() {
   newAttachmentFile.value = null
 }
 
+/**
+ * Returns the translated label for a role code.
+ * @param {string} v - The user role code.
+ * @returns {string} The role label, or the raw code when unknown.
+ */
 function roleLabel(v) {
   return ROLES.find((r) => r.value === v)?.label || v
 }
 
+/**
+ * Maps a role code to the CSS class used for its badge colour.
+ * @param {string} v - The user role code.
+ * @returns {string} The badge CSS class.
+ */
 function roleBadge(v) {
   const map = { hotel_admin: 'badge-red', manager: 'badge-blue', accountant: 'badge-blue', receptionist: 'badge-green', staff: 'badge-gray' }
   return map[v] || 'badge-yellow'
 }
 
+/**
+ * Formats an ISO date-time string for display, truncating to minutes.
+ * @param {string} d - The ISO date-time string (e.g. a last-login timestamp).
+ * @returns {string} The formatted value, or the 'never' label when absent.
+ */
 function formatDate(d) {
   return d ? String(d).slice(0, 16).replace('T', ' ') : t('common.never')
 }
 
+/**
+ * Formats a byte count for display next to an attachment.
+ * @param {number} bytes - The file size in bytes.
+ * @returns {string} The size in B or KB ('' when the size is unknown).
+ */
 function formatBytes(bytes) {
   if (!bytes && bytes !== 0) return ''
   if (bytes < 1024) return `${bytes} B`
   return `${Math.round(bytes / 1024)} KB`
 }
 
+/**
+ * Builds the public URL for an attachment, stripping the /api suffix off the API base.
+ * @param {Object} att - The attachment record (needs its `file_path`).
+ * @returns {string} The absolute URL of the stored file.
+ */
 function attachmentUrl(att) {
   const base = (import.meta.env.VITE_API_URL || '').replace(/\/api$/, '')
   return `${base}/storage/${att.file_path}`
 }
 
+/**
+ * Returns true when the row is the currently logged-in user.
+ * @param {Object} u - The staff row.
+ * @returns {boolean} Whether the row represents the current user.
+ */
 function isSelf(u) {
   return u.user_id === authStore.user?.user_id
 }
@@ -415,6 +463,7 @@ function canEdit(u) {
   return !['superadmin', 'hotel_admin', 'manager'].includes(u.user_role)
 }
 
+/** Fetches the current page of staff, honouring the active filters. */
 async function load() {
   loading.value = true
   error.value = ''
@@ -436,11 +485,16 @@ async function load() {
   }
 }
 
+/**
+ * Moves to the given page and reloads the list.
+ * @param {number} p - The 1-based page number.
+ */
 function goPage(p) {
   page.value = p
   load()
 }
 
+/** Resets all filters and reloads from the first page. */
 function clearFilters() {
   page.value = 1
   filters.role = ''
@@ -450,11 +504,16 @@ function clearFilters() {
   load()
 }
 
+/** Restarts the search from page one whenever the search text changes. */
 function triggerSearch() {
   page.value = 1
   load()
 }
 
+/**
+ * Stores the picked profile picture and shows a local preview of it.
+ * @param {Event} e - The file input change event.
+ */
 function onProfilePicture(e) {
   const file = e.target.files?.[0]
   form.profile_picture = file || null
@@ -463,10 +522,15 @@ function onProfilePicture(e) {
   }
 }
 
+/**
+ * Stores the attachment file picked for the next upload.
+ * @param {Event} e - The file input change event.
+ */
 function onAttachmentFile(e) {
   newAttachmentFile.value = e.target.files?.[0] || null
 }
 
+/** Opens the staff modal in create mode with a blank form. */
 function openCreate() {
   resetForm()
   modalError.value = ''
@@ -476,6 +540,10 @@ function openCreate() {
   showModal.value = true
 }
 
+/**
+ * Opens the staff modal in edit mode, copying the user's data into the form.
+ * @param {Object} u - The staff row being edited.
+ */
 function openEdit(u) {
   resetForm()
   modalError.value = ''
@@ -499,10 +567,15 @@ function openEdit(u) {
   showModal.value = true
 }
 
+/** Closes the create/edit staff modal. */
 function closeModal() {
   showModal.value = false
 }
 
+/**
+ * Builds the multipart form data for create/update, including the optional photo.
+ * @returns {FormData} The request body.
+ */
 function buildPayload() {
   const fd = new FormData()
   fd.append('first_name', form.first_name)
@@ -523,6 +596,7 @@ function buildPayload() {
   return fd
 }
 
+/** Creates or updates the staff account and surfaces the invitation credentials. */
 async function save() {
   modalError.value = ''
   invitation.value = null
@@ -546,6 +620,7 @@ async function save() {
   }
 }
 
+/** Uploads the picked attachment for the staff member being edited. */
 async function uploadAttachment() {
   if (!newAttachmentFile.value) return
   modalError.value = ''
@@ -565,6 +640,10 @@ async function uploadAttachment() {
   }
 }
 
+/**
+ * Deletes an attachment after a confirmation prompt.
+ * @param {Object} att - The attachment record to remove.
+ */
 async function removeAttachment(att) {
   if (!window.confirm(t('common.delete'))) return
   modalError.value = ''
@@ -577,6 +656,13 @@ async function removeAttachment(att) {
   }
 }
 
+/**
+ * Runs a staff lifecycle action with an optional confirmation, then reloads.
+ * @param {Object} u - The staff row to act on.
+ * @param {Function} fn - The userApi action (invite, activate, destroy).
+ * @param {string} message - Fallback success message.
+ * @param {string} [confirmMsg] - When set, the action requires confirmation first.
+ */
 async function runAction(u, fn, message, confirmMsg) {
   if (confirmMsg && !window.confirm(confirmMsg)) return
   error.value = ''
@@ -590,10 +676,16 @@ async function runAction(u, fn, message, confirmMsg) {
   }
 }
 
+// Per-row lifecycle actions, all funnelled through the shared runAction helper.
 const invite = (u) => runAction(u, userApi.invite, t('staff.invitationSent', { email: u.email, password: u.full_name.toUpperCase() }))
 const activate = (u) => runAction(u, userApi.activate, t('staff.activated', { name: u.full_name }))
 const deactivate = (u) => runAction(u, userApi.destroy, t('staff.deactivated', { name: u.full_name }), t('staff.deactivateConfirm', { name: u.full_name }))
 
+/**
+ * Flattens Laravel-style validation errors into a single readable message.
+ * @param {Error} err - The thrown request error.
+ * @returns {string} A space-joined error message or the generic failure text.
+ */
 function flattenError(err) {
   const messages = err.response?.data?.errors
   return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')

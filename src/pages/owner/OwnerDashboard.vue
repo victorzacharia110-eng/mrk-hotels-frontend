@@ -1,5 +1,11 @@
+<!--
+  Owner dashboard (route: /owner, name: owner-dashboard).
+  Portfolio overview for a hotel owner: KPI cards aggregated across all their
+  hotels and a per-hotel comparison table with a shortcut into each staff panel.
+-->
 <template>
   <div class="dashboard-page">
+    <!-- Page header with the owner role badge -->
     <div class="dash-header">
       <div>
         <h1>{{ $t('owner.dashboardTitle') }}</h1>
@@ -102,14 +108,17 @@ const data = ref(null)
 const loading = ref(false)
 const error = ref('')
 
-// Remembers the chosen hotel in localStorage so the app panel opens in its
-// context, then routes into the management app.
+/**
+ * Remembers the chosen hotel in localStorage so the app panel opens in its
+ * context, then routes into the management app.
+ * @param {Object} hotel - The hotel row from the dashboard comparison table.
+ */
 function openPanel(hotel) {
   setOwnerHotel(hotel.tenant_id, hotel.hotel_name)
   router.push('/app')
 }
 
-// Fetches the owner dashboard summary from the API and exposes it in `data`.
+/** Fetches the owner dashboard summary from the API and exposes it in `data`. */
 async function load() {
   loading.value = true
   error.value = ''

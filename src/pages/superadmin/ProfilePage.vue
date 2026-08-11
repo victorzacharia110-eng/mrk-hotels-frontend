@@ -1,3 +1,8 @@
+<!--
+  Superadmin profile page (route: /superadmin/profile, name: superadmin-profile).
+  The superadmin's own account: editable personal info with photo upload,
+  read-only system attributes and a password change form.
+-->
 <template>
   <div>
     <div class="page-head">
@@ -27,6 +32,7 @@
 
       <p v-if="message" class="alert" :class="error ? 'alert-error' : 'alert-success'">{{ message }}</p>
 
+      <!-- Editable personal information form -->
       <form @submit.prevent="save">
         <h3 class="form-section-title"><i class="fas fa-pen"></i> {{ $t('profile.personalInfo') }}</h3>
         <div class="profile-grid">
@@ -153,7 +159,7 @@ const saving = ref(false)
 const message = ref('')
 const error = ref(false)
 
-// Copies the current user from the auth store into the editable form fields.
+/** Copies the current user from the auth store into the editable form fields. */
 function fillForm() {
   const u = authStore.user || {}
   form.first_name = u.first_name || ''
@@ -167,12 +173,15 @@ function fillForm() {
   form.position = u.position || ''
 }
 
-// Stores the selected profile picture file, if any, from the file input.
+/**
+ * Stores the selected profile picture file, if any, from the file input.
+ * @param {Event} e - The file input change event.
+ */
 function onPhoto(e) {
   photo.value = e.target.files?.[0] || null
 }
 
-// Submits the profile as multipart form data, then refreshes the store and form.
+/** Submits the profile as multipart form data, then refreshes the store and form. */
 async function save() {
   saving.value = true
   message.value = ''
@@ -202,17 +211,29 @@ async function save() {
   }
 }
 
-// Formats an ISO date-time string for display, truncating to minutes.
+/**
+ * Formats an ISO date-time string for display, truncating to minutes.
+ * @param {string} d - The ISO date-time string.
+ * @returns {string} The formatted value, or '-' when absent.
+ */
 function formatDateTime(d) {
   return d ? String(d).slice(0, 16).replace('T', ' ') : '-'
 }
 
-// Formats an ISO date string for display, keeping only the date part.
+/**
+ * Formats an ISO date string for display, keeping only the date part.
+ * @param {string} d - The ISO date string.
+ * @returns {string} The formatted value, or '-' when absent.
+ */
 function formatDate(d) {
   return d ? String(d).slice(0, 10) : '-'
 }
 
-// Flattens a validation-error object (or fallback message) into a single readable string.
+/**
+ * Flattens a validation-error object (or fallback message) into a single readable string.
+ * @param {Error} err - The thrown request error.
+ * @returns {string} A space-joined error message or the generic failure text.
+ */
 function flattenError(err) {
   const messages = err.response?.data?.errors
   return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')

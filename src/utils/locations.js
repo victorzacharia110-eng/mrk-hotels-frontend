@@ -1,5 +1,3 @@
-import { City, Country, State } from 'country-state-city'
-
 /**
  * Country and city lookups for the booking forms.
  *
@@ -9,9 +7,12 @@ import { City, Country, State } from 'country-state-city'
  * for data it does not show.
  */
 
+import { City, Country, State } from 'country-state-city'
+
 /** Countries the hotel serves most, floated to the top of the list. */
 export const PRIORITY_COUNTRY_CODES = ['TZ', 'KE', 'UG', 'RW', 'BI', 'ZM', 'MW', 'MZ', 'ZA']
 
+/** Country preselected in the forms (the chain's home market). */
 export const DEFAULT_COUNTRY_CODE = 'TZ'
 
 // Memoised country list (built once, reused across all calls).
@@ -48,12 +49,6 @@ export function getCountries() {
   return countryCache
 }
 
-/**
- * Every city in a country, de-duplicated and sorted by name.
- *
- * Some countries repeat a city name across states, so names are collapsed to a
- * unique set: the form only stores a city name, not a state.
- */
 /**
  * Every city in a country, de-duplicated and sorted by name.
  *

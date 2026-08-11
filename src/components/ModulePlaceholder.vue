@@ -1,8 +1,14 @@
+<!--
+  ModulePlaceholder — stand-in page for modules that are not built yet.
+  Renders the module title with an "under construction" card.
+-->
+
 <template>
   <div>
     <div class="page-head">
       <h1>{{ title }}</h1>
     </div>
+    <!-- "Under construction" card for the upcoming module. -->
     <div class="card placeholder">
       <i class="fas fa-hammer"></i>
       <p><strong>{{ title }}</strong> {{ $t('placeholder.underConstruction') }}</p>

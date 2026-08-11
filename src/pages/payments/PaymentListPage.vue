@@ -1,3 +1,8 @@
+<!--
+  Payments page (route: /app/payments, name: hotel-payments).
+  Hotel staff view of payments: a filterable paginated list with confirm/reject,
+  refund, delete and invoice-download actions, plus a record-payment modal.
+-->
 <template>
   <div class="dashboard-page container">
     <div class="page-head">
@@ -14,6 +19,7 @@
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <!-- Status/method/date-range filters; each change reloads the list -->
     <div class="card filter-bar">
       <div class="filter-grid">
         <div class="form-group">
@@ -41,6 +47,7 @@
 
     <div v-if="loading" class="alert alert-info">{{ $t('payments.loading') }}</div>
 
+    <!-- Payment table with per-row confirm/reject/refund/delete/invoice actions -->
     <div v-else class="table-scroll">
       <table class="table">
       <thead>
@@ -105,6 +112,7 @@
     </table>
     </div>
 
+    <!-- Pagination controls, only shown when there is more than one page -->
     <div v-if="meta.total > meta.per_page" class="pagination">
       <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
         $t('common.previous') }}</button>

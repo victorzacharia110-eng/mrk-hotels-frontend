@@ -1,11 +1,18 @@
+<!--
+  Staff profile page (route: /app/profile, name: hotel-profile).
+  The logged-in user's own account: editable personal info with photo upload,
+  read-only system attributes, attendance clock in/out and a password change.
+-->
 <template>
   <div>
     <div class="page-head">
       <h1>{{ $t('profile.title') }}</h1>
     </div>
 
+    <!-- Account card: avatar summary, editable info and read-only system info -->
     <div class="card">
       <h2 class="card-title"><i class="fas fa-id-card"></i> {{ $t('profile.account') }}</h2>
+      <!-- Avatar and summary of the logged-in user pulled from the auth store -->
       <div class="profile-header">
         <div class="avatar">
           <img
@@ -26,6 +33,7 @@
 
       <p v-if="message" class="alert" :class="error ? 'alert-error' : 'alert-success'">{{ message }}</p>
 
+      <!-- Editable personal information form -->
       <form @submit.prevent="save">
         <h3 class="form-section-title"><i class="fas fa-pen"></i> {{ $t('profile.personalInfo') }}</h3>
         <div class="profile-grid">
@@ -72,6 +80,7 @@
         </div>
       </form>
 
+      <!-- Read-only system attributes supplied by the backend, shown for reference -->
       <h3 class="form-section-title"><i class="fas fa-lock"></i> {{ $t('profile.systemInfo') }}</h3>
       <p class="muted">{{ $t('profile.systemInfoHint') }}</p>
       <div class="profile-grid">
@@ -114,6 +123,7 @@
       </div>
     </div>
 
+    <!-- Attendance card: current shift state with clock in/out actions -->
     <div class="card">
       <h2 class="card-title"><i class="fas fa-user-clock"></i> {{ $t('attendance.title') }}</h2>
       <div v-if="attendanceError" class="alert alert-error">{{ attendanceError }}</div>
@@ -133,6 +143,7 @@
       </div>
     </div>
 
+    <!-- Password change section delegated to a shared form component -->
     <div class="card">
       <h2 class="card-title">{{ $t('profile.changePassword') }}</h2>
       <ChangePasswordForm />

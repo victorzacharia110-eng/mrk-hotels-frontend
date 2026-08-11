@@ -1,3 +1,11 @@
+/**
+ * Laravel Echo (Reverb) WebSocket client, created as a lazy singleton.
+ *
+ * initEcho() runs after login; private-channel authorisation goes through the
+ * backend's /broadcasting/auth endpoint via the shared axios instance, so the
+ * bearer token is attached automatically. destroyEcho() runs on logout.
+ */
+
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 import api from '@/api/axios'

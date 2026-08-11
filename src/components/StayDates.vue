@@ -1,3 +1,9 @@
+<!--
+  StayDates — the arrival date / number of nights / departure date trio.
+  Any two values imply the third, so the receptionist can work from whichever
+  one the guest states; departure is never earlier than the day after arrival.
+-->
+
 <template>
   <div class="form-group">
     <label :for="`${uid}-arrival`">
@@ -73,6 +79,7 @@ const props = defineProps({
   allowPast: { type: Boolean, default: false },
 })
 
+// v-model updates for the arrival date, departure date and nights count.
 const emit = defineEmits(['update:arrival', 'update:departure', 'update:days'])
 
 const { t } = useI18n()

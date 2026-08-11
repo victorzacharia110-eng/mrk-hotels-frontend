@@ -1,8 +1,15 @@
+<!--
+  BookingStatusTracker — public self-service tracker for booking requisitions.
+  A guest enters their requisition reference number to see the hotel's
+  response: status badge, quoted amount, hotel notes and the stay dates.
+-->
+
 <template>
   <div class="card tracker">
     <h2 class="card-title"><i class="fas fa-magnifying-glass-location"></i> {{ $t('bookingRequisitions.trackTitle') }}</h2>
     <p class="muted">{{ $t('bookingRequisitions.trackSubtitle') }}</p>
 
+    <!-- Lookup form: the guest types their requisition reference number. -->
     <form class="tracker-form" @submit.prevent="lookup">
       <input
         v-model.trim="number"

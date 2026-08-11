@@ -1,8 +1,17 @@
+<!--
+  ChangePasswordForm — lets a signed-in user replace their password.
+  Checks the new password against its confirmation locally, then delegates to
+  the auth store; each field has a visibility toggle. Also serves the forced
+  password-change flow after a reset (mustChangePassword).
+-->
+
 <template>
   <form @submit.prevent="submit">
+    <!-- Feedback alerts for the last submit attempt. -->
     <div v-if="error" class="alert alert-error">{{ error }}</div>
     <div v-if="success" class="alert alert-success">{{ success }}</div>
 
+    <!-- Current password, with an eye toggle to reveal it. -->
     <div class="form-group">
       <label for="current_password">{{ $t('changePassword.currentPassword') }}</label>
       <div class="password-input-wrap">
@@ -13,6 +22,7 @@
         </button>
       </div>
     </div>
+    <!-- New password (minimum 8 characters), with an eye toggle. -->
     <div class="form-group">
       <label for="new_password">{{ $t('changePassword.newPassword') }}</label>
       <div class="password-input-wrap">
@@ -23,6 +33,7 @@
         </button>
       </div>
     </div>
+    <!-- Confirmation must match the new password (checked in submit()). -->
     <div class="form-group">
       <label for="new_password_confirmation">{{ $t('changePassword.confirmNewPassword') }}</label>
       <div class="password-input-wrap">

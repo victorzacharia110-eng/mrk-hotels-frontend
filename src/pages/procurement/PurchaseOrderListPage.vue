@@ -1,5 +1,15 @@
+<!--
+  PurchaseOrderListPage.vue
+  Purchase order register with a two-stage approval workflow (manager approval
+  via permission 80, then finance approval via permission 70). Features:
+  status/supplier filters, debounced search, create modal with dynamic line
+  items and optional linked requisition, and a read-only detail modal.
+  Authenticated back-office route.
+-->
+
 <template>
   <div class="dashboard-page container">
+    <!-- Page header: refresh plus permission-gated "new purchase order" button -->
     <div class="page-head">
       <div>
         <h1>{{ $t('purchaseOrders.title') }}</h1>
@@ -13,9 +23,11 @@
       </div>
     </div>
 
+    <!-- Global success / error feedback banners -->
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <!-- Filter bar: free-text search (debounced), status and supplier -->
     <div class="card filter-bar">
       <div class="filter-grid">
         <div class="form-group">
@@ -38,8 +50,10 @@
       </div>
     </div>
 
+    <!-- Loading indicator shown while the list request is in flight -->
     <div v-if="loading" class="alert alert-info">{{ $t('purchaseOrders.loading') }}</div>
 
+    <!-- PO table: reference, supplier, item count link, total, delivery date and status badge -->
     <div v-else class="table-scroll">
       <table class="table">
       <thead>
@@ -67,6 +81,7 @@
           <td>{{ po.delivery_date || '-' }}</td>
           <td><span class="badge" :class="statusBadge(po.status)">{{ po.status.replace('_', ' ') }}</span></td>
           <td>
+            <!-- Approval workflow actions, each gated by status and permission -->
             <div class="actions">
               <button v-if="po.status === 'pending' && canManagerApprove" class="btn btn-sm btn-success"
                 @click="managerApprove(po)">
@@ -90,6 +105,7 @@
     </table>
     </div>
 
+    <!-- Server-side pagination controls -->
     <div v-if="meta.total > meta.per_page" class="pagination">
       <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
         $t('common.previous') }}</button>

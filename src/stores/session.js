@@ -1,3 +1,11 @@
+/**
+ * Session store: auto-logs-out an idle or departed user.
+ *
+ * A five-minute countdown resets on any user activity, shows a warning during
+ * the final minute and terminates the session at zero. Hiding or closing the
+ * tab ends the session immediately — coming back always requires a sign-in.
+ */
+
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
@@ -29,6 +37,7 @@ export const useSessionStore = defineStore("session", () => {
   const remaining = ref(IDLE_TIMEOUT_SECONDS);
   // Whether the expiry warning is currently visible.
   const showWarning = ref(false);
+  // Seconds left, capped to the warning window, for the countdown display.
   const warningSeconds = computed(() => Math.max(0, Math.min(WARNING_AT_SECONDS, remaining.value)));
 
   // Interval handle for the per-second countdown tick.

@@ -6,6 +6,7 @@
  * receptionist what will happen before they submit.
  */
 
+// Payment method keys, mirroring the backend's PaymentOptions enum.
 export const METHOD_CASH = 'cash'
 export const METHOD_MOBILE_MONEY = 'mobile_money'
 export const METHOD_BANK = 'bank'
@@ -22,8 +23,10 @@ export const PAYMENT_METHODS = [
   METHOD_CARD,
 ]
 
+/** Mobile money wallets the hotel accepts. */
 export const MOBILE_MONEY_PROVIDERS = ['airtel_money', 'mixx_by_yas', 'halopesa', 'mpesa']
 
+/** Banks the hotel holds accounts with. */
 export const BANK_PROVIDERS = ['crdb', 'nmb', 'nbc', 'other']
 
 /** All providers a hotel can receive money into, for which an account exists. */
@@ -52,6 +55,7 @@ export const PROVIDERS = {
   other: { logo: null, color: '#6B7280' },
 }
 
+// Lifecycle states a payment moves through.
 export const STATUS_AWAITING_CONFIRMATION = 'awaiting_confirmation'
 export const STATUS_PENDING = 'pending'
 export const STATUS_COMPLETED = 'completed'

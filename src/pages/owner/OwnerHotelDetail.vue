@@ -1,5 +1,11 @@
+<!--
+  Owner hotel detail page (route: /owner/hotels/:id, name: owner-hotel-detail).
+  Read-only analytics for a single owned hotel: identity header with status and
+  subscription badges plus KPI cards (rooms, occupancy, guests, revenue).
+-->
 <template>
   <div>
+    <!-- Back navigation to the owner's dashboard -->
     <router-link :to="{ name: 'owner-dashboard' }" class="back-link">
       <i class="fas fa-arrow-left"></i> {{ $t('owner.backToDashboard') }}
     </router-link>
@@ -70,13 +76,17 @@ const hotel = ref(null)
 const loading = ref(false)
 const error = ref('')
 
-// Maps a hotel status to the CSS class used for its badge colour.
+/**
+ * Maps a hotel status to the CSS class used for its badge colour.
+ * @param {string} s - The tenant status (active, pending, suspended, cancelled).
+ * @returns {string} The badge CSS class.
+ */
 function statusBadge(s) {
   const map = { active: 'badge-green', pending: 'badge-yellow', suspended: 'badge-red', cancelled: 'badge-gray' }
   return map[s] || 'badge-gray'
 }
 
-// Fetches the hotel detail (by the tenant id in the URL) and stores it in `hotel`.
+/** Fetches the hotel detail (by the tenant id in the URL) and stores it in `hotel`. */
 async function load() {
   loading.value = true
   error.value = ''

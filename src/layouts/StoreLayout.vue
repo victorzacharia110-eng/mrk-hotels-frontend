@@ -1,6 +1,15 @@
+<!--
+  StoreLayout — shell for the public storefront and the staff panel.
+  Hosts the top bar, the main header (logo, directory search, auth actions,
+  language switch), the module navigation filtered by the user's access
+  rights, the owner's read-only preview banner, the routed page and the
+  footer.
+-->
+
 <template>
   <div class="store-layout">
     <header class="site-header">
+      <!-- Top bar: contact details; the viewed hotel's name when in app mode. -->
       <div class="top-bar">
         <div class="container top-bar-inner">
           <div class="top-bar-left">
@@ -17,6 +26,7 @@
         </div>
       </div>
 
+      <!-- Main header: logo, directory search and account/language actions. -->
       <div class="main-header">
         <div class="container main-header-inner">
           <router-link :to="homeLink" class="logo" @click="navOpen = false">
@@ -123,6 +133,7 @@
         </div>
       </div>
 
+      <!-- Module navigation: access-filtered staff links, or the public links. -->
       <nav class="main-nav">
         <div class="container nav-inner">
           <div v-if="isAppMode" class="nav-links nav-scroll">
@@ -160,6 +171,7 @@
       </button>
     </div>
 
+    <!-- Routed page content with a fade transition between pages. -->
     <main>
       <RouterView v-slot="{ Component }">
         <Transition name="page" mode="out-in">
@@ -168,6 +180,7 @@
       </RouterView>
     </main>
 
+    <!-- Site footer: brand, quick links, support and contact details. -->
     <footer class="site-footer">
       <div class="container footer-grid">
         <div>

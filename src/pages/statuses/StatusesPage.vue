@@ -1,3 +1,9 @@
+<!--
+  Statuses page (route: /app/statuses, name: hotel-statuses).
+  WhatsApp-style ephemeral status board for hotel staff: post text/image/video
+  updates (hotel or global scope), browse colleagues' statuses in a fullscreen
+  auto-advancing viewer with likes and view counts, kept live over websockets.
+-->
 <template>
   <div class="dashboard-page container">
     <div class="page-head">

@@ -1,13 +1,24 @@
+<!--
+  LoginPage.vue
+  Staff sign-in page for the MRK Hotels back-office (public route).
+  Features: localized per-field validation, password visibility toggle,
+  server-error surfacing, one-time password-rotation toast, and role-based
+  redirects (superadmin / owner / staff) after a successful login.
+-->
+
 <template>
   <div class="auth-page">
     <div class="auth-card">
+      <!-- Brand header: hotel logo and localized subtitle -->
       <div class="auth-header">
         <span class="logo-icon"><i class="fas fa-hotel"></i></span>
         <h1>MRK Hotels</h1>
         <p>{{ $t('auth.signInSubtitle') }}</p>
       </div>
 
+      <!-- Sign-in form: validates on blur/input, submits via handleLogin (browser validation disabled in favour of custom messages) -->
       <form @submit.prevent="handleLogin" novalidate>
+        <!-- Email field; error appears only after the field is touched -->
         <div class="form-group" :class="{ 'has-error': errors.email }">
           <label>{{ $t('auth.email') }}</label>
           <input v-model="form.email" type="email" :placeholder="$t('auth.emailPlaceholder')" autocomplete="email"
@@ -16,6 +27,7 @@
             errors.email }}</span>
         </div>
 
+        <!-- Password field with show/hide visibility toggle -->
         <div class="form-group" :class="{ 'has-error': errors.password }">
           <label>{{ $t('common.password') }}</label>
           <div class="password-input-wrap">
@@ -29,17 +41,21 @@
             errors.password }}</span>
         </div>
 
+        <!-- Authentication failures returned by the API -->
         <div class="server-errors" v-if="serverErrors.length > 0">
           <div v-for="(msg, i) in serverErrors" :key="i" class="server-error"><i class="fas fa-exclamation-circle"></i>
             {{ msg }}</div>
         </div>
 
+        <!-- Transient toast, e.g. showing the default password after a forced rotation -->
         <div v-if="toastMsg" class="password-toast"><i class="fas fa-key"></i> {{ toastMsg }}</div>
 
+        <!-- Submit stays disabled while the login request is in flight -->
         <button type="submit" class="btn btn-primary full-width" :disabled="loading"><i
             class="fas fa-right-to-bracket"></i> {{ loading ? $t('auth.signInLoading') : $t('auth.signIn') }}</button>
       </form>
 
+      <!-- Link back to the public landing page -->
       <p class="auth-link home-link"><router-link to="/"><i class="fas fa-arrow-left"></i> {{ $t('common.backToHome')
       }}</router-link></p>
     </div>
@@ -71,25 +87,36 @@ const toastMsg = ref('')
 // Timer handle for the temporary password-rotation toast.
 let toastTimer = null
 
+// When redirected here after a forced password rotation, surface the new default password once.
 onMounted(() => {
   if (route.query.rotated) {
     showToast(`${t('auth.passwordRotated')} ${route.query.default_password || ''}`)
   }
 })
 
-/** Shows a transient toast message that clears itself after 6 seconds. */
+/**
+ * Shows a transient toast message that clears itself after 6 seconds.
+ * @param {string} msg - Text to display inside the toast.
+ */
 function showToast(msg) {
   toastMsg.value = msg
   clearTimeout(toastTimer)
   toastTimer = setTimeout(() => (toastMsg.value = ''), 6000)
 }
 
-/** Marks a form field as touched (so its errors show once blurred). */
+/**
+ * Marks a form field as touched (so its errors show once blurred).
+ * @param {string} field - Key of the form model ('email' | 'password').
+ */
 function touch(field) {
   touched.value[field] = true
 }
 
-/** Validates a single field when it has been touched or already contains a value. */
+/**
+ * Validates a single field when it has been touched or already contains a value.
+ * Skips untouched, empty fields so the form does not scream errors on first paint.
+ * @param {string} field - Key of the form model to validate ('email' | 'password').
+ */
 function validateField(field) {
   if (!touched.value[field] && !form.value[field]) return
 
@@ -106,7 +133,11 @@ function validateField(field) {
   }
 }
 
-/** Validates every field and returns true only when the whole form is valid. */
+/**
+ * Validates every field and returns true only when the whole form is valid.
+ * Forces all fields to "touched" so every error becomes visible on submit.
+ * @returns {boolean} True when neither email nor password has an error.
+ */
 function validateAll() {
   ;['email', 'password'].forEach((f) => {
     touched.value[f] = true
@@ -115,7 +146,12 @@ function validateAll() {
   return !errors.value.email && !errors.value.password
 }
 
-/** Performs the login, redirecting by role and surfacing API/server errors. */
+/**
+ * Performs the login, redirecting by role and surfacing API/server errors.
+ * Honours the ?redirect= query param first, then falls back to role-based
+ * landing pages; also starts the inactivity session timer on success.
+ * @returns {Promise<void>}
+ */
 async function handleLogin() {
   serverErrors.value = []
   if (!validateAll()) return

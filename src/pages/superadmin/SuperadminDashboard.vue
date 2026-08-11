@@ -1,3 +1,8 @@
+<!--
+  Superadmin dashboard (route: /superadmin, name: superadmin-dashboard).
+  Platform-wide overview: tenant KPIs, SaaS business metrics (MRR/ARR, trials,
+  conversion), a monthly GMV bar chart, expiring trials and recent signups.
+-->
 <template>
   <div class="dashboard-page container">
     <div v-if="loading" class="loading-spinner">
@@ -180,25 +185,37 @@ const maxGmv = computed(() =>
   Math.max(1, ...(data.value?.saas?.monthly_gmv?.map((m) => m.total) || [1])),
 )
 
-// Converts a monthly total into a bar width percentage relative to the largest month.
+/**
+ * Converts a monthly total into a bar width percentage relative to the largest month.
+ * @param {number} total - The month's GMV total.
+ * @returns {string} A CSS width percentage (minimum 2% so small bars stay visible).
+ */
 function barWidth(total) {
   return `${Math.max(2, Math.round((total / maxGmv.value) * 100))}%`
 }
 
-// Shortens large amounts for display, e.g. 1.5M or 20K.
+/**
+ * Shortens large amounts for display, e.g. 1.5M or 20K.
+ * @param {number} n - The raw amount.
+ * @returns {string} The compact label.
+ */
 function formatCompact(n) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000) return `${Math.round(n / 1_000)}K`
   return String(n)
 }
 
-// Maps a tenant status to the CSS class used for its badge colour.
+/**
+ * Maps a tenant status to the CSS class used for its badge colour.
+ * @param {string} status - The tenant status (active, pending, suspended, rejected).
+ * @returns {string} The badge CSS class.
+ */
 function statusBadge(status) {
   const map = { active: 'badge-green', pending: 'badge-yellow', suspended: 'badge-red', rejected: 'badge-red' }
   return map[status] || 'badge-gray'
 }
 
-// Fetches the superadmin dashboard report and exposes it in `data`.
+/** Fetches the superadmin dashboard report and exposes it in `data`. */
 async function load() {
   loading.value = true
   error.value = ''

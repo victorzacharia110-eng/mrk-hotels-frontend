@@ -1,10 +1,21 @@
+<!--
+  HotelDashboard.vue
+  Operational landing dashboard for hotel staff (route /app/dashboard).
+  Shows at-a-glance KPIs (in-house guests, arrivals/departures, revenue,
+  occupancy, open issues), a room status breakdown, operational alerts,
+  recent payments and permission-filtered quick-action tiles. Data comes
+  from the reports API and refreshes every 30 seconds.
+-->
+
 <template>
   <div class="dashboard-page container">
+    <!-- Full-page spinner shown until the first dashboard payload arrives -->
     <div v-if="loading" class="loading-spinner">
       <div class="spinner"></div>
     </div>
 
     <template v-else-if="data">
+      <!-- Header: greeting with hotel name and the current user's role badge -->
       <div class="dash-header">
         <div>
           <h1>{{ $t('dashboard.subtitle') }}</h1>
@@ -13,8 +24,10 @@
         <span class="role-badge"><i class="fas fa-user-shield"></i> {{ roleLabel }}</span>
       </div>
 
+      <!-- Inline error banner for failed (background) refreshes -->
       <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+      <!-- KPI stat cards: guests, arrivals/departures, reservations, revenue, occupancy, issues -->
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-icon"><i class="fas fa-users"></i></div>
@@ -53,7 +66,9 @@
         </div>
       </div>
 
+      <!-- Two-column area: room status summary + weekly occupancy chart -->
       <div class="dash-grid">
+        <!-- Room status card: live counts per housekeeping status -->
         <div class="card dash-section">
           <div class="section-header-row">
             <h2><i class="fas fa-bed"></i> {{ $t('dashboard.roomStatus') }}</h2>
@@ -69,6 +84,7 @@
           </div>
         </div>
 
+        <!-- Operational alerts card: pending requisitions, low stock, pending payments, F&B orders, open issues -->
         <div class="card dash-section">
           <div class="section-header-row">
             <h2><i class="fas fa-bell"></i> {{ $t('dashboard.alerts') }}</h2>
@@ -95,6 +111,7 @@
         </div>
       </div>
 
+      <!-- Recent payments card with provider logo, status badge and amount -->
       <div class="card dash-section">
         <div class="section-header-row">
           <h2><i class="fas fa-money-bill-wave"></i> {{ $t('dashboard.recentPayments') }}</h2>
@@ -122,6 +139,7 @@
         </div>
       </div>
 
+      <!-- Quick actions: navigation tiles filtered by the user's module permissions -->
       <div class="card dash-section">
         <div class="section-header-row">
           <h2><i class="fas fa-gauge-high"></i> {{ $t('dashboard.quickActions') }}</h2>
@@ -134,6 +152,7 @@
       </div>
     </template>
 
+    <!-- Error shown when the initial load fails and no data can be rendered -->
     <div v-else-if="error" class="alert alert-error">{{ error }}</div>
   </div>
 </template>

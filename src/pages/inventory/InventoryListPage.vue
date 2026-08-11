@@ -1,5 +1,15 @@
+<!--
+  InventoryListPage.vue
+  Inventory/stock register for the hotel. Features: category, status and
+  low-stock filters, search-as-you-type, create/edit item modal, stock
+  adjustment modal (in / out / set absolute) and a detail modal with the
+  full stock-movement history. Write actions gated by canOperate.
+  Authenticated back-office route.
+-->
+
 <template>
   <div class="dashboard-page container">
+    <!-- Page header: refresh plus permission-gated "new item" button -->
     <div class="page-head">
       <div>
         <h1>{{ $t('inventory.title') }}</h1>
@@ -13,9 +23,11 @@
       </div>
     </div>
 
+    <!-- Global success / error feedback banners -->
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <!-- Filter bar: category, stock status, free-text search and low-stock-only toggle -->
     <div class="card filter-bar">
       <div class="filter-grid">
         <div class="form-group">
@@ -42,8 +54,10 @@
       </div>
     </div>
 
+    <!-- Loading indicator shown while the list request is in flight -->
     <div v-if="loading" class="alert alert-info">{{ $t('inventory.loading') }}</div>
 
+    <!-- Stock table: item, category, on-hand qty, reorder level, cost, supplier and status badge -->
     <div v-else class="table-scroll">
       <table class="table">
       <thead>
@@ -85,6 +99,7 @@
     </table>
     </div>
 
+    <!-- Server-side pagination controls -->
     <div v-if="meta.total > meta.per_page" class="pagination">
       <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
         $t('common.previous') }}</button>

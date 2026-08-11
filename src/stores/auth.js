@@ -1,3 +1,11 @@
+/**
+ * Auth store: session token, current user, permissions and access checks.
+ *
+ * Only the token is persisted across reloads (see the `persist` option at the
+ * bottom); the user profile and permissions are re-fetched from /auth/me by
+ * the router guard whenever a protected page needs them.
+ */
+
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi } from '@/api'
@@ -30,9 +38,13 @@ export const useAuthStore = defineStore('auth', () => {
   // Flag forcing the user to reset their password before continuing.
   const mustChangePassword = ref(false)
 
+  /** True while a session token exists. */
   const isAuthenticated = computed(() => !!token.value)
+  /** True for the platform superadmin. */
   const isSuperadmin = computed(() => user.value?.user_role === 'superadmin')
+  /** True for a hotel's own administrator. */
   const isHotelAdmin = computed(() => user.value?.user_role === 'hotel_admin')
+  /** Seniority of the user's role; prefers the backend's level over the local map. */
   const roleLevel = computed(() => user.value?.role_level ?? ROLE_LEVELS[user.value?.user_role] ?? 0)
   // False for management roles, who observe rather than operate the front desk.
   const canOperate = computed(() => !['hotel_admin', 'manager'].includes(user.value?.user_role))
@@ -131,11 +143,6 @@ export const useAuthStore = defineStore('auth', () => {
     return permissions.value.includes(name)
   }
 
-  /**
-   * Role-based module access. A module is reachable when the user's role is in
-   * its allow-list (an empty list means everyone) and any required permission
-   * is held. Superadmin bypasses the lists.
-   */
   /**
    * Role-based module access. A module is reachable when the user's role is in
    * its allow-list (an empty list means everyone) and any required permission

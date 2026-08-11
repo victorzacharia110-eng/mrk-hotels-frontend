@@ -1,5 +1,14 @@
+<!--
+  FunGameListPage.vue
+  Manages fun-game (activities) orders booked by guests. Features: status/date/
+  supervisor filters, search-as-you-type, create/edit modal with supervisor
+  assignment, quick complete/cancel actions and delete. All write actions are
+  gated by the canOperate permission. Authenticated back-office route.
+-->
+
 <template>
   <div class="dashboard-page container">
+    <!-- Page header: refresh plus permission-gated "new order" button -->
     <div class="page-head">
       <div>
         <h1>{{ $t('funGames.title') }}</h1>
@@ -11,6 +20,7 @@
       </div>
     </div>
 
+    <!-- Global success / error feedback banners -->
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
@@ -42,6 +52,7 @@
       </div>
     </div>
 
+    <!-- Loading indicator shown while the list request is in flight -->
     <div v-if="loading" class="alert alert-info">{{ $t('funGames.loading') }}</div>
 
     <!-- Orders table with status workflow actions and price badges -->
@@ -185,12 +196,14 @@ const modalError = ref('')
 // Form model bound to the order modal fields.
 const form = reactive({ game_name: '', guest_name: '', booking_date: '', arrival_time: '', total_charge: null, status: 'pending', supervisor_id: '', notes: '' })
 
+// Order status options used by both the filter bar and the modal form.
 const statusOptions = [
   { value: 'pending', label: t('funGames.statusPending') },
   { value: 'completed', label: t('funGames.statusCompleted') },
   { value: 'cancelled', label: t('funGames.statusCancelled') },
 ]
 
+// Supervisor dropdown options derived from the loaded user list.
 const userOptions = computed(() => users.value.map((u) => ({ value: u.user_id, label: u.full_name })))
 
 /** Maps an order status key to its translated display label. */

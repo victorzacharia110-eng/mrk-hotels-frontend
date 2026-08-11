@@ -1,5 +1,16 @@
+<!--
+  OrderListPage.vue
+  F&B order management for restaurant and bar. Features: department/status/
+  order-type/payment/date filters, create-order modal with department-aware
+  order types, waiter and in-house guest selectors plus dynamic line items,
+  per-order status lifecycle actions, collect-payment and bill-to-room, and a
+  detail modal with per-item ready/served actions. Payment collection is gated
+  by permission 60; other writes by canOperate. Authenticated back-office route.
+-->
+
 <template>
   <div class="dashboard-page container">
+    <!-- Page header: refresh plus permission-gated "new order" button -->
     <div class="page-head">
       <div>
         <h1>{{ $t('orders.title') }}</h1>
@@ -11,9 +22,11 @@
       </div>
     </div>
 
+    <!-- Global success / error feedback banners -->
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <!-- Filter bar: department, status, order type, payment status and date -->
     <div class="card filter-bar">
       <div class="filter-grid">
         <div class="form-group">
@@ -46,8 +59,10 @@
       </div>
     </div>
 
+    <!-- Loading indicator shown while the list request is in flight -->
     <div v-if="loading" class="alert alert-info">{{ $t('orders.loading') }}</div>
 
+    <!-- Orders table: number, department, guest/table, waiter, totals and status/payment badges -->
     <div v-else class="table-scroll">
       <table class="table">
       <thead>
@@ -116,6 +131,7 @@
     </table>
     </div>
 
+    <!-- Server-side pagination controls -->
     <div v-if="meta.total > meta.per_page" class="pagination">
       <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{ $t('common.previous') }}</button>
       <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>

@@ -1,8 +1,19 @@
+/**
+ * API endpoint registry, grouped per backend resource.
+ *
+ * Each export is a plain object of thin methods over the shared axios
+ * instance (see ./axios for the base URL, auth/tenant headers and error
+ * handling). Every path is prefixed with the /v1 API version segment, and
+ * methods return the axios promise unchanged so callers read response.data
+ * directly.
+ */
+
 import api from './axios'
 
 // API version segment prepended to every endpoint path below.
 const v1 = '/v1'
 
+/** Public storefront endpoints: hotel directory, availability, bookings and guest self-service. No auth required. */
 export const publicApi = {
   /**
    * Fetches the list of hotels shown on the public hotel directory.
@@ -79,6 +90,7 @@ export const publicApi = {
   },
 }
 
+/** Authentication: login/logout, the current user's profile and password. */
 export const authApi = {
   /**
    * Authenticates a user and returns the token + profile.
@@ -120,6 +132,7 @@ export const authApi = {
   },
 }
 
+/** Hotel reporting: dashboard KPIs, overview, occupancy, revenue and audit trail. */
 export const reportApi = {
   /**
    * KPIs for the admin dashboard.
@@ -171,6 +184,7 @@ export const reportApi = {
   },
 }
 
+/** Accounting reports: general ledger, trial balance and balance sheet. */
 export const accountingApi = {
   /**
    * Fetches general ledger entries.
@@ -198,6 +212,7 @@ export const accountingApi = {
   },
 }
 
+/** Staff user management: CRUD plus activation, invites, resets and attachments. */
 export const userApi = {
   /**
    * Paginated list of staff users.
@@ -284,6 +299,7 @@ export const userApi = {
   },
 }
 
+/** Staff issue reports with comment threads and management responses. */
 export const issueReportApi = {
   /**
    * Paginated list of issue reports.
@@ -329,6 +345,7 @@ export const issueReportApi = {
   },
 }
 
+/** Room directory: CRUD plus operational status changes. */
 export const roomApi = {
   /**
    * Paginated list of rooms.
@@ -382,6 +399,7 @@ export const roomApi = {
   },
 }
 
+/** Guest registry: CRUD plus the cross-hotel returning-guest lookup. */
 export const guestApi = {
   /**
    * Paginated list of guests.
@@ -435,6 +453,7 @@ export const guestApi = {
   },
 }
 
+/** Reservations: CRUD plus the check-in / check-out / no-show lifecycle. */
 export const reservationApi = {
   /**
    * Paginated list of reservations.
@@ -520,6 +539,7 @@ export const reservationApi = {
   },
 }
 
+/** Payments: capture, confirmation of guest-pushed transfers, refunds and ClickPesa. */
 export const paymentApi = {
   /**
    * Paginated list of payments.
@@ -598,6 +618,7 @@ export const paymentApi = {
   },
 }
 
+/** Invoices: listing, folio invoice generation and PDF download. */
 export const invoiceApi = {
   /**
    * Paginated list of invoices.
@@ -635,6 +656,7 @@ export const invoiceApi = {
   },
 }
 
+/** Housekeeping tasks with the assign → start → confirm → verify → complete workflow. */
 export const housekeepingApi = {
   /**
    * Paginated list of housekeeping tasks.
@@ -720,6 +742,7 @@ export const housekeepingApi = {
   },
 }
 
+/** Inventory items, stock adjustments and movement history. */
 export const inventoryApi = {
   /**
    * Paginated list of inventory items.
@@ -782,6 +805,7 @@ export const inventoryApi = {
   },
 }
 
+/** Supplier records for procurement. */
 export const supplierApi = {
   /**
    * Paginated list of suppliers.
@@ -826,6 +850,7 @@ export const supplierApi = {
   },
 }
 
+/** Food & beverage menu items. */
 export const menuItemApi = {
   /**
    * Paginated list of menu items.
@@ -870,6 +895,7 @@ export const menuItemApi = {
   },
 }
 
+/** F&B orders: cash/room-folio settlement and per-item kitchen status. */
 export const orderApi = {
   /**
    * Paginated list of food & beverage orders.
@@ -943,6 +969,7 @@ export const orderApi = {
   },
 }
 
+/** Guest laundry orders. */
 export const laundryApi = {
   /**
    * Paginated list of laundry orders.
@@ -987,6 +1014,7 @@ export const laundryApi = {
   },
 }
 
+/** Staff attendance: clock-in/out, current status and per-user history. */
 export const attendanceApi = {
   /**
    * Records the current user's clock-in.
@@ -1030,6 +1058,7 @@ export const attendanceApi = {
   },
 }
 
+/** Guest fun-game activities. */
 export const funGameApi = {
   /**
    * Paginated list of fun games (guest activities).
@@ -1074,6 +1103,7 @@ export const funGameApi = {
   },
 }
 
+/** Purchase requisitions with the approve / reject / cancel workflow. */
 export const purchaseRequisitionApi = {
   /**
    * Paginated list of purchase requisitions.
@@ -1126,6 +1156,7 @@ export const purchaseRequisitionApi = {
   },
 }
 
+/** Purchase orders with two-level approval. */
 export const purchaseOrderApi = {
   /**
    * Paginated list of purchase orders.
@@ -1177,6 +1208,7 @@ export const purchaseOrderApi = {
   },
 }
 
+/** Goods received notes recorded against purchase orders. */
 export const goodsReceivedNoteApi = {
   /**
    * Paginated list of goods received notes.
@@ -1204,6 +1236,7 @@ export const goodsReceivedNoteApi = {
   },
 }
 
+/** Booking requisitions sent by the public site, answered by the hotel. */
 export const bookingRequisitionApi = {
   /**
    * Paginated list of booking requisitions received by the hotel.
@@ -1240,6 +1273,7 @@ export const bookingRequisitionApi = {
   },
 }
 
+/** Superadmin tenant (hotel) management: lifecycle, subscription, branding and owners. */
 export const tenantApi = {
   /**
    * Paginated list of tenants (hotels) managed by the superadmin.
@@ -1342,6 +1376,7 @@ export const tenantApi = {
   },
 }
 
+/** Superadmin platform-wide reports and per-tenant analytics. */
 export const superadminReportApi = {
   /**
    * Platform-wide KPIs for the superadmin dashboard.
@@ -1360,6 +1395,7 @@ export const superadminReportApi = {
   },
 }
 
+/** Owner dashboard and owned-hotel views. */
 export const ownerApi = {
   /**
    * KPIs for the owner's dashboard.
@@ -1385,6 +1421,7 @@ export const ownerApi = {
   },
 }
 
+/** 1:1 staff conversations and their messages. */
 export const conversationApi = {
   /**
    * Paginated list of 1:1 conversations.
@@ -1453,6 +1490,7 @@ export const conversationApi = {
   },
 }
 
+/** Staff chat groups, their messages and membership. */
 export const groupApi = {
   /**
    * Paginated list of chat groups.
@@ -1524,6 +1562,7 @@ export const groupApi = {
   },
 }
 
+/** Message-level actions: deletion, view-once and reactions. */
 export const messageActionApi = {
   /**
    * Deletes a message in a 1:1 conversation.
@@ -1575,6 +1614,7 @@ export const messageActionApi = {
   },
 }
 
+/** Ephemeral staff status updates with views and reactions. */
 export const statusApi = {
   /**
    * Paginated list of ephemeral status updates.
@@ -1626,6 +1666,7 @@ export const statusApi = {
   },
 }
 
+/** Messaging extras: pins, stars, polls, search, export, translation and forwarding. */
 export const featuresApi = {
   /**
    * Pins a message.
@@ -1717,6 +1758,7 @@ export const featuresApi = {
   },
 }
 
+/** Reusable message templates. */
 export const templateApi = {
   /**
    * Paginated list of message templates.
@@ -1753,6 +1795,7 @@ export const templateApi = {
   },
 }
 
+/** Messages scheduled for later delivery. */
 export const scheduledApi = {
   /**
    * Lists the current user's scheduled messages.
@@ -1779,6 +1822,7 @@ export const scheduledApi = {
   },
 }
 
+/** Announcements with read acknowledgements. */
 export const announcementApi = {
   /**
    * Paginated list of announcements.
@@ -1806,6 +1850,7 @@ export const announcementApi = {
   },
 }
 
+/** Conversation escalations to higher support levels. */
 export const escalationApi = {
   /**
    * Lists open escalations for the current user.
@@ -1833,6 +1878,7 @@ export const escalationApi = {
   },
 }
 
+/** Shift handover notes with acknowledgement. */
 export const handoverApi = {
   /**
    * Paginated list of shift handover notes.
@@ -1860,6 +1906,7 @@ export const handoverApi = {
   },
 }
 
+/** Per-user messaging preferences. */
 export const preferenceApi = {
   /**
    * Lists the current user's messaging preferences.
@@ -1895,6 +1942,7 @@ export const preferenceApi = {
   },
 }
 
+/** Chat retention policies. */
 export const retentionApi = {
   /**
    * Lists the chat retention policies.
@@ -1921,6 +1969,7 @@ export const retentionApi = {
   },
 }
 
+/** Links between hotel rooms and chats. */
 export const roomLinkApi = {
   /**
    * Paginated list of rooms linked to chats.
@@ -1956,6 +2005,7 @@ export const roomLinkApi = {
   },
 }
 
+/** Tasks created from chat context. */
 export const taskGroupApi = {
   /**
    * Creates a task from chat context.
@@ -1977,6 +2027,7 @@ export const taskGroupApi = {
   },
 }
 
+/** Staff location sharing and nearby lookup. */
 export const staffLocationApi = {
   /**
    * Updates the current user's shared location.
@@ -1996,6 +2047,7 @@ export const staffLocationApi = {
   },
 }
 
+/** In-room guest chat messages. */
 export const guestMessageApi = {
   /**
    * Paginated list of guest chat messages.
@@ -2015,6 +2067,7 @@ export const guestMessageApi = {
   },
 }
 
+/** Staff meetings with invites and responses. */
 export const meetingApi = {
   /**
    * Paginated list of meetings.
@@ -2051,6 +2104,7 @@ export const meetingApi = {
   },
 }
 
+/** SOS alerts raised by staff. */
 export const sosApi = {
   /**
    * Paginated list of SOS alerts.
@@ -2086,6 +2140,7 @@ export const sosApi = {
   },
 }
 
+/** WebRTC call lifecycle: initiate, signal, accept/decline, end/cancel. */
 export const callApi = {
   /**
    * Starts a call to a peer.

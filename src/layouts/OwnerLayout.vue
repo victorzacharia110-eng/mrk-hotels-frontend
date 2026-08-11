@@ -1,6 +1,15 @@
+<!--
+  OwnerLayout — shell for the owner panel (/owner).
+  Collapsible sidebar (slide-over on mobile) with the dashboard link and
+  session actions, a header showing the current page title, and the routed
+  owner pages.
+-->
+
 <template>
   <div class="owner-layout">
+    <!-- Backdrop that closes the slide-over sidebar on mobile. -->
     <div class="sa-sidebar-overlay" :class="{ visible: sidebarMobileOpen }" @click="sidebarMobileOpen = false"></div>
+    <!-- Sidebar: logo (click to collapse), navigation and session actions. -->
     <aside class="sa-sidebar" :class="{ collapsed: sidebarCollapsed, 'mobile-open': sidebarMobileOpen }">
       <div class="sa-logo" @click="sidebarCollapsed = !sidebarCollapsed">
         <span class="sa-logo-icon"><i class="fas fa-crown"></i></span>
@@ -24,6 +33,7 @@
         </button>
       </div>
     </aside>
+    <!-- Main column: header bar with the page title + routed page content. -->
     <div class="sa-main">
       <header class="sa-header">
         <div class="sa-header-left">

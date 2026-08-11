@@ -1,3 +1,8 @@
+<!--
+  Suppliers page (route: /app/suppliers, name: hotel-suppliers).
+  Supplier records for a hotel: a filterable paginated list with balance and
+  rating columns plus a create/edit/delete modal (permission-gated).
+-->
 <template>
   <div class="dashboard-page container">
     <div class="page-head">
@@ -16,6 +21,7 @@
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <!-- Status/category/search filters; each change reloads the list -->
     <div class="card filter-bar">
       <div class="filter-grid">
         <div class="form-group">
@@ -40,6 +46,7 @@
 
     <div v-if="loading" class="alert alert-info">{{ $t('suppliers.loading') }}</div>
 
+    <!-- Supplier table with per-row edit/delete actions -->
     <div v-else class="table-scroll">
       <table class="table">
       <thead>
@@ -82,6 +89,7 @@
     </table>
     </div>
 
+    <!-- Pagination controls, only shown when there is more than one page -->
     <div v-if="meta.total > meta.per_page" class="pagination">
       <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
         $t('common.previous') }}</button>
@@ -90,6 +98,7 @@
         $t('common.next') }}</button>
     </div>
 
+    <!-- Create/edit supplier modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal">
         <div class="modal-head">
@@ -173,6 +182,7 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 const canOperate = computed(() => authStore.canOperate)
 
+// List state: supplier rows, pagination, filters and feedback flags.
 const suppliers = ref([])
 const page = ref(1)
 const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
@@ -181,6 +191,7 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 
+// Modal state: visibility, edit target, in-flight flag, errors and the form fields.
 const showModal = ref(false)
 const editing = ref(false)
 const editingId = ref(null)
@@ -201,6 +212,7 @@ const form = reactive({
   notes: '',
 })
 
+// Translated option lists for the status and category dropdowns.
 const supplierStatusOptions = computed(() => [
   { value: 'active', label: t('suppliers.active') },
   { value: 'inactive', label: t('suppliers.inactive') },
@@ -217,11 +229,21 @@ const categoryOptions = computed(() => [
   { value: 'other', label: t('suppliers.categoryOther') },
 ])
 
+/**
+ * Maps a supplier status to the CSS class used for its badge colour.
+ * @param {string} s - The supplier status (active, inactive, blocked).
+ * @returns {string} The badge CSS class.
+ */
 function statusBadge(s) {
   const map = { active: 'badge-green', inactive: 'badge-gray', blocked: 'badge-red' }
   return map[s] || 'badge-gray'
 }
 
+/**
+ * Renders a 0-5 rating as a string of filled/empty star characters.
+ * @param {number} rating - The supplier rating.
+ * @returns {string} Five star characters, e.g. "★★★☆☆".
+ */
 function stars(rating) {
   const n = Number(rating) || 0
   let out = ''
@@ -229,6 +251,7 @@ function stars(rating) {
   return out
 }
 
+/** Fetches the current page of suppliers, honouring the active filters. */
 async function load() {
   loading.value = true
   error.value = ''
@@ -249,11 +272,16 @@ async function load() {
   }
 }
 
+/**
+ * Moves to the given page and reloads the list.
+ * @param {number} p - The 1-based page number.
+ */
 function goPage(p) {
   page.value = p
   load()
 }
 
+/** Resets all filters and reloads from the first page. */
 function clearFilters() {
   page.value = 1
   filters.status = ''
@@ -262,11 +290,13 @@ function clearFilters() {
   load()
 }
 
+/** Restarts the search from page one whenever the search text changes. */
 function triggerSearch() {
   page.value = 1
   load()
 }
 
+/** Resets the modal form to its defaults for a fresh create. */
 function resetForm() {
   editing.value = false
   editingId.value = null
@@ -284,12 +314,17 @@ function resetForm() {
   form.notes = ''
 }
 
+/** Opens the modal in create mode with a blank form. */
 function openCreate() {
   modalError.value = ''
   resetForm()
   showModal.value = true
 }
 
+/**
+ * Opens the modal in edit mode, copying the supplier's data into the form.
+ * @param {Object} s - The supplier row being edited.
+ */
 function openEdit(s) {
   modalError.value = ''
   editing.value = true
@@ -309,10 +344,12 @@ function openEdit(s) {
   showModal.value = true
 }
 
+/** Closes the create/edit modal. */
 function closeModal() {
   showModal.value = false
 }
 
+/** Creates or updates the supplier (normalising the phone number) and reloads. */
 async function save() {
   modalError.value = ''
   saving.value = true
@@ -333,6 +370,10 @@ async function save() {
   }
 }
 
+/**
+ * Deletes a supplier after a confirmation prompt.
+ * @param {Object} s - The supplier row to delete.
+ */
 async function remove(s) {
   if (!window.confirm(t('suppliers.deleteMessage', { name: s.supplier_name }))) return
   error.value = ''
@@ -345,6 +386,11 @@ async function remove(s) {
   }
 }
 
+/**
+ * Flattens Laravel-style validation errors into a single readable message.
+ * @param {Error} err - The thrown request error.
+ * @returns {string} A space-joined error message or the generic failure text.
+ */
 function flattenError(err) {
   const messages = err.response?.data?.errors
   return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')

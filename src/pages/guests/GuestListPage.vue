@@ -1,5 +1,14 @@
+<!--
+  GuestListPage.vue
+  Guest directory for the hotel back-office. Features: search, VIP and
+  nationality filters, create/edit modal with phone normalization and
+  country/city selectors, VIP badging, and delete. Write actions are
+  permission-gated via canEdit. Authenticated route.
+-->
+
 <template>
   <div class="dashboard-page container">
+    <!-- Page header: refresh plus permission-gated "new guest" button -->
     <div class="page-head">
       <div>
         <h1>{{ $t('guests.title') }}</h1>
@@ -13,9 +22,11 @@
       </div>
     </div>
 
+    <!-- Global success / error feedback banners -->
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <!-- Filter bar: free-text search, VIP flag and nationality -->
     <div class="card filter-bar">
       <div class="filter-grid">
         <div class="form-group">
@@ -44,8 +55,10 @@
       </div>
     </div>
 
+    <!-- Loading indicator shown while the list request is in flight -->
     <div v-if="loading" class="alert alert-info">{{ $t('guests.loading') }}</div>
 
+    <!-- Guests table: identity, contact, ID document, nationality and VIP type -->
     <div v-else class="table-scroll">
       <table class="table">
       <thead>
@@ -77,6 +90,7 @@
             </span>
           </td>
           <td>
+            <!-- Row actions (edit/delete) only for users with guest-edit rights -->
             <div class="actions">
               <button v-if="canEdit" class="btn btn-sm btn-secondary" @click="openEdit(guest)"><i
                   class="fas fa-pen"></i> {{ $t('common.edit') }}</button>
@@ -92,6 +106,7 @@
     </table>
     </div>
 
+    <!-- Server-side pagination controls -->
     <div v-if="meta.total > meta.per_page" class="pagination">
       <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
         $t('common.previous') }}</button>
@@ -100,6 +115,7 @@
         $t('common.next') }}</button>
     </div>
 
+    <!-- Create/edit guest modal: identity, contact, location, ID and VIP status -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal">
         <div class="modal-head">
@@ -204,24 +220,29 @@ import { normalizePhoneNumber } from '@/utils/phone'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
+// Permission gate: guest editing requires permission 60 plus operate rights.
 const canEdit = computed(() => authStore.can(60) && authStore.canOperate)
 
+// VIP filter options with translated labels (recomputed on locale change).
 const vipFilterOptions = computed(() => [
   { value: 'true', label: t('guests.typeVip') },
   { value: 'false', label: t('guests.typeRegular') },
 ])
 
+// Accepted identification document types for the guest form.
 const idTypeOptions = computed(() => [
   { value: 'passport', label: t('common.idTypes.passport') },
   { value: 'national_id', label: t('common.idTypes.nationalId') },
   { value: 'driving_license', label: t('common.idTypes.drivingLicense') },
 ])
 
+// VIP status choices bound to the modal form select.
 const vipStatusOptions = computed(() => [
   { value: false, label: t('guests.typeRegular') },
   { value: true, label: t('guests.typeVip') },
 ])
 
+// List state: guest rows, pagination metadata, filters and feedback flags.
 const guests = ref([])
 const page = ref(1)
 const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
@@ -230,6 +251,7 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 
+// Create/edit modal state and its form model.
 const showModal = ref(false)
 const editing = ref(false)
 const editingId = ref(null)
@@ -252,6 +274,10 @@ const form = reactive({
   notes: '',
 })
 
+/**
+ * Fetches the current page of guests applying the active filters.
+ * @returns {Promise<void>}
+ */
 async function load() {
   loading.value = true
   error.value = ''
@@ -272,11 +298,16 @@ async function load() {
   }
 }
 
+/**
+ * Navigates to a given result page and reloads.
+ * @param {number} p - 1-based page number.
+ */
 function goPage(p) {
   page.value = p
   load()
 }
 
+/** Resets every filter and the page cursor, then reloads the list. */
 function clearFilters() {
   page.value = 1
   filters.search = ''
@@ -285,11 +316,13 @@ function clearFilters() {
   load()
 }
 
+/** Search-as-you-type handler: resets to page 1 and reloads on each input. */
 function triggerSearch() {
   page.value = 1
   load()
 }
 
+/** Restores the guest form to its empty default state. */
 function resetForm() {
   editing.value = false
   editingId.value = null
@@ -309,12 +342,17 @@ function resetForm() {
   form.notes = ''
 }
 
+/** Opens the create-guest modal with a fresh form. */
 function openCreate() {
   modalError.value = ''
   resetForm()
   showModal.value = true
 }
 
+/**
+ * Opens the edit modal pre-filled with the selected guest's data.
+ * @param {Object} guest - The guest row to edit.
+ */
 function openEdit(guest) {
   modalError.value = ''
   editing.value = true
@@ -337,10 +375,16 @@ function openEdit(guest) {
   showModal.value = true
 }
 
+/** Closes the create/edit modal. */
 function closeModal() {
   showModal.value = false
 }
 
+/**
+ * Creates or updates the guest depending on the editing flag.
+ * The phone number is normalized to E.164 (defaulting to TZ) before sending.
+ * @returns {Promise<void>}
+ */
 async function save() {
   modalError.value = ''
   saving.value = true
@@ -361,6 +405,11 @@ async function save() {
   }
 }
 
+/**
+ * Deletes a guest after a native confirmation dialog, then reloads the list.
+ * @param {Object} guest - The guest row to delete.
+ * @returns {Promise<void>}
+ */
 async function remove(guest) {
   if (!window.confirm(t('guests.deleteMessage', { name: guest.full_name }))) return
   error.value = ''
@@ -373,6 +422,12 @@ async function remove(guest) {
   }
 }
 
+/**
+ * Converts an Axios/Laravel error response into a single human-readable string,
+ * joining per-field validation messages when present.
+ * @param {Object} err - The caught Axios error.
+ * @returns {string} Flattened error message (localized fallback included).
+ */
 function flattenError(err) {
   const messages = err.response?.data?.errors
   return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')

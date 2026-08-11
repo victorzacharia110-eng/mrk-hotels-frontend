@@ -1,5 +1,13 @@
+<!--
+  BookingRequisitionListPage.vue
+  Back-office list of booking requisitions submitted through the public website.
+  Staff can filter by status/type, free-text search, then review, quote, confirm,
+  reject or delete each request via the respond modal. Authenticated route.
+-->
+
 <template>
   <div class="dashboard-page container">
+    <!-- Page header with manual refresh -->
     <div class="page-head">
       <div>
         <h1>{{ $t('bookingRequisitions.title') }}</h1>
@@ -11,9 +19,11 @@
       </div>
     </div>
 
+    <!-- Global success / error feedback banners -->
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <!-- Filter bar: status, booking type and free-text search (all trigger a reload) -->
     <div class="card filter-bar">
       <div class="filter-grid">
         <div class="form-group">
@@ -36,8 +46,10 @@
       </div>
     </div>
 
+    <!-- Loading indicator shown while the list request is in flight -->
     <div v-if="loading" class="alert alert-info">{{ $t('bookingRequisitions.loading') }}</div>
 
+    <!-- Results table: one row per requisition with status-gated workflow actions -->
     <div v-else class="table-scroll">
       <table class="table">
       <thead>
@@ -73,6 +85,7 @@
           </td>
           <td><span class="badge" :class="statusBadge(r.status)">{{ r.status }}</span></td>
           <td>
+            <!-- Workflow actions, each visible only for the statuses where it is valid -->
             <div class="actions">
               <button v-if="r.status === 'pending'" class="btn btn-sm btn-primary"
                 @click="openRespond(r, 'reviewing')">{{ $t('bookingRequisitions.review') }}</button>
@@ -94,6 +107,7 @@
     </table>
     </div>
 
+    <!-- Server-side pagination controls -->
     <div v-if="meta.total > meta.per_page" class="pagination">
       <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
         $t('common.previous') }}</button>
@@ -102,6 +116,7 @@
         $t('common.next') }}</button>
     </div>
 
+    <!-- Respond modal: choose the new status, optionally quote an amount and add hotel notes -->
     <div v-if="showRespond" class="modal-overlay" @click.self="showRespond = false">
       <div class="modal">
         <div class="modal-head">
@@ -120,6 +135,7 @@
             <label>{{ $t('bookingRequisitions.response') }}</label>
             <SearchableSelect v-model="respondForm.status" :options="respondStatusOptions" required />
           </div>
+          <!-- Quoted amount is only relevant when quoting or confirming -->
           <div v-if="['quoted', 'confirmed'].includes(respondForm.status)" class="form-group">
             <label>{{ $t('bookingRequisitions.quotedAmount') }}</label>
             <input v-model.number="respondForm.quoted_amount" type="number" min="0" step="0.01" class="input"
@@ -150,6 +166,7 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 
 const { t } = useI18n()
 
+// List data, server pagination metadata and the active filter model.
 const requisitions = ref([])
 const page = ref(1)
 const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
@@ -158,12 +175,14 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 
+// Respond-modal state: the requisition being answered, its form model and save flag.
 const showRespond = ref(false)
 const respondTarget = ref(null)
 const saving = ref(false)
 const modalError = ref('')
 const respondForm = reactive({ status: 'reviewing', quoted_amount: null, hotel_notes: '' })
 
+// Status filter options with translated labels (recomputed on locale change).
 const statusOptions = computed(() => [
   { value: 'pending', label: t('bookingRequisitions.statusPending') },
   { value: 'reviewing', label: t('bookingRequisitions.statusReviewing') },
@@ -173,6 +192,7 @@ const statusOptions = computed(() => [
   { value: 'cancelled', label: t('bookingRequisitions.statusCancelled') },
 ])
 
+// Booking-type filter options with translated labels.
 const bookingTypeOptions = computed(() => [
   { value: 'leisure', label: t('common.bookingTypes.leisure') },
   { value: 'business', label: t('common.bookingTypes.business') },
@@ -182,6 +202,7 @@ const bookingTypeOptions = computed(() => [
   { value: 'other', label: t('common.bookingTypes.other') },
 ])
 
+// Statuses staff can pick inside the respond modal (no 'pending'/'cancelled' here).
 const respondStatusOptions = computed(() => [
   { value: 'reviewing', label: t('bookingRequisitions.statusReviewing') },
   { value: 'quoted', label: t('bookingRequisitions.statusQuoted') },
@@ -189,15 +210,29 @@ const respondStatusOptions = computed(() => [
   { value: 'rejected', label: t('bookingRequisitions.statusRejected') },
 ])
 
+/**
+ * Maps a requisition status to its badge CSS class.
+ * @param {string} s - Requisition status (pending|reviewing|quoted|confirmed|rejected|cancelled).
+ * @returns {string} Badge class name, defaulting to 'badge-gray' for unknown statuses.
+ */
 function statusBadge(s) {
   const map = { pending: 'badge-yellow', reviewing: 'badge-blue', quoted: 'badge-blue', confirmed: 'badge-green', rejected: 'badge-red', cancelled: 'badge-gray' }
   return map[s] || 'badge-gray'
 }
 
+/**
+ * Formats an ISO datetime as 'YYYY-MM-DD HH:mm' for compact table display.
+ * @param {string} d - ISO datetime string from the API.
+ * @returns {string} Formatted datetime, or '-' when empty.
+ */
 function formatDate(d) {
   return d ? String(d).slice(0, 16).replace('T', ' ') : '-'
 }
 
+/**
+ * Fetches the current page of requisitions applying the active filters.
+ * @returns {Promise<void>}
+ */
 async function load() {
   loading.value = true
   error.value = ''
@@ -218,11 +253,16 @@ async function load() {
   }
 }
 
+/**
+ * Navigates to a given result page and reloads.
+ * @param {number} p - 1-based page number.
+ */
 function goPage(p) {
   page.value = p
   load()
 }
 
+/** Resets every filter and the page cursor, then reloads the list. */
 function clearFilters() {
   page.value = 1
   filters.status = ''
@@ -231,6 +271,12 @@ function clearFilters() {
   load()
 }
 
+/**
+ * Opens the respond modal for a requisition, pre-filling the intended status
+ * and any previously quoted amount / notes so staff can adjust instead of retype.
+ * @param {Object} r - The requisition row being answered.
+ * @param {string} status - Workflow status the modal starts with.
+ */
 function openRespond(r, status) {
   modalError.value = ''
   respondTarget.value = r
@@ -240,6 +286,11 @@ function openRespond(r, status) {
   showRespond.value = true
 }
 
+/**
+ * Submits the respond form to the API, then closes the modal and refreshes the list.
+ * Validation errors from the server are flattened into the modal-local error banner.
+ * @returns {Promise<void>}
+ */
 async function saveRespond() {
   modalError.value = ''
   saving.value = true
@@ -259,6 +310,11 @@ async function saveRespond() {
   }
 }
 
+/**
+ * Deletes a pending requisition after a native confirmation dialog.
+ * @param {Object} r - The requisition row to delete.
+ * @returns {Promise<void>}
+ */
 async function remove(r) {
   if (!window.confirm(t('bookingRequisitions.deleteConfirm', { reference: r.requisition_number }))) return
   error.value = ''
@@ -271,6 +327,12 @@ async function remove(r) {
   }
 }
 
+/**
+ * Converts an Axios/Laravel error response into a single human-readable string,
+ * joining per-field validation messages when present.
+ * @param {Object} err - The caught Axios error.
+ * @returns {string} Flattened error message (localized fallback included).
+ */
 function flattenError(err) {
   const messages = err.response?.data?.errors
   return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')

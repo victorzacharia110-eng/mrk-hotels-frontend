@@ -1,5 +1,14 @@
+<!--
+  SearchableSelect — custom dropdown replacement for <select>.
+  Live-searches large option sets, positions its panel with `position: fixed`
+  (flipping above the trigger near the viewport bottom), offers an `option`
+  slot for custom rows, and keeps a hidden native <select> so HTML5 form
+  validation (required) still runs.
+-->
+
 <template>
   <div class="ss" ref="rootEl">
+    <!-- Trigger button showing the current selection (or the placeholder). -->
     <button
       type="button"
       class="ss-trigger"
@@ -12,6 +21,7 @@
       <span class="ss-trigger-label">{{ selectedLabel || placeholder }}</span>
     </button>
 
+    <!-- Dropdown panel: search box, loading/empty states and the option list. -->
     <div v-if="open" class="ss-panel" role="listbox" :style="panelStyle">
       <input
         v-if="showSearch"

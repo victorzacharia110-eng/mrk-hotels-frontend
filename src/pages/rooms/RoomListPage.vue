@@ -1,3 +1,9 @@
+<!--
+  Rooms page (route: /app/rooms, name: hotel-rooms).
+  Hotel room inventory: a filterable paginated list showing the current
+  occupant, with create/edit and delete actions (permission-gated) and a
+  dedicated room-status change dialog.
+-->
 <template>
   <div class="dashboard-page container">
     <div class="page-head">
@@ -15,6 +21,7 @@
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <!-- Status/type/search filters; each change reloads the list -->
     <div class="card filter-bar">
       <div class="filter-grid">
         <div class="form-group">
@@ -41,6 +48,7 @@
 
     <div v-if="loading" class="alert alert-info">{{ $t('rooms.loading') }}</div>
 
+    <!-- Room table; shows the current guest under the room number when occupied -->
     <div v-else class="table-scroll">
       <table class="table">
       <thead>
@@ -87,6 +95,7 @@
     </table>
     </div>
 
+    <!-- Pagination controls, only shown when there is more than one page -->
     <div v-if="meta.total > meta.per_page" class="pagination">
       <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
         $t('common.previous') }}</button>
@@ -95,6 +104,7 @@
         $t('common.next') }}</button>
     </div>
 
+    <!-- Create/edit room modal; amenities are typed as a comma-separated list -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal">
         <div class="modal-head">
@@ -150,6 +160,7 @@
       </div>
     </div>
 
+    <!-- Status-change modal (not offered for occupied rooms) -->
     <div v-if="showStatus" class="modal-overlay" @click.self="showStatus = false">
       <div class="modal modal-sm">
         <div class="modal-head">
@@ -191,6 +202,7 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 const canEdit = computed(() => authStore.can(80))
 
+// List state: room rows, pagination, filters and feedback flags.
 const rooms = ref([])
 const page = ref(1)
 const meta = ref({ total: 0, per_page: 20, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
@@ -199,6 +211,7 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 
+// Modal state: create/edit and status-change dialogs plus their form fields.
 const showModal = ref(false)
 const showStatus = ref(false)
 const editing = ref(false)
@@ -210,6 +223,7 @@ const form = reactive({ room_number: '', room_type: 'single', floor: null, statu
 const statusForm = reactive({ status: 'available', notes: '' })
 const amenitiesText = ref('')
 
+// Translated option lists for the room type and status dropdowns.
 const roomTypeOptions = computed(() => [
   { value: 'single', label: t('common.roomTypes.single') },
   { value: 'double', label: t('common.roomTypes.double') },
@@ -233,11 +247,17 @@ const statusChangeOptions = computed(() => [
   { value: 'dirty', label: t('rooms.statusDirty') },
 ])
 
+/**
+ * Maps a room status to the CSS class used for its badge colour.
+ * @param {string} s - The room status (available, occupied, cleaning, maintenance, dirty).
+ * @returns {string} The badge CSS class.
+ */
 function statusBadge(s) {
   const map = { available: 'badge-green', occupied: 'badge-red', cleaning: 'badge-yellow', maintenance: 'badge-gray', dirty: 'badge-yellow' }
   return map[s] || 'badge-gray'
 }
 
+/** Fetches the current page of rooms, honouring the active filters. */
 async function load() {
   loading.value = true
   error.value = ''
@@ -252,11 +272,16 @@ async function load() {
   }
 }
 
+/**
+ * Moves to the given page and reloads the list.
+ * @param {number} p - The 1-based page number.
+ */
 function goPage(p) {
   page.value = p
   load()
 }
 
+/** Resets all filters and reloads from the first page. */
 function clearFilters() {
   page.value = 1
   filters.status = ''
@@ -265,11 +290,13 @@ function clearFilters() {
   load()
 }
 
+/** Restarts the search from page one whenever the search text changes. */
 function triggerSearch() {
   page.value = 1
   load()
 }
 
+/** Resets the room form (and its amenities text) to the create defaults. */
 function resetForm() {
   editing.value = false
   editingId.value = null
@@ -284,12 +311,17 @@ function resetForm() {
   amenitiesText.value = ''
 }
 
+/** Opens the room modal in create mode with a blank form. */
 function openCreate() {
   modalError.value = ''
   resetForm()
   showModal.value = true
 }
 
+/**
+ * Opens the room modal in edit mode, copying the room's data into the form.
+ * @param {Object} room - The room row being edited.
+ */
 function openEdit(room) {
   modalError.value = ''
   editing.value = true
@@ -306,11 +338,13 @@ function openEdit(room) {
   showModal.value = true
 }
 
+/** Closes both the room form and the status-change modal. */
 function closeModal() {
   showModal.value = false
   showStatus.value = false
 }
 
+/** Creates or updates the room, converting the amenities text into an array. */
 async function save() {
   modalError.value = ''
   saving.value = true
@@ -335,6 +369,10 @@ async function save() {
   }
 }
 
+/**
+ * Opens the status-change modal for a room, defaulting an available room to cleaning.
+ * @param {Object} room - The room whose status is being changed.
+ */
 function openStatus(room) {
   modalError.value = ''
   statusRoom.value = room
@@ -343,6 +381,7 @@ function openStatus(room) {
   showStatus.value = true
 }
 
+/** Persists the new room status (with optional notes) and reloads the list. */
 async function saveStatus() {
   modalError.value = ''
   saving.value = true
@@ -358,6 +397,10 @@ async function saveStatus() {
   }
 }
 
+/**
+ * Deletes a room after a confirmation prompt.
+ * @param {Object} room - The room row to delete.
+ */
 async function remove(room) {
   if (!window.confirm(t('rooms.deleteMessage', { roomNumber: room.room_number }))) return
   error.value = ''
@@ -370,6 +413,11 @@ async function remove(room) {
   }
 }
 
+/**
+ * Flattens Laravel-style validation errors into a single readable message.
+ * @param {Error} err - The thrown request error.
+ * @returns {string} A space-joined error message or the generic failure text.
+ */
 function flattenError(err) {
   const messages = err.response?.data?.errors
   return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')

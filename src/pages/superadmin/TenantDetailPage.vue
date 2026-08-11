@@ -1,3 +1,9 @@
+<!--
+  Tenant detail page (route: /superadmin/tenants/:id, name: superadmin-tenant-detail).
+  Superadmin control panel for one tenant hotel: operational analytics,
+  subscription plan/status editing, tax details with signature/stamp branding,
+  owner assignment/creation, and accepted payment methods with account numbers.
+-->
 <template>
   <div v-if="tenant">
     <router-link :to="{ name: 'superadmin-tenants' }" class="back-link">
@@ -248,12 +254,18 @@ const subscriptionStatusOptions = computed(() => [
 const paymentMethods = PAYMENT_METHODS
 const paymentForm = ref({ methods: defaultPaymentMethods(), accounts: emptyAccounts() })
 
-// Returns a fresh copy of the default payment method list.
+/**
+ * Returns a fresh copy of the default payment method list.
+ * @returns {string[]} All supported payment method codes.
+ */
 function defaultPaymentMethods() {
   return PAYMENT_METHODS.slice()
 }
 
-// Builds an accounts object with every provider keyed to an empty string.
+/**
+ * Builds an accounts object with every provider keyed to an empty string.
+ * @returns {Object<string, string>} Map of provider code to account number.
+ */
 function emptyAccounts() {
   return Object.fromEntries(ALL_PROVIDERS.map((p) => [p, '']))
 }
@@ -266,13 +278,17 @@ const accountProviders = computed(() => {
   )
 })
 
-// Maps a tenant status to the CSS class used for its badge colour.
+/**
+ * Maps a tenant status to the CSS class used for its badge colour.
+ * @param {string} s - The tenant status (active, pending, suspended, cancelled).
+ * @returns {string} The badge CSS class.
+ */
 function statusBadge(s) {
   const map = { active: 'badge-green', pending: 'badge-yellow', suspended: 'badge-red', cancelled: 'badge-gray' }
   return map[s] || 'badge-gray'
 }
 
-// Loads the tenant and its analytics, and seeds every edit form from the response.
+/** Loads the tenant and its analytics, and seeds every edit form from the response. */
 async function load() {
   loading.value = true
   error.value = ''
@@ -305,7 +321,7 @@ async function load() {
   loading.value = false
 }
 
-// Persists the chosen subscription plan and status, then refreshes the tenant.
+/** Persists the chosen subscription plan and status, then refreshes the tenant. */
 async function updateSubscription() {
   saving.value = true
   error.value = ''
@@ -320,7 +336,7 @@ async function updateSubscription() {
   }
 }
 
-// Saves the hotel's TIN and VRN tax numbers.
+/** Saves the hotel's TIN and VRN tax numbers. */
 async function saveTaxDetails() {
   savingTax.value = true
   error.value = ''
@@ -339,12 +355,16 @@ async function saveTaxDetails() {
   }
 }
 
-// Stores the selected image file ('signature' or 'stamp') for the branding upload.
+/**
+ * Stores the selected image file ('signature' or 'stamp') for the branding upload.
+ * @param {Event} event - The file input change event.
+ * @param {string} key - Which branding asset the input belongs to.
+ */
 function onBrandingFile(event, key) {
   brandingFiles.value[key] = event.target.files?.[0] || null
 }
 
-// Uploads the signature/stamp images and updates their URLs on the tenant.
+/** Uploads the signature/stamp images and updates their URLs on the tenant. */
 async function saveBranding() {
   savingBranding.value = true
   error.value = ''
@@ -364,7 +384,10 @@ async function saveBranding() {
   }
 }
 
-// Removes one of the branding assets by telling the API to clear its image.
+/**
+ * Removes one of the branding assets by telling the API to clear its image.
+ * @param {string} asset - The asset to remove ('signature' or 'stamp').
+ */
 async function removeBranding(asset) {
   savingBranding.value = true
   error.value = ''
@@ -381,7 +404,7 @@ async function removeBranding(asset) {
   }
 }
 
-// Assigns an existing owner account to this tenant.
+/** Assigns an existing owner account to this tenant. */
 async function saveOwner() {
   savingOwner.value = true
   error.value = ''
@@ -396,7 +419,7 @@ async function saveOwner() {
   }
 }
 
-// Creates a new owner account, reloads the owner list and selects the new owner.
+/** Creates a new owner account, reloads the owner list and selects the new owner. */
 async function createOwner() {
   creatingOwner.value = true
   error.value = ''
@@ -415,7 +438,7 @@ async function createOwner() {
   }
 }
 
-// Loads the pool of owners available for assignment.
+/** Loads the pool of owners available for assignment. */
 async function loadOwners() {
   try {
     const res = await tenantApi.owners()
@@ -425,7 +448,7 @@ async function loadOwners() {
   }
 }
 
-// Persists the enabled payment methods and their (non-empty) account numbers.
+/** Persists the enabled payment methods and their (non-empty) account numbers. */
 async function savePaymentMethods() {
   savingPayment.value = true
   error.value = ''

@@ -1,3 +1,7 @@
+<!--
+  Superadmin reports page (route: /superadmin/reports, name: superadmin-reports).
+  Placeholder for the platform-level reports module, which is not built yet.
+-->
 <script setup>
 import ModulePlaceholder from '@/components/ModulePlaceholder.vue'
 </script>

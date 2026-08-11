@@ -1,3 +1,11 @@
+/**
+ * vue-i18n configuration.
+ *
+ * English is the default and fallback locale; Swahili is fully supported.
+ * `legacy: false` enables the Composition API (useI18n) used throughout the
+ * app, and the chosen locale persists in localStorage across visits.
+ */
+
 import { createI18n } from 'vue-i18n'
 import en from './en.json'
 import sw from './sw.json'

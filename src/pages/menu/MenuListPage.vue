@@ -1,5 +1,14 @@
+<!--
+  MenuListPage.vue
+  Admin list of restaurant/bar menu items with price, cost and margin display.
+  Features: department/category/availability filters, search-as-you-type,
+  create/edit modal, availability toggle and delete (edit actions are
+  permission-gated via canEdit). Authenticated back-office route.
+-->
+
 <template>
   <div class="dashboard-page container">
+    <!-- Page header: refresh plus permission-gated "new item" button -->
     <div class="page-head">
       <div>
         <h1>{{ $t('menu.title') }}</h1>
@@ -13,9 +22,11 @@
       </div>
     </div>
 
+    <!-- Global success / error feedback banners -->
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <!-- Filter bar: department, category, availability and free-text search -->
     <div class="card filter-bar">
       <div class="filter-grid">
         <div class="form-group">
@@ -45,8 +56,10 @@
       </div>
     </div>
 
+    <!-- Loading indicator shown while the list request is in flight -->
     <div v-if="loading" class="alert alert-info">{{ $t('menu.loading') }}</div>
 
+    <!-- Menu items table: name, category, department, price/cost/margin and status -->
     <div v-else class="table-scroll">
       <table class="table">
       <thead>
@@ -81,6 +94,7 @@
             </span>
           </td>
           <td>
+            <!-- Row actions (availability toggle, edit, delete) only for users with edit rights -->
             <div class="actions">
               <template v-if="canEdit">
                 <button class="btn btn-sm btn-secondary" @click="toggleAvailability(item)">
@@ -100,6 +114,7 @@
     </table>
     </div>
 
+    <!-- Server-side pagination controls -->
     <div v-if="meta.total > meta.per_page" class="pagination">
       <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
         $t('common.previous') }}</button>
