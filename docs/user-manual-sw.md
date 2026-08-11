@@ -72,6 +72,8 @@ Ukurasa wa kuingia una **njia mbili** — badilisha kwa vifungo vya **Neno la Si
 - **Neno la Siri** (chaguo-msingi): weka barua pepe na nenosiri lako, kisha bofya **Ingia**.
 - **PIN**: kuingia haraka kwa terminali zinazoshirikiwa (mapokezi, baa, jikoni). Andika **jina la mtumiaji au namba yako ya usajili** (mf. `EMP-2026-0004`), kisha bonyeza **PIN yako ya tarakimu 4** kwenye kibodi cha skrini. Unaingizwa moja kwa moja mara tu tarakimu ya nne inapokamilika — hakuna kitufe cha kubofya. Tumia **C** kufuta PIN nzima na **⌫** kufuta tarakimu ya mwisho.
 
+<figure><img src="images/login-pin.png" alt="Ukurasa wa kuingia kwa PIN"><figcaption>Kuingia kwa PIN — andika jina la mtumiaji au namba ya usajili, kisha bonyeza PIN ya tarakimu 4 kwenye kibodi; nukta zinaonyesha maendeleo yako.</figcaption></figure>
+
 > **Huna PIN bado?** PIN huwekwa na msimamizi au meneja wa hoteli kutoka ukurasa wa **Wafanyakazi** (sehemu ya 17) — huwezi kuiweka mwenyewe. Kama huna PIN, endelea kutumia njia ya nenosiri.
 >
 > Njia zote mbili ni salama vilevile: majaribio mengi yaliyoshindwa hufunga kuingia kwa muda, na PIN iliyokataliwa huanza upya kutoka kibodi tupu.
@@ -372,6 +374,8 @@ Ukurasa wa Wafanyakazi (msimamizi/meneja) unasimamia timu:
 - Rekodi kitambulisho/viambatisho kwa kila mwanachama.
 
 <figure><img src="images/app-staff.png" alt="Ukurasa wa Wafanyakazi"><figcaption>Wafanyakazi — simamia timu, nafasi, akaunti, mialiko, kuweka upya nenosiri na PIN za kuingia.</figcaption></figure>
+
+<figure><img src="images/app-staff-set-pin.png" alt="Kisanduku cha Weka PIN ya Kuingia"><figcaption>Weka PIN ya Kuingia — weka PIN ya tarakimu 4 mara mbili; huhifadhiwa kwa usalama na inaweza kubadilishwa wakati wowote.</figcaption></figure>
 
 ---
 

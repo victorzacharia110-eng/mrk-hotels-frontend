@@ -72,6 +72,8 @@ The sign-in page offers **two modes** — switch between them with the **Passwor
 - **Password** (default): enter your email and password, then click **Sign In**.
 - **PIN**: quick sign-in for shared terminals (front desk, bar, kitchen). Type your **username or registration number** (e.g. `EMP-2026-0004`), then tap your **4-digit PIN** on the on-screen keypad. You are signed in automatically the moment the 4th digit is entered — there is no button to press. Use **C** to clear the whole PIN and **⌫** to delete the last digit.
 
+<figure><img src="images/login-pin.png" alt="Sign-in page in PIN mode"><figcaption>PIN sign-in — enter your username or registration number, then tap your 4-digit PIN on the keypad; the dots track your progress.</figcaption></figure>
+
 > **No PIN yet?** PINs are assigned by your hotel admin or manager from the **Staff** page (section 17) — you cannot set your own. Until you have one, keep using the password mode.
 >
 > Both modes are equally protected: too many failed attempts temporarily block sign-in, and a rejected PIN always restarts from an empty keypad.
@@ -372,6 +374,8 @@ The Staff page (admin/manager) manages the team:
 - Record ID/attachments for each member.
 
 <figure><img src="images/app-staff.png" alt="Staff page"><figcaption>Staff — manage the team, roles, accounts, invites, password resets and login PINs.</figcaption></figure>
+
+<figure><img src="images/app-staff-set-pin.png" alt="Set Login PIN dialog"><figcaption>Set Login PIN — enter the 4-digit PIN twice; it is stored securely hashed and can be replaced at any time.</figcaption></figure>
 
 ---
 

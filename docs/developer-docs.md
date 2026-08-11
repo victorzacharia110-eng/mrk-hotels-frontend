@@ -553,11 +553,13 @@ A mobile-money payment is always **confirmable**: `Payment::isConfirmable()` acc
 
 ## 10. Screens
 
-Captured from the running demo (MRK Grand Hotel + the platform superadmin). Public and hotel-panel screens are shared with the user manuals; the superadmin screens appear only here.
+Captured from the running demo (MRK Grand Hotel + the platform superadmin). Public and hotel-panel screens are shared with the user manuals; the superadmin screens appear only here. The PIN sign-in screens (`login-pin.png`, `app-staff.png`, `app-staff-set-pin.png`) are regenerated with `node scripts/capture-docs-images.mjs` (requires the dev server on :5173 and the API on :8000).
 
 ### 10.1 Public portal and sign-in
 
 <figure><img src="images/login.png" alt="Sign-in page"><figcaption>Sign-in page (`/login`) — dual-mode: email + password, or username/registration number + 4-digit PIN on the iPOS-style keypad.</figcaption></figure>
+
+<figure><img src="images/login-pin.png" alt="Sign-in page in PIN mode"><figcaption>PIN mode — the on-screen keypad; sign-in is submitted automatically when the 4th digit is entered.</figcaption></figure>
 
 <figure><img src="images/public-home.png" alt="Public portal home"><figcaption>Public booking portal home (`/`) — hotel directory, country/city filters, invoice download.</figcaption></figure>
 
@@ -597,7 +599,9 @@ Captured from the running demo (MRK Grand Hotel + the platform superadmin). Publ
 
 <figure><img src="images/app-goods-received.png" alt="Goods received notes"><figcaption>Goods received notes.</figcaption></figure>
 
-<figure><img src="images/app-staff.png" alt="Staff"><figcaption>Staff.</figcaption></figure>
+<figure><img src="images/app-staff.png" alt="Staff"><figcaption>Staff — accounts, roles, invites, password resets and login PINs.</figcaption></figure>
+
+<figure><img src="images/app-staff-set-pin.png" alt="Set Login PIN modal"><figcaption>Set Login PIN modal (`/app/staff`) — admins set a hashed 4-digit PIN per staff member for shared-terminal sign-in.</figcaption></figure>
 
 <figure><img src="images/app-messages.png" alt="Messages"><figcaption>Messages.</figcaption></figure>
 
