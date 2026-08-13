@@ -26,7 +26,7 @@ test.beforeEach(async ({ page }) => {
 for (const path of APP_PAGES) {
   test(`no page-level horizontal scroll on mobile: ${path}`, async ({ page }) => {
     await page.goto(path)
-    await page.waitForTimeout(1200)
+    await expect(page.locator('main')).toBeVisible()
 
     const result = page.evaluate(() => {
       const vw = document.documentElement.clientWidth
@@ -56,7 +56,7 @@ for (const path of APP_PAGES) {
 
 test('public pages have no horizontal scroll on mobile', async ({ page }) => {
   await page.goto('/')
-  await page.waitForTimeout(1000)
+  await expect(page.locator('main')).toBeVisible()
   const vw = await page.evaluate(() => document.documentElement.clientWidth)
   const sw = await page.evaluate(() => document.documentElement.scrollWidth)
   expect(sw).toBeLessThanOrEqual(vw + 1)
@@ -64,7 +64,7 @@ test('public pages have no horizontal scroll on mobile', async ({ page }) => {
 
 test('tables scroll inside their wrapper, not the page', async ({ page }) => {
   await page.goto('/app/reservations')
-  await page.waitForTimeout(1500)
+  await expect(page.locator('.table-scroll table')).toBeVisible()
   const check = await page.evaluate(() => {
     const w = document.querySelector('.table-scroll')
     if (!w || !w.querySelector('table')) return null

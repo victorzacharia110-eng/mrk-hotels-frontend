@@ -11,7 +11,7 @@ CSS = """
   size: A4;
   margin: 20mm 16mm 18mm 16mm;
   @top-center {
-    content: "MRK Hotels — Documentation";
+    content: "MRK Hotels — Documentation · {edition} · {year}";
     font-size: 8pt; color: #94a3b8;
   }
   @bottom-center {
@@ -101,27 +101,34 @@ blockquote {
 .cover .kicker { font-size: 11pt; letter-spacing: 3px; text-transform: uppercase; color: #bfdbfe; }
 .cover h1 { color: #fff; font-size: 30pt; margin: 10pt 0; }
 .cover p { color: #e2e8f0; font-size: 11pt; }
+.cover .edition {
+  display: inline-block; margin-top: 8pt; padding: 5pt 14pt;
+  border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 20px;
+  font-size: 10pt; letter-spacing: 1px; color: #ffffff;
+}
 .cover .rule { width: 90px; height: 3px; background: #60a5fa; margin: 18pt auto; border-radius: 2px; }
 """
 
 
-def build(md_path, out_name, title):
+def build(md_path, out_name, title, edition="Edition 1.0", year="2026"):
+    print(f"building {out_name} (edition: {edition} {year})...", flush=True)
     text = Path(md_path).read_text(encoding="utf-8")
     html_body = markdown.markdown(
         text, extensions=["tables", "fenced_code", "toc"]
     )
+    css = CSS.replace("{edition}", edition).replace("{year}", year)
     cover = (
         '<section class="cover">'
         '<div class="logo"><img src="MRK_logo.png" alt="MRK Hotels"></div>'
         f'<div class="kicker">MRK Hotels</div>'
         f'<h1>{title}</h1>'
         '<div class="rule"></div>'
-        "<p>Multi-tenant hotel management system</p>"
+        f'<p class="edition">{edition} &middot; {year}</p>'
         "</section>"
     )
     html = (
         '<html><head><meta charset="utf-8"><style>'
-        + CSS
+        + css
         + "</style></head><body>"
         + cover
         + '<div class="content">'
@@ -134,7 +141,7 @@ def build(md_path, out_name, title):
     print(f"built {out_name}")
 
 
-build(HERE / "user-manual-en.md", "MRK_Hotels_User_Manual_EN.pdf", "User Manual")
-build(HERE / "user-manual-sw.md", "MRK_Hotels_User_Manual_SW.pdf", "Mwongozo wa Mtumiaji")
-build(HERE / "developer-docs.md", "MRK_Hotels_Developer_Documentation.pdf", "Developer Documentation")
+build(HERE / "user-manual-en.md", "MRK_Hotels_User_Manual_EN.pdf", "User Manual", "Edition 1.0")
+build(HERE / "user-manual-sw.md", "MRK_Hotels_User_Manual_SW.pdf", "Mwongozo wa Mtumiaji", "Toleo la 1.0")
+build(HERE / "developer-docs.md", "MRK_Hotels_Developer_Documentation.pdf", "Developer Documentation", "Edition 1.0")
 print("All PDFs generated.")

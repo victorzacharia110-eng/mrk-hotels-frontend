@@ -2,8 +2,11 @@
  * Session store: auto-logs-out an idle or departed user.
  *
  * A five-minute countdown resets on any user activity, shows a warning during
- * the final minute and terminates the session at zero. Hiding or closing the
- * tab ends the session immediately — coming back always requires a sign-in.
+ * the final minute and terminates the session at zero. Hiding the tab
+ * (switching away or minimising) ends the session immediately; closing the
+ * tab ends it because the token lives in sessionStorage. A refresh keeps the
+ * session and restarts the idle countdown — browsers hand reloads a fresh
+ * sessionStorage, so the idle deadline cannot be carried across them.
  */
 
 import { defineStore } from "pinia";
@@ -15,7 +18,8 @@ import router from "@/router";
 const IDLE_TIMEOUT_SECONDS = 5 * 60;
 // Seconds before the deadline at which the expiry warning appears.
 const WARNING_AT_SECONDS = 60;
-// localStorage key holding the timestamp of the last user activity.
+// sessionStorage key holding the timestamp of the last user activity. Kept
+// per-tab like the token: it survives a refresh and dies with the tab.
 const LAST_ACTIVE_KEY = "session_last_active";
 
 // Browser events that count as user activity and reset the idle timer.
@@ -29,7 +33,7 @@ const ACTIVITY_EVENTS = [
   "wheel",
 ];
 
-// Session store: auto-expires the login after inactivity and on page leave.
+// Session store: auto-expires the login after inactivity or when the tab hides.
 export const useSessionStore = defineStore("session", () => {
   const authStore = useAuthStore();
 
@@ -42,7 +46,7 @@ export const useSessionStore = defineStore("session", () => {
 
   // Interval handle for the per-second countdown tick.
   let timer = null;
-  // Timestamp of the last localStorage activity write (throttle guard).
+  // Timestamp of the last sessionStorage activity write (throttle guard).
   let lastWrite = 0;
   // True once start() has armed the listeners.
   let running = false;
@@ -56,7 +60,7 @@ export const useSessionStore = defineStore("session", () => {
     const now = Date.now();
     if (now - lastWrite > 10000) {
       lastWrite = now;
-      localStorage.setItem(LAST_ACTIVE_KEY, String(now));
+      sessionStorage.setItem(LAST_ACTIVE_KEY, String(now));
     }
   }
 
@@ -89,25 +93,13 @@ export const useSessionStore = defineStore("session", () => {
    */
   function onVisibilityChange() {
     if (!running) return;
-    // Leaving the page (switching tab, minimising, closing the window) ends
-    // the session immediately — returning requires a fresh sign-in.
+    // Hiding the page (switching tab, minimising the window) ends the session
+    // immediately — returning requires a fresh sign-in. A refresh does not
+    // hide the page, and a closed tab loses the sessionStorage token anyway,
+    // so no pagehide handler is needed for those cases.
     if (document.hidden) {
       terminate();
     }
-  }
-
-  /**
-   * Clears persisted credentials synchronously when the tab is closed.
-   */
-  // Closing the tab fires pagehide before unload, but async network calls are
-  // not guaranteed to complete — clear the persisted credentials synchronously
-  // so the next visit always starts from the login screen.
-  function onPageHide() {
-    if (!running) return;
-    stop();
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("auth");
-    localStorage.removeItem(LAST_ACTIVE_KEY);
   }
 
   /**
@@ -123,7 +115,7 @@ export const useSessionStore = defineStore("session", () => {
     } catch {
       // Server logout failed (e.g. offline) — still force local sign-out.
       authStore.$patch({ token: null, user: null, permissions: [], mustChangePassword: false });
-      localStorage.removeItem("auth_token");
+      sessionStorage.removeItem("auth_token");
     } finally {
       router.push({ name: "login" });
     }
@@ -138,18 +130,10 @@ export const useSessionStore = defineStore("session", () => {
     terminating = false;
     remaining.value = IDLE_TIMEOUT_SECONDS;
 
-    const lastActive = parseInt(localStorage.getItem(LAST_ACTIVE_KEY) || "0", 10);
-    if (lastActive && Date.now() - lastActive > IDLE_TIMEOUT_SECONDS * 1000) {
-      // A leftover stamp from a session that never ran its cleanup (e.g. the
-      // tab was closed) must not kill a brand new login, so treat it as none.
-      localStorage.removeItem(LAST_ACTIVE_KEY);
-    }
-
     lastWrite = Date.now();
-    localStorage.setItem(LAST_ACTIVE_KEY, String(lastWrite));
+    sessionStorage.setItem(LAST_ACTIVE_KEY, String(lastWrite));
     ACTIVITY_EVENTS.forEach((ev) => window.addEventListener(ev, handleActivity, { passive: true }));
     document.addEventListener("visibilitychange", onVisibilityChange);
-    window.addEventListener("pagehide", onPageHide);
     timer = setInterval(tick, 1000);
   }
 
@@ -158,10 +142,9 @@ export const useSessionStore = defineStore("session", () => {
    */
   function stop() {
     running = false;
-    localStorage.removeItem(LAST_ACTIVE_KEY);
+    sessionStorage.removeItem(LAST_ACTIVE_KEY);
     ACTIVITY_EVENTS.forEach((ev) => window.removeEventListener(ev, handleActivity));
     document.removeEventListener("visibilitychange", onVisibilityChange);
-    window.removeEventListener("pagehide", onPageHide);
     if (timer) {
       clearInterval(timer);
       timer = null;

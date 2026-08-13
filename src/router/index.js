@@ -213,7 +213,7 @@ const dashboardMap = {
  * @returns {object|undefined} Redirect location, or nothing to allow the nav.
  */
 router.beforeEach(async (to) => {
-  const token = localStorage.getItem('auth_token')
+  const token = sessionStorage.getItem('auth_token')
   const authStore = useAuthStore()
 
   // Unauthenticated users are sent to login, remembering where they came from.

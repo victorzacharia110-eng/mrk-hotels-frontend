@@ -530,7 +530,7 @@ Chini ya kila sehemu unaweza kuruka kati ya kurasa. Kadi za muhtasari juu ya seh
 ## 20. Profaili na Nenosiri
 
 - **Profile** inaonyesha maelezo yote ya akaunti yako: jina, namba ya mfanyakazi/usajili, barua pepe, simu, namba ya nchi, wajibu na kiwango chake, idara, cheo, aina na namba ya kitambulisho, hoteli yako, hali ya msimamizi mdogo, hali ya akaunti, mara ya mwisho kuingia na tarehe ya kujiunga.
-- **Ingia / toka zamu** kutoka kwenye kadi ya mahudhurio (attendance) na uone umekaa zamu kwa muda gani.
+ - **Ingia / toka zamu** kutoka kwenye kadi ya mahudhurio (attendance) na uone umekaa zamu kwa muda gani. Ikiwa hoteli yako imewasha ukaguzi wa eneo, au QR, au uthibitisho wa picha (selfie), kadi ya mahudhurio itauliza nafasi ya simu yako, inaweza kukuhitaji kumpa ruhusa ya kamera na kupakia selfie, na, pale inapohitajika, kuchanganua QR ya ofisi (inayoonyeshwa kwenye simu ya meneja, inayoburudishwa kila dakika) kabla zamu kuanza — hili linathibitisha uwepo kazini.
 - **Badilisha nenosiri** kutoka profaili; chagua nenosiri imara na ulinde vizuri.
 - Ikiwa msimamizi wa hoteli ameweka upya nenosiri lako, ingia kwa la muda kisha ulibadilishe mara moja.
 
@@ -593,7 +593,7 @@ Kila rekodi katika MRK Hotels husonga kupitia hali zilizowekwa. Kila mzunguko ha
    KITANZI KINARUDIA: mgeni mpya anahifadhi → kurudi ①
 ```
 
-Vitanzi viwili vya **kusaidia** vinaendesha kitanzi kikuu:
+Vitanzi vitatu vya **kusaidia** vinaendesha kitanzi kikuu:
 
 ```
   USAFIRI WA BIDHAA (SUPPLY) — huweka hoteli na vitu
@@ -602,13 +602,35 @@ Vitanzi viwili vya **kusaidia** vinaendesha kitanzi kikuu:
         → jikoni / usafi vinatumia stoo → onyo la vitu vilivyopungua → ombì jipya
 
   WATU (PEOPLE) — timu nyuma ya kila hatua
-     Mahudhurio:  clock in → zamu → clock out
+   Mahudhurio:  clock in (ukaguzi wa eneo wa ofisi unapowekwa/ukiwashwa; + QR kama imewashwa) → zamu → clock out
      Matatizo:    new → in progress → resolved
      Ujumbe:      sent → delivered → read
      Dharura:     sent → (hajasoma) → auto-escalated → resolved
      SOS:         initiated → acknowledged → resolved
      Mkutano:     scheduled → invited → accepted / declined
      Handover:    posted → acknowledged
+
+  MUUNDO WA TIMU (ORGANIZATION) — msimamizi anajenga timu; kila wadhifa anamtumikia mteja
+     Msimamizi anamuongeza mwanachama → anapanga nafasi, idara na wadhifa
+      → nambari ya usajili inatolewa (EMP-2026-0004)
+      → akaunti inawezeshwa → PIN ya kuingia (nambari 4) inaweza kuwekwa kama hatua ya hiari na msimamizi; mwanachama anaweza kuingia kwa kutumia nenosiri au PIN
+     Msururu wa huduma — kila wadhifa anahusiana moja kwa moja na mteja:
+        Mapokezi (Receptionist) — kuhifadhi nafasi, check-in/out kwa wageni,
+                        kujibu ombì za nafasi, kurekodi malipo ya mapokezi,
+                        kuweka daftari la wageni
+        Waiter / Bartender / Staff — kuchukua maagizo ya chakula na kuhudumia
+                        mgahawa, baa na room service, kurekodi michezo na
+                        nguo pale mahali pa huduma
+        Jiko (Kitchen)   — huandaa kila agizo linalotoka sakafuni
+        Usafi (Housekeeping) — dirty → cleaning → verified → clean; nguo za
+                        wageni: received → washing → drying → ironing → delivered
+        Mhasibu (Accountant) — hurekodi na kuthibitisha malipo, hulinganisha daftari
+        Manunuzi (Procurement) — ombì → meneja anaidhinisha → agizo la ununuzi
+                        → fedha zinaidhinisha → bidhaa zinapokelewa → stoo inasasishwa
+     MENEJA anasimamia timu na kuidhinisha rekodi zinazohitaji idhini.
+     MSIMAMIZI anaiweka timu imara: kuweka upya nenosiri / kuweka PIN mpya
+        wakati wowote, kualika na kuwezesha tena kadri inavyohitajika, kuzima
+        akaunti mwanachama anapoondoka → mwanachama mpya anajiunga → kurudi mwanzo
 ```
 
 ### 21.1 Kuhifadhi nafasi mtandaoni na malipo
@@ -756,7 +778,7 @@ Tumia kitufe cha **EN / SW** kwenye upau wa juu kubadilisha mfumo mzima kati ya 
 
 | Tatizo | Suluhisho |
 | --- | --- |
-| Onyo la "Unauthenticated" wakati wa kuingia | Futa kikao kilichohifadhiwa: fungua DevTools → Application → Local Storage → futa `auth_token`, kisha burudisha na ingia tena. |
+| Onyo la "Unauthenticated" wakati wa kuingia | Futa kikao kilichohifadhiwa: fungua DevTools → Application → Session Storage → futa `auth_token`, kisha burudisha na ingia tena. |
 | "Country field is required" wakati wa kuhifadhi | Chagua nchi kwenye orodha ya kuteua (inajaza nchi ya mgeni). |
 | Nenosiri limeisha muda | Mfumo huliweka upya kuwa jina lako kamili kwa herufi kubwa; ingia kisha ubadili kutoka Profile. |
 | Hunawezi kuona menyu | Nafasi hiyo hairuhusiwi menyu hiyo. Uliza msimamizi wa hoteli au msimamizi mkuu. |

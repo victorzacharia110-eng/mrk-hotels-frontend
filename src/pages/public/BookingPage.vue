@@ -59,9 +59,32 @@
       <p v-if="availability.available_rooms?.length" class="hint muted">
         {{ $t('bookingPage.selectRoomsHint') }}
       </p>
-      <div v-if="availability.available_rooms?.length" class="room-grid">
+
+      <!-- Search, sort and pagination controls over the available rooms -->
+      <div v-if="availability.available_rooms?.length" class="room-browser-bar">
+        <div class="form-group room-browser-search">
+          <label>{{ $t('bookingPage.searchRooms') }}</label>
+          <input v-model="query" type="text" class="input" :placeholder="$t('bookingPage.searchRoomsPlaceholder')" />
+        </div>
+        <div class="form-group">
+          <label>{{ $t('bookingPage.sortBy') }}</label>
+          <SearchableSelect v-model="sortKey" :options="sortOptions" />
+        </div>
+        <div class="form-group">
+          <label>&nbsp;</label>
+          <button type="button" class="btn btn-secondary room-browser-dir" @click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'">
+            <i class="fas" :class="sortDir === 'asc' ? 'fa-arrow-up-wide-short' : 'fa-arrow-down-wide-short'"></i>
+            {{ sortDir === 'asc' ? $t('bookingPage.sortAsc') : $t('bookingPage.sortDesc') }}
+          </button>
+        </div>
+      </div>
+      <p v-if="availability.available_rooms?.length && filteredCount" class="hint muted room-browser-count">
+        {{ $t('bookingPage.showingRooms', { from: rangeFrom, to: rangeTo, total: filteredCount }) }}
+      </p>
+
+      <div v-if="pagedRooms.length" class="room-grid">
         <article
-          v-for="room in availability.available_rooms"
+          v-for="room in pagedRooms"
           :key="room.room_id"
           class="room-card"
           :class="{ selected: isRoomSelected(room.room_id) }"
@@ -76,7 +99,18 @@
           <p class="room-price">TZS {{ room.price_per_night.toLocaleString() }} {{ $t('home.perNight') }}</p>
         </article>
       </div>
+      <p v-else-if="availability.available_rooms?.length" class="muted">{{ $t('common.noResults') }}</p>
       <p v-else class="muted">{{ $t('bookingPage.noRoomsAvailable') }}</p>
+
+      <!-- Pagination over the filtered/sorted available rooms -->
+      <div v-if="pageCount > 1" class="pagination">
+        <button class="btn btn-sm btn-secondary" :disabled="page <= 1" @click="page--">
+          {{ $t('common.previous') }}</button>
+        <span class="muted">{{ $t('common.pageXOfY', { current: page, total: pageCount }) }}</span>
+        <button class="btn btn-sm btn-secondary" :disabled="page >= pageCount" @click="page++">
+          {{ $t('common.next') }}</button>
+      </div>
+
       <p v-if="booking.selected_rooms.length" class="hint muted selected-summary">
         {{ $t('bookingPage.selectedRooms') }}: {{ booking.selected_rooms.length }}
       </p>
@@ -265,6 +299,7 @@ import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import BookingStatusTracker from '@/components/BookingStatusTracker.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import { useRoomBrowser } from '@/composables/useRoomBrowser'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -304,6 +339,20 @@ const hotelOptions = computed(() =>
 const selectedRoomOptions = computed(() =>
   booking.value.selected_rooms.map((room) => ({ value: room.room_id, label: `${t('bookingPage.room')} ${room.room_number}` })),
 )
+
+// Search/sort/paginate the available rooms client-side; selections live in
+// booking.selected_rooms (keyed by room_id) so they survive paging/sorting.
+const roomsSource = computed(() => availability.value?.available_rooms || [])
+const { query, sortKey, sortDir, page, pageCount, pagedRooms, filteredCount, rangeFrom, rangeTo } =
+  useRoomBrowser(roomsSource)
+
+// Options for the room-sort dropdown.
+const sortOptions = computed(() => [
+  { value: 'price_per_night', label: t('bookingPage.sortPrice') },
+  { value: 'room_number', label: t('bookingPage.sortRoomNumber') },
+  { value: 'max_occupancy', label: t('bookingPage.sortCapacity') },
+  { value: 'floor', label: t('bookingPage.sortFloor') },
+])
 
 // Search criteria collected from the availability form; hotel id is seeded from the route query
 const search = ref({
@@ -697,6 +746,41 @@ onMounted(loadHotels)
 
 .selected-summary {
   margin-top: 12px;
+}
+
+/* Search/sort controls bar above the room grid */
+.room-browser-bar {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) minmax(160px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin: 12px 0 4px;
+}
+
+.room-browser-bar .form-group {
+  margin-bottom: 0;
+}
+
+.room-browser-dir {
+  white-space: nowrap;
+}
+
+.room-browser-count {
+  margin: 4px 0 12px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+@media (max-width: 640px) {
+  .room-browser-bar {
+    grid-template-columns: 1fr;
+  }
 }
 
 .selected-rooms-summary {

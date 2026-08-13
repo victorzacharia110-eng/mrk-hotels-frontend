@@ -1036,7 +1036,7 @@ export const laundryApi = {
 export const attendanceApi = {
   /**
    * Records the current user's clock-in.
-   * @param {object} data - Clock-in payload (device, note).
+   * @param {object} data - Clock-in payload (lat, lng, accuracy_m, positioned_at, qr_token, device_id, device_fingerprint, photo, note).
    * @returns {Promise} Axios response with the attendance record.
    */
   clockIn(data) {
@@ -1044,7 +1044,7 @@ export const attendanceApi = {
   },
   /**
    * Records the current user's clock-out.
-   * @param {object} data - Clock-out payload (note, ...).
+   * @param {object} data - Clock-out payload (lat, lng, accuracy_m, positioned_at, note).
    * @returns {Promise} Axios response with the attendance record.
    */
   clockOut(data) {
@@ -1056,6 +1056,36 @@ export const attendanceApi = {
    */
   status() {
     return api.get(`${v1}/attendance/status`)
+  },
+  /**
+   * Fetches the current hotel's clock-in requirements so the UI can prompt
+   * for a location fix and/or entrance QR scan before submitting.
+   * @returns {Promise} Axios response with the requirements flags.
+   */
+  requirements() {
+    return api.get(`${v1}/attendance/requirements`)
+  },
+  /**
+   * Mints a fresh rotating entrance QR token for the current hotel.
+   * @returns {Promise} Axios response with the new token and expiry.
+   */
+  qrToken() {
+    return api.post(`${v1}/attendance/qr-token`)
+  },
+  /**
+   * Fetches the hotel's attendance settings (office geofence + QR toggle).
+   * @returns {Promise} Axios response with the attendance settings.
+   */
+  settings() {
+    return api.get(`${v1}/attendance/settings`)
+  },
+  /**
+   * Updates the hotel's attendance settings.
+   * @param {object} data - Fields to update (office_lat, office_lng, office_radius_m, attendance_qr_enabled).
+   * @returns {Promise} Axios response with the updated settings.
+   */
+  updateSettings(data) {
+    return api.put(`${v1}/attendance/settings`, data)
   },
   /**
    * Lists staff currently on shift.
@@ -1073,6 +1103,96 @@ export const attendanceApi = {
    */
   history(userId, params) {
     return api.get(`${v1}/attendance/users/${userId}/history`, { params })
+  },
+  /**
+   * Registers the current user's device so it may clock in.
+   * @param {object} data - Device payload (device_id, device_fingerprint, device_name).
+   * @returns {Promise} Axios response with the registered device.
+   */
+  registerDevice(data) {
+    return api.post(`${v1}/attendance/devices/register`, data)
+  },
+  /**
+   * Lists the current user's registered devices.
+   * @returns {Promise} Axios response with the device list.
+   */
+  myDevices() {
+    return api.get(`${v1}/attendance/devices/mine`)
+  },
+  /**
+   * Lists every registered device in the hotel (managers).
+   * @param {object} params - Query params (user_id, status, per_page).
+   * @returns {Promise} Axios response with the device list.
+   */
+  attendanceDevices(params) {
+    return api.get(`${v1}/attendance/devices`, { params })
+  },
+  /**
+   * Revokes a device so it can no longer clock in (managers).
+   * @param {string} deviceRowId - The attendance device row id.
+   * @returns {Promise} Axios response with the revoked device.
+   */
+  revokeDevice(deviceRowId) {
+    return api.post(`${v1}/attendance/devices/${deviceRowId}/revoke`)
+  },
+  /**
+   * Lists attendance records the anti-cheat scan flagged as suspicious.
+   * @param {object} params - Query params (user_id, from, to, per_page).
+   * @returns {Promise} Axios response with the suspicious records.
+   */
+  suspicious(params) {
+    return api.get(`${v1}/attendance/suspicious`, { params })
+  },
+  /**
+   * Files an absence claim (sick/emergency/...) with location, device and
+   * optional evidence attachments.
+   * @param {FormData} data - absence_type, reason, starts_at, ends_at, lat, lng, device_id, attachments.
+   * @returns {Promise} Axios response with the created claim.
+   */
+  reportAbsence(data) {
+    return api.post(`${v1}/attendance/absences`, data)
+  },
+  /**
+   * The current user's own absence claims.
+   * @returns {Promise} Axios response with the paginated claims.
+   */
+  myAbsenceRequests() {
+    return api.get(`${v1}/attendance/absences/mine`)
+  },
+  /**
+   * Every absence claim in the hotel (manager verification).
+   * @param {object} params - Query params (status, user_id, from, to, per_page).
+   * @returns {Promise} Axios response with the paginated claims.
+   */
+  absenceRequests(params) {
+    return api.get(`${v1}/attendance/absences`, { params })
+  },
+  /**
+   * Approves or rejects an absence claim.
+   * @param {string} requestId - The absence request id.
+   * @param {object} data - decision (approve|reject) and optional note.
+   * @returns {Promise} Axios response with the updated claim.
+   */
+  decideAbsenceRequest(requestId, data) {
+    return api.post(`${v1}/attendance/absences/${requestId}/decide`, data)
+  },
+  /**
+   * Streams a clock-in selfie from the private disk. The bearer token rides
+   * the shared axios interceptor; the caller turns the blob into an object URL.
+   * @param {string} attendanceId - The attendance record id.
+   * @returns {Promise} Axios response with the image blob.
+   */
+  photo(attendanceId) {
+    return api.get(`${v1}/attendance/photos/${attendanceId}`, { responseType: 'blob' })
+  },
+  /**
+   * Streams an absence evidence attachment from the private disk. Same auth
+   * model as photo(): claimant or a manager may view.
+   * @param {string} attachmentId - The attachment id.
+   * @returns {Promise} Axios response with the file blob.
+   */
+  attachment(attachmentId) {
+    return api.get(`${v1}/attendance/attachments/${attachmentId}`, { responseType: 'blob' })
   },
 }
 

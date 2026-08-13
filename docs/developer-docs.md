@@ -223,15 +223,25 @@ All routes are under the `v1` prefix.
 
 ### 4.9 Migrations & seeders
 
-- ~67 migrations cover tenants, users (incl. `add_login_pin_to_users_table` — the nullable, hashed 4-digit `users.login_pin` powering PIN sign-in), permissions, rooms, guests, reservations, payments, booking requisitions, housekeeping, F&B, laundry, fun & games, inventory, procurement, staff invitations/attachments, audit logs, **messages (reactions/view-once/delete fields), statuses (`statuses`/`status_views`/`status_reactions`), calls (`calls`/`call_events`)** plus the messaging feature set: `pin_star_templates_scheduled_tables` (pinned/starred/templates/scheduled), `polls_announcements_tables` (polls/poll_options/poll_votes/announcements + acknowledgements), `preferences_retention_escalation_handover_tables` (notification preferences, retention policies, escalations, handovers), `task_groups_staff_locations_guest_messages` (conversation_rooms, task_groups, staff_locations, guest_messages) and `meetings_sos_tables` (meetings, meeting_invitees, sos_alerts + `ack_user_ids`).
+- ~68 migrations cover tenants, users (incl. `add_login_pin_to_users_table` — the nullable, hashed 4-digit `users.login_pin` powering PIN sign-in), permissions, rooms, guests, reservations, payments, booking requisitions, housekeeping, F&B, laundry, fun & games, inventory, procurement, staff invitations/attachments, audit logs, **messages (reactions/view-once/delete fields), statuses (`statuses`/`status_views`/`status_reactions`), calls (`calls`/`call_events`)** plus the messaging feature set: `pin_star_templates_scheduled_tables` (pinned/starred/templates/scheduled), `polls_announcements_tables` (polls/poll_options/poll_votes/announcements + acknowledgements), `preferences_retention_escalation_handover_tables` (notification preferences, retention policies, escalations, handovers), `task_groups_staff_locations_guest_messages` (conversation_rooms, task_groups, staff_locations, guest_messages), `meetings_sos_tables` (meetings, meeting_invitees, sos_alerts + `ack_user_ids`), and **attendance anti-cheat**: `add_attendance_audit_columns_to_staff_attendance_table` (`lat`, `lng`, `accuracy_m`, `qr_verified_at`, `ip_address`, `user_agent`), `add_attendance_settings_to_tenants_table` (`attendance_office_lat`, `attendance_office_lng`, `attendance_radius_m`, `attendance_require_qr`), `create_attendance_qr_tokens_table`.
 - `TenantSeeder` seeds the demo tenant; `RolePermissionSeeder` sets up roles/permissions.
+
+#### 4.9.1 Database schema ERD
+
+The full relational diagram (all 67 tables, columns, primary/foreign keys and crow's-foot relationships) is available as a poster-size document:
+
+- **`MRK_Hotels_Database_Schema_ERD.pdf`** — a single page printed at `8578 × 2794 mm` (way larger than A4, about 7 A0 sheets side by side) with a large 36 px font, so every table name, column and relationship is legible. Exported from the live schema served by **Laravel Truss** at `http://localhost:8000/truss` (`GET /truss/export/mermaid`), rendered with **Mermaid** (36 px font, blue `#005EB8` accent theme) and printed to a **vector PDF** via WeasyPrint.
+- Preview of the same diagram, scaled to fit:
+
+![Database schema ERD (all 67 tables)](images/database-schema-erd.png)
 
 ### 4.10 Testing
 
 - `phpunit.xml` uses in-memory SQLite (`:memory:`) for tests.
 - Base `Tests\TestCase` with `RefreshDatabase`.
-- Feature tests include `tests/Feature/PublicBookingPaymentFlowTest.php` (7 tests: availability methods, selcom default-off, pending booking creation, selcom confirms, bank awaiting-confirmation, selcom rejected when disabled, multi-room shared reference + batch confirm), `tests/Feature/ConversationTest.php` (direct messaging: scoping, resumes, unread counts, polling, delivery/read ticks, audio upload), `tests/Feature/GroupConversationTest.php` (11 tests: hotel/global groups, member guards, read receipts, media, add/remove/leave, unread badge feed), `tests/Feature/MessagingFeaturesTest.php` (**20 tests** covering the 24-feature set: replies + priority + polls, poll voting, pin/star, templates, scheduled messages, announcements + acknowledge, escalation + resolve, command auto-escalation, search, CSV export, translate, task-group conversion, meetings + responses, SOS flow, staff location/nearby, guest SMS, retention purge, **forwarding (incl. cross-chat access block), room search, meeting-invitee search**), `tests/Feature/OverviewPaginationTest.php` (3 tests: staff/in-house/housekeeping section filtering + pagination), `tests/Feature/InvoiceTest.php` (folio totals, regeneration keeps number and settles, PDF download, front-desk level, tenant scoping), `tests/Feature/PublicInvoiceDownloadTest.php` (reference + any phone spelling, wrong phone 404, pending reservation has no invoice, group booking, rate limit), `tests/Feature/TenantTest.php` (payment accounts, tax IDs, branding upload/removal), and `tests/Feature/RateLimitTest.php` (3 tests: login per-IP/per-email, public portal writes per-IP, messaging per-user), `tests/Feature/StaffPinLoginTest.php` (13 tests: PIN login by email and by registration number, wrong/unset/unknown-identifier rejections, disabled accounts, 4-digit validation, and the set-pin guards — role hierarchy, no self-service, confirmation required).
-- Run: `php artisan test` (currently **188 passing, 646 assertions**).
+- Feature tests include `tests/Feature/PublicBookingPaymentFlowTest.php` (7 tests: availability methods, selcom default-off, pending booking creation, selcom confirms, bank awaiting-confirmation, selcom rejected when disabled, multi-room shared reference + batch confirm), `tests/Feature/ConversationTest.php` (direct messaging: scoping, resumes, unread counts, polling, delivery/read ticks, audio upload), `tests/Feature/GroupConversationTest.php` (11 tests: hotel/global groups, member guards, read receipts, media, add/remove/leave, unread badge feed), `tests/Feature/MessagingFeaturesTest.php` (**20 tests** covering the 24-feature set: replies + priority + polls, poll voting, pin/star, templates, scheduled messages, announcements + acknowledge, escalation + resolve, command auto-escalation, search, CSV export, translate, task-group conversion, meetings + responses, SOS flow, staff location/nearby, guest SMS, retention purge, **forwarding (incl. cross-chat access block), room search, meeting-invitee search**), `tests/Feature/OverviewPaginationTest.php` (3 tests: staff/in-house/housekeeping section filtering + pagination), `tests/Feature/InvoiceTest.php` (folio totals, regeneration keeps number and settles, PDF download, front-desk level, tenant scoping), `tests/Feature/PublicInvoiceDownloadTest.php` (reference + any phone spelling, wrong phone 404, pending reservation has no invoice, group booking, rate limit), `tests/Feature/TenantTest.php` (payment accounts, tax IDs, branding upload/removal), `tests/Feature/RateLimitTest.php` (3 tests: login per-IP/per-email, public portal writes per-IP, messaging per-user), `tests/Feature/StaffPinLoginTest.php` (13 tests: PIN login by email and by registration number, wrong/unset/unknown-identifier rejections, disabled accounts, 4-digit validation, and the set-pin guards — role hierarchy, no self-service, confirmation required), and `tests/Feature/AttendanceTest.php` (**15 tests**: clock-in/out, double clock-in refused, clock-out without shift refused, location + request metadata capture, location required when office configured, inside/outside geofence, manager QR issue, QR-required refusal without token, valid + expired token paths, requirements reflect policy, admin settings update, QR cannot be enabled without an office, who-is-on-shift).
+- Messaging tests broadcast to the local Reverb server — run `php artisan reverb:start` (or set `BROADCAST_CONNECTION=null` and avoid the broadcast calls) for the full suite to stay green.
+- Run: `php artisan test` (currently **199 passing, 676 assertions**).
 
 ### 4.11 Realtime (Reverb + Echo)
 
@@ -253,6 +263,21 @@ Defined as named limiters in `AppServiceProvider::boot()` and applied in `routes
 | `webhook` | IP | 60 / min | `payments/clickpesa/callback` (server-to-server; generous to avoid breaking payment verification) |
 
 Violations return `429 Too Many Requests` with the standard Laravel JSON body (`Retry-After` included). Counter storage uses the configured cache store (database by default); flush `cache` in tests to keep rate-limit tests isolated.
+
+### 4.13 Attendance anti-cheat (geofence + entrance QR)
+
+`StaffAttendanceController` enforces the hotel's attendance policy from `tenants.attendance_office_lat`, `attendance_office_lng`, `attendance_radius_m` and `attendance_require_qr` (default: **off** — unconfigured hotels behave as before):
+
+- **Office location** — when lat/lng are set, `clock-in` (and best-effort `clock-out`) requires a `lat`/`lng` (`accuracy_m` optional) and the point must fall within the geofence radius (haversine via `AttendanceService::distanceToOffice()`); outside or missing → `422 You must be at the office to clock in.`
+- **Entrance QR** — when `attendance_require_qr` is on (only valid once the office is configured; the settings validator refuses QR without a location), `clock-in` also needs a `qr_token` issued by a manager/level-80+ (`POST attendance/qr-token`, 60-second TTL, single-use — consumed on successful clock-in, stored in `attendance_qr_tokens`). Missing/expired/reused token → `422 Scan the office QR code to clock in.` A successful `clock-in` stamps `qr_verified_at`.
+- **Audit** — every clock-in/out records `lat`, `lng`, `accuracy_m`, `ip_address` and `user_agent` on the `staff_attendance` row.
+- **Flow** — the staff SPA calls `attendanceApi.requirements()` on the Profile page, geolocates, then (when enabled) surfaces the generated QR (issued per user, rotates every 60 s with a `refreshToken`) in a scan-the-office-phone dialog; the scan is decoded with `jsqr` and passed as `qr_token`. `POST attendance/qr-token` is rate-limited per user and never returns tokens for the same user (no self-issue); `qr-token` also refuses to mint when the policy isn't enabled.
+
+ - **Selfie verification & device binding** — hotels may enable an optional selfie verification step (`attendance_require_selfie`) or a device-binding policy that registers a device on first clock-in. When selfie verification is enabled the client must capture a live selfie (the SPA uses `AttendanceSelfieCapture`) and submit the captured image or a facial-match proof; the API records an `evidence` item tied to the attendance row. Device binding records a `device_id`/`device_fingerprint` and provides admin endpoints to list and revoke devices; revoking a device marks it `revoked` and prevents it from minting QR tokens until re-bound.
+
+ - **Suspicious-records & absence claims** — anomalous patterns (large geofence deviations, IP/device mismatches, repeated outside attempts, or reused selfies) create `suspicious-record` entries for manager review. Staff can create `absence-claim` records with optional evidence; the admin review flow accepts or rejects claims and links decisions to the attendance audit. The API surfaces flags like `on_shift`, `suspicious`, and `evidence_count` for UI rendering and review workflows.
+
+ - **Administrator and manager behaviours** — `attendance/settings` controls geofence coordinates, radius, QR and selfie/device policies; enabling QR or selfie requires a validated office location. Manager-level (level 80+) actions mint QR tokens and view `on-shift` lists and suspicious records; admin-level users update settings and revoke devices. All sensitive actions are audit-logged and rate-limited.
 
 ---
 
@@ -280,8 +305,8 @@ src/
 
 ### 5.2 API layer (`src/api`)
 
-- `axios.js`: baseURL from `VITE_API_URL` (default `http://localhost:8000/api`); adds `Authorization: Bearer <auth_token>` from localStorage; flattens Laravel pagination (`data.data` + `meta` → top-level); on 401 clears the token and hard-redirects to `/login`.
-- `index.js` exposes typed endpoint groups under `/v1`: `publicApi`, `authApi`, `reportApi`, `userApi`, `roomApi`, `guestApi`, `reservationApi`, `paymentApi`, `housekeepingApi`, `inventoryApi`, `supplierApi`, `menuItemApi`, `orderApi`, `laundryApi`, `funGameApi`, `purchaseRequisitionApi`, `purchaseOrderApi`, `goodsReceivedNoteApi`, `bookingRequisitionApi`, `tenantApi`, `superadminReportApi`, `conversationApi`, `groupApi`, **`messageActionApi`** (react/delete/view-once), **`statusApi`** (post/list/view/like), **`callApi`** (start/accept/reject/decline/end/miss), **`featuresApi`** (reply/pin/star/polls/templates/scheduled/announcements/search/export/translate/escalate/retention/preferences/handovers/guest SMS/nearby/SOS/forward), **`roomLinkApi`** (index/searchRooms/link/unlink), **`taskGroupApi`** (store/convert), **`meetingApi`** (index/store/respond/searchUsers), **`sosApi`** (index/initiate/acknowledge/resolve).
+- `axios.js`: baseURL from `VITE_API_URL` (default `http://localhost:8000/api`); adds `Authorization: Bearer <auth_token>` from sessionStorage; flattens Laravel pagination (`data.data` + `meta` → top-level); on 401 clears the token and hard-redirects to `/login`.
+ - `index.js` exposes typed endpoint groups under `/v1`: `publicApi`, `authApi`, `reportApi`, `userApi`, `roomApi`, `guestApi`, `reservationApi`, `paymentApi`, `housekeepingApi`, `inventoryApi`, `supplierApi`, `menuItemApi`, `orderApi`, `laundryApi`, `funGameApi`, `purchaseRequisitionApi`, `purchaseOrderApi`, `goodsReceivedNoteApi`, `bookingRequisitionApi`, `tenantApi`, `superadminReportApi`, `conversationApi`, `groupApi`, **`messageActionApi`** (react/delete/view-once), **`statusApi`** (post/list/view/like), **`callApi`** (start/accept/reject/decline/end/miss), **`featuresApi`** (reply/pin/star/polls/templates/scheduled/announcements/search/export/translate/escalate/retention/preferences/handovers/guest SMS/nearby/SOS/forward), **`roomLinkApi`** (index/searchRooms/link/unlink), **`taskGroupApi`** (store/convert), **`meetingApi`** (index/store/respond/searchUsers), **`sosApi`** (index/initiate/acknowledge/resolve), **`attendanceApi`** (clock-in/clock-out/status/requirements/qr-token/on-shift/users/{id}/history/settings/device/suspicious-record/absence-claim/evidence).
 - `echo.js` sets up the `laravel-echo` instance from `VITE_REVERB_*` env vars, authorises private channels through the SPA's `axios` auth headers, and exports `echo` for the broadcast composables.
 - PIN sign-in: `authApi.loginPin({ identifier, pin })` mirrors `authApi.login` (same response shape); `userApi.setPin(id, { pin, pin_confirmation })` lets admins/managers assign staff login PINs from the Staff page.
 - `reportApi.overview(params)` sends per-section filters/pagination (`staff_search`, `role`, `status`, `in_house_search`, `upcoming_search`, `housekeeping_status`, `page`); nested sections return raw `{ data, links, meta }` (the interceptor only flattens top-level pagination).
@@ -289,13 +314,13 @@ src/
 ### 5.3 Routing & access control
 
 - Three areas: public portal (`/`, `/hotels/:id`, `/booking`), hotel panel (`/app/*`), superadmin (`/superadmin/*`).
-- `router.beforeEach`: requires `auth_token` for `requiresAuth`; guest routes bounce signed-in users to their dashboard; fetches `/me` before role/module checks; enforces `role` meta and module access via `canAccess`.
+- `router.beforeEach`: requires `auth_token` (sessionStorage) for `requiresAuth`; guest routes bounce signed-in users to their dashboard; fetches `/me` before role/module checks; enforces `role` meta and module access via `canAccess`.
 - Access matrix (`src/config/modules.js`): explicit role allow-lists per module with optional extra `permission` gate. Empty `roles` = everyone (dashboard, profile). Superadmin bypasses all lists.
 
 ### 5.4 Stores (Pinia)
 
-- `auth.js`: `token` (persisted via pinia-plugin-persistedstate `pick: ['token']`), `user`, `permissions`, `mustChangePassword`; `ROLE_LEVELS`; helpers `can()`, `hasPermission()`, `canAccess()`; actions `login`, `loginPin` (identical session handling to `login`, used by the PIN keypad mode), `logout`, `fetchProfile`, `changePassword`.
-- `session.js`: **5-minute idle timeout**; leaving the page (tab switch/minimise/close) logs out **immediately** — `visibilitychange` → `terminate()`, and `pagehide` clears the persisted token synchronously so a closed tab always returns to login; activity listeners; auto-logout → login page.
+- `auth.js`: `token` (stored in sessionStorage — survives a refresh, dies with the tab; credentials left in localStorage by older builds are cleared once), `user`, `permissions`, `mustChangePassword`; `ROLE_LEVELS`; helpers `can()`, `hasPermission()`, `canAccess()`; actions `login`, `loginPin` (identical session handling to `login`, used by the PIN keypad mode), `logout`, `fetchProfile`, `changePassword`.
+- `session.js`: **5-minute idle timeout**; hiding the tab (tab switch/minimise) logs out **immediately** — `visibilitychange` → `terminate()`; a refresh keeps the session (the token lives in sessionStorage, so a closed tab always returns to login) and restarts the idle countdown; activity listeners; auto-logout → login page. `App.vue` re-arms the timer on boot when a stored token exists; a fresh login arms it from `LoginPage`.
 - `messages.js` (Pinia): conversations + groups merged into one feed, unread counts, active thread state; subscribes to `MessageSent`/`MessageRead`/`MessageDeleted`/`MessageReacted` via Echo to update the UI live.
 
 ### 5.5 i18n
@@ -321,6 +346,7 @@ src/
 | `StatusRing` | Avatar ring showing a colleague has an active status; navigates to the Statuses page. |
 | `StatusItem` | A single 24-hour status (photo/video/text) with viewer + reaction counts. |
 | `CallIncomingOverlay` | Full-screen incoming-call modal (audio/video) with accept/reject; uses `useCallManager`. |
+| `AttendanceQrScanner` | Attendance clock-in flow on the Profile page: geolocates the user, checks `attendanceApi.requirements()`, renders the rotating per-user office QR (drawn with the `qrcode` lib, refreshes every 60 s), opens `getUserMedia` camera preview and decodes scans with `jsqr` (`qr_token`), then calls `clock-in`. Also contains the manager's "issue token" action and the admin's attendance-settings form (office marker/radius/QR toggle). |
 
 **Key pages:** `pages/messages/` (conversation list + thread composer with replies, priority, polls, templates, scheduled send, forwarding, pin/star, translate, search, export, mute/DND, room-link + task groups, and the **Workspace panel** with Announcements / Meetings / Handovers / Guest SMS / Nearby Staff / Escalations / SOS / Scheduled / Starred / Retention tabs + the floating SOS button), `pages/statuses/` (my status + status feed), `pages/calls/` for call history (missed/active logs).
 
@@ -459,6 +485,15 @@ Returns the generated PDF (`Content-Disposition: attachment; filename=INV-….pd
 | GET | `/api/v1/invoices/{id}/download` | Staff invoice PDF download |
 | PUT | `/api/v1/tenants/{id}` | Superadmin: update hotel details incl. `tin`, `vrn`, `payment_methods`, `payment_accounts` |
 | POST | `/api/v1/tenants/{id}/branding` | Superadmin: upload/remove invoice signature & stamp images (multipart `signature`/`stamp`, or `remove_signature`/`remove_stamp`) |
+| POST | `/api/v1/attendance/clock-in` | Clock in (`lat`, `lng`, optional `accuracy_m`, optional `qr_token`); enforces geofence + QR when configured |
+| POST | `/api/v1/attendance/clock-out` | Clock out (best-effort `lat`/`lng`) |
+| GET | `/api/v1/attendance/status` | Current user's on-shift status + active attendance record |
+| GET | `/api/v1/attendance/requirements` | Policy for the caller's hotel (`office_configured`, `requires_qr`, `office_lat`/`office_lng`/`radius_m`) |
+| POST | `/api/v1/attendance/qr-token` | Manager (level 80+): mint a 60-second single-use entrance QR token |
+| GET | `/api/v1/attendance/on-shift` | Manager: who is currently on shift |
+| GET | `/api/v1/attendance/users/{userId}/history` | Manager: a staff member's attendance register |
+| GET | `/api/v1/attendance/settings` | Admin: current attendance settings |
+| PUT | `/api/v1/attendance/settings` | Admin: set office location / radius / QR requirement (QR refused without office) |
 
 **Payment methods payload** (superadmin):
 

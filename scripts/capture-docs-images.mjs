@@ -1,3 +1,4 @@
+/* global process */
 /**
  * capture-docs-images.mjs (docs tooling)
  * Captures the screenshots for the PIN sign-in feature into docs/images/:

@@ -530,7 +530,8 @@ Each section footer lets you jump between pages. The summary cards above the sec
 ## 20. Profile and Password
 
 - **Profile** shows your complete account details: name, staff/registration number, email, phone, country code, role and role level, department, position, ID type and number, your hotel, the sub-manager flag, account status, last login and the date you joined.
-- **Clock in / out** from the attendance card and see how long you have been on shift.
+- **Clock in / out** from the attendance card and see how long you have been on shift. If your hotel has location or QR checks enabled, the clock-in card will ask for your phone's location and, where required, to scan the office's QR code (shown on the manager's phone, refreshed every minute) before your shift starts — this proves you were actually at the hotel.
+ - **Clock in / out** from the attendance card and see how long you have been on shift. If your hotel has location, QR, or selfie verification enabled, the clock-in card will ask for your phone's location, may request a selfie (you must grant camera access), and, where required, to scan the office's QR code (shown on the manager's phone, refreshed every minute) before your shift starts — this proves you were actually at the hotel.
 - **Change password** from your profile; pick a strong password and keep it safe.
 - If the hotel admin resets your password, sign in with the temporary one and change it immediately.
 
@@ -592,7 +593,7 @@ Every record in MRK Hotels moves through a fixed set of states. Each lifecycle b
    LOOP RESTARTS: a new guest books → back to ①
 ```
 
-Two **supporting loops** keep the main loop running:
+Three **supporting loops** keep the main loop running:
 
 ```
   SUPPLY — keeps the hotel stocked
@@ -601,13 +602,34 @@ Two **supporting loops** keep the main loop running:
         → kitchen / housekeeping use stock → low-stock warning → new requisition
 
   PEOPLE — the team behind every step
-     Attendance:  clock in → on shift → clock out
+   Attendance:     clock in (location check when enabled; QR scan when enabled) → on shift → clock out
      Issues:      new → in progress → resolved
      Messages:    sent → delivered → read
      Urgent:      sent → (unread) → auto-escalated → resolved
      SOS:         initiated → acknowledged → resolved
      Meeting:     scheduled → invited → accepted / declined
      Handover:    posted → acknowledged
+
+  ORGANIZATION — the admin builds the team; every position serves the client
+     Admin onboards a member → assigns role, department and position
+      → registration number issued (EMP-2026-0004)
+      → account activated → optional 4-digit login PIN setup by an administrator (hiari); members may sign in using either their password or their PIN
+     The chain of service — each position deals with clients directly:
+        Receptionist  — books, checks guests in/out, replies to booking
+                        requisitions, records desk payments, keeps the register
+        Waiter / Bartender / Staff — takes F&B orders and serves the
+                        restaurant, bar and room service, records fun & games
+                        and laundry at the point of service
+        Kitchen       — prepares every order that comes up from the floor
+        Housekeeping  — dirty → cleaning → verified → clean; guest laundry:
+                        received → washing → drying → ironing → delivered
+        Accountant    — records and confirms payments, balances the ledger
+        Procurement   — requisition → manager approves → purchase order
+                        → finance approves → goods received → stock restocked
+     The MANAGER supervises the team and signs off the records that need it.
+     The ADMIN keeps the team healthy: reset password / set a new PIN any
+        time, invite and reactivate as needed, deactivate the account when a
+        member leaves → a new member joins → back to the start
 ```
 
 ### 21.1 Online booking and payment
@@ -755,7 +777,7 @@ Use the **EN / SW** button in the top bar to switch the whole interface between 
 
 | Problem | Solution |
 | --- | --- |
-| "Unauthenticated" alert on sign-in | Clear the saved sign-in: open DevTools → Application → Local Storage → delete `auth_token`, then refresh and sign in again. |
+| "Unauthenticated" alert on sign-in | Clear the saved sign-in: open DevTools → Application → Session Storage → delete `auth_token`, then refresh and sign in again. |
 | "Country field is required" when booking | Pick a country from the dropdown (it feeds the guest's country). |
 | Password expired | The system resets it to your full name in capital letters; sign in and change it from Profile. |
 | Can't see a menu | That role is not allowed that menu. Ask your hotel admin or superadmin. |

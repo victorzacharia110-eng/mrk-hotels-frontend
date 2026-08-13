@@ -35,8 +35,35 @@
       <!-- List of the hotel's rooms, each showing status, type and nightly price -->
       <div class="card">
         <h2 class="card-title">{{ $t('hotelDetail.rooms') }} ({{ rooms.length }})</h2>
-        <div v-if="rooms.length" class="room-grid">
-          <article v-for="room in rooms" :key="room.room_id" class="room-card">
+
+        <!-- Search, status filter and sort controls -->
+        <div v-if="rooms.length" class="room-browser-bar">
+          <div class="form-group">
+            <label>{{ $t('common.search') }}</label>
+            <input v-model.trim="query" type="search" class="input" :placeholder="$t('bookingPage.searchRoomsPlaceholder')" />
+          </div>
+          <div class="form-group">
+            <label>{{ $t('common.status') }}</label>
+            <SearchableSelect v-model="status" :options="statusOptions" :empty-label="$t('common.all')" />
+          </div>
+          <div class="form-group">
+            <label>{{ $t('bookingPage.sortBy') }}</label>
+            <SearchableSelect v-model="sortKey" :options="sortOptions" :placeholder="$t('bookingPage.sortBy')" />
+          </div>
+          <div class="form-group">
+            <label>&nbsp;</label>
+            <button type="button" class="btn btn-outline room-browser-dir" @click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'">
+              <i :class="sortDir === 'asc' ? 'fas fa-arrow-up-wide-short' : 'fas fa-arrow-down-wide-short'"></i>
+              {{ sortDir === 'asc' ? $t('bookingPage.sortAsc') : $t('bookingPage.sortDesc') }}
+            </button>
+          </div>
+        </div>
+        <p v-if="rooms.length" class="hint muted room-browser-count">
+          {{ $t('bookingPage.showingRooms', { from: rangeFrom, to: rangeTo, total: filteredCount }) }}
+        </p>
+
+        <div v-if="pagedRooms.length" class="room-grid">
+          <article v-for="room in pagedRooms" :key="room.room_id" class="room-card">
             <span class="badge" :class="statusBadge(room.status)">{{ room.status }}</span>
             <h3>{{ $t('bookingPage.room') }} {{ room.room_number }}</h3>
             <p class="muted">{{ room.room_type }} &middot; {{ $t('rooms.floor') }} {{ room.floor }}</p>
@@ -44,7 +71,19 @@
             <p class="room-price">TZS {{ room.price_per_night.toLocaleString() }} {{ $t('home.perNight') }}</p>
           </article>
         </div>
+        <p v-else-if="rooms.length" class="muted">{{ $t('common.noResults') }}</p>
         <p v-else class="muted">{{ $t('hotelDetail.noRooms') }}</p>
+
+        <!-- Pagination over the filtered/sorted rooms (15 per page) -->
+        <div v-if="pageCount > 1" class="pagination">
+          <button type="button" class="btn btn-sm btn-outline" :disabled="page <= 1" @click="page--">
+            <i class="fas fa-chevron-left"></i> {{ $t('common.previous') }}
+          </button>
+          <span class="muted">{{ $t('common.pageXOfY', { current: page, total: pageCount }) }}</span>
+          <button type="button" class="btn btn-sm btn-outline" :disabled="page >= pageCount" @click="page++">
+            {{ $t('common.next') }} <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -53,10 +92,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { publicApi } from '@/api'
+import SearchableSelect from '@/components/SearchableSelect.vue'
+import { useRoomBrowser } from '@/composables/useRoomBrowser'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -64,6 +105,33 @@ const hotel = ref(null)
 const rooms = ref([])
 const loading = ref(false)
 const error = ref('')
+
+// Rooms after applying the status filter; the browser then searches/sorts/paginates these.
+const status = ref('')
+const statusFilteredRooms = computed(() => {
+  if (!status.value) return rooms.value
+  return rooms.value.filter((room) => room.status === status.value)
+})
+
+// Search/sort/paginate the status-filtered rooms client-side.
+const { query, sortKey, sortDir, page, pageCount, pagedRooms, filteredCount, rangeFrom, rangeTo } =
+  useRoomBrowser(statusFilteredRooms)
+
+// Options for the status filter dropdown (All plus every known room status).
+const statusOptions = computed(() => [
+  { value: 'available', label: t('rooms.statusAvailable') },
+  { value: 'occupied', label: t('rooms.statusOccupied') },
+  { value: 'cleaning', label: t('rooms.statusCleaning') },
+  { value: 'maintenance', label: t('rooms.statusMaintenance') },
+])
+
+// Options for the room-sort dropdown.
+const sortOptions = computed(() => [
+  { value: 'price_per_night', label: t('bookingPage.sortPrice') },
+  { value: 'room_number', label: t('bookingPage.sortRoomNumber') },
+  { value: 'max_occupancy', label: t('bookingPage.sortCapacity') },
+  { value: 'floor', label: t('bookingPage.sortFloor') },
+])
 
 /**
  * Maps a room status to the CSS class used for its badge colour.

@@ -1,7 +1,9 @@
 <!--
   Staff profile page (route: /app/profile, name: hotel-profile).
   The logged-in user's own account: editable personal info with photo upload,
-  read-only system attributes, attendance clock in/out and a password change.
+  read-only system attributes, attendance clock in/out (geofenced + optional
+  entrance QR), and — for managers — the rotating clock-in QR and office
+  attendance settings for the hotel.
 -->
 <template>
   <div>
@@ -15,11 +17,8 @@
       <!-- Avatar and summary of the logged-in user pulled from the auth store -->
       <div class="profile-header">
         <div class="avatar">
-          <img
-            v-if="authStore.user?.profile_picture"
-            :src="authStore.user.profile_picture"
-            :alt="authStore.user?.full_name"
-          />
+          <img v-if="authStore.user?.profile_picture" :src="authStore.user.profile_picture"
+            :alt="authStore.user?.full_name" />
           <i v-else class="fas fa-user"></i>
         </div>
         <div class="profile-header-info">
@@ -106,11 +105,8 @@
         </div>
         <div class="form-group">
           <label>{{ $t('profile.subManager') }}</label>
-          <input
-            :value="authStore.user?.is_sub_manager ? $t('profile.yes') : $t('profile.no')"
-            class="input"
-            disabled
-          />
+          <input :value="authStore.user?.is_sub_manager ? $t('profile.yes') : $t('profile.no')" class="input"
+            disabled />
         </div>
         <div class="form-group">
           <label>{{ $t('profile.lastLogin') }}</label>
@@ -134,12 +130,216 @@
           </span>
           <span v-if="clockInAt" class="muted">{{ $t('attendance.since') }} {{ formatDateTime(clockInAt) }}</span>
         </div>
-        <button v-if="onShift" class="btn btn-danger" :disabled="acting" @click="clockOut">
+        <button v-if="onShift" class="btn btn-danger" :disabled="acting" @click="handleClockOut">
           <i class="fas fa-right-from-bracket"></i> {{ $t('attendance.clockOut') }}
         </button>
-        <button v-else class="btn btn-primary" :disabled="acting" @click="clockIn">
+        <button v-else class="btn btn-primary" :disabled="acting" @click="handleClockIn">
           <i class="fas fa-right-to-bracket"></i> {{ $t('attendance.clockIn') }}
         </button>
+      </div>
+      <p v-if="!onShift && requirements.office_configured" class="muted attendance-hint">
+        {{ requirements.requires_qr ? $t('attendance.clockInHint') : $t('attendance.officeSettingsHint') }}
+      </p>
+
+      <!-- Absence claim: sick/emergency excuse filed with evidence -->
+      <div class="absence-claim">
+        <h3 class="form-section-title"><i class="fas fa-notes-medical"></i> {{ $t('attendance.absenceTitle') }}</h3>
+        <p class="muted attendance-hint">{{ $t('attendance.absenceHint') }}</p>
+        <div v-if="absenceError" class="alert alert-error">{{ absenceError }}</div>
+        <div v-if="absenceMessage" class="alert alert-success">{{ absenceMessage }}</div>
+        <form @submit.prevent="submitAbsence">
+          <div class="absence-grid">
+            <select v-model="absenceForm.type" class="input">
+              <option value="sick">{{ $t('attendance.absenceSick') }}</option>
+              <option value="emergency">{{ $t('attendance.absenceEmergency') }}</option>
+              <option value="transport">{{ $t('attendance.absenceTransport') }}</option>
+              <option value="family">{{ $t('attendance.absenceFamily') }}</option>
+              <option value="other">{{ $t('attendance.absenceOther') }}</option>
+            </select>
+            <input v-model="absenceForm.startsAt" type="date" class="input" />
+            <input v-model="absenceForm.endsAt" type="date" class="input" />
+          </div>
+          <input v-model="absenceForm.reason" type="text" class="input"
+            :placeholder="$t('attendance.absenceReasonPlaceholder')" />
+          <input ref="absenceFilesInput" type="file" multiple accept="image/jpeg,image/png,application/pdf"
+            class="input" @change="onAbsenceFiles" />
+          <button class="btn btn-primary" type="submit" :disabled="absenceSaving">
+            <i class="fas fa-paper-plane"></i> {{ absenceSaving ? $t('common.saving') : $t('attendance.absenceSubmit')
+            }}
+          </button>
+        </form>
+        <ul v-if="myAbsences.length" class="security-list">
+          <li v-for="a in myAbsences" :key="a.request_id">
+            <div>
+              <strong>{{ absenceTypeLabel(a.absence_type) }}</strong>
+              <span class="muted">{{ formatDate(a.starts_at) }} &rarr; {{ formatDate(a.ends_at) }}</span>
+              <span v-if="a.suspicious" class="badge badge-warning">{{ suspicionLabels(a.suspicion_reasons).join(', ')
+                }}</span>
+            </div>
+            <em class="badge" :class="statusBadge(a.status)">{{ statusLabel(a.status) }}</em>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Clock-in QR scanner modal, opened when the entrance QR is required -->
+    <AttendanceQrScanner v-if="showScanner" @scanned="onScanned" @close="onScannerClose" />
+
+    <!-- Clock-in selfie modal, opened when the hotel requires photo proof -->
+    <AttendanceSelfieCapture v-if="showSelfie" @captured="onSelfieCaptured" @close="onSelfieClose" />
+
+    <!-- Rotating clock-in QR, shown to managers for display at the entrance -->
+    <div v-if="canManageQr" class="card">
+      <h2 class="card-title"><i class="fas fa-qrcode"></i> {{ $t('attendance.officeQr') }}</h2>
+      <p class="muted">{{ $t('attendance.officeQrHint') }}</p>
+      <div class="qr-layout">
+        <div class="qr-frame">
+          <canvas v-if="qrToken" ref="qrCanvasEl" class="qr-canvas"></canvas>
+          <div v-else class="qr-loading"><i class="fas fa-spinner fa-spin"></i></div>
+        </div>
+        <div class="qr-meta">
+          <div class="qr-countdown" :class="qrCountdown <= 10 ? 'qr-countdown-urgent' : ''">
+            <i class="fas fa-rotate"></i> {{ $t('attendance.qrExpiresIn', { s: qrCountdown }) }}
+          </div>
+          <button class="btn btn-secondary" :disabled="qrLoading" @click="issueQr">
+            <i class="fas fa-arrows-rotate"></i> {{ $t('attendance.refresh') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Office attendance settings, editable by the hotel admin -->
+    <div v-if="canManageSettings" class="card">
+      <h2 class="card-title"><i class="fas fa-location-dot"></i> {{ $t('attendance.officeSettings') }}</h2>
+      <p class="muted">{{ $t('attendance.officeSettingsHint') }}</p>
+      <div v-if="settingsError" class="alert alert-error">{{ settingsError }}</div>
+      <div v-if="settingsMessage" class="alert alert-success">{{ settingsMessage }}</div>
+      <form @submit.prevent="saveSettings">
+        <div class="profile-grid">
+          <div class="form-group">
+            <label>{{ $t('attendance.officeLat') }}</label>
+            <input v-model.number="settings.lat" type="number" step="any" class="input" />
+          </div>
+          <div class="form-group">
+            <label>{{ $t('attendance.officeLng') }}</label>
+            <input v-model.number="settings.lng" type="number" step="any" class="input" />
+          </div>
+          <div class="form-group">
+            <label>{{ $t('attendance.officeRadius') }}</label>
+            <input v-model.number="settings.radius" type="number" min="50" max="5000" class="input" />
+          </div>
+          <div class="form-group">
+            <label class="check-label">
+              <input v-model="settings.qrEnabled" type="checkbox" class="input-check" />
+              {{ $t('attendance.qrEnabled') }}
+            </label>
+          </div>
+          <div class="form-group">
+            <label class="check-label">
+              <input v-model="settings.photoRequired" type="checkbox" class="input-check" />
+              {{ $t('attendance.photoEnabled') }}
+            </label>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" :disabled="savingSettings">
+            <i class="fas fa-save"></i> {{ savingSettings ? $t('common.saving') : $t('common.save') }}
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Attendance security oversight, visible to managers -->
+    <div v-if="canManageSecurity" class="card">
+      <h2 class="card-title"><i class="fas fa-shield-halved"></i> {{ $t('attendance.securityTitle') }}</h2>
+      <p class="muted">{{ $t('attendance.securityHint') }}</p>
+      <div v-if="securityError" class="alert alert-error">{{ securityError }}</div>
+
+      <div class="security-block">
+        <h3 class="security-subtitle">{{ $t('attendance.devicesTitle') }}</h3>
+        <table class="security-table">
+          <thead>
+            <tr>
+              <th>{{ $t('attendance.deviceStaff') }}</th>
+              <th>{{ $t('attendance.deviceName') }}</th>
+              <th>{{ $t('attendance.deviceLastSeen') }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="d in security.devices" :key="d.device_row_id">
+              <td>{{ d.user?.full_name || '—' }}</td>
+              <td>
+                {{ d.device_name || d.device_id }}
+                <span v-if="d.revoked" class="badge badge-danger">{{ $t('attendance.revoked') }}</span>
+              </td>
+              <td>{{ formatDateTime(d.last_seen_at) }}</td>
+              <td class="security-actions">
+                <button v-if="!d.revoked" class="btn btn-sm btn-danger" @click="revokeDevice(d.device_row_id)">
+                  {{ $t('attendance.revoke') }}
+                </button>
+              </td>
+            </tr>
+            <tr v-if="!security.devices.length">
+              <td colspan="4" class="muted">{{ $t('attendance.noDevices') }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="security-block">
+        <h3 class="security-subtitle">{{ $t('attendance.suspiciousTitle') }}</h3>
+        <ul class="security-list">
+          <li v-for="r in security.suspicious" :key="r.attendance_id">
+            <div>
+              <strong>{{ r.user?.full_name || '—' }}</strong>
+              <span class="muted">{{ formatDateTime(r.clock_in_at) }}</span>
+            </div>
+            <em class="badge badge-warning">{{ suspicionLabels(r.suspicion_reasons).join(', ') }}</em>
+          </li>
+          <li v-if="!security.suspicious.length" class="muted">{{ $t('attendance.noSuspicious') }}</li>
+        </ul>
+      </div>
+
+      <div class="security-block">
+        <h3 class="security-subtitle"><i class="fas fa-file-medical"></i> {{ $t('attendance.absenceClaimsTitle') }}</h3>
+        <div v-if="claimsError" class="alert alert-error">{{ claimsError }}</div>
+        <ul class="security-list">
+          <li v-for="c in absenceClaims" :key="c.request_id">
+            <div>
+              <strong>{{ c.user?.full_name || '—' }}</strong>
+              <span class="muted">
+                {{ absenceTypeLabel(c.absence_type) }} &middot; {{ formatDate(c.starts_at) }} &rarr; {{
+                  formatDate(c.ends_at) }}
+              </span>
+              <span class="muted">{{ $t('attendance.absenceClaimedAt') }} {{ formatDateTime(c.submitted_at) }}</span>
+              <span v-if="c.suspicious" class="badge badge-warning">{{ suspicionLabels(c.suspicion_reasons).join(', ')
+                }}</span>
+              <span v-if="c.attachments?.length" class="badge">
+                <i class="fas fa-paperclip"></i> {{ c.attachments.length }}
+                <span class="muted">{{ $t('attendance.absenceEvidenceHashed') }}</span>
+              </span>
+              <button v-if="c.attachments?.length" class="btn-link" type="button"
+                @click="viewEvidence(c.attachments[0].attachment_id)">
+                <i class="fas fa-paperclip"></i> {{ $t('attendance.openEvidence') }}
+              </button>
+            </div>
+            <div class="claim-actions">
+              <em class="badge" :class="statusBadge(c.status)">{{ statusLabel(c.status) }}</em>
+              <template v-if="c.status === 'pending'">
+                <button class="btn btn-sm btn-primary" :disabled="decidingClaim"
+                  @click="decideAbsence(c.request_id, 'approve')">
+                  {{ $t('attendance.absenceApprove') }}
+                </button>
+                <button class="btn btn-sm btn-danger" :disabled="decidingClaim"
+                  @click="decideAbsence(c.request_id, 'reject')">
+                  {{ $t('attendance.absenceReject') }}
+                </button>
+              </template>
+            </div>
+          </li>
+          <li v-if="!absenceClaims.length" class="muted">{{ $t('attendance.noAbsenceClaims') }}</li>
+        </ul>
       </div>
     </div>
 
@@ -152,14 +352,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
+import QRCode from 'qrcode'
 import { useAuthStore } from '@/stores/auth'
 import { attendanceApi, authApi } from '@/api'
 import ChangePasswordForm from '@/components/ChangePasswordForm.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
+import AttendanceQrScanner from '@/components/AttendanceQrScanner.vue'
+import AttendanceSelfieCapture from '@/components/AttendanceSelfieCapture.vue'
+import { getDeviceId, getDeviceFingerprint, getDeviceSecret, setDeviceSecret, clearDeviceSecret } from '@/utils/device'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const authStore = useAuthStore()
 
 // Attendance section state: shift status, clock-in time, in-flight flag and errors.
@@ -167,6 +371,47 @@ const onShift = ref(false)
 const clockInAt = ref(null)
 const acting = ref(false)
 const attendanceError = ref('')
+const requirements = reactive({ office_configured: false, requires_location: false, requires_qr: false, requires_photo: false, device_policy: 'off', device_registered: true })
+const showScanner = ref(false)
+let qrResolve = null
+
+// Clock-in selfie state (required when the hotel asks for photo proof).
+const showSelfie = ref(false)
+let selfieResolve = null
+
+// Manager security oversight: registered devices + suspicious clock-ins.
+const security = reactive({ devices: [], suspicious: [], loading: false })
+const securityError = ref('')
+
+// Absence claim state: the staff form plus the manager verification ledger.
+const absenceForm = reactive({ type: 'sick', startsAt: '', endsAt: '', reason: '' })
+const absenceFiles = ref([])
+const absenceFilesInput = ref(null)
+const absenceSaving = ref(false)
+const absenceError = ref('')
+const absenceMessage = ref('')
+const myAbsences = ref([])
+const absenceClaims = ref([])
+const claimsError = ref('')
+const decidingClaim = ref(false)
+
+// Rotating office QR state (managers).
+const qrToken = ref('')
+const qrCountdown = ref(0)
+const qrLoading = ref(false)
+const qrCanvasEl = ref(null)
+let qrTimer = 0
+
+// Office attendance settings state (hotel admin).
+const settings = reactive({ lat: null, lng: null, radius: 100, qrEnabled: false, photoRequired: false })
+const savingSettings = ref(false)
+const settingsError = ref('')
+const settingsMessage = ref('')
+
+// Only managers and above mint the entrance QR; only hotel admins edit the fence.
+const canManageQr = computed(() => authStore.can(80))
+const canManageSettings = computed(() => authStore.can(90))
+const canManageSecurity = computed(() => authStore.can(80))
 
 // Profile form config: allowed ID types and the editable fields.
 const idTypes = ['national_id', 'passport']
@@ -273,12 +518,195 @@ async function refreshStatus() {
   }
 }
 
-/** Runs an attendance action (clock in/out), applying the returned attendance on success. */
-async function run(action) {
-  acting.value = true
-  attendanceError.value = ''
+/** Loads the hotel's clock-in requirements so the UI can prompt the right steps. */
+async function loadRequirements() {
   try {
-    const res = await action()
+    const { data } = await attendanceApi.requirements()
+    requirements.office_configured = !!data.office_configured
+    requirements.requires_location = !!data.requires_location
+    requirements.requires_qr = !!data.requires_qr
+    requirements.requires_photo = !!data.requires_photo
+    requirements.device_policy = data.device_policy || 'off'
+    requirements.device_registered = data.device_registered !== false
+  } catch {
+    // Non-fatal: fall back to a plain clock-in.
+  }
+}
+
+/**
+ * Resolves the device's current position, or null when unavailable/denied.
+ * @returns {Promise<object|null>} { lat, lng, accuracy_m, positioned_at }.
+ */
+function getPosition() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve(null)
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+        resolve({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy_m: Math.round(pos.coords.accuracy) || null,
+          positioned_at: new Date().toISOString(),
+        }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    )
+  })
+}
+
+/** Opens the QR scanner and resolves with the scanned token (or null when cancelled). */
+function scanQr() {
+  return new Promise((resolve) => {
+    qrResolve = resolve
+    showScanner.value = true
+  })
+}
+
+/** Called when the scanner decodes a QR code. */
+function onScanned(token) {
+  showScanner.value = false
+  if (qrResolve) {
+    qrResolve(token)
+    qrResolve = null
+  }
+}
+
+/** Called when the scanner is closed without a scan. */
+function onScannerClose() {
+  showScanner.value = false
+  if (qrResolve) {
+    qrResolve(null)
+    qrResolve = null
+  }
+}
+
+/** Opens the selfie camera and resolves with the captured file (or null when cancelled). */
+function captureSelfie() {
+  return new Promise((resolve) => {
+    selfieResolve = resolve
+    showSelfie.value = true
+  })
+}
+
+/** Called when the selfie is captured. */
+function onSelfieCaptured(file) {
+  showSelfie.value = false
+  if (selfieResolve) {
+    selfieResolve(file)
+    selfieResolve = null
+  }
+}
+
+/** Called when the selfie modal is closed without capturing. */
+function onSelfieClose() {
+  showSelfie.value = false
+  if (selfieResolve) {
+    selfieResolve(null)
+    selfieResolve = null
+  }
+}
+
+/**
+ * Ensures the device is registered when the hotel runs the strict policy,
+ * so a first clock-in from an unregistered browser is not silently refused.
+ * @returns {Promise<boolean>} True when the device may be used.
+ */
+async function ensureDeviceRegistered() {
+  if (requirements.device_policy !== 'strict' || requirements.device_registered) return true
+  try {
+    const res = await attendanceApi.registerDevice({
+      device_id: getDeviceId(),
+      device_fingerprint: getDeviceFingerprint(),
+      device_name: navigator.userAgent?.slice(0, 60) || 'Web browser',
+    })
+    if (res.data.device_secret) setDeviceSecret(res.data.device_secret)
+    requirements.device_registered = true
+    return true
+  } catch (err) {
+    attendanceError.value = flattenError(err)
+    return false
+  }
+}
+
+/** Geofenced clock-in: location (+ QR + selfie when required) then submit. */
+async function handleClockIn() {
+  if (acting.value) return
+  attendanceError.value = ''
+  // mark we are acting early to prevent duplicate starts while awaiting user/device prompts
+  acting.value = true
+
+  if (!(await ensureDeviceRegistered())) {
+    acting.value = false
+    return
+  }
+
+  const position = await getPosition()
+  if (!position && requirements.requires_location) {
+    attendanceError.value = t('attendance.gpsUnavailable')
+    acting.value = false
+    return
+  }
+
+  const payload = {
+    ...position,
+    device_id: getDeviceId(),
+    device_fingerprint: getDeviceFingerprint(),
+  }
+
+  const deviceSecret = getDeviceSecret()
+  if (deviceSecret) payload.device_secret = deviceSecret
+
+  if (requirements.requires_qr) {
+    const token = await scanQr()
+    if (!token) {
+      acting.value = false
+      return
+    }
+    payload.qr_token = token
+  }
+
+  let photo = null
+  if (requirements.requires_photo) {
+    photo = await captureSelfie()
+    if (!photo) {
+      acting.value = false
+      return
+    }
+  }
+  // already marked acting above; proceed to the network request
+  try {
+    let res
+    if (photo) {
+      const fd = new FormData()
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) fd.append(key, value)
+      })
+      fd.append('photo', photo)
+      res = await attendanceApi.clockIn(fd)
+    } else {
+      res = await attendanceApi.clockIn(payload)
+    }
+    applyAttendance(res.data.attendance)
+    if (res.data.device_secret) setDeviceSecret(res.data.device_secret)
+    if (res.data.device_status === 'new_registered') await loadRequirements()
+  } catch (err) {
+    attendanceError.value = flattenError(err)
+  } finally {
+    acting.value = false
+  }
+}
+
+/** Clocks out, attaching a best-effort location fix if one is available. */
+async function handleClockOut() {
+  if (acting.value) return
+  attendanceError.value = ''
+  const position = await getPosition()
+  acting.value = true
+  try {
+    const res = await attendanceApi.clockOut({ ...position })
     applyAttendance(res.data.attendance)
   } catch (err) {
     attendanceError.value = flattenError(err)
@@ -287,14 +715,249 @@ async function run(action) {
   }
 }
 
-// Clock-in/out wrappers bound to the attendance API through the shared run helper.
-const clockIn = () => run(() => attendanceApi.clockIn(), 'attendance.clockedIn')
-const clockOut = () => run(() => attendanceApi.clockOut(), 'attendance.clockedOut')
+/** Mints a fresh entrance QR token and renders it on the canvas. */
+async function issueQr() {
+  qrLoading.value = true
+  try {
+    const res = await attendanceApi.qrToken()
+    qrToken.value = res.data.token
+    qrCountdown.value = res.data.ttl_seconds ?? 60
+    await nextTick()
+    if (qrCanvasEl.value && qrToken.value) {
+      await QRCode.toCanvas(qrCanvasEl.value, qrToken.value, { width: 240, margin: 1 })
+    }
+  } catch {
+    // Ignore the error but avoid immediate tight retry storms by backing off the countdown.
+    qrCountdown.value = Math.max(qrCountdown.value, 10)
+  } finally {
+    qrLoading.value = false
+  }
+}
+
+/** Counts down the QR's lifetime and mints a new token when it expires. */
+function startQrRotation() {
+  clearInterval(qrTimer)
+  qrTimer = setInterval(() => {
+    if (qrCountdown.value > 1) {
+      qrCountdown.value -= 1
+    } else {
+      issueQr()
+    }
+  }, 1000)
+}
+
+/** Loads the hotel's attendance settings into the admin form. */
+async function loadSettings() {
+  try {
+    const { data } = await attendanceApi.settings()
+    settings.lat = data.office_lat
+    settings.lng = data.office_lng
+    settings.radius = data.office_radius_m ?? 100
+    settings.qrEnabled = !!data.attendance_qr_enabled
+    settings.photoRequired = !!data.attendance_require_photo
+  } catch {
+    // Non-fatal: leave the form at defaults.
+  }
+}
+
+/** Saves the hotel's attendance settings. */
+async function saveSettings() {
+  savingSettings.value = true
+  settingsError.value = ''
+  settingsMessage.value = ''
+  try {
+    const { data } = await attendanceApi.updateSettings({
+      office_lat: settings.lat || null,
+      office_lng: settings.lng || null,
+      office_radius_m: settings.radius || null,
+      attendance_qr_enabled: settings.qrEnabled,
+      attendance_require_photo: settings.photoRequired,
+    })
+    settings.lat = data.office_lat
+    settings.lng = data.office_lng
+    settings.radius = data.office_radius_m ?? 100
+    settings.qrEnabled = !!data.attendance_qr_enabled
+    settings.photoRequired = !!data.attendance_require_photo
+    settingsMessage.value = t('attendance.settingsSaved')
+    loadRequirements()
+  } catch (err) {
+    settingsError.value = flattenError(err)
+  } finally {
+    savingSettings.value = false
+  }
+}
+
+/** Loads the manager security oversight: registered devices + suspicious clock-ins. */
+async function loadSecurity() {
+  security.loading = true
+  // ensure lists are empty by default so we don't show stale data on error
+  security.devices = []
+  security.suspicious = []
+  try {
+    const [dev, sus] = await Promise.all([
+      attendanceApi.attendanceDevices({ per_page: 100 }),
+      attendanceApi.suspicious({ per_page: 50 }),
+    ])
+    security.devices = dev.data.data || []
+    security.suspicious = sus.data.data || []
+  } catch {
+    // Non-fatal: keep the lists empty when the request fails.
+  } finally {
+    security.loading = false
+  }
+}
+
+/** Revokes a device so it can no longer clock in. */
+async function revokeDevice(deviceRowId) {
+  securityError.value = ''
+  try {
+    const res = await attendanceApi.revokeDevice(deviceRowId)
+    if (res.data.device?.device_id === getDeviceId()) clearDeviceSecret()
+    await loadSecurity()
+  } catch (err) {
+    securityError.value = flattenError(err)
+  }
+}
+
+/** Localized label for a suspicion reason code. */
+function suspicionLabel(reason) {
+  const key = `attendance.suspicionReasons.${reason}`
+  return te(key) ? t(key) : reason
+}
+
+/** Renders localized labels for a list of suspicion reason codes. */
+function suspicionLabels(reasons) {
+  return (reasons || []).map(suspicionLabel)
+}
+
+/** Opens a private evidence attachment in a new tab via the authenticated blob endpoint. */
+async function viewEvidence(attachmentId) {
+  try {
+    const res = await attendanceApi.attachment(attachmentId)
+    const url = URL.createObjectURL(res.data)
+    window.open(url, '_blank', 'noopener,noreferrer')
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+  } catch {
+    securityError.value = t('common.actionFailed')
+  }
+}
+
+/** Localized label for an absence type code. */
+function absenceTypeLabel(type) {
+  const map = {
+    sick: 'attendance.absenceSick',
+    emergency: 'attendance.absenceEmergency',
+    transport: 'attendance.absenceTransport',
+    family: 'attendance.absenceFamily',
+    other: 'attendance.absenceOther',
+  }
+  return t(map[type] || map.other)
+}
+
+/** Localized label for a claim status code. */
+function statusLabel(status) {
+  return t(`attendance.status_${status}`)
+}
+
+/** CSS badge class for a claim status. */
+function statusBadge(status) {
+  if (status === 'approved') return 'badge-green'
+  if (status === 'rejected') return 'badge-red'
+  return 'badge-warning'
+}
+
+/** Collects the selected evidence files into the form state. */
+function onAbsenceFiles(e) {
+  absenceFiles.value = Array.from(e.target.files || [])
+}
+
+/** The current user's own absence claims, refreshed after submitting. */
+async function loadMyAbsences() {
+  try {
+    const { data } = await attendanceApi.myAbsenceRequests()
+    myAbsences.value = data.data
+  } catch {
+    // Non-fatal: the list simply stays empty.
+  }
+}
+
+/** Files an absence claim with location, device and optional evidence. */
+async function submitAbsence() {
+  absenceSaving.value = true
+  absenceError.value = ''
+  absenceMessage.value = ''
+  try {
+    const position = await getPosition()
+    const fd = new FormData()
+    fd.append('absence_type', absenceForm.type)
+    fd.append('reason', absenceForm.reason || '')
+    fd.append('starts_at', absenceForm.startsAt)
+    fd.append('ends_at', absenceForm.endsAt)
+    fd.append('device_id', getDeviceId())
+    fd.append('device_fingerprint', getDeviceFingerprint())
+    if (position) {
+      Object.entries(position).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) fd.append(key, value)
+      })
+    }
+    absenceFiles.value.forEach((file) => fd.append('attachments[]', file))
+    await attendanceApi.reportAbsence(fd)
+    absenceForm.reason = ''
+    absenceForm.startsAt = ''
+    absenceForm.endsAt = ''
+    absenceFiles.value = []
+    if (absenceFilesInput.value) absenceFilesInput.value.value = ''
+    absenceMessage.value = t('attendance.absenceSubmitted')
+    await loadMyAbsences()
+  } catch (err) {
+    absenceError.value = flattenError(err)
+  } finally {
+    absenceSaving.value = false
+  }
+}
+
+/** Loads every absence claim for the manager verification ledger. */
+async function loadAbsenceClaims() {
+  claimsError.value = ''
+  try {
+    const { data } = await attendanceApi.absenceRequests({ per_page: 50, status: 'pending' })
+    absenceClaims.value = data.data
+  } catch {
+    // Non-fatal: the ledger simply stays empty.
+  }
+}
+
+/** Approves or rejects an absence claim and refreshes the ledger. */
+async function decideAbsence(requestId, decision) {
+  decidingClaim.value = true
+  claimsError.value = ''
+  try {
+    await attendanceApi.decideAbsenceRequest(requestId, { decision })
+    await loadAbsenceClaims()
+  } catch (err) {
+    claimsError.value = flattenError(err)
+  } finally {
+    decidingClaim.value = false
+  }
+}
 
 onMounted(() => {
   fillForm()
   refreshStatus()
+  loadRequirements()
+  loadMyAbsences()
+  if (canManageQr.value) {
+    issueQr()
+    startQrRotation()
+  }
+  if (canManageSettings.value) loadSettings()
+  if (canManageSecurity.value) {
+    loadSecurity()
+    loadAbsenceClaims()
+  }
 })
+
+onUnmounted(() => clearInterval(qrTimer))
 </script>
 
 <style scoped>
@@ -373,5 +1036,182 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.attendance-hint {
+  margin-top: 10px;
+}
+
+.check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 6px;
+  cursor: pointer;
+}
+
+.qr-layout {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.qr-frame {
+  width: 260px;
+  height: 260px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.qr-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.qr-loading {
+  color: #005eb8;
+  font-size: 24px;
+}
+
+.qr-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.qr-countdown {
+  font-size: 15px;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qr-countdown-urgent {
+  color: #dc2626;
+}
+
+.security-block {
+  margin-top: 16px;
+}
+
+.security-subtitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  margin: 0 0 8px;
+}
+
+.security-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.security-table th,
+.security-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+
+.security-table th {
+  color: #64748b;
+  font-weight: 600;
+  background: #f8fafc;
+}
+
+.security-actions {
+  text-align: right;
+}
+
+.security-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.security-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.security-list li>div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.badge-warning {
+  background: #fef3c7;
+  color: #b45309;
+  font-style: normal;
+}
+
+.absence-claim {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.absence-claim form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.absence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.claim-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-link {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.btn-link:hover {
+  color: #1e40af;
 }
 </style>

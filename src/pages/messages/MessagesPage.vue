@@ -13,7 +13,7 @@
 <template>
   <div class="dashboard-page container">
     <!-- Page header: workspace shortcut, refresh, new message / new group -->
-    <div class="page-head">
+    <div class="page-head" @click="headMenuOpen = false">
       <div>
         <h1><i class="fas fa-comments"></i> {{ $t('messages.title') }}</h1>
         <p class="muted">{{ $t('messages.subtitle') }}</p>
@@ -22,11 +22,25 @@
         <button class="btn btn-secondary" @click="openWorkspace()"><i class="fas fa-briefcase"></i> {{
           $t('messages.workspace') }}</button>
         <button class="btn btn-secondary" @click="refreshAll"><i class="fas fa-rotate"></i> {{ $t('common.refresh')
-          }}</button>
+        }}</button>
         <button class="btn btn-primary" @click="openNewMessage"><i class="fas fa-paper-plane"></i> {{
           $t('messages.newMessage') }}</button>
         <button class="btn btn-primary btn-group" @click="openNewGroup"><i class="fas fa-users"></i> {{
           $t('messages.newGroup') }}</button>
+      </div>
+      <!-- Mobile: collapse the header actions into a dropdown -->
+      <div class="head-actions-mobile">
+        <button type="button" class="btn btn-secondary head-actions-toggle" :class="{ active: headMenuOpen }"
+          :title="$t('messages.moreActions')" @click.stop="headMenuOpen = !headMenuOpen">
+          <i class="fas fa-ellipsis-vertical"></i>
+        </button>
+        <div v-if="headMenuOpen" class="composer-tools-menu head-actions-menu" @click.stop>
+          <button v-for="action in headActions" :key="action.key" type="button" class="composer-tool-item"
+            @click="headAction(action)">
+            <i class="fas" :class="action.icon"></i>
+            <span>{{ action.label }}</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -57,7 +71,7 @@
             </span>
             <span class="chat-item-sub">
               <span class="muted chat-preview">{{ myStatusHas ? $t('statuses.viewHint') : $t('statuses.addStatusHint')
-                }}</span>
+              }}</span>
             </span>
           </span>
         </button>
@@ -112,7 +126,7 @@
       <section class="chat-thread" :class="{ 'hidden-xs': !activeChat }">
         <template v-if="activeChat">
           <!-- Thread header: participant info plus call/pinned/search/room-link/mute/group actions -->
-          <header class="chat-thread-head">
+          <header class="chat-thread-head" @click="threadHeadMenuOpen = false">
             <button class="btn btn-sm btn-secondary back-btn" @click="closeThread">
               <i class="fas fa-arrow-left"></i>
             </button>
@@ -135,40 +149,28 @@
                 <span v-else-if="activeChat.hotel_name" class="muted">{{ activeChat.hotel_name }}</span>
               </div>
             </div>
-            <button v-if="activeChat.kind === 'group'" class="btn btn-sm btn-secondary members-btn"
-              @click="openGroupManage">
-              <i class="fas fa-user-group"></i> {{ $t('messages.membersManage') }}
-            </button>
-            <template v-else>
-              <button class="btn btn-sm btn-secondary members-btn" :title="$t('messages.audioCall')"
-                @click="callManager.startCall('audio', activeChat.id, activeChat.name)">
-                <i class="fas fa-phone"></i>
+            <!-- Thread actions: inline on desktop, collapsed into a dropdown on mobile -->
+            <div class="thread-head-actions">
+              <button v-for="tool in threadHeadTools" :key="tool.key" type="button"
+                class="btn btn-sm btn-secondary members-btn" :title="tool.label" @click="tool.handler">
+                <i class="fas" :class="tool.icon"></i>
+                <span v-if="tool.key === 'members'">{{ tool.label }}</span>
               </button>
-              <button class="btn btn-sm btn-secondary members-btn" :title="$t('messages.videoCall')"
-                @click="callManager.startCall('video', activeChat.id, activeChat.name)">
-                <i class="fas fa-video"></i>
+            </div>
+            <div class="thread-head-actions-mobile">
+              <button type="button" class="btn btn-sm btn-secondary members-btn thread-head-toggle"
+                :class="{ active: threadHeadMenuOpen }" :title="$t('messages.moreActions')"
+                @click.stop="threadHeadMenuOpen = !threadHeadMenuOpen">
+                <i class="fas fa-ellipsis-vertical"></i>
               </button>
-            </template>
-            <button class="btn btn-sm btn-secondary members-btn" :title="$t('messages.searchInChat')"
-              @click="openSearchPanel">
-              <i class="fas fa-magnifying-glass"></i>
-            </button>
-            <button class="btn btn-sm btn-secondary members-btn" :title="$t('messages.pinnedMessages')"
-              @click="openPinnedPanel">
-              <i class="fas fa-thumbtack"></i>
-            </button>
-            <button class="btn btn-sm btn-secondary members-btn" :title="$t('messages.linkRoom')"
-              @click="openRoomLinkModal">
-              <i class="fas fa-hotel"></i>
-            </button>
-            <button class="btn btn-sm btn-secondary members-btn" :title="$t('messages.exportChat')"
-              @click="exportHistory">
-              <i class="fas fa-file-export"></i>
-            </button>
-            <button class="btn btn-sm btn-secondary members-btn"
-              :title="isChatMuted() ? $t('messages.unmuteChat') : $t('messages.muteChat')" @click="muteCurrentChat">
-              <i :class="isChatMuted() ? 'fas fa-volume-high' : 'fas fa-volume-xmark'"></i>
-            </button>
+              <div v-if="threadHeadMenuOpen" class="composer-tools-menu thread-head-menu" @click.stop>
+                <button v-for="tool in threadHeadTools" :key="tool.key" type="button" class="composer-tool-item"
+                  @click="threadHeadAction(tool)">
+                  <i class="fas" :class="tool.icon"></i>
+                  <span>{{ tool.label }}</span>
+                </button>
+              </div>
+            </div>
           </header>
 
           <div v-if="loadingMsgs" class="alert alert-info">{{ $t('common.loading') }}</div>
@@ -203,7 +205,7 @@
                 </div>
                 <div v-if="msg.reply_to" class="reply-quote" @click.stop="scrollToMessage(msg)">
                   <span v-if="msg.reply_to.sender_id === me.user_id" class="reply-quote-author">{{ $t('messages.you')
-                    }}</span>
+                  }}</span>
                   <span v-else class="reply-quote-author">{{ msg.reply_to.sender?.full_name ||
                     $t('messages.unknownSender') }}</span>
                   <span class="reply-quote-text">{{ msg.reply_to.body || $t('messages.attachment') }}</span>
@@ -284,7 +286,7 @@
           </div>
 
           <!-- Composer: recording/file previews, reply bar, priority toggle, attachments and emoji -->
-          <form class="chat-composer" @submit.prevent="sendMessage">
+          <form class="chat-composer" @submit.prevent="sendMessage" @click="composerMenuOpen = false">
             <template v-if="recordingPreview">
               <audio controls :src="recordingUrl" class="bubble-audio"></audio>
               <div class="recording-actions">
@@ -327,42 +329,36 @@
             </div>
 
             <template v-else>
-              <button type="button" class="icon-btn emoji-toggle" :title="$t('messages.emoji')"
-                @click="showEmojiPicker = !showEmojiPicker">
-                <i class="fas fa-face-smile"></i>
-              </button>
-              <button type="button" class="icon-btn" :title="$t('messages.attachment')" @click="fileInput?.click()">
-                <i class="fas fa-paperclip"></i>
-              </button>
+              <!-- Composer tools (emoji, attach, mic, poll, schedule, template, priority).
+                   Inline on desktop; collapsed into the left dropdown on mobile. -->
+              <div class="composer-tools">
+                <button v-for="tool in composerTools" :key="tool.key" type="button" class="icon-btn"
+                  :class="{ active: tool.active, recording: tool.key === 'mic' && isRecording }" :title="tool.title"
+                  @click="tool.handler">
+                  <i class="fas" :class="tool.icon"></i>
+                  <span v-if="tool.key === 'mic' && isRecording" class="rec-timer">{{ recSeconds }}s</span>
+                </button>
+              </div>
+
+              <!-- Mobile: dropdown that groups all composer tools (keeps the input wide) -->
+              <div class="composer-tools-mobile">
+                <button type="button" class="icon-btn composer-tools-toggle" :class="{ active: composerMenuOpen }"
+                  :title="$t('messages.moreTools')" @click.stop="composerMenuOpen = !composerMenuOpen">
+                  <i class="fas fa-plus"></i>
+                </button>
+                <div v-if="composerMenuOpen" class="composer-tools-menu" @click.stop>
+                  <button v-for="tool in composerTools" :key="tool.key" type="button" class="composer-tool-item"
+                    :class="{ active: tool.active }" @click="toolAction(tool)">
+                    <i class="fas" :class="tool.icon"></i>
+                    <span>{{ tool.title }}</span>
+                  </button>
+                </div>
+              </div>
+
               <input ref="fileInput" type="file" class="hidden-input" @change="onFilePicked" />
               <textarea ref="draftInput" v-model="draft" rows="1" class="textarea"
                 :placeholder="$t('messages.typeMessage')" @input="onDraftInput"
                 @keydown.enter.exact.prevent="sendMessage"></textarea>
-              <button v-if="isRecording" type="button" class="icon-btn recording" @click="stopRecording">
-                <i class="fas fa-stop"></i>
-                <span class="rec-timer">{{ recSeconds }}s</span>
-              </button>
-              <button v-else type="button" class="icon-btn mic" :title="$t('messages.recordVoice')"
-                @click="startRecording">
-                <i class="fas fa-microphone"></i>
-              </button>
-              <button type="button" class="icon-btn" :class="{ active: showPollBuilder }" :title="$t('messages.poll')"
-                @click="showPollBuilder = !showPollBuilder">
-                <i class="fas fa-square-poll-vertical"></i>
-              </button>
-              <button type="button" class="icon-btn" :class="{ active: showScheduler }"
-                :title="$t('messages.scheduleMessage')" @click="showScheduler = !showScheduler">
-                <i class="fas fa-clock"></i>
-              </button>
-              <button type="button" class="icon-btn" :class="{ active: showTemplatePicker }"
-                :title="$t('messages.templates')" @click="openTemplatePicker">
-                <i class="fas fa-rectangle-list"></i>
-              </button>
-              <button type="button" class="icon-btn" :class="{ active: sendPriority === 'urgent' }"
-                :title="sendPriority === 'urgent' ? $t('messages.priorityNormal') : $t('messages.priorityUrgent')"
-                @click="togglePriority">
-                <i class="fas fa-flag"></i>
-              </button>
               <button type="submit" class="btn btn-primary composer-send"
                 :disabled="sending || (!draft.trim() && !isRecording)">
                 <i class="fas fa-paper-plane"></i>
@@ -564,7 +560,7 @@
 
         <div class="form-group">
           <label>{{ $t('messages.addMembers') }} <span class="muted">({{ $t('messages.selectMembersHint')
-              }})</span></label>
+          }})</span></label>
           <input v-model="groupUserSearch" type="text" class="input"
             :placeholder="groupScope === 'global' ? $t('messages.searchGlobal') : $t('messages.searchColleagues')"
             @input="searchGroupUsers" />
@@ -730,7 +726,8 @@
           <span class="muted call-sub">
             <template v-if="callManager.call.status === 'ringing'">
               {{ callManager.call.direction === 'outgoing' ? $t('messages.calling') : $t('messages.incomingCall', {
-                kind: callManager.call.kind }) }}
+                kind: callManager.call.kind
+              }) }}
             </template>
             <template v-else>{{ callManager.formatElapsed(callManager.elapsed) }}</template>
           </span>
@@ -824,11 +821,13 @@
         </div>
         <div class="side-list">
           <button v-for="m in searchResults" :key="m.message_id" class="side-item" @click="focusResult(m)">
-            <span class="side-item-meta">{{ m.sender?.full_name || $t('messages.you') }} · {{ formatTime(m.created_at) }}</span>
+            <span class="side-item-meta">{{ m.sender?.full_name || $t('messages.you') }} · {{ formatTime(m.created_at)
+              }}</span>
             <span class="side-item-body">{{ m.body || $t('messages.attachment') }}</span>
           </button>
           <div v-if="searchingMessages" class="muted side-empty">{{ $t('common.loading') }}</div>
-          <div v-else-if="searchQuery && !searchResults.length" class="muted side-empty">{{ $t('messages.noResults') }}</div>
+          <div v-else-if="searchQuery && !searchResults.length" class="muted side-empty">{{ $t('messages.noResults') }}
+          </div>
         </div>
       </div>
     </div>
@@ -848,7 +847,8 @@
         <div class="forward-list">
           <button v-for="room in roomLinkResults" :key="room.room_id" class="forward-item" @click="linkRoom(room)">
             <span class="avatar avatar-room"><i class="fas fa-bed"></i></span>
-            <span class="forward-item-name">{{ room.room_number }} <span class="muted">{{ room.room_type || '' }}</span></span>
+            <span class="forward-item-name">{{ room.room_number }} <span class="muted">{{ room.room_type || ''
+                }}</span></span>
             <i class="fas fa-link forward-go"></i>
           </button>
           <div v-if="!roomLinkResults.length" class="muted forward-empty">{{ $t('messages.noRooms') }}</div>
@@ -873,34 +873,43 @@
         </div>
         <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
         <div class="workspace-tabs">
-          <button class="workspace-tab" :class="{ active: workspaceTab === 'announcements' }" @click="workspaceTab = 'announcements'">
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'announcements' }"
+            @click="workspaceTab = 'announcements'">
             <i class="fas fa-bullhorn"></i> {{ $t('messages.announcements') }}
           </button>
-          <button class="workspace-tab" :class="{ active: workspaceTab === 'meetings' }" @click="workspaceTab = 'meetings'">
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'meetings' }"
+            @click="workspaceTab = 'meetings'">
             <i class="fas fa-calendar-days"></i> {{ $t('messages.meetings') }}
           </button>
-          <button class="workspace-tab" :class="{ active: workspaceTab === 'handovers' }" @click="workspaceTab = 'handovers'">
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'handovers' }"
+            @click="workspaceTab = 'handovers'">
             <i class="fas fa-arrows-rotate"></i> {{ $t('messages.handovers') }}
           </button>
           <button class="workspace-tab" :class="{ active: workspaceTab === 'guest' }" @click="workspaceTab = 'guest'">
             <i class="fas fa-envelope"></i> {{ $t('messages.guestSms') }}
           </button>
-          <button class="workspace-tab" :class="{ active: workspaceTab === 'nearby' }" @click="workspaceTab = 'nearby'; loadNearbyStaff()">
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'nearby' }"
+            @click="workspaceTab = 'nearby'; loadNearbyStaff()">
             <i class="fas fa-location-dot"></i> {{ $t('messages.nearbyStaff') }}
           </button>
-          <button class="workspace-tab" :class="{ active: workspaceTab === 'escalations' }" @click="workspaceTab = 'escalations'; loadEscalations()">
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'escalations' }"
+            @click="workspaceTab = 'escalations'; loadEscalations()">
             <i class="fas fa-bell"></i> {{ $t('messages.escalations') }}
           </button>
-          <button class="workspace-tab" :class="{ active: workspaceTab === 'sos' }" @click="workspaceTab = 'sos'; loadSos()">
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'sos' }"
+            @click="workspaceTab = 'sos'; loadSos()">
             <i class="fas fa-shield-heart"></i> {{ $t('messages.sosAlerts') }}
           </button>
-          <button class="workspace-tab" :class="{ active: workspaceTab === 'scheduled' }" @click="workspaceTab = 'scheduled'; loadScheduled()">
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'scheduled' }"
+            @click="workspaceTab = 'scheduled'; loadScheduled()">
             <i class="fas fa-clock"></i> {{ $t('messages.scheduledMessages') }}
           </button>
-          <button class="workspace-tab" :class="{ active: workspaceTab === 'starred' }" @click="workspaceTab = 'starred'; loadStarred()">
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'starred' }"
+            @click="workspaceTab = 'starred'; loadStarred()">
             <i class="fas fa-star"></i> {{ $t('messages.starredMessages') }}
           </button>
-          <button v-if="isAdmin" class="workspace-tab" :class="{ active: workspaceTab === 'retention' }" @click="workspaceTab = 'retention'; loadPolicies()">
+          <button v-if="isAdmin" class="workspace-tab" :class="{ active: workspaceTab === 'retention' }"
+            @click="workspaceTab = 'retention'; loadPolicies()">
             <i class="fas fa-shield"></i> {{ $t('messages.retention') }}
           </button>
         </div>
@@ -908,14 +917,17 @@
         <div class="workspace-body">
           <div v-if="workspaceTab === 'announcements'" class="ws-tab">
             <div class="ws-compose">
-              <input v-model="announcementTitle" type="text" class="input" :placeholder="$t('messages.announcementTitle')" />
-              <textarea v-model="announcementBody" rows="2" class="textarea" :placeholder="$t('messages.announcementBodyPlaceholder')"></textarea>
+              <input v-model="announcementTitle" type="text" class="input"
+                :placeholder="$t('messages.announcementTitle')" />
+              <textarea v-model="announcementBody" rows="2" class="textarea"
+                :placeholder="$t('messages.announcementBodyPlaceholder')"></textarea>
               <div class="ws-compose-actions">
                 <select v-model="announcementPriority" class="input">
                   <option value="normal">{{ $t('messages.priorityNormal') }}</option>
                   <option value="urgent">{{ $t('messages.priorityUrgent') }}</option>
                 </select>
-                <button class="btn btn-primary btn-sm" :disabled="savingFeature || !announcementBody.trim()" @click="postAnnouncement">
+                <button class="btn btn-primary btn-sm" :disabled="savingFeature || !announcementBody.trim()"
+                  @click="postAnnouncement">
                   <i class="fas fa-paper-plane"></i> {{ $t('messages.post') }}
                 </button>
               </div>
@@ -930,10 +942,12 @@
                 <span class="muted">
                   {{ a.acknowledgements_count || 0 }} {{ $t('messages.acknowledged') }}
                 </span>
-                <button v-if="!(a.acknowledgements || []).length" class="btn btn-sm btn-secondary" @click="ackAnnouncement(a.id)">
+                <button v-if="!(a.acknowledgements || []).length" class="btn btn-sm btn-secondary"
+                  @click="ackAnnouncement(a.id)">
                   <i class="fas fa-check"></i> {{ $t('messages.acknowledge') }}
                 </button>
-                <span v-else class="badge badge-green"><i class="fas fa-check"></i> {{ $t('messages.acknowledged') }}</span>
+                <span v-else class="badge badge-green"><i class="fas fa-check"></i> {{ $t('messages.acknowledged')
+                  }}</span>
               </div>
             </div>
             <div v-if="!announcements.length" class="muted side-empty">{{ $t('messages.noAnnouncements') }}</div>
@@ -941,7 +955,8 @@
 
           <div v-if="workspaceTab === 'meetings'" class="ws-tab">
             <div class="ws-compose">
-              <input v-model="meetingTitle" type="text" class="input" :placeholder="$t('messages.meetingTitlePlaceholder')" />
+              <input v-model="meetingTitle" type="text" class="input"
+                :placeholder="$t('messages.meetingTitlePlaceholder')" />
               <input v-model="meetingStart" type="datetime-local" class="input" />
               <input v-model="meetingUserSearch" type="text" class="input" :placeholder="$t('messages.searchInvitees')"
                 @input="searchMeetingUsers" />
@@ -975,10 +990,12 @@
                 </span>
               </div>
               <div v-if="m.my_invitee" class="ws-card-foot">
-                <button class="btn btn-sm btn-primary" :disabled="m.my_invitee.status === 'accepted'" @click="respondMeeting(m, 'accepted')">
+                <button class="btn btn-sm btn-primary" :disabled="m.my_invitee.status === 'accepted'"
+                  @click="respondMeeting(m, 'accepted')">
                   <i class="fas fa-check"></i> {{ $t('messages.accept') }}
                 </button>
-                <button class="btn btn-sm btn-secondary" :disabled="m.my_invitee.status === 'declined'" @click="respondMeeting(m, 'declined')">
+                <button class="btn btn-sm btn-secondary" :disabled="m.my_invitee.status === 'declined'"
+                  @click="respondMeeting(m, 'declined')">
                   <i class="fas fa-xmark"></i> {{ $t('messages.decline') }}
                 </button>
               </div>
@@ -989,8 +1006,10 @@
           <div v-if="workspaceTab === 'handovers'" class="ws-tab">
             <div class="ws-compose">
               <input v-model="handoverTitle" type="text" class="input" :placeholder="$t('messages.handoverTitle')" />
-              <textarea v-model="handoverNotes" rows="2" class="textarea" :placeholder="$t('messages.handoverNotesPlaceholder')"></textarea>
-              <button class="btn btn-primary btn-sm" :disabled="savingFeature || !handoverNotes.trim()" @click="createHandover">
+              <textarea v-model="handoverNotes" rows="2" class="textarea"
+                :placeholder="$t('messages.handoverNotesPlaceholder')"></textarea>
+              <button class="btn btn-primary btn-sm" :disabled="savingFeature || !handoverNotes.trim()"
+                @click="createHandover">
                 <i class="fas fa-arrows-rotate"></i> {{ $t('messages.postHandover') }}
               </button>
             </div>
@@ -1005,7 +1024,8 @@
                 <button v-if="h.status !== 'acknowledged'" class="btn btn-sm btn-secondary" @click="ackHandover(h.id)">
                   <i class="fas fa-check"></i> {{ $t('messages.acknowledge') }}
                 </button>
-                <span v-else class="badge badge-green"><i class="fas fa-check"></i> {{ $t('messages.acknowledged') }}</span>
+                <span v-else class="badge badge-green"><i class="fas fa-check"></i> {{ $t('messages.acknowledged')
+                  }}</span>
               </div>
             </div>
             <div v-if="!handovers.length" class="muted side-empty">{{ $t('messages.noHandovers') }}</div>
@@ -1013,10 +1033,12 @@
 
           <div v-if="workspaceTab === 'guest'" class="ws-tab">
             <div class="ws-compose">
-              <input v-model="guestPhone" type="text" class="input" :placeholder="$t('messages.guestPhonePlaceholder')" />
-              <textarea v-model="guestBody" rows="2" class="textarea" :placeholder="$t('messages.guestBodyPlaceholder')"></textarea>
-              <button class="btn btn-primary btn-sm" :disabled="savingFeature || !guestPhone.trim() || !guestBody.trim()"
-                @click="sendGuestMessage">
+              <input v-model="guestPhone" type="text" class="input"
+                :placeholder="$t('messages.guestPhonePlaceholder')" />
+              <textarea v-model="guestBody" rows="2" class="textarea"
+                :placeholder="$t('messages.guestBodyPlaceholder')"></textarea>
+              <button class="btn btn-primary btn-sm"
+                :disabled="savingFeature || !guestPhone.trim() || !guestBody.trim()" @click="sendGuestMessage">
                 <i class="fas fa-envelope"></i> {{ $t('messages.sendGuestSms') }}
               </button>
             </div>
@@ -1027,7 +1049,8 @@
               </div>
               <p class="ws-card-body">{{ g.body }}</p>
               <div class="ws-card-foot">
-                <span class="badge" :class="g.status === 'delivered' ? 'badge-green' : 'badge-blue'">{{ g.status }}</span>
+                <span class="badge" :class="g.status === 'delivered' ? 'badge-green' : 'badge-blue'">{{ g.status
+                  }}</span>
               </div>
             </div>
             <div v-if="!guestMessages.length" class="muted side-empty">{{ $t('messages.noGuestMessages') }}</div>
@@ -1036,7 +1059,8 @@
           <div v-if="workspaceTab === 'nearby'" class="ws-tab">
             <div class="ws-compose">
               <div class="ws-compose-actions">
-                <input v-model="myLocation" type="text" class="input" :placeholder="$t('messages.myLocationPlaceholder')" />
+                <input v-model="myLocation" type="text" class="input"
+                  :placeholder="$t('messages.myLocationPlaceholder')" />
                 <input v-model="myFloor" type="text" class="input" :placeholder="$t('messages.myFloorPlaceholder')" />
                 <button class="btn btn-primary btn-sm" @click="updateMyLocation">
                   <i class="fas fa-location-dot"></i> {{ $t('messages.updateLocation') }}
@@ -1086,11 +1110,13 @@
                 <span class="muted">{{ formatTime(s.created_at) }}</span>
               </div>
               <div class="ws-card-body">
-                <span v-if="s.message" class="badge badge-blue"><i class="fas fa-location-dot"></i> {{ s.message }}</span>
+                <span v-if="s.message" class="badge badge-blue"><i class="fas fa-location-dot"></i> {{ s.message
+                  }}</span>
               </div>
               <div class="ws-card-foot">
                 <span class="muted">{{ s.ack_count || 0 }} {{ $t('messages.acknowledged') }}</span>
-                <button v-if="s.status === 'active' && !(s.ack_user_ids || []).includes(me.user_id)" class="btn btn-sm btn-secondary" @click="ackSos(s.id)">
+                <button v-if="s.status === 'active' && !(s.ack_user_ids || []).includes(me.user_id)"
+                  class="btn btn-sm btn-secondary" @click="ackSos(s.id)">
                   <i class="fas fa-check"></i> {{ $t('messages.acknowledge') }}
                 </button>
                 <button v-if="s.status === 'active'" class="btn btn-sm btn-danger" @click="resolveSos(s.id)">
@@ -1144,7 +1170,8 @@
                 <span class="muted">{{ p.days }} {{ $t('messages.days') }}</span>
               </div>
               <div class="ws-card-foot">
-                <button class="btn btn-sm btn-danger" @click="deleteRetention(p.id)"><i class="fas fa-trash"></i></button>
+                <button class="btn btn-sm btn-danger" @click="deleteRetention(p.id)"><i
+                    class="fas fa-trash"></i></button>
               </div>
             </div>
             <div v-if="!policies.length" class="muted side-empty">{{ $t('messages.noPolicies') }}</div>
@@ -1296,6 +1323,147 @@ const templates = ref([])
 const templateCategory = ref('')
 const showScheduler = ref(false)
 const scheduleAt = ref('')
+/** Mobile-only dropdown that groups all composer tools. */
+const composerMenuOpen = ref(false)
+
+/** Mobile-only dropdown for the page-head actions (Workspace, Refresh, New Message, New Group). */
+const headMenuOpen = ref(false)
+
+/** Mobile-only dropdown that groups the thread-header actions. */
+const threadHeadMenuOpen = ref(false)
+
+/**
+ * Thread-header actions (call/pinned/search/room-link/export/mute/members)
+ * rendered inline on desktop and inside the mobile dropdown.
+ * @returns {Array<{key: string, icon: string, label: string, handler: Function}>}
+ */
+const threadHeadTools = computed(() => {
+  const tools = [
+    { key: 'search', icon: 'fa-magnifying-glass', label: t('messages.searchInChat'), handler: openSearchPanel },
+    { key: 'pinned', icon: 'fa-thumbtack', label: t('messages.pinnedMessages'), handler: openPinnedPanel },
+    { key: 'linkroom', icon: 'fa-hotel', label: t('messages.linkRoom'), handler: openRoomLinkModal },
+    { key: 'export', icon: 'fa-file-export', label: t('messages.exportChat'), handler: exportHistory },
+    {
+      key: 'mute',
+      icon: isChatMuted() ? 'fa-volume-high' : 'fa-volume-xmark',
+      label: isChatMuted() ? t('messages.unmuteChat') : t('messages.muteChat'),
+      handler: muteCurrentChat,
+    },
+  ]
+  if (activeChat.value?.kind === 'group') {
+    tools.unshift({ key: 'members', icon: 'fa-user-group', label: t('messages.membersManage'), handler: openGroupManage })
+  } else {
+    tools.unshift(
+      {
+        key: 'call',
+        icon: 'fa-phone',
+        label: t('messages.audioCall'),
+        handler: () => callManager.startCall('audio', activeChat.value?.id, activeChat.value?.name),
+      },
+      {
+        key: 'video',
+        icon: 'fa-video',
+        label: t('messages.videoCall'),
+        handler: () => callManager.startCall('video', activeChat.value?.id, activeChat.value?.name),
+      },
+    )
+  }
+  return tools
+})
+
+/**
+ * Runs a thread-header action from the mobile dropdown and closes the menu.
+ * @param {{ handler: Function }} tool - The thread-head tool to run.
+ */
+function threadHeadAction(tool) {
+  tool.handler()
+  threadHeadMenuOpen.value = false
+}
+
+/**
+ * Page-head actions rendered inline on desktop and inside the mobile dropdown.
+ * @returns {Array<{key: string, icon: string, label: string, handler: Function}>}
+ */
+const headActions = computed(() => [
+  { key: 'workspace', icon: 'fa-briefcase', label: t('messages.workspace'), handler: () => openWorkspace() },
+  { key: 'refresh', icon: 'fa-rotate', label: t('common.refresh'), handler: refreshAll },
+  { key: 'newMessage', icon: 'fa-paper-plane', label: t('messages.newMessage'), handler: openNewMessage },
+  { key: 'newGroup', icon: 'fa-users', label: t('messages.newGroup'), handler: openNewGroup },
+])
+
+/**
+ * Runs a page-head action from the mobile dropdown and closes the menu.
+ * @param {{ handler: Function }} action - The head action to run.
+ */
+function headAction(action) {
+  action.handler()
+  headMenuOpen.value = false
+}
+
+/**
+ * Composer tools rendered inline on desktop and inside the mobile dropdown.
+ * @returns {Array<{key: string, icon: string, title: string, active: boolean, handler: Function}>}
+ */
+const composerTools = computed(() => [
+  {
+    key: 'emoji',
+    icon: 'fa-face-smile',
+    title: t('messages.emoji'),
+    active: showEmojiPicker.value,
+    handler: () => { showEmojiPicker.value = !showEmojiPicker.value },
+  },
+  {
+    key: 'attach',
+    icon: 'fa-paperclip',
+    title: t('messages.attachment'),
+    active: false,
+    handler: () => fileInput.value?.click(),
+  },
+  {
+    key: 'mic',
+    icon: isRecording.value ? 'fa-stop' : 'fa-microphone',
+    title: isRecording.value ? t('messages.stopRecording') : t('messages.recordVoice'),
+    active: false,
+    handler: () => (isRecording.value ? stopRecording() : startRecording()),
+  },
+  {
+    key: 'poll',
+    icon: 'fa-square-poll-vertical',
+    title: t('messages.poll'),
+    active: showPollBuilder.value,
+    handler: () => { showPollBuilder.value = !showPollBuilder.value },
+  },
+  {
+    key: 'schedule',
+    icon: 'fa-clock',
+    title: t('messages.scheduleMessage'),
+    active: showScheduler.value,
+    handler: () => { showScheduler.value = !showScheduler.value },
+  },
+  {
+    key: 'template',
+    icon: 'fa-rectangle-list',
+    title: t('messages.templates'),
+    active: showTemplatePicker.value,
+    handler: openTemplatePicker,
+  },
+  {
+    key: 'priority',
+    icon: 'fa-flag',
+    title: sendPriority.value === 'urgent' ? t('messages.priorityNormal') : t('messages.priorityUrgent'),
+    active: sendPriority.value === 'urgent',
+    handler: togglePriority,
+  },
+])
+
+/**
+ * Runs a tool from the mobile dropdown and closes the menu.
+ * @param {{ handler: Function }} tool - The composer tool to run.
+ */
+function toolAction(tool) {
+  tool.handler()
+  composerMenuOpen.value = false
+}
 const showForward = ref(false)
 const forwardMsg = ref(null)
 const forwardSearch = ref('')
@@ -1328,8 +1496,6 @@ const meetingUserSearch = ref('')
 const meetingUserResults = ref([])
 const handoverTitle = ref('')
 const handoverNotes = ref('')
-const handoverFrom = ref('')
-const handoverTo = ref('')
 const announcementTitle = ref('')
 const announcementBody = ref('')
 const announcementPriority = ref('normal')
@@ -1339,7 +1505,6 @@ const retentionDays = ref(30)
 const taskGroupType = ref('housekeeping')
 const isTaskGroupCreation = ref(false)
 const sosAlerts = ref([])
-const showSosPanel = ref(false)
 const activeSos = ref(null)
 const myLocation = ref('')
 const myFloor = ref('')
@@ -1786,7 +1951,7 @@ async function loadPinned() {
   try {
     const res = await featuresApi.pinned({ message_type: activeKind.value, chat_id: activeId.value })
     pinnedMsgs.value = res.data.data || []
-  } catch (e) { }
+  } catch { /* Ignore: non-fatal. */ }
 }
 
 /** Loads the current user's starred messages. @returns {Promise<void>} */
@@ -1794,7 +1959,7 @@ async function loadStarred() {
   try {
     const res = await featuresApi.starred()
     starredMsgs.value = res.data.data || []
-  } catch (e) { }
+  } catch { /* Ignore: non-fatal. */ }
 }
 
 /** Opens the pinned-messages panel, lazy-loading its data. */
@@ -1872,7 +2037,7 @@ async function loadTemplates() {
   try {
     const res = await templateApi.index({ category: templateCategory.value || undefined })
     templates.value = res.data.data || []
-  } catch (e) { }
+  } catch { /* Ignore: non-fatal. */ }
 }
 /** Opens the template picker and loads the template list. */
 function openTemplatePicker() {
@@ -1893,10 +2058,6 @@ function insertTemplate(tpl) {
   requestAnimationFrame(() => draftInput.value?.focus())
 }
 
-/** Opens the message scheduler popover. */
-function openScheduler() {
-  showScheduler.value = true
-}
 /** Closes the message scheduler popover. */
 function closeScheduler() {
   showScheduler.value = false
@@ -1913,7 +2074,6 @@ async function scheduleMessage() {
   }
   savingFeature.value = true
   try {
-    const api = activeKind.value === 'group' ? groupApi : conversationApi
     await scheduledApi.store({
       recipient_type: activeKind.value === 'group' ? 'group' : 'conversation',
       recipient_id: activeId.value,
@@ -1936,7 +2096,7 @@ async function loadScheduled() {
   try {
     const res = await scheduledApi.index()
     scheduledList.value = res.data.data || []
-  } catch (e) { }
+  } catch { /* Ignore: non-fatal. */ }
 }
 /**
  * Cancels a scheduled message and removes it from the local list.
@@ -1979,7 +2139,7 @@ async function searchForwardTargets() {
       ...(c.data.data || []).map((x) => ({ kind: 'conversation', id: x.conversation_id, name: x.participant_name || t('messages.directChat') })),
       ...(g.data.data || []).map((x) => ({ kind: 'group', id: x.group_conversation_id, name: x.name })),
     ]
-  } catch (e) { }
+  } catch { /* Ignore: non-fatal. */ }
 }
 /**
  * Forwards the held message to the chosen target chat.
@@ -2076,7 +2236,16 @@ async function searchRooms() {
   try {
     const res = await roomLinkApi.searchRooms(roomLinkSearch.value)
     roomLinkResults.value = res.data.data || res.data || []
-  } catch (e) { }
+  } catch { /* Ignore: non-fatal. */ }
+}
+/**
+ * Maps the internal chat kind (direct|group) to the backend room-link API
+ * values (conversation|group).
+ * @param {string} kind - Internal chat kind.
+ * @returns {string} Backend chat type accepted by the room-link endpoints.
+ */
+function roomLinkChatType(kind) {
+  return kind === 'group' ? 'group' : 'conversation'
 }
 /**
  * Links a room to the active chat (used for service-request context).
@@ -2086,7 +2255,7 @@ async function searchRooms() {
 async function linkRoom(room) {
   try {
     const res = await roomLinkApi.store({
-      chat_type: activeKind.value,
+      chat_type: roomLinkChatType(activeKind.value),
       chat_id: activeId.value,
       room_id: room.room_id,
     })
@@ -2114,9 +2283,9 @@ async function unlinkRoom(id) {
 /** Loads the rooms linked to the active chat. @returns {Promise<void>} */
 async function loadRoomLinks() {
   try {
-    const res = await roomLinkApi.index({ chat_type: activeKind.value, chat_id: activeId.value })
+    const res = await roomLinkApi.index({ chat_type: roomLinkChatType(activeKind.value), chat_id: activeId.value })
     roomLinks.value = res.data.data || []
-  } catch (e) { }
+  } catch { /* Ignore: non-fatal. */ }
 }
 
 /**
@@ -2128,7 +2297,7 @@ async function convertToTask(msg) {
   closeMsgMenu()
   if (!confirm(t('messages.confirmConvertTask'))) return
   try {
-    const res = await taskGroupApi.convert(activeId.value, msgId(msg), { task_type: taskGroupType.value })
+    await taskGroupApi.convert(activeId.value, msgId(msg), { task_type: taskGroupType.value })
     toast(t('messages.taskConverted'))
   } catch (err) {
     modalError.value = flattenError(err)
@@ -2166,7 +2335,7 @@ async function loadAnnouncements() {
   try {
     const res = await announcementApi.index()
     announcements.value = res.data.data || []
-  } catch (e) { }
+  } catch { /* Ignore: non-fatal. */ }
 }
 /** Posts a new announcement (body required), then reloads the list. @returns {Promise<void>} */
 async function postAnnouncement() {
@@ -2206,7 +2375,7 @@ async function loadMeetings() {
   try {
     const res = await meetingApi.index()
     meetings.value = res.data.data || []
-  } catch (e) { }
+  } catch { /* Ignore: non-fatal. */ }
 }
 /** Searches inviteable users for the meeting form (clears results on empty query). @returns {Promise<void>} */
 async function searchMeetingUsers() {
@@ -2217,7 +2386,7 @@ async function searchMeetingUsers() {
   try {
     const res = await meetingApi.searchUsers(meetingUserSearch.value)
     meetingUserResults.value = res.data.data || res.data || []
-  } catch (e) { }
+  } catch { /* Ignore: non-fatal. */ }
 }
 /**
  * Toggles a user in/out of the meeting invitee selection.
@@ -2271,7 +2440,7 @@ async function loadHandovers() {
   try {
     const res = await handoverApi.index()
     handovers.value = res.data.data || []
-  } catch (e) { }
+  } catch { /* Ignore: non-fatal. */ }
 }
 /** Posts a shift handover note (notes required), then reloads the list. @returns {Promise<void>} */
 async function createHandover() {
@@ -2310,7 +2479,7 @@ async function loadNearbyStaff() {
   try {
     const res = await staffLocationApi.nearby()
     nearbyStaff.value = res.data.data || res.data || []
-  } catch (e) { }
+  } catch { /* Ignore: non-fatal. */ }
 }
 /** Publishes my current zone/floor so colleagues can find me. @returns {Promise<void>} */
 async function updateMyLocation() {
@@ -2326,7 +2495,7 @@ async function loadGuestMessages() {
   try {
     const res = await guestMessageApi.index()
     guestMessages.value = res.data.data || []
-  } catch (e) { }
+  } catch { /* Ignore: non-fatal. */ }
 }
 /** Sends an SMS to a guest phone number (phone + body required). @returns {Promise<void>} */
 async function sendGuestMessage() {
@@ -2348,7 +2517,7 @@ async function loadEscalations() {
   try {
     const res = await escalationApi.index()
     escalations.value = res.data.data || []
-  } catch (e) { }
+  } catch { /* Ignore: non-fatal. */ }
 }
 /**
  * Escalates a message to management.
@@ -2385,7 +2554,7 @@ async function loadPolicies() {
   try {
     const res = await retentionApi.index()
     policies.value = res.data.data || []
-  } catch (e) { }
+  } catch { /* Ignore: non-fatal. */ }
 }
 /** Saves the global retention window (in days), then reloads policies. @returns {Promise<void>} */
 async function saveRetention() {
@@ -2418,27 +2587,10 @@ async function loadPreferences() {
   try {
     const res = await preferenceApi.index()
     preferences.value = res.data.data || []
-  } catch (e) { }
+  } catch { /* Ignore: non-fatal. */ }
 }
 /**
- * Persists notification preferences for the active chat.
- * @param {Object} pref - Preference flags ({ muted, push_enabled }).
- * @returns {Promise<void>}
- */
-async function savePreference(pref) {
-  try {
-    await preferenceApi.store({
-      scope: activeKind.value === 'group' ? 'group' : 'conversation',
-      target_id: activeId.value,
-      muted: pref.muted,
-      push_enabled: pref.push_enabled,
-    })
-    toast(t('messages.preferenceSaved'))
-  } catch (err) {
-    modalError.value = flattenError(err)
-  }
-}
-/** Toggles the muted flag of the active chat and toasts the outcome. @returns {Promise<void>} */
+ * Toggles the muted flag of the active chat and toasts the outcome. @returns {Promise<void>} */
 async function muteCurrentChat() {
   const pref = preferences.value.find(
     (p) => p.message_type === activeKind.value && p.chat_id === activeId.value,
@@ -2469,15 +2621,11 @@ async function loadSos() {
   try {
     const res = await sosApi.index()
     sosAlerts.value = res.data.data || []
-  } catch (e) { }
+  } catch { /* Ignore: non-fatal. */ }
 }
 /** Opens the workspace panel directly on the SOS tab. */
 function openSosPanel() {
   openWorkspace('sos')
-}
-/** Closes the SOS panel (i.e. the whole workspace panel). */
-function closeSosPanel() {
-  showWorkspace.value = false
 }
 /** Triggers an SOS alert with my location after a confirmation prompt. @returns {Promise<void>} */
 async function initiateSos() {
@@ -2746,6 +2894,8 @@ async function openChat(chat) {
   cancelRecording()
   cancelFilePreview()
   showEmojiPicker.value = false
+  composerMenuOpen.value = false
+  threadHeadMenuOpen.value = false
   mentionSuggestions.value = []
   mentionTriggerPos = -1
   viewOncePreview.value = null
@@ -2792,6 +2942,8 @@ function closeThread() {
   mentionSuggestions.value = []
   mentionTriggerPos = -1
   viewOncePreview.value = null
+  composerMenuOpen.value = false
+  threadHeadMenuOpen.value = false
 }
 
 /** Marks the active thread read in the background and mirrors the read state locally (ticks/unread badge). */
@@ -3527,10 +3679,10 @@ async function createGroup() {
     const res = isTaskGroupCreation.value
       ? await taskGroupApi.store({ name, task_type: taskGroupType.value, member_ids: selectedGroupUsers.value })
       : await groupApi.store({
-          name,
-          scope: groupScope.value,
-          member_ids: selectedGroupUsers.value,
-        })
+        name,
+        scope: groupScope.value,
+        member_ids: selectedGroupUsers.value,
+      })
     success.value = t('messages.groupCreated')
     const group = res.data.group
     showNewGroup.value = false
@@ -3666,9 +3818,27 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 
+/* Mobile dropdown replacing the header action buttons. */
+.head-actions-mobile {
+  display: none;
+  position: relative;
+  align-items: center;
+}
+
+.head-actions-toggle {
+  flex-shrink: 0;
+}
+
+.composer-tools-menu.head-actions-menu {
+  left: auto;
+  right: 0;
+  top: calc(100% + 8px);
+  bottom: auto;
+}
+
 .chat-shell {
   display: grid;
-  grid-template-columns: 340px 1fr;
+  grid-template-columns: 340px minmax(0, 1fr);
   gap: 16px;
   align-items: stretch;
   background: #fff;
@@ -3678,12 +3848,19 @@ onUnmounted(() => {
   min-height: 620px;
 }
 
+/* Direct grid children must be allowed to shrink below their content width,
+   otherwise a long message or wide media forces the shell to overflow. */
+.chat-shell>* {
+  min-width: 0;
+}
+
 .chat-list {
   border-right: 1px solid #eee;
   display: flex;
   flex-direction: column;
   max-height: 700px;
   overflow-y: auto;
+  overflow-x: hidden;
   background: #fbfcfe;
 }
 
@@ -3849,6 +4026,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   min-height: 620px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .chat-thread-head {
@@ -3857,6 +4036,28 @@ onUnmounted(() => {
   gap: 10px;
   padding: 12px 16px;
   border-bottom: 1px solid #eee;
+}
+
+/* Desktop: thread actions render inline in the header (the wrapper has no box). */
+.thread-head-actions {
+  display: contents;
+}
+
+.thread-head-actions-mobile {
+  display: none;
+  position: relative;
+  align-items: center;
+}
+
+.thread-head-toggle {
+  flex-shrink: 0;
+}
+
+.composer-tools-menu.thread-head-menu {
+  left: auto;
+  right: 0;
+  top: calc(100% + 4px);
+  bottom: auto;
 }
 
 .chat-thread-who {
@@ -3882,11 +4083,14 @@ onUnmounted(() => {
 .chat-messages {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   background: #f7f9fc;
+  min-width: 0;
+  min-height: 0;
 }
 
 .chat-empty {
@@ -4310,6 +4514,7 @@ onUnmounted(() => {
 
 .chat-composer {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   padding: 12px;
   border-top: 1px solid #eee;
@@ -4317,11 +4522,79 @@ onUnmounted(() => {
   position: relative;
 }
 
+/* In-flow popovers (reply bar, poll/schedule/template builders, static mention
+   list) wrap onto their own full-width row below the composer controls. */
+.chat-composer>.reply-bar,
+.chat-composer>.poll-builder,
+.chat-composer>.schedule-bar,
+.chat-composer>.template-picker,
+.chat-composer>.mention-picker.static {
+  flex: 1 1 100%;
+}
+
 .chat-composer .textarea {
   flex: 1;
   resize: none;
   min-height: 42px;
   max-height: 120px;
+}
+
+/* Desktop: composer tools render inline in the row (the wrapper itself has no box). */
+.composer-tools {
+  display: contents;
+}
+
+.composer-tools-mobile {
+  display: none;
+}
+
+.composer-tools-toggle {
+  flex-shrink: 0;
+}
+
+.composer-tools-menu {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  min-width: 190px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 30;
+}
+
+.composer-tool-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  color: #333;
+  text-align: left;
+  cursor: pointer;
+}
+
+.composer-tool-item:hover {
+  background: #f3f4f6;
+}
+
+.composer-tool-item.active {
+  color: var(--brand);
+  background: #eaf4ff;
+}
+
+.composer-tool-item i {
+  width: 18px;
+  text-align: center;
 }
 
 .icon-btn {
@@ -4631,22 +4904,68 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .dashboard-page {
-    padding: 20px 16px;
+    padding: 12px 10px 10px;
+    height: calc(100vh - 67px);
+    height: calc(100dvh - 67px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   .page-head {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  /* Mobile: header actions move into the dropdown. */
+  .head-actions {
+    display: none;
+  }
+
+  .head-actions-mobile {
+    display: flex;
+  }
+
+  /* Mobile: thread-header actions collapse into the dropdown. */
+  .thread-head-actions {
+    display: none;
+  }
+
+  .thread-head-actions-mobile {
+    display: flex;
   }
 
   .chat-shell {
     grid-template-columns: 1fr;
+    grid-auto-rows: minmax(0, 1fr);
     min-height: 0;
+    height: auto;
+    flex: 1 1 0;
   }
 
   .chat-list {
     border-right: none;
     max-height: none;
+    min-height: 0;
+  }
+
+  .chat-thread {
+    min-height: 0;
+    height: 100%;
+  }
+
+  .chat-thread-head {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .chat-thread-head .members-btn {
+    width: 34px;
+    height: 34px;
+    padding: 0;
   }
 
   .chat-list.hidden-xs,
@@ -4671,6 +4990,21 @@ onUnmounted(() => {
   .chat-composer .textarea {
     min-height: 38px;
     font-size: 15px;
+  }
+
+  /* Mobile: collapse the composer tools into the left dropdown so the input widens. */
+  .composer-tools {
+    display: none;
+  }
+
+  .composer-tools-mobile {
+    display: flex;
+    position: relative;
+    align-items: center;
+  }
+
+  .chat-composer .textarea {
+    min-width: 0;
   }
 
   .chat-composer .composer-send {
@@ -4703,6 +5037,57 @@ onUnmounted(() => {
   .chat-composer .composer-send {
     width: 38px;
     height: 38px;
+  }
+}
+
+/* Very narrow phones (320-360px): compact the headers so the pinned
+   composer stays on screen. */
+@media (max-width: 360px) {
+  .page-head {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .page-head h1 {
+    font-size: 18px;
+    gap: 6px;
+  }
+
+  .page-head>div:first-child p.muted {
+    display: none;
+  }
+
+  .chat-thread-head {
+    gap: 4px;
+    padding: 6px 8px;
+  }
+
+  .chat-thread-head .members-btn {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+  }
+
+  .chat-thread-who .muted {
+    display: none;
+  }
+
+  .chat-thread-who strong {
+    font-size: 13px;
+  }
+
+  .chat-composer {
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .chat-composer .textarea {
+    font-size: 13px;
+    padding: 8px;
+  }
+
+  .chat-messages {
+    padding: 8px 8px 4px;
   }
 }
 
@@ -5293,13 +5678,22 @@ onUnmounted(() => {
   animation: sos-pulse 1.4s infinite;
 }
 
+/* On mobile the composer is pinned at the bottom, so the SOS floats above it */
+@media (max-width: 768px) {
+  .sos-floating {
+    bottom: 96px;
+  }
+}
+
 @keyframes sos-pulse {
   0% {
     box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.5);
   }
+
   70% {
     box-shadow: 0 0 0 16px rgba(225, 29, 72, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(225, 29, 72, 0);
   }

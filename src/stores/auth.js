@@ -1,9 +1,10 @@
 /**
  * Auth store: session token, current user, permissions and access checks.
  *
- * Only the token is persisted across reloads (see the `persist` option at the
- * bottom); the user profile and permissions are re-fetched from /auth/me by
- * the router guard whenever a protected page needs them.
+ * The token lives in sessionStorage: a refresh keeps the session (the router
+ * guard re-fetches the user profile and permissions from /auth/me), while
+ * closing the tab ends it. Credentials left behind in localStorage by older
+ * builds are cleared once when the store is created.
  */
 
 import { defineStore } from 'pinia'
@@ -29,8 +30,13 @@ const ROLE_LEVELS = {
 export const useAuthStore = defineStore('auth', () => {
   // Currently signed-in user object (or null when logged out).
   const user = ref(null)
-  // API token, hydrated from localStorage so a refresh keeps the session.
-  const token = ref(localStorage.getItem('auth_token') || null)
+  // API token, hydrated from sessionStorage so a refresh keeps the session
+  // while a closed tab ends it.
+  const token = ref(sessionStorage.getItem('auth_token') || null)
+  // One-time cleanup of credentials stored in localStorage by older builds
+  // (the raw token plus the pinia-plugin-persistedstate snapshot).
+  localStorage.removeItem('auth_token')
+  localStorage.removeItem('auth')
   // Flat list of backend permissions granted to the user.
   const permissions = ref([])
   // True while a login/profile fetch is in flight.
@@ -58,7 +64,7 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = payload.user
     mustChangePassword.value = payload.must_change_password || false
     permissions.value = payload.permissions || user.value?.permissions || []
-    localStorage.setItem('auth_token', payload.token)
+    sessionStorage.setItem('auth_token', payload.token)
   }
 
   /**
@@ -103,17 +109,21 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * Ends the session server-side and wipes all local auth state.
+   * The API call is best-effort: an expired/revoked token (401) or a network
+   * failure must not block the client-side logout.
    * @returns {Promise<void>}
    */
   async function logout() {
     try {
       await authApi.logout()
+    } catch {
+      // Server session already gone (401) or unreachable — ignore, logout locally.
     } finally {
       token.value = null
       user.value = null
       permissions.value = []
       mustChangePassword.value = false
-      localStorage.removeItem('auth_token')
+      sessionStorage.removeItem('auth_token')
       // Drop the owner's selected hotel on logout as well.
       sessionStorage.removeItem('owner_viewing_hotel')
       sessionStorage.removeItem('owner_viewing_hotel_name')
@@ -139,7 +149,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = null
       permissions.value = []
       mustChangePassword.value = false
-      localStorage.removeItem('auth_token')
+      sessionStorage.removeItem('auth_token')
       throw new Error('Failed to load profile')
     } finally {
       loading.value = false
@@ -212,9 +222,4 @@ export const useAuthStore = defineStore('auth', () => {
     canAccess,
     hasPermission,
   }
-}, {
-  // Only the token survives a reload; user/permissions are re-fetched via /me.
-  persist: {
-    pick: ['token'],
-  },
 })

@@ -270,7 +270,7 @@ onMounted(load)
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
   margin-bottom: 32px;
 }
@@ -283,6 +283,11 @@ onMounted(load)
   display: flex;
   align-items: center;
   gap: 16px;
+  min-width: 0;
+}
+
+.stat-card > div:last-child {
+  min-width: 0;
 }
 
 .stat-icon {
@@ -407,6 +412,7 @@ onMounted(load)
   font-size: 22px;
   font-weight: 700;
   color: #333;
+  overflow-wrap: anywhere;
 }
 
 .stat-label {
@@ -416,7 +422,7 @@ onMounted(load)
 
 .dash-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
 }
 
@@ -513,11 +519,27 @@ onMounted(load)
   }
 
   .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .dash-grid {
     grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+
+  .stat-value {
+    font-size: 18px;
   }
 }
 </style>
