@@ -16,6 +16,14 @@ const i18n = createI18n({
   locale: localStorage.getItem('locale') || 'en',
   fallbackLocale: 'en',
   messages: { en, sw },
+  datetimeFormats: {
+    en: {
+      long: { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' },
+    },
+    sw: {
+      long: { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' },
+    },
+  },
 })
 
 export default i18n

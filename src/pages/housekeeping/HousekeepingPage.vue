@@ -17,10 +17,13 @@
         <p class="muted">{{ $t('housekeeping.subtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="load"><i class="fas fa-rotate"></i> {{ $t('housekeeping.refresh')
-        }}</button>
-        <button v-if="canManage" class="btn btn-primary" @click="openCreate"><i class="fas fa-plus"></i> {{
-          $t('housekeeping.newTask') }}</button>
+        <button class="btn btn-secondary" @click="load">
+          <i class="fas fa-rotate"></i> {{ $t('housekeeping.refresh') }}
+        </button>
+        <button v-if="canManage" class="btn btn-primary" @click="openCreate">
+          <i class="fas fa-plus"></i> {{ $t('housekeeping.newTask') }}
+        </button>
+        <TableExportButton filename="housekeeping" :load-all="loadAllTasks" />
       </div>
     </div>
 
@@ -33,27 +36,44 @@
       <div class="filter-grid">
         <div class="form-group">
           <label>{{ $t('housekeeping.status') }}</label>
-          <SearchableSelect v-model="filters.status" :options="statusOptions" :empty-label="$t('common.all')"
-            @change="load" />
+          <SearchableSelect
+            v-model="filters.status"
+            :options="statusOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('housekeeping.houseStatus') }}</label>
-          <SearchableSelect v-model="filters.house_status" :options="houseStatusOptions" :empty-label="$t('common.all')"
-            @change="load" />
+          <SearchableSelect
+            v-model="filters.house_status"
+            :options="houseStatusOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('housekeeping.roomStatus') }}</label>
-          <SearchableSelect v-model="filters.room_status" :options="roomStatusOptions" :empty-label="$t('common.all')"
-            @change="load" />
+          <SearchableSelect
+            v-model="filters.room_status"
+            :options="roomStatusOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('housekeeping.room') }}</label>
-          <SearchableSelect v-model="filters.room_id" :options="roomFilterOptions"
-            :empty-label="$t('housekeeping.allRooms')" @change="load" />
+          <SearchableSelect
+            v-model="filters.room_id"
+            :options="roomFilterOptions"
+            :empty-label="$t('housekeeping.allRooms')"
+            @change="load"
+          />
         </div>
         <div class="filter-actions">
-          <button class="btn btn-secondary btn-sm" @click="clearFilters"><i class="fas fa-filter-circle-xmark"></i> {{
-            $t('common.clear') }}</button>
+          <button class="btn btn-secondary btn-sm" @click="clearFilters">
+            <i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}
+          </button>
         </div>
       </div>
     </div>
@@ -66,15 +86,17 @@
       <table class="table">
         <thead>
           <tr>
-            <th>{{ $t('housekeeping.room') }}</th>
-            <th>{{ $t('housekeeping.pax') }}</th>
-            <th>{{ $t('housekeeping.houseStatus') }}</th>
-            <th>{{ $t('housekeeping.assignedTo') }}</th>
-            <th>{{ $t('housekeeping.roomStatus') }}</th>
-            <th>{{ $t('housekeeping.arrival') }}</th>
-            <th>{{ $t('housekeeping.departure') }} · {{ $t('housekeeping.nights') }}</th>
-            <th>{{ $t('housekeeping.status') }}</th>
-            <th>{{ $t('common.actions') }}</th>
+            <th scope="col">{{ $t('housekeeping.room') }}</th>
+            <th scope="col">{{ $t('housekeeping.pax') }}</th>
+            <th scope="col">{{ $t('housekeeping.houseStatus') }}</th>
+            <th scope="col">{{ $t('housekeeping.assignedTo') }}</th>
+            <th scope="col">{{ $t('housekeeping.roomStatus') }}</th>
+            <th scope="col">{{ $t('housekeeping.arrival') }}</th>
+            <th scope="col">
+              {{ $t('housekeeping.departure') }} · {{ $t('housekeeping.nights') }}
+            </th>
+            <th scope="col">{{ $t('housekeeping.status') }}</th>
+            <th scope="col">{{ $t('common.actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -87,41 +109,73 @@
             <td v-else>-</td>
             <td>{{ task.pax }}</td>
             <td>
-              <span class="badge" :class="task.house_status === 'dirty' ? 'badge-red' : 'badge-green'">
-                {{ task.house_status === 'dirty' ? $t('housekeeping.houseDirty') : $t('housekeeping.houseClean') }}
+              <span
+                class="badge"
+                :class="task.house_status === 'dirty' ? 'badge-red' : 'badge-green'"
+              >
+                {{
+                  task.house_status === 'dirty'
+                    ? $t('housekeeping.houseDirty')
+                    : $t('housekeeping.houseClean')
+                }}
               </span>
             </td>
             <td>{{ task.assigned_user?.full_name || $t('housekeeping.unassigned') }}</td>
             <td class="capitalize">{{ roomStatusLabel(task.room_status) }}</td>
             <td>{{ formatArrival(task.arrival_at) }}</td>
             <td>{{ formatDeparture(task.departure_at) }} · {{ task.nights }}</td>
-            <td><span class="badge" :class="statusBadge(task.status)">{{ statusLabel(task.status) }}</span></td>
+            <td>
+              <span class="badge" :class="statusBadge(task.status)">{{
+                statusLabel(task.status)
+              }}</span>
+            </td>
             <td>
               <div class="actions">
-                <button v-if="canManage && task.status === 'dirty'" class="btn btn-sm btn-secondary"
-                  @click="openAssign(task)">
+                <button
+                  v-if="canManage && task.status === 'dirty'"
+                  class="btn btn-sm btn-secondary"
+                  @click="openAssign(task)"
+                >
                   <i class="fas fa-user-plus"></i> {{ $t('housekeeping.assign') }}
                 </button>
-                <button v-if="task.status === 'dirty'" class="btn btn-sm btn-primary" @click="start(task)">
+                <button
+                  v-if="task.status === 'dirty'"
+                  class="btn btn-sm btn-primary"
+                  @click="start(task)"
+                >
                   <i class="fas fa-play"></i> {{ $t('housekeeping.start') }}
                 </button>
-                <button v-if="task.status === 'in_progress' && canConfirm" class="btn btn-sm btn-secondary"
-                  @click="confirm(task)">
+                <button
+                  v-if="task.status === 'in_progress' && canConfirm"
+                  class="btn btn-sm btn-secondary"
+                  @click="confirm(task)"
+                >
                   <i class="fas fa-check-double"></i> {{ $t('housekeeping.confirm') }}
                 </button>
-                <button v-if="task.status === 'confirmed' && canVerify" class="btn btn-sm btn-secondary"
-                  @click="verify(task)">
+                <button
+                  v-if="task.status === 'confirmed' && canVerify"
+                  class="btn btn-sm btn-secondary"
+                  @click="verify(task)"
+                >
                   <i class="fas fa-clipboard-check"></i> {{ $t('housekeeping.verify') }}
                 </button>
-                <button v-if="task.status === 'verified'" class="btn btn-sm btn-success" @click="complete(task)">
+                <button
+                  v-if="task.status === 'verified'"
+                  class="btn btn-sm btn-success"
+                  @click="complete(task)"
+                >
                   <i class="fas fa-check"></i> {{ $t('housekeeping.complete') }}
                 </button>
-                <button v-if="canManage && ['dirty', 'in_progress', 'confirmed'].includes(task.status)"
-                  class="btn btn-sm btn-secondary" @click="openEdit(task)">
+                <button
+                  v-if="canManage && ['dirty', 'in_progress', 'confirmed'].includes(task.status)"
+                  class="btn btn-sm btn-secondary"
+                  @click="openEdit(task)"
+                >
                   <i class="fas fa-pen"></i>
                 </button>
-                <button v-if="canManage" class="btn btn-sm btn-danger" @click="remove(task)"><i
-                    class="fas fa-trash"></i></button>
+                <button v-if="canManage" class="btn btn-sm btn-danger" @click="remove(task)">
+                  <i class="fas fa-trash"></i>
+                </button>
               </div>
             </td>
           </tr>
@@ -134,18 +188,33 @@
 
     <!-- Pagination controls (shown when there is more than one page of tasks) -->
     <div v-if="meta.total > meta.per_page" class="pagination">
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
-        $t('common.previous') }}</button>
-      <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.next_page_url" @click="goPage(meta.current_page + 1)">{{
-        $t('common.next') }}</button>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.prev_page_url"
+        @click="goPage(meta.current_page - 1)"
+      >
+        {{ $t('common.previous') }}
+      </button>
+      <span class="muted">{{
+        $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page })
+      }}</span>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.next_page_url"
+        @click="goPage(meta.current_page + 1)"
+      >
+        {{ $t('common.next') }}
+      </button>
     </div>
 
     <!-- Create/edit task modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal">
         <div class="modal-head">
-          <h2><i class="fas fa-broom"></i> {{ editing ? $t('housekeeping.editTask') : $t('housekeeping.newTask') }}</h2>
+          <h2>
+            <i class="fas fa-broom"></i>
+            {{ editing ? $t('housekeeping.editTask') : $t('housekeeping.newTask') }}
+          </h2>
           <button class="modal-close" @click="closeModal"><i class="fas fa-xmark"></i></button>
         </div>
 
@@ -155,8 +224,12 @@
           <div class="form-grid">
             <div class="form-group">
               <label>{{ $t('housekeeping.room') }} *</label>
-              <SearchableSelect v-model="form.room_id" :options="roomOptions"
-                :empty-label="$t('housekeeping.selectRoom')" required />
+              <SearchableSelect
+                v-model="form.room_id"
+                :options="roomOptions"
+                :empty-label="$t('housekeeping.selectRoom')"
+                required
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('housekeeping.pax') }} *</label>
@@ -164,7 +237,11 @@
             </div>
             <div class="form-group">
               <label>{{ $t('housekeeping.houseStatus') }} *</label>
-              <SearchableSelect v-model="form.house_status" :options="houseStatusOptions" required />
+              <SearchableSelect
+                v-model="form.house_status"
+                :options="houseStatusOptions"
+                required
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('housekeeping.roomStatus') }} *</label>
@@ -184,8 +261,11 @@
             </div>
             <div class="form-group">
               <label>{{ $t('housekeeping.assignTo') }}</label>
-              <SearchableSelect v-model="form.assigned_to" :options="userOptions"
-                :empty-label="$t('housekeeping.unassigned')" />
+              <SearchableSelect
+                v-model="form.assigned_to"
+                :options="userOptions"
+                :empty-label="$t('housekeeping.unassigned')"
+              />
             </div>
             <div class="form-group form-full">
               <label>{{ $t('housekeeping.remarks') }}</label>
@@ -197,9 +277,12 @@
             </div>
           </div>
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="closeModal">{{ $t('common.cancel') }}</button>
+            <button type="button" class="btn btn-secondary" @click="closeModal">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="saving">
-              <i class="fas fa-check"></i> {{ saving ? $t('common.saving') : $t('housekeeping.saveTask') }}
+              <i class="fas fa-check"></i>
+              {{ saving ? $t('common.saving') : $t('housekeeping.saveTask') }}
             </button>
           </div>
         </form>
@@ -211,20 +294,28 @@
       <div class="modal modal-sm">
         <div class="modal-head">
           <h2><i class="fas fa-user-plus"></i> {{ $t('housekeeping.assignTo') }}</h2>
-          <button class="modal-close" @click="showAssign = false"><i class="fas fa-xmark"></i></button>
+          <button class="modal-close" @click="showAssign = false">
+            <i class="fas fa-xmark"></i>
+          </button>
         </div>
         <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
         <form @submit.prevent="assignTask">
           <div class="form-group">
             <label>{{ $t('housekeeping.assignTo') }} *</label>
-            <SearchableSelect v-model="assignUserId" :options="userOptions" :empty-label="$t('housekeeping.selectRoom')"
-              required />
+            <SearchableSelect
+              v-model="assignUserId"
+              :options="userOptions"
+              :empty-label="$t('housekeeping.selectRoom')"
+              required
+            />
           </div>
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="showAssign = false">{{ $t('common.cancel')
-            }}</button>
+            <button type="button" class="btn btn-secondary" @click="showAssign = false">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="saving">
-              <i class="fas fa-check"></i> {{ saving ? $t('common.saving') : $t('housekeeping.assign') }}
+              <i class="fas fa-check"></i>
+              {{ saving ? $t('common.saving') : $t('housekeeping.assign') }}
             </button>
           </div>
         </form>
@@ -238,7 +329,9 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { housekeepingApi, roomApi, userApi } from '@/api'
+import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import TableExportButton from '@/components/TableExportButton.vue'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -252,7 +345,14 @@ const tasks = ref([])
 const rooms = ref([])
 const users = ref([])
 const page = ref(1)
-const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
+const meta = ref({
+  total: 0,
+  per_page: 15,
+  current_page: 1,
+  last_page: 1,
+  prev_page_url: null,
+  next_page_url: null,
+})
 const filters = reactive({ status: '', house_status: '', room_status: '', room_id: '' })
 const loading = ref(false)
 const error = ref('')
@@ -304,40 +404,64 @@ const roomStatusOptions = [
   { value: 'vacant', label: t('housekeeping.roomStatusVacant') },
 ]
 
-const roomFilterOptions = computed(() => rooms.value.map((r) => ({ value: r.room_id, label: r.room_number })))
-
-const roomOptions = computed(() =>
-  rooms.value.map((r) => ({ value: r.room_id, label: `${t('housekeeping.room')} ${r.room_number} · ${r.status}` })),
+const roomFilterOptions = computed(() =>
+  rooms.value.map((room) => ({ value: room.room_id, label: room.room_number })),
 )
 
-const userOptions = computed(() => users.value.map((u) => ({ value: u.user_id, label: u.full_name })))
+const roomOptions = computed(() =>
+  rooms.value.map((room) => ({
+    value: room.room_id,
+    label: `${t('housekeeping.room')} ${room.room_number} · ${room.status}`,
+  })),
+)
+
+const userOptions = computed(() =>
+  users.value.map((user) => ({ value: user.user_id, label: user.full_name })),
+)
 
 /** Maps a task status key to its translated display label. */
-function statusLabel(s) {
-  const map = { dirty: t('housekeeping.statusDirty'), in_progress: t('housekeeping.statusInProgress'), confirmed: t('housekeeping.statusConfirmed'), verified: t('housekeeping.statusVerified'), completed: t('housekeeping.statusCompleted') }
-  return map[s] || s
+function statusLabel(status) {
+  const map = {
+    dirty: t('housekeeping.statusDirty'),
+    in_progress: t('housekeeping.statusInProgress'),
+    confirmed: t('housekeeping.statusConfirmed'),
+    verified: t('housekeeping.statusVerified'),
+    completed: t('housekeeping.statusCompleted'),
+  }
+  return map[status] || status
 }
 
 /** Returns the CSS badge class appropriate for the given task status. */
-function statusBadge(s) {
-  const map = { dirty: 'badge-red', in_progress: 'badge-blue', confirmed: 'badge-yellow', verified: 'badge-blue', completed: 'badge-green' }
-  return map[s] || 'badge-gray'
+function statusBadge(status) {
+  const map = {
+    dirty: 'badge-red',
+    in_progress: 'badge-blue',
+    confirmed: 'badge-yellow',
+    verified: 'badge-blue',
+    completed: 'badge-green',
+  }
+  return map[status] || 'badge-gray'
 }
 
 /** Maps a room-status key to its translated display label. */
-function roomStatusLabel(s) {
-  const map = { checked_out: t('housekeeping.roomStatusCheckedOut'), arriving_today: t('housekeeping.roomStatusArrivingToday'), in_house: t('housekeeping.roomStatusInHouse'), vacant: t('housekeeping.roomStatusVacant') }
-  return map[s] || s
+function roomStatusLabel(status) {
+  const map = {
+    checked_out: t('housekeeping.roomStatusCheckedOut'),
+    arriving_today: t('housekeeping.roomStatusArrivingToday'),
+    in_house: t('housekeeping.roomStatusInHouse'),
+    vacant: t('housekeeping.roomStatusVacant'),
+  }
+  return map[status] || status
 }
 
 /** Formats an ISO datetime string for display, or '-' when absent. */
-function formatArrival(d) {
-  return d ? String(d).slice(0, 16).replace('T', ' ') : '-'
+function formatArrival(date) {
+  return date ? String(date).slice(0, 16).replace('T', ' ') : '-'
 }
 
 /** Returns the departure date as-is, or '-' when absent. */
-function formatDeparture(d) {
-  return d || '-'
+function formatDeparture(date) {
+  return date || '-'
 }
 
 /**
@@ -365,6 +489,19 @@ async function load() {
   }
 }
 
+/** Fetches every housekeeping task page for export, honouring the active filters. */
+const loadAllTasks = () =>
+  collectAllRows((page, perPage) =>
+    housekeepingApi.index({
+      status: filters.status,
+      house_status: filters.house_status,
+      room_status: filters.room_status,
+      room_id: filters.room_id,
+      page,
+      per_page: perPage,
+    }),
+  )
+
 /** Loads room and user option lists for the filter and form selects; failures are silently ignored. */
 async function loadOptions() {
   try {
@@ -380,8 +517,8 @@ async function loadOptions() {
 }
 
 /** Sets the page number and reloads the task list. */
-function goPage(p) {
-  page.value = p
+function goPage(page) {
+  page.value = page
   load()
 }
 
@@ -478,7 +615,9 @@ async function assignTask() {
   modalError.value = ''
   saving.value = true
   try {
-    const res = await housekeepingApi.assign(assignTaskId.value, { assigned_to: assignUserId.value })
+    const res = await housekeepingApi.assign(assignTaskId.value, {
+      assigned_to: assignUserId.value,
+    })
     success.value = res.data.message || t('housekeeping.assigned')
     showAssign.value = false
     await load()
@@ -515,7 +654,9 @@ const remove = (task) => runAction(task, housekeepingApi.destroy, t('housekeepin
  */
 function flattenError(err) {
   const messages = err.response?.data?.errors
-  return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')
+  return messages
+    ? Object.values(messages).flat().join(' ')
+    : err.response?.data?.message || t('common.actionFailed')
 }
 
 onMounted(() => {
@@ -566,7 +707,7 @@ onMounted(() => {
 }
 
 .muted {
-  color: #888;
+  color: #757575;
   font-size: 12px;
   margin-top: 2px;
 }
@@ -639,14 +780,14 @@ onMounted(() => {
 }
 
 .modal-head h2 i {
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .modal-close {
   background: none;
   border: none;
   font-size: 18px;
-  color: #999;
+  color: #757575;
   cursor: pointer;
   padding: 4px;
 }

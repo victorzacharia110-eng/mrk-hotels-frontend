@@ -139,6 +139,30 @@ export const authApi = {
   updateProfile(data) {
     return api.post(`${v1}/auth/update-profile`, data)
   },
+  /**
+   * Self-service hotel registration (public, no auth required).
+   * @param {object} data - Registration fields (hotel_name, subdomain, etc.).
+   * @returns {Promise} Axios response with tenant info and trial details.
+   */
+  register(data) {
+    return api.post(`${v1}/auth/register`, data)
+  },
+  /**
+   * Sends a password reset link to the user's email.
+   * @param {string} email - User's email address.
+   * @returns {Promise} Axios response with confirmation message.
+   */
+  forgotPassword(email) {
+    return api.post(`${v1}/auth/forgot-password`, { email })
+  },
+  /**
+   * Resets the user's password using the token from the email.
+   * @param {object} data - Token, email, password, password_confirmation.
+   * @returns {Promise} Axios response confirming password reset.
+   */
+  resetPassword(data) {
+    return api.post(`${v1}/auth/reset-password`, data)
+  },
 }
 
 /** Hotel reporting: dashboard KPIs, overview, occupancy, revenue and audit trail. */
@@ -184,6 +208,39 @@ export const reportApi = {
     return api.get(`${v1}/reports/room-status`, { params })
   },
   /**
+   * Booking analytics: volumes, source mix, cancellation/no-show rates.
+   * @param {object} params - Query params (from, to).
+   * @returns {Promise} Axios response with booking figures.
+   */
+  bookings(params) {
+    return api.get(`${v1}/reports/bookings`, { params })
+  },
+  /**
+   * Food & beverage analytics: department split, top items, per-waiter.
+   * @param {object} params - Query params (from, to).
+   * @returns {Promise} Axios response with F&B figures.
+   */
+  fnb(params) {
+    return api.get(`${v1}/reports/fnb`, { params })
+  },
+  /**
+   * Item-wise stock ledger with opening/running balances and valuation.
+   * @param {object} params - Query params (from, to, category, ignore_zero).
+   * @returns {Promise} Axios response with per-item ledger rows.
+   */
+  stockLedger(params) {
+    return api.get(`${v1}/reports/stock-ledger`, { params })
+  },
+  /**
+   * Inventory report series (stock register family).
+   * @param {string} report - Template key, e.g. ledger-summary, closing-stock.
+   * @param {object} params - Query params (from/to/as_of/category/filters).
+   * @returns {Promise} Axios response shaped per template.
+   */
+  inventoryReport(report, params) {
+    return api.get(`${v1}/reports/inventory/${report}`, { params })
+  },
+  /**
    * Paginated audit trail entries.
    * @param {object} params - Query params (filters, pagination).
    * @returns {Promise} Axios response with audit log entries.
@@ -193,7 +250,7 @@ export const reportApi = {
   },
 }
 
-/** Accounting reports: general ledger, trial balance and balance sheet. */
+/** Accounting reports: general ledger, trial balance, balance sheet and night audit / day close. */
 export const accountingApi = {
   /**
    * Fetches general ledger entries.
@@ -219,6 +276,56 @@ export const accountingApi = {
   balanceSheet(params) {
     return api.get(`${v1}/accounting/balance-sheet`, { params })
   },
+  /**
+   * Computes (or returns the frozen) night-audit / day-close summary for a date.
+   * @param {object} params - Query params (date defaults to today).
+   * @returns {Promise} Axios response with { date, closed, day_close, report }.
+   */
+  dayCloseReport(params) {
+    return api.get(`${v1}/accounting/day-close`, { params })
+  },
+  /**
+   * Closes a business day, freezing its night-audit snapshot.
+   * @param {object} data - Payload (date).
+   * @returns {Promise} Axios response with the frozen day-close (201, or 409 when already closed).
+   */
+  storeDayClose(data) {
+    return api.post(`${v1}/accounting/day-close`, data)
+  },
+  /**
+   * Lists every closed business day, newest first.
+   * @param {object} params - Query params (pagination).
+   * @returns {Promise} Axios response with { day_closes }.
+   */
+  dayCloses(params) {
+    return api.get(`${v1}/accounting/day-closes`, { params })
+  },
+}
+
+/** Night audit — receptionist-accessible day close (level:60). */
+export const nightAuditApi = {
+  report(params) { return api.get(`${v1}/night-audit/report`, { params }) },
+  close(data) { return api.post(`${v1}/night-audit/close`, data) },
+  history(params) { return api.get(`${v1}/night-audit/history`, { params }) },
+  logs(params) { return api.get(`${v1}/night-audit/logs`, { params }) },
+  transactions(params) { return api.get(`${v1}/night-audit/transactions`, { params }) },
+  insertTransaction(data) { return api.post(`${v1}/night-audit/transactions`, data) },
+  deleteTransaction(id) { return api.delete(`${v1}/night-audit/transactions/${id}`) },
+}
+
+/** Activity log report — daily/weekly/monthly with CSV download. */
+export const activityLogReportApi = {
+  index(params) { return api.get(`${v1}/activity-log-report`, { params }) },
+  csv(params) { return api.get(`${v1}/activity-log-report`, { params: { ...params, format: 'csv' }, responseType: 'blob' }) },
+  csvUrl(params) {
+    const qs = new URLSearchParams({ ...params, format: 'csv' }).toString()
+    return `${api.defaults.baseURL}/${v1}/activity-log-report?${qs}`
+  },
+}
+
+/** Guest list report — front office report browser (level:60). */
+export const guestReportApi = {
+  guestList(params) { return api.get(`${v1}/guests/guest-list`, { params }) },
 }
 
 /** Staff user management: CRUD plus activation, invites, resets and attachments. */
@@ -469,6 +576,35 @@ export const guestApi = {
   destroy(id) {
     return api.delete(`${v1}/guests/${id}`)
   },
+  /**
+   * Returns a summary of records that will be removed when a guest
+   * is permanently deleted.
+   * @param {string|number} id - Guest identifier.
+   * @returns {Promise} Axios response with preview data.
+   */
+  deletionPreview(id) {
+    return api.get(`${v1}/guests/${id}/deletion-preview`)
+  },
+}
+
+/** Hotel business settings — manager/owner can view and edit. */
+export const hotelSettingsApi = {
+  /** Fetches the current hotel's business details. */
+  show() {
+    return api.get(`${v1}/hotel-settings`)
+  },
+  /** Updates the current hotel's business details. Supports FormData for logo upload. */
+  update(data) {
+    if (data instanceof FormData) {
+      data.append('_method', 'PUT')
+      return api.post(`${v1}/hotel-settings`, data, { headers: { 'Content-Type': 'multipart/form-data' } })
+    }
+    return api.put(`${v1}/hotel-settings`, data)
+  },
+  /** Removes the hotel logo. */
+  removeLogo() {
+    return api.delete(`${v1}/hotel-settings/logo`)
+  },
 }
 
 /** Reservations: CRUD plus the check-in / check-out / no-show lifecycle. */
@@ -524,12 +660,21 @@ export const reservationApi = {
     return api.delete(`${v1}/reservations/${id}`, { data })
   },
   /**
+   * Returns a summary of records that will be removed when a reservation
+   * is permanently deleted.
+   * @param {string|number} id - Reservation identifier.
+   * @returns {Promise} Axios response with preview data.
+   */
+  deletionPreview(id) {
+    return api.get(`${v1}/reservations/${id}/deletion-preview`)
+  },
+  /**
    * Checks a guest into their reserved room.
    * @param {string|number} id - Reservation identifier.
    * @returns {Promise} Axios response confirming check-in.
    */
-  checkIn(id) {
-    return api.post(`${v1}/reservations/${id}/check-in`)
+  checkIn(id, data = {}) {
+    return api.post(`${v1}/reservations/${id}/check-in`, data)
   },
   /**
    * Checks a guest out and finalises the folio.
@@ -823,6 +968,85 @@ export const inventoryApi = {
   },
 }
 
+/**
+ * Inventory transaction series: departments, transfers, physical counts,
+ * production (BOM), indents, market lists and goods returns. Backed by the
+ * /api/v1/inventory-* endpoints; voids write reversible audit movements.
+ */
+export const inventoryOpsApi = {
+  departments: (params) => api.get(`${v1}/departments`, { params }),
+  createDepartment: (data) => api.post(`${v1}/departments`, data),
+  updateDepartment: (id, data) => api.put(`${v1}/departments/${id}`, data),
+  deleteDepartment: (id) => api.delete(`${v1}/departments/${id}`),
+
+  transfers: (params) => api.get(`${v1}/inventory-transfers`, { params }),
+  storeTransfer: (data) => api.post(`${v1}/inventory-transfers`, data),
+  voidTransfer: (id, reason) => api.post(`${v1}/inventory-transfers/${id}/void`, { reason }),
+
+  stockTakes: (params) => api.get(`${v1}/inventory-stock-takes`, { params }),
+  openStockTake: (data) => api.post(`${v1}/inventory-stock-takes`, data),
+  updateStockTakeCounts: (id, counts) => api.put(`${v1}/inventory-stock-takes/${id}/counts`, { counts }),
+  postStockTake: (id) => api.post(`${v1}/inventory-stock-takes/${id}/post`),
+  voidStockTake: (id, reason) => api.post(`${v1}/inventory-stock-takes/${id}/void`, { reason }),
+
+  recipes: () => api.get(`${v1}/inventory-recipes`),
+  storeRecipe: (data) => api.post(`${v1}/inventory-recipes`, data),
+  productionRuns: (params) => api.get(`${v1}/inventory-production-runs`, { params }),
+  storeProductionRun: (data) => api.post(`${v1}/inventory-production-runs`, data),
+  voidProductionRun: (id, reason) => api.post(`${v1}/inventory-production-runs/${id}/void`, { reason }),
+
+  indents: (params) => api.get(`${v1}/inventory-indents`, { params }),
+  storeIndent: (data) => api.post(`${v1}/inventory-indents`, data),
+  approveIndent: (id) => api.post(`${v1}/inventory-indents/${id}/approve`),
+  rejectIndent: (id, reason) => api.post(`${v1}/inventory-indents/${id}/reject`, { reason }),
+  voidIndent: (id, reason) => api.post(`${v1}/inventory-indents/${id}/void`, { reason }),
+
+  marketLists: (params) => api.get(`${v1}/inventory-market-lists`, { params }),
+  storeMarketList: (data) => api.post(`${v1}/inventory-market-lists`, data),
+  submitMarketList: (id) => api.post(`${v1}/inventory-market-lists/${id}/submit`),
+  voidMarketList: (id, reason) => api.post(`${v1}/inventory-market-lists/${id}/void`, { reason }),
+
+  goodsReturns: (params) => api.get(`${v1}/inventory-goods-returns`, { params }),
+  storeGoodsReturn: (data) => api.post(`${v1}/inventory-goods-returns`, data),
+  voidGoodsReturn: (id, reason) => api.post(`${v1}/inventory-goods-returns/${id}/void`, { reason }),
+}
+
+/** Store manager extended operations (POS, sales, categories, customers, etc.). */
+export const storeApi = {
+  sales: (params) => api.get(`${v1}/store/sales`, { params }),
+  storeSale: (data) => api.post(`${v1}/store/sales`, data),
+  showSale: (id) => api.get(`${v1}/store/sales/${id}`),
+  categories: () => api.get(`${v1}/store/categories`),
+  storeCategory: (data) => api.post(`${v1}/store/categories`, data),
+  updateCategory: (id, data) => api.put(`${v1}/store/categories/${id}`, data),
+  destroyCategory: (id) => api.delete(`${v1}/store/categories/${id}`),
+  customers: (params) => api.get(`${v1}/store/customers`, { params }),
+  storeCustomer: (data) => api.post(`${v1}/store/customers`, data),
+  updateCustomer: (id, data) => api.put(`${v1}/store/customers/${id}`, data),
+  destroyCustomer: (id) => api.delete(`${v1}/store/customers/${id}`),
+  reports: (params) => api.get(`${v1}/store/reports`, { params }),
+  movements: (params) => api.get(`${v1}/store/stock-movements`, { params }),
+  expenses: (params) => api.get(`${v1}/store/expenses`, { params }),
+  storeExpense: (data) => api.post(`${v1}/store/expenses`, data),
+  destroyExpense: (id) => api.delete(`${v1}/store/expenses/${id}`),
+  cashRegister: () => api.get(`${v1}/store/cash-register`),
+  openRegister: (data) => api.post(`${v1}/store/cash-register/open`, data),
+  closeRegister: (data) => api.post(`${v1}/store/cash-register/close`, data),
+  shifts: (params) => api.get(`${v1}/store/cash-register/shifts`, { params }),
+  discounts: (params) => api.get(`${v1}/store/discounts`, { params }),
+  storeDiscount: (data) => api.post(`${v1}/store/discounts`, data),
+  updateDiscount: (id, data) => api.put(`${v1}/store/discounts/${id}`, data),
+  destroyDiscount: (id) => api.delete(`${v1}/store/discounts/${id}`),
+  transfers: (params) => api.get(`${v1}/store/transfers`, { params }),
+  storeTransfer: (data) => api.post(`${v1}/store/transfers`, data),
+  stockCounts: (params) => api.get(`${v1}/store/stock-counts`, { params }),
+  storeStockCount: (data) => api.post(`${v1}/store/stock-counts`, data),
+  lowStock: () => api.get(`${v1}/store/low-stock`),
+  activityLog: (params) => api.get(`${v1}/store/activity-log`, { params }),
+  settings: () => api.get(`${v1}/store/settings`),
+  updateSettings: (data) => api.put(`${v1}/store/settings`, data),
+}
+
 /** Supplier records for procurement. */
 export const supplierApi = {
   /**
@@ -913,6 +1137,88 @@ export const menuItemApi = {
   },
 }
 
+/** Managed restaurant/bar menu categories (buttons the point-of-sale shows). */
+export const menuCategoryApi = {
+  /**
+   * Lists menu categories for a department, ordered by sort_order.
+   * @param {object} params - Query params (department, is_active).
+   * @returns {Promise} Axios response with the ordered category list.
+   */
+  index(params) {
+    return api.get(`${v1}/menu-categories`, { params })
+  },
+  /**
+   * Creates a menu category.
+   * @param {object} data - { department, name, sort_order? }.
+   * @returns {Promise} Axios response with the created category.
+   */
+  store(data) {
+    return api.post(`${v1}/menu-categories`, data)
+  },
+  /**
+   * Updates a menu category (name / sort_order / is_active).
+   * @param {string} id - Category identifier.
+   * @param {object} data - Fields to update.
+   * @returns {Promise} Axios response with the updated category.
+   */
+  update(id, data) {
+    return api.put(`${v1}/menu-categories/${id}`, data)
+  },
+  /**
+   * Persists the display order of a department's categories.
+   * @param {object} data - { department, order: [categoryId, ...] }.
+   * @returns {Promise} Axios response confirming the order.
+   */
+  reorder(department, order) {
+    return api.put(`${v1}/menu-categories/reorder`, { department, order })
+  },
+  /**
+   * Deletes a menu category (linked items are ungrouped, not deleted).
+   * @param {string} id - Category identifier.
+   * @returns {Promise} Axios response confirming deletion.
+   */
+  destroy(id) {
+    return api.delete(`${v1}/menu-categories/${id}`)
+  },
+}
+
+/** Restaurant/bar tables (manager maintains the list; waiters pick one when ordering). */
+export const tableApi = {
+  /**
+   * Lists tables with optional section/status filters.
+   * @param {object} params - Query params (section, status, is_active).
+   * @returns {Promise} Axios response with the table list.
+   */
+  index(params) {
+    return api.get(`${v1}/tables`, { params })
+  },
+  /**
+   * Creates a table.
+   * @param {object} data - Table payload (table_name, section, capacity, ...).
+   * @returns {Promise} Axios response with the created table.
+   */
+  store(data) {
+    return api.post(`${v1}/tables`, data)
+  },
+  /**
+   * Updates a table.
+   * @param {string|number} id - Table identifier.
+   * @param {object} data - Fields to update.
+   * @returns {Promise} Axios response with the updated table.
+   */
+  update(id, data) {
+    return api.put(`${v1}/tables/${id}`, data)
+  },
+  /**
+   * Deletes a table.
+   * @param {string|number} id - Table identifier.
+   * @returns {Promise} Axios response confirming deletion.
+   */
+  destroy(id) {
+    return api.delete(`${v1}/tables/${id}`)
+  },
+}
+
 /** F&B orders: cash/room-folio settlement and per-item kitchen status. */
 export const orderApi = {
   /**
@@ -984,6 +1290,126 @@ export const orderApi = {
   // Kitchen marks a single line item ready or served without moving the whole order.
   markItemStatus(id, itemId, status) {
     return api.patch(`${v1}/orders/${id}/items/${itemId}/status`, { status })
+  },
+}
+
+/** POS outlets: the service points (restaurant/bar) a cashier works from. */
+export const outletApi = {
+  /**
+   * Lists the hotel's outlets for the post-login selector.
+   * @returns {Promise} Axios response with the outlet list.
+   */
+  index() {
+    return api.get(`${v1}/outlets`)
+  },
+  /**
+   * Creates an outlet.
+   * @param {object} data - Outlet payload (name, type).
+   * @returns {Promise} Axios response with the created outlet.
+   */
+  store(data) {
+    return api.post(`${v1}/outlets`, data)
+  },
+  /**
+   * Updates an outlet.
+   * @param {string|number} id - Outlet identifier.
+   * @param {object} data - Fields to update.
+   * @returns {Promise} Axios response with the updated outlet.
+   */
+  update(id, data) {
+    return api.put(`${v1}/outlets/${id}`, data)
+  },
+  /**
+   * Deactivates an outlet.
+   * @param {string|number} id - Outlet identifier.
+   * @returns {Promise} Axios response confirming deactivation.
+   */
+  destroy(id) {
+    return api.delete(`${v1}/outlets/${id}`)
+  },
+}
+
+/** Cashier POS operations: waiter assignment board and freeze/unfreeze. */
+export const cashierApi = {
+  /**
+   * Waiter assignment board: service staff with their assigned-table counts.
+   * @returns {Promise} Axios response with waiters + unassigned table count.
+   */
+  waiters() {
+    return api.get(`${v1}/cashier/waiters`)
+  },
+  /**
+   * Assigns (or clears, when userId is null) the waiter responsible for a table.
+   * @param {string|number} tableId - Table identifier.
+   * @param {string|number|null} userId - Waiter to assign, or null to unassign.
+   * @returns {Promise} Axios response with the updated table.
+   */
+  assignWaiter(tableId, userId) {
+    return api.put(`${v1}/cashier/tables/${tableId}/waiter`, { user_id: userId })
+  },
+  /**
+   * Today's orders for a specific waiter (served + running).
+   * @param {string} userId - Waiter user id.
+   * @returns {Promise} Axios response with orders list.
+   */
+  waiterOrders(userId) {
+    return api.get(`${v1}/cashier/waiters/${userId}/orders`)
+  },
+  /**
+   * Today's orders for a specific table, with per-waiter summary.
+   * @param {string} tableId - Restaurant table UUID.
+   * @returns {Promise} Axios response with orders + summary.
+   */
+  tableTodayOrders(tableId) {
+    return api.get(`${v1}/cashier/tables/${tableId}/today-orders`)
+  },
+  /**
+   * Batch today's order summary for ALL tables in one request.
+   * @returns {Promise} Axios response with { tables: { tableName: { waiters_count, last_at } } }
+   */
+  todayOrdersBatch() {
+    return api.get(`${v1}/cashier/tables/today-orders-batch`)
+  },
+  /**
+   * Freezes a running order so it cannot be edited until unfrozen.
+   * @param {string|number} orderId - Order identifier.
+   * @param {object} [data] - Optional reason payload.
+   * @returns {Promise} Axios response with the frozen order.
+   */
+  freeze(orderId, data = {}) {
+    return api.post(`${v1}/orders/${orderId}/freeze`, data)
+  },
+  /**
+   * Releases a frozen order back into service.
+   * @param {string|number} orderId - Order identifier.
+   * @returns {Promise} Axios response with the unfrozen order.
+   */
+  unfreeze(orderId) {
+    return api.post(`${v1}/orders/${orderId}/unfreeze`)
+  },
+  /**
+   * F&B inventory items (restaurant + bar) for building ingredient lists,
+   * accessible to cashiers/staff without the management inventory endpoint.
+   * @returns {Promise} Axios response with the item list.
+   */
+  inventoryItems() {
+    return api.get(`${v1}/cashier/inventory-items`)
+  },
+}
+
+/** Menu item ingredients — links sellable items to tracked inventory stock. */
+export const menuItemIngredientApi = {
+  index(menuItemId) {
+    return api.get(`${v1}/menu-items/${menuItemId}/ingredients`)
+  },
+  store(menuItemId, data) {
+    return api.post(`${v1}/menu-items/${menuItemId}/ingredients`, data)
+  },
+  update(menuItemId, ingredientId, data) {
+    return api.put(`${v1}/menu-items/${menuItemId}/ingredients/${ingredientId}`, data)
+  },
+  destroy(menuItemId, ingredientId) {
+    return api.delete(`${v1}/menu-items/${menuItemId}/ingredients/${ingredientId}`)
   },
 }
 
@@ -1512,6 +1938,14 @@ export const tenantApi = {
   createOwner(data) {
     return api.post(`${v1}/owners`, data)
   },
+  /**
+   * Downloads a JSON backup of a tenant's operational data.
+   * @param {string|number} id - Tenant identifier.
+   * @returns {Promise} Axios response with the backup JSON.
+   */
+  backup(id) {
+    return api.get(`${v1}/tenants/${id}/backup`)
+  },
 }
 
 /** Superadmin platform-wide reports and per-tenant analytics. */
@@ -1637,7 +2071,7 @@ export const groupApi = {
    */
   index(params) {
     return api.get(`${v1}/messages/groups`, { params })
-  },
+  }, 
   /**
    * Creates a new chat group.
    * @param {object} data - Group payload (name, member ids, ...).
@@ -1710,7 +2144,9 @@ export const messageActionApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   deleteConversationMessage(conversationId, messageId, scope) {
-    return api.post(`${v1}/messages/conversations/${conversationId}/messages/${messageId}/delete`, { scope })
+    return api.post(`${v1}/messages/conversations/${conversationId}/messages/${messageId}/delete`, {
+      scope,
+    })
   },
   /**
    * Deletes a message in a group.
@@ -1729,7 +2165,9 @@ export const messageActionApi = {
    * @returns {Promise} Axios response with the view-once content.
    */
   openViewOnce(conversationId, messageId) {
-    return api.post(`${v1}/messages/conversations/${conversationId}/messages/${messageId}/view-once`)
+    return api.post(
+      `${v1}/messages/conversations/${conversationId}/messages/${messageId}/view-once`,
+    )
   },
   /**
    * Opens a view-once message in a group.
@@ -1748,7 +2186,11 @@ export const messageActionApi = {
    * @returns {Promise} Axios response with the new reaction state.
    */
   toggleReaction(messageType, messageId, reaction) {
-    return api.post(`${v1}/messages/reactions`, { message_type: messageType, message_id: messageId, reaction })
+    return api.post(`${v1}/messages/reactions`, {
+      message_type: messageType,
+      message_id: messageId,
+      reaction,
+    })
   },
 }
 
@@ -2205,6 +2647,25 @@ export const guestMessageApi = {
   },
 }
 
+/** Automated guest-messaging toggles (booking, payment, reminder, checkout). */
+export const guestNotificationSettingsApi = {
+  /**
+   * Lists every automation event with its current on/off state and dispatch time.
+   * @returns {Promise} Axios response with { events }.
+   */
+  index() {
+    return api.get(`${v1}/messages/guest-notification-settings`)
+  },
+  /**
+   * Saves a hotel's automation toggles.
+   * @param {object} data - Payload ({ events: [{ event, enabled }] }).
+   * @returns {Promise} Axios response with the refreshed settings list.
+   */
+  update(data) {
+    return api.put(`${v1}/messages/guest-notification-settings`, data)
+  },
+}
+
 /** Staff meetings with invites and responses. */
 export const meetingApi = {
   /**
@@ -2330,5 +2791,320 @@ export const callApi = {
    */
   cancel(callId) {
     return api.post(`${v1}/calls/${callId}/cancel`)
+  },
+}
+
+/** Notifications: unread counts, alerts, mark-read. */
+export const notificationApi = {
+  /** Paginated list of notifications. */
+  index(params = {}) {
+    return api.get(`${v1}/notifications`, { params })
+  },
+  /** Returns { count, alert_count }. */
+  unreadCount() {
+    return api.get(`${v1}/notifications/unread-count`)
+  },
+  /** Returns unread notifications requiring a dashboard alert modal. */
+  alerts() {
+    return api.get(`${v1}/notifications/alerts`)
+  },
+  /** Mark a single notification as read. */
+  markRead(id) {
+    return api.post(`${v1}/notifications/${id}/read`)
+  },
+  /** Mark all notifications as read. */
+  markAllRead() {
+    return api.post(`${v1}/notifications/read-all`)
+  },
+}
+
+/** Hotel feature plan management (superadmin). */
+export const planApi = {
+  /** Returns plans config + feature labels. */
+  index() {
+    return api.get(`${v1}/plans`)
+  },
+  /** Returns plans config + feature labels (public, no auth). */
+  publicIndex() {
+    return api.get(`${v1}/public/plans`)
+  },
+  /** Show a single plan. */
+  show(slug) {
+    return api.get(`${v1}/plans/${slug}`)
+  },
+  /** Create a new plan. */
+  store(data) {
+    return api.post(`${v1}/plans`, data)
+  },
+  /** Update an existing plan. */
+  update(slug, data) {
+    return api.put(`${v1}/plans/${slug}`, data)
+  },
+  /** Delete a plan. */
+  destroy(slug) {
+    return api.delete(`${v1}/plans/${slug}`)
+  },
+  /** Updates a tenant's subscription plan and features. */
+  updateTenantPlan(tenantId, data) {
+    return api.post(`${v1}/tenants/${tenantId}/subscription`, data)
+  },
+}
+
+/** Portal self-service subscription management. */
+export const portalSubscriptionApi = {
+  show() {
+    return api.get(`${v1}/portal/subscription`)
+  },
+  update(data) {
+    return api.put(`${v1}/portal/subscription`, data)
+  },
+}
+
+/** Portal self-service payments. */
+export const portalPaymentApi = {
+  index(params = {}) {
+    return api.get(`${v1}/portal/payments`, { params })
+  },
+  initiate(data) {
+    return api.post(`${v1}/portal/payments/initiate`, data)
+  },
+  options() {
+    return api.get(`${v1}/portal/payments/options`)
+  },
+}
+
+/** Superadmin integration dashboard (all hotels). */
+export const integrationDashboardApi = {
+  index() {
+    return api.get(`${v1}/integrations/dashboard`)
+  },
+}
+
+/** Booking.com channel manager integration. */
+export const bookingComApi = {
+  getSettings() {
+    return api.get(`${v1}/integrations/booking-com/settings`)
+  },
+  updateSettings(data) {
+    return api.put(`${v1}/integrations/booking-com/settings`, data)
+  },
+  testConnection() {
+    return api.post(`${v1}/integrations/booking-com/test`)
+  },
+  syncAvailability(data) {
+    return api.post(`${v1}/integrations/booking-com/sync/availability`, data)
+  },
+  syncRates(data) {
+    return api.post(`${v1}/integrations/booking-com/sync/rates`, data)
+  },
+  pullReservations(data) {
+    return api.post(`${v1}/integrations/booking-com/pull/reservations`, data)
+  },
+  getLogs(params) {
+    return api.get(`${v1}/integrations/booking-com/logs`, { params })
+  },
+  disconnect() {
+    return api.delete(`${v1}/integrations/booking-com/disconnect`)
+  },
+}
+
+/** Channel distribution — auto stop-sell schedules and channel activity logs. */
+export const distributionApi = {
+  getStopSellSchedules() {
+    return api.get(`${v1}/distribution/stop-sell-schedules`)
+  },
+  updateStopSellSchedules(schedules) {
+    return api.post(`${v1}/distribution/stop-sell-schedules`, { schedules })
+  },
+  getLogs(params) {
+    return api.get(`${v1}/distribution/logs`, { params })
+  },
+  getSources() {
+    return api.get(`${v1}/distribution/sources`)
+  },
+  createSource(data) {
+    return api.post(`${v1}/distribution/sources`, data)
+  },
+  updateSource(id, data) {
+    return api.put(`${v1}/distribution/sources/${id}`, data)
+  },
+  reorderSources(order) {
+    return api.put(`${v1}/distribution/sources/reorder`, { order })
+  },
+  deleteSource(id) {
+    return api.delete(`${v1}/distribution/sources/${id}`)
+  },
+}
+
+/** Bulk data importers — dry-run validation + commit of CSV batches. */
+export const importApi = {
+  /**
+   * Lists every available importer with its target table, unique keys and
+   * accepted columns.
+   */
+  importers() {
+    return api.get(`${v1}/importers`)
+  },
+  /**
+   * Dry-run validates an uploaded CSV. Never writes anything; returns the
+   * per-row report so mistakes can be corrected before committing.
+   */
+  validate(importerKey, file) {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post(`${v1}/importers/${importerKey}/validate`, form)
+  },
+  /**
+   * Commits an uploaded CSV. Rows that fail validation are skipped and
+   * listed in the returned report; writes are idempotent on natural keys.
+   */
+  run(importerKey, file) {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post(`${v1}/importers/${importerKey}/run`, form)
+  },
+}
+
+/** QuickBooks Online accounting integration. */
+export const quickbooksApi = {
+  getAuthUrl() {
+    return api.get(`${v1}/integrations/quickbooks/auth-url`)
+  },
+  handleCallback(data) {
+    return api.post(`${v1}/integrations/quickbooks/callback`, data)
+  },
+  getSettings() {
+    return api.get(`${v1}/integrations/quickbooks/settings`)
+  },
+  updateSettings(data) {
+    return api.put(`${v1}/integrations/quickbooks/settings`, data)
+  },
+  testConnection() {
+    return api.post(`${v1}/integrations/quickbooks/test`)
+  },
+  getAccounts() {
+    return api.get(`${v1}/integrations/quickbooks/accounts`)
+  },
+  syncInvoices(data) {
+    return api.post(`${v1}/integrations/quickbooks/sync/invoices`, data)
+  },
+  syncPayments(data) {
+    return api.post(`${v1}/integrations/quickbooks/sync/payments`, data)
+  },
+  getLogs(params) {
+    return api.get(`${v1}/integrations/quickbooks/logs`, { params })
+  },
+  disconnect() {
+    return api.delete(`${v1}/integrations/quickbooks/disconnect`)
+  },
+}
+
+/** Xero accounting integration. */
+export const xeroApi = {
+  getAuthUrl() {
+    return api.get(`${v1}/integrations/xero/auth-url`)
+  },
+  handleCallback(data) {
+    return api.post(`${v1}/integrations/xero/callback`, data)
+  },
+  getSettings() {
+    return api.get(`${v1}/integrations/xero/settings`)
+  },
+  updateSettings(data) {
+    return api.put(`${v1}/integrations/xero/settings`, data)
+  },
+  testConnection() {
+    return api.post(`${v1}/integrations/xero/test`)
+  },
+  getAccounts() {
+    return api.get(`${v1}/integrations/xero/accounts`)
+  },
+  getReport(report, params) {
+    return api.get(`${v1}/integrations/xero/reports/${report}`, { params })
+  },
+  syncInvoices(data) {
+    return api.post(`${v1}/integrations/xero/sync/invoices`, data)
+  },
+  syncPayments(data) {
+    return api.post(`${v1}/integrations/xero/sync/payments`, data)
+  },
+  getLogs(params) {
+    return api.get(`${v1}/integrations/xero/logs`, { params })
+  },
+  disconnect() {
+    return api.delete(`${v1}/integrations/xero/disconnect`)
+  },
+}
+
+/** Check-in override approvals (manager pre-authorizes unpaid check-ins). */
+export const checkinOverrideApi = {
+  list(params) {
+    return api.get(`${v1}/checkin-overrides`, { params })
+  },
+  create(data) {
+    return api.post(`${v1}/checkin-overrides`, data)
+  },
+  revoke(id) {
+    return api.post(`${v1}/checkin-overrides/${id}/revoke`)
+  },
+  active() {
+    return api.get(`${v1}/checkin-overrides/active`)
+  },
+  stats() {
+    return api.get(`${v1}/checkin-overrides/stats`)
+  },
+}
+
+/** Portal notification settings (email/SMS toggles per event). */
+export const portalNotificationSettingsApi = {
+  index() {
+    return api.get(`${v1}/portal/notification-settings`)
+  },
+  update(data) {
+    return api.put(`${v1}/portal/notification-settings`, data)
+  },
+}
+
+/** Portal analytics (KPIs + revenue trend). */
+export const portalAnalyticsApi = {
+  overview() {
+    return api.get(`${v1}/portal/analytics/overview`)
+  },
+}
+
+/**
+ * Guest self-service portal API.
+ * Uses a separate axios instance with the guest token (not staff auth).
+ */
+import guestPortalHttp from 'axios'
+
+const guestPortalAxios = guestPortalHttp.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
+  headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+})
+
+guestPortalAxios.interceptors.request.use((config) => {
+  const token = sessionStorage.getItem('guest_token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+export const guestPortalApi = {
+  authenticate(data) {
+    return guestPortalAxios.post(`${v1}/guest/portal/auth`, data).then(r => r.data)
+  },
+  booking() {
+    return guestPortalAxios.get(`${v1}/guest/portal/booking`).then(r => r.data)
+  },
+  folio() {
+    return guestPortalAxios.get(`${v1}/guest/portal/folio`).then(r => r.data)
+  },
+  requests() {
+    return guestPortalAxios.get(`${v1}/guest/portal/requests`).then(r => r.data)
+  },
+  createRequest(data) {
+    return guestPortalAxios.post(`${v1}/guest/portal/requests`, data).then(r => r.data)
   },
 }

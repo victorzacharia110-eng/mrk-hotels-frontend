@@ -23,6 +23,10 @@
           <p class="hint muted">
             {{ $t(`bookingPage.${booking.booking_type}Hint`) }}
           </p>
+          <p v-if="allowMixedRoomTypes" class="hint muted">
+            <i class="fas fa-circle-info" aria-hidden="true"></i>
+            {{ $t('bookingPage.mixedRoomTypesHint') }}
+          </p>
         </div>
         <div class="form-grid">
           <div class="form-group">
@@ -94,8 +98,8 @@
             <input type="checkbox" :checked="isRoomSelected(room.room_id)" @change="toggleRoom(room)" />
             <span>{{ $t('bookingPage.bookRoom') }}</span>
           </label>
-          <h3>{{ $t('bookingPage.room') }} {{ room.room_number }}</h3>
-          <p class="muted">{{ roomTypeLabel(room.room_type) }} &middot; {{ $t('rooms.floor') }} {{ room.floor }} &middot; {{ $t('bookingPage.upTo') }} {{ room.max_occupancy }}</p>
+          <h3>{{ roomTypeLabel(room.room_type) }}</h3>
+          <p class="muted">{{ $t('rooms.floor') }} {{ room.floor }} &middot; {{ $t('bookingPage.upTo') }} {{ room.max_occupancy }}</p>
           <p class="room-price">TZS {{ room.price_per_night.toLocaleString() }} {{ $t('home.perNight') }}</p>
         </article>
       </div>
@@ -200,9 +204,31 @@
           <strong>{{ $t('bookingPage.yourRooms') }}</strong>
           <ul>
             <li v-for="r in selectedRooms" :key="r.room_id">
-              {{ $t('bookingPage.room') }} {{ r.room_number }} &mdash; {{ roomTypeLabel(r.room_type) }}
+              {{ roomTypeLabel(r.room_type) }} &mdash; {{ $t('bookingPage.upTo') }} {{ r.max_occupancy }}
             </li>
           </ul>
+        </div>
+
+        <!-- Transparent price preview: nightly rates, stay length and the online payment fee -->
+        <div v-if="selectedRooms.length && previewNights > 0" class="price-summary">
+          <div v-for="r in selectedRooms" :key="r.room_id" class="price-row">
+            <span
+              >{{ roomTypeLabel(r.room_type) }} ·
+              {{ $t('bookingPage.nightsCount', { nights: previewNights }) }}</span
+            >
+            <span
+              >TZS
+              {{ ((Number(r.price_per_night) || 0) * previewNights).toLocaleString() }}</span
+            >
+          </div>
+          <div v-if="serviceFeePercent > 0" class="price-row price-fee">
+            <span>{{ $t('bookingPage.serviceFee', { percent: serviceFeePercent }) }}</span>
+            <span>TZS {{ serviceFee.toLocaleString() }}</span>
+          </div>
+          <div class="price-row price-total">
+            <span>{{ $t('bookingPage.estimatedTotal') }}</span>
+            <span><strong>TZS {{ estimatedTotal.toLocaleString() }}</strong></span>
+          </div>
         </div>
 
         <!-- For group bookings: list of additional guests, each assigned to one of the selected rooms -->
@@ -251,7 +277,38 @@
         <strong>{{ $t('bookingPage.reference') }}</strong>
         <code>{{ pendingBooking.booking_reference }}</code>
       </p>
-      <p class="room-price payment-total">
+      <!-- Itemised breakdown when the API provided one; bare total as fallback -->
+      <div v-if="pendingBooking.price_breakdown" class="price-summary">
+        <div
+          v-for="(line, i) in pendingBooking.price_breakdown.lines"
+          :key="i"
+          class="price-row"
+        >
+          <span
+            >{{ $t('bookingPage.room') }} {{ i + 1 }} ·
+            TZS {{ Number(line.rate_per_night).toLocaleString() }} ×
+            {{ $t('bookingPage.nightsCount', { nights: line.nights }) }}</span
+          >
+          <span>TZS {{ Number(line.subtotal).toLocaleString() }}</span>
+        </div>
+        <div class="price-row price-fee">
+          <span>{{
+            $t('bookingPage.serviceFee', {
+              percent: pendingBooking.price_breakdown.service_fee_percent,
+            })
+          }}</span>
+          <span>TZS {{ Number(pendingBooking.price_breakdown.service_fee).toLocaleString() }}</span>
+        </div>
+        <div class="price-row price-total">
+          <span>{{ $t('bookingPage.totalDue') }}</span>
+          <span
+            ><strong
+              >TZS {{ Number(pendingBooking.price_breakdown.total).toLocaleString() }}</strong
+            ></span
+          >
+        </div>
+      </div>
+      <p v-else class="room-price payment-total">
         {{ $t('bookingPage.totalDue') }}
         <strong>TZS {{ pendingBooking.total_amount.toLocaleString() }}</strong>
       </p>
@@ -262,6 +319,47 @@
           :methods="enabledPaymentMethods"
           :required="true"
         />
+
+        <!-- Hotel receiving details shown after provider selection -->
+        <div v-if="hotelDetails && (payment.method === METHOD_MOBILE_MONEY || payment.method === METHOD_BANK)" class="hotel-receiving-details">
+          <h3 class="receiving-title">{{ $t('bookingPage.receivingDetails') }}</h3>
+          <div class="receiving-grid">
+            <div class="receiving-row">
+              <span class="receiving-label">{{ $t('bookingPage.hotelName') }}</span>
+              <span class="receiving-value">{{ hotelDetails.hotel_name }}</span>
+            </div>
+            <div v-if="hotelDetails.registration_code" class="receiving-row">
+              <span class="receiving-label">{{ $t('bookingPage.registrationCode') }}</span>
+              <span class="receiving-value mono">{{ hotelDetails.registration_code }}</span>
+            </div>
+            <div v-if="hotelDetails.tin" class="receiving-row">
+              <span class="receiving-label">TIN</span>
+              <span class="receiving-value mono">{{ hotelDetails.tin }}</span>
+            </div>
+            <div v-if="hotelDetails.vrn" class="receiving-row">
+              <span class="receiving-label">VRN</span>
+              <span class="receiving-value mono">{{ hotelDetails.vrn }}</span>
+            </div>
+            <div v-if="hotelDetails.phone" class="receiving-row">
+              <span class="receiving-label">{{ $t('bookingPage.phone') }}</span>
+              <span class="receiving-value">{{ hotelDetails.phone }}</span>
+            </div>
+            <div v-if="hotelDetails.email" class="receiving-row">
+              <span class="receiving-label">{{ $t('bookingPage.email') }}</span>
+              <span class="receiving-value">{{ hotelDetails.email }}</span>
+            </div>
+            <div v-if="hotelDetails.address" class="receiving-row">
+              <span class="receiving-label">{{ $t('bookingPage.address') }}</span>
+              <span class="receiving-value">{{ hotelDetails.address }}<template v-if="hotelDetails.city">, {{ hotelDetails.city }}</template><template v-if="hotelDetails.country">, {{ hotelDetails.country }}</template></span>
+            </div>
+          </div>
+          <div v-if="receivingAccount" class="receiving-account">
+            <span class="receiving-account-label">{{ $t('bookingPage.sendTo') }}:</span>
+            <span class="receiving-account-number">{{ receivingAccount }}</span>
+          </div>
+          <p v-else class="receiving-no-account">{{ $t('bookingPage.noAccountConfigured') }}</p>
+        </div>
+
         <!-- Mobile money payments require a phone number to bill -->
         <div v-if="payment.method === METHOD_MOBILE_MONEY" class="form-group">
           <label>{{ $t('bookingPage.payFromPhone') }}<span class="req">*</span></label>
@@ -292,7 +390,7 @@ import { useRoute } from 'vue-router'
 import { publicApi } from '@/api'
 import { normalizePhoneNumber } from '@/utils/phone'
 import { getCountryName } from '@/utils/locations'
-import { METHOD_MOBILE_MONEY } from '@/utils/payments'
+import { METHOD_MOBILE_MONEY, METHOD_BANK } from '@/utils/payments'
 import { todayISO } from '@/utils/dates'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
@@ -309,6 +407,10 @@ const submitting = ref(false)
 const error = ref('')
 const success = ref('')
 const availability = ref(null)
+
+// Per-tenant feature flag from the availability response: when the hotel
+// allows it, any booking type can pick any room type.
+const allowMixedRoomTypes = computed(() => !!availability.value?.hotel?.allow_mixed_room_types)
 
 // Lookup values that drive the search and booking type dropdowns
 const roomTypes = ['single', 'double', 'suite', 'deluxe', 'presidential']
@@ -337,7 +439,7 @@ const hotelOptions = computed(() =>
 )
 
 const selectedRoomOptions = computed(() =>
-  booking.value.selected_rooms.map((room) => ({ value: room.room_id, label: `${t('bookingPage.room')} ${room.room_number}` })),
+  booking.value.selected_rooms.map((room, i) => ({ value: room.room_id, label: `${t('bookingPage.room')} ${i + 1} — ${roomTypeLabel(room.room_type)}` })),
 )
 
 // Search/sort/paginate the available rooms client-side; selections live in
@@ -349,7 +451,6 @@ const { query, sortKey, sortDir, page, pageCount, pagedRooms, filteredCount, ran
 // Options for the room-sort dropdown.
 const sortOptions = computed(() => [
   { value: 'price_per_night', label: t('bookingPage.sortPrice') },
-  { value: 'room_number', label: t('bookingPage.sortRoomNumber') },
   { value: 'max_occupancy', label: t('bookingPage.sortCapacity') },
   { value: 'floor', label: t('bookingPage.sortFloor') },
 ])
@@ -378,6 +479,15 @@ const paymentInitiated = ref(false)
 
 /** The methods this hotel accepts on the public page, if it has any. */
 const enabledPaymentMethods = computed(() => availability.value?.payment_methods || [])
+
+/** Full hotel details from the availability response. */
+const hotelDetails = computed(() => availability.value?.hotel || null)
+
+/** The receiving account number for the selected provider. */
+const receivingAccount = computed(() => {
+  if (!hotelDetails.value?.payment_accounts || !payment.value.provider) return ''
+  return hotelDetails.value.payment_accounts[payment.value.provider] || ''
+})
 
 // The whole booking being built: guest details, chosen rooms and any additional guests
 const booking = ref({
@@ -447,18 +557,36 @@ function toggleRoom(room) {
   if (index >= 0) {
     booking.value.selected_rooms.splice(index, 1)
   } else {
-    booking.value.selected_rooms.push({
-      room_id: room.room_id,
-      room_number: room.room_number,
-      room_type: room.room_type,
-      max_occupancy: room.max_occupancy,
-    })
+      booking.value.selected_rooms.push({
+        room_id: room.room_id,
+        room_number: room.room_number,
+        room_type: room.room_type,
+        max_occupancy: room.max_occupancy,
+        price_per_night: room.price_per_night,
+      })
   }
   booking.value.rooms = Math.max(1, booking.value.selected_rooms.length)
 }
 
 // Derived values over the chosen rooms: the selection itself and its total guest capacity
 const selectedRooms = computed(() => booking.value.selected_rooms)
+
+/**
+ * Pre-payment price preview: nightly rates × stay length for every chosen
+ * room, plus the online payment service fee the hotel charges. Mirrors
+ * ReservationService::roomTotal() so the form total matches the amount the
+ * payment step will actually request.
+ */
+const previewNights = computed(() => Number(availability.value?.nights) || 0)
+const serviceFeePercent = computed(() => Number(availability.value?.service_fee_percent ?? 0))
+const roomsSubtotal = computed(() =>
+  selectedRooms.value.reduce(
+    (sum, r) => sum + (Number(r.price_per_night) || 0) * previewNights.value,
+    0,
+  ),
+)
+const serviceFee = computed(() => Math.round(roomsSubtotal.value * serviceFeePercent.value) / 100)
+const estimatedTotal = computed(() => roomsSubtotal.value + serviceFee.value)
 const selectedCapacity = computed(() =>
   selectedRooms.value.reduce((sum, r) => sum + (r.max_occupancy || 1), 0),
 )
@@ -572,6 +700,7 @@ async function submitBooking() {
       pendingBooking.value = {
         booking_reference: res.data.booking_reference,
         total_amount: res.data.total_amount,
+        price_breakdown: res.data.price_breakdown || null,
       }
       payment.value.method = enabledPaymentMethods.value[0] || ''
       payment.value.provider = ''
@@ -628,6 +757,7 @@ async function payBooking() {
       payment_method: payment.value.method,
       payment_provider: payment.value.provider || undefined,
       phone: normalizePhoneNumber(payment.value.phone, payment.value.country_code) || undefined,
+      hotel_id: search.value.hotel_id || undefined,
     })
     const reference = res.data.payment?.transaction_reference || res.data.payment?.clickpesa_reference
     paymentSuccess.value = `${res.data.message} ${reference ? `${t('bookingPage.reference')} ${reference}` : ''}`
@@ -798,6 +928,34 @@ onMounted(loadHotels)
   gap: 4px;
 }
 
+/* Itemised price preview shared by the booking form and payment step. */
+.price-summary {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 14px;
+}
+
+.price-row.price-fee span:first-child {
+  color: #757575;
+}
+
+.price-row.price-total {
+  border-top: 1px dashed #d4d4d4;
+  padding-top: 8px;
+  font-size: 15px;
+}
+
 .room-price {
   margin-top: auto;
   font-weight: 700;
@@ -857,5 +1015,110 @@ onMounted(loadHotels)
 .req {
   color: #c0392b;
   margin-left: 2px;
+}
+
+.hotel-receiving-details {
+  margin: 16px 0;
+  padding: 16px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+}
+
+.receiving-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0c4a6e;
+  margin: 0 0 12px;
+}
+
+.receiving-grid {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.receiving-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.receiving-label {
+  color: #64748b;
+}
+
+.receiving-value {
+  font-weight: 500;
+  color: #0f172a;
+  text-align: right;
+}
+
+.receiving-value.mono {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.5px;
+}
+
+.receiving-account {
+  padding: 12px;
+  background: #ecfdf5;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.receiving-account-label {
+  font-size: 13px;
+  color: #166534;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.receiving-account-number {
+  font-size: 18px;
+  font-weight: 700;
+  color: #166534;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 1px;
+}
+
+.receiving-no-account {
+  font-size: 13px;
+  color: #92400e;
+  background: #fef3c7;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin: 0;
+}
+
+.price-summary {
+  margin: 16px 0;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #334155;
+}
+
+.price-fee {
+  color: #64748b;
+}
+
+.price-total {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 8px;
+  margin-top: 2px;
+  font-size: 14px;
+  color: #0f172a;
 }
 </style>

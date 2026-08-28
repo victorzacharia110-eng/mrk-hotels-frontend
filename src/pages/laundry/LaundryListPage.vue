@@ -16,8 +16,13 @@
         <p class="muted">{{ $t('laundry.subtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="load"><i class="fas fa-rotate"></i> {{ $t('laundry.refresh') }}</button>
-        <button v-if="canManage" class="btn btn-primary" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('laundry.newOrder') }}</button>
+        <button class="btn btn-secondary" @click="load">
+          <i class="fas fa-rotate"></i> {{ $t('laundry.refresh') }}
+        </button>
+        <button v-if="canManage" class="btn btn-primary" @click="openCreate">
+          <i class="fas fa-plus"></i> {{ $t('laundry.newOrder') }}
+        </button>
+        <TableExportButton filename="laundry" :load-all="loadAllOrders" />
       </div>
     </div>
 
@@ -30,18 +35,30 @@
       <div class="filter-grid">
         <div class="form-group">
           <label>{{ $t('laundry.service') }}</label>
-          <SearchableSelect v-model="filters.service" :options="serviceOptions" :empty-label="$t('common.all')"
-            @change="load" />
+          <SearchableSelect
+            v-model="filters.service"
+            :options="serviceOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('laundry.status') }}</label>
-          <SearchableSelect v-model="filters.status" :options="statusOptions" :empty-label="$t('common.all')"
-            @change="load" />
+          <SearchableSelect
+            v-model="filters.status"
+            :options="statusOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('orders.payment') }}</label>
-          <SearchableSelect v-model="filters.payment_status" :options="paymentStatusOptions" :empty-label="$t('common.all')"
-            @change="load" />
+          <SearchableSelect
+            v-model="filters.payment_status"
+            :options="paymentStatusOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('laundry.orderDate') }}</label>
@@ -49,11 +66,18 @@
         </div>
         <div class="form-group">
           <label>{{ $t('common.search') }}</label>
-          <input v-model="filters.search" type="text" class="input" :placeholder="$t('laundry.orderNumber')"
-            @input="triggerSearch" />
+          <input
+            v-model="filters.search"
+            type="text"
+            class="input"
+            :placeholder="$t('laundry.orderNumber')"
+            @input="triggerSearch"
+          />
         </div>
         <div class="filter-actions">
-          <button class="btn btn-secondary btn-sm" @click="clearFilters"><i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}</button>
+          <button class="btn btn-secondary btn-sm" @click="clearFilters">
+            <i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}
+          </button>
         </div>
       </div>
     </div>
@@ -64,73 +88,120 @@
     <!-- Orders table with status workflow actions and payment badges -->
     <div v-else class="table-scroll">
       <table class="table">
-      <thead>
-        <tr>
-          <th>{{ $t('laundry.orderNumber') }}</th>
-          <th>{{ $t('laundry.guest') }}</th>
-          <th>{{ $t('laundry.room') }}</th>
-          <th>{{ $t('laundry.tableService') }}</th>
-          <th>{{ $t('laundry.items') }}</th>
-          <th>{{ $t('laundry.totalCharge') }}</th>
-          <th>{{ $t('laundry.attendant') }}</th>
-          <th>{{ $t('laundry.status') }}</th>
-          <th>{{ $t('orders.payment') }}</th>
-          <th>{{ $t('laundry.orderDate') }}</th>
-          <th>{{ $t('common.actions') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="order in orders" :key="order.laundry_order_id">
-          <td><strong>{{ order.order_number }}</strong></td>
-          <td>{{ order.guest_name || '-' }}</td>
-          <td>{{ order.room_number || '-' }}</td>
-          <td class="capitalize">{{ serviceLabel(order.service) }}</td>
-          <td>{{ order.items_count || '-' }}</td>
-          <td><span class="price">TZS {{ Number(order.total_charge).toLocaleString() }}</span></td>
-          <td>{{ order.attendant?.full_name || '-' }}</td>
-          <td>
-            <span class="badge" :class="statusBadge(order.status)">{{ statusLabel(order.status) }}</span>
-            <div v-if="order.ready_at" class="muted">{{ $t('laundry.readyAt') }} {{ formatDateTime(order.ready_at) }}</div>
-            <div v-if="order.delivered_at" class="muted">{{ $t('laundry.deliveredAt') }} {{ formatDateTime(order.delivered_at) }}</div>
-          </td>
-          <td><span class="badge" :class="paymentBadge(order.payment_status)">{{ order.payment_status.replace('_', ' ') }}</span></td>
-          <td>{{ order.order_date || '-' }}</td>
-          <td>
-            <div class="actions" v-if="canManage">
-              <button v-if="order.status === 'pending'" class="btn btn-sm btn-secondary" @click="setStatus(order, 'ready')">
-                <i class="fas fa-check-double"></i> {{ $t('laundry.statusReady') }}
-              </button>
-              <button v-if="order.status === 'ready'" class="btn btn-sm btn-success" @click="setStatus(order, 'delivered')">
-                <i class="fas fa-truck"></i> {{ $t('laundry.statusDelivered') }}
-              </button>
-              <button v-if="order.status === 'pending'" class="btn btn-sm btn-danger" @click="setStatus(order, 'cancelled')">
-                <i class="fas fa-ban"></i> {{ $t('laundry.statusCancelled') }}
-              </button>
-              <button class="btn btn-sm btn-secondary" @click="openEdit(order)"><i class="fas fa-pen"></i> {{ $t('common.edit') }}</button>
-              <button class="btn btn-sm btn-danger" @click="remove(order)"><i class="fas fa-trash"></i></button>
-            </div>
-            <span v-else class="muted">—</span>
-          </td>
-        </tr>
-        <tr v-if="!orders.length && !loading">
-          <td colspan="11" class="muted">{{ $t('laundry.empty') }}</td>
-        </tr>
-      </tbody>
-    </table>
+        <thead>
+          <tr>
+            <th scope="col">{{ $t('laundry.orderNumber') }}</th>
+            <th scope="col">{{ $t('laundry.guest') }}</th>
+            <th scope="col">{{ $t('laundry.room') }}</th>
+            <th scope="col">{{ $t('laundry.tableService') }}</th>
+            <th scope="col">{{ $t('laundry.items') }}</th>
+            <th scope="col">{{ $t('laundry.totalCharge') }}</th>
+            <th scope="col">{{ $t('laundry.attendant') }}</th>
+            <th scope="col">{{ $t('laundry.status') }}</th>
+            <th scope="col">{{ $t('orders.payment') }}</th>
+            <th scope="col">{{ $t('laundry.orderDate') }}</th>
+            <th scope="col">{{ $t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="order in orders" :key="order.laundry_order_id">
+            <td>
+              <strong>{{ order.order_number }}</strong>
+            </td>
+            <td>{{ order.guest_name || '-' }}</td>
+            <td>{{ order.room_number || '-' }}</td>
+            <td class="capitalize">{{ serviceLabel(order.service) }}</td>
+            <td>{{ order.items_count || '-' }}</td>
+            <td>
+              <span class="price">TZS {{ Number(order.total_charge).toLocaleString() }}</span>
+            </td>
+            <td>{{ order.attendant?.full_name || '-' }}</td>
+            <td>
+              <span class="badge" :class="statusBadge(order.status)">{{
+                statusLabel(order.status)
+              }}</span>
+              <div v-if="order.ready_at" class="muted">
+                {{ $t('laundry.readyAt') }} {{ formatDateTime(order.ready_at) }}
+              </div>
+              <div v-if="order.delivered_at" class="muted">
+                {{ $t('laundry.deliveredAt') }} {{ formatDateTime(order.delivered_at) }}
+              </div>
+            </td>
+            <td>
+              <span class="badge" :class="paymentBadge(order.payment_status)">{{
+                order.payment_status.replace('_', ' ')
+              }}</span>
+            </td>
+            <td>{{ order.order_date || '-' }}</td>
+            <td>
+              <div class="actions" v-if="canManage">
+                <button
+                  v-if="order.status === 'pending'"
+                  class="btn btn-sm btn-secondary"
+                  @click="setStatus(order, 'ready')"
+                >
+                  <i class="fas fa-check-double"></i> {{ $t('laundry.statusReady') }}
+                </button>
+                <button
+                  v-if="order.status === 'ready'"
+                  class="btn btn-sm btn-success"
+                  @click="setStatus(order, 'delivered')"
+                >
+                  <i class="fas fa-truck"></i> {{ $t('laundry.statusDelivered') }}
+                </button>
+                <button
+                  v-if="order.status === 'pending'"
+                  class="btn btn-sm btn-danger"
+                  @click="setStatus(order, 'cancelled')"
+                >
+                  <i class="fas fa-ban"></i> {{ $t('laundry.statusCancelled') }}
+                </button>
+                <button class="btn btn-sm btn-secondary" @click="openEdit(order)">
+                  <i class="fas fa-pen"></i> {{ $t('common.edit') }}
+                </button>
+                <button class="btn btn-sm btn-danger" @click="remove(order)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+              <span v-else class="muted">—</span>
+            </td>
+          </tr>
+          <tr v-if="!orders.length && !loading">
+            <td colspan="11" class="muted">{{ $t('laundry.empty') }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Pagination controls (shown when there is more than one page of orders) -->
     <div v-if="meta.total > meta.per_page" class="pagination">
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{ $t('common.previous') }}</button>
-      <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.next_page_url" @click="goPage(meta.current_page + 1)">{{ $t('common.next') }}</button>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.prev_page_url"
+        @click="goPage(meta.current_page - 1)"
+      >
+        {{ $t('common.previous') }}
+      </button>
+      <span class="muted">{{
+        $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page })
+      }}</span>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.next_page_url"
+        @click="goPage(meta.current_page + 1)"
+      >
+        {{ $t('common.next') }}
+      </button>
     </div>
 
     <!-- Create/edit order modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal">
         <div class="modal-head">
-          <h2><i class="fas fa-jug-detergent"></i> {{ editing ? $t('laundry.editOrder') : $t('laundry.newOrder') }}</h2>
+          <h2>
+            <i class="fas fa-jug-detergent"></i>
+            {{ editing ? $t('laundry.editOrder') : $t('laundry.newOrder') }}
+          </h2>
           <button class="modal-close" @click="closeModal"><i class="fas fa-xmark"></i></button>
         </div>
 
@@ -148,7 +219,12 @@
             </div>
             <div class="form-group">
               <label>{{ $t('laundry.room') }}</label>
-              <input v-model="form.room_number" type="text" class="input" :placeholder="$t('laundry.roomNumberPlaceholder')" />
+              <input
+                v-model="form.room_number"
+                type="text"
+                class="input"
+                :placeholder="$t('laundry.roomNumberPlaceholder')"
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('laundry.status') }}</label>
@@ -164,14 +240,20 @@
             </div>
             <div class="form-group form-full">
               <label>{{ $t('laundry.attendant') }}</label>
-              <SearchableSelect v-model="form.attendant_id" :options="userOptions" :empty-label="$t('common.none')" />
+              <SearchableSelect
+                v-model="form.attendant_id"
+                :options="userOptions"
+                :empty-label="$t('common.none')"
+              />
             </div>
           </div>
 
           <!-- Line items: repeatable rows of item name, quantity, unit price and a remove button -->
           <div class="items-head">
             <h3>{{ $t('laundry.lineItems') }}</h3>
-            <button type="button" class="btn btn-sm btn-secondary" @click="addItem"><i class="fas fa-plus"></i> {{ $t('laundry.addItem') }}</button>
+            <button type="button" class="btn btn-sm btn-secondary" @click="addItem">
+              <i class="fas fa-plus"></i> {{ $t('laundry.addItem') }}
+            </button>
           </div>
           <div v-for="(item, idx) in form.items" :key="idx" class="item-row">
             <div class="item-grid">
@@ -181,19 +263,36 @@
               </div>
               <div class="form-group">
                 <label>{{ $t('orders.quantity') }}</label>
-                <input v-model.number="item.quantity" type="number" min="1" class="input" required />
+                <input
+                  v-model.number="item.quantity"
+                  type="number"
+                  min="1"
+                  class="input"
+                  required
+                />
               </div>
               <div class="form-group">
                 <label>{{ $t('laundry.unitPrice') }}</label>
-                <input v-model.number="item.unit_price" type="number" min="0" step="0.01" class="input" required />
+                <input
+                  v-model.number="item.unit_price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="input"
+                  required
+                />
               </div>
               <div class="form-group item-remove">
-                <button type="button" class="btn btn-sm btn-danger" @click="removeItem(idx)"><i class="fas fa-trash"></i></button>
+                <button type="button" class="btn btn-sm btn-danger" @click="removeItem(idx)">
+                  <i class="fas fa-trash"></i>
+                </button>
               </div>
             </div>
           </div>
           <p v-if="form.items.length" class="muted">
-            {{ $t('laundry.estimatedCharge', { amount: Number(estimatedCharge).toLocaleString() }) }}
+            {{
+              $t('laundry.estimatedCharge', { amount: Number(estimatedCharge).toLocaleString() })
+            }}
           </p>
 
           <div class="form-group form-full">
@@ -201,9 +300,18 @@
             <textarea v-model="form.notes" rows="2" class="textarea"></textarea>
           </div>
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="closeModal">{{ $t('common.cancel') }}</button>
+            <button type="button" class="btn btn-secondary" @click="closeModal">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="saving">
-              <i class="fas fa-check"></i> {{ saving ? $t('common.saving') : (editing ? $t('laundry.updateOrder') : $t('laundry.saveOrder')) }}
+              <i class="fas fa-check"></i>
+              {{
+                saving
+                  ? $t('common.saving')
+                  : editing
+                    ? $t('laundry.updateOrder')
+                    : $t('laundry.saveOrder')
+              }}
             </button>
           </div>
         </form>
@@ -217,7 +325,9 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { laundryApi, userApi } from '@/api'
+import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import TableExportButton from '@/components/TableExportButton.vue'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -228,7 +338,14 @@ const canManage = computed(() => authStore.can(40) && authStore.canOperate)
 const orders = ref([])
 const users = ref([])
 const page = ref(1)
-const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
+const meta = ref({
+  total: 0,
+  per_page: 15,
+  current_page: 1,
+  last_page: 1,
+  prev_page_url: null,
+  next_page_url: null,
+})
 const filters = reactive({ service: '', status: '', payment_status: '', date: '', search: '' })
 const loading = ref(false)
 const error = ref('')
@@ -276,45 +393,51 @@ const paymentStatusOptions = [
 ]
 
 // Attendant dropdown options derived from the loaded user list.
-const userOptions = computed(() => users.value.map((u) => ({ value: u.user_id, label: u.full_name })))
+const userOptions = computed(() =>
+  users.value.map((user) => ({ value: user.user_id, label: user.full_name })),
+)
 
 /** Maps an order status key to its translated display label. */
-function statusLabel(s) {
+function statusLabel(status) {
   const map = {
     pending: t('laundry.statusPending'),
     ready: t('laundry.statusReady'),
     delivered: t('laundry.statusDelivered'),
     cancelled: t('laundry.statusCancelled'),
   }
-  return map[s] || s
+  return map[status] || status
 }
 
 /** Returns the CSS badge class for the given order status. */
-function statusBadge(s) {
+function statusBadge(status) {
   const map = {
     pending: 'badge-yellow',
     ready: 'badge-blue',
     delivered: 'badge-green',
     cancelled: 'badge-red',
   }
-  return map[s] || 'badge-gray'
+  return map[status] || 'badge-gray'
 }
 
 /** Returns the CSS badge class for the given payment status. */
-function paymentBadge(s) {
+function paymentBadge(status) {
   const map = { unpaid: 'badge-red', paid: 'badge-green', billed_to_room: 'badge-blue' }
-  return map[s] || 'badge-gray'
+  return map[status] || 'badge-gray'
 }
 
 /** Maps a laundry service key to its translated display label. */
-function serviceLabel(s) {
-  const map = { wash: t('laundry.serviceWash'), iron: t('laundry.serviceIron'), dry_clean: t('laundry.serviceDryClean') }
-  return map[s] || s
+function serviceLabel(service) {
+  const map = {
+    wash: t('laundry.serviceWash'),
+    iron: t('laundry.serviceIron'),
+    dry_clean: t('laundry.serviceDryClean'),
+  }
+  return map[service] || service
 }
 
 /** Formats an ISO datetime string for display, or '-' when absent. */
-function formatDateTime(d) {
-  return d ? String(d).slice(0, 16).replace('T', ' ') : '-'
+function formatDateTime(date) {
+  return date ? String(date).slice(0, 16).replace('T', ' ') : '-'
 }
 
 /** Creates a blank line-item object for the items list. */
@@ -334,7 +457,10 @@ function removeItem(idx) {
 
 /** Computes the estimated total charge from the entered line items. */
 const estimatedCharge = computed(() =>
-  form.items.reduce((sum, item) => sum + (Number(item.unit_price) || 0) * (Number(item.quantity) || 0), 0),
+  form.items.reduce(
+    (sum, item) => sum + (Number(item.unit_price) || 0) * (Number(item.quantity) || 0),
+    0,
+  ),
 )
 
 /**
@@ -363,6 +489,20 @@ async function load() {
   }
 }
 
+/** Fetches every laundry order page for export, honouring the active filters. */
+const loadAllOrders = () =>
+  collectAllRows((page, perPage) =>
+    laundryApi.index({
+      service: filters.service,
+      status: filters.status,
+      payment_status: filters.payment_status,
+      date: filters.date,
+      search: filters.search,
+      page,
+      per_page: perPage,
+    }),
+  )
+
 /** Loads the list of users for the attendant selector; failures are silently ignored. */
 async function loadUsers() {
   try {
@@ -373,8 +513,8 @@ async function loadUsers() {
 }
 
 /** Sets the page number and reloads the order list. */
-function goPage(p) {
-  page.value = p
+function goPage(page) {
+  page.value = page
   load()
 }
 
@@ -425,10 +565,10 @@ function openEdit(order) {
   form.guest_name = order.guest_name || ''
   form.service = order.service
   form.room_number = order.room_number || ''
-  form.items = (order.items || []).map((i) => ({
-    item_name: i.item_name,
-    quantity: i.quantity,
-    unit_price: Number(i.unit_price),
+  form.items = (order.items || []).map((item) => ({
+    item_name: item.item_name,
+    quantity: item.quantity,
+    unit_price: Number(item.unit_price),
   }))
   form.status = order.status
   form.payment_status = order.payment_status || 'unpaid'
@@ -453,8 +593,12 @@ function buildPayload() {
     service: form.service,
     room_number: form.room_number,
     items: form.items
-      .filter((i) => i.item_name)
-      .map((i) => ({ item_name: i.item_name, quantity: i.quantity, unit_price: i.unit_price })),
+      .filter((item) => item.item_name)
+      .map((item) => ({
+        item_name: item.item_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+      })),
     status: form.status,
     payment_status: form.payment_status,
     order_date: form.order_date,
@@ -517,7 +661,9 @@ async function remove(order) {
  */
 function flattenError(err) {
   const messages = err.response?.data?.errors
-  return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')
+  return messages
+    ? Object.values(messages).flat().join(' ')
+    : err.response?.data?.message || t('common.actionFailed')
 }
 
 onMounted(() => {
@@ -568,7 +714,7 @@ onMounted(() => {
 }
 
 .muted {
-  color: #888;
+  color: #757575;
   font-size: 12px;
   margin-top: 2px;
 }
@@ -579,7 +725,7 @@ onMounted(() => {
 
 .price {
   font-weight: 700;
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .actions {
@@ -634,14 +780,14 @@ onMounted(() => {
 }
 
 .modal-head h2 i {
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .modal-close {
   background: none;
   border: none;
   font-size: 18px;
-  color: #999;
+  color: #757575;
   cursor: pointer;
   padding: 4px;
 }
@@ -673,7 +819,7 @@ onMounted(() => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .item-row {

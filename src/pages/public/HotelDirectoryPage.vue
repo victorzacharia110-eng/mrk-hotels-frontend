@@ -39,7 +39,6 @@
           </div>
         </div>
         <div class="hotel-meta">
-          <span class="badge badge-blue">{{ hotel.available_rooms }} {{ $t('home.rooms') }}</span>
           <span v-if="hotel.room_types?.length" class="badge badge-gray">{{ hotel.room_types.join(', ') }}</span>
         </div>
         <div class="hotel-card-foot">
@@ -72,6 +71,7 @@
 
 <script setup>
 import { ref, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { publicApi } from '@/api'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
@@ -79,6 +79,7 @@ import BookingStatusTracker from '@/components/BookingStatusTracker.vue'
 import InvoiceDownloadCard from '@/components/InvoiceDownloadCard.vue'
 
 const { t } = useI18n()
+const route = useRoute()
 const hotels = ref([])
 const loading = ref(false)
 const error = ref('')
@@ -86,14 +87,16 @@ const filters = ref({
   country_code: '',
   country: '',
   city: '',
+  search: Array.isArray(route.query.search) ? route.query.search[0] : (route.query.search || ''),
 })
 
-/** Queries the API for hotels, passing the country/city filters when set. */
+/** Queries the API for hotels, passing the text/country/city filters when set. */
 async function search() {
   loading.value = true
   error.value = ''
   try {
     const params = {
+      search: filters.value.search || undefined,
       country: filters.value.country || undefined,
       city: filters.value.city || undefined,
     }
@@ -110,6 +113,15 @@ async function search() {
 watch(
   () => [filters.value.country, filters.value.city],
   () => search()
+)
+
+// Applies a new search submitted from the header directory search input
+watch(
+  () => route.query.search,
+  (q) => {
+    filters.value.search = Array.isArray(q) ? q[0] : (q || '')
+    search()
+  }
 )
 
 onMounted(search)

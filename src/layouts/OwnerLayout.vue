@@ -7,28 +7,55 @@
 
 <template>
   <div class="owner-layout">
+    <a href="#owner-content" class="skip-link">{{ $t('common.skipToContent') }}</a>
     <!-- Backdrop that closes the slide-over sidebar on mobile. -->
-    <div class="sa-sidebar-overlay" :class="{ visible: sidebarMobileOpen }" @click="sidebarMobileOpen = false"></div>
+    <div
+      class="sa-sidebar-overlay"
+      :class="{ visible: sidebarMobileOpen }"
+      @click="sidebarMobileOpen = false"
+    ></div>
     <!-- Sidebar: logo (click to collapse), navigation and session actions. -->
-    <aside class="sa-sidebar" :class="{ collapsed: sidebarCollapsed, 'mobile-open': sidebarMobileOpen }">
-      <div class="sa-logo" @click="sidebarCollapsed = !sidebarCollapsed">
-        <span class="sa-logo-icon"><i class="fas fa-crown"></i></span>
+    <aside
+      class="sa-sidebar"
+      :class="{ collapsed: sidebarCollapsed, 'mobile-open': sidebarMobileOpen }"
+    >
+      <div
+        class="sa-logo"
+        @click="sidebarCollapsed = !sidebarCollapsed"
+        role="button"
+        tabindex="0"
+        @keyup.enter="sidebarCollapsed = !sidebarCollapsed"
+      >
+        <span class="sa-logo-icon" aria-hidden="true"><i class="fas fa-crown"></i></span>
         <span class="sa-logo-text" v-show="!sidebarCollapsed">{{ $t('owner.panelTitle') }}</span>
       </div>
-      <nav class="sa-nav">
-        <router-link to="/owner" class="sa-nav-link" :class="{ active: $route.name === 'owner-dashboard' }"
-          @click="sidebarMobileOpen = false">
-          <i class="fas fa-gauge-high"></i>
+      <nav class="sa-nav" :aria-label="$t('common.navigation')">
+        <router-link
+          to="/owner"
+          class="sa-nav-link"
+          :class="{ active: $route.name === 'owner-dashboard' }"
+          @click="sidebarMobileOpen = false"
+        >
+          <i class="fas fa-gauge-high" aria-hidden="true"></i>
           <span v-show="!sidebarCollapsed">{{ $t('owner.dashboard') }}</span>
+        </router-link>
+        <router-link
+          to="/owner/profile"
+          class="sa-nav-link"
+          :class="{ active: $route.name === 'owner-profile' }"
+          @click="sidebarMobileOpen = false"
+        >
+          <i class="fas fa-user" aria-hidden="true"></i>
+          <span v-show="!sidebarCollapsed">{{ $t('owner.profile') }}</span>
         </router-link>
       </nav>
       <div class="sa-sidebar-footer">
         <router-link to="/" class="sa-nav-link" @click="sidebarMobileOpen = false">
-          <i class="fas fa-arrow-left"></i>
+          <i class="fas fa-arrow-left" aria-hidden="true"></i>
           <span v-show="!sidebarCollapsed">{{ $t('owner.backToPortal') }}</span>
         </router-link>
         <button @click="handleLogout" class="sa-nav-link logout-btn">
-          <i class="fas fa-right-from-bracket"></i>
+          <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
           <span v-show="!sidebarCollapsed">{{ $t('common.logout') }}</span>
         </button>
       </div>
@@ -37,17 +64,24 @@
     <div class="sa-main">
       <header class="sa-header">
         <div class="sa-header-left">
-          <button class="sa-hamburger" @click="toggleSidebar">
+          <button
+            class="sa-hamburger"
+            @click="toggleSidebar"
+            :aria-label="$t('nav.menuToggle')"
+            :aria-expanded="sidebarMobileOpen"
+          >
             <span></span><span></span><span></span>
           </button>
           <h2>{{ pageTitle }}</h2>
         </div>
         <div class="sa-header-right">
-          <span class="sa-badge"><i class="fas fa-crown"></i> {{ $t('owner.title') }}</span>
+          <span class="sa-badge"
+            ><i class="fas fa-crown" aria-hidden="true"></i> {{ $t('owner.title') }}</span
+          >
           <span class="sa-user">{{ authStore.user?.full_name }}</span>
         </div>
       </header>
-      <main class="sa-content">
+      <main id="owner-content" class="sa-content" tabindex="-1">
         <router-view />
       </main>
     </div>
@@ -71,6 +105,7 @@ const pageTitle = computed(() => {
   const titles = {
     'owner-dashboard': 'Dashboard',
     'owner-hotel-detail': 'Hotel Details',
+    'owner-profile': 'Profile',
   }
   return titles[route.name] || 'Dashboard'
 })

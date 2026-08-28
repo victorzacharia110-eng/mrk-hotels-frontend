@@ -17,8 +17,11 @@
       <!-- Avatar and summary of the logged-in user pulled from the auth store -->
       <div class="profile-header">
         <div class="avatar">
-          <img v-if="authStore.user?.profile_picture" :src="authStore.user.profile_picture"
-            :alt="authStore.user?.full_name" />
+          <img
+            v-if="authStore.user?.profile_picture"
+            :src="authStore.user.profile_picture"
+            :alt="authStore.user?.full_name"
+          />
           <i v-else class="fas fa-user"></i>
         </div>
         <div class="profile-header-info">
@@ -30,11 +33,15 @@
         </div>
       </div>
 
-      <p v-if="message" class="alert" :class="error ? 'alert-error' : 'alert-success'">{{ message }}</p>
+      <p v-if="message" class="alert" :class="error ? 'alert-error' : 'alert-success'">
+        {{ message }}
+      </p>
 
       <!-- Editable personal information form -->
       <form @submit.prevent="save">
-        <h3 class="form-section-title"><i class="fas fa-pen"></i> {{ $t('profile.personalInfo') }}</h3>
+        <h3 class="form-section-title">
+          <i class="fas fa-pen"></i> {{ $t('profile.personalInfo') }}
+        </h3>
         <div class="profile-grid">
           <div class="form-group">
             <label>{{ $t('profile.firstName') }}</label>
@@ -105,8 +112,11 @@
         </div>
         <div class="form-group">
           <label>{{ $t('profile.subManager') }}</label>
-          <input :value="authStore.user?.is_sub_manager ? $t('profile.yes') : $t('profile.no')" class="input"
-            disabled />
+          <input
+            :value="authStore.user?.is_sub_manager ? $t('profile.yes') : $t('profile.no')"
+            class="input"
+            disabled
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('profile.lastLogin') }}</label>
@@ -128,7 +138,9 @@
           <span class="badge" :class="onShift ? 'badge-green' : 'badge-red'">
             {{ onShift ? $t('attendance.onShift') : $t('attendance.offShift') }}
           </span>
-          <span v-if="clockInAt" class="muted">{{ $t('attendance.since') }} {{ formatDateTime(clockInAt) }}</span>
+          <span v-if="clockInAt" class="muted"
+            >{{ $t('attendance.since') }} {{ formatDateTime(clockInAt) }}</span
+          >
         </div>
         <button v-if="onShift" class="btn btn-danger" :disabled="acting" @click="handleClockOut">
           <i class="fas fa-right-from-bracket"></i> {{ $t('attendance.clockOut') }}
@@ -138,12 +150,18 @@
         </button>
       </div>
       <p v-if="!onShift && requirements.office_configured" class="muted attendance-hint">
-        {{ requirements.requires_qr ? $t('attendance.clockInHint') : $t('attendance.officeSettingsHint') }}
+        {{
+          requirements.requires_qr
+            ? $t('attendance.clockInHint')
+            : $t('attendance.officeSettingsHint')
+        }}
       </p>
 
       <!-- Absence claim: sick/emergency excuse filed with evidence -->
       <div class="absence-claim">
-        <h3 class="form-section-title"><i class="fas fa-notes-medical"></i> {{ $t('attendance.absenceTitle') }}</h3>
+        <h3 class="form-section-title">
+          <i class="fas fa-notes-medical"></i> {{ $t('attendance.absenceTitle') }}
+        </h3>
         <p class="muted attendance-hint">{{ $t('attendance.absenceHint') }}</p>
         <div v-if="absenceError" class="alert alert-error">{{ absenceError }}</div>
         <div v-if="absenceMessage" class="alert alert-success">{{ absenceMessage }}</div>
@@ -159,22 +177,35 @@
             <input v-model="absenceForm.startsAt" type="date" class="input" />
             <input v-model="absenceForm.endsAt" type="date" class="input" />
           </div>
-          <input v-model="absenceForm.reason" type="text" class="input"
-            :placeholder="$t('attendance.absenceReasonPlaceholder')" />
-          <input ref="absenceFilesInput" type="file" multiple accept="image/jpeg,image/png,application/pdf"
-            class="input" @change="onAbsenceFiles" />
+          <input
+            v-model="absenceForm.reason"
+            type="text"
+            class="input"
+            :placeholder="$t('attendance.absenceReasonPlaceholder')"
+          />
+          <input
+            ref="absenceFilesInput"
+            type="file"
+            multiple
+            accept="image/jpeg,image/png,application/pdf"
+            class="input"
+            @change="onAbsenceFiles"
+          />
           <button class="btn btn-primary" type="submit" :disabled="absenceSaving">
-            <i class="fas fa-paper-plane"></i> {{ absenceSaving ? $t('common.saving') : $t('attendance.absenceSubmit')
-            }}
+            <i class="fas fa-paper-plane"></i>
+            {{ absenceSaving ? $t('common.saving') : $t('attendance.absenceSubmit') }}
           </button>
         </form>
         <ul v-if="myAbsences.length" class="security-list">
           <li v-for="a in myAbsences" :key="a.request_id">
             <div>
               <strong>{{ absenceTypeLabel(a.absence_type) }}</strong>
-              <span class="muted">{{ formatDate(a.starts_at) }} &rarr; {{ formatDate(a.ends_at) }}</span>
-              <span v-if="a.suspicious" class="badge badge-warning">{{ suspicionLabels(a.suspicion_reasons).join(', ')
-                }}</span>
+              <span class="muted"
+                >{{ formatDate(a.starts_at) }} &rarr; {{ formatDate(a.ends_at) }}</span
+              >
+              <span v-if="a.suspicious" class="badge badge-warning">{{
+                suspicionLabels(a.suspicion_reasons).join(', ')
+              }}</span>
             </div>
             <em class="badge" :class="statusBadge(a.status)">{{ statusLabel(a.status) }}</em>
           </li>
@@ -186,7 +217,11 @@
     <AttendanceQrScanner v-if="showScanner" @scanned="onScanned" @close="onScannerClose" />
 
     <!-- Clock-in selfie modal, opened when the hotel requires photo proof -->
-    <AttendanceSelfieCapture v-if="showSelfie" @captured="onSelfieCaptured" @close="onSelfieClose" />
+    <AttendanceSelfieCapture
+      v-if="showSelfie"
+      @captured="onSelfieCaptured"
+      @close="onSelfieClose"
+    />
 
     <!-- Rotating clock-in QR, shown to managers for display at the entrance -->
     <div v-if="canManageQr" class="card">
@@ -210,7 +245,9 @@
 
     <!-- Office attendance settings, editable by the hotel admin -->
     <div v-if="canManageSettings" class="card">
-      <h2 class="card-title"><i class="fas fa-location-dot"></i> {{ $t('attendance.officeSettings') }}</h2>
+      <h2 class="card-title">
+        <i class="fas fa-location-dot"></i> {{ $t('attendance.officeSettings') }}
+      </h2>
       <p class="muted">{{ $t('attendance.officeSettingsHint') }}</p>
       <div v-if="settingsError" class="alert alert-error">{{ settingsError }}</div>
       <div v-if="settingsMessage" class="alert alert-success">{{ settingsMessage }}</div>
@@ -226,7 +263,13 @@
           </div>
           <div class="form-group">
             <label>{{ $t('attendance.officeRadius') }}</label>
-            <input v-model.number="settings.radius" type="number" min="50" max="5000" class="input" />
+            <input
+              v-model.number="settings.radius"
+              type="number"
+              min="50"
+              max="5000"
+              class="input"
+            />
           </div>
           <div class="form-group">
             <label class="check-label">
@@ -243,7 +286,87 @@
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn-primary" :disabled="savingSettings">
-            <i class="fas fa-save"></i> {{ savingSettings ? $t('common.saving') : $t('common.save') }}
+            <i class="fas fa-save"></i>
+            {{ savingSettings ? $t('common.saving') : $t('common.save') }}
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Hotel business details — editable by managers and owners (level 80+) -->
+    <div v-if="canManageHotel" class="card">
+      <h2 class="card-title">
+        <i class="fas fa-building"></i> {{ $t('hotelSettings.title') }}
+      </h2>
+      <p class="muted">{{ $t('hotelSettings.hint') }}</p>
+      <div v-if="hotelSettingsError" class="alert alert-error">{{ hotelSettingsError }}</div>
+      <div v-if="hotelSettingsSuccess" class="alert alert-success">{{ hotelSettingsSuccess }}</div>
+      <form @submit.prevent="saveHotelSettings">
+        <div class="profile-grid">
+          <div class="form-group">
+            <label>{{ $t('hotelSettings.hotelName') }}</label>
+            <input v-model="hotelForm.hotel_name" type="text" class="input" required />
+          </div>
+          <div class="form-group">
+            <label>{{ $t('hotelSettings.registrationCode') }}</label>
+            <input v-model="hotelForm.registration_code" type="text" class="input" maxlength="6" style="text-transform: uppercase; font-family: monospace;" />
+          </div>
+          <div class="form-group">
+            <label>{{ $t('hotelSettings.contactPerson') }}</label>
+            <input v-model="hotelForm.contact_person" type="text" class="input" />
+          </div>
+          <div class="form-group">
+            <label>{{ $t('hotelSettings.email') }}</label>
+            <input v-model="hotelForm.email" type="email" class="input" />
+          </div>
+          <div class="form-group">
+            <label>{{ $t('hotelSettings.phone') }}</label>
+            <input v-model="hotelForm.phone" type="text" class="input" />
+          </div>
+          <div class="form-group">
+            <label>{{ $t('hotelSettings.city') }}</label>
+            <input v-model="hotelForm.city" type="text" class="input" />
+          </div>
+          <div class="form-group">
+            <label>{{ $t('hotelSettings.country') }}</label>
+            <input v-model="hotelForm.country" type="text" class="input" />
+          </div>
+          <div class="form-group form-full">
+            <label>{{ $t('hotelSettings.address') }}</label>
+            <input v-model="hotelForm.address" type="text" class="input" />
+          </div>
+          <div class="form-group">
+            <label>TIN</label>
+            <input v-model="hotelForm.tin" type="text" class="input" placeholder="Taxpayer Identification Number" />
+          </div>
+          <div class="form-group">
+            <label>VRN</label>
+            <input v-model="hotelForm.vrn" type="text" class="input" placeholder="VAT Registration Number" />
+          </div>
+        </div>
+
+        <!-- Payment methods and account numbers -->
+        <h3 class="card-subtitle">{{ $t('hotelSettings.paymentSection') }}</h3>
+        <div class="payment-methods-grid">
+          <label v-for="m in allPaymentMethods" :key="m" class="checkbox-label">
+            <input type="checkbox" :value="m" v-model="hotelForm.payment_methods" />
+            {{ $t(`paymentFields.methods.${m}`) }}
+          </label>
+        </div>
+        <div v-if="hotelAccountProviders.length" class="payment-accounts-grid">
+          <div v-for="p in hotelAccountProviders" :key="p" class="form-group">
+            <label class="account-label">
+              <ProviderLogo :provider="p" />
+              {{ $t(`paymentFields.providers.${p}`) }}
+            </label>
+            <input v-model="hotelForm.payment_accounts[p]" type="text" class="input" :placeholder="$t('hotelSettings.accountPlaceholder')" />
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" :disabled="savingHotelSettings">
+            <i class="fas fa-check"></i>
+            {{ savingHotelSettings ? $t('common.saving') : $t('common.save') }}
           </button>
         </div>
       </form>
@@ -251,19 +374,28 @@
 
     <!-- Attendance security oversight, visible to managers -->
     <div v-if="canManageSecurity" class="card">
-      <h2 class="card-title"><i class="fas fa-shield-halved"></i> {{ $t('attendance.securityTitle') }}</h2>
+      <h2 class="card-title">
+        <i class="fas fa-shield-halved"></i> {{ $t('attendance.securityTitle') }}
+      </h2>
       <p class="muted">{{ $t('attendance.securityHint') }}</p>
       <div v-if="securityError" class="alert alert-error">{{ securityError }}</div>
 
       <div class="security-block">
-        <h3 class="security-subtitle">{{ $t('attendance.devicesTitle') }}</h3>
+        <div class="security-subtitle-row">
+          <h3 class="security-subtitle">{{ $t('attendance.devicesTitle') }}</h3>
+          <TableExportButton
+            filename="attendance-devices"
+            :title="$t('attendance.devicesTitle')"
+            :rows="security.devices"
+          />
+        </div>
         <table class="security-table">
           <thead>
             <tr>
-              <th>{{ $t('attendance.deviceStaff') }}</th>
-              <th>{{ $t('attendance.deviceName') }}</th>
-              <th>{{ $t('attendance.deviceLastSeen') }}</th>
-              <th></th>
+              <th scope="col">{{ $t('attendance.deviceStaff') }}</th>
+              <th scope="col">{{ $t('attendance.deviceName') }}</th>
+              <th scope="col">{{ $t('attendance.deviceLastSeen') }}</th>
+              <th scope="col"></th>
             </tr>
           </thead>
           <tbody>
@@ -271,11 +403,17 @@
               <td>{{ d.user?.full_name || '—' }}</td>
               <td>
                 {{ d.device_name || d.device_id }}
-                <span v-if="d.revoked" class="badge badge-danger">{{ $t('attendance.revoked') }}</span>
+                <span v-if="d.revoked" class="badge badge-danger">{{
+                  $t('attendance.revoked')
+                }}</span>
               </td>
               <td>{{ formatDateTime(d.last_seen_at) }}</td>
               <td class="security-actions">
-                <button v-if="!d.revoked" class="btn btn-sm btn-danger" @click="revokeDevice(d.device_row_id)">
+                <button
+                  v-if="!d.revoked"
+                  class="btn btn-sm btn-danger"
+                  @click="revokeDevice(d.device_row_id)"
+                >
                   {{ $t('attendance.revoke') }}
                 </button>
               </td>
@@ -295,44 +433,63 @@
               <strong>{{ r.user?.full_name || '—' }}</strong>
               <span class="muted">{{ formatDateTime(r.clock_in_at) }}</span>
             </div>
-            <em class="badge badge-warning">{{ suspicionLabels(r.suspicion_reasons).join(', ') }}</em>
+            <em class="badge badge-warning">{{
+              suspicionLabels(r.suspicion_reasons).join(', ')
+            }}</em>
           </li>
-          <li v-if="!security.suspicious.length" class="muted">{{ $t('attendance.noSuspicious') }}</li>
+          <li v-if="!security.suspicious.length" class="muted">
+            {{ $t('attendance.noSuspicious') }}
+          </li>
         </ul>
       </div>
 
       <div class="security-block">
-        <h3 class="security-subtitle"><i class="fas fa-file-medical"></i> {{ $t('attendance.absenceClaimsTitle') }}</h3>
+        <h3 class="security-subtitle">
+          <i class="fas fa-file-medical"></i> {{ $t('attendance.absenceClaimsTitle') }}
+        </h3>
         <div v-if="claimsError" class="alert alert-error">{{ claimsError }}</div>
         <ul class="security-list">
           <li v-for="c in absenceClaims" :key="c.request_id">
             <div>
               <strong>{{ c.user?.full_name || '—' }}</strong>
               <span class="muted">
-                {{ absenceTypeLabel(c.absence_type) }} &middot; {{ formatDate(c.starts_at) }} &rarr; {{
-                  formatDate(c.ends_at) }}
+                {{ absenceTypeLabel(c.absence_type) }} &middot; {{ formatDate(c.starts_at) }} &rarr;
+                {{ formatDate(c.ends_at) }}
               </span>
-              <span class="muted">{{ $t('attendance.absenceClaimedAt') }} {{ formatDateTime(c.submitted_at) }}</span>
-              <span v-if="c.suspicious" class="badge badge-warning">{{ suspicionLabels(c.suspicion_reasons).join(', ')
-                }}</span>
+              <span class="muted"
+                >{{ $t('attendance.absenceClaimedAt') }} {{ formatDateTime(c.submitted_at) }}</span
+              >
+              <span v-if="c.suspicious" class="badge badge-warning">{{
+                suspicionLabels(c.suspicion_reasons).join(', ')
+              }}</span>
               <span v-if="c.attachments?.length" class="badge">
                 <i class="fas fa-paperclip"></i> {{ c.attachments.length }}
                 <span class="muted">{{ $t('attendance.absenceEvidenceHashed') }}</span>
               </span>
-              <button v-if="c.attachments?.length" class="btn-link" type="button"
-                @click="viewEvidence(c.attachments[0].attachment_id)">
+              <button
+                v-if="c.attachments?.length"
+                class="btn-link"
+                type="button"
+                @click="viewEvidence(c.attachments[0].attachment_id)"
+              >
                 <i class="fas fa-paperclip"></i> {{ $t('attendance.openEvidence') }}
               </button>
             </div>
             <div class="claim-actions">
               <em class="badge" :class="statusBadge(c.status)">{{ statusLabel(c.status) }}</em>
               <template v-if="c.status === 'pending'">
-                <button class="btn btn-sm btn-primary" :disabled="decidingClaim"
-                  @click="decideAbsence(c.request_id, 'approve')">
+                <button
+                  class="btn btn-sm btn-primary"
+                  :disabled="decidingClaim"
+                  @click="decideAbsence(c.request_id, 'approve')"
+                >
                   {{ $t('attendance.absenceApprove') }}
                 </button>
-                <button class="btn btn-sm btn-danger" :disabled="decidingClaim"
-                  @click="decideAbsence(c.request_id, 'reject')">
+                <button
+                  class="btn btn-sm btn-danger"
+                  :disabled="decidingClaim"
+                  @click="decideAbsence(c.request_id, 'reject')"
+                >
                   {{ $t('attendance.absenceReject') }}
                 </button>
               </template>
@@ -356,12 +513,21 @@ import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import QRCode from 'qrcode'
 import { useAuthStore } from '@/stores/auth'
-import { attendanceApi, authApi } from '@/api'
+import { attendanceApi, authApi, hotelSettingsApi } from '@/api'
+import { PAYMENT_METHODS, METHOD_MOBILE_MONEY, METHOD_BANK, MOBILE_MONEY_PROVIDERS, ALL_PROVIDERS } from '@/utils/payments'
 import ChangePasswordForm from '@/components/ChangePasswordForm.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
 import AttendanceQrScanner from '@/components/AttendanceQrScanner.vue'
 import AttendanceSelfieCapture from '@/components/AttendanceSelfieCapture.vue'
-import { getDeviceId, getDeviceFingerprint, getDeviceSecret, setDeviceSecret, clearDeviceSecret } from '@/utils/device'
+import TableExportButton from '@/components/TableExportButton.vue'
+import ProviderLogo from '@/components/ProviderLogo.vue'
+import {
+  getDeviceId,
+  getDeviceFingerprint,
+  getDeviceSecret,
+  setDeviceSecret,
+  clearDeviceSecret,
+} from '@/utils/device'
 
 const { t, te } = useI18n()
 const authStore = useAuthStore()
@@ -371,7 +537,14 @@ const onShift = ref(false)
 const clockInAt = ref(null)
 const acting = ref(false)
 const attendanceError = ref('')
-const requirements = reactive({ office_configured: false, requires_location: false, requires_qr: false, requires_photo: false, device_policy: 'off', device_registered: true })
+const requirements = reactive({
+  office_configured: false,
+  requires_location: false,
+  requires_qr: false,
+  requires_photo: false,
+  device_policy: 'off',
+  device_registered: true,
+})
 const showScanner = ref(false)
 let qrResolve = null
 
@@ -403,7 +576,13 @@ const qrCanvasEl = ref(null)
 let qrTimer = 0
 
 // Office attendance settings state (hotel admin).
-const settings = reactive({ lat: null, lng: null, radius: 100, qrEnabled: false, photoRequired: false })
+const settings = reactive({
+  lat: null,
+  lng: null,
+  radius: 100,
+  qrEnabled: false,
+  photoRequired: false,
+})
 const savingSettings = ref(false)
 const settingsError = ref('')
 const settingsMessage = ref('')
@@ -412,6 +591,36 @@ const settingsMessage = ref('')
 const canManageQr = computed(() => authStore.can(80))
 const canManageSettings = computed(() => authStore.can(90))
 const canManageSecurity = computed(() => authStore.can(80))
+const canManageHotel = computed(() => authStore.can(80))
+
+// Hotel business details form state.
+const allPaymentMethods = PAYMENT_METHODS
+const hotelForm = reactive({
+  hotel_name: '',
+  registration_code: '',
+  contact_person: '',
+  email: '',
+  phone: '',
+  address: '',
+  city: '',
+  country: '',
+  tin: '',
+  vrn: '',
+  payment_methods: [],
+  payment_accounts: {},
+})
+const savingHotelSettings = ref(false)
+const hotelSettingsError = ref('')
+const hotelSettingsSuccess = ref('')
+
+/** Which provider account inputs to show based on enabled payment methods. */
+const hotelAccountProviders = computed(() => {
+  const methods = hotelForm.payment_methods
+  if (!methods.length) return []
+  return ALL_PROVIDERS.filter((p) =>
+    methods.includes(MOBILE_MONEY_PROVIDERS.includes(p) ? METHOD_MOBILE_MONEY : METHOD_BANK),
+  )
+})
 
 // Profile form config: allowed ID types and the editable fields.
 const idTypes = ['national_id', 'passport']
@@ -447,8 +656,8 @@ function fillForm() {
 }
 
 /** Stores the photo file picked in the file input. */
-function onPhoto(e) {
-  photo.value = e.target.files?.[0] || null
+function onPhoto(event) {
+  photo.value = event.target.files?.[0] || null
 }
 
 /** Submits the profile form (with optional photo) and refreshes the user in the auth store. */
@@ -482,13 +691,13 @@ async function save() {
 }
 
 /** Formats an ISO datetime string for display, or '-' when absent. */
-function formatDateTime(d) {
-  return d ? String(d).slice(0, 16).replace('T', ' ') : '-'
+function formatDateTime(date) {
+  return date ? String(date).slice(0, 16).replace('T', ' ') : '-'
 }
 
 /** Formats an ISO date string (date only) for display, or '-' when absent. */
-function formatDate(d) {
-  return d ? String(d).slice(0, 10) : '-'
+function formatDate(date) {
+  return date ? String(date).slice(0, 10) : '-'
 }
 
 /**
@@ -498,7 +707,9 @@ function formatDate(d) {
  */
 function flattenError(err) {
   const messages = err.response?.data?.errors
-  return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')
+  return messages
+    ? Object.values(messages).flat().join(' ')
+    : err.response?.data?.message || t('common.actionFailed')
 }
 
 /** Applies attendance data to the UI, defaulting the shift state from clock timestamps. */
@@ -552,7 +763,7 @@ function getPosition() {
           positioned_at: new Date().toISOString(),
         }),
       () => resolve(null),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
     )
   })
 }
@@ -787,6 +998,46 @@ async function saveSettings() {
   }
 }
 
+/** Loads the hotel's business details into the form. */
+async function loadHotelSettings() {
+  try {
+    const { data } = await hotelSettingsApi.show()
+    const h = data.hotel
+    hotelForm.hotel_name = h.hotel_name || ''
+    hotelForm.registration_code = h.registration_code || ''
+    hotelForm.contact_person = h.contact_person || ''
+    hotelForm.email = h.email || ''
+    hotelForm.phone = h.phone || ''
+    hotelForm.address = h.address || ''
+    hotelForm.city = h.city || ''
+    hotelForm.country = h.country || ''
+    hotelForm.tin = h.tin || ''
+    hotelForm.vrn = h.vrn || ''
+    hotelForm.payment_methods = h.payment_methods || []
+    hotelForm.payment_accounts = h.payment_accounts || {}
+  } catch {
+    // Silently ignore — the card simply won't show data.
+  }
+}
+
+/** Saves the hotel's business details. */
+async function saveHotelSettings() {
+  savingHotelSettings.value = true
+  hotelSettingsError.value = ''
+  hotelSettingsSuccess.value = ''
+  try {
+    const payload = { ...hotelForm }
+    // Clone accounts so reactive changes don't leak.
+    payload.payment_accounts = { ...hotelForm.payment_accounts }
+    const { data } = await hotelSettingsApi.update(payload)
+    hotelSettingsSuccess.value = data.message || t('hotelSettings.saved')
+  } catch (err) {
+    hotelSettingsError.value = flattenError(err)
+  } finally {
+    savingHotelSettings.value = false
+  }
+}
+
 /** Loads the manager security oversight: registered devices + suspicious clock-ins. */
 async function loadSecurity() {
   security.loading = true
@@ -867,8 +1118,8 @@ function statusBadge(status) {
 }
 
 /** Collects the selected evidence files into the form state. */
-function onAbsenceFiles(e) {
-  absenceFiles.value = Array.from(e.target.files || [])
+function onAbsenceFiles(event) {
+  absenceFiles.value = Array.from(event.target.files || [])
 }
 
 /** The current user's own absence claims, refreshed after submitting. */
@@ -951,6 +1202,7 @@ onMounted(() => {
     startQrRotation()
   }
   if (canManageSettings.value) loadSettings()
+  if (canManageHotel.value) loadHotelSettings()
   if (canManageSecurity.value) {
     loadSecurity()
     loadAbsenceClaims()
@@ -1110,6 +1362,18 @@ onUnmounted(() => clearInterval(qrTimer))
   margin: 0 0 8px;
 }
 
+.security-subtitle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.security-subtitle-row .security-subtitle {
+  margin-bottom: 0;
+}
+
 .security-table {
   width: 100%;
   border-collapse: collapse;
@@ -1149,7 +1413,7 @@ onUnmounted(() => clearInterval(qrTimer))
   border-bottom: 1px solid #e2e8f0;
 }
 
-.security-list li>div {
+.security-list li > div {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -1213,5 +1477,55 @@ onUnmounted(() => clearInterval(qrTimer))
 
 .btn-link:hover {
   color: #1e40af;
+}
+
+.card-subtitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #334155;
+  margin: 20px 0 10px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.form-full {
+  grid-column: 1 / -1;
+}
+
+.payment-methods-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #005eb8;
+}
+
+.payment-accounts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.account-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
 }
 </style>

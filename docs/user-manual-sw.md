@@ -1,6 +1,6 @@
 # MRK Hotels — Mwongozo wa Mtumiaji (Kiswahili)
 
-**Toleo 1.3**
+**Toleo 1.3** — v1.1.0 · 15 Agosti 2026
 
 ---
 
@@ -292,6 +292,21 @@ Ukurasa wa Maagizo unashughulikia huduma katika mgahawa, baa na chumba:
 
 <figure><img src="images/app-orders.png" alt="Ukurasa wa Maagizo ya chakula"><figcaption>Maagizo — huduma katika mgahawa, baa na chumba.</figcaption></figure>
 
+### 12.3 Ubao wa Kuweka Oda (Take Order)
+
+Wahudumu na mabarmen huweka oda za meza kwenye skrini ya **Weka Oda**, iliyoundwa kama POS ya kugusa:
+
+- **Mgahawa / Baa** — gusa mara moja juu kubadilisha ubao mzima: vitufe vya makundi, foleni ya maagizo na aina ya oda vyote vinafuata. Mabarmen huanza kwenye Baa; mtu yeyote anaweza kubadilisha.
+- **Vitufe vya makundi** — gusa kundi (Mishkaki, Cocktail, Tambi…) kupopota vitu vyake; gusa kipengele na kinajitokea kwenye tiketi papo hapo.
+- **Wageni (covers)** — weka idadi ya watu mezani mara moja unapokaa (kitufe cha − / +). Hakizuizi chochote: kinatumika na tiketi ili ripoti baadaye zikokotoe wastani wa matumizi kwa kila mgeni na idadi ya wageni kwa siku. Mteja wa baa peke yake anaweza kuacha sifuri.
+  - Wageni *hawalingani* na maagizo: familia ya watu tano ni tiketi moja na wageni watano; bia ya mtu mmoja ni tiketi moja na mgeni mmoja. Wageni ÷ maagizo = ukubwa wa kawaida wa kikundi — ukitazama mabadiliko yake utagundua meza zinapokuwa tupu hata mapato yakionekana sawa.
+- **Aina ya oda** inachaguliwa kwako: oda za mgahawa ni Dine-in, za baa ni At-bar kiotomatiki; oda za huduma ya chumba kutoka ukurasa wa Maagizo zinasalia Hotel-menu.
+- **Inaambatana na** — vyakula vya kuchoma mgahawani (mishkaki, nyama choma…) vinauliza kiarabu cha kukamilisha (wali, ugali, chips…). Chaguo linaonekana kwenye tiketi ya jikoni na kuhifadhiwa kwenye historia ya oda.
+
+### 12.4 Ubao wa Jikoni (gusa moja)
+
+Wafanyakazi wa jikoni wanatua kwenye **Ubao wa Jikoni** wenye rangi nyeusi: kadi moja kwa kila tiketi wazi inayoonyesha namba ya oda, meza/chumba, idara na dakika zilizopita. Kila sahani kwenye kadi **yenyewe ni kitufe** — gusa mara moja ikiwa tayari, na mbeba anagusa tena ikifika kwa mgeni. Hakuna madirira madogo, hakuna vichujio; ubao unajiondoa yenyewe kila sekunde 15 ili tiketi mpya zijitokee peke zake, na "Inaambatana na" vinaonekana chini ya vyakula vyao. Malipo yanabaki hatua tofauti ya meneja/mkadiriaji.
+
 ---
 
 ## 13. Nguo (Laundry)
@@ -370,12 +385,12 @@ Ukurasa wa Wafanyakazi (msimamizi/meneja) unasimamia timu:
 - Ongeza mfanyakazi kwa nafasi yake (manager, accountant, receptionist, housekeeping, kitchen, waiter, bartender, staff, …).
 - Kila mfanyakazi anapata **namba ya usajili** (mf. `EMP-2026-0004`) — huitumia pia kama kitambulisho cha kuingia kwa PIN (sehemu ya 2.4).
 - **Washa / zima** akaunti, **weka upya nenosiri**, na **waalike** wafanyakazi kuingia.
-- **Weka PIN ya kuingia ya tarakimu 4** kutoka kwenye mstari wa mfanyakazi (**Weka PIN**) ili atumie njia ya PIN kwenye terminali zinazoshirikiwa. Weka PIN mara mbili; huhifadhiwa kwa usalama na inaweza kubadilishwa wakati wowote. Unaweza kuweka PIN tu kwa nafasi zilizo sawa au chini ya yako — na sio yako mwenyewe.
+- **Weka PIN ya kuingia ya tarakimu 4** kutoka kwenye mstari wa mfanyakazi (**Weka PIN**) ili atumie njia ya PIN kwenye terminali zinazoshirikiwa. Kisanduku **kinatengeneza PIN salama bila mpangilio kiotomatiki** — bonyeza kitufe cha kubadilisha (refresh) kutengeneza nyingine, kitufe cha nakili (copy) kuinakili, na kishirikishe na mfanyakazi. Badilisha kuwa **Niandike mwenyewe** ikiwa unapendelea kuweka PIN unayochagua (mashamba yote mawili yana kitufe cha jicho kuonyesha/ficha). PIN huhifadhiwa kwa usalama na inaweza kubadilishwa wakati wowote. Unaweza kuweka PIN tu kwa nafasi zilizo sawa au chini ya yako — na sio yako mwenyewe.
 - Rekodi kitambulisho/viambatisho kwa kila mwanachama.
 
 <figure><img src="images/app-staff.png" alt="Ukurasa wa Wafanyakazi"><figcaption>Wafanyakazi — simamia timu, nafasi, akaunti, mialiko, kuweka upya nenosiri na PIN za kuingia.</figcaption></figure>
 
-<figure><img src="images/app-staff-set-pin.png" alt="Kisanduku cha Weka PIN ya Kuingia"><figcaption>Weka PIN ya Kuingia — weka PIN ya tarakimu 4 mara mbili; huhifadhiwa kwa usalama na inaweza kubadilishwa wakati wowote.</figcaption></figure>
+<figure><img src="images/app-staff-set-pin.png" alt="Kisanduku cha Weka PIN ya Kuingia"><figcaption>Weka PIN ya Kuingia — PIN inatengenezwa kiotomatiki kwa ajili ya kushirikisha; au badilisha na uandike mwenyewe. PIN huhifadhiwa kwa usalama na inaweza kubadilishwa wakati wowote.</figcaption></figure>
 
 ---
 
@@ -390,6 +405,7 @@ Ujumbe ni kikasha cha wafanyakazi. Kila mfanyakazi anaweza kuzungumza na mwenzak
   - **Global Messaging** — mfanyakazi yeyote kwenye mfumo, hoteli zote.
 - Tafuta mwenzako kwa jina kisha umchague — mazungumzo hufunguka mara moja.
 - Ujumbe ambao haujasomwa huonyesha alama ya bluu kwenye mazungumzo na kwenye menyu ya Ujumbe.
+- **Nukta ya kijani** karibu na picha ya mwenzako (orodha ya mazungumzo, kichwa cha mazungumzo, wanachama wa kikundi, matokeo ya utafutaji) inamaanisha mwenzako ameunganishwa sasa hivi — ndani ya hoteli yako au mahali popote kwenye mtandao; wale ambao hawako mtandaoni hawana nukta.
 
 ### 18.2 Mazungumzo ya kikundi
 
@@ -486,7 +502,7 @@ Baada ya kutuma ujumbe, alama inaonyesha hali yake:
 ### 18.16 Wafanyakazi wa karibu na SMS kwa wageni
 
 - **Wafanyakazi wa karibu**: sasisha eneo/sakafu yako kwenye **Workspace → Nearby**, na uone wafanyakazi walio karibu (ndani ya dakika 30 zilizopita). Eneo lako linasasishwa kwa timu yako kwa wakati halisi.
-- **SMS kwa mgeni**: kutoka **Workspace → Guest SMS**, tuma ujumbe kwa simu ya mgeni (k.m. "chumba chako kiko tayari") — majibu na historia zinabaki kwenye hoteli.
+- **SMS kwa mgeni**: kutoka **Workspace → Guest SMS**, tuma ujumbe kwa simu ya mgeni (k.m. "chumba chako kiko tayari") — huu ni mwelekeo mmoja (hoteli → mgeni): wageni hawawezi kujibu kwa ujumbe mfupi, wanapiga simu kwa usaidizi badala yake. Ujumbe wote uliotumwa na historia zinabaki kwenye hoteli.
 
 ### 18.17 Mikutano na taarifa za SOS
 
@@ -530,7 +546,7 @@ Chini ya kila sehemu unaweza kuruka kati ya kurasa. Kadi za muhtasari juu ya seh
 ## 20. Profaili na Nenosiri
 
 - **Profile** inaonyesha maelezo yote ya akaunti yako: jina, namba ya mfanyakazi/usajili, barua pepe, simu, namba ya nchi, wajibu na kiwango chake, idara, cheo, aina na namba ya kitambulisho, hoteli yako, hali ya msimamizi mdogo, hali ya akaunti, mara ya mwisho kuingia na tarehe ya kujiunga.
- - **Ingia / toka zamu** kutoka kwenye kadi ya mahudhurio (attendance) na uone umekaa zamu kwa muda gani. Ikiwa hoteli yako imewasha ukaguzi wa eneo, au QR, au uthibitisho wa picha (selfie), kadi ya mahudhurio itauliza nafasi ya simu yako, inaweza kukuhitaji kumpa ruhusa ya kamera na kupakia selfie, na, pale inapohitajika, kuchanganua QR ya ofisi (inayoonyeshwa kwenye simu ya meneja, inayoburudishwa kila dakika) kabla zamu kuanza — hili linathibitisha uwepo kazini.
+- **Ingia / toka zamu** kutoka kwenye kadi ya mahudhurio (attendance) na uone umekaa zamu kwa muda gani. Ikiwa hoteli yako imewasha ukaguzi wa eneo, au QR, au uthibitisho wa picha (selfie), kadi ya mahudhurio itauliza nafasi ya simu yako, inaweza kukuhitaji kumpa ruhusa ya kamera na kupakia selfie, na, pale inapohitajika, kuchanganua QR ya ofisi (inayoonyeshwa kwenye simu ya meneja, inayoburudishwa kila dakika) kabla zamu kuanza — hili linathibitisha uwepo kazini. Kadi pia inaonyesha alama zozote za mashaka (suspicious) au adhabu zilizotokana na ukaguzi wa ulaghai (anti-cheat), ambazo meneja huzipitia.
 - **Badilisha nenosiri** kutoka profaili; chagua nenosiri imara na ulinde vizuri.
 - Ikiwa msimamizi wa hoteli ameweka upya nenosiri lako, ingia kwa la muda kisha ulibadilishe mara moja.
 
@@ -763,6 +779,11 @@ Akaunti ya **mmiliki** ni kwa mtu anayemiliki **hoteli zaidi ya moja**. Kuingia 
 
 - **Dashibodi ya Hoteli Zangu** — jumla zilizochanganywa za hoteli zote: mapato (siku 30), wastani wa ukaaji, wageni walio ndani, nafasi zilizo hai na jumla ya vyumba, pamoja na jedwali la ulinganisho wa hoteli.
 - **Uchunguzi wa hoteli** — bonyeza jina la hoteli kuona maelezo yake: mawasiliano, TIN/VRN, vyumba, ukaaji, wageni walio ndani, nafasi zilizo hai na mapato (siku 30 + jumla).
+- **Wasifu** — sasisha maelezo yako ya kibinafsi, picha ya wasifu na nenosiri.
+
+<figure><img src="images/owner-dashboard.png" alt="Dashibodi ya mmiliki"><figcaption>Dashibodi ya mmiliki — jumla za KPIs na jedwali la kulinganisha hoteli kwa kila hoteli unayomiliki.</figcaption></figure>
+<figure><img src="images/owner-hotel-detail.png" alt="Uchunguzi wa hoteli ya mmiliki"><figcaption>Uchunguzi wa hoteli — mawasiliano, vyumba, ukaaji, wageni walio ndani na mapato ya hoteli moja.</figcaption></figure>
+<figure><img src="images/owner-profile.png" alt="Ukurasa wa wasifu wa mmiliki"><figcaption>Wasifu wa mmiliki — hariri maelezo yako, picha na nenosiri.</figcaption></figure>
 
 Msimamizi mkuu huunda akaunti za wamiliki na kuwatengewa hoteli (Hotel Management → chagua hoteli → kadi ya **Mmiliki**).
 
@@ -783,6 +804,64 @@ Tumia kitufe cha **EN / SW** kwenye upau wa juu kubadilisha mfumo mzima kati ya 
 | Nenosiri limeisha muda | Mfumo huliweka upya kuwa jina lako kamili kwa herufi kubwa; ingia kisha ubadili kutoka Profile. |
 | Hunawezi kuona menyu | Nafasi hiyo hairuhusiwi menyu hiyo. Uliza msimamizi wa hoteli au msimamizi mkuu. |
 | Ukurasa umechelewa kusasishwa | Burudisha kwa nguvu kwa Ctrl+Shift+R. |
+
+---
+
+## 26. Tovuti ya Kujitolea ya Wateja
+
+Hoteli zinazojiandikisha kupitia ukurasa wa bei wa TSCL zinatumia **Tovuti ya Wateja** kusimamia usajili wao, kuona malipo, na kusasisha maelezo ya hoteli — bila kuhitaji msaada wa msimamizi mkuu.
+
+### 26.1 Kujiandikisha
+
+1. Tembelea **tscl.app/portal/pricing** kuona mipango inayopatikana (Mwanzo, Ukuaji, Biashara)
+2. Bofya **Anza Sasa** kwenye mpango unaoipenda
+3. Jaza fomu ya usajili:
+   - Jina la hoteli, mtu wa mawasiliano, barua pepe, simu, mji, nchi
+   - **Usajili wa kisheria**: Nambari ya TIN, nambari ya VRN (ikiwa inatumika), nambari ya usajili wa biashara, nchi ya usajili
+   - Nenosiri (herufi 8 ndogo zaidi)
+4. Bofya **Unda akaunti** — akaunti yako itasubiri uidhinishaji na siku 14 za jaribio bila malipo
+
+### 26.2 Kuingia
+
+1. Tembelea **tscl.app/portal/login**
+2. Weka barua pepe yako na nenosiri
+3. Utaelekezwa kwenye dashibodi yako ya tovuti
+
+### 26.3 Dashibodi ya Tovuti
+
+Dashibodi inaonyesha:
+- **Bendera ya jaribio** na hesabu ya nyuma (ikiwa kwenye jaribio)
+- **Kadi za KPI**: vyumba, nafasi, wageni, mapato
+- **Hatua za haraka**: ruka kwenye maelezo ya hoteli, usajili, au wafanyakazi
+- **Taarifa za akaunti**: mpango wa sasa, hali, subdomain, mwisho wa jaribio
+
+### 26.4 Usimamizi wa Usajili
+
+Tembelea **/portal/subscription** ili:
+- Kuona mpango wako wa sasa na hali ya jaribio
+- **Kubadilisha** kati ya mipango Mwanzo, Ukuaji, na Biashara
+- Mabadiliko yanafanya kazi mara moja
+
+### 26.5 Kulipa
+
+Tembelea **/portal/payments** ili:
+- Kuona historia ya malipo na utafiti na vichujio
+- **Lipa mpya** kupitia:
+  - **Pesa za Simu**: M-Pesa, Tigo Pesa, Pesa ya Airtel, HaloPesa, EzyPesa — utapokea tangazo la USSD kwenye simu yako
+  **Uhamisho wa Benki**: Chagua benki yako (CRDB, NMB, Stanbic, ABSA, NCBA, Equity), weka nambari ya akaunti na reference ya muamala — inarekodiwa kama inasubiri hadi ikishwa na timu yetu
+
+### 26.6 Maelezo ya Hoteli
+
+Tembelea **/portal/hotel** ili kusasisha:
+- Jina la hoteli, mtu wa mawasiliano, simu, mji, nchi
+- Nambari za TIN na VRN
+- (Subdomain na barua pepe ni za kusoma tu)
+
+### 26.7 Usimamizi wa Wafanyakazi
+
+Tembelea **/portal/staff** ili:
+- Kuona wafanyakazi wote na utafiti na vichujio vya nafasi
+- Kuona bendera za nafasi na viashiria ya hali
 
 ---
 

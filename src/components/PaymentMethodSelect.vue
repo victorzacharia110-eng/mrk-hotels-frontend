@@ -22,9 +22,7 @@
 
   <!-- Only mobile money and banks have a provider to choose. -->
   <div v-if="providers.length" class="form-group">
-    <label :for="`${uid}-provider`">
-      {{ providerLabel }}<span class="req">*</span>
-    </label>
+    <label :for="`${uid}-provider`"> {{ providerLabel }}<span class="req">*</span> </label>
     <SearchableSelect
       :id="`${uid}-provider`"
       :model-value="provider"
@@ -86,8 +84,15 @@ const uid = `pay-${Math.random().toString(36).slice(2, 8)}`
 // method/provider dropdown options, and the label for the provider field.
 const providers = computed(() => providersFor(props.method))
 
-const methodOptions = computed(() => props.methods.map((m) => ({ value: m, label: t(`paymentFields.methods.${m}`) })))
-const providerOptions = computed(() => providers.value.map((p) => ({ value: p, label: t(`paymentFields.providers.${p}`) })))
+const methodOptions = computed(() =>
+  props.methods.map((method) => ({ value: method, label: t(`paymentFields.methods.${method}`) })),
+)
+const providerOptions = computed(() =>
+  providers.value.map((provider) => ({
+    value: provider,
+    label: t(`paymentFields.providers.${provider}`),
+  })),
+)
 
 const providerLabel = computed(() =>
   props.method === METHOD_BANK ? t('paymentFields.bank') : t('paymentFields.wallet'),
@@ -146,7 +151,7 @@ function onMethodChange(value) {
 
 .method-notice.is-pending {
   background: #fef9e7;
-  color: #b7950b;
+  color: #856f00;
 }
 
 .provider-option {

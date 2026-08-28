@@ -16,8 +16,17 @@
         <p class="muted">{{ $t('issueReports.subtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="load"><i class="fas fa-rotate"></i> {{ $t('common.refresh') }}</button>
-        <button class="btn btn-primary" @click="openCreate"><i class="fas fa-flag"></i> {{ $t('issueReports.newReport') }}</button>
+        <button class="btn btn-secondary" @click="load">
+          <i class="fas fa-rotate"></i> {{ $t('common.refresh') }}
+        </button>
+        <button class="btn btn-primary" @click="openCreate">
+          <i class="fas fa-flag"></i> {{ $t('issueReports.newReport') }}
+        </button>
+        <TableExportButton
+          filename="issue-reports"
+          :load-all="loadAllReports"
+          :title="$t('issueReports.title')"
+        />
       </div>
     </div>
 
@@ -30,26 +39,45 @@
       <div class="filter-grid">
         <div class="form-group">
           <label>{{ $t('issueReports.status') }}</label>
-          <SearchableSelect v-model="filters.status" :options="statusOptions" :empty-label="$t('common.all')"
-            @change="load" />
+          <SearchableSelect
+            v-model="filters.status"
+            :options="statusOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('issueReports.category') }}</label>
-          <SearchableSelect v-model="filters.category" :options="categoryOptions" :empty-label="$t('common.all')"
-            @change="load" />
+          <SearchableSelect
+            v-model="filters.category"
+            :options="categoryOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('issueReports.priority') }}</label>
-          <SearchableSelect v-model="filters.priority" :options="priorityOptions" :empty-label="$t('common.all')"
-            @change="load" />
+          <SearchableSelect
+            v-model="filters.priority"
+            :options="priorityOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('common.search') }}</label>
-          <input v-model="filters.search" type="text" class="input" :placeholder="$t('issueReports.searchPlaceholder')"
-            @input="triggerSearch" />
+          <input
+            v-model="filters.search"
+            type="text"
+            class="input"
+            :placeholder="$t('issueReports.searchPlaceholder')"
+            @input="triggerSearch"
+          />
         </div>
         <div class="filter-actions">
-          <button class="btn btn-secondary btn-sm" @click="clearFilters"><i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}</button>
+          <button class="btn btn-secondary btn-sm" @click="clearFilters">
+            <i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}
+          </button>
         </div>
       </div>
     </div>
@@ -60,45 +88,69 @@
     <!-- Reports table; the "reported by" column is only rendered for managers -->
     <div v-else class="table-scroll">
       <table class="table">
-      <thead>
-        <tr>
-          <th>{{ $t('issueReports.reportNumber') }}</th>
-          <th>{{ $t('issueReports.title') }}</th>
-          <th>{{ $t('issueReports.category') }}</th>
-          <th>{{ $t('issueReports.priority') }}</th>
-          <th>{{ $t('issueReports.status') }}</th>
-          <th v-if="canManage">{{ $t('issueReports.reportedBy') }}</th>
-          <th>{{ $t('issueReports.reportedAt') }}</th>
-          <th>{{ $t('common.actions') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="report in reports" :key="report.issue_report_id">
-          <td><strong>{{ report.report_number }}</strong></td>
-          <td>{{ report.title }}</td>
-          <td class="capitalize">{{ categoryLabel(report.category) }}</td>
-          <td><span class="badge" :class="priorityBadge(report.priority)">{{ priorityLabel(report.priority) }}</span></td>
-          <td><span class="badge" :class="statusBadge(report.status)">{{ statusLabel(report.status) }}</span></td>
-          <td v-if="canManage">{{ report.reporter?.full_name || '-' }}</td>
-          <td>{{ formatDateTime(report.created_at) }}</td>
-          <td>
-            <button class="btn btn-sm btn-secondary" @click="openDetail(report)">
-              <i class="fas fa-eye"></i> {{ $t('common.view') }}
-            </button>
-          </td>
-        </tr>
-        <tr v-if="!reports.length && !loading">
-          <td :colspan="canManage ? 8 : 7" class="muted">{{ $t('issueReports.empty') }}</td>
-        </tr>
-      </tbody>
-    </table>
+        <thead>
+          <tr>
+            <th scope="col">{{ $t('issueReports.reportNumber') }}</th>
+            <th scope="col">{{ $t('issueReports.title') }}</th>
+            <th scope="col">{{ $t('issueReports.category') }}</th>
+            <th scope="col">{{ $t('issueReports.priority') }}</th>
+            <th scope="col">{{ $t('issueReports.status') }}</th>
+            <th scope="col" v-if="canManage">{{ $t('issueReports.reportedBy') }}</th>
+            <th scope="col">{{ $t('issueReports.reportedAt') }}</th>
+            <th scope="col">{{ $t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="report in reports" :key="report.issue_report_id">
+            <td>
+              <strong>{{ report.report_number }}</strong>
+            </td>
+            <td>{{ report.title }}</td>
+            <td class="capitalize">{{ categoryLabel(report.category) }}</td>
+            <td>
+              <span class="badge" :class="priorityBadge(report.priority)">{{
+                priorityLabel(report.priority)
+              }}</span>
+            </td>
+            <td>
+              <span class="badge" :class="statusBadge(report.status)">{{
+                statusLabel(report.status)
+              }}</span>
+            </td>
+            <td v-if="canManage">{{ report.reporter?.full_name || '-' }}</td>
+            <td>{{ formatDateTime(report.created_at) }}</td>
+            <td>
+              <button class="btn btn-sm btn-secondary" @click="openDetail(report)">
+                <i class="fas fa-eye"></i> {{ $t('common.view') }}
+              </button>
+            </td>
+          </tr>
+          <tr v-if="!reports.length && !loading">
+            <td :colspan="canManage ? 8 : 7" class="muted">{{ $t('issueReports.empty') }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Server-side pagination controls -->
     <div v-if="meta.total > meta.per_page" class="pagination">
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{ $t('common.previous') }}</button>
-      <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.next_page_url" @click="goPage(meta.current_page + 1)">{{ $t('common.next') }}</button>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.prev_page_url"
+        @click="goPage(meta.current_page - 1)"
+      >
+        {{ $t('common.previous') }}
+      </button>
+      <span class="muted">{{
+        $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page })
+      }}</span>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.next_page_url"
+        @click="goPage(meta.current_page + 1)"
+      >
+        {{ $t('common.next') }}
+      </button>
     </div>
 
     <!-- Create report modal -->
@@ -131,9 +183,12 @@
             </div>
           </div>
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="closeCreate">{{ $t('common.cancel') }}</button>
+            <button type="button" class="btn btn-secondary" @click="closeCreate">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="saving">
-              <i class="fas fa-check"></i> {{ saving ? $t('common.saving') : $t('issueReports.submitReport') }}
+              <i class="fas fa-check"></i>
+              {{ saving ? $t('common.saving') : $t('issueReports.submitReport') }}
             </button>
           </div>
         </form>
@@ -153,12 +208,22 @@
 
         <h3 class="detail-title">{{ detail.title }}</h3>
         <div class="detail-meta">
-          <span class="badge" :class="statusBadge(detail.status)">{{ statusLabel(detail.status) }}</span>
-          <span class="badge" :class="priorityBadge(detail.priority)">{{ priorityLabel(detail.priority) }}</span>
+          <span class="badge" :class="statusBadge(detail.status)">{{
+            statusLabel(detail.status)
+          }}</span>
+          <span class="badge" :class="priorityBadge(detail.priority)">{{
+            priorityLabel(detail.priority)
+          }}</span>
           <span class="badge badge-gray capitalize">{{ categoryLabel(detail.category) }}</span>
-          <span class="muted">{{ $t('issueReports.reportedAt') }} {{ formatDateTime(detail.created_at) }}</span>
-          <span v-if="detail.reporter" class="muted">{{ $t('issueReports.reportedBy') }}: {{ detail.reporter.full_name }}</span>
-          <span v-if="detail.assigned_to_user" class="muted">{{ $t('issueReports.assignedTo') }}: {{ detail.assigned_to_user.full_name }}</span>
+          <span class="muted"
+            >{{ $t('issueReports.reportedAt') }} {{ formatDateTime(detail.created_at) }}</span
+          >
+          <span v-if="detail.reporter" class="muted"
+            >{{ $t('issueReports.reportedBy') }}: {{ detail.reporter.full_name }}</span
+          >
+          <span v-if="detail.assigned_to_user" class="muted"
+            >{{ $t('issueReports.assignedTo') }}: {{ detail.assigned_to_user.full_name }}</span
+          >
         </div>
 
         <div class="detail-description">
@@ -168,11 +233,16 @@
         <div v-if="detail.resolution" class="detail-resolution">
           <h4><i class="fas fa-check-circle"></i> {{ $t('issueReports.resolution') }}</h4>
           <p>{{ detail.resolution }}</p>
-          <p v-if="detail.resolved_at" class="muted">{{ $t('issueReports.resolvedAt') }} {{ formatDateTime(detail.resolved_at) }}</p>
+          <p v-if="detail.resolved_at" class="muted">
+            {{ $t('issueReports.resolvedAt') }} {{ formatDateTime(detail.resolved_at) }}
+          </p>
         </div>
 
         <!-- Manager respond panel -->
-        <div v-if="canManage && detail.status !== 'resolved' && detail.status !== 'cancelled'" class="respond-panel">
+        <div
+          v-if="canManage && detail.status !== 'resolved' && detail.status !== 'cancelled'"
+          class="respond-panel"
+        >
           <h4><i class="fas fa-reply"></i> {{ $t('issueReports.respond') }}</h4>
           <form @submit.prevent="respond">
             <div class="form-grid">
@@ -182,16 +252,26 @@
               </div>
               <div class="form-group">
                 <label>{{ $t('issueReports.assignTo') }}</label>
-                <SearchableSelect v-model="respondForm.assigned_to" :options="userOptions" :empty-label="$t('common.none')" />
+                <SearchableSelect
+                  v-model="respondForm.assigned_to"
+                  :options="userOptions"
+                  :empty-label="$t('common.none')"
+                />
               </div>
               <div class="form-group form-full">
                 <label>{{ $t('issueReports.resolution') }}</label>
-                <textarea v-model="respondForm.resolution" rows="3" class="textarea" :placeholder="$t('issueReports.resolutionPlaceholder')"></textarea>
+                <textarea
+                  v-model="respondForm.resolution"
+                  rows="3"
+                  class="textarea"
+                  :placeholder="$t('issueReports.resolutionPlaceholder')"
+                ></textarea>
               </div>
             </div>
             <div class="modal-foot">
               <button type="submit" class="btn btn-primary" :disabled="responding">
-                <i class="fas fa-check"></i> {{ responding ? $t('common.saving') : $t('issueReports.updateReport') }}
+                <i class="fas fa-check"></i>
+                {{ responding ? $t('common.saving') : $t('issueReports.updateReport') }}
               </button>
             </div>
           </form>
@@ -204,16 +284,28 @@
             <div class="form-grid">
               <div class="form-group form-full">
                 <label>{{ $t('issueReports.askTarget') }} *</label>
-                <SearchableSelect v-model="privateAsk.directed_to" :options="userOptions" :empty-label="$t('issueReports.selectEmployee')" required />
+                <SearchableSelect
+                  v-model="privateAsk.directed_to"
+                  :options="userOptions"
+                  :empty-label="$t('issueReports.selectEmployee')"
+                  required
+                />
               </div>
               <div class="form-group form-full">
                 <label>{{ $t('issueReports.privateQuestion') }} *</label>
-                <textarea v-model="privateAsk.body" rows="3" class="textarea" :placeholder="$t('issueReports.privateQuestionPlaceholder')" required></textarea>
+                <textarea
+                  v-model="privateAsk.body"
+                  rows="3"
+                  class="textarea"
+                  :placeholder="$t('issueReports.privateQuestionPlaceholder')"
+                  required
+                ></textarea>
               </div>
             </div>
             <div class="modal-foot">
               <button type="submit" class="btn btn-primary" :disabled="askingPrivate">
-                <i class="fas fa-lock"></i> {{ askingPrivate ? $t('common.saving') : $t('issueReports.askPrivately') }}
+                <i class="fas fa-lock"></i>
+                {{ askingPrivate ? $t('common.saving') : $t('issueReports.askPrivately') }}
               </button>
             </div>
           </form>
@@ -222,24 +314,39 @@
         <!-- Comments thread -->
         <div class="comments">
           <h4><i class="fas fa-comments"></i> {{ $t('issueReports.comments') }}</h4>
-          <div v-if="!detail.comments || !detail.comments.length" class="muted">{{ $t('issueReports.noComments') }}</div>
-          <div v-for="comment in detail.comments" :key="comment.issue_report_comment_id" class="comment-row"
-            :class="{ 'private-comment': comment.is_private }">
+          <div v-if="!detail.comments || !detail.comments.length" class="muted">
+            {{ $t('issueReports.noComments') }}
+          </div>
+          <div
+            v-for="comment in detail.comments"
+            :key="comment.issue_report_comment_id"
+            class="comment-row"
+            :class="{ 'private-comment': comment.is_private }"
+          >
             <div class="comment-head">
               <strong>{{ comment.user?.full_name || '—' }}</strong>
-              <span v-if="comment.is_private" class="badge badge-purple"><i class="fas fa-lock"></i> {{
-                $t('issueReports.private') }}</span>
-              <span v-if="comment.directed_to_user" class="muted">{{ $t('issueReports.privateTo') }}: {{
-                comment.directed_to_user.full_name }}</span>
+              <span v-if="comment.is_private" class="badge badge-purple"
+                ><i class="fas fa-lock"></i> {{ $t('issueReports.private') }}</span
+              >
+              <span v-if="comment.directed_to_user" class="muted"
+                >{{ $t('issueReports.privateTo') }}: {{ comment.directed_to_user.full_name }}</span
+              >
               <span class="muted">{{ formatDateTime(comment.created_at) }}</span>
             </div>
             <p>{{ comment.body }}</p>
           </div>
 
           <form class="comment-form" @submit.prevent="addComment">
-            <textarea v-model="commentBody" rows="2" class="textarea" :placeholder="$t('issueReports.commentPlaceholder')" required></textarea>
+            <textarea
+              v-model="commentBody"
+              rows="2"
+              class="textarea"
+              :placeholder="$t('issueReports.commentPlaceholder')"
+              required
+            ></textarea>
             <button type="submit" class="btn btn-primary" :disabled="commenting">
-              <i class="fas fa-paper-plane"></i> {{ commenting ? $t('common.saving') : $t('issueReports.postComment') }}
+              <i class="fas fa-paper-plane"></i>
+              {{ commenting ? $t('common.saving') : $t('issueReports.postComment') }}
             </button>
           </form>
         </div>
@@ -254,6 +361,8 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { issueReportApi, userApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import TableExportButton from '@/components/TableExportButton.vue'
+import { collectAllRows } from '@/utils/export'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -264,7 +373,14 @@ const canManage = computed(() => authStore.can(80))
 const reports = ref([])
 const users = ref([])
 const page = ref(1)
-const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
+const meta = ref({
+  total: 0,
+  per_page: 15,
+  current_page: 1,
+  last_page: 1,
+  prev_page_url: null,
+  next_page_url: null,
+})
 const filters = reactive({ status: '', category: '', priority: '', search: '' })
 const loading = ref(false)
 const error = ref('')
@@ -316,14 +432,22 @@ const statusOptions = [
 
 // Statuses a manager may set from the respond panel (currently all of them).
 const respondStatusOptions = computed(() =>
-  statusOptions.filter((o) => o.value === 'new' || o.value === 'in_progress' || o.value === 'resolved' || o.value === 'cancelled'),
+  statusOptions.filter(
+    (option) =>
+      option.value === 'new' ||
+      option.value === 'in_progress' ||
+      option.value === 'resolved' ||
+      option.value === 'cancelled',
+  ),
 )
 
 // Employee dropdown options used by the assign and private-question selectors.
-const userOptions = computed(() => users.value.map((u) => ({ value: u.user_id, label: u.full_name })))
+const userOptions = computed(() =>
+  users.value.map((user) => ({ value: user.user_id, label: user.full_name })),
+)
 
 /** Maps a category key to its translated display label. */
-function categoryLabel(c) {
+function categoryLabel(category) {
   const map = {
     billing: t('issueReports.categoryBilling'),
     reservation: t('issueReports.categoryReservation'),
@@ -334,51 +458,51 @@ function categoryLabel(c) {
     it_system: t('issueReports.categoryItSystem'),
     other: t('issueReports.categoryOther'),
   }
-  return map[c] || c
+  return map[category] || category
 }
 
 /** Maps a priority key to its translated display label. */
-function priorityLabel(p) {
+function priorityLabel(priority) {
   const map = {
     low: t('issueReports.priorityLow'),
     normal: t('issueReports.priorityNormal'),
     high: t('issueReports.priorityHigh'),
     urgent: t('issueReports.priorityUrgent'),
   }
-  return map[p] || p
+  return map[priority] || priority
 }
 
 /** Returns the CSS badge class for the given priority. */
-function priorityBadge(p) {
+function priorityBadge(priority) {
   const map = { low: 'badge-gray', normal: 'badge-blue', high: 'badge-yellow', urgent: 'badge-red' }
-  return map[p] || 'badge-gray'
+  return map[priority] || 'badge-gray'
 }
 
 /** Maps a report status key to its translated display label. */
-function statusLabel(s) {
+function statusLabel(status) {
   const map = {
     new: t('issueReports.statusNew'),
     in_progress: t('issueReports.statusInProgress'),
     resolved: t('issueReports.statusResolved'),
     cancelled: t('issueReports.statusCancelled'),
   }
-  return map[s] || s
+  return map[status] || status
 }
 
 /** Returns the CSS badge class for the given report status. */
-function statusBadge(s) {
+function statusBadge(status) {
   const map = {
     new: 'badge-yellow',
     in_progress: 'badge-blue',
     resolved: 'badge-green',
     cancelled: 'badge-gray',
   }
-  return map[s] || 'badge-gray'
+  return map[status] || 'badge-gray'
 }
 
 /** Formats an ISO datetime string for display, or '-' when absent. */
-function formatDateTime(d) {
-  return d ? String(d).slice(0, 16).replace('T', ' ') : '-'
+function formatDateTime(date) {
+  return date ? String(date).slice(0, 16).replace('T', ' ') : '-'
 }
 
 /**
@@ -406,6 +530,18 @@ async function load() {
   }
 }
 
+const loadAllReports = () =>
+  collectAllRows((page, perPage) =>
+    issueReportApi.index({
+      status: filters.status,
+      category: filters.category,
+      priority: filters.priority,
+      search: filters.search,
+      page,
+      per_page: perPage,
+    }),
+  )
+
 /** Loads the list of users for the assign/private-ask selectors; failures are silently ignored. */
 async function loadUsers() {
   try {
@@ -416,8 +552,8 @@ async function loadUsers() {
 }
 
 /** Sets the page number and reloads the report list. */
-function goPage(p) {
-  page.value = p
+function goPage(page) {
+  page.value = page
   load()
 }
 
@@ -502,7 +638,9 @@ async function addComment() {
   commenting.value = true
   modalError.value = ''
   try {
-    const res = await issueReportApi.comment(detail.value.issue_report_id, { body: commentBody.value })
+    const res = await issueReportApi.comment(detail.value.issue_report_id, {
+      body: commentBody.value,
+    })
     detail.value = res.data.report
     commentBody.value = ''
     detailSuccess.value = t('issueReports.commentAdded')
@@ -566,7 +704,9 @@ async function respond() {
  */
 function flattenError(err) {
   const messages = err.response?.data?.errors
-  return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')
+  return messages
+    ? Object.values(messages).flat().join(' ')
+    : err.response?.data?.message || t('common.actionFailed')
 }
 
 onMounted(() => {
@@ -617,7 +757,7 @@ onMounted(() => {
 }
 
 .muted {
-  color: #888;
+  color: #757575;
   font-size: 12px;
   margin-top: 2px;
 }
@@ -682,14 +822,14 @@ onMounted(() => {
 }
 
 .modal-head h2 i {
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .modal-close {
   background: none;
   border: none;
   font-size: 18px;
-  color: #999;
+  color: #757575;
   cursor: pointer;
   padding: 4px;
 }
@@ -766,7 +906,7 @@ onMounted(() => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #005EB8;
+  color: #005eb8;
   margin-bottom: 4px;
 }
 
@@ -789,7 +929,7 @@ onMounted(() => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #005EB8;
+  color: #005eb8;
   margin: 6px 0 12px;
 }
 

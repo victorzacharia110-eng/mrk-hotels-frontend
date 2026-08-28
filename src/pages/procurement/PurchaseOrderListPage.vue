@@ -16,10 +16,13 @@
         <p class="muted">{{ $t('purchaseOrders.subtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="load"><i class="fas fa-rotate"></i> {{ $t('purchaseOrders.refresh')
-        }}</button>
-        <button v-if="canOperate" class="btn btn-primary" @click="openCreate"><i class="fas fa-plus"></i> {{
-          $t('purchaseOrders.newPurchaseOrder') }}</button>
+        <button class="btn btn-secondary" @click="load">
+          <i class="fas fa-rotate"></i> {{ $t('purchaseOrders.refresh') }}
+        </button>
+        <button v-if="canOperate" class="btn btn-primary" @click="openCreate">
+          <i class="fas fa-plus"></i> {{ $t('purchaseOrders.newPurchaseOrder') }}
+        </button>
+        <TableExportButton filename="purchase-orders" :load-all="loadAllOrders" :title="$t('purchaseOrders.title')" />
       </div>
     </div>
 
@@ -37,15 +40,18 @@
         </div>
         <div class="form-group">
           <label>{{ $t('purchaseOrders.status') }}</label>
-          <SearchableSelect v-model="filters.status" :options="statusOptions" :empty-label="$t('common.all')" @change="load" />
+          <SearchableSelect v-model="filters.status" :options="statusOptions" :empty-label="$t('common.all')"
+            @change="load" />
         </div>
         <div class="form-group">
           <label>{{ $t('purchaseOrders.supplier') }}</label>
-          <SearchableSelect v-model="filters.supplier_id" :options="supplierOptions" :empty-label="$t('purchaseOrders.allSuppliers')" @change="load" />
+          <SearchableSelect v-model="filters.supplier_id" :options="supplierOptions"
+            :empty-label="$t('purchaseOrders.allSuppliers')" @change="load" />
         </div>
         <div class="filter-actions">
-          <button class="btn btn-secondary btn-sm" @click="clearFilters"><i class="fas fa-filter-circle-xmark"></i> {{
-            $t('common.clear') }}</button>
+          <button class="btn btn-secondary btn-sm" @click="clearFilters">
+            <i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}
+          </button>
         </div>
       </div>
     </div>
@@ -56,62 +62,78 @@
     <!-- PO table: reference, supplier, item count link, total, delivery date and status badge -->
     <div v-else class="table-scroll">
       <table class="table">
-      <thead>
-        <tr>
-          <th>{{ $t('purchaseOrders.reference') }}</th>
-          <th>{{ $t('purchaseOrders.supplier') }}</th>
-          <th>{{ $t('common.items') }}</th>
-          <th>{{ $t('purchaseOrders.total') }}</th>
-          <th>{{ $t('purchaseOrders.delivery') }}</th>
-          <th>{{ $t('purchaseOrders.status') }}</th>
-          <th>{{ $t('common.actions') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="po in orders" :key="po.po_id">
-          <td><strong>{{ po.po_number }}</strong></td>
-          <td>{{ po.supplier?.supplier_name || '-' }}</td>
-          <td>
-            <button class="link-btn" @click="openDetail(po)">{{ $t('purchaseOrders.viewItems', {
-              count: (po.items ||
-                []).length
-            }) }}</button>
-          </td>
-          <td><span class="price">TZS {{ Number(po.total_amount).toLocaleString() }}</span></td>
-          <td>{{ po.delivery_date || '-' }}</td>
-          <td><span class="badge" :class="statusBadge(po.status)">{{ po.status.replace('_', ' ') }}</span></td>
-          <td>
-            <!-- Approval workflow actions, each gated by status and permission -->
-            <div class="actions">
-              <button v-if="po.status === 'pending' && canManagerApprove" class="btn btn-sm btn-success"
-                @click="managerApprove(po)">
-                <i class="fas fa-check"></i> {{ $t('purchaseOrders.managerApprove') }}
+        <thead>
+          <tr>
+            <th scope="col">{{ $t('purchaseOrders.reference') }}</th>
+            <th scope="col">{{ $t('purchaseOrders.supplier') }}</th>
+            <th scope="col">{{ $t('common.items') }}</th>
+            <th scope="col">{{ $t('purchaseOrders.total') }}</th>
+            <th scope="col">{{ $t('purchaseOrders.delivery') }}</th>
+            <th scope="col">{{ $t('purchaseOrders.status') }}</th>
+            <th scope="col">{{ $t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="po in orders" :key="po.po_id">
+            <td>
+              <strong>{{ po.po_number }}</strong>
+            </td>
+            <td>{{ po.supplier?.supplier_name || '-' }}</td>
+            <td>
+              <button class="link-btn" @click="openDetail(po)">
+                {{
+                  $t('purchaseOrders.viewItems', {
+                    count: (po.items || []).length,
+                  })
+                }}
               </button>
-              <button v-if="po.status === 'manager_approved' && canApprove" class="btn btn-sm btn-success"
-                @click="approve(po)">
-                <i class="fas fa-check"></i> {{ $t('purchaseOrders.financeApprove') }}
-              </button>
-              <button v-if="['pending', 'manager_approved', 'approved'].includes(po.status) && canOperate"
-                class="btn btn-sm btn-danger" @click="cancel(po)">
-                <i class="fas fa-ban"></i> {{ $t('common.cancel') }}
-              </button>
-            </div>
-          </td>
-        </tr>
-        <tr v-if="!orders.length && !loading">
-          <td colspan="7" class="muted">{{ $t('purchaseOrders.empty') }}</td>
-        </tr>
-      </tbody>
-    </table>
+            </td>
+            <td>
+              <span class="price">TZS {{ Number(po.total_amount).toLocaleString() }}</span>
+            </td>
+            <td>{{ po.delivery_date || '-' }}</td>
+            <td>
+              <span class="badge" :class="statusBadge(po.status)">{{
+                po.status.replace('_', ' ')
+                }}</span>
+            </td>
+            <td>
+              <!-- Approval workflow actions, each gated by status and permission -->
+              <div class="actions">
+                <button v-if="po.status === 'pending' && canManagerApprove" class="btn btn-sm btn-success"
+                  @click="managerApprove(po)">
+                  <i class="fas fa-check"></i> {{ $t('purchaseOrders.managerApprove') }}
+                </button>
+                <button v-if="po.status === 'manager_approved' && canApprove" class="btn btn-sm btn-success"
+                  @click="approve(po)">
+                  <i class="fas fa-check"></i> {{ $t('purchaseOrders.financeApprove') }}
+                </button>
+                <button v-if="
+                  ['pending', 'manager_approved', 'approved'].includes(po.status) && canOperate
+                " class="btn btn-sm btn-danger" @click="cancel(po)">
+                  <i class="fas fa-ban"></i> {{ $t('common.cancel') }}
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!orders.length && !loading">
+            <td colspan="7" class="muted">{{ $t('purchaseOrders.empty') }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Server-side pagination controls -->
     <div v-if="meta.total > meta.per_page" class="pagination">
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
-        $t('common.previous') }}</button>
-      <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.next_page_url" @click="goPage(meta.current_page + 1)">{{
-        $t('common.next') }}</button>
+      <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">
+        {{ $t('common.previous') }}
+      </button>
+      <span class="muted">{{
+        $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page })
+        }}</span>
+      <button class="btn btn-sm btn-secondary" :disabled="!meta.next_page_url" @click="goPage(meta.current_page + 1)">
+        {{ $t('common.next') }}
+      </button>
     </div>
 
     <!-- Create purchase-order modal (optional linked requisition, line items) -->
@@ -128,7 +150,8 @@
           <div class="form-grid">
             <div class="form-group">
               <label>{{ $t('purchaseOrders.supplier') }} *</label>
-              <SearchableSelect v-model="form.supplier_id" :options="supplierOptions" :empty-label="$t('purchaseOrders.selectSupplier')" required />
+              <SearchableSelect v-model="form.supplier_id" :options="supplierOptions"
+                :empty-label="$t('purchaseOrders.selectSupplier')" required />
             </div>
             <div class="form-group">
               <label>{{ $t('purchaseOrders.linkedRequisition') }}</label>
@@ -155,8 +178,9 @@
 
           <div class="items-head">
             <h3>{{ $t('common.items') }}</h3>
-            <button type="button" class="btn btn-sm btn-secondary" @click="addItem"><i class="fas fa-plus"></i> {{
-              $t('purchaseOrders.addItem') }}</button>
+            <button type="button" class="btn btn-sm btn-secondary" @click="addItem">
+              <i class="fas fa-plus"></i> {{ $t('purchaseOrders.addItem') }}
+            </button>
           </div>
 
           <div v-for="(item, idx) in form.items" :key="idx" class="item-row">
@@ -183,16 +207,20 @@
                 <input v-model.number="item.unit_price" type="number" min="0" step="0.01" class="input" required />
               </div>
               <div class="form-group item-remove">
-                <button type="button" class="btn btn-sm btn-danger" @click="removeItem(idx)"><i
-                    class="fas fa-trash"></i></button>
+                <button type="button" class="btn btn-sm btn-danger" @click="removeItem(idx)">
+                  <i class="fas fa-trash"></i>
+                </button>
               </div>
             </div>
           </div>
 
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="closeModal">{{ $t('common.cancel') }}</button>
+            <button type="button" class="btn btn-secondary" @click="closeModal">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="saving">
-              <i class="fas fa-check"></i> {{ saving ? $t('common.saving') : $t('purchaseOrders.savePurchaseOrder') }}
+              <i class="fas fa-check"></i>
+              {{ saving ? $t('common.saving') : $t('purchaseOrders.savePurchaseOrder') }}
             </button>
           </div>
         </form>
@@ -204,39 +232,45 @@
       <div class="modal modal-lg">
         <div class="modal-head">
           <h2><i class="fas fa-file-invoice"></i> {{ detail?.po_number }}</h2>
-          <button class="modal-close" @click="showDetail = false"><i class="fas fa-xmark"></i></button>
+          <button class="modal-close" @click="showDetail = false">
+            <i class="fas fa-xmark"></i>
+          </button>
         </div>
         <p class="muted">
           {{ detail?.supplier?.supplier_name || '-' }}
-          <span v-if="detail?.requisition"> · {{ $t('common.from') }} {{ detail.requisition.pr_number }}</span>
-          <span v-if="detail?.delivery_date"> · {{ $t('purchaseOrders.deliverBy') }} {{ detail.delivery_date }}</span>
+          <span v-if="detail?.requisition">
+            · {{ $t('common.from') }} {{ detail.requisition.pr_number }}</span>
+          <span v-if="detail?.delivery_date">
+            · {{ $t('purchaseOrders.deliverBy') }} {{ detail.delivery_date }}</span>
         </p>
         <div class="table-scroll">
           <table class="table">
-          <thead>
-            <tr>
-              <th>{{ $t('purchaseOrders.tableItem') }}</th>
-              <th>{{ $t('purchaseOrders.tableQty') }}</th>
-              <th>{{ $t('common.unit') }}</th>
-              <th>{{ $t('purchaseOrders.tableUnitPrice') }}</th>
-              <th>{{ $t('purchaseOrders.statusReceived') }}</th>
-              <th>{{ $t('purchaseOrders.tableSubtotal') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in detail?.items || []" :key="item.po_item_id">
-              <td>
-                <strong>{{ item.item_name }}</strong>
-                <div v-if="item.description" class="muted">{{ item.description }}</div>
-              </td>
-              <td>{{ item.quantity }}</td>
-              <td>{{ item.unit || '-' }}</td>
-              <td>TZS {{ Number(item.unit_price).toLocaleString() }}</td>
-              <td>{{ item.quantity_received }}</td>
-              <td><span class="price">TZS {{ Number(item.subtotal).toLocaleString() }}</span></td>
-            </tr>
-          </tbody>
-        </table>
+            <thead>
+              <tr>
+                <th scope="col">{{ $t('purchaseOrders.tableItem') }}</th>
+                <th scope="col">{{ $t('purchaseOrders.tableQty') }}</th>
+                <th scope="col">{{ $t('common.unit') }}</th>
+                <th scope="col">{{ $t('purchaseOrders.tableUnitPrice') }}</th>
+                <th scope="col">{{ $t('purchaseOrders.statusReceived') }}</th>
+                <th scope="col">{{ $t('purchaseOrders.tableSubtotal') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in detail?.items || []" :key="item.po_item_id">
+                <td>
+                  <strong>{{ item.item_name }}</strong>
+                  <div v-if="item.description" class="muted">{{ item.description }}</div>
+                </td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.unit || '-' }}</td>
+                <td>TZS {{ Number(item.unit_price).toLocaleString() }}</td>
+                <td>{{ item.quantity_received }}</td>
+                <td>
+                  <span class="price">TZS {{ Number(item.subtotal).toLocaleString() }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -249,6 +283,8 @@ import { useAuthStore } from '@/stores/auth'
 import { purchaseOrderApi, purchaseRequisitionApi, supplierApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import TableExportButton from '@/components/TableExportButton.vue'
+import { collectAllRows } from '@/utils/export'
 
 const { t } = useI18n()
 
@@ -264,7 +300,14 @@ const orders = ref([])
 const suppliers = ref([])
 const approvedPrs = ref([])
 const page = ref(1)
-const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
+const meta = ref({
+  total: 0,
+  per_page: 15,
+  current_page: 1,
+  last_page: 1,
+  prev_page_url: null,
+  next_page_url: null,
+})
 const filters = reactive({ status: '', supplier_id: '', search: '' })
 const loading = ref(false)
 const error = ref('')
@@ -276,7 +319,15 @@ const saving = ref(false)
 const modalError = ref('')
 const showDetail = ref(false)
 const detail = ref(null)
-const form = reactive({ supplier_id: '', pr_id: '', delivery_date: '', delivery_address: '', payment_terms: '', notes: '', items: [] })
+const form = reactive({
+  supplier_id: '',
+  pr_id: '',
+  delivery_date: '',
+  delivery_address: '',
+  payment_terms: '',
+  notes: '',
+  items: [],
+})
 
 // Dropdown option lists for filters and the create form.
 const statusOptions = computed(() => [
@@ -288,9 +339,16 @@ const statusOptions = computed(() => [
   { value: 'cancelled', label: t('purchaseOrders.statusCancelled') },
 ])
 
-const supplierOptions = computed(() => suppliers.value.map((s) => ({ value: s.supplier_id, label: s.supplier_name })))
+const supplierOptions = computed(() =>
+  suppliers.value.map((supplier) => ({
+    value: supplier.supplier_id,
+    label: supplier.supplier_name,
+  })),
+)
 
-const requisitionOptions = computed(() => approvedPrs.value.map((pr) => ({ value: pr.pr_id, label: pr.pr_number })))
+const requisitionOptions = computed(() =>
+  approvedPrs.value.map((pr) => ({ value: pr.pr_id, label: pr.pr_number })),
+)
 
 /** Returns a fresh blank PO line item. */
 function emptyItem() {
@@ -298,9 +356,16 @@ function emptyItem() {
 }
 
 /** Maps a PO status to its badge CSS class for the table. */
-function statusBadge(s) {
-  const map = { pending: 'badge-yellow', manager_approved: 'badge-blue', approved: 'badge-green', partially_received: 'badge-yellow', received: 'badge-green', cancelled: 'badge-red' }
-  return map[s] || 'badge-gray'
+function statusBadge(status) {
+  const map = {
+    pending: 'badge-yellow',
+    manager_approved: 'badge-blue',
+    approved: 'badge-green',
+    partially_received: 'badge-yellow',
+    received: 'badge-green',
+    cancelled: 'badge-red',
+  }
+  return map[status] || 'badge-gray'
 }
 
 // Debounce timer for the search input.
@@ -327,6 +392,17 @@ async function load() {
   }
 }
 
+const loadAllOrders = () =>
+  collectAllRows((page, perPage) =>
+    purchaseOrderApi.index({
+      status: filters.status,
+      supplier_id: filters.supplier_id,
+      search: filters.search || undefined,
+      page,
+      per_page: perPage,
+    }),
+  )
+
 /** Debounced search: waits for a pause in typing before reloading. */
 function triggerSearch() {
   page.value = 1
@@ -351,8 +427,8 @@ async function loadOptions() {
 }
 
 /** Moves to the given page and reloads. */
-function goPage(p) {
-  page.value = p
+function goPage(page) {
+  page.value = page
   load()
 }
 
@@ -401,7 +477,7 @@ async function save() {
     const res = await purchaseOrderApi.store({
       ...form,
       pr_id: form.pr_id || undefined,
-      items: form.items.filter((i) => i.item_name),
+      items: form.items.filter((item) => item.item_name),
     })
     success.value = res.data.message || t('purchaseOrders.createSuccess')
     showModal.value = false
@@ -421,7 +497,8 @@ function openDetail(po) {
 
 /** Moves a pending PO to manager approval after confirmation. */
 async function managerApprove(po) {
-  if (!window.confirm(t('purchaseOrders.managerApproveConfirm', { reference: po.po_number }))) return
+  if (!window.confirm(t('purchaseOrders.managerApproveConfirm', { reference: po.po_number })))
+    return
   error.value = ''
   try {
     const res = await purchaseOrderApi.managerApprove(po.po_id)
@@ -434,7 +511,8 @@ async function managerApprove(po) {
 
 /** Finance approval of a manager-approved PO after confirmation. */
 async function approve(po) {
-  if (!window.confirm(t('purchaseOrders.financeApproveConfirm', { reference: po.po_number }))) return
+  if (!window.confirm(t('purchaseOrders.financeApproveConfirm', { reference: po.po_number })))
+    return
   error.value = ''
   try {
     const res = await purchaseOrderApi.approve(po.po_id)
@@ -461,7 +539,9 @@ async function cancel(po) {
 /** Flattens Laravel-style validation errors into a single readable message. */
 function flattenError(err) {
   const messages = err.response?.data?.errors
-  return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')
+  return messages
+    ? Object.values(messages).flat().join(' ')
+    : err.response?.data?.message || t('common.actionFailed')
 }
 
 onMounted(() => {
@@ -512,14 +592,14 @@ onMounted(() => {
 }
 
 .muted {
-  color: #888;
+  color: #757575;
   font-size: 12px;
   margin-top: 2px;
 }
 
 .price {
   font-weight: 700;
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .actions {
@@ -529,7 +609,7 @@ onMounted(() => {
 }
 
 .link-btn {
-  color: #005EB8;
+  color: #005eb8;
   font-weight: 600;
   background: none;
   border: none;
@@ -557,7 +637,7 @@ onMounted(() => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .item-row {
@@ -620,14 +700,14 @@ onMounted(() => {
 }
 
 .modal-head h2 i {
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .modal-close {
   background: none;
   border: none;
   font-size: 18px;
-  color: #999;
+  color: #757575;
   cursor: pointer;
   padding: 4px;
 }

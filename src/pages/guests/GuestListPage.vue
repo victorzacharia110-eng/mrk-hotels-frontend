@@ -15,10 +15,27 @@
         <p class="muted">{{ $t('guests.subtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="load"><i class="fas fa-rotate"></i> {{ $t('guests.refresh')
-        }}</button>
-        <button v-if="canEdit" class="btn btn-primary" @click="openCreate"><i class="fas fa-plus"></i> {{
-          $t('guests.newGuest') }}</button>
+        <button class="btn btn-secondary" @click="load">
+          <i class="fas fa-rotate"></i> {{ $t('guests.refresh') }}
+        </button>
+        <button v-if="canEdit" class="btn btn-primary" @click="openCreate">
+          <i class="fas fa-plus"></i> {{ $t('guests.newGuest') }}
+        </button>
+        <TableExportButton
+          filename="guests"
+          :load-all="loadAllGuests"
+          :columns="[
+            { key: 'full_name', label: $t('guests.tableGuest') },
+            { key: 'email', label: $t('common.email') },
+            { key: 'phone', label: $t('common.phone') },
+            { key: 'id_type', label: $t('guests.tableId') },
+            { key: 'id_number', label: 'ID #' },
+            { key: 'nationality', label: $t('guests.nationality') },
+            { key: 'vip_status', label: $t('guests.tableType') },
+            { key: 'city', label: $t('common.city') },
+            { key: 'country', label: $t('common.country') },
+          ]"
+        />
       </div>
     </div>
 
@@ -31,8 +48,13 @@
       <div class="filter-grid">
         <div class="form-group">
           <label>{{ $t('common.search') }}</label>
-          <input v-model="filters.search" type="text" class="input" :placeholder="$t('guests.searchPlaceholder')"
-            @input="triggerSearch" />
+          <input
+            v-model="filters.search"
+            type="text"
+            class="input"
+            :placeholder="$t('guests.searchPlaceholder')"
+            @input="triggerSearch"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('guests.typeVip') }}</label>
@@ -45,12 +67,18 @@
         </div>
         <div class="form-group">
           <label>{{ $t('guests.nationality') }}</label>
-          <input v-model="filters.nationality" type="text" class="input"
-            :placeholder="$t('guests.nationalityPlaceholder')" @input="triggerSearch" />
+          <input
+            v-model="filters.nationality"
+            type="text"
+            class="input"
+            :placeholder="$t('guests.nationalityPlaceholder')"
+            @input="triggerSearch"
+          />
         </div>
         <div class="filter-actions">
-          <button class="btn btn-secondary btn-sm" @click="clearFilters"><i class="fas fa-filter-circle-xmark"></i> {{
-            $t('common.clear') }}</button>
+          <button class="btn btn-secondary btn-sm" @click="clearFilters">
+            <i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}
+          </button>
         </div>
       </div>
     </div>
@@ -61,65 +89,83 @@
     <!-- Guests table: identity, contact, ID document, nationality and VIP type -->
     <div v-else class="table-scroll">
       <table class="table">
-      <thead>
-        <tr>
-          <th>{{ $t('guests.tableGuest') }}</th>
-          <th>{{ $t('guests.tableContact') }}</th>
-          <th>{{ $t('guests.tableId') }}</th>
-          <th>{{ $t('guests.nationality') }}</th>
-          <th>{{ $t('guests.tableType') }}</th>
-          <th>{{ $t('common.actions') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="guest in guests" :key="guest.guest_id">
-          <td>
-            <strong>{{ guest.full_name }}</strong>
-            <span v-if="guest.vip_status" class="badge badge-yellow vip-badge"><i class="fas fa-crown"></i> {{
-              $t('guests.typeVip') }}</span>
-          </td>
-          <td>
-            <div>{{ guest.email || '-' }}</div>
-            <div class="muted">{{ guest.phone || '-' }}</div>
-          </td>
-          <td class="capitalize">{{ guest.id_type }} · {{ guest.id_number }}</td>
-          <td>{{ guest.nationality || '-' }}</td>
-          <td>
-            <span class="badge" :class="guest.vip_status ? 'badge-yellow' : 'badge-gray'">
-              {{ guest.vip_status ? $t('guests.typeVip') : $t('guests.typeRegular') }}
-            </span>
-          </td>
-          <td>
-            <!-- Row actions (edit/delete) only for users with guest-edit rights -->
-            <div class="actions">
-              <button v-if="canEdit" class="btn btn-sm btn-secondary" @click="openEdit(guest)"><i
-                  class="fas fa-pen"></i> {{ $t('common.edit') }}</button>
-              <button v-if="canEdit" class="btn btn-sm btn-danger" @click="remove(guest)"><i
-                  class="fas fa-trash"></i></button>
-            </div>
-          </td>
-        </tr>
-        <tr v-if="!guests.length && !loading">
-          <td colspan="6" class="muted">{{ $t('guests.empty') }}</td>
-        </tr>
-      </tbody>
-    </table>
+        <thead>
+          <tr>
+            <th scope="col">{{ $t('guests.tableGuest') }}</th>
+            <th scope="col">{{ $t('guests.tableContact') }}</th>
+            <th scope="col">{{ $t('guests.tableId') }}</th>
+            <th scope="col">{{ $t('guests.nationality') }}</th>
+            <th scope="col">{{ $t('guests.tableType') }}</th>
+            <th scope="col">{{ $t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="guest in guests" :key="guest.guest_id">
+            <td>
+              <strong>{{ guest.full_name }}</strong>
+              <span v-if="guest.vip_status" class="badge badge-yellow vip-badge"
+                ><i class="fas fa-crown"></i> {{ $t('guests.typeVip') }}</span
+              >
+            </td>
+            <td>
+              <div>{{ guest.email || '-' }}</div>
+              <div class="muted">{{ guest.phone || '-' }}</div>
+            </td>
+            <td class="capitalize">{{ guest.id_type }} · {{ guest.id_number }}</td>
+            <td>{{ guest.nationality || '-' }}</td>
+            <td>
+              <span class="badge" :class="guest.vip_status ? 'badge-yellow' : 'badge-gray'">
+                {{ guest.vip_status ? $t('guests.typeVip') : $t('guests.typeRegular') }}
+              </span>
+            </td>
+            <td>
+              <!-- Row actions (edit/delete) only for users with guest-edit rights -->
+              <div class="actions">
+                <button v-if="canEdit" class="btn btn-sm btn-secondary" @click="openEdit(guest)">
+                  <i class="fas fa-pen"></i> {{ $t('common.edit') }}
+                </button>
+                <button v-if="canEdit" class="btn btn-sm btn-danger" @click="remove(guest)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!guests.length && !loading">
+            <td colspan="6" class="muted">{{ $t('guests.empty') }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Server-side pagination controls -->
     <div v-if="meta.total > meta.per_page" class="pagination">
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
-        $t('common.previous') }}</button>
-      <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.next_page_url" @click="goPage(meta.current_page + 1)">{{
-        $t('common.next') }}</button>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.prev_page_url"
+        @click="goPage(meta.current_page - 1)"
+      >
+        {{ $t('common.previous') }}
+      </button>
+      <span class="muted">{{
+        $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page })
+      }}</span>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.next_page_url"
+        @click="goPage(meta.current_page + 1)"
+      >
+        {{ $t('common.next') }}
+      </button>
     </div>
 
     <!-- Create/edit guest modal: identity, contact, location, ID and VIP status -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal">
         <div class="modal-head">
-          <h2><i class="fas fa-user"></i> {{ editing ? $t('guests.editGuest') : $t('guests.newGuest') }}</h2>
+          <h2>
+            <i class="fas fa-user"></i>
+            {{ editing ? $t('guests.editGuest') : $t('guests.newGuest') }}
+          </h2>
           <button class="modal-close" @click="closeModal"><i class="fas fa-xmark"></i></button>
         </div>
 
@@ -195,12 +241,68 @@
             </div>
           </div>
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="closeModal">{{ $t('common.cancel') }}</button>
+            <button type="button" class="btn btn-secondary" @click="closeModal">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="saving">
-              <i class="fas fa-check"></i> {{ saving ? $t('common.saving') : $t('guests.saveGuest') }}
+              <i class="fas fa-check"></i>
+              {{ saving ? $t('common.saving') : $t('guests.saveGuest') }}
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Delete guest confirmation modal with impact summary -->
+    <div v-if="showDelete" class="modal-overlay" @click.self="closeDelete">
+      <div class="modal modal-sm">
+        <div class="modal-head">
+          <h2><i class="fas fa-trash-can"></i> {{ $t('guests.deleteTitle') }}</h2>
+          <button class="modal-close" @click="closeDelete"><i class="fas fa-xmark"></i></button>
+        </div>
+        <p>{{ $t('guests.deleteMessage', { name: deleteTarget?.full_name }) }}</p>
+
+        <div v-if="loadingDeletePreview" class="delete-impact-loading">
+          <i class="fas fa-spinner fa-spin"></i> {{ $t('common.loading') }}
+        </div>
+        <div v-else-if="deletePreview" class="delete-impact">
+          <p class="delete-impact-title">{{ $t('guests.deleteImpactTitle') }}</p>
+          <table class="delete-impact-table">
+            <tbody>
+              <tr v-if="deletePreview.reservations_count > 0">
+                <td><i class="fas fa-calendar"></i> {{ $t('guests.deleteImpactReservations') }}</td>
+                <td class="text-right">{{ deletePreview.reservations_count }}</td>
+              </tr>
+              <tr v-if="deletePreview.payments_count > 0">
+                <td><i class="fas fa-credit-card"></i> {{ $t('guests.deleteImpactPayments') }}</td>
+                <td class="text-right">
+                  {{ deletePreview.payments_count }} · TZS {{ Number(deletePreview.payments_total).toLocaleString() }}
+                </td>
+              </tr>
+              <tr v-if="deletePreview.invoices_count > 0">
+                <td><i class="fas fa-file-invoice"></i> {{ $t('guests.deleteImpactInvoices') }}</td>
+                <td class="text-right">{{ deletePreview.invoices_count }}</td>
+              </tr>
+              <tr v-if="deletePreview.messages_count > 0">
+                <td><i class="fas fa-comment"></i> {{ $t('guests.deleteImpactMessages') }}</td>
+                <td class="text-right">{{ deletePreview.messages_count }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="delete-impact-warning">{{ $t('guests.deleteImpactWarning') }}</p>
+        </div>
+
+        <div class="modal-foot">
+          <button class="btn btn-secondary" @click="closeDelete">{{ $t('common.cancel') }}</button>
+          <button
+            class="btn btn-danger"
+            :disabled="deleting"
+            @click="confirmDelete"
+          >
+            <i class="fas fa-trash-can"></i>
+            {{ deleting ? $t('common.deleting') : $t('guests.deleteTitle') }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -214,7 +316,9 @@ import { guestApi } from '@/api'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import TableExportButton from '@/components/TableExportButton.vue'
 import { todayISO } from '@/utils/dates'
+import { collectAllRows } from '@/utils/export'
 import { findCountryCode } from '@/utils/locations'
 import { normalizePhoneNumber } from '@/utils/phone'
 
@@ -245,7 +349,14 @@ const vipStatusOptions = computed(() => [
 // List state: guest rows, pagination metadata, filters and feedback flags.
 const guests = ref([])
 const page = ref(1)
-const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
+const meta = ref({
+  total: 0,
+  per_page: 15,
+  current_page: 1,
+  last_page: 1,
+  prev_page_url: null,
+  next_page_url: null,
+})
 const filters = reactive({ search: '', vip: '', nationality: '' })
 const loading = ref(false)
 const error = ref('')
@@ -257,6 +368,14 @@ const editing = ref(false)
 const editingId = ref(null)
 const saving = ref(false)
 const modalError = ref('')
+
+// Delete confirmation modal state.
+const showDelete = ref(false)
+const deleteTarget = ref(null)
+const deletePreview = ref(null)
+const loadingDeletePreview = ref(false)
+const deleting = ref(false)
+
 const form = reactive({
   first_name: '',
   last_name: '',
@@ -298,12 +417,24 @@ async function load() {
   }
 }
 
+function loadAllGuests() {
+  return collectAllRows((page, perPage) =>
+    guestApi.index({
+      search: filters.search,
+      vip: filters.vip || undefined,
+      nationality: filters.nationality,
+      page,
+      per_page: perPage,
+    }),
+  )
+}
+
 /**
  * Navigates to a given result page and reloads.
- * @param {number} p - 1-based page number.
+ * @param {number} page - 1-based page number.
  */
-function goPage(p) {
-  page.value = p
+function goPage(page) {
+  page.value = page
   load()
 }
 
@@ -390,10 +521,16 @@ async function save() {
   saving.value = true
   try {
     if (editing.value) {
-      await guestApi.update(editingId.value, { ...form, phone: normalizePhoneNumber(form.phone, form.country_code || 'TZ') })
+      await guestApi.update(editingId.value, {
+        ...form,
+        phone: normalizePhoneNumber(form.phone, form.country_code || 'TZ'),
+      })
       success.value = t('guests.updateSuccess')
     } else {
-      await guestApi.store({ ...form, phone: normalizePhoneNumber(form.phone, form.country_code || 'TZ') })
+      await guestApi.store({
+        ...form,
+        phone: normalizePhoneNumber(form.phone, form.country_code || 'TZ'),
+      })
       success.value = t('guests.createSuccess')
     }
     showModal.value = false
@@ -406,19 +543,46 @@ async function save() {
 }
 
 /**
- * Deletes a guest after a native confirmation dialog, then reloads the list.
+ * Opens the delete confirmation modal and fetches the impact preview.
  * @param {Object} guest - The guest row to delete.
- * @returns {Promise<void>}
  */
 async function remove(guest) {
-  if (!window.confirm(t('guests.deleteMessage', { name: guest.full_name }))) return
+  deleteTarget.value = guest
+  deletePreview.value = null
+  loadingDeletePreview.value = true
+  showDelete.value = true
+  try {
+    const res = await guestApi.deletionPreview(guest.guest_id)
+    deletePreview.value = res.data.preview
+  } catch {
+    deletePreview.value = null
+  } finally {
+    loadingDeletePreview.value = false
+  }
+}
+
+/** Closes the delete modal. */
+function closeDelete() {
+  showDelete.value = false
+  deleteTarget.value = null
+  deletePreview.value = null
+}
+
+/** Permanently deletes the guest. */
+async function confirmDelete() {
+  const target = deleteTarget.value
+  if (!target) return
+  deleting.value = true
   error.value = ''
   try {
-    await guestApi.destroy(guest.guest_id)
+    await guestApi.destroy(target.guest_id)
     success.value = t('guests.deleteSuccess')
+    closeDelete()
     await load()
   } catch (err) {
     error.value = flattenError(err)
+  } finally {
+    deleting.value = false
   }
 }
 
@@ -430,7 +594,9 @@ async function remove(guest) {
  */
 function flattenError(err) {
   const messages = err.response?.data?.errors
-  return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')
+  return messages
+    ? Object.values(messages).flat().join(' ')
+    : err.response?.data?.message || t('common.actionFailed')
 }
 
 onMounted(load)
@@ -478,7 +644,7 @@ onMounted(load)
 }
 
 .muted {
-  color: #888;
+  color: #757575;
   font-size: 12px;
   margin-top: 2px;
 }
@@ -547,14 +713,14 @@ onMounted(load)
 }
 
 .modal-head h2 i {
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .modal-close {
   background: none;
   border: none;
   font-size: 18px;
-  color: #999;
+  color: #757575;
   cursor: pointer;
   padding: 4px;
 }
@@ -575,6 +741,92 @@ onMounted(load)
   justify-content: flex-end;
   gap: 10px;
   margin-top: 20px;
+}
+
+.delete-impact {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+}
+
+.delete-impact-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #92400e;
+}
+
+.delete-impact-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+}
+
+.delete-impact-table td {
+  padding: 4px 0;
+  font-size: 0.88rem;
+}
+
+.delete-impact-table td i {
+  width: 18px;
+  margin-right: 6px;
+  color: #92400e;
+}
+
+.delete-impact-table .text-right {
+  text-align: right;
+  font-weight: 500;
+}
+
+.delete-impact-warning {
+  font-size: 0.82rem;
+  color: #b45309;
+  margin: 0;
+}
+
+.delete-impact-loading {
+  margin-bottom: 16px;
+  padding: 12px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.88rem;
+}
+
+.modal-sm {
+  max-width: 420px;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
+.btn-secondary {
+  background: #e5e7eb;
+  color: #374151;
+  border: none;
+}
+
+.btn-secondary:hover {
+  background: #d1d5db;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {

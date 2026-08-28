@@ -11,8 +11,24 @@
         <p class="muted">{{ $t('payments.subtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="load"><i class="fas fa-rotate"></i> {{ $t('payments.refresh') }}</button>
-        <button v-if="canOperate" class="btn btn-primary" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('payments.recordPayment') }}</button>
+        <button class="btn btn-secondary" @click="load">
+          <i class="fas fa-rotate"></i> {{ $t('payments.refresh') }}
+        </button>
+        <button v-if="canOperate" class="btn btn-primary" @click="openCreate">
+          <i class="fas fa-plus"></i> {{ $t('payments.recordPayment') }}
+        </button>
+        <TableExportButton
+          filename="payments"
+          :load-all="loadAllPayments"
+          :columns="[
+            { key: 'transaction_reference', label: $t('payments.tablePayment') },
+            { key: 'created_at', label: $t('common.date') },
+            { key: 'paid_by', label: $t('payments.tablePayer') },
+            { key: 'amount', label: $t('payments.amount') },
+            { key: 'payment_method', label: $t('payments.method') },
+            { key: 'payment_status', label: $t('common.status') },
+          ]"
+        />
       </div>
     </div>
 
@@ -24,11 +40,21 @@
       <div class="filter-grid">
         <div class="form-group">
           <label>{{ $t('common.status') }}</label>
-          <SearchableSelect v-model="filters.status" :options="paymentStatusOptions" :empty-label="$t('common.all')" @change="load" />
+          <SearchableSelect
+            v-model="filters.status"
+            :options="paymentStatusOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('payments.method') }}</label>
-          <SearchableSelect v-model="filters.method" :options="paymentMethodOptions" :empty-label="$t('common.all')" @change="load" />
+          <SearchableSelect
+            v-model="filters.method"
+            :options="paymentMethodOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('common.from') }}</label>
@@ -39,8 +65,9 @@
           <input v-model="filters.to" type="date" class="input" @change="load" />
         </div>
         <div class="filter-actions">
-          <button class="btn btn-secondary btn-sm" @click="clearFilters"><i class="fas fa-filter-circle-xmark"></i> {{
-            $t('common.clear') }}</button>
+          <button class="btn btn-secondary btn-sm" @click="clearFilters">
+            <i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}
+          </button>
         </div>
       </div>
     </div>
@@ -50,75 +77,121 @@
     <!-- Payment table with per-row confirm/reject/refund/delete/invoice actions -->
     <div v-else class="table-scroll">
       <table class="table">
-      <thead>
-        <tr>
-          <th>{{ $t('payments.tablePayment') }}</th>
-          <th>{{ $t('payments.reservation') }}</th>
-          <th>{{ $t('payments.tablePayer') }}</th>
-          <th>{{ $t('payments.amount') }}</th>
-          <th>{{ $t('payments.method') }}</th>
-          <th>{{ $t('common.status') }}</th>
-          <th>{{ $t('common.actions') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="p in payments" :key="p.payment_id">
-          <td>
-            <strong class="mono">{{ p.transaction_reference || p.payment_id.slice(0, 8) }}</strong>
-            <div class="muted">{{ formatDate(p.created_at) }}</div>
-          </td>
-          <td>
-            <span v-if="p.reservation">{{ p.reservation.guest_name }} · {{ $t('payments.roomN', {
-              number:
-                p.reservation.room?.room_number || '-' }) }}</span>
-            <span v-else class="muted">-</span>
-          </td>
-          <td>{{ p.paid_by || '-' }}</td>
-          <td><span class="price">TZS {{ Number(p.amount).toLocaleString() }}</span></td>
-          <td>
-            <span class="provider-cell" :class="{ 'is-bank': p.payment_method === 'bank' }">
-              <span v-if="p.payment_provider">
-                <ProviderLogo :provider="p.payment_provider" />
-                <span class="capitalize">{{ providerLabel(p.payment_provider) }}</span>
+        <thead>
+          <tr>
+            <th scope="col">{{ $t('payments.tablePayment') }}</th>
+            <th scope="col">{{ $t('payments.reservation') }}</th>
+            <th scope="col">{{ $t('payments.tablePayer') }}</th>
+            <th scope="col">{{ $t('payments.amount') }}</th>
+            <th scope="col">{{ $t('payments.method') }}</th>
+            <th scope="col">{{ $t('common.status') }}</th>
+            <th scope="col">{{ $t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="p in payments" :key="p.payment_id">
+            <td>
+              <strong class="mono">{{
+                p.transaction_reference || p.payment_id.slice(0, 8)
+              }}</strong>
+              <div class="muted">{{ formatDate(p.created_at) }}</div>
+            </td>
+            <td>
+              <span v-if="p.reservation"
+                >{{ p.reservation.guest_name }} ·
+                {{
+                  $t('payments.roomN', {
+                    number: p.reservation.room?.room_number || '-',
+                  })
+                }}</span
+              >
+              <span v-else class="muted">-</span>
+            </td>
+            <td>{{ p.paid_by || '-' }}</td>
+            <td>
+              <span class="price">TZS {{ Number(p.amount).toLocaleString() }}</span>
+            </td>
+            <td>
+              <span class="provider-cell" :class="{ 'is-bank': p.payment_method === 'bank' }">
+                <span v-if="p.payment_provider">
+                  <ProviderLogo :provider="p.payment_provider" />
+                  <span class="capitalize">{{ providerLabel(p.payment_provider) }}</span>
+                </span>
+                <span v-else class="capitalize">{{ methodLabel(p.payment_method) }}</span>
               </span>
-              <span v-else class="capitalize">{{ methodLabel(p.payment_method) }}</span>
-            </span>
-          </td>
-          <td><span class="badge" :class="statusBadge(p.payment_status)">{{ p.payment_status }}</span></td>
-          <td>
-            <div class="actions">
-              <button v-if="isConfirmable(p) && canOperate" class="btn btn-sm btn-success" @click="confirmPayment(p)">
-                <i class="fas fa-check"></i> {{ $t('payments.actionConfirm') }}
-              </button>
-              <button v-if="isConfirmable(p) && canOperate" class="btn btn-sm btn-danger" @click="rejectPayment(p)">
-                <i class="fas fa-xmark"></i> {{ $t('payments.actionReject') }}
-              </button>
-              <button v-if="p.reservation_id" class="btn btn-sm btn-secondary" :disabled="invoiceFor === p.payment_id" @click="downloadInvoice(p)">
-                <i class="fas fa-file-invoice"></i> {{ $t('invoices.download') }}
-              </button>
-              <button v-if="p.payment_status === 'completed' && canOperate" class="btn btn-sm btn-secondary" @click="refund(p)">
-                <i class="fas fa-rotate-left"></i> {{ $t('payments.actionRefund') }}
-              </button>
-              <button v-if="isDeletable(p) && canOperate" class="btn btn-sm btn-secondary" @click="remove(p)">
-                <i class="fas fa-trash"></i> {{ $t('common.delete') }}
-              </button>
-            </div>
-          </td>
-        </tr>
-        <tr v-if="!payments.length && !loading">
-          <td colspan="7" class="muted">{{ $t('payments.empty') }}</td>
-        </tr>
-      </tbody>
-    </table>
+            </td>
+            <td>
+              <span class="badge" :class="statusBadge(p.payment_status)">{{
+                p.payment_status
+              }}</span>
+            </td>
+            <td>
+              <div class="actions">
+                <button
+                  v-if="isConfirmable(p) && canOperate"
+                  class="btn btn-sm btn-success"
+                  @click="confirmPayment(p)"
+                >
+                  <i class="fas fa-check"></i> {{ $t('payments.actionConfirm') }}
+                </button>
+                <button
+                  v-if="isConfirmable(p) && canOperate"
+                  class="btn btn-sm btn-danger"
+                  @click="rejectPayment(p)"
+                >
+                  <i class="fas fa-xmark"></i> {{ $t('payments.actionReject') }}
+                </button>
+                <button
+                  v-if="p.reservation_id"
+                  class="btn btn-sm btn-secondary"
+                  :disabled="invoiceFor === p.payment_id"
+                  @click="downloadInvoice(p)"
+                >
+                  <i class="fas fa-file-invoice"></i> {{ $t('invoices.download') }}
+                </button>
+                <button
+                  v-if="p.payment_status === 'completed' && canOperate"
+                  class="btn btn-sm btn-secondary"
+                  @click="refund(p)"
+                >
+                  <i class="fas fa-rotate-left"></i> {{ $t('payments.actionRefund') }}
+                </button>
+                <button
+                  v-if="isDeletable(p) && canOperate"
+                  class="btn btn-sm btn-secondary"
+                  @click="remove(p)"
+                >
+                  <i class="fas fa-trash"></i> {{ $t('common.delete') }}
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!payments.length && !loading">
+            <td colspan="7" class="muted">{{ $t('payments.empty') }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Pagination controls, only shown when there is more than one page -->
     <div v-if="meta.total > meta.per_page" class="pagination">
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
-        $t('common.previous') }}</button>
-      <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.next_page_url" @click="goPage(meta.current_page + 1)">{{
-        $t('common.next') }}</button>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.prev_page_url"
+        @click="goPage(meta.current_page - 1)"
+      >
+        {{ $t('common.previous') }}
+      </button>
+      <span class="muted">{{
+        $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page })
+      }}</span>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.next_page_url"
+        @click="goPage(meta.current_page + 1)"
+      >
+        {{ $t('common.next') }}
+      </button>
     </div>
 
     <!-- Record a new payment against a reservation modal -->
@@ -143,7 +216,14 @@
             </div>
             <div class="form-group">
               <label>{{ $t('payments.amountTzs') }}</label>
-              <input v-model.number="form.amount" type="number" min="0.01" step="0.01" class="input" required />
+              <input
+                v-model.number="form.amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                class="input"
+                required
+              />
             </div>
             <PaymentMethodSelect
               v-model:method="form.payment_method"
@@ -165,9 +245,12 @@
             </div>
           </div>
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="closeModal">{{ $t('common.cancel') }}</button>
+            <button type="button" class="btn btn-secondary" @click="closeModal">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="saving">
-              <i class="fas fa-check"></i> {{ saving ? $t('common.saving') : $t('payments.savePayment') }}
+              <i class="fas fa-check"></i>
+              {{ saving ? $t('common.saving') : $t('payments.savePayment') }}
             </button>
           </div>
         </form>
@@ -183,6 +266,8 @@ import { useAuthStore } from '@/stores/auth'
 import { invoiceApi, paymentApi, reservationApi } from '@/api'
 import { saveBlob } from '@/utils/download'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import TableExportButton from '@/components/TableExportButton.vue'
+import { collectAllRows } from '@/utils/export'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import ProviderLogo from '@/components/ProviderLogo.vue'
 import { METHOD_CASH, PAYMENT_METHODS, requiresProvider } from '@/utils/payments'
@@ -197,7 +282,14 @@ const canOperate = computed(() => authStore.canOperate)
 const payments = ref([])
 const reservations = ref([])
 const page = ref(1)
-const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
+const meta = ref({
+  total: 0,
+  per_page: 15,
+  current_page: 1,
+  last_page: 1,
+  prev_page_url: null,
+  next_page_url: null,
+})
 const filters = reactive({ status: '', method: '', from: '', to: '' })
 const loading = ref(false)
 const error = ref('')
@@ -210,12 +302,12 @@ const modalError = ref('')
 const invoiceFor = ref('')
 
 /** Downloads the folio invoice of the reservation this payment belongs to. */
-async function downloadInvoice(p) {
-  invoiceFor.value = p.payment_id
+async function downloadInvoice(payment) {
+  invoiceFor.value = payment.payment_id
   error.value = ''
   success.value = ''
   try {
-    const gen = await invoiceApi.generate(p.reservation_id)
+    const gen = await invoiceApi.generate(payment.reservation_id)
     const invoice = gen.data.invoice
     const res = await invoiceApi.download(invoice.invoice_id)
     saveBlob(res.data, `${invoice.invoice_number}.pdf`)
@@ -257,19 +349,19 @@ const paymentStatusOptions = computed(() => [
 ])
 
 const paymentMethodOptions = computed(() =>
-  PAYMENT_METHODS.map((m) => ({ value: m, label: t(`paymentFields.methods.${m}`) })),
+  PAYMENT_METHODS.map((method) => ({ value: method, label: t(`paymentFields.methods.${method}`) })),
 )
 
 /** Confirmed reservations as selectable options, showing their balance. */
 const reservationOptions = computed(() =>
-  reservations.value.map((r) => ({
-    value: r.reservation_id,
-    label: `${r.guest_name} · TZS ${Number(r.balance).toLocaleString()} ${t('payments.balance')}`,
+  reservations.value.map((reservation) => ({
+    value: reservation.reservation_id,
+    label: `${reservation.guest_name} · TZS ${Number(reservation.balance).toLocaleString()} ${t('payments.balance')}`,
   })),
 )
 
 /** Maps a payment status to its badge CSS class for the table. */
-function statusBadge(s) {
+function statusBadge(status) {
   const map = {
     pending: 'badge-yellow',
     awaiting_confirmation: 'badge-yellow',
@@ -277,22 +369,22 @@ function statusBadge(s) {
     failed: 'badge-red',
     refunded: 'badge-gray',
   }
-  return map[s] || 'badge-gray'
+  return map[status] || 'badge-gray'
 }
 
 /** Whether a payment is still waiting to be confirmed or rejected. */
-function isConfirmable(p) {
-  return ['pending', 'awaiting_confirmation'].includes(p.payment_status)
+function isConfirmable(payment) {
+  return ['pending', 'awaiting_confirmation'].includes(payment.payment_status)
 }
 
 /** Whether a payment can still be deleted (not completed or refunded). */
-function isDeletable(p) {
-  return !['completed', 'refunded'].includes(p.payment_status)
+function isDeletable(payment) {
+  return !['completed', 'refunded'].includes(payment.payment_status)
 }
 
 /** Formats an ISO date/time into a short display string. */
-function formatDate(d) {
-  return d ? String(d).slice(0, 16).replace('T', ' ') : '-'
+function formatDate(date) {
+  return date ? String(date).slice(0, 16).replace('T', ' ') : '-'
 }
 
 /** Fetches the paged payment list using the current filters. */
@@ -327,9 +419,22 @@ async function loadReservations() {
   }
 }
 
+function loadAllPayments() {
+  return collectAllRows((page, perPage) =>
+    paymentApi.index({
+      status: filters.status,
+      method: filters.method,
+      from: filters.from,
+      to: filters.to,
+      page,
+      per_page: perPage,
+    }),
+  )
+}
+
 /** Moves to the given page and reloads. */
-function goPage(p) {
-  page.value = p
+function goPage(page) {
+  page.value = page
   load()
 }
 
@@ -392,11 +497,16 @@ async function save() {
 }
 
 /** Refunds a completed payment after confirmation. */
-async function refund(p) {
-  if (!window.confirm(t('payments.refundConfirm', { amount: Number(p.amount).toLocaleString() }))) return
+async function refund(payment) {
+  if (
+    !window.confirm(
+      t('payments.refundConfirm', { amount: Number(payment.amount).toLocaleString() }),
+    )
+  )
+    return
   error.value = ''
   try {
-    const res = await paymentApi.refund(p.payment_id, {})
+    const res = await paymentApi.refund(payment.payment_id, {})
     success.value = res.data.message || t('payments.refunded')
     await load()
   } catch (err) {
@@ -405,12 +515,17 @@ async function refund(p) {
 }
 
 /** Confirms a pending payment, prompting for the transaction reference. */
-async function confirmPayment(p) {
-  const reference = window.prompt(t('payments.confirmReferencePrompt'), p.transaction_reference || '')
+async function confirmPayment(payment) {
+  const reference = window.prompt(
+    t('payments.confirmReferencePrompt'),
+    payment.transaction_reference || '',
+  )
   if (reference === null) return
   error.value = ''
   try {
-    const res = await paymentApi.confirm(p.payment_id, { transaction_reference: reference || undefined })
+    const res = await paymentApi.confirm(payment.payment_id, {
+      transaction_reference: reference || undefined,
+    })
     success.value = res.data.message || t('payments.confirmed')
     await load()
   } catch (err) {
@@ -419,11 +534,11 @@ async function confirmPayment(p) {
 }
 
 /** Rejects a pending payment after confirmation. */
-async function rejectPayment(p) {
+async function rejectPayment(payment) {
   if (!window.confirm(t('payments.rejectConfirm'))) return
   error.value = ''
   try {
-    const res = await paymentApi.reject(p.payment_id, {})
+    const res = await paymentApi.reject(payment.payment_id, {})
     success.value = res.data.message || t('payments.rejected')
     await load()
   } catch (err) {
@@ -432,11 +547,16 @@ async function rejectPayment(p) {
 }
 
 /** Deletes a deletable payment after confirmation. */
-async function remove(p) {
-  if (!window.confirm(t('payments.deleteConfirm', { amount: Number(p.amount).toLocaleString() }))) return
+async function remove(payment) {
+  if (
+    !window.confirm(
+      t('payments.deleteConfirm', { amount: Number(payment.amount).toLocaleString() }),
+    )
+  )
+    return
   error.value = ''
   try {
-    const res = await paymentApi.destroy(p.payment_id)
+    const res = await paymentApi.destroy(payment.payment_id)
     success.value = res.data.message || t('payments.deleted')
     await load()
   } catch (err) {
@@ -447,7 +567,9 @@ async function remove(p) {
 /** Flattens Laravel-style validation errors into a single readable message. */
 function flattenError(err) {
   const messages = err.response?.data?.errors
-  return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')
+  return messages
+    ? Object.values(messages).flat().join(' ')
+    : err.response?.data?.message || t('common.actionFailed')
 }
 
 onMounted(() => {
@@ -498,7 +620,7 @@ onMounted(() => {
 }
 
 .muted {
-  color: #888;
+  color: #757575;
   font-size: 12px;
   margin-top: 2px;
 }
@@ -513,7 +635,7 @@ onMounted(() => {
 
 .price {
   font-weight: 700;
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .actions {
@@ -574,14 +696,14 @@ onMounted(() => {
 }
 
 .modal-head h2 i {
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .modal-close {
   background: none;
   border: none;
   font-size: 18px;
-  color: #999;
+  color: #757575;
   cursor: pointer;
   padding: 4px;
 }

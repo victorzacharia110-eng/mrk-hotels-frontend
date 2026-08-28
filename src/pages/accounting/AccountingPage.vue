@@ -11,8 +11,9 @@
         <p class="muted">{{ $t('accounting.subtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="reload"><i class="fas fa-rotate"></i> {{ $t('common.refresh')
-          }}</button>
+        <button class="btn btn-secondary" @click="reload">
+          <i class="fas fa-rotate"></i> {{ $t('common.refresh') }}
+        </button>
       </div>
     </div>
 
@@ -22,7 +23,9 @@
     <div class="card filter-bar">
       <div class="filter-grid">
         <div class="form-group">
-          <label>{{ activeTab === 'ledger' ? $t('accounting.from') : $t('accounting.asOf') }}</label>
+          <label>{{
+            activeTab === 'ledger' ? $t('accounting.from') : $t('accounting.asOf')
+          }}</label>
           <input v-model="from" type="date" class="input" @change="reload" />
         </div>
         <div class="form-group">
@@ -34,8 +37,13 @@
 
     <!-- Accounting report type tabs: trial balance, balance sheet, general ledger -->
     <div class="tabs">
-      <button v-for="tab in tabs" :key="tab.key" class="tab-btn" :class="{ active: activeTab === tab.key }"
-        @click="switchTab(tab.key)">
+      <button
+        v-for="tab in tabs"
+        :key="tab.key"
+        class="tab-btn"
+        :class="{ active: activeTab === tab.key }"
+        @click="switchTab(tab.key)"
+      >
         <i :class="tab.icon"></i> {{ $t(tab.label) }}
       </button>
     </div>
@@ -55,10 +63,10 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>{{ $t('accounting.account') }}</th>
-                <th class="num">{{ $t('accounting.type') }}</th>
-                <th class="num">{{ $t('accounting.debit') }}</th>
-                <th class="num">{{ $t('accounting.credit') }}</th>
+                <th scope="col">{{ $t('accounting.account') }}</th>
+                <th scope="col" class="num">{{ $t('accounting.type') }}</th>
+                <th scope="col" class="num">{{ $t('accounting.debit') }}</th>
+                <th scope="col" class="num">{{ $t('accounting.credit') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -71,9 +79,15 @@
             </tbody>
             <tfoot>
               <tr>
-                <td colspan="2"><strong>{{ $t('accounting.total') }}</strong></td>
-                <td class="num"><strong>{{ money(trial.total_debit) }}</strong></td>
-                <td class="num"><strong>{{ money(trial.total_credit) }}</strong></td>
+                <td colspan="2">
+                  <strong>{{ $t('accounting.total') }}</strong>
+                </td>
+                <td class="num">
+                  <strong>{{ money(trial.total_debit) }}</strong>
+                </td>
+                <td class="num">
+                  <strong>{{ money(trial.total_credit) }}</strong>
+                </td>
               </tr>
             </tfoot>
           </table>
@@ -82,12 +96,19 @@
 
         <div v-if="trial.revenue" class="summary-block">
           <h3>{{ $t('accounting.revenueBreakdown') }}</h3>
-          <div class="summary-row" v-for="(amount, key) in trial.revenue" :key="key" v-show="key !== 'total'">
+          <div
+            class="summary-row"
+            v-for="(amount, key) in trial.revenue"
+            :key="key"
+            v-show="key !== 'total'"
+          >
             <span class="capitalize">{{ $t('accounting.' + key) }}</span>
             <span class="price">{{ money(amount) }}</span>
           </div>
           <div class="summary-row total-row">
-            <span><strong>{{ $t('accounting.revenueTotal') }}</strong></span>
+            <span
+              ><strong>{{ $t('accounting.revenueTotal') }}</strong></span
+            >
             <span class="price">{{ money(trial.revenue.total) }}</span>
           </div>
         </div>
@@ -111,7 +132,9 @@
             </div>
             <div v-if="!balance.assets?.length" class="muted">{{ $t('accounting.noData') }}</div>
             <div class="summary-row total-row">
-              <span><strong>{{ $t('accounting.total') }}</strong></span>
+              <span
+                ><strong>{{ $t('accounting.total') }}</strong></span
+              >
               <span class="price">{{ money(balance.total_assets) }}</span>
             </div>
           </div>
@@ -123,7 +146,9 @@
             </div>
             <div v-if="!balance.equity?.length" class="muted">{{ $t('accounting.noData') }}</div>
             <div class="summary-row total-row">
-              <span><strong>{{ $t('accounting.total') }}</strong></span>
+              <span
+                ><strong>{{ $t('accounting.total') }}</strong></span
+              >
               <span class="price">{{ money(balance.total_equity) }}</span>
             </div>
           </div>
@@ -131,22 +156,30 @@
       </div>
 
       <!-- General ledger: dated entries with running balance -->
-      <div v-else class="card dash-section">
+      <div v-else-if="activeTab === 'ledger'" class="card dash-section">
         <div class="section-header-row">
           <h2><i class="fas fa-book"></i> {{ $t('accounting.generalLedger') }}</h2>
-          <span class="muted">{{ $t('accounting.openingBalance') }}: <strong>{{ money(ledger.opening_balance)
-              }}</strong></span>
+          <TableExportButton
+            filename="general-ledger"
+            :title="$t('accounting.generalLedger')"
+            :rows="ledger.entries || []"
+            :columns="ledgerExportColumns"
+          />
+          <span class="muted"
+            >{{ $t('accounting.openingBalance') }}:
+            <strong>{{ money(ledger.opening_balance) }}</strong></span
+          >
         </div>
         <div v-if="ledger.entries?.length" class="table-wrap">
           <table class="data-table">
             <thead>
               <tr>
-                <th>{{ $t('accounting.date') }}</th>
-                <th>{{ $t('accounting.reference') }}</th>
-                <th>{{ $t('accounting.description') }}</th>
-                <th class="num">{{ $t('accounting.debit') }}</th>
-                <th class="num">{{ $t('accounting.credit') }}</th>
-                <th class="num">{{ $t('accounting.balance') }}</th>
+                <th scope="col">{{ $t('accounting.date') }}</th>
+                <th scope="col">{{ $t('accounting.reference') }}</th>
+                <th scope="col">{{ $t('accounting.description') }}</th>
+                <th scope="col" class="num">{{ $t('accounting.debit') }}</th>
+                <th scope="col" class="num">{{ $t('accounting.credit') }}</th>
+                <th scope="col" class="num">{{ $t('accounting.balance') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -156,26 +189,196 @@
                 <td>{{ row.description }}</td>
                 <td class="num">{{ row.debit ? money(row.debit) : '—' }}</td>
                 <td class="num">{{ row.credit ? money(row.credit) : '—' }}</td>
-                <td class="num"><strong>{{ money(row.balance) }}</strong></td>
+                <td class="num">
+                  <strong>{{ money(row.balance) }}</strong>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
         <div v-else class="muted">{{ $t('accounting.noData') }}</div>
       </div>
+
+      <!-- Night audit / day close: computed snapshot for a business day -->
+      <div v-else class="card dash-section">
+        <div class="section-header-row">
+          <h2><i class="fas fa-moon"></i> {{ $t('accounting.nightAudit') }}</h2>
+          <TableExportButton
+            filename="day-close"
+            :title="$t('accounting.nightAudit')"
+            :rows="dayCloseRows"
+            :columns="dayCloseExportColumns"
+          />
+          <span class="badge" :class="dayReport.closed ? 'badge-ok' : 'badge-bad'">
+            {{ dayReport.closed ? $t('accounting.dayClosed') : $t('accounting.dayOpen') }}
+          </span>
+        </div>
+
+        <div v-if="dayError" class="alert alert-error">{{ dayError }}</div>
+
+        <!-- Close actions: pick a date, review the snapshot, freeze it -->
+        <div class="day-close-toolbar">
+          <div class="form-group">
+            <label>{{ $t('accounting.businessDate') }}</label>
+            <input
+              v-model="dayDate"
+              type="date"
+              class="input"
+              :max="today()"
+              @change="loadDayClose"
+            />
+          </div>
+          <button
+            v-if="!dayReport.closed"
+            class="btn btn-primary"
+            :disabled="closing || !dayReport.report"
+            @click="closeDay"
+          >
+            <i class="fas fa-lock"></i>
+            {{ closing ? $t('accounting.closing') : $t('accounting.closeDay') }}
+          </button>
+          <span v-else class="muted">
+            <i class="fas fa-check-circle"></i>
+            {{ $t('accounting.closedOn') }}
+            {{
+              dayReport.day_close?.closed_at ? shortDateTime(dayReport.day_close.closed_at) : '—'
+            }}
+          </span>
+        </div>
+
+        <div v-if="dayReport.report" class="day-summary">
+          <div class="day-cols">
+            <div>
+              <h3 class="sheet-heading">{{ $t('accounting.revenueBreakdown') }}</h3>
+              <div class="summary-row">
+                <span>{{ $t('accounting.rooms') }}</span
+                ><span class="price">{{ money(dayReport.report.revenue.rooms) }}</span>
+              </div>
+              <div class="summary-row">
+                <span>{{ $t('accounting.fnb') }}</span
+                ><span class="price">{{ money(dayReport.report.revenue.fnb) }}</span>
+              </div>
+              <div class="summary-row">
+                <span>{{ $t('accounting.laundry') }}</span
+                ><span class="price">{{ money(dayReport.report.revenue.laundry) }}</span>
+              </div>
+              <div class="summary-row">
+                <span>{{ $t('accounting.funGames') }}</span
+                ><span class="price">{{ money(dayReport.report.revenue.fun_games) }}</span>
+              </div>
+              <div class="summary-row total-row">
+                <span
+                  ><strong>{{ $t('accounting.revenueTotal') }}</strong></span
+                ><span class="price">{{ money(dayReport.report.revenue.total) }}</span>
+              </div>
+            </div>
+            <div>
+              <h3 class="sheet-heading">{{ $t('accounting.collections') }}</h3>
+              <div
+                v-for="(amount, method) in dayReport.report.collections.by_method"
+                :key="method"
+                class="summary-row"
+              >
+                <span class="capitalize">{{ method.replace('_', ' ') }}</span>
+                <span class="price">{{ money(amount) }}</span>
+              </div>
+              <div class="summary-row total-row">
+                <span
+                  ><strong>{{ $t('accounting.collectedTotal') }}</strong></span
+                ><span class="price">{{ money(dayReport.report.collections.total) }}</span>
+              </div>
+            </div>
+            <div>
+              <h3 class="sheet-heading">{{ $t('accounting.positions') }}</h3>
+              <div class="summary-row">
+                <span>{{ $t('accounting.expenses') }}</span
+                ><span>{{ money(dayReport.report.expenses) }}</span>
+              </div>
+              <div class="summary-row">
+                <span>{{ $t('accounting.cashInHand') }}</span
+                ><span class="price">{{ money(dayReport.report.cash_in_hand) }}</span>
+              </div>
+              <div class="summary-row">
+                <span>{{ $t('accounting.netProfit') }}</span
+                ><span class="price">{{ money(dayReport.report.net_profit) }}</span>
+              </div>
+              <div class="summary-row">
+                <span>{{ $t('accounting.outstanding') }}</span
+                ><span>{{ money(dayReport.report.outstanding) }}</span>
+              </div>
+            </div>
+            <div>
+              <h3 class="sheet-heading">{{ $t('accounting.counts') }}</h3>
+              <div class="summary-row">
+                <span>{{ $t('accounting.arrivals') }}</span
+                ><span>{{ dayReport.report.counts.arrivals }}</span>
+              </div>
+              <div class="summary-row">
+                <span>{{ $t('accounting.departures') }}</span
+                ><span>{{ dayReport.report.counts.departures }}</span>
+              </div>
+              <div class="summary-row">
+                <span>{{ $t('accounting.inHouse') }}</span
+                ><span>{{ dayReport.report.counts.in_house }}</span>
+              </div>
+              <div class="summary-row">
+                <span>{{ $t('accounting.reservationsCreated') }}</span
+                ><span>{{ dayReport.report.counts.reservations_created }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else class="muted">{{ $t('accounting.noData') }}</div>
+
+        <!-- History of every closed business day -->
+        <div v-if="dayHistory.length" class="day-history">
+          <h3 class="sheet-heading">{{ $t('accounting.closeHistory') }}</h3>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">{{ $t('accounting.businessDate') }}</th>
+                  <th scope="col" class="num">{{ $t('accounting.revenueTotal') }}</th>
+                  <th scope="col" class="num">{{ $t('accounting.collectedTotal') }}</th>
+                  <th scope="col" class="num">{{ $t('accounting.cashInHand') }}</th>
+                  <th scope="col" class="num">{{ $t('accounting.netProfit') }}</th>
+                  <th scope="col" class="num">{{ $t('accounting.outstanding') }}</th>
+                  <th scope="col">{{ $t('accounting.closedBy') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in dayHistory" :key="row.day_close_id">
+                  <td>{{ row.close_date }}</td>
+                  <td class="num">{{ money(row.total_revenue) }}</td>
+                  <td class="num">{{ money(row.total_collected) }}</td>
+                  <td class="num">{{ money(row.cash_in_hand) }}</td>
+                  <td class="num">{{ money(row.net_profit) }}</td>
+                  <td class="num">{{ money(row.total_outstanding) }}</td>
+                  <td>{{ row.closed_by?.name || '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </template>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { accountingApi } from '@/api'
+import TableExportButton from '@/components/TableExportButton.vue'
+
+const { t } = useI18n()
 
 // Available accounting report tabs and their icons/labels.
 const tabs = [
   { key: 'trial', icon: 'fas fa-scale-balanced', label: 'accounting.trialBalance' },
   { key: 'balance', icon: 'fas fa-scale-unbalanced', label: 'accounting.balanceSheet' },
   { key: 'ledger', icon: 'fas fa-book', label: 'accounting.generalLedger' },
+  { key: 'day', icon: 'fas fa-moon', label: 'accounting.nightAudit' },
 ]
 
 // Active tab, loading/error flags, date range filter, and per-report data.
@@ -188,6 +391,45 @@ const trial = ref({})
 const balance = ref({})
 const ledger = ref({})
 
+// Night audit / day close state: target business date, live report, and history.
+const dayDate = ref(today())
+const dayReport = ref({})
+const dayHistory = ref([])
+const dayError = ref('')
+const closing = ref(false)
+
+// Column maps for the exported sheets (labels come from the UI strings).
+const ledgerExportColumns = [
+  { key: 'date', label: 'Date' },
+  { key: 'reference', label: 'Reference' },
+  { key: 'description', label: 'Description' },
+  { key: 'debit', label: 'Debit' },
+  { key: 'credit', label: 'Credit' },
+  { key: 'balance', label: 'Balance' },
+]
+
+const dayCloseRows = computed(() => {
+  const r = dayReport.value.report
+  if (!r) return []
+  return [
+    { source: 'Rooms', amount: r.revenue.rooms },
+    { source: 'F&B', amount: r.revenue.fnb },
+    { source: 'Laundry', amount: r.revenue.laundry },
+    { source: 'Fun games', amount: r.revenue.fun_games },
+    { source: 'Total revenue', amount: r.revenue.total },
+    { source: 'Collected', amount: r.collections.total },
+    { source: 'Expenses', amount: r.expenses },
+    { source: 'Cash in hand', amount: r.cash_in_hand },
+    { source: 'Net profit', amount: r.net_profit },
+    { source: 'Outstanding', amount: r.outstanding },
+  ]
+})
+
+const dayCloseExportColumns = [
+  { key: 'source', label: 'Item' },
+  { key: 'amount', label: 'Amount (TZS)' },
+]
+
 /** Returns today's date as an ISO string (YYYY-MM-DD). */
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -199,8 +441,8 @@ function money(value) {
 }
 
 /** Formats an ISO date/time into a dd/mm/yyyy hh:mm string. */
-function shortDateTime(d) {
-  const date = new Date(d)
+function shortDateTime(isoDateTime) {
+  const date = new Date(isoDateTime)
   const dd = String(date.getDate()).padStart(2, '0')
   const mm = String(date.getMonth() + 1).padStart(2, '0')
   const hh = String(date.getHours()).padStart(2, '0')
@@ -226,13 +468,52 @@ async function reload() {
       trial.value = (await accountingApi.trialBalance(params)).data
     } else if (activeTab.value === 'balance') {
       balance.value = (await accountingApi.balanceSheet(params)).data
-    } else {
+    } else if (activeTab.value === 'ledger') {
       ledger.value = (await accountingApi.generalLedger(params)).data
+    } else {
+      await Promise.all([loadDayClose(), loadDayHistory()])
     }
   } catch (err) {
     error.value = err.response?.data?.message || err.message
   } finally {
     loading.value = false
+  }
+}
+
+/** Fetches the night-audit snapshot for the selected business date. */
+async function loadDayClose() {
+  dayError.value = ''
+  try {
+    dayReport.value = (
+      await accountingApi.dayCloseReport({ date: dayDate.value || undefined })
+    ).data
+  } catch (err) {
+    dayError.value = err.response?.data?.message || err.message
+  }
+}
+
+/** Fetches the list of already-closed business days. */
+async function loadDayHistory() {
+  try {
+    const res = (await accountingApi.dayCloses()).data
+    dayHistory.value = res.day_closes || []
+  } catch (err) {
+    dayError.value = err.response?.data?.message || err.message
+  }
+}
+
+/** Closes the selected business day after a confirmation prompt. */
+async function closeDay() {
+  if (!window.confirm(t('accounting.closeConfirm'))) return
+  closing.value = true
+  dayError.value = ''
+  try {
+    await accountingApi.storeDayClose({ date: dayDate.value })
+    await Promise.all([loadDayClose(), loadDayHistory()])
+  } catch (err) {
+    dayError.value = err.response?.data?.message || err.message
+  } finally {
+    closing.value = false
   }
 }
 
@@ -295,8 +576,8 @@ onMounted(reload)
 }
 
 .tab-btn.active {
-  background: #005EB8;
-  border-color: #005EB8;
+  background: #005eb8;
+  border-color: #005eb8;
   color: #fff;
 }
 
@@ -320,7 +601,7 @@ onMounted(reload)
 }
 
 .section-header-row h2 i {
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .badge {
@@ -362,7 +643,7 @@ onMounted(reload)
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #888;
+  color: #757575;
 }
 
 .data-table tfoot td {
@@ -397,7 +678,7 @@ onMounted(reload)
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #005EB8;
+  color: #005eb8;
   margin-bottom: 10px;
 }
 
@@ -422,7 +703,7 @@ onMounted(reload)
 
 .price {
   font-weight: 700;
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .sheet-grid {
@@ -431,8 +712,38 @@ onMounted(reload)
   gap: 24px;
 }
 
+.day-close-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-wrap: wrap;
+}
+
+.day-summary {
+  margin-bottom: 24px;
+}
+
+.day-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 24px;
+}
+
+.day-history {
+  margin-top: 24px;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 16px;
+}
+
+.day-history .sheet-heading {
+  margin-bottom: 12px;
+}
+
 .muted {
-  color: #888;
+  color: #757575;
   font-size: 13px;
 }
 

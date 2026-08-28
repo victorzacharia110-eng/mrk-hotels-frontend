@@ -18,6 +18,7 @@ const ROLE_LEVELS = {
   manager: 80,
   accountant: 70,
   receptionist: 60,
+  store_manager: 55,
   procurement_officer: 50,
   housekeeping: 40,
   kitchen: 40,

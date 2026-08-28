@@ -11,10 +11,18 @@
         <p class="muted">{{ $t('superadmin.tenantListSubtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="load"><i class="fas fa-rotate"></i> {{ $t('superadmin.refresh')
-          }}</button>
-        <button class="btn btn-primary" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('superadmin.newTenant')
-          }}</button>
+        <button class="btn btn-secondary" @click="load">
+          <i class="fas fa-rotate"></i> {{ $t('superadmin.refresh') }}
+        </button>
+        <button class="btn btn-primary" @click="openCreate">
+          <i class="fas fa-plus"></i> {{ $t('superadmin.newTenant') }}
+        </button>
+        <TableExportButton
+          filename="tenants"
+          :title="$t('superadmin.tenantListTitle')"
+          :load-all="loadAllTenants"
+          :columns="exportColumns"
+        />
       </div>
     </div>
 
@@ -26,19 +34,36 @@
       <div class="filter-grid">
         <div class="form-group">
           <label>{{ $t('common.search') }}</label>
-          <input v-model="search" type="search" class="input" placeholder="Search hotels..." @input="load" />
+          <input
+            v-model="search"
+            type="search"
+            class="input"
+            :placeholder="$t('superadmin.searchHotels')"
+            @input="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('superadmin.status') }}</label>
-          <SearchableSelect v-model="status" :options="statusOptions" :empty-label="$t('common.all')" @change="load" />
+          <SearchableSelect
+            v-model="status"
+            :options="statusOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('superadmin.plan') }}</label>
-          <SearchableSelect v-model="plan" :options="planOptions" :empty-label="$t('common.all')" @change="load" />
+          <SearchableSelect
+            v-model="plan"
+            :options="planOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="filter-actions">
-          <button class="btn btn-secondary btn-sm" @click="clearFilters"><i class="fas fa-filter-circle-xmark"></i> {{
-            $t('common.clear') }}</button>
+          <button class="btn btn-secondary btn-sm" @click="clearFilters">
+            <i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}
+          </button>
         </div>
       </div>
     </div>
@@ -50,46 +75,74 @@
       <table class="table">
         <thead>
           <tr>
-            <th>{{ $t('superadmin.tenant') }}</th>
-            <th>{{ $t('superadmin.tableContact') }}</th>
-            <th>{{ $t('superadmin.tableLocation') }}</th>
-            <th>{{ $t('superadmin.status') }}</th>
-            <th>{{ $t('superadmin.plan') }}</th>
-            <th>{{ $t('superadmin.staff') }}</th>
-            <th>{{ $t('superadmin.rooms') }}</th>
-            <th>{{ $t('common.actions') }}</th>
+            <th scope="col">{{ $t('superadmin.tenant') }}</th>
+            <th scope="col">{{ $t('superadmin.tableContact') }}</th>
+            <th scope="col">{{ $t('superadmin.tableLocation') }}</th>
+            <th scope="col">{{ $t('superadmin.status') }}</th>
+            <th scope="col">{{ $t('superadmin.plan') }}</th>
+            <th scope="col">{{ $t('superadmin.staff') }}</th>
+            <th scope="col">{{ $t('superadmin.rooms') }}</th>
+            <th scope="col">{{ $t('common.actions') }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="tenant in tenants" :key="tenant.tenant_id">
             <td>
-              <router-link :to="{ name: 'superadmin-tenant-detail', params: { id: tenant.tenant_id } }"
-                class="tenant-name">
+              <router-link
+                :to="{ name: 'superadmin-tenant-detail', params: { id: tenant.tenant_id } }"
+                class="tenant-name"
+              >
                 {{ tenant.hotel_name }}
               </router-link>
               <div class="muted">{{ tenant.subdomain }}</div>
+              <span v-if="tenant.self_service" class="badge badge-info" style="margin-top:4px">{{ $t('superadmin.selfService') }}</span>
+              <span v-if="tenant.subscription_status === 'trial'" class="badge badge-warning" style="margin-top:4px;margin-left:4px">{{ $t('superadmin.trialLabel') }}</span>
             </td>
             <td>
               {{ tenant.contact_person }}
               <div class="muted">{{ tenant.email }}</div>
             </td>
             <td>{{ [tenant.city, tenant.country].filter(Boolean).join(', ') || '-' }}</td>
-            <td><span class="badge" :class="statusBadge(tenant.status)">{{ tenant.status }}</span></td>
-            <td>{{ tenant.subscription_plan }}</td>
+            <td>
+              <span class="badge" :class="statusBadge(tenant.status)">{{ tenant.status }}</span>
+            </td>
+            <td>
+              {{ tenant.subscription_plan }}
+              <div v-if="tenant.subscription_status === 'trial'" class="muted" style="font-size:11px">
+                {{ $t('superadmin.trialLabel') }}
+                <template v-if="tenant.trial_ends_at"> · {{ $t('superadmin.trialEndsOnDate') }} {{ new Date(tenant.trial_ends_at).toLocaleDateString() }}</template>
+              </div>
+            </td>
             <td>{{ tenant.staff_count ?? '-' }}</td>
             <td>{{ tenant.room_count ?? '-' }}</td>
             <td>
               <div class="actions">
-                <button v-if="tenant.status === 'pending'" class="btn btn-sm btn-success" @click="approve(tenant)">
+                <button
+                  v-if="tenant.status === 'pending'"
+                  class="btn btn-sm btn-success"
+                  @click="approve(tenant)"
+                >
                   {{ $t('superadmin.approve') }}
                 </button>
-                <button v-if="tenant.status === 'pending'" class="btn btn-sm btn-danger" @click="reject(tenant)">
+                <button
+                  v-if="tenant.status === 'pending'"
+                  class="btn btn-sm btn-danger"
+                  @click="reject(tenant)"
+                >
                   {{ $t('superadmin.reject') }}
                 </button>
-                <button v-if="tenant.status === 'active'" class="btn btn-sm btn-danger" @click="suspend(tenant)">
+                <button
+                  v-if="tenant.status === 'active'"
+                  class="btn btn-sm btn-danger"
+                  @click="suspend(tenant)"
+                >
                   {{ $t('superadmin.suspend') }}
                 </button>
-                <button v-if="tenant.status === 'suspended'" class="btn btn-sm btn-success" @click="reactivate(tenant)">
+                <button
+                  v-if="tenant.status === 'suspended'"
+                  class="btn btn-sm btn-success"
+                  @click="reactivate(tenant)"
+                >
                   {{ $t('superadmin.reactivate') }}
                 </button>
               </div>
@@ -106,7 +159,9 @@
         <div class="modal">
           <div class="modal-head">
             <h2><i class="fas fa-hotel"></i> {{ $t('superadmin.newTenant') }}</h2>
-            <button class="modal-close" @click="showCreate = false"><i class="fas fa-xmark"></i></button>
+            <button class="modal-close" @click="showCreate = false">
+              <i class="fas fa-xmark"></i>
+            </button>
           </div>
           <p class="muted">{{ $t('superadmin.onboardNote') }}</p>
 
@@ -120,7 +175,13 @@
               </div>
               <div class="form-group">
                 <label>{{ $t('superadmin.subdomain') }} *</label>
-                <input v-model="form.subdomain" type="text" class="input" placeholder="my-hotel" required />
+                <input
+                  v-model="form.subdomain"
+                  type="text"
+                  class="input"
+                  placeholder="my-hotel"
+                  required
+                />
               </div>
               <div class="form-group">
                 <label>{{ $t('superadmin.contactPerson') }}</label>
@@ -144,11 +205,21 @@
               </div>
               <div class="form-group">
                 <label>{{ $t('superadmin.tin') }}</label>
-                <input v-model="form.tin" type="text" class="input" :placeholder="$t('superadmin.tinPlaceholder')" />
+                <input
+                  v-model="form.tin"
+                  type="text"
+                  class="input"
+                  :placeholder="$t('superadmin.tinPlaceholder')"
+                />
               </div>
               <div class="form-group">
                 <label>{{ $t('superadmin.vrn') }}</label>
-                <input v-model="form.vrn" type="text" class="input" :placeholder="$t('superadmin.vrnPlaceholder')" />
+                <input
+                  v-model="form.vrn"
+                  type="text"
+                  class="input"
+                  :placeholder="$t('superadmin.vrnPlaceholder')"
+                />
               </div>
               <div class="form-group">
                 <label>{{ $t('superadmin.subscriptionPlan') }}</label>
@@ -156,10 +227,12 @@
               </div>
             </div>
             <div class="modal-foot">
-              <button type="button" class="btn btn-secondary" @click="showCreate = false">{{ $t('common.cancel')
-                }}</button>
+              <button type="button" class="btn btn-secondary" @click="showCreate = false">
+                {{ $t('common.cancel') }}
+              </button>
               <button type="submit" class="btn btn-primary" :disabled="creating">
-                <i class="fas fa-plus"></i> {{ creating ? $t('superadmin.creating') : $t('superadmin.createTenant') }}
+                <i class="fas fa-plus"></i>
+                {{ creating ? $t('superadmin.creating') : $t('superadmin.createTenant') }}
               </button>
             </div>
           </form>
@@ -172,15 +245,18 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { tenantApi } from '@/api'
+import { tenantApi, planApi } from '@/api'
 import PhoneInput from '@/components/PhoneInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import TableExportButton from '@/components/TableExportButton.vue'
 import { normalizePhoneNumber } from '@/utils/phone'
+import { collectAllRows } from '@/utils/export'
 
 const { t } = useI18n()
 
 // List state: tenant rows, filters (search text, status, plan) and feedback flags.
 const tenants = ref([])
+const plans = ref([])
 const search = ref('')
 const status = ref('')
 const plan = ref('')
@@ -214,21 +290,49 @@ const statusOptions = computed(() => [
   { value: 'cancelled', label: t('superadmin.statusCancelled') },
 ])
 
-const planOptions = computed(() => [
-  { value: 'trial', label: t('superadmin.planTrial') },
-  { value: 'basic', label: t('superadmin.planBasic') },
-  { value: 'premium', label: t('superadmin.planPremium') },
-  { value: 'enterprise', label: t('superadmin.planEnterprise') },
+const planOptions = computed(() => {
+  if (plans.value.length) {
+    return plans.value.map((p) => ({ value: p.slug, label: p.label || p.slug }))
+  }
+  // Fallback while plans load.
+  return [
+    { value: 'trial', label: t('superadmin.planTrial') },
+    { value: 'starter', label: 'Starter' },
+    { value: 'growth', label: 'Growth' },
+    { value: 'enterprise', label: t('superadmin.planEnterprise') },
+  ]
+})
+
+// Readable, curated columns used for CSV/Excel/PDF exports instead of every raw field.
+const exportColumns = computed(() => [
+  { key: 'hotel_name', label: t('superadmin.tenant') },
+  { key: 'registration_code', label: t('superadmin.registrationCode') },
+  { key: 'subdomain', label: t('superadmin.subdomain') },
+  { key: 'contact_person', label: t('superadmin.tableContact') },
+  { key: 'email', label: t('superadmin.email') },
+  { key: 'phone', label: t('superadmin.phone') },
+  { key: 'city', label: t('superadmin.city') },
+  { key: 'country', label: t('superadmin.country') },
+  { key: 'status', label: t('superadmin.status') },
+  { key: 'subscription_plan', label: t('superadmin.plan') },
+  { key: 'subscription_status', label: t('superadmin.subscriptionStatus') },
+  { key: 'staff_count', label: t('superadmin.staff') },
+  { key: 'room_count', label: t('superadmin.rooms') },
 ])
 
 /**
  * Maps a tenant status to the CSS class used for its badge colour.
- * @param {string} s - The tenant status (active, pending, suspended, cancelled).
+ * @param {string} status - The tenant status (active, pending, suspended, cancelled).
  * @returns {string} The badge CSS class.
  */
-function statusBadge(s) {
-  const map = { active: 'badge-green', pending: 'badge-yellow', suspended: 'badge-red', cancelled: 'badge-gray' }
-  return map[s] || 'badge-gray'
+function statusBadge(status) {
+  const map = {
+    active: 'badge-green',
+    pending: 'badge-yellow',
+    suspended: 'badge-red',
+    cancelled: 'badge-gray',
+  }
+  return map[status] || 'badge-gray'
 }
 
 /** Fetches the tenant list, honouring the current status/plan/search filters. */
@@ -249,6 +353,18 @@ async function load() {
   }
 }
 
+function loadAllTenants() {
+  return collectAllRows((page, perPage) =>
+    tenantApi.index({
+      status: status.value,
+      plan: plan.value,
+      search: search.value || undefined,
+      page,
+      per_page: perPage,
+    }),
+  )
+}
+
 /** Resets every filter and reloads the full tenant list. */
 function clearFilters() {
   status.value = ''
@@ -260,7 +376,19 @@ function clearFilters() {
 /** Opens the create-hotel modal, clearing previous input but keeping the plan default. */
 function openCreate() {
   createError.value = ''
-  form.value = { ...form.value, hotel_name: '', subdomain: '', contact_person: '', email: '', phone: '', country_code: 'TZ', city: '', country: '', tin: '', vrn: '' }
+  form.value = {
+    ...form.value,
+    hotel_name: '',
+    subdomain: '',
+    contact_person: '',
+    email: '',
+    phone: '',
+    country_code: 'TZ',
+    city: '',
+    country: '',
+    tin: '',
+    vrn: '',
+  }
   showCreate.value = true
 }
 
@@ -269,7 +397,10 @@ async function createHotel() {
   createError.value = ''
   creating.value = true
   try {
-    const res = await tenantApi.store({ ...form.value, phone: normalizePhoneNumber(form.value.phone, form.value.country_code || 'TZ') })
+    const res = await tenantApi.store({
+      ...form.value,
+      phone: normalizePhoneNumber(form.value.phone, form.value.country_code || 'TZ'),
+    })
     showCreate.value = false
     success.value = res.data.message || t('superadmin.created')
     await load()
@@ -301,12 +432,40 @@ async function runAction(id, fn, message) {
 }
 
 // Per-row lifecycle actions, all funnelled through the shared runAction helper.
-const approve = (tenant) => runAction(tenant.tenant_id, tenantApi.approve, t('superadmin.approvedMsg', { name: tenant.hotel_name }))
-const reject = (tenant) => runAction(tenant.tenant_id, tenantApi.reject, t('superadmin.rejectedMsg', { name: tenant.hotel_name }))
-const suspend = (tenant) => runAction(tenant.tenant_id, tenantApi.suspend, t('superadmin.suspendedMsg', { name: tenant.hotel_name }))
-const reactivate = (tenant) => runAction(tenant.tenant_id, tenantApi.reactivate, t('superadmin.reactivatedMsg', { name: tenant.hotel_name }))
+const approve = (tenant) =>
+  runAction(
+    tenant.tenant_id,
+    tenantApi.approve,
+    t('superadmin.approvedMsg', { name: tenant.hotel_name }),
+  )
+const reject = (tenant) =>
+  runAction(
+    tenant.tenant_id,
+    tenantApi.reject,
+    t('superadmin.rejectedMsg', { name: tenant.hotel_name }),
+  )
+const suspend = (tenant) =>
+  runAction(
+    tenant.tenant_id,
+    tenantApi.suspend,
+    t('superadmin.suspendedMsg', { name: tenant.hotel_name }),
+  )
+const reactivate = (tenant) =>
+  runAction(
+    tenant.tenant_id,
+    tenantApi.reactivate,
+    t('superadmin.reactivatedMsg', { name: tenant.hotel_name }),
+  )
 
-onMounted(load)
+onMounted(async () => {
+  load()
+  try {
+    const { data } = await planApi.index()
+    plans.value = data.plans || data.data || data
+  } catch {
+    // Plans load failed — fallback options still work.
+  }
+})
 </script>
 
 <style scoped>
@@ -352,12 +511,12 @@ onMounted(load)
 }
 
 .muted {
-  color: #888;
+  color: #757575;
   font-size: 12px;
 }
 
 .tenant-name {
-  color: #005EB8;
+  color: #005eb8;
   font-weight: 600;
 }
 
@@ -405,14 +564,14 @@ onMounted(load)
 }
 
 .modal-head h2 i {
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .modal-close {
   background: none;
   border: none;
   font-size: 18px;
-  color: #999;
+  color: #757575;
   cursor: pointer;
   padding: 4px;
 }

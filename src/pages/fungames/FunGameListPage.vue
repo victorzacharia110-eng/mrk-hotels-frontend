@@ -15,8 +15,13 @@
         <p class="muted">{{ $t('funGames.subtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="load"><i class="fas fa-rotate"></i> {{ $t('funGames.refresh') }}</button>
-        <button v-if="canOperate" class="btn btn-primary" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('funGames.newOrder') }}</button>
+        <button class="btn btn-secondary" @click="load">
+          <i class="fas fa-rotate"></i> {{ $t('funGames.refresh') }}
+        </button>
+        <button v-if="canOperate" class="btn btn-primary" @click="openCreate">
+          <i class="fas fa-plus"></i> {{ $t('funGames.newOrder') }}
+        </button>
+        <TableExportButton filename="fun-games" :load-all="loadAllOrders" />
       </div>
     </div>
 
@@ -29,8 +34,12 @@
       <div class="filter-grid">
         <div class="form-group">
           <label>{{ $t('funGames.status') }}</label>
-          <SearchableSelect v-model="filters.status" :options="statusOptions" :empty-label="$t('common.all')"
-            @change="load" />
+          <SearchableSelect
+            v-model="filters.status"
+            :options="statusOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('funGames.bookingDate') }}</label>
@@ -38,16 +47,27 @@
         </div>
         <div class="form-group">
           <label>{{ $t('funGames.supervisor') }}</label>
-          <SearchableSelect v-model="filters.supervisor_id" :options="userOptions" :empty-label="$t('common.all')"
-            @change="load" />
+          <SearchableSelect
+            v-model="filters.supervisor_id"
+            :options="userOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('common.search') }}</label>
-          <input v-model="filters.search" type="text" class="input" :placeholder="$t('funGames.gameName')"
-            @input="triggerSearch" />
+          <input
+            v-model="filters.search"
+            type="text"
+            class="input"
+            :placeholder="$t('funGames.gameName')"
+            @input="triggerSearch"
+          />
         </div>
         <div class="filter-actions">
-          <button class="btn btn-secondary btn-sm" @click="clearFilters"><i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}</button>
+          <button class="btn btn-secondary btn-sm" @click="clearFilters">
+            <i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}
+          </button>
         </div>
       </div>
     </div>
@@ -58,61 +78,98 @@
     <!-- Orders table with status workflow actions and price badges -->
     <div v-else class="table-scroll">
       <table class="table">
-      <thead>
-        <tr>
-          <th>{{ $t('funGames.orderNumber') }}</th>
-          <th>{{ $t('funGames.game') }}</th>
-          <th>{{ $t('funGames.guest') }}</th>
-          <th>{{ $t('funGames.supervisor') }}</th>
-          <th>{{ $t('funGames.bookingDate') }}</th>
-          <th>{{ $t('funGames.arrivalTime') }}</th>
-          <th>{{ $t('funGames.totalCharge') }}</th>
-          <th>{{ $t('funGames.status') }}</th>
-          <th>{{ $t('common.actions') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="order in orders" :key="order.fun_game_order_id">
-          <td><strong>{{ order.order_number }}</strong></td>
-          <td>{{ order.game_name || '-' }}</td>
-          <td>{{ order.guest_name || '-' }}</td>
-          <td>{{ order.supervisor?.full_name || '-' }}</td>
-          <td>{{ order.booking_date || '-' }}</td>
-          <td>{{ order.arrival_time || '-' }}</td>
-          <td><span class="price">TZS {{ Number(order.total_charge).toLocaleString() }}</span></td>
-          <td><span class="badge" :class="statusBadge(order.status)">{{ statusLabel(order.status) }}</span></td>
-          <td>
-            <div class="actions" v-if="canOperate">
-              <button v-if="order.status === 'pending'" class="btn btn-sm btn-success" @click="setStatus(order, 'completed')">
-                <i class="fas fa-check"></i> {{ $t('funGames.statusCompleted') }}
-              </button>
-              <button v-if="order.status === 'pending'" class="btn btn-sm btn-danger" @click="setStatus(order, 'cancelled')">
-                <i class="fas fa-xmark"></i> {{ $t('funGames.statusCancelled') }}
-              </button>
-              <button class="btn btn-sm btn-secondary" @click="openEdit(order)"><i class="fas fa-pen"></i> {{ $t('common.edit') }}</button>
-              <button class="btn btn-sm btn-danger" @click="remove(order)"><i class="fas fa-trash"></i></button>
-            </div>
-          </td>
-        </tr>
-        <tr v-if="!orders.length && !loading">
-          <td colspan="9" class="muted">{{ $t('funGames.empty') }}</td>
-        </tr>
-      </tbody>
-    </table>
+        <thead>
+          <tr>
+            <th scope="col">{{ $t('funGames.orderNumber') }}</th>
+            <th scope="col">{{ $t('funGames.game') }}</th>
+            <th scope="col">{{ $t('funGames.guest') }}</th>
+            <th scope="col">{{ $t('funGames.supervisor') }}</th>
+            <th scope="col">{{ $t('funGames.bookingDate') }}</th>
+            <th scope="col">{{ $t('funGames.arrivalTime') }}</th>
+            <th scope="col">{{ $t('funGames.totalCharge') }}</th>
+            <th scope="col">{{ $t('funGames.status') }}</th>
+            <th scope="col">{{ $t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="order in orders" :key="order.fun_game_order_id">
+            <td>
+              <strong>{{ order.order_number }}</strong>
+            </td>
+            <td>{{ order.game_name || '-' }}</td>
+            <td>{{ order.guest_name || '-' }}</td>
+            <td>{{ order.supervisor?.full_name || '-' }}</td>
+            <td>{{ order.booking_date || '-' }}</td>
+            <td>{{ order.arrival_time || '-' }}</td>
+            <td>
+              <span class="price">TZS {{ Number(order.total_charge).toLocaleString() }}</span>
+            </td>
+            <td>
+              <span class="badge" :class="statusBadge(order.status)">{{
+                statusLabel(order.status)
+              }}</span>
+            </td>
+            <td>
+              <div class="actions" v-if="canOperate">
+                <button
+                  v-if="order.status === 'pending'"
+                  class="btn btn-sm btn-success"
+                  @click="setStatus(order, 'completed')"
+                >
+                  <i class="fas fa-check"></i> {{ $t('funGames.statusCompleted') }}
+                </button>
+                <button
+                  v-if="order.status === 'pending'"
+                  class="btn btn-sm btn-danger"
+                  @click="setStatus(order, 'cancelled')"
+                >
+                  <i class="fas fa-xmark"></i> {{ $t('funGames.statusCancelled') }}
+                </button>
+                <button class="btn btn-sm btn-secondary" @click="openEdit(order)">
+                  <i class="fas fa-pen"></i> {{ $t('common.edit') }}
+                </button>
+                <button class="btn btn-sm btn-danger" @click="remove(order)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!orders.length && !loading">
+            <td colspan="9" class="muted">{{ $t('funGames.empty') }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Pagination controls (shown when there is more than one page of orders) -->
     <div v-if="meta.total > meta.per_page" class="pagination">
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{ $t('common.previous') }}</button>
-      <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.next_page_url" @click="goPage(meta.current_page + 1)">{{ $t('common.next') }}</button>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.prev_page_url"
+        @click="goPage(meta.current_page - 1)"
+      >
+        {{ $t('common.previous') }}
+      </button>
+      <span class="muted">{{
+        $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page })
+      }}</span>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.next_page_url"
+        @click="goPage(meta.current_page + 1)"
+      >
+        {{ $t('common.next') }}
+      </button>
     </div>
 
     <!-- Create/edit fun-game order modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal">
         <div class="modal-head">
-          <h2><i class="fas fa-gamepad"></i> {{ editing ? $t('funGames.editOrder') : $t('funGames.newOrder') }}</h2>
+          <h2>
+            <i class="fas fa-gamepad"></i>
+            {{ editing ? $t('funGames.editOrder') : $t('funGames.newOrder') }}
+          </h2>
           <button class="modal-close" @click="closeModal"><i class="fas fa-xmark"></i></button>
         </div>
 
@@ -138,7 +195,14 @@
             </div>
             <div class="form-group">
               <label>{{ $t('funGames.totalCharge') }} *</label>
-              <input v-model.number="form.total_charge" type="number" min="0" step="0.01" class="input" required />
+              <input
+                v-model.number="form.total_charge"
+                type="number"
+                min="0"
+                step="0.01"
+                class="input"
+                required
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('funGames.status') }}</label>
@@ -146,7 +210,11 @@
             </div>
             <div class="form-group form-full">
               <label>{{ $t('funGames.supervisor') }}</label>
-              <SearchableSelect v-model="form.supervisor_id" :options="userOptions" :empty-label="$t('common.none')" />
+              <SearchableSelect
+                v-model="form.supervisor_id"
+                :options="userOptions"
+                :empty-label="$t('common.none')"
+              />
             </div>
             <div class="form-group form-full">
               <label>{{ $t('funGames.notes') }}</label>
@@ -154,9 +222,18 @@
             </div>
           </div>
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="closeModal">{{ $t('common.cancel') }}</button>
+            <button type="button" class="btn btn-secondary" @click="closeModal">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="saving">
-              <i class="fas fa-check"></i> {{ saving ? $t('common.saving') : (editing ? $t('funGames.updateOrder') : $t('funGames.saveOrder')) }}
+              <i class="fas fa-check"></i>
+              {{
+                saving
+                  ? $t('common.saving')
+                  : editing
+                    ? $t('funGames.updateOrder')
+                    : $t('funGames.saveOrder')
+              }}
             </button>
           </div>
         </form>
@@ -170,7 +247,9 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { funGameApi, userApi } from '@/api'
+import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import TableExportButton from '@/components/TableExportButton.vue'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -181,7 +260,14 @@ const canOperate = computed(() => authStore.canOperate)
 const orders = ref([])
 const users = ref([])
 const page = ref(1)
-const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
+const meta = ref({
+  total: 0,
+  per_page: 15,
+  current_page: 1,
+  last_page: 1,
+  prev_page_url: null,
+  next_page_url: null,
+})
 const filters = reactive({ status: '', date: '', supervisor_id: '', search: '' })
 const loading = ref(false)
 const error = ref('')
@@ -194,7 +280,16 @@ const editingId = ref(null)
 const saving = ref(false)
 const modalError = ref('')
 // Form model bound to the order modal fields.
-const form = reactive({ game_name: '', guest_name: '', booking_date: '', arrival_time: '', total_charge: null, status: 'pending', supervisor_id: '', notes: '' })
+const form = reactive({
+  game_name: '',
+  guest_name: '',
+  booking_date: '',
+  arrival_time: '',
+  total_charge: null,
+  status: 'pending',
+  supervisor_id: '',
+  notes: '',
+})
 
 // Order status options used by both the filter bar and the modal form.
 const statusOptions = [
@@ -204,18 +299,24 @@ const statusOptions = [
 ]
 
 // Supervisor dropdown options derived from the loaded user list.
-const userOptions = computed(() => users.value.map((u) => ({ value: u.user_id, label: u.full_name })))
+const userOptions = computed(() =>
+  users.value.map((user) => ({ value: user.user_id, label: user.full_name })),
+)
 
 /** Maps an order status key to its translated display label. */
-function statusLabel(s) {
-  const map = { pending: t('funGames.statusPending'), completed: t('funGames.statusCompleted'), cancelled: t('funGames.statusCancelled') }
-  return map[s] || s
+function statusLabel(status) {
+  const map = {
+    pending: t('funGames.statusPending'),
+    completed: t('funGames.statusCompleted'),
+    cancelled: t('funGames.statusCancelled'),
+  }
+  return map[status] || status
 }
 
 /** Returns the CSS badge class for the given order status. */
-function statusBadge(s) {
+function statusBadge(status) {
   const map = { pending: 'badge-yellow', completed: 'badge-green', cancelled: 'badge-red' }
-  return map[s] || 'badge-gray'
+  return map[status] || 'badge-gray'
 }
 
 /**
@@ -243,6 +344,19 @@ async function load() {
   }
 }
 
+/** Fetches every fun-game order page for export, honouring the active filters. */
+const loadAllOrders = () =>
+  collectAllRows((page, perPage) =>
+    funGameApi.index({
+      status: filters.status,
+      date: filters.date,
+      supervisor_id: filters.supervisor_id,
+      search: filters.search,
+      page,
+      per_page: perPage,
+    }),
+  )
+
 /** Loads the list of users for the supervisor selector; failures are silently ignored. */
 async function loadUsers() {
   try {
@@ -253,8 +367,8 @@ async function loadUsers() {
 }
 
 /** Sets the page number and reloads the order list. */
-function goPage(p) {
-  page.value = p
+function goPage(page) {
+  page.value = page
   load()
 }
 
@@ -369,7 +483,9 @@ async function remove(order) {
  */
 function flattenError(err) {
   const messages = err.response?.data?.errors
-  return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')
+  return messages
+    ? Object.values(messages).flat().join(' ')
+    : err.response?.data?.message || t('common.actionFailed')
 }
 
 onMounted(() => {
@@ -420,14 +536,14 @@ onMounted(() => {
 }
 
 .muted {
-  color: #888;
+  color: #757575;
   font-size: 12px;
   margin-top: 2px;
 }
 
 .price {
   font-weight: 700;
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .actions {
@@ -482,14 +598,14 @@ onMounted(() => {
 }
 
 .modal-head h2 i {
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .modal-close {
   background: none;
   border: none;
   font-size: 18px;
-  color: #999;
+  color: #757575;
   cursor: pointer;
   padding: 4px;
 }

@@ -15,8 +15,17 @@
         <p class="muted">{{ $t('goodsReceived.subtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="load"><i class="fas fa-rotate"></i> {{ $t('goodsReceived.refresh') }}</button>
-        <button v-if="canOperate" class="btn btn-primary" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('goodsReceived.newEntry') }}</button>
+        <button class="btn btn-secondary" @click="load">
+          <i class="fas fa-rotate"></i> {{ $t('goodsReceived.refresh') }}
+        </button>
+        <button v-if="canOperate" class="btn btn-primary" @click="openCreate">
+          <i class="fas fa-plus"></i> {{ $t('goodsReceived.newEntry') }}
+        </button>
+        <TableExportButton
+          filename="goods-received-notes"
+          :load-all="loadAllGrns"
+          :title="$t('goodsReceived.title')"
+        />
       </div>
     </div>
 
@@ -29,11 +38,21 @@
       <div class="filter-grid">
         <div class="form-group">
           <label>{{ $t('goodsReceived.po') }}</label>
-          <SearchableSelect v-model="filters.po_id" :options="purchaseOrderOptions" :empty-label="$t('goodsReceived.allPos')" @change="load" />
+          <SearchableSelect
+            v-model="filters.po_id"
+            :options="purchaseOrderOptions"
+            :empty-label="$t('goodsReceived.allPos')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('goodsReceived.inspectionStatus') }}</label>
-          <SearchableSelect v-model="filters.inspection_status" :options="inspectionStatusOptions" :empty-label="$t('common.all')" @change="load" />
+          <SearchableSelect
+            v-model="filters.inspection_status"
+            :options="inspectionStatusOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('common.from') }}</label>
@@ -44,7 +63,9 @@
           <input v-model="filters.to" type="date" class="input" @change="load" />
         </div>
         <div class="filter-actions">
-          <button class="btn btn-secondary btn-sm" @click="clearFilters"><i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}</button>
+          <button class="btn btn-secondary btn-sm" @click="clearFilters">
+            <i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}
+          </button>
         </div>
       </div>
     </div>
@@ -55,41 +76,63 @@
     <!-- GRN table: reference, linked PO/supplier, received date and inspection badge -->
     <div v-else class="table-scroll">
       <table class="table">
-      <thead>
-        <tr>
-          <th>{{ $t('goodsReceived.reference') }}</th>
-          <th>{{ $t('goodsReceived.po') }}</th>
-          <th>{{ $t('goodsReceived.supplier') }}</th>
-          <th>{{ $t('goodsReceived.statusReceived') }}</th>
-          <th>{{ $t('goodsReceived.deliveryNote') }}</th>
-          <th>{{ $t('goodsReceived.tableInspection') }}</th>
-          <th>{{ $t('common.actions') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="grn in grns" :key="grn.grn_id">
-          <td><strong>{{ grn.grn_number }}</strong></td>
-          <td>{{ grn.purchase_order?.po_number || '-' }}</td>
-          <td>{{ grn.supplier?.supplier_name || '-' }}</td>
-          <td>{{ formatDate(grn.received_date) }}</td>
-          <td>{{ grn.delivery_note_number || '-' }}</td>
-          <td><span class="badge" :class="inspectionBadge(grn.inspection_status)">{{ grn.inspection_status }}</span></td>
-          <td>
-            <button class="btn btn-sm btn-secondary" @click="openDetail(grn)"><i class="fas fa-eye"></i> {{ $t('goodsReceived.view') }}</button>
-          </td>
-        </tr>
-        <tr v-if="!grns.length && !loading">
-          <td colspan="7" class="muted">{{ $t('goodsReceived.empty') }}</td>
-        </tr>
-      </tbody>
-    </table>
+        <thead>
+          <tr>
+            <th scope="col">{{ $t('goodsReceived.reference') }}</th>
+            <th scope="col">{{ $t('goodsReceived.po') }}</th>
+            <th scope="col">{{ $t('goodsReceived.supplier') }}</th>
+            <th scope="col">{{ $t('goodsReceived.statusReceived') }}</th>
+            <th scope="col">{{ $t('goodsReceived.deliveryNote') }}</th>
+            <th scope="col">{{ $t('goodsReceived.tableInspection') }}</th>
+            <th scope="col">{{ $t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="grn in grns" :key="grn.grn_id">
+            <td>
+              <strong>{{ grn.grn_number }}</strong>
+            </td>
+            <td>{{ grn.purchase_order?.po_number || '-' }}</td>
+            <td>{{ grn.supplier?.supplier_name || '-' }}</td>
+            <td>{{ formatDate(grn.received_date) }}</td>
+            <td>{{ grn.delivery_note_number || '-' }}</td>
+            <td>
+              <span class="badge" :class="inspectionBadge(grn.inspection_status)">{{
+                grn.inspection_status
+              }}</span>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-secondary" @click="openDetail(grn)">
+                <i class="fas fa-eye"></i> {{ $t('goodsReceived.view') }}
+              </button>
+            </td>
+          </tr>
+          <tr v-if="!grns.length && !loading">
+            <td colspan="7" class="muted">{{ $t('goodsReceived.empty') }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Server-side pagination controls -->
     <div v-if="meta.total > meta.per_page" class="pagination">
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{ $t('common.previous') }}</button>
-      <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.next_page_url" @click="goPage(meta.current_page + 1)">{{ $t('common.next') }}</button>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.prev_page_url"
+        @click="goPage(meta.current_page - 1)"
+      >
+        {{ $t('common.previous') }}
+      </button>
+      <span class="muted">{{
+        $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page })
+      }}</span>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.next_page_url"
+        @click="goPage(meta.current_page + 1)"
+      >
+        {{ $t('common.next') }}
+      </button>
     </div>
 
     <!-- Create goods-received-note modal (items auto-filled from the selected PO) -->
@@ -116,7 +159,10 @@
             </div>
             <div class="form-group">
               <label>{{ $t('goodsReceived.inspectionStatus') }}</label>
-              <SearchableSelect v-model="form.inspection_status" :options="inspectionStatusOptions" />
+              <SearchableSelect
+                v-model="form.inspection_status"
+                :options="inspectionStatusOptions"
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('goodsReceived.receivedDate') }}</label>
@@ -148,11 +194,24 @@
               </div>
               <div class="form-group">
                 <label>{{ $t('goodsReceived.qtyReceived') }}</label>
-                <input v-model.number="item.quantity_received" type="number" min="0" step="0.01" class="input" required />
+                <input
+                  v-model.number="item.quantity_received"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="input"
+                  required
+                />
               </div>
               <div class="form-group">
                 <label>{{ $t('goodsReceived.qtyRejected') }}</label>
-                <input v-model.number="item.quantity_rejected" type="number" min="0" step="0.01" class="input" />
+                <input
+                  v-model.number="item.quantity_rejected"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="input"
+                />
               </div>
               <div class="form-group">
                 <label>{{ $t('goodsReceived.rejectionReason') }}</label>
@@ -162,9 +221,12 @@
           </div>
 
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="closeModal">{{ $t('common.cancel') }}</button>
+            <button type="button" class="btn btn-secondary" @click="closeModal">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="saving || !form.items.length">
-              <i class="fas fa-check"></i> {{ saving ? $t('common.saving') : $t('goodsReceived.saveEntry') }}
+              <i class="fas fa-check"></i>
+              {{ saving ? $t('common.saving') : $t('goodsReceived.saveEntry') }}
             </button>
           </div>
         </form>
@@ -176,33 +238,40 @@
       <div class="modal modal-lg">
         <div class="modal-head">
           <h2><i class="fas fa-clipboard-check"></i> {{ detail?.grn_number }}</h2>
-          <button class="modal-close" @click="showDetail = false"><i class="fas fa-xmark"></i></button>
+          <button class="modal-close" @click="showDetail = false">
+            <i class="fas fa-xmark"></i>
+          </button>
         </div>
         <p class="muted">
-          {{ detail?.supplier?.supplier_name || '-' }} · {{ $t('goodsReceived.poRef', { reference: detail?.purchase_order?.po_number || '-' }) }}
-          <span v-if="detail?.delivery_note_number"> · {{ $t('goodsReceived.deliveryNote') }} {{ detail.delivery_note_number }}</span>
+          {{ detail?.supplier?.supplier_name || '-' }} ·
+          {{ $t('goodsReceived.poRef', { reference: detail?.purchase_order?.po_number || '-' }) }}
+          <span v-if="detail?.delivery_note_number">
+            · {{ $t('goodsReceived.deliveryNote') }} {{ detail.delivery_note_number }}</span
+          >
         </p>
         <div class="table-scroll">
           <table class="table">
-          <thead>
-            <tr>
-              <th>{{ $t('goodsReceived.item') }}</th>
-              <th>{{ $t('goodsReceived.ordered') }}</th>
-              <th>{{ $t('goodsReceived.statusReceived') }}</th>
-              <th>{{ $t('goodsReceived.rejected') }}</th>
-              <th>{{ $t('goodsReceived.reason') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in detail?.items || []" :key="item.grn_item_id">
-              <td><strong>{{ item.item_name }}</strong></td>
-              <td>{{ item.quantity_ordered }}</td>
-              <td>{{ item.quantity_received }}</td>
-              <td>{{ item.quantity_rejected || 0 }}</td>
-              <td>{{ item.rejection_reason || '-' }}</td>
-            </tr>
-          </tbody>
-        </table>
+            <thead>
+              <tr>
+                <th scope="col">{{ $t('goodsReceived.item') }}</th>
+                <th scope="col">{{ $t('goodsReceived.ordered') }}</th>
+                <th scope="col">{{ $t('goodsReceived.statusReceived') }}</th>
+                <th scope="col">{{ $t('goodsReceived.rejected') }}</th>
+                <th scope="col">{{ $t('goodsReceived.reason') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in detail?.items || []" :key="item.grn_item_id">
+                <td>
+                  <strong>{{ item.item_name }}</strong>
+                </td>
+                <td>{{ item.quantity_ordered }}</td>
+                <td>{{ item.quantity_received }}</td>
+                <td>{{ item.quantity_rejected || 0 }}</td>
+                <td>{{ item.rejection_reason || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -215,6 +284,8 @@ import { goodsReceivedNoteApi, purchaseOrderApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import TableExportButton from '@/components/TableExportButton.vue'
+import { collectAllRows } from '@/utils/export'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -226,7 +297,14 @@ const canOperate = computed(() => authStore.canOperate)
 const grns = ref([])
 const poOptions = ref([])
 const page = ref(1)
-const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
+const meta = ref({
+  total: 0,
+  per_page: 15,
+  current_page: 1,
+  last_page: 1,
+  prev_page_url: null,
+  next_page_url: null,
+})
 const filters = reactive({ po_id: '', inspection_status: '', from: '', to: '' })
 const loading = ref(false)
 const error = ref('')
@@ -238,16 +316,31 @@ const saving = ref(false)
 const modalError = ref('')
 const showDetail = ref(false)
 const detail = ref(null)
-const form = reactive({ po_id: '', inspection_status: 'pending', received_date: '', delivery_note_number: '', notes: '', items: [] })
+const form = reactive({
+  po_id: '',
+  inspection_status: 'pending',
+  received_date: '',
+  delivery_note_number: '',
+  notes: '',
+  items: [],
+})
 
 // PO options, filtered to those that can still receive goods.
-const eligiblePos = computed(() => poOptions.value.filter((po) => ['approved', 'partially_received', 'received'].includes(po.status)))
+const eligiblePos = computed(() =>
+  poOptions.value.filter((po) =>
+    ['approved', 'partially_received', 'received'].includes(po.status),
+  ),
+)
 
 // All loaded POs as dropdown options (used by the filter bar).
-const purchaseOrderOptions = computed(() => poOptions.value.map((po) => ({ value: po.po_id, label: po.po_number })))
+const purchaseOrderOptions = computed(() =>
+  poOptions.value.map((po) => ({ value: po.po_id, label: po.po_number })),
+)
 
 // Only goods-receivable POs as dropdown options (used by the create form).
-const eligiblePurchaseOrderOptions = computed(() => eligiblePos.value.map((po) => ({ value: po.po_id, label: po.po_number })))
+const eligiblePurchaseOrderOptions = computed(() =>
+  eligiblePos.value.map((po) => ({ value: po.po_id, label: po.po_number })),
+)
 
 // Inspection status options with translated labels (filter bar and form).
 const inspectionStatusOptions = computed(() => [
@@ -258,14 +351,19 @@ const inspectionStatusOptions = computed(() => [
 ])
 
 /** Maps an inspection status to its badge CSS class for the table. */
-function inspectionBadge(s) {
-  const map = { pending: 'badge-yellow', passed: 'badge-green', failed: 'badge-red', partial: 'badge-yellow' }
-  return map[s] || 'badge-gray'
+function inspectionBadge(status) {
+  const map = {
+    pending: 'badge-yellow',
+    passed: 'badge-green',
+    failed: 'badge-red',
+    partial: 'badge-yellow',
+  }
+  return map[status] || 'badge-gray'
 }
 
 /** Formats an ISO date into a short YYYY-MM-DD display string. */
-function formatDate(d) {
-  return d ? String(d).slice(0, 10) : '-'
+function formatDate(date) {
+  return date ? String(date).slice(0, 10) : '-'
 }
 
 /** Fetches the paged GRN list using the current filters. */
@@ -290,6 +388,18 @@ async function load() {
   }
 }
 
+const loadAllGrns = () =>
+  collectAllRows((page, perPage) =>
+    goodsReceivedNoteApi.index({
+      po_id: filters.po_id,
+      inspection_status: filters.inspection_status,
+      from: filters.from,
+      to: filters.to,
+      page,
+      per_page: perPage,
+    }),
+  )
+
 /** Loads the purchase orders for the filter and form dropdowns. */
 async function loadOptions() {
   try {
@@ -301,8 +411,8 @@ async function loadOptions() {
 }
 
 /** Moves to the given page and reloads. */
-function goPage(p) {
-  page.value = p
+function goPage(page) {
+  page.value = page
   load()
 }
 
@@ -391,7 +501,9 @@ function openDetail(grn) {
 /** Flattens Laravel-style validation errors into a single readable message. */
 function flattenError(err) {
   const messages = err.response?.data?.errors
-  return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')
+  return messages
+    ? Object.values(messages).flat().join(' ')
+    : err.response?.data?.message || t('common.actionFailed')
 }
 
 onMounted(() => {
@@ -442,7 +554,7 @@ onMounted(() => {
 }
 
 .muted {
-  color: #888;
+  color: #757575;
   font-size: 12px;
   margin-top: 2px;
 }
@@ -473,7 +585,7 @@ onMounted(() => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .item-row {
@@ -532,14 +644,14 @@ onMounted(() => {
 }
 
 .modal-head h2 i {
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .modal-close {
   background: none;
   border: none;
   font-size: 18px;
-  color: #999;
+  color: #757575;
   cursor: pointer;
   padding: 4px;
 }

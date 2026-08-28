@@ -12,8 +12,12 @@
         <p class="muted">{{ $t('statuses.subtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="loadStatuses"><i class="fas fa-rotate"></i> {{ $t('common.refresh') }}</button>
-        <button class="btn btn-primary" @click="openPost"><i class="fas fa-plus"></i> {{ $t('statuses.newStatus') }}</button>
+        <button class="btn btn-secondary" @click="loadStatuses">
+          <i class="fas fa-rotate"></i> {{ $t('common.refresh') }}
+        </button>
+        <button class="btn btn-primary" @click="openPost">
+          <i class="fas fa-plus"></i> {{ $t('statuses.newStatus') }}
+        </button>
       </div>
     </div>
 
@@ -34,12 +38,16 @@
         </span>
         <span class="status-card-body">
           <strong>{{ $t('statuses.myStatus') }}</strong>
-          <span class="muted">{{ myStatuses.length ? timeAgo(myStatuses[0].created_at) : $t('statuses.addStatusHint') }}</span>
+          <span class="muted">{{
+            myStatuses.length ? timeAgo(myStatuses[0].created_at) : $t('statuses.addStatusHint')
+          }}</span>
         </span>
       </button>
 
       <button v-for="g in others" :key="g.user.user_id" class="status-card" @click="openViewer(g)">
-        <span class="avatar status-avatar" :class="g.allViewed ? 'viewed' : 'unviewed'">{{ initials(g.user.full_name) }}</span>
+        <span class="avatar status-avatar" :class="g.allViewed ? 'viewed' : 'unviewed'">{{
+          initials(g.user.full_name)
+        }}</span>
         <span class="status-card-body">
           <strong>{{ g.user.full_name }}</strong>
           <span class="muted">{{ timeAgo(g.latest.created_at) }}</span>
@@ -61,30 +69,60 @@
 
         <div class="form-group">
           <label>{{ $t('statuses.whatsHappening') }}</label>
-          <textarea v-model="postBody" rows="3" class="textarea" :placeholder="$t('statuses.bodyPlaceholder')"></textarea>
+          <textarea
+            v-model="postBody"
+            rows="3"
+            class="textarea"
+            :placeholder="$t('statuses.bodyPlaceholder')"
+          ></textarea>
         </div>
 
         <div class="form-group">
           <label>{{ $t('statuses.media') }}</label>
           <button type="button" class="btn btn-secondary" @click="mediaInput?.click()">
-            <i class="fas fa-image"></i> {{ postMedia ? postMedia.name : $t('statuses.chooseMedia') }}
+            <i class="fas fa-image"></i>
+            {{ postMedia ? postMedia.name : $t('statuses.chooseMedia') }}
           </button>
-          <input ref="mediaInput" type="file" accept="image/*,video/*" class="hidden-input" @change="onMediaPicked" />
-          <img v-if="postMediaUrl && postMedia?.type.startsWith('image/')" :src="postMediaUrl" class="status-media-preview" alt="preview" />
-          <video v-else-if="postMediaUrl" :src="postMediaUrl" controls class="status-media-preview"></video>
+          <input
+            ref="mediaInput"
+            type="file"
+            accept="image/*,video/*"
+            class="hidden-input"
+            @change="onMediaPicked"
+          />
+          <img
+            v-if="postMediaUrl && postMedia?.type.startsWith('image/')"
+            :src="postMediaUrl"
+            class="status-media-preview"
+            alt="preview"
+          />
+          <video
+            v-else-if="postMediaUrl"
+            :src="postMediaUrl"
+            controls
+            class="status-media-preview"
+          ></video>
         </div>
 
         <!-- Audience scope picker: hotel-only vs global -->
         <p class="muted">{{ $t('statuses.selectScope') }}</p>
         <div class="scope-cards">
-          <button class="scope-card" :class="{ selected: postScope === 'hotel' }" @click="postScope = 'hotel'">
+          <button
+            class="scope-card"
+            :class="{ selected: postScope === 'hotel' }"
+            @click="postScope = 'hotel'"
+          >
             <span class="scope-icon"><i class="fas fa-building"></i></span>
             <span>
               <strong>{{ $t('messages.hotelMessaging') }}</strong>
               <span class="muted">{{ $t('statuses.hintHotel') }}</span>
             </span>
           </button>
-          <button class="scope-card" :class="{ selected: postScope === 'global' }" @click="postScope = 'global'">
+          <button
+            class="scope-card"
+            :class="{ selected: postScope === 'global' }"
+            @click="postScope = 'global'"
+          >
             <span class="scope-icon"><i class="fas fa-globe"></i></span>
             <span>
               <strong>{{ $t('messages.globalMessaging') }}</strong>
@@ -94,9 +132,12 @@
         </div>
 
         <div class="modal-foot">
-          <button type="button" class="btn btn-secondary" @click="closePost">{{ $t('common.cancel') }}</button>
+          <button type="button" class="btn btn-secondary" @click="closePost">
+            {{ $t('common.cancel') }}
+          </button>
           <button type="button" class="btn btn-primary" :disabled="posting" @click="postStatus">
-            <i class="fas fa-paper-plane"></i> {{ posting ? $t('common.saving') : $t('statuses.post') }}
+            <i class="fas fa-paper-plane"></i>
+            {{ posting ? $t('common.saving') : $t('statuses.post') }}
           </button>
         </div>
       </div>
@@ -105,8 +146,12 @@
     <!-- Status viewer -->
     <div v-if="viewer.open" class="status-viewer">
       <div class="status-progress">
-        <div v-for="(s, i) in viewer.items" :key="s.status_id" class="progress-seg"
-          :class="{ active: i === viewer.index, done: i < viewer.index }"></div>
+        <div
+          v-for="(s, i) in viewer.items"
+          :key="s.status_id"
+          class="progress-seg"
+          :class="{ active: i === viewer.index, done: i < viewer.index }"
+        ></div>
       </div>
 
       <div class="status-viewer-head">
@@ -120,8 +165,19 @@
 
       <div class="status-slide" @click.self="nextStatus">
         <template v-if="currentStatus">
-          <img v-if="currentStatus.type === 'image' && currentStatus.media_url" :src="currentStatus.media_url" class="status-media" />
-          <video v-else-if="currentStatus.type === 'video' && currentStatus.media_url" :src="currentStatus.media_url" autoplay controls class="status-media"></video>
+          <img
+            v-if="currentStatus.type === 'image' && currentStatus.media_url"
+            :src="currentStatus.media_url"
+            class="status-media"
+            :alt="currentStatus.body || $t('common.image')"
+          />
+          <video
+            v-else-if="currentStatus.type === 'video' && currentStatus.media_url"
+            :src="currentStatus.media_url"
+            autoplay
+            controls
+            class="status-media"
+          ></video>
           <p v-else class="status-text">{{ currentStatus.body }}</p>
         </template>
       </div>
@@ -129,22 +185,34 @@
       <div class="status-viewer-bottom">
         <template v-if="currentStatus?.user_id === me.user_id">
           <div class="status-viewers">
-            <span class="muted"><i class="fas fa-eye"></i> {{ currentStatus?.view_count || 0 }}</span>
+            <span class="muted"
+              ><i class="fas fa-eye"></i> {{ currentStatus?.view_count || 0 }}</span
+            >
             <span v-if="viewer.viewersLoading" class="muted">{{ $t('common.loading') }}</span>
-            <span v-for="v in viewer.viewers" :key="v.user_id" class="viewer-chip">{{ v.full_name }}</span>
+            <span v-for="v in viewer.viewers" :key="v.user_id" class="viewer-chip">{{
+              v.full_name
+            }}</span>
           </div>
           <button class="btn btn-sm btn-danger" @click="deleteStatus(currentStatus)">
             <i class="fas fa-trash"></i> {{ $t('common.delete') }}
           </button>
         </template>
         <template v-else>
-          <button class="status-like" :class="{ liked: currentStatus?.liked }" @click="toggleLike(currentStatus)">
+          <button
+            class="status-like"
+            :class="{ liked: currentStatus?.liked }"
+            @click="toggleLike(currentStatus)"
+          >
             <i class="fas fa-heart"></i>
             <span>{{ currentStatus?.like_count || 0 }}</span>
           </button>
           <div class="status-nav-btns">
-            <button class="status-nav" @click="prevStatus"><i class="fas fa-chevron-left"></i></button>
-            <button class="status-nav" @click="nextStatus"><i class="fas fa-chevron-right"></i></button>
+            <button class="status-nav" @click="prevStatus">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <button class="status-nav" @click="nextStatus">
+              <i class="fas fa-chevron-right"></i>
+            </button>
           </div>
         </template>
       </div>
@@ -158,7 +226,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { statusApi } from '@/api'
-import { initEcho, getEcho, destroyEcho } from '@/plugins/echo'
+import { initEcho, getEcho } from '@/plugins/echo'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -183,7 +251,14 @@ const posting = ref(false)
 const mediaInput = ref(null)
 
 // Fullscreen status viewer state and the auto-advance timer.
-const viewer = ref({ open: false, user: null, items: [], index: 0, viewers: [], viewersLoading: false })
+const viewer = ref({
+  open: false,
+  user: null,
+  items: [],
+  index: 0,
+  viewers: [],
+  viewersLoading: false,
+})
 let viewerTimer = null
 
 /** Builds a 1-2 letter uppercase monogram from a person's name. */
@@ -191,7 +266,7 @@ function initials(name) {
   return (name || '?')
     .split(' ')
     .filter(Boolean)
-    .map((w) => w[0])
+    .map((word) => word[0])
     .slice(0, 2)
     .join('')
     .toUpperCase()
@@ -221,7 +296,9 @@ function flattenError(err) {
 }
 
 // The statuses posted by the current user.
-const myStatuses = computed(() => statuses.value.filter((s) => s.user_id === me.value.user_id))
+const myStatuses = computed(() =>
+  statuses.value.filter((status) => status.user_id === me.value.user_id),
+)
 
 /** Groups all statuses by author, sorted by latest first, with per-group viewing state. */
 const grouped = computed(() => {
@@ -235,13 +312,17 @@ const grouped = computed(() => {
       user: list[0].user,
       items: list,
       latest: list[0],
-      allViewed: list.every((s) => s.viewed),
+      allViewed: list.every((status) => status.viewed),
     }))
-    .sort((a, b) => String(b.latest.created_at).localeCompare(String(a.latest.created_at)))
+    .sort((groupA, groupB) =>
+      String(groupB.latest.created_at).localeCompare(String(groupA.latest.created_at)),
+    )
 })
 
 // Status groups belonging to other users (i.e. not the current user).
-const others = computed(() => grouped.value.filter((g) => g.user && g.user.user_id !== me.value.user_id))
+const others = computed(() =>
+  grouped.value.filter((group) => group.user && group.user.user_id !== me.value.user_id),
+)
 
 // The status currently shown in the viewer, based on the active group index.
 const currentStatus = computed(() => viewer.value.items[viewer.value.index] || null)
@@ -272,7 +353,14 @@ function openMyStatus() {
 /** Opens the viewer for a group, marks the first status viewed and starts auto-advance. */
 function openViewer(group) {
   if (!group?.items?.length) return
-  viewer.value = { open: true, user: group.user, items: group.items, index: 0, viewers: [], viewersLoading: false }
+  viewer.value = {
+    open: true,
+    user: group.user,
+    items: group.items,
+    index: 0,
+    viewers: [],
+    viewersLoading: false,
+  }
   const first = currentStatus.value
   markViewed(first)
   if (first?.user_id === me.value.user_id) loadViewers(first)
@@ -283,7 +371,14 @@ function openViewer(group) {
 function closeViewer() {
   clearInterval(viewerTimer)
   viewerTimer = null
-  viewer.value = { open: false, user: null, items: [], index: 0, viewers: [], viewersLoading: false }
+  viewer.value = {
+    open: false,
+    user: null,
+    items: [],
+    index: 0,
+    viewers: [],
+    viewersLoading: false,
+  }
 }
 
 /** Moves to the next status, or closes the viewer at the end of the group. */
@@ -444,7 +539,7 @@ function subscribeUserChannel() {
 function handleStatusPosted(data) {
   const posted = data?.status
   if (!posted?.status_id) return
-  if (statuses.value.some((s) => s.status_id === posted.status_id)) return
+  if (statuses.value.some((status) => status.status_id === posted.status_id)) return
   statuses.value = [
     { ...posted, viewed: false, view_count: 0, like_count: 0, liked: false, can_delete: false },
     ...statuses.value,
@@ -460,7 +555,7 @@ function openRequestedUserStatus() {
   }
   const userId = route.query.user
   if (!userId) return
-  const group = grouped.value.find((g) => g.user?.user_id === userId)
+  const group = grouped.value.find((group) => group.user?.user_id === userId)
   if (group) {
     openViewer(group)
     router.replace({ name: 'hotel-statuses' })
@@ -473,7 +568,6 @@ onUnmounted(() => {
     userChannel.unsubscribe()
     userChannel = null
   }
-  destroyEcho()
 })
 </script>
 
@@ -560,11 +654,15 @@ onUnmounted(() => {
 }
 
 .status-avatar.unviewed {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 5px #25d366;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 5px #25d366;
 }
 
 .status-avatar.viewed {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 5px #c0c0c0;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 5px #c0c0c0;
 }
 
 .mine-avatar {

@@ -12,9 +12,24 @@
         <p class="muted">{{ $t('rooms.subtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="load"><i class="fas fa-rotate"></i> {{ $t('rooms.refresh') }}</button>
-        <button v-if="canEdit" class="btn btn-primary" @click="openCreate"><i class="fas fa-plus"></i> {{
-          $t('rooms.newRoom') }}</button>
+        <button class="btn btn-secondary" @click="load">
+          <i class="fas fa-rotate"></i> {{ $t('rooms.refresh') }}
+        </button>
+        <button v-if="canEdit" class="btn btn-primary" @click="openCreate">
+          <i class="fas fa-plus"></i> {{ $t('rooms.newRoom') }}
+        </button>
+        <TableExportButton
+          filename="rooms"
+          :load-all="loadAllRooms"
+          :columns="[
+            { key: 'room_number', label: $t('rooms.tableRoom') },
+            { key: 'room_type', label: $t('rooms.tableType') },
+            { key: 'floor', label: $t('rooms.floor') },
+            { key: 'price_per_night', label: $t('rooms.tableRate') },
+            { key: 'max_occupancy', label: $t('rooms.tableCapacity') },
+            { key: 'status', label: $t('rooms.status') },
+          ]"
+        />
       </div>
     </div>
 
@@ -26,22 +41,36 @@
       <div class="filter-grid">
         <div class="form-group">
           <label>{{ $t('rooms.status') }}</label>
-          <SearchableSelect v-model="filters.status" :options="roomStatusOptions" :empty-label="$t('common.all')"
-            @change="load" />
+          <SearchableSelect
+            v-model="filters.status"
+            :options="roomStatusOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('rooms.roomType') }}</label>
-          <SearchableSelect v-model="filters.room_type" :options="roomTypeOptions" :empty-label="$t('common.all')"
-            @change="load" />
+          <SearchableSelect
+            v-model="filters.room_type"
+            :options="roomTypeOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('common.search') }}</label>
-          <input v-model="filters.search" type="text" class="input" :placeholder="$t('rooms.searchPlaceholder')"
-            @input="triggerSearch" />
+          <input
+            v-model="filters.search"
+            type="text"
+            class="input"
+            :placeholder="$t('rooms.searchPlaceholder')"
+            @input="triggerSearch"
+          />
         </div>
         <div class="filter-actions">
-          <button class="btn btn-secondary btn-sm" @click="clearFilters"><i class="fas fa-filter-circle-xmark"></i> {{
-            $t('common.clear') }}</button>
+          <button class="btn btn-secondary btn-sm" @click="clearFilters">
+            <i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}
+          </button>
         </div>
       </div>
     </div>
@@ -51,64 +80,90 @@
     <!-- Room table; shows the current guest under the room number when occupied -->
     <div v-else class="table-scroll">
       <table class="table">
-      <thead>
-        <tr>
-          <th>{{ $t('rooms.tableRoom') }}</th>
-          <th>{{ $t('rooms.tableType') }}</th>
-          <th>{{ $t('rooms.floor') }}</th>
-          <th>{{ $t('rooms.tableRate') }}</th>
-          <th>{{ $t('rooms.tableCapacity') }}</th>
-          <th>{{ $t('rooms.status') }}</th>
-          <th>{{ $t('common.actions') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="room in rooms" :key="room.room_id">
-          <td>
-            <strong>{{ room.room_number }}</strong>
-            <div v-if="room.current_reservation" class="muted">
-              {{ room.current_reservation.guest_name }}
-              <span v-if="room.current_reservation.reservation_number">· {{ room.current_reservation.reservation_number
-              }}</span>
-            </div>
-          </td>
-          <td class="capitalize">{{ room.room_type }}</td>
-          <td>{{ $t('rooms.floor') }} {{ room.floor ?? '-' }}</td>
-          <td><span class="price">TZS {{ Number(room.price_per_night).toLocaleString() }}</span></td>
-          <td>{{ room.max_occupancy ?? 1 }}</td>
-          <td><span class="badge" :class="statusBadge(room.status)">{{ room.status }}</span></td>
-          <td>
-            <div class="actions">
-              <button v-if="canEdit" class="btn btn-sm btn-secondary" @click="openEdit(room)"><i class="fas fa-pen"></i>
-                {{ $t('common.edit') }}</button>
-              <button v-if="canEdit && room.status !== 'occupied'" class="btn btn-sm btn-secondary"
-                @click="openStatus(room)"><i class="fas fa-arrows-rotate"></i> {{ $t('rooms.status') }}</button>
-              <button v-if="canEdit" class="btn btn-sm btn-danger" @click="remove(room)"><i
-                  class="fas fa-trash"></i></button>
-            </div>
-          </td>
-        </tr>
-        <tr v-if="!rooms.length && !loading">
-          <td colspan="7" class="muted">{{ $t('rooms.empty') }}</td>
-        </tr>
-      </tbody>
-    </table>
+        <thead>
+          <tr>
+            <th scope="col">{{ $t('rooms.tableRoom') }}</th>
+            <th scope="col">{{ $t('rooms.tableType') }}</th>
+            <th scope="col">{{ $t('rooms.floor') }}</th>
+            <th scope="col">{{ $t('rooms.tableRate') }}</th>
+            <th scope="col">{{ $t('rooms.tableCapacity') }}</th>
+            <th scope="col">{{ $t('rooms.status') }}</th>
+            <th scope="col">{{ $t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="room in rooms" :key="room.room_id">
+            <td>
+              <strong>{{ room.room_number }}</strong>
+              <div v-if="room.current_reservation" class="muted">
+                {{ room.current_reservation.guest_name }}
+                <span v-if="room.current_reservation.reservation_number"
+                  >· {{ room.current_reservation.reservation_number }}</span
+                >
+              </div>
+            </td>
+            <td class="capitalize">{{ room.room_type }}</td>
+            <td>{{ $t('rooms.floor') }} {{ room.floor ?? '-' }}</td>
+            <td>
+              <span class="price">TZS {{ Number(room.price_per_night).toLocaleString() }}</span>
+            </td>
+            <td>{{ room.max_occupancy ?? 1 }}</td>
+            <td>
+              <span class="badge" :class="statusBadge(room.status)">{{ room.status }}</span>
+            </td>
+            <td>
+              <div class="actions">
+                <button v-if="canEdit" class="btn btn-sm btn-secondary" @click="openEdit(room)">
+                  <i class="fas fa-pen"></i> {{ $t('common.edit') }}
+                </button>
+                <button
+                  v-if="canEdit && room.status !== 'occupied'"
+                  class="btn btn-sm btn-secondary"
+                  @click="openStatus(room)"
+                >
+                  <i class="fas fa-arrows-rotate"></i> {{ $t('rooms.status') }}
+                </button>
+                <button v-if="canEdit" class="btn btn-sm btn-danger" @click="remove(room)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!rooms.length && !loading">
+            <td colspan="7" class="muted">{{ $t('rooms.empty') }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Pagination controls, only shown when there is more than one page -->
     <div v-if="meta.total > meta.per_page" class="pagination">
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
-        $t('common.previous') }}</button>
-      <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.next_page_url" @click="goPage(meta.current_page + 1)">{{
-        $t('common.next') }}</button>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.prev_page_url"
+        @click="goPage(meta.current_page - 1)"
+      >
+        {{ $t('common.previous') }}
+      </button>
+      <span class="muted">{{
+        $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page })
+      }}</span>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.next_page_url"
+        @click="goPage(meta.current_page + 1)"
+      >
+        {{ $t('common.next') }}
+      </button>
     </div>
 
     <!-- Create/edit room modal; amenities are typed as a comma-separated list -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal">
         <div class="modal-head">
-          <h2><i class="fas fa-bed"></i> {{ editing ? $t('rooms.editRoom') : $t('rooms.newRoom') }}</h2>
+          <h2>
+            <i class="fas fa-bed"></i> {{ editing ? $t('rooms.editRoom') : $t('rooms.newRoom') }}
+          </h2>
           <button class="modal-close" @click="closeModal"><i class="fas fa-xmark"></i></button>
         </div>
 
@@ -122,7 +177,11 @@
             </div>
             <div class="form-group">
               <label>{{ $t('rooms.roomType') }} *</label>
-              <SearchableSelect v-model="form.room_type" :options="roomTypeOptions" :required="true" />
+              <SearchableSelect
+                v-model="form.room_type"
+                :options="roomTypeOptions"
+                :required="true"
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('rooms.floor') }}</label>
@@ -130,7 +189,13 @@
             </div>
             <div class="form-group">
               <label>{{ $t('rooms.pricePerNightTZS') }} *</label>
-              <input v-model.number="form.price_per_night" type="number" min="0" class="input" required />
+              <input
+                v-model.number="form.price_per_night"
+                type="number"
+                min="0"
+                class="input"
+                required
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('rooms.maxOccupancy') }}</label>
@@ -142,8 +207,12 @@
             </div>
             <div class="form-group form-full">
               <label>{{ $t('rooms.amenities') }}</label>
-              <input v-model="amenitiesText" type="text" class="input"
-                :placeholder="$t('rooms.amenitiesPlaceholder')" />
+              <input
+                v-model="amenitiesText"
+                type="text"
+                class="input"
+                :placeholder="$t('rooms.amenitiesPlaceholder')"
+              />
             </div>
             <div class="form-group form-full">
               <label>{{ $t('rooms.description') }}</label>
@@ -151,7 +220,9 @@
             </div>
           </div>
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="closeModal">{{ $t('common.cancel') }}</button>
+            <button type="button" class="btn btn-secondary" @click="closeModal">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="saving">
               <i class="fas fa-check"></i> {{ saving ? $t('common.saving') : $t('rooms.saveRoom') }}
             </button>
@@ -165,24 +236,32 @@
       <div class="modal modal-sm">
         <div class="modal-head">
           <h2><i class="fas fa-arrows-rotate"></i> {{ $t('rooms.changeStatus') }}</h2>
-          <button class="modal-close" @click="showStatus = false"><i class="fas fa-xmark"></i></button>
+          <button class="modal-close" @click="showStatus = false">
+            <i class="fas fa-xmark"></i>
+          </button>
         </div>
         <p class="muted">{{ $t('rooms.roomTitle', { number: statusRoom.room_number }) }}</p>
         <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
         <form @submit.prevent="saveStatus">
           <div class="form-group">
             <label>{{ $t('rooms.newStatus') }}</label>
-            <SearchableSelect v-model="statusForm.status" :options="statusChangeOptions" :required="true" />
+            <SearchableSelect
+              v-model="statusForm.status"
+              :options="statusChangeOptions"
+              :required="true"
+            />
           </div>
           <div class="form-group">
             <label>{{ $t('common.notes') }}</label>
             <textarea v-model="statusForm.notes" rows="2" class="textarea"></textarea>
           </div>
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="showStatus = false">{{ $t('common.cancel')
-            }}</button>
+            <button type="button" class="btn btn-secondary" @click="showStatus = false">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="saving">
-              <i class="fas fa-check"></i> {{ saving ? $t('rooms.updating') : $t('rooms.updateStatus') }}
+              <i class="fas fa-check"></i>
+              {{ saving ? $t('rooms.updating') : $t('rooms.updateStatus') }}
             </button>
           </div>
         </form>
@@ -197,6 +276,8 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { roomApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import TableExportButton from '@/components/TableExportButton.vue'
+import { collectAllRows } from '@/utils/export'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -205,7 +286,14 @@ const canEdit = computed(() => authStore.can(80))
 // List state: room rows, pagination, filters and feedback flags.
 const rooms = ref([])
 const page = ref(1)
-const meta = ref({ total: 0, per_page: 20, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
+const meta = ref({
+  total: 0,
+  per_page: 20,
+  current_page: 1,
+  last_page: 1,
+  prev_page_url: null,
+  next_page_url: null,
+})
 const filters = reactive({ status: '', room_type: '', search: '' })
 const loading = ref(false)
 const error = ref('')
@@ -219,7 +307,16 @@ const editingId = ref(null)
 const saving = ref(false)
 const modalError = ref('')
 const statusRoom = ref(null)
-const form = reactive({ room_number: '', room_type: 'single', floor: null, status: 'available', price_per_night: null, max_occupancy: 2, description: '', amenities: [] })
+const form = reactive({
+  room_number: '',
+  room_type: 'single',
+  floor: null,
+  status: 'available',
+  price_per_night: null,
+  max_occupancy: 2,
+  description: '',
+  amenities: [],
+})
 const statusForm = reactive({ status: 'available', notes: '' })
 const amenitiesText = ref('')
 
@@ -249,12 +346,18 @@ const statusChangeOptions = computed(() => [
 
 /**
  * Maps a room status to the CSS class used for its badge colour.
- * @param {string} s - The room status (available, occupied, cleaning, maintenance, dirty).
+ * @param {string} status - The room status (available, occupied, cleaning, maintenance, dirty).
  * @returns {string} The badge CSS class.
  */
-function statusBadge(s) {
-  const map = { available: 'badge-green', occupied: 'badge-red', cleaning: 'badge-yellow', maintenance: 'badge-gray', dirty: 'badge-yellow' }
-  return map[s] || 'badge-gray'
+function statusBadge(status) {
+  const map = {
+    available: 'badge-green',
+    occupied: 'badge-red',
+    cleaning: 'badge-yellow',
+    maintenance: 'badge-gray',
+    dirty: 'badge-yellow',
+  }
+  return map[status] || 'badge-gray'
 }
 
 /** Fetches the current page of rooms, honouring the active filters. */
@@ -262,7 +365,13 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const res = await roomApi.index({ status: filters.status, room_type: filters.room_type, search: filters.search, page: page.value, per_page: 20 })
+    const res = await roomApi.index({
+      status: filters.status,
+      room_type: filters.room_type,
+      search: filters.search,
+      page: page.value,
+      per_page: 20,
+    })
     rooms.value = res.data.data || []
     meta.value = res.data
   } catch (err) {
@@ -272,12 +381,24 @@ async function load() {
   }
 }
 
+function loadAllRooms() {
+  return collectAllRows((page, perPage) =>
+    roomApi.index({
+      status: filters.status,
+      room_type: filters.room_type,
+      search: filters.search,
+      page,
+      per_page: perPage,
+    }),
+  )
+}
+
 /**
  * Moves to the given page and reloads the list.
- * @param {number} p - The 1-based page number.
+ * @param {number} page - The 1-based page number.
  */
-function goPage(p) {
-  page.value = p
+function goPage(page) {
+  page.value = page
   load()
 }
 
@@ -350,7 +471,12 @@ async function save() {
   saving.value = true
   const payload = {
     ...form,
-    amenities: amenitiesText.value ? amenitiesText.value.split(',').map((a) => a.trim()).filter(Boolean) : [],
+    amenities: amenitiesText.value
+      ? amenitiesText.value
+          .split(',')
+          .map((amenity) => amenity.trim())
+          .filter(Boolean)
+      : [],
   }
   try {
     if (editing.value) {
@@ -386,7 +512,10 @@ async function saveStatus() {
   modalError.value = ''
   saving.value = true
   try {
-    await roomApi.updateStatus(statusRoom.value.room_id, { status: statusForm.status, notes: statusForm.notes })
+    await roomApi.updateStatus(statusRoom.value.room_id, {
+      status: statusForm.status,
+      notes: statusForm.notes,
+    })
     showStatus.value = false
     success.value = t('rooms.statusUpdated', { number: statusRoom.value.room_number })
     await load()
@@ -420,7 +549,9 @@ async function remove(room) {
  */
 function flattenError(err) {
   const messages = err.response?.data?.errors
-  return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')
+  return messages
+    ? Object.values(messages).flat().join(' ')
+    : err.response?.data?.message || t('common.actionFailed')
 }
 
 onMounted(load)
@@ -468,7 +599,7 @@ onMounted(load)
 }
 
 .muted {
-  color: #888;
+  color: #757575;
   font-size: 12px;
   margin-top: 2px;
 }
@@ -485,7 +616,7 @@ onMounted(load)
 
 .price {
   font-weight: 700;
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .pagination {
@@ -542,14 +673,14 @@ onMounted(load)
 }
 
 .modal-head h2 i {
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .modal-close {
   background: none;
   border: none;
   font-size: 18px;
-  color: #999;
+  color: #757575;
   cursor: pointer;
   padding: 4px;
 }

@@ -30,7 +30,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { formatIncompletePhoneNumber } from 'libphonenumber-js'
-import { getCountries } from '@/utils/locations'
+import { getCountries, loadLocationData } from '@/utils/locations'
 import { formatPhoneInput } from '@/utils/phone'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 
@@ -96,8 +96,9 @@ function onCountryChange(code) {
   emit('update:modelValue', withoutDial ? formatIncompletePhoneNumber(withoutDial, code) : '')
 }
 
-/** Loads the country list once the component mounts. */
-onMounted(() => {
+/** Loads the country list once the component mounts (dataset fetched lazily). */
+onMounted(async () => {
+  await loadLocationData()
   countries.value = getCountries()
 })
 </script>

@@ -16,6 +16,8 @@ import './assets/base.css'
 import App from './App.vue'
 import router from './router'
 import i18n from './locales/i18n'
+import { initA11y } from './utils/a11y'
+import './utils/toast'
 
 // Root Vue application instance.
 const app = createApp(App)
@@ -30,3 +32,7 @@ app.use(i18n)
 
 // Mount the app into the #app element from index.html.
 app.mount('#app')
+
+// Global accessibility behaviours (modal focus trap, Escape-to-close, ARIA
+// dialog semantics). Runs after mount so the initial DOM exists.
+initA11y()

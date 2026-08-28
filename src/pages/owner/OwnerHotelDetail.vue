@@ -24,7 +24,11 @@
             {{ [hotel.address, hotel.phone, hotel.email].filter(Boolean).join(' · ') }}
           </p>
           <p v-if="hotel.tin || hotel.vrn" class="muted">
-            {{ [hotel.tin ? 'TIN: ' + hotel.tin : null, hotel.vrn ? 'VRN: ' + hotel.vrn : null].filter(Boolean).join(' · ') }}
+            {{
+              [hotel.tin ? 'TIN: ' + hotel.tin : null, hotel.vrn ? 'VRN: ' + hotel.vrn : null]
+                .filter(Boolean)
+                .join(' · ')
+            }}
           </p>
         </div>
         <div class="head-badges">
@@ -37,27 +41,45 @@
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-icon rooms"><i class="fas fa-door-open"></i></div>
-          <div><span class="stat-value">{{ hotel.rooms }}</span><span class="stat-label">{{ $t('owner.rooms') }}</span></div>
+          <div>
+            <span class="stat-value">{{ hotel.rooms }}</span
+            ><span class="stat-label">{{ $t('owner.rooms') }}</span>
+          </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon active"><i class="fas fa-bed"></i></div>
-          <div><span class="stat-value">{{ hotel.occupancy_rate }}%</span><span class="stat-label">{{ $t('owner.occupancy') }}</span></div>
+          <div>
+            <span class="stat-value">{{ hotel.occupancy_rate }}%</span
+            ><span class="stat-label">{{ $t('owner.occupancy') }}</span>
+          </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon guests"><i class="fas fa-users"></i></div>
-          <div><span class="stat-value">{{ hotel.guests_in_house }}</span><span class="stat-label">{{ $t('owner.guestsInHouse') }}</span></div>
+          <div>
+            <span class="stat-value">{{ hotel.guests_in_house }}</span
+            ><span class="stat-label">{{ $t('owner.guestsInHouse') }}</span>
+          </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon bookings"><i class="fas fa-calendar-check"></i></div>
-          <div><span class="stat-value">{{ hotel.active_reservations }}</span><span class="stat-label">{{ $t('owner.activeReservations') }}</span></div>
+          <div>
+            <span class="stat-value">{{ hotel.active_reservations }}</span
+            ><span class="stat-label">{{ $t('owner.activeReservations') }}</span>
+          </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon revenue"><i class="fas fa-dollar-sign"></i></div>
-          <div><span class="stat-value">TZS {{ hotel.revenue_30_days.toLocaleString() }}</span><span class="stat-label">{{ $t('owner.revenue30d') }}</span></div>
+          <div>
+            <span class="stat-value">TZS {{ hotel.revenue_30_days.toLocaleString() }}</span
+            ><span class="stat-label">{{ $t('owner.revenue30d') }}</span>
+          </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon total"><i class="fas fa-sack-dollar"></i></div>
-          <div><span class="stat-value">TZS {{ hotel.revenue_total.toLocaleString() }}</span><span class="stat-label">{{ $t('owner.revenueTotal') }}</span></div>
+          <div>
+            <span class="stat-value">TZS {{ hotel.revenue_total.toLocaleString() }}</span
+            ><span class="stat-label">{{ $t('owner.revenueTotal') }}</span>
+          </div>
         </div>
       </div>
     </template>
@@ -78,12 +100,17 @@ const error = ref('')
 
 /**
  * Maps a hotel status to the CSS class used for its badge colour.
- * @param {string} s - The tenant status (active, pending, suspended, cancelled).
+ * @param {string} status - The tenant status (active, pending, suspended, cancelled).
  * @returns {string} The badge CSS class.
  */
-function statusBadge(s) {
-  const map = { active: 'badge-green', pending: 'badge-yellow', suspended: 'badge-red', cancelled: 'badge-gray' }
-  return map[s] || 'badge-gray'
+function statusBadge(status) {
+  const map = {
+    active: 'badge-green',
+    pending: 'badge-yellow',
+    suspended: 'badge-red',
+    cancelled: 'badge-gray',
+  }
+  return map[status] || 'badge-gray'
 }
 
 /** Fetches the hotel detail (by the tenant id in the URL) and stores it in `hotel`. */
@@ -168,12 +195,30 @@ onMounted(load)
   flex-shrink: 0;
 }
 
-.stat-icon.revenue { background: #eafaf1; color: #1e8449; }
-.stat-icon.active { background: #eaf4ff; color: #2980b9; }
-.stat-icon.guests { background: #f5f0ff; color: #8e44ad; }
-.stat-icon.bookings { background: #fef9e7; color: #b7950b; }
-.stat-icon.rooms { background: #fdecea; color: #c0392b; }
-.stat-icon.total { background: #fdf2e9; color: #b9770e; }
+.stat-icon.revenue {
+  background: #eafaf1;
+  color: #1e8449;
+}
+.stat-icon.active {
+  background: #eaf4ff;
+  color: #1f6ea8;
+}
+.stat-icon.guests {
+  background: #f5f0ff;
+  color: #8e44ad;
+}
+.stat-icon.bookings {
+  background: #fef9e7;
+  color: #856f00;
+}
+.stat-icon.rooms {
+  background: #fdecea;
+  color: #c0392b;
+}
+.stat-icon.total {
+  background: #fdf2e9;
+  color: #b9770e;
+}
 
 .stat-value {
   display: block;
@@ -184,7 +229,7 @@ onMounted(load)
 
 .stat-label {
   font-size: 12px;
-  color: #888;
+  color: #757575;
 }
 
 @media (max-width: 768px) {

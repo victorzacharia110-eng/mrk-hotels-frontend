@@ -79,12 +79,32 @@ export function useCallManager({ notify }) {
   }
 
   /**
-   * Grabs the local camera/mic and feeds its tracks into the connection.
+   * Grabs the local media and feeds its tracks into the connection.
+   * Audio/video calls use the camera/mic; share calls capture the screen
+   * via getDisplayMedia (tab audio included where the browser allows).
    * @returns {Promise<MediaStream>} The local stream.
    */
   async function attachLocal() {
     if (localStream.value) localStream.value.getTracks().forEach((tr) => tr.stop())
-    localStream.value = await navigator.mediaDevices.getUserMedia({ audio: true, video: call.value.kind === 'video' })
+    if (call.value.kind === 'share') {
+      try {
+        // Screen + tab/system audio (Chromium); Firefox may reject audio.
+        localStream.value = await navigator.mediaDevices.getDisplayMedia({
+          video: { frameRate: 30 },
+          audio: true,
+        })
+      } catch {
+        localStream.value = await navigator.mediaDevices.getDisplayMedia({
+          video: { frameRate: 30 },
+        })
+      }
+      // The browser's own "Stop sharing" control ends the call.
+      localStream.value.getVideoTracks()[0]?.addEventListener('ended', () => {
+        if (call.value.visible) hangup()
+      })
+    } else {
+      localStream.value = await navigator.mediaDevices.getUserMedia({ audio: true, video: call.value.kind === 'video' })
+    }
     localStream.value.getTracks().forEach((tr) => peer().addTrack(tr, localStream.value))
     if (localVideoUrl.value) URL.revokeObjectURL(localVideoUrl.value)
     localVideoUrl.value = URL.createObjectURL(localStream.value)

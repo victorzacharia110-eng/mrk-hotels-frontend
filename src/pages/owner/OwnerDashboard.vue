@@ -24,52 +24,82 @@
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-icon"><i class="fas fa-hotel"></i></div>
-          <div><span class="stat-value">{{ data.hotels_total }}</span><span class="stat-label">{{ $t('owner.myHotels') }}</span></div>
+          <div>
+            <span class="stat-value">{{ data.hotels_total }}</span
+            ><span class="stat-label">{{ $t('owner.myHotels') }}</span>
+          </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon revenue"><i class="fas fa-dollar-sign"></i></div>
-          <div><span class="stat-value">TZS {{ data.revenue_30_days.toLocaleString() }}</span><span class="stat-label">{{ $t('owner.revenue30d') }}</span></div>
+          <div>
+            <span class="stat-value">TZS {{ data.revenue_30_days.toLocaleString() }}</span
+            ><span class="stat-label">{{ $t('owner.revenue30d') }}</span>
+          </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon active"><i class="fas fa-bed"></i></div>
-          <div><span class="stat-value">{{ data.avg_occupancy }}%</span><span class="stat-label">{{ $t('owner.avgOccupancy') }}</span></div>
+          <div>
+            <span class="stat-value">{{ data.avg_occupancy }}%</span
+            ><span class="stat-label">{{ $t('owner.avgOccupancy') }}</span>
+          </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon guests"><i class="fas fa-users"></i></div>
-          <div><span class="stat-value">{{ data.guests_in_house }}</span><span class="stat-label">{{ $t('owner.guestsInHouse') }}</span></div>
+          <div>
+            <span class="stat-value">{{ data.guests_in_house }}</span
+            ><span class="stat-label">{{ $t('owner.guestsInHouse') }}</span>
+          </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon bookings"><i class="fas fa-calendar-check"></i></div>
-          <div><span class="stat-value">{{ data.active_reservations }}</span><span class="stat-label">{{ $t('owner.activeReservations') }}</span></div>
+          <div>
+            <span class="stat-value">{{ data.active_reservations }}</span
+            ><span class="stat-label">{{ $t('owner.activeReservations') }}</span>
+          </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon rooms"><i class="fas fa-door-open"></i></div>
-          <div><span class="stat-value">{{ data.rooms_total }}</span><span class="stat-label">{{ $t('owner.roomsTotal') }}</span></div>
+          <div>
+            <span class="stat-value">{{ data.rooms_total }}</span
+            ><span class="stat-label">{{ $t('owner.roomsTotal') }}</span>
+          </div>
         </div>
       </div>
 
       <!-- Side-by-side comparison of every hotel the owner manages -->
       <div class="card">
-        <h2 class="card-title"><i class="fas fa-building"></i> {{ $t('owner.hotelsComparison') }}</h2>
+        <div class="card-head-row">
+          <h2 class="card-title">
+            <i class="fas fa-building"></i> {{ $t('owner.hotelsComparison') }}
+          </h2>
+          <TableExportButton
+            filename="owner-hotels"
+            :title="$t('owner.hotelsComparison')"
+            :rows="data.hotels"
+          />
+        </div>
         <div class="table-scroll">
           <table class="table">
             <thead>
               <tr>
-                <th>{{ $t('owner.hotel') }}</th>
-                <th>{{ $t('owner.location') }}</th>
-                <th>{{ $t('owner.rooms') }}</th>
-                <th>{{ $t('owner.occupancy') }}</th>
-                <th>{{ $t('owner.guestsInHouse') }}</th>
-                <th>{{ $t('owner.activeReservations') }}</th>
-                <th class="num">TZS · {{ $t('owner.revenue30d') }}</th>
-                <th class="num">TZS · {{ $t('owner.revenueTotal') }}</th>
-                <th>{{ $t('owner.actions') }}</th>
+                <th scope="col">{{ $t('owner.hotel') }}</th>
+                <th scope="col">{{ $t('owner.location') }}</th>
+                <th scope="col">{{ $t('owner.rooms') }}</th>
+                <th scope="col">{{ $t('owner.occupancy') }}</th>
+                <th scope="col">{{ $t('owner.guestsInHouse') }}</th>
+                <th scope="col">{{ $t('owner.activeReservations') }}</th>
+                <th scope="col" class="num">TZS · {{ $t('owner.revenue30d') }}</th>
+                <th scope="col" class="num">TZS · {{ $t('owner.revenueTotal') }}</th>
+                <th scope="col">{{ $t('owner.actions') }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="h in data.hotels" :key="h.tenant_id">
                 <td>
-                  <router-link :to="{ name: 'owner-hotel-detail', params: { id: h.tenant_id } }" class="hotel-link">
+                  <router-link
+                    :to="{ name: 'owner-hotel-detail', params: { id: h.tenant_id } }"
+                    class="hotel-link"
+                  >
                     {{ h.hotel_name }}
                   </router-link>
                 </td>
@@ -89,21 +119,39 @@
             </tbody>
           </table>
         </div>
-        <p v-if="!data.hotels.length" class="empty-mini"><i class="fas fa-hotel"></i> {{ $t('owner.noHotels') }}</p>
+        <p v-if="!data.hotels.length" class="empty-mini">
+          <i class="fas fa-hotel"></i> {{ $t('owner.noHotels') }}
+        </p>
       </div>
     </template>
+
+    <!-- Dashboard alert modal for urgent notifications -->
+    <AlertModal
+      v-if="currentAlert"
+      :show="true"
+      :title="currentAlert.title"
+      :body="currentAlert.body"
+      :details="alertDetails"
+      :timestamp="currentAlert.created_at"
+      :type="alertType"
+      @dismiss="dismissCurrentAlert"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ownerApi } from '@/api'
+import { useNotificationStore } from '@/stores/notifications'
+import TableExportButton from '@/components/TableExportButton.vue'
+import AlertModal from '@/components/AlertModal.vue'
 import { setOwnerHotel } from '@/utils/ownerView'
 
 const router = useRouter()
 const { t } = useI18n()
+const notifStore = useNotificationStore()
 const data = ref(null)
 const loading = ref(false)
 const error = ref('')
@@ -132,7 +180,39 @@ async function load() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  notifStore.fetchAlerts()
+})
+
+/** Alert modal logic. */
+const currentAlert = computed(() => notifStore.alerts[0] || null)
+const alertType = computed(() => {
+  if (!currentAlert.value) return 'info'
+  switch (currentAlert.value.type) {
+    case 'payment_awaiting_confirmation': return 'payment'
+    case 'reservation_new': return 'reservation'
+    case 'booking_requisition_new': return 'approval'
+    case 'purchase_requisition_pending': return 'approval'
+    case 'purchase_order_pending': return 'approval'
+    default: return 'info'
+  }
+})
+const alertDetails = computed(() => {
+  if (!currentAlert.value?.data) return []
+  const d = currentAlert.value.data
+  const details = []
+  if (d.guest_name) details.push({ label: t('guests.guestName'), value: d.guest_name })
+  if (d.amount) details.push({ label: t('payments.amount'), value: `TZS ${Number(d.amount).toLocaleString()}` })
+  if (d.provider) details.push({ label: t('payments.provider'), value: d.provider })
+  if (d.requested_by) details.push({ label: 'Requested by', value: d.requested_by })
+  if (d.ordered_by) details.push({ label: 'Ordered by', value: d.ordered_by })
+  if (d.requisition_number) details.push({ label: t('bookingRequisitions.requisitionNumber'), value: d.requisition_number })
+  return details
+})
+function dismissCurrentAlert() {
+  if (currentAlert.value) notifStore.dismissAlert(currentAlert.value.id)
+}
 </script>
 
 <style scoped>
@@ -151,7 +231,7 @@ onMounted(load)
 }
 
 .dash-header p {
-  color: #777;
+  color: #6f6f6f;
   font-size: 14px;
   margin-top: 4px;
 }
@@ -200,11 +280,26 @@ onMounted(load)
   flex-shrink: 0;
 }
 
-.stat-icon.revenue { background: #eafaf1; color: #1e8449; }
-.stat-icon.active { background: #eaf4ff; color: #2980b9; }
-.stat-icon.guests { background: #f5f0ff; color: #8e44ad; }
-.stat-icon.bookings { background: #fef9e7; color: #b7950b; }
-.stat-icon.rooms { background: #fdecea; color: #c0392b; }
+.stat-icon.revenue {
+  background: #eafaf1;
+  color: #1e8449;
+}
+.stat-icon.active {
+  background: #eaf4ff;
+  color: #1f6ea8;
+}
+.stat-icon.guests {
+  background: #f5f0ff;
+  color: #8e44ad;
+}
+.stat-icon.bookings {
+  background: #fef9e7;
+  color: #856f00;
+}
+.stat-icon.rooms {
+  background: #fdecea;
+  color: #c0392b;
+}
 
 .stat-value {
   display: block;
@@ -215,7 +310,7 @@ onMounted(load)
 
 .stat-label {
   font-size: 12px;
-  color: #888;
+  color: #757575;
 }
 
 .card-title {
@@ -230,6 +325,18 @@ onMounted(load)
   color: #005eb8;
 }
 
+.card-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.card-head-row .card-title {
+  margin-bottom: 0;
+}
+
 .hotel-link {
   font-weight: 600;
   color: #005eb8;
@@ -242,7 +349,7 @@ onMounted(load)
 .empty-mini {
   text-align: center;
   padding: 32px 16px;
-  color: #999;
+  color: #757575;
   font-size: 14px;
 }
 

@@ -16,10 +16,13 @@
         <p class="muted">{{ $t('inventory.subtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="load"><i class="fas fa-rotate"></i> {{ $t('inventory.refresh')
-          }}</button>
-        <button v-if="canOperate" class="btn btn-primary" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('inventory.newItem')
-          }}</button>
+        <button class="btn btn-secondary" @click="load">
+          <i class="fas fa-rotate"></i> {{ $t('inventory.refresh') }}
+        </button>
+        <button v-if="canOperate" class="btn btn-primary" @click="openCreate">
+          <i class="fas fa-plus"></i> {{ $t('inventory.newItem') }}
+        </button>
+        <TableExportButton filename="inventory" :load-all="loadAllItems" />
       </div>
     </div>
 
@@ -32,24 +35,45 @@
       <div class="filter-grid">
         <div class="form-group">
           <label>{{ $t('inventory.category') }}</label>
-          <SearchableSelect v-model="filters.category" :options="categoryOptions" :empty-label="$t('common.all')" @change="load" />
+          <SearchableSelect
+            v-model="filters.category"
+            :options="categoryOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('inventory.status') }}</label>
-          <SearchableSelect v-model="filters.status" :options="stockStatusOptions" :empty-label="$t('common.all')" @change="load" />
+          <SearchableSelect
+            v-model="filters.status"
+            :options="stockStatusOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('common.search') }}</label>
-          <input v-model="filters.search" type="text" class="input" :placeholder="$t('inventory.namePlaceholder')"
-            @input="triggerSearch" />
+          <input
+            v-model="filters.search"
+            type="text"
+            class="input"
+            :placeholder="$t('inventory.namePlaceholder')"
+            @input="triggerSearch"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('inventory.lowStockOnly') }}</label>
-          <SearchableSelect v-model="filters.low_stock" :options="yesNoOptions" :empty-label="$t('common.no')" @change="load" />
+          <SearchableSelect
+            v-model="filters.low_stock"
+            :options="yesNoOptions"
+            :empty-label="$t('common.no')"
+            @change="load"
+          />
         </div>
         <div class="filter-actions">
-          <button class="btn btn-secondary btn-sm" @click="clearFilters"><i class="fas fa-filter-circle-xmark"></i> {{
-            $t('common.clear') }}</button>
+          <button class="btn btn-secondary btn-sm" @click="clearFilters">
+            <i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}
+          </button>
         </div>
       </div>
     </div>
@@ -60,59 +84,90 @@
     <!-- Stock table: item, category, on-hand qty, reorder level, cost, supplier and status badge -->
     <div v-else class="table-scroll">
       <table class="table">
-      <thead>
-        <tr>
-          <th>{{ $t('inventory.tableItem') }}</th>
-          <th>{{ $t('inventory.category') }}</th>
-          <th>{{ $t('inventory.tableStock') }}</th>
-          <th>{{ $t('inventory.tableReorder') }}</th>
-          <th>{{ $t('inventory.tableUnitCost') }}</th>
-          <th>{{ $t('inventory.tableSupplier') }}</th>
-          <th>{{ $t('inventory.status') }}</th>
-          <th>{{ $t('common.actions') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="item in items" :key="item.item_id">
-          <td><strong>{{ item.item_name }}</strong>
-            <div class="muted">{{ item.unit || '-' }}</div>
-          </td>
-          <td class="capitalize">{{ item.category }}</td>
-          <td><strong>{{ Number(item.quantity_in_stock).toLocaleString() }}</strong></td>
-          <td>{{ Number(item.reorder_level).toLocaleString() }}</td>
-          <td>TZS {{ Number(item.unit_cost).toLocaleString() }}</td>
-          <td>{{ item.supplier || '-' }}</td>
-          <td><span class="badge" :class="stockBadge(item.status)">{{ item.status.replace('_', ' ') }}</span></td>
-          <td>
-            <div class="actions">
-              <button class="btn btn-sm btn-secondary" @click="openDetail(item)"><i class="fas fa-eye"></i></button>
-              <button v-if="canOperate" class="btn btn-sm btn-secondary" @click="openAdjust(item)"><i
-                  class="fas fa-arrows-up-down"></i></button>
-              <button v-if="canOperate" class="btn btn-sm btn-secondary" @click="openEdit(item)"><i class="fas fa-pen"></i></button>
-            </div>
-          </td>
-        </tr>
-        <tr v-if="!items.length && !loading">
-          <td colspan="8" class="muted">{{ $t('inventory.empty') }}</td>
-        </tr>
-      </tbody>
-    </table>
+        <thead>
+          <tr>
+            <th scope="col">{{ $t('inventory.tableItem') }}</th>
+            <th scope="col">{{ $t('inventory.category') }}</th>
+            <th scope="col">{{ $t('inventory.tableStock') }}</th>
+            <th scope="col">{{ $t('inventory.tableReorder') }}</th>
+            <th scope="col">{{ $t('inventory.tableUnitCost') }}</th>
+            <th scope="col">{{ $t('inventory.tableSupplier') }}</th>
+            <th scope="col">{{ $t('inventory.status') }}</th>
+            <th scope="col">{{ $t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in items" :key="item.item_id">
+            <td>
+              <strong>{{ item.item_name }}</strong>
+              <div class="muted">{{ item.unit || '-' }}</div>
+            </td>
+            <td class="capitalize">{{ item.category }}</td>
+            <td>
+              <strong>{{ Number(item.quantity_in_stock).toLocaleString() }}</strong>
+            </td>
+            <td>{{ Number(item.reorder_level).toLocaleString() }}</td>
+            <td>TZS {{ Number(item.unit_cost).toLocaleString() }}</td>
+            <td>{{ item.supplier || '-' }}</td>
+            <td>
+              <span class="badge" :class="stockBadge(item.status)">{{
+                item.status.replace('_', ' ')
+              }}</span>
+            </td>
+            <td>
+              <div class="actions">
+                <button class="btn btn-sm btn-secondary" @click="openDetail(item)">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button
+                  v-if="canOperate"
+                  class="btn btn-sm btn-secondary"
+                  @click="openAdjust(item)"
+                >
+                  <i class="fas fa-arrows-up-down"></i>
+                </button>
+                <button v-if="canOperate" class="btn btn-sm btn-secondary" @click="openEdit(item)">
+                  <i class="fas fa-pen"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!items.length && !loading">
+            <td colspan="8" class="muted">{{ $t('inventory.empty') }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Server-side pagination controls -->
     <div v-if="meta.total > meta.per_page" class="pagination">
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
-        $t('common.previous') }}</button>
-      <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.next_page_url" @click="goPage(meta.current_page + 1)">{{
-        $t('common.next') }}</button>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.prev_page_url"
+        @click="goPage(meta.current_page - 1)"
+      >
+        {{ $t('common.previous') }}
+      </button>
+      <span class="muted">{{
+        $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page })
+      }}</span>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.next_page_url"
+        @click="goPage(meta.current_page + 1)"
+      >
+        {{ $t('common.next') }}
+      </button>
     </div>
 
     <!-- Create / edit item modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal">
         <div class="modal-head">
-          <h2><i class="fas fa-box"></i> {{ editing ? $t('inventory.editItem') : $t('inventory.newItem') }}</h2>
+          <h2>
+            <i class="fas fa-box"></i>
+            {{ editing ? $t('inventory.editItem') : $t('inventory.newItem') }}
+          </h2>
           <button class="modal-close" @click="closeModal"><i class="fas fa-xmark"></i></button>
         </div>
 
@@ -130,19 +185,42 @@
             </div>
             <div class="form-group">
               <label>{{ $t('inventory.unit') }}</label>
-              <input v-model="form.unit" type="text" class="input" :placeholder="$t('inventory.unitPlaceholder')" />
+              <input
+                v-model="form.unit"
+                type="text"
+                class="input"
+                :placeholder="$t('inventory.unitPlaceholder')"
+              />
             </div>
             <div v-if="!editing" class="form-group">
               <label>{{ $t('inventory.openingStock') }}</label>
-              <input v-model.number="form.quantity_in_stock" type="number" min="0" step="0.01" class="input" />
+              <input
+                v-model.number="form.quantity_in_stock"
+                type="number"
+                min="0"
+                step="0.01"
+                class="input"
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('inventory.reorderLevel') }}</label>
-              <input v-model.number="form.reorder_level" type="number" min="0" step="0.01" class="input" />
+              <input
+                v-model.number="form.reorder_level"
+                type="number"
+                min="0"
+                step="0.01"
+                class="input"
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('inventory.unitCost') }}</label>
-              <input v-model.number="form.unit_cost" type="number" min="0" step="0.01" class="input" />
+              <input
+                v-model.number="form.unit_cost"
+                type="number"
+                min="0"
+                step="0.01"
+                class="input"
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('common.supplier') }}</label>
@@ -154,9 +232,12 @@
             </div>
           </div>
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="closeModal">{{ $t('common.cancel') }}</button>
+            <button type="button" class="btn btn-secondary" @click="closeModal">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="saving">
-              <i class="fas fa-check"></i> {{ saving ? $t('common.saving') : $t('inventory.saveItem') }}
+              <i class="fas fa-check"></i>
+              {{ saving ? $t('common.saving') : $t('inventory.saveItem') }}
             </button>
           </div>
         </form>
@@ -168,10 +249,14 @@
       <div class="modal modal-sm">
         <div class="modal-head">
           <h2><i class="fas fa-arrows-up-down"></i> {{ $t('inventory.adjustStock') }}</h2>
-          <button class="modal-close" @click="showAdjust = false"><i class="fas fa-xmark"></i></button>
+          <button class="modal-close" @click="showAdjust = false">
+            <i class="fas fa-xmark"></i>
+          </button>
         </div>
-        <p class="muted">{{ adjustItem.item_name }} · {{ $t('inventory.currentStock') }} {{
-          Number(adjustItem.quantity_in_stock).toLocaleString() }}</p>
+        <p class="muted">
+          {{ adjustItem.item_name }} · {{ $t('inventory.currentStock') }}
+          {{ Number(adjustItem.quantity_in_stock).toLocaleString() }}
+        </p>
         <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
         <form @submit.prevent="saveAdjust">
           <div class="form-group">
@@ -180,21 +265,34 @@
           </div>
           <div class="form-group">
             <label>{{ $t('inventory.quantity') }} *</label>
-            <input v-model.number="adjustForm.quantity" type="number" min="0" step="0.01" class="input" required />
+            <input
+              v-model.number="adjustForm.quantity"
+              type="number"
+              min="0"
+              step="0.01"
+              class="input"
+              required
+            />
           </div>
           <div class="form-group">
             <label>{{ $t('common.reference') }}</label>
-            <SearchableSelect v-model="adjustForm.reference_type" :options="referenceTypeOptions" :empty-label="$t('common.none')" />
+            <SearchableSelect
+              v-model="adjustForm.reference_type"
+              :options="referenceTypeOptions"
+              :empty-label="$t('common.none')"
+            />
           </div>
           <div class="form-group">
             <label>{{ $t('common.notes') }}</label>
             <textarea v-model="adjustForm.notes" rows="2" class="textarea"></textarea>
           </div>
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="showAdjust = false">{{ $t('common.cancel')
-              }}</button>
+            <button type="button" class="btn btn-secondary" @click="showAdjust = false">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="saving">
-              <i class="fas fa-check"></i> {{ saving ? $t('common.saving') : $t('inventory.adjust') }}
+              <i class="fas fa-check"></i>
+              {{ saving ? $t('common.saving') : $t('inventory.adjust') }}
             </button>
           </div>
         </form>
@@ -206,39 +304,50 @@
       <div class="modal modal-lg">
         <div class="modal-head">
           <h2><i class="fas fa-box"></i> {{ detail?.item?.item_name }}</h2>
-          <button class="modal-close" @click="showDetail = false"><i class="fas fa-xmark"></i></button>
+          <button class="modal-close" @click="showDetail = false">
+            <i class="fas fa-xmark"></i>
+          </button>
         </div>
         <p class="muted">
-          {{ $t('inventory.detailSummary', {
-            stock: Number(detail?.item?.quantity_in_stock).toLocaleString(), reorder:
-              Number(detail?.item?.reorder_level).toLocaleString(), category: detail?.item?.category }) }}
+          {{
+            $t('inventory.detailSummary', {
+              stock: Number(detail?.item?.quantity_in_stock).toLocaleString(),
+              reorder: Number(detail?.item?.reorder_level).toLocaleString(),
+              category: detail?.item?.category,
+            })
+          }}
         </p>
         <h3 class="sub-title">{{ $t('inventory.movements') }}</h3>
         <div class="table-scroll">
           <table class="table">
-          <thead>
-            <tr>
-              <th>{{ $t('inventory.movementType') }}</th>
-              <th>{{ $t('inventory.movementQty') }}</th>
-              <th>{{ $t('common.reference') }}</th>
-              <th>{{ $t('common.notes') }}</th>
-              <th>{{ $t('inventory.movementWhen') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="m in detail?.movements || []" :key="m.movement_id">
-              <td><span class="badge" :class="m.movement_type === 'out' ? 'badge-red' : 'badge-green'">{{
-                m.movement_type }}</span></td>
-              <td>{{ Number(m.quantity).toLocaleString() }}</td>
-              <td>{{ m.reference_type || '-' }}</td>
-              <td>{{ m.notes || '-' }}</td>
-              <td>{{ formatDate(m.created_at) }}</td>
-            </tr>
-            <tr v-if="!detail?.movements?.length">
-              <td colspan="5" class="muted">{{ $t('inventory.noMovements') }}</td>
-            </tr>
-          </tbody>
-        </table>
+            <thead>
+              <tr>
+                <th scope="col">{{ $t('inventory.movementType') }}</th>
+                <th scope="col">{{ $t('inventory.movementQty') }}</th>
+                <th scope="col">{{ $t('common.reference') }}</th>
+                <th scope="col">{{ $t('common.notes') }}</th>
+                <th scope="col">{{ $t('inventory.movementWhen') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="m in detail?.movements || []" :key="m.movement_id">
+                <td>
+                  <span
+                    class="badge"
+                    :class="m.movement_type === 'out' ? 'badge-red' : 'badge-green'"
+                    >{{ m.movement_type }}</span
+                  >
+                </td>
+                <td>{{ Number(m.quantity).toLocaleString() }}</td>
+                <td>{{ m.reference_type || '-' }}</td>
+                <td>{{ m.notes || '-' }}</td>
+                <td>{{ formatDate(m.created_at) }}</td>
+              </tr>
+              <tr v-if="!detail?.movements?.length">
+                <td colspan="5" class="muted">{{ $t('inventory.noMovements') }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -250,7 +359,9 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { inventoryApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import TableExportButton from '@/components/TableExportButton.vue'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -261,7 +372,14 @@ const canOperate = computed(() => authStore.canOperate)
 // List state: items, pagination, filters, and load flags/messages.
 const items = ref([])
 const page = ref(1)
-const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
+const meta = ref({
+  total: 0,
+  per_page: 15,
+  current_page: 1,
+  last_page: 1,
+  prev_page_url: null,
+  next_page_url: null,
+})
 const filters = reactive({ category: '', status: '', search: '', low_stock: '' })
 const loading = ref(false)
 const error = ref('')
@@ -277,7 +395,16 @@ const showAdjust = ref(false)
 const adjustItem = ref(null)
 const showDetail = ref(false)
 const detail = ref(null)
-const form = reactive({ item_name: '', category: 'other', unit: '', quantity_in_stock: 0, reorder_level: 0, unit_cost: 0, supplier: '', notes: '' })
+const form = reactive({
+  item_name: '',
+  category: 'other',
+  unit: '',
+  quantity_in_stock: 0,
+  reorder_level: 0,
+  unit_cost: 0,
+  supplier: '',
+  notes: '',
+})
 const adjustForm = reactive({ type: 'in', quantity: 0, reference_type: '', notes: '' })
 
 // Dropdown option lists for filters and forms.
@@ -313,14 +440,14 @@ const referenceTypeOptions = computed(() => [
 ])
 
 /** Maps a stock status to its badge CSS class for the table. */
-function stockBadge(s) {
+function stockBadge(status) {
   const map = { in_stock: 'badge-green', low_stock: 'badge-yellow', out_of_stock: 'badge-red' }
-  return map[s] || 'badge-gray'
+  return map[status] || 'badge-gray'
 }
 
 /** Formats an ISO date/time into a short display string. */
-function formatDate(d) {
-  return d ? String(d).slice(0, 16).replace('T', ' ') : '-'
+function formatDate(date) {
+  return date ? String(date).slice(0, 16).replace('T', ' ') : '-'
 }
 
 /** Fetches the paged item list using the current filters. */
@@ -345,9 +472,22 @@ async function load() {
   }
 }
 
+/** Fetches every inventory item page for export, honouring the active filters. */
+const loadAllItems = () =>
+  collectAllRows((page, perPage) =>
+    inventoryApi.index({
+      category: filters.category,
+      status: filters.status,
+      search: filters.search,
+      low_stock: filters.low_stock || undefined,
+      page,
+      per_page: perPage,
+    }),
+  )
+
 /** Moves to the given page and reloads. */
-function goPage(p) {
-  page.value = p
+function goPage(page) {
+  page.value = page
   load()
 }
 
@@ -486,7 +626,9 @@ async function openDetail(item) {
 /** Flattens Laravel-style validation errors into a single readable message. */
 function flattenError(err) {
   const messages = err.response?.data?.errors
-  return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')
+  return messages
+    ? Object.values(messages).flat().join(' ')
+    : err.response?.data?.message || t('common.actionFailed')
 }
 
 onMounted(load)
@@ -534,7 +676,7 @@ onMounted(load)
 }
 
 .muted {
-  color: #888;
+  color: #757575;
   font-size: 12px;
   margin-top: 2px;
 }
@@ -562,7 +704,7 @@ onMounted(load)
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #005EB8;
+  color: #005eb8;
   margin: 16px 0 8px;
 }
 
@@ -612,14 +754,14 @@ onMounted(load)
 }
 
 .modal-head h2 i {
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .modal-close {
   background: none;
   border: none;
   font-size: 18px;
-  color: #999;
+  color: #757575;
   cursor: pointer;
   padding: 4px;
 }

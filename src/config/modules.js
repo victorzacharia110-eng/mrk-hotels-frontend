@@ -22,10 +22,20 @@ export const MODULES = [
   { key: 'payments', to: '/app/payments', icon: 'fas fa-money-bill-wave', labelKey: 'nav.payments', roles: ['hotel_admin', 'manager', 'receptionist'] },
   // Public booking requisitions inbox.
   { key: 'booking-requisitions', to: '/app/booking-requisitions', icon: 'fas fa-envelope-open-text', labelKey: 'bookingRequisitions.title', roles: ['hotel_admin', 'manager', 'receptionist'] },
+  // Night audit — day close for receptionists.
+  { key: 'night-audit', to: '/app/night-audit', icon: 'fas fa-moon', labelKey: 'nav.nightAudit', roles: ['hotel_admin', 'manager', 'receptionist'] },
+  // Channel distribution — auto stop-sell and channel logs.
+  { key: 'distribution', to: '/app/distribution/channel-logs', icon: 'fas fa-share-nodes', labelKey: 'nav.distribution', roles: ['hotel_admin', 'manager', 'receptionist'] },
+  // Activity log report — daily/weekly/monthly staff activity.
+  { key: 'activity-log-report', to: '/app/activity-log-report', icon: 'fas fa-clock-rotate-left', labelKey: 'nav.activityLogReport', roles: ['hotel_admin', 'manager', 'receptionist'] },
   // Housekeeping task board.
   { key: 'housekeeping', to: '/app/housekeeping', icon: 'fas fa-broom', labelKey: 'nav.housekeeping', roles: ['hotel_admin', 'manager', 'housekeeping'] },
   // Food & beverage orders for the service teams.
   { key: 'orders', to: '/app/orders', icon: 'fas fa-utensils', labelKey: 'nav.orders', roles: ['hotel_admin', 'manager', 'kitchen', 'waiter', 'bartender', 'staff'] },
+  // Single-click kitchen board for the cooks.
+  { key: 'kitchen-board', to: '/app/kitchen', icon: 'fas fa-fire-burner', labelKey: 'nav.kitchenBoard', roles: ['kitchen'] },
+  // Touch-POS order pad (restaurant/bar toggle) for the service teams.
+  { key: 'take-order', to: '/app/take-order', icon: 'fas fa-cash-register', labelKey: 'nav.takeOrder', roles: ['hotel_admin', 'manager', 'waiter', 'bartender', 'staff'] },
   // Staff issue reporting, open to everyone.
   { key: 'issue-reports', to: '/app/issue-reports', icon: 'fas fa-flag', labelKey: 'nav.issueReports', roles: [] },
   // Staff messaging/calls, open to everyone.
@@ -40,6 +50,8 @@ export const MODULES = [
   { key: 'fun-games', to: '/app/fun-games', icon: 'fas fa-gamepad', labelKey: 'funGames.title', roles: ['hotel_admin', 'manager', 'housekeeping'] },
   // Inventory stock management.
   { key: 'inventory', to: '/app/inventory', icon: 'fas fa-boxes-stacked', labelKey: 'nav.inventory', roles: ['hotel_admin', 'manager', 'procurement_officer'] },
+  // Inventory departments.
+  { key: 'departments', to: '/app/departments', icon: 'fas fa-building', labelKey: 'nav.departments', roles: ['hotel_admin', 'manager', 'procurement_officer'] },
   // Supplier records.
   { key: 'suppliers', to: '/app/suppliers', icon: 'fas fa-truck', labelKey: 'nav.suppliers', roles: ['hotel_admin', 'manager', 'procurement_officer'] },
   // Purchase requisitions.
@@ -51,11 +63,21 @@ export const MODULES = [
   // Staff/user management.
   { key: 'staff', to: '/app/staff', icon: 'fas fa-user-tie', labelKey: 'nav.staff', roles: ['hotel_admin', 'manager'] },
   // Business reporting.
-  { key: 'reports', to: '/app/reports', icon: 'fas fa-chart-line', labelKey: 'nav.reports', roles: ['hotel_admin', 'manager'] },
+  { key: 'reports', to: '/app/reports', icon: 'fas fa-chart-line', labelKey: 'nav.reports', roles: ['hotel_admin', 'manager', 'receptionist'] },
   // Accounting reports.
   { key: 'accounting', to: '/app/accounting', icon: 'fas fa-scale-balanced', labelKey: 'accounting.title', roles: ['hotel_admin', 'manager', 'accountant'] },
   // Personal profile, visible to all staff.
   { key: 'profile', to: '/app/profile', icon: 'fas fa-user-circle', labelKey: 'nav.profile', roles: [] },
+  // Booking.com channel manager integration.
+  { key: 'integrations/booking-com', to: '/app/integrations/booking-com', icon: 'fas fa-plug', labelKey: 'nav.bookingCom', roles: ['hotel_admin', 'manager'] },
+  // QuickBooks Online accounting integration.
+  { key: 'integrations/quickbooks', to: '/app/integrations/quickbooks', icon: 'fas fa-calculator', labelKey: 'nav.quickbooks', roles: ['hotel_admin', 'manager'] },
+  // Xero accounting integration.
+  { key: 'integrations/xero', to: '/app/integrations/xero', icon: 'fas fa-chart-line', labelKey: 'nav.xero', roles: ['hotel_admin', 'manager'] },
+  // Check-in override approvals.
+  { key: 'overrides', to: '/app/overrides', icon: 'fas fa-user-shield', labelKey: 'nav.overrideApprovals', roles: ['hotel_admin', 'manager', 'receptionist'] },
+  // Bulk data import (CSV) — administrators only, since commits write records.
+  { key: 'imports', to: '/app/import', icon: 'fas fa-file-import', labelKey: 'nav.importData', roles: ['hotel_admin'] },
 ]
 
 /**

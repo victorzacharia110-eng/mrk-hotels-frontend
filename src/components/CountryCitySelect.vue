@@ -65,11 +65,12 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-  PRIORITY_COUNTRY_CODES,
   findCountryCode,
   getCities,
   getCountries,
   getCountryName,
+  loadLocationData,
+  PRIORITY_COUNTRY_CODES,
 } from '@/utils/locations'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 
@@ -140,9 +141,11 @@ function onCountryChange(code) {
 /**
  * Bootstraps the component: loads the country list and, when editing a record
  * saved without an ISO code, resolves the country name so the city dropdown
- * still populates.
+ * still populates. The ~8MB location dataset is fetched lazily here.
  */
-onMounted(() => {
+onMounted(async () => {
+  await loadLocationData()
+
   countries.value = getCountries()
 
   // Records saved before the ISO code was captured only carry a country name;

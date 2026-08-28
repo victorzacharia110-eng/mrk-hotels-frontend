@@ -13,9 +13,27 @@
         <p class="muted">{{ $t('staff.subtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="load"><i class="fas fa-rotate"></i> {{ $t('staff.refresh') }}</button>
-        <button class="btn btn-primary" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('staff.newStaff')
-          }}</button>
+        <button class="btn btn-secondary" @click="load">
+          <i class="fas fa-rotate"></i> {{ $t('staff.refresh') }}
+        </button>
+        <button class="btn btn-primary" @click="openCreate">
+          <i class="fas fa-plus"></i> {{ $t('staff.newStaff') }}
+        </button>
+        <TableExportButton
+          filename="staff"
+          :load-all="loadAllStaff"
+          :columns="[
+            { key: 'full_name', label: $t('staff.tableStaff') },
+            { key: 'registration_number', label: 'Reg #' },
+            { key: 'email', label: $t('common.email') },
+            { key: 'phone', label: $t('common.phone') },
+            { key: 'user_role', label: $t('staff.role') },
+            { key: 'department', label: $t('common.department') },
+            { key: 'position', label: $t('staff.position') },
+            { key: 'last_login', label: $t('staff.lastLogin') },
+            { key: 'is_active', label: $t('staff.status') },
+          ]"
+        />
       </div>
     </div>
 
@@ -45,8 +63,13 @@
         </div>
         <div class="form-group">
           <label>{{ $t('common.search') }}</label>
-          <input v-model="filters.search" type="text" class="input" :placeholder="$t('staff.searchPlaceholder')"
-            @input="triggerSearch" />
+          <input
+            v-model="filters.search"
+            type="text"
+            class="input"
+            :placeholder="$t('staff.searchPlaceholder')"
+            @input="triggerSearch"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('staff.status') }}</label>
@@ -58,8 +81,9 @@
           />
         </div>
         <div class="filter-actions">
-          <button class="btn btn-secondary btn-sm" @click="clearFilters"><i class="fas fa-filter-circle-xmark"></i> {{
-            $t('common.clear') }}</button>
+          <button class="btn btn-secondary btn-sm" @click="clearFilters">
+            <i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}
+          </button>
         </div>
       </div>
     </div>
@@ -69,78 +93,138 @@
     <!-- Staff table; row actions respect the role hierarchy via canEdit/isSelf -->
     <div v-else class="table-scroll">
       <table class="table">
-      <thead>
-        <tr>
-          <th>{{ $t('staff.tableStaff') }}</th>
-          <th>{{ $t('staff.contact') }}</th>
-          <th>{{ $t('staff.role') }}</th>
-          <th>{{ $t('common.department') }}</th>
-          <th>{{ $t('staff.position') }}</th>
-          <th>{{ $t('staff.lastLogin') }}</th>
-          <th>{{ $t('staff.status') }}</th>
-          <th>{{ $t('common.actions') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="u in users" :key="u.user_id">
-          <td>
-            <div class="staff-cell">
-              <img v-if="u.profile_picture" :src="u.profile_picture" class="avatar" alt="" />
-              <span v-else class="avatar avatar-icon"><i class="fas fa-user"></i></span>
-              <div>
-                <strong>{{ u.full_name }}</strong>
-                <div class="muted">{{ u.registration_number || '-' }}</div>
+        <thead>
+          <tr>
+            <th scope="col">{{ $t('staff.tableStaff') }}</th>
+            <th scope="col">{{ $t('staff.contact') }}</th>
+            <th scope="col">{{ $t('staff.role') }}</th>
+            <th scope="col">{{ $t('common.department') }}</th>
+            <th scope="col">{{ $t('staff.position') }}</th>
+            <th scope="col">{{ $t('staff.lastLogin') }}</th>
+            <th scope="col">{{ $t('staff.online') }}</th>
+            <th scope="col">{{ $t('staff.status') }}</th>
+            <th scope="col">{{ $t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="u in users" :key="u.user_id">
+            <td>
+              <div class="staff-cell">
+                <span class="avatar-wrap">
+                  <img v-if="u.profile_picture" :src="u.profile_picture" class="avatar" alt="" />
+                  <span v-else class="avatar avatar-icon"><i class="fas fa-user"></i></span>
+                  <span
+                    v-if="isOnline(u.user_id)"
+                    class="online-dot"
+                    :title="$t('staff.online')"
+                  ></span>
+                </span>
+                <div>
+                  <strong>
+                    {{ u.full_name }}
+                    <span v-if="isOnline(u.user_id)" class="online-chip">{{
+                      $t('staff.online')
+                    }}</span>
+                  </strong>
+                  <div class="muted">{{ u.registration_number || '-' }}</div>
+                </div>
               </div>
-            </div>
-          </td>
-          <td>
-            <div>{{ u.email }}</div>
-            <div class="muted">{{ u.phone || '-' }}</div>
-          </td>
-          <td>
-            <span class="badge" :class="roleBadge(u.user_role)">{{ roleLabel(u.user_role) }}</span>
-          </td>
-          <td class="capitalize">{{ $t(`common.departments.${u.department}`) }}</td>
-          <td class="capitalize">{{ u.position || '-' }}</td>
-          <td>{{ formatDate(u.last_login) }}</td>
-          <td><span class="badge" :class="u.is_active ? 'badge-green' : 'badge-red'">{{ u.is_active ? $t('staff.active')
-            : $t('staff.inactive') }}</span></td>
-          <td>
-            <div class="actions">
-              <button v-if="canEdit(u)" class="btn btn-sm btn-secondary" @click="openEdit(u)"><i class="fas fa-pen"></i> {{
-                $t('common.edit') }}</button>
-              <button v-if="u.is_active && !isSelf(u) && canEdit(u)" class="btn btn-sm btn-secondary" @click="invite(u)">{{
-                $t('staff.invite') }}</button>
-              <button v-if="u.is_active && !isSelf(u) && canEdit(u)" class="btn btn-sm btn-secondary"
-                @click="openPinModal(u)"><i class="fas fa-calculator"></i> {{ $t('staff.setPin') }}</button>
-              <button v-if="u.is_active && !isSelf(u) && canEdit(u)" class="btn btn-sm btn-danger" @click="deactivate(u)">{{
-                $t('staff.deactivate') }}</button>
-              <button v-if="!u.is_active && canEdit(u)" class="btn btn-sm btn-success" @click="activate(u)">{{ $t('staff.activate')
-                }}</button>
-            </div>
-          </td>
-        </tr>
-        <tr v-if="!users.length && !loading">
-          <td colspan="8" class="muted">{{ $t('staff.empty') }}</td>
-        </tr>
-      </tbody>
-    </table>
+            </td>
+            <td>
+              <div>{{ u.email }}</div>
+              <div class="muted">{{ u.phone || '-' }}</div>
+            </td>
+            <td>
+              <span class="badge" :class="roleBadge(u.user_role)">{{
+                roleLabel(u.user_role)
+              }}</span>
+            </td>
+            <td class="capitalize">{{ $t(`common.departments.${u.department}`) }}</td>
+            <td class="capitalize">{{ u.position || '-' }}</td>
+            <td>{{ formatDate(u.last_login) }}</td>
+            <td>
+              <span v-if="isOnline(u.user_id)" class="badge badge-green">
+                <i class="fas fa-circle online-bullet"></i> {{ $t('staff.online') }}
+              </span>
+              <span v-else class="badge badge-gray">{{ $t('staff.offline') }}</span>
+            </td>
+            <td>
+              <span class="badge" :class="u.is_active ? 'badge-green' : 'badge-red'">{{
+                u.is_active ? $t('staff.active') : $t('staff.inactive')
+              }}</span>
+            </td>
+            <td>
+              <div class="actions">
+                <button v-if="canEdit(u)" class="btn btn-sm btn-secondary" @click="openEdit(u)">
+                  <i class="fas fa-pen"></i> {{ $t('common.edit') }}
+                </button>
+                <button
+                  v-if="u.is_active && !isSelf(u) && canEdit(u)"
+                  class="btn btn-sm btn-secondary"
+                  @click="invite(u)"
+                >
+                  {{ $t('staff.invite') }}
+                </button>
+                <button
+                  v-if="u.is_active && !isSelf(u) && canEdit(u)"
+                  class="btn btn-sm btn-secondary"
+                  @click="openPinModal(u)"
+                >
+                  <i class="fas fa-calculator"></i> {{ $t('staff.setPin') }}
+                </button>
+                <button
+                  v-if="u.is_active && !isSelf(u) && canEdit(u)"
+                  class="btn btn-sm btn-danger"
+                  @click="deactivate(u)"
+                >
+                  {{ $t('staff.deactivate') }}
+                </button>
+                <button
+                  v-if="!u.is_active && canEdit(u)"
+                  class="btn btn-sm btn-success"
+                  @click="activate(u)"
+                >
+                  {{ $t('staff.activate') }}
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!users.length && !loading">
+            <td colspan="9" class="muted">{{ $t('staff.empty') }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Pagination controls, only shown when there is more than one page -->
     <div v-if="meta.total > meta.per_page" class="pagination">
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
-        $t('common.previous') }}</button>
-      <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.next_page_url" @click="goPage(meta.current_page + 1)">{{
-        $t('common.next') }}</button>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.prev_page_url"
+        @click="goPage(meta.current_page - 1)"
+      >
+        {{ $t('common.previous') }}
+      </button>
+      <span class="muted">{{
+        $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page })
+      }}</span>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.next_page_url"
+        @click="goPage(meta.current_page + 1)"
+      >
+        {{ $t('common.next') }}
+      </button>
     </div>
 
     <!-- Create/edit staff modal, including attachments while editing -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal">
         <div class="modal-head">
-          <h2><i class="fas fa-user-tie"></i> {{ editing ? $t('staff.editStaff') : $t('staff.newStaff') }}</h2>
+          <h2>
+            <i class="fas fa-user-tie"></i>
+            {{ editing ? $t('staff.editStaff') : $t('staff.newStaff') }}
+          </h2>
           <button class="modal-close" @click="closeModal"><i class="fas fa-xmark"></i></button>
         </div>
 
@@ -155,7 +239,9 @@
         <div v-if="invitation" class="alert alert-success">
           <strong>{{ $t('staff.accountReady') }}</strong> {{ $t('staff.defaultPassword') }}
           <code>{{ invitation.default_password }}</code>
-          <div class="muted">{{ $t('staff.resetToFullName') }}. {{ $t('staff.shareWithStaff') }}</div>
+          <div class="muted">
+            {{ $t('staff.resetToFullName') }}. {{ $t('staff.shareWithStaff') }}
+          </div>
         </div>
 
         <form @submit.prevent="save">
@@ -178,11 +264,19 @@
             </div>
             <div class="form-group">
               <label>{{ $t('staff.roleRequired') }}</label>
-              <SearchableSelect v-model="form.user_role" :options="assignableRoles" :required="true" />
+              <SearchableSelect
+                v-model="form.user_role"
+                :options="assignableRoles"
+                :required="true"
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('staff.departmentRequired') }}</label>
-              <SearchableSelect v-model="form.department" :options="departmentOptions" :required="true" />
+              <SearchableSelect
+                v-model="form.department"
+                :options="departmentOptions"
+                :required="true"
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('staff.position') }}</label>
@@ -216,9 +310,21 @@
             <div class="form-group">
               <label>{{ $t('staff.profilePicture') }}</label>
               <div class="picture-field">
-                <img v-if="form.picture_preview" :src="form.picture_preview" class="picture-preview" alt="" />
-                <span v-else class="picture-preview picture-placeholder"><i class="fas fa-user"></i></span>
-                <input type="file" accept="image/jpeg,image/png,image/webp" class="input" @change="onProfilePicture" />
+                <img
+                  v-if="form.picture_preview"
+                  :src="form.picture_preview"
+                  class="picture-preview"
+                  alt=""
+                />
+                <span v-else class="picture-preview picture-placeholder"
+                  ><i class="fas fa-user"></i
+                ></span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  class="input"
+                  @change="onProfilePicture"
+                />
               </div>
             </div>
 
@@ -226,12 +332,20 @@
             <div class="form-group form-full" v-if="editing">
               <label>{{ $t('staff.attachments') }}</label>
               <div v-if="attachments.length" class="attachment-list">
-                <div v-for="att in attachments" :key="att.staff_attachment_id" class="attachment-item">
+                <div
+                  v-for="att in attachments"
+                  :key="att.staff_attachment_id"
+                  class="attachment-item"
+                >
                   <a :href="attachmentUrl(att)" target="_blank" rel="noopener">
                     <i class="fas fa-paperclip"></i> {{ att.original_name }}
                   </a>
                   <span class="muted">{{ formatBytes(att.size) }}</span>
-                  <button type="button" class="btn btn-sm btn-danger" @click="removeAttachment(att)">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-danger"
+                    @click="removeAttachment(att)"
+                  >
                     <i class="fas fa-trash"></i>
                   </button>
                 </div>
@@ -239,25 +353,38 @@
               <div v-else class="muted">{{ $t('staff.noAttachment') }}</div>
               <div class="attachment-add">
                 <input ref="attachmentInput" type="file" class="input" @change="onAttachmentFile" />
-                <button type="button" class="btn btn-sm btn-secondary" :disabled="!newAttachmentFile || uploading"
-                  @click="uploadAttachment">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-secondary"
+                  :disabled="!newAttachmentFile || uploading"
+                  @click="uploadAttachment"
+                >
                   <i class="fas fa-upload"></i> {{ $t('staff.addAttachment') }}
                 </button>
               </div>
             </div>
           </div>
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="closeModal">{{ $t('common.cancel') }}</button>
+            <button type="button" class="btn btn-secondary" @click="closeModal">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="saving">
-              <i class="fas fa-check"></i> {{ saving ? $t('common.saving') : (editing ? $t('staff.updateStaff') :
-                $t('staff.saveStaff')) }}
+              <i class="fas fa-check"></i>
+              {{
+                saving
+                  ? $t('common.saving')
+                  : editing
+                    ? $t('staff.updateStaff')
+                    : $t('staff.saveStaff')
+              }}
             </button>
           </div>
         </form>
       </div>
     </div>
 
-    <!-- Set-PIN modal: admin/manager assigns the 4-digit login PIN used by the PIN sign-in mode -->
+    <!-- Set-PIN modal: admin/manager assigns the 4-digit login PIN used by the PIN sign-in mode.
+         Auto-generates a PIN by default; the admin can switch to typing one manually. -->
     <div v-if="showPinModal" class="modal-overlay" @click.self="closePinModal">
       <div class="modal modal-pin">
         <div class="modal-head">
@@ -269,24 +396,96 @@
 
         <div v-if="pinError" class="alert alert-error">{{ pinError }}</div>
 
-        <!-- Both PIN entries are masked; validation requires 4 matching digits -->
+        <!-- Mode switch: generate a PIN (default) or type one manually -->
+        <div class="pin-mode-switch" role="radiogroup" :aria-label="$t('staff.pinModeLabel')">
+          <button
+            type="button"
+            class="pin-mode-option"
+            :class="{ active: pinMode === 'random' }"
+            role="radio"
+            :aria-checked="pinMode === 'random'"
+            @click="switchPinMode('random')"
+          >
+            <i class="fas fa-dice"></i>
+            {{ $t('staff.pinModeRandom') }}
+          </button>
+          <button
+            type="button"
+            class="pin-mode-option"
+            :class="{ active: pinMode === 'manual' }"
+            role="radio"
+            :aria-checked="pinMode === 'manual'"
+            @click="switchPinMode('manual')"
+          >
+            <i class="fas fa-keyboard"></i>
+            {{ $t('staff.pinModeManual') }}
+          </button>
+        </div>
+
         <form @submit.prevent="savePin">
-          <div class="form-grid">
+          <!-- Auto-generated PIN shown in the open so it can be shared with the staff member -->
+          <div v-if="pinMode === 'random'" class="form-group form-full">
+            <label>{{ $t('staff.generatedPin') }}</label>
+            <div class="pin-display">
+              <span class="pin-display-value">{{ pinForm.pin }}</span>
+              <div class="pin-actions">
+                <button type="button" class="btn btn-icon" :title="$t('staff.regeneratePin')" @click="regeneratePin">
+                  <i class="fas fa-rotate-right"></i>
+                </button>
+                <button type="button" class="btn btn-icon" :title="$t('staff.copyPin')" @click="copyPin">
+                  <i class="fas fa-copy"></i>
+                </button>
+              </div>
+            </div>
+            <p v-if="pinCopied" class="muted pin-copied-hint"><i class="fas fa-check"></i> {{ $t('staff.pinCopied') }}</p>
+            <p class="muted pin-share-hint"><i class="fas fa-share"></i> {{ $t('staff.sharePinNote') }}</p>
+          </div>
+
+          <!-- Manual entry; both fields are masked with an eye toggle to reveal them -->
+          <div v-else class="form-grid">
             <div class="form-group form-full">
               <label>{{ $t('staff.newPin') }}</label>
-              <input v-model="pinForm.pin" type="password" class="input pin-input" inputmode="numeric" maxlength="4"
-                autocomplete="off" :placeholder="$t('staff.pinPlaceholder')" />
+              <div class="password-input-wrap">
+                <input
+                  v-model="pinForm.pin"
+                  :type="showPin1 ? 'text' : 'password'"
+                  class="input pin-input"
+                  inputmode="numeric"
+                  maxlength="4"
+                  autocomplete="off"
+                  :placeholder="$t('staff.pinPlaceholder')"
+                />
+                <button type="button" class="pw-toggle" :aria-label="$t('staff.togglePinVisibility')" @click="showPin1 = !showPin1">
+                  <i :class="showPin1 ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                </button>
+              </div>
             </div>
             <div class="form-group form-full">
               <label>{{ $t('staff.confirmPin') }}</label>
-              <input v-model="pinForm.pin_confirmation" type="password" class="input pin-input" inputmode="numeric"
-                maxlength="4" autocomplete="off" :placeholder="$t('staff.pinPlaceholder')" />
+              <div class="password-input-wrap">
+                <input
+                  v-model="pinForm.pin_confirmation"
+                  :type="showPin2 ? 'text' : 'password'"
+                  class="input pin-input"
+                  inputmode="numeric"
+                  maxlength="4"
+                  autocomplete="off"
+                  :placeholder="$t('staff.pinPlaceholder')"
+                />
+                <button type="button" class="pw-toggle" :aria-label="$t('staff.togglePinVisibility')" @click="showPin2 = !showPin2">
+                  <i :class="showPin2 ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                </button>
+              </div>
             </div>
           </div>
+
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="closePinModal">{{ $t('common.cancel') }}</button>
+            <button type="button" class="btn btn-secondary" @click="closePinModal">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="pinSaving">
-              <i class="fas fa-check"></i> {{ pinSaving ? $t('common.saving') : $t('staff.savePin') }}
+              <i class="fas fa-check"></i>
+              {{ pinSaving ? $t('common.saving') : $t('staff.savePin') }}
             </button>
           </div>
         </form>
@@ -302,7 +501,10 @@ import { useAuthStore } from '@/stores/auth'
 import { userApi } from '@/api'
 import PhoneInput from '@/components/PhoneInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import TableExportButton from '@/components/TableExportButton.vue'
+import { collectAllRows } from '@/utils/export'
 import { normalizePhoneNumber } from '@/utils/phone'
+import { isOnline } from '@/composables/usePresence'
 
 const { t } = useI18n()
 
@@ -342,11 +544,14 @@ const POSITIONS = [
 
 // Translated option lists for the department, position, status and flag dropdowns.
 const departmentOptions = computed(() =>
-  DEPARTMENTS.map((d) => ({ value: d, label: t(`common.departments.${d}`) })),
+  DEPARTMENTS.map((department) => ({
+    value: department,
+    label: t(`common.departments.${department}`),
+  })),
 )
 
 const positionOptions = computed(() =>
-  POSITIONS.map((p) => ({ value: p, label: p.replace('_', ' ') })),
+  POSITIONS.map((position) => ({ value: position, label: position.replace('_', ' ') })),
 )
 
 const staffStatusOptions = computed(() => [
@@ -372,7 +577,14 @@ const isActiveOptions = computed(() => [
 // List state: staff rows, pagination, filters and feedback flags.
 const users = ref([])
 const page = ref(1)
-const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
+const meta = ref({
+  total: 0,
+  per_page: 15,
+  current_page: 1,
+  last_page: 1,
+  prev_page_url: null,
+  next_page_url: null,
+})
 const filters = reactive({ role: '', department: '', search: '', is_active: '' })
 const loading = ref(false)
 const error = ref('')
@@ -396,6 +608,12 @@ const pinUser = ref(null)
 const pinSaving = ref(false)
 const pinError = ref('')
 const pinForm = reactive({ pin: '', pin_confirmation: '' })
+// PIN source mode: 'random' (default) auto-generates the PIN, 'manual' lets the
+// admin type it. showPin1/2 are the manual fields' eye toggles.
+const pinMode = ref('random')
+const showPin1 = ref(false)
+const showPin2 = ref(false)
+const pinCopied = ref(false)
 
 const form = reactive({
   first_name: '',
@@ -439,30 +657,36 @@ function resetForm() {
 
 /**
  * Returns the translated label for a role code.
- * @param {string} v - The user role code.
+ * @param {string} value - The user role code.
  * @returns {string} The role label, or the raw code when unknown.
  */
-function roleLabel(v) {
-  return ROLES.find((r) => r.value === v)?.label || v
+function roleLabel(value) {
+  return ROLES.find((role) => role.value === value)?.label || value
 }
 
 /**
  * Maps a role code to the CSS class used for its badge colour.
- * @param {string} v - The user role code.
+ * @param {string} value - The user role code.
  * @returns {string} The badge CSS class.
  */
-function roleBadge(v) {
-  const map = { hotel_admin: 'badge-red', manager: 'badge-blue', accountant: 'badge-blue', receptionist: 'badge-green', staff: 'badge-gray' }
-  return map[v] || 'badge-yellow'
+function roleBadge(value) {
+  const map = {
+    hotel_admin: 'badge-red',
+    manager: 'badge-blue',
+    accountant: 'badge-blue',
+    receptionist: 'badge-green',
+    staff: 'badge-gray',
+  }
+  return map[value] || 'badge-yellow'
 }
 
 /**
  * Formats an ISO date-time string for display, truncating to minutes.
- * @param {string} d - The ISO date-time string (e.g. a last-login timestamp).
+ * @param {string} date - The ISO date-time string (e.g. a last-login timestamp).
  * @returns {string} The formatted value, or the 'never' label when absent.
  */
-function formatDate(d) {
-  return d ? String(d).slice(0, 16).replace('T', ' ') : t('common.never')
+function formatDate(date) {
+  return date ? String(date).slice(0, 16).replace('T', ' ') : t('common.never')
 }
 
 /**
@@ -488,25 +712,25 @@ function attachmentUrl(att) {
 
 /**
  * Returns true when the row is the currently logged-in user.
- * @param {Object} u - The staff row.
+ * @param {Object} user - The staff row.
  * @returns {boolean} Whether the row represents the current user.
  */
-function isSelf(u) {
-  return u.user_id === authStore.user?.user_id
+function isSelf(user) {
+  return user.user_id === authStore.user?.user_id
 }
 
 /** The hotel admin only manages the manager; the manager manages regular staff. */
 const assignableRoles = computed(() => {
   if (authStore.isSuperadmin) return ROLES
-  if (authStore.isHotelAdmin) return ROLES.filter((r) => r.value === 'manager')
-  return ROLES.filter((r) => !['superadmin', 'hotel_admin', 'manager'].includes(r.value))
+  if (authStore.isHotelAdmin) return ROLES.filter((role) => role.value === 'manager')
+  return ROLES.filter((role) => !['superadmin', 'hotel_admin', 'manager'].includes(role.value))
 })
 
 /** A manager can edit or deactivate regular staff but not peers or admins. */
-function canEdit(u) {
+function canEdit(user) {
   if (authStore.isSuperadmin) return true
-  if (authStore.isHotelAdmin) return u.user_role === 'manager'
-  return !['superadmin', 'hotel_admin', 'manager'].includes(u.user_role)
+  if (authStore.isHotelAdmin) return user.user_role === 'manager'
+  return !['superadmin', 'hotel_admin', 'manager'].includes(user.user_role)
 }
 
 /** Fetches the current page of staff, honouring the active filters. */
@@ -531,12 +755,25 @@ async function load() {
   }
 }
 
+function loadAllStaff() {
+  return collectAllRows((page, perPage) =>
+    userApi.index({
+      role: filters.role,
+      department: filters.department,
+      search: filters.search,
+      is_active: filters.is_active || undefined,
+      page,
+      per_page: perPage,
+    }),
+  )
+}
+
 /**
  * Moves to the given page and reloads the list.
- * @param {number} p - The 1-based page number.
+ * @param {number} page - The 1-based page number.
  */
-function goPage(p) {
-  page.value = p
+function goPage(page) {
+  page.value = page
   load()
 }
 
@@ -558,10 +795,10 @@ function triggerSearch() {
 
 /**
  * Stores the picked profile picture and shows a local preview of it.
- * @param {Event} e - The file input change event.
+ * @param {Event} event - The file input change event.
  */
-function onProfilePicture(e) {
-  const file = e.target.files?.[0]
+function onProfilePicture(event) {
+  const file = event.target.files?.[0]
   form.profile_picture = file || null
   if (file) {
     form.picture_preview = URL.createObjectURL(file)
@@ -570,10 +807,10 @@ function onProfilePicture(e) {
 
 /**
  * Stores the attachment file picked for the next upload.
- * @param {Event} e - The file input change event.
+ * @param {Event} event - The file input change event.
  */
-function onAttachmentFile(e) {
-  newAttachmentFile.value = e.target.files?.[0] || null
+function onAttachmentFile(event) {
+  newAttachmentFile.value = event.target.files?.[0] || null
 }
 
 /** Opens the staff modal in create mode with a blank form. */
@@ -588,28 +825,28 @@ function openCreate() {
 
 /**
  * Opens the staff modal in edit mode, copying the user's data into the form.
- * @param {Object} u - The staff row being edited.
+ * @param {Object} user - The staff row being edited.
  */
-function openEdit(u) {
+function openEdit(user) {
   resetForm()
   modalError.value = ''
   invitation.value = null
   editing.value = true
-  editingId.value = u.user_id
-  form.first_name = u.first_name || ''
-  form.last_name = u.last_name || ''
-  form.email = u.email
-  form.phone = u.phone || ''
-  form.country_code = u.country_code || 'TZ'
-  form.user_role = u.user_role
-  form.department = u.department
-  form.position = u.position || ''
-  form.id_type = u.id_type || ''
-  form.id_number = u.id_number || ''
-  form.is_sub_manager = !!u.is_sub_manager
-  form.is_active = !!u.is_active
-  form.picture_preview = u.profile_picture || ''
-  attachments.value = u.attachments || []
+  editingId.value = user.user_id
+  form.first_name = user.first_name || ''
+  form.last_name = user.last_name || ''
+  form.email = user.email
+  form.phone = user.phone || ''
+  form.country_code = user.country_code || 'TZ'
+  form.user_role = user.user_role
+  form.department = user.department
+  form.position = user.position || ''
+  form.id_type = user.id_type || ''
+  form.id_number = user.id_number || ''
+  form.is_sub_manager = !!user.is_sub_manager
+  form.is_active = !!user.is_active
+  form.picture_preview = user.profile_picture || ''
+  attachments.value = user.attachments || []
   showModal.value = true
 }
 
@@ -619,14 +856,73 @@ function closeModal() {
 }
 
 /**
- * Opens the set-PIN modal for a staff row with a blank PIN pair.
- * @param {Object} u - The staff row whose login PIN is being set.
+ * Generates a fresh random 4-digit PIN (leading zero allowed) and pre-fills
+ * both confirmation fields so the modal is always save-ready in random mode.
  */
-function openPinModal(u) {
-  pinUser.value = u
-  pinForm.pin = ''
-  pinForm.pin_confirmation = ''
+function generatePin() {
+  let pin = ''
+  for (let i = 0; i < 4; i++) pin += Math.floor(Math.random() * 10)
+  pinForm.pin = pin
+  pinForm.pin_confirmation = pin
+  return pin
+}
+
+/** Switches between auto-generate and manual PIN entry. */
+function switchPinMode(mode) {
+  pinMode.value = mode
+  if (mode === 'random') generatePin()
+  else {
+    pinForm.pin = ''
+    pinForm.pin_confirmation = ''
+  }
+}
+
+/** Re-rolls the random PIN. */
+function regeneratePin() {
   pinError.value = ''
+  pinCopied.value = false
+  generatePin()
+}
+
+/**
+ * Copies the generated PIN to the clipboard (with a legacy fallback) and
+ * shows a brief confirmation.
+ */
+async function copyPin() {
+  const pin = pinForm.pin
+  try {
+    await navigator.clipboard.writeText(pin)
+  } catch {
+    const textarea = document.createElement('textarea')
+    textarea.value = pin
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.select()
+    try {
+      document.execCommand('copy')
+    } finally {
+      document.body.removeChild(textarea)
+    }
+  }
+  pinCopied.value = true
+  setTimeout(() => {
+    pinCopied.value = false
+  }, 1500)
+}
+
+/**
+ * Opens the set-PIN modal for a staff row. Defaults to auto-generating a PIN.
+ * @param {Object} user - The staff row whose login PIN is being set.
+ */
+function openPinModal(user) {
+  pinUser.value = user
+  pinMode.value = 'random'
+  showPin1.value = false
+  showPin2.value = false
+  pinCopied.value = false
+  pinError.value = ''
+  generatePin()
   showPinModal.value = true
 }
 
@@ -657,7 +953,10 @@ async function savePin() {
       pin: pinForm.pin,
       pin_confirmation: pinForm.pin_confirmation,
     })
-    success.value = res.data.message || t('staff.pinSet', { name: pinUser.value.full_name })
+    success.value =
+      pinMode.value === 'random'
+        ? t('staff.pinSetWithPin', { name: pinUser.value.full_name, pin: pinForm.pin })
+        : (res.data.message || t('staff.pinSet', { name: pinUser.value.full_name }))
     showPinModal.value = false
   } catch (err) {
     pinError.value = flattenError(err)
@@ -743,7 +1042,9 @@ async function removeAttachment(att) {
   modalError.value = ''
   try {
     await userApi.removeAttachment(editingId.value, att.staff_attachment_id)
-    attachments.value = attachments.value.filter((a) => a.staff_attachment_id !== att.staff_attachment_id)
+    attachments.value = attachments.value.filter(
+      (attachment) => attachment.staff_attachment_id !== att.staff_attachment_id,
+    )
     success.value = t('staff.attachmentDeleted')
   } catch (err) {
     modalError.value = flattenError(err)
@@ -752,16 +1053,16 @@ async function removeAttachment(att) {
 
 /**
  * Runs a staff lifecycle action with an optional confirmation, then reloads.
- * @param {Object} u - The staff row to act on.
+ * @param {Object} user - The staff row to act on.
  * @param {Function} fn - The userApi action (invite, activate, destroy).
  * @param {string} message - Fallback success message.
  * @param {string} [confirmMsg] - When set, the action requires confirmation first.
  */
-async function runAction(u, fn, message, confirmMsg) {
+async function runAction(user, fn, message, confirmMsg) {
   if (confirmMsg && !window.confirm(confirmMsg)) return
   error.value = ''
   try {
-    const res = await fn(u.user_id)
+    const res = await fn(user.user_id)
     success.value = res.data.message || message
     if (res.data.invitation) invitation.value = res.data.invitation
     await load()
@@ -771,9 +1072,21 @@ async function runAction(u, fn, message, confirmMsg) {
 }
 
 // Per-row lifecycle actions, all funnelled through the shared runAction helper.
-const invite = (u) => runAction(u, userApi.invite, t('staff.invitationSent', { email: u.email, password: u.full_name.toUpperCase() }))
-const activate = (u) => runAction(u, userApi.activate, t('staff.activated', { name: u.full_name }))
-const deactivate = (u) => runAction(u, userApi.destroy, t('staff.deactivated', { name: u.full_name }), t('staff.deactivateConfirm', { name: u.full_name }))
+const invite = (user) =>
+  runAction(
+    user,
+    userApi.invite,
+    t('staff.invitationSent', { email: user.email, password: user.full_name.toUpperCase() }),
+  )
+const activate = (user) =>
+  runAction(user, userApi.activate, t('staff.activated', { name: user.full_name }))
+const deactivate = (user) =>
+  runAction(
+    user,
+    userApi.destroy,
+    t('staff.deactivated', { name: user.full_name }),
+    t('staff.deactivateConfirm', { name: user.full_name }),
+  )
 
 /**
  * Flattens Laravel-style validation errors into a single readable message.
@@ -782,7 +1095,9 @@ const deactivate = (u) => runAction(u, userApi.destroy, t('staff.deactivated', {
  */
 function flattenError(err) {
   const messages = err.response?.data?.errors
-  return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')
+  return messages
+    ? Object.values(messages).flat().join(' ')
+    : err.response?.data?.message || t('common.actionFailed')
 }
 
 onMounted(load)
@@ -830,7 +1145,7 @@ onMounted(load)
 }
 
 .muted {
-  color: #888;
+  color: #757575;
   font-size: 12px;
   margin-top: 2px;
 }
@@ -869,11 +1184,43 @@ onMounted(load)
 
 .avatar-icon {
   background: #eef4fb;
-  color: #005EB8;
+  color: #005eb8;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
+}
+
+.avatar-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.online-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #2ecc40;
+  border: 2px solid #fff;
+}
+
+.online-chip {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #2ecc40;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.online-bullet {
+  font-size: 8px;
+  vertical-align: middle;
 }
 
 code {
@@ -898,7 +1245,7 @@ code {
 }
 
 .branch-info i {
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .branch-info .muted {
@@ -943,6 +1290,122 @@ code {
   font-size: 18px;
 }
 
+/* Auto-generate vs manual mode switch */
+.pin-mode-switch {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.pin-mode-option {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid #d9dee5;
+  border-radius: 8px;
+  background: #f5f6f8;
+  color: #555;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.pin-mode-option:hover {
+  border-color: #a7c3e8;
+  color: #333;
+}
+
+.pin-mode-option.active {
+  background: #1b4f9c;
+  border-color: #1b4f9c;
+  color: #fff;
+}
+
+/* The generated PIN readout with regenerate/copy actions */
+.pin-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px dashed #1b4f9c;
+  border-radius: 10px;
+  background: #f0f5ff;
+}
+
+.pin-display-value {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 10px;
+  color: #1b4f9c;
+}
+
+.pin-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-icon {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d9dee5;
+  border-radius: 8px;
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+}
+
+.btn-icon:hover {
+  color: #1b4f9c;
+  border-color: #1b4f9c;
+}
+
+.pin-copied-hint {
+  margin-top: 6px;
+  color: #1a7f37;
+  font-size: 13px;
+}
+
+.pin-share-hint {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+/* Eye toggles for the manual PIN fields */
+.password-input-wrap {
+  position: relative;
+}
+
+.password-input-wrap .input {
+  padding-right: 44px;
+}
+
+.pw-toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pw-toggle:hover {
+  color: #333;
+}
+
 .modal-head {
   display: flex;
   justify-content: space-between;
@@ -959,14 +1422,14 @@ code {
 }
 
 .modal-head h2 i {
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .modal-close {
   background: none;
   border: none;
   font-size: 18px;
-  color: #999;
+  color: #757575;
   cursor: pointer;
   padding: 4px;
 }
@@ -1002,7 +1465,7 @@ code {
 
 .picture-placeholder {
   background: #eef4fb;
-  color: #005EB8;
+  color: #005eb8;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1030,7 +1493,7 @@ code {
 }
 
 .attachment-item a {
-  color: #005EB8;
+  color: #005eb8;
   font-weight: 600;
   text-decoration: none;
   flex: 1;

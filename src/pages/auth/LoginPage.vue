@@ -14,7 +14,10 @@
     <div class="auth-card">
       <!-- Brand header: hotel logo and localized subtitle -->
       <div class="auth-header">
-        <span class="logo-icon"><i class="fas fa-hotel"></i></span>
+        <span class="logo-wrap">
+          <span class="logo-icon"><i class="fas fa-hotel"></i></span>
+          <HolidayDecor v-if="holiday" :holiday="holiday" />
+        </span>
         <h1>MRK Hotels</h1>
         <p>{{ $t('auth.signInSubtitle') }}</p>
       </div>
@@ -106,6 +109,13 @@
       <!-- Link back to the public landing page -->
       <p class="auth-link home-link"><router-link to="/"><i class="fas fa-arrow-left"></i> {{ $t('common.backToHome')
       }}</router-link></p>
+
+      <!-- Small app footer: version, short description and copyright -->
+      <footer class="auth-footer">
+        <p class="home-version">{{ $t('common.version') }} {{ appVersion }}</p>
+        <p class="home-version">{{ $t('auth.appInfo') }}</p>
+        <p class="home-version">{{ $t('footer.copyright', { year }) }}</p>
+      </footer>
     </div>
   </div>
 </template>
@@ -114,14 +124,22 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { dashboardMap } from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
+import { useHoliday } from '@/composables/useHoliday'
+import HolidayDecor from '@/components/HolidayDecor.vue'
+import versionData from '@/version.json'
 
 const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const sessionStore = useSessionStore()
+const appVersion = versionData.version
+const year = new Date().getFullYear()
+
+const { holiday } = useHoliday()
 
 // Login form model, per-field validation errors, server errors and UI flags.
 const form = ref({ email: '', password: '' })
@@ -229,7 +247,7 @@ async function handleLogin() {
     } else if (authStore.user?.user_role === 'owner') {
       router.push('/owner')
     } else {
-      router.push('/app')
+      router.push(dashboardMap[authStore.user?.user_role] || '/app')
     }
     if (data?.password_rotated) {
       showToast(`${t('auth.passwordRotated')} ${data.default_password}`)
@@ -317,7 +335,7 @@ async function submitPin() {
     } else if (authStore.user?.user_role === 'owner') {
       router.push('/owner')
     } else {
-      router.push('/app')
+      router.push(dashboardMap[authStore.user?.user_role] || '/app')
     }
   } catch (e) {
     if (e.response?.data?.message) {
@@ -355,6 +373,11 @@ async function submitPin() {
 .auth-header {
   text-align: center;
   margin-bottom: 28px;
+}
+
+.logo-wrap {
+  position: relative;
+  display: inline-block;
 }
 
 .auth-header .logo-icon {
@@ -405,6 +428,18 @@ async function submitPin() {
   margin-top: 20px;
   padding-top: 16px;
   border-top: 1px solid #f0f0f0;
+}
+
+.home-version {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: #64748b;
+}
+
+.auth-footer {
+  margin-top: 14px;
 }
 
 .form-group {

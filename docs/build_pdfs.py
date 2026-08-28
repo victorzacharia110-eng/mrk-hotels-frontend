@@ -6,12 +6,21 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 
+# Code version is read from ../VERSION so the PDFs always match the repo.
+_VERSION_FILE = HERE.parent / "VERSION"
+try:
+    VERSION = "v" + _VERSION_FILE.read_text(encoding="utf-8").strip()
+except OSError:
+    VERSION = "v0.0.0"
+DATE_EN = "15 August 2026"
+DATE_SW = "15 Agosti 2026"
+
 CSS = """
 @page {
   size: A4;
   margin: 20mm 16mm 18mm 16mm;
   @top-center {
-    content: "MRK Hotels — Documentation · {edition} · {year}";
+    content: "MRK Hotels — Documentation · {version} · {edition} · {date}";
     font-size: 8pt; color: #94a3b8;
   }
   @bottom-center {
@@ -110,20 +119,24 @@ blockquote {
 """
 
 
-def build(md_path, out_name, title, edition="Edition 1.0", year="2026"):
-    print(f"building {out_name} (edition: {edition} {year})...", flush=True)
+def build(md_path, out_name, title, edition="Edition 1.0", date=DATE_EN, version=VERSION):
+    print(f"building {out_name} (version: {version} · edition: {edition} · {date})...", flush=True)
     text = Path(md_path).read_text(encoding="utf-8")
     html_body = markdown.markdown(
         text, extensions=["tables", "fenced_code", "toc"]
     )
-    css = CSS.replace("{edition}", edition).replace("{year}", year)
+    css = (
+        CSS.replace("{version}", version)
+        .replace("{edition}", edition)
+        .replace("{date}", date)
+    )
     cover = (
         '<section class="cover">'
         '<div class="logo"><img src="MRK_logo.png" alt="MRK Hotels"></div>'
         f'<div class="kicker">MRK Hotels</div>'
         f'<h1>{title}</h1>'
         '<div class="rule"></div>'
-        f'<p class="edition">{edition} &middot; {year}</p>'
+        f'<p class="edition">{version} &middot; {edition} &middot; {date}</p>'
         "</section>"
     )
     html = (
@@ -142,6 +155,6 @@ def build(md_path, out_name, title, edition="Edition 1.0", year="2026"):
 
 
 build(HERE / "user-manual-en.md", "MRK_Hotels_User_Manual_EN.pdf", "User Manual", "Edition 1.0")
-build(HERE / "user-manual-sw.md", "MRK_Hotels_User_Manual_SW.pdf", "Mwongozo wa Mtumiaji", "Toleo la 1.0")
+build(HERE / "user-manual-sw.md", "MRK_Hotels_User_Manual_SW.pdf", "Mwongozo wa Mtumiaji", "Toleo la 1.0", date=DATE_SW)
 build(HERE / "developer-docs.md", "MRK_Hotels_Developer_Documentation.pdf", "Developer Documentation", "Edition 1.0")
 print("All PDFs generated.")

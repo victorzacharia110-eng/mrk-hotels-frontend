@@ -11,10 +11,13 @@
         <p class="muted">{{ $t('suppliers.subtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="load"><i class="fas fa-rotate"></i> {{ $t('suppliers.refresh')
-          }}</button>
-        <button v-if="canOperate" class="btn btn-primary" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('suppliers.newSupplier')
-          }}</button>
+        <button class="btn btn-secondary" @click="load">
+          <i class="fas fa-rotate"></i> {{ $t('suppliers.refresh') }}
+        </button>
+        <button v-if="canOperate" class="btn btn-primary" @click="openCreate">
+          <i class="fas fa-plus"></i> {{ $t('suppliers.newSupplier') }}
+        </button>
+        <TableExportButton filename="suppliers" :load-all="loadAllSuppliers" />
       </div>
     </div>
 
@@ -26,20 +29,36 @@
       <div class="filter-grid">
         <div class="form-group">
           <label>{{ $t('suppliers.status') }}</label>
-          <SearchableSelect v-model="filters.status" :options="supplierStatusOptions" :empty-label="$t('common.all')" @change="load" />
+          <SearchableSelect
+            v-model="filters.status"
+            :options="supplierStatusOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('suppliers.category') }}</label>
-          <SearchableSelect v-model="filters.category" :options="categoryOptions" :empty-label="$t('common.all')" @change="load" />
+          <SearchableSelect
+            v-model="filters.category"
+            :options="categoryOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('common.search') }}</label>
-          <input v-model="filters.search" type="text" class="input" :placeholder="$t('suppliers.namePlaceholder')"
-            @input="triggerSearch" />
+          <input
+            v-model="filters.search"
+            type="text"
+            class="input"
+            :placeholder="$t('suppliers.namePlaceholder')"
+            @input="triggerSearch"
+          />
         </div>
         <div class="filter-actions">
-          <button class="btn btn-secondary btn-sm" @click="clearFilters"><i class="fas fa-filter-circle-xmark"></i> {{
-            $t('common.clear') }}</button>
+          <button class="btn btn-secondary btn-sm" @click="clearFilters">
+            <i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}
+          </button>
         </div>
       </div>
     </div>
@@ -49,60 +68,83 @@
     <!-- Supplier table with per-row edit/delete actions -->
     <div v-else class="table-scroll">
       <table class="table">
-      <thead>
-        <tr>
-          <th>{{ $t('suppliers.tableSupplier') }}</th>
-          <th>{{ $t('suppliers.tableContact') }}</th>
-          <th>{{ $t('suppliers.category') }}</th>
-          <th>{{ $t('suppliers.tableTerms') }}</th>
-          <th>{{ $t('suppliers.tableBalance') }}</th>
-          <th>{{ $t('suppliers.tableRating') }}</th>
-          <th>{{ $t('suppliers.status') }}</th>
-          <th>{{ $t('common.actions') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="s in suppliers" :key="s.supplier_id">
-          <td><strong>{{ s.supplier_name }}</strong>
-            <div class="muted">{{ s.address || '-' }}</div>
-          </td>
-          <td>
-            <div>{{ s.contact_person || '-' }}</div>
-            <div class="muted">{{ s.email || s.phone || '-' }}</div>
-          </td>
-          <td class="capitalize">{{ s.category.replace('_', ' ') }}</td>
-          <td>{{ s.payment_terms || '-' }}</td>
-          <td><span class="price">TZS {{ Number(s.current_balance || 0).toLocaleString() }}</span></td>
-          <td>{{ stars(s.rating) }}</td>
-          <td><span class="badge" :class="statusBadge(s.status)">{{ s.status }}</span></td>
-          <td>
-            <div class="actions">
-              <button v-if="canOperate" class="btn btn-sm btn-secondary" @click="openEdit(s)"><i class="fas fa-pen"></i></button>
-              <button v-if="canOperate" class="btn btn-sm btn-danger" @click="remove(s)"><i class="fas fa-trash"></i></button>
-            </div>
-          </td>
-        </tr>
-        <tr v-if="!suppliers.length && !loading">
-          <td colspan="8" class="muted">{{ $t('suppliers.empty') }}</td>
-        </tr>
-      </tbody>
-    </table>
+        <thead>
+          <tr>
+            <th scope="col">{{ $t('suppliers.tableSupplier') }}</th>
+            <th scope="col">{{ $t('suppliers.tableContact') }}</th>
+            <th scope="col">{{ $t('suppliers.category') }}</th>
+            <th scope="col">{{ $t('suppliers.tableTerms') }}</th>
+            <th scope="col">{{ $t('suppliers.tableBalance') }}</th>
+            <th scope="col">{{ $t('suppliers.tableRating') }}</th>
+            <th scope="col">{{ $t('suppliers.status') }}</th>
+            <th scope="col">{{ $t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="s in suppliers" :key="s.supplier_id">
+            <td>
+              <strong>{{ s.supplier_name }}</strong>
+              <div class="muted">{{ s.address || '-' }}</div>
+            </td>
+            <td>
+              <div>{{ s.contact_person || '-' }}</div>
+              <div class="muted">{{ s.email || s.phone || '-' }}</div>
+            </td>
+            <td class="capitalize">{{ s.category.replace('_', ' ') }}</td>
+            <td>{{ s.payment_terms || '-' }}</td>
+            <td>
+              <span class="price">TZS {{ Number(s.current_balance || 0).toLocaleString() }}</span>
+            </td>
+            <td>{{ stars(s.rating) }}</td>
+            <td>
+              <span class="badge" :class="statusBadge(s.status)">{{ s.status }}</span>
+            </td>
+            <td>
+              <div class="actions">
+                <button v-if="canOperate" class="btn btn-sm btn-secondary" @click="openEdit(s)">
+                  <i class="fas fa-pen"></i>
+                </button>
+                <button v-if="canOperate" class="btn btn-sm btn-danger" @click="remove(s)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!suppliers.length && !loading">
+            <td colspan="8" class="muted">{{ $t('suppliers.empty') }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Pagination controls, only shown when there is more than one page -->
     <div v-if="meta.total > meta.per_page" class="pagination">
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
-        $t('common.previous') }}</button>
-      <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.next_page_url" @click="goPage(meta.current_page + 1)">{{
-        $t('common.next') }}</button>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.prev_page_url"
+        @click="goPage(meta.current_page - 1)"
+      >
+        {{ $t('common.previous') }}
+      </button>
+      <span class="muted">{{
+        $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page })
+      }}</span>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.next_page_url"
+        @click="goPage(meta.current_page + 1)"
+      >
+        {{ $t('common.next') }}
+      </button>
     </div>
 
     <!-- Create/edit supplier modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal">
         <div class="modal-head">
-          <h2><i class="fas fa-truck"></i> {{ editing ? $t('suppliers.editSupplier') : $t('suppliers.newSupplier') }}
+          <h2>
+            <i class="fas fa-truck"></i>
+            {{ editing ? $t('suppliers.editSupplier') : $t('suppliers.newSupplier') }}
           </h2>
           <button class="modal-close" @click="closeModal"><i class="fas fa-xmark"></i></button>
         </div>
@@ -133,16 +175,33 @@
             </div>
             <div class="form-group">
               <label>{{ $t('suppliers.paymentTerms') }}</label>
-              <input v-model="form.payment_terms" type="text" class="input"
-                :placeholder="$t('suppliers.paymentTermsPlaceholder')" />
+              <input
+                v-model="form.payment_terms"
+                type="text"
+                class="input"
+                :placeholder="$t('suppliers.paymentTermsPlaceholder')"
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('suppliers.creditLimit') }}</label>
-              <input v-model.number="form.credit_limit" type="number" min="0" step="0.01" class="input" />
+              <input
+                v-model.number="form.credit_limit"
+                type="number"
+                min="0"
+                step="0.01"
+                class="input"
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('suppliers.rating') }}</label>
-              <input v-model.number="form.rating" type="number" min="0" max="5" step="0.5" class="input" />
+              <input
+                v-model.number="form.rating"
+                type="number"
+                min="0"
+                max="5"
+                step="0.5"
+                class="input"
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('suppliers.status') }}</label>
@@ -158,9 +217,12 @@
             </div>
           </div>
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="closeModal">{{ $t('common.cancel') }}</button>
+            <button type="button" class="btn btn-secondary" @click="closeModal">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="saving">
-              <i class="fas fa-check"></i> {{ saving ? $t('common.saving') : $t('suppliers.saveSupplier') }}
+              <i class="fas fa-check"></i>
+              {{ saving ? $t('common.saving') : $t('suppliers.saveSupplier') }}
             </button>
           </div>
         </form>
@@ -176,6 +238,8 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import PhoneInput from '@/components/PhoneInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import TableExportButton from '@/components/TableExportButton.vue'
+import { collectAllRows } from '@/utils/export'
 import { normalizePhoneNumber } from '@/utils/phone'
 
 const { t } = useI18n()
@@ -185,7 +249,14 @@ const canOperate = computed(() => authStore.canOperate)
 // List state: supplier rows, pagination, filters and feedback flags.
 const suppliers = ref([])
 const page = ref(1)
-const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
+const meta = ref({
+  total: 0,
+  per_page: 15,
+  current_page: 1,
+  last_page: 1,
+  prev_page_url: null,
+  next_page_url: null,
+})
 const filters = reactive({ status: '', category: '', search: '' })
 const loading = ref(false)
 const error = ref('')
@@ -231,12 +302,12 @@ const categoryOptions = computed(() => [
 
 /**
  * Maps a supplier status to the CSS class used for its badge colour.
- * @param {string} s - The supplier status (active, inactive, blocked).
+ * @param {string} status - The supplier status (active, inactive, blocked).
  * @returns {string} The badge CSS class.
  */
-function statusBadge(s) {
+function statusBadge(status) {
   const map = { active: 'badge-green', inactive: 'badge-gray', blocked: 'badge-red' }
-  return map[s] || 'badge-gray'
+  return map[status] || 'badge-gray'
 }
 
 /**
@@ -272,12 +343,24 @@ async function load() {
   }
 }
 
+function loadAllSuppliers() {
+  return collectAllRows((page, perPage) =>
+    supplierApi.index({
+      status: filters.status,
+      category: filters.category,
+      search: filters.search,
+      page,
+      per_page: perPage,
+    }),
+  )
+}
+
 /**
  * Moves to the given page and reloads the list.
- * @param {number} p - The 1-based page number.
+ * @param {number} page - The 1-based page number.
  */
-function goPage(p) {
-  page.value = p
+function goPage(page) {
+  page.value = page
   load()
 }
 
@@ -323,24 +406,24 @@ function openCreate() {
 
 /**
  * Opens the modal in edit mode, copying the supplier's data into the form.
- * @param {Object} s - The supplier row being edited.
+ * @param {Object} supplier - The supplier row being edited.
  */
-function openEdit(s) {
+function openEdit(supplier) {
   modalError.value = ''
   editing.value = true
-  editingId.value = s.supplier_id
-  form.supplier_name = s.supplier_name
-  form.contact_person = s.contact_person || ''
-  form.email = s.email || ''
-  form.phone = s.phone || ''
+  editingId.value = supplier.supplier_id
+  form.supplier_name = supplier.supplier_name
+  form.contact_person = supplier.contact_person || ''
+  form.email = supplier.email || ''
+  form.phone = supplier.phone || ''
   form.country_code = 'TZ'
-  form.address = s.address || ''
-  form.category = s.category
-  form.payment_terms = s.payment_terms || ''
-  form.credit_limit = s.credit_limit
-  form.rating = s.rating
-  form.status = s.status
-  form.notes = s.notes || ''
+  form.address = supplier.address || ''
+  form.category = supplier.category
+  form.payment_terms = supplier.payment_terms || ''
+  form.credit_limit = supplier.credit_limit
+  form.rating = supplier.rating
+  form.status = supplier.status
+  form.notes = supplier.notes || ''
   showModal.value = true
 }
 
@@ -355,10 +438,16 @@ async function save() {
   saving.value = true
   try {
     if (editing.value) {
-      await supplierApi.update(editingId.value, { ...form, phone: normalizePhoneNumber(form.phone, form.country_code || 'TZ') })
+      await supplierApi.update(editingId.value, {
+        ...form,
+        phone: normalizePhoneNumber(form.phone, form.country_code || 'TZ'),
+      })
       success.value = t('suppliers.updateSuccess')
     } else {
-      await supplierApi.store({ ...form, phone: normalizePhoneNumber(form.phone, form.country_code || 'TZ') })
+      await supplierApi.store({
+        ...form,
+        phone: normalizePhoneNumber(form.phone, form.country_code || 'TZ'),
+      })
       success.value = t('suppliers.createSuccess')
     }
     showModal.value = false
@@ -372,14 +461,14 @@ async function save() {
 
 /**
  * Deletes a supplier after a confirmation prompt.
- * @param {Object} s - The supplier row to delete.
+ * @param {Object} supplier - The supplier row to delete.
  */
-async function remove(s) {
-  if (!window.confirm(t('suppliers.deleteMessage', { name: s.supplier_name }))) return
+async function remove(supplier) {
+  if (!window.confirm(t('suppliers.deleteMessage', { name: supplier.supplier_name }))) return
   error.value = ''
   try {
-    await supplierApi.destroy(s.supplier_id)
-    success.value = t('suppliers.deleted', { name: s.supplier_name })
+    await supplierApi.destroy(supplier.supplier_id)
+    success.value = t('suppliers.deleted', { name: supplier.supplier_name })
     await load()
   } catch (err) {
     error.value = flattenError(err)
@@ -393,7 +482,9 @@ async function remove(s) {
  */
 function flattenError(err) {
   const messages = err.response?.data?.errors
-  return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')
+  return messages
+    ? Object.values(messages).flat().join(' ')
+    : err.response?.data?.message || t('common.actionFailed')
 }
 
 onMounted(load)
@@ -441,7 +532,7 @@ onMounted(load)
 }
 
 .muted {
-  color: #888;
+  color: #757575;
   font-size: 12px;
   margin-top: 2px;
 }
@@ -452,7 +543,7 @@ onMounted(load)
 
 .price {
   font-weight: 700;
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .actions {
@@ -507,14 +598,14 @@ onMounted(load)
 }
 
 .modal-head h2 i {
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .modal-close {
   background: none;
   border: none;
   font-size: 18px;
-  color: #999;
+  color: #757575;
   cursor: pointer;
   padding: 4px;
 }

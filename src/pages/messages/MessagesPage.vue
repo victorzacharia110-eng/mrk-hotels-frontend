@@ -19,14 +19,18 @@
         <p class="muted">{{ $t('messages.subtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="openWorkspace()"><i class="fas fa-briefcase"></i> {{
-          $t('messages.workspace') }}</button>
-        <button class="btn btn-secondary" @click="refreshAll"><i class="fas fa-rotate"></i> {{ $t('common.refresh')
-        }}</button>
-        <button class="btn btn-primary" @click="openNewMessage"><i class="fas fa-paper-plane"></i> {{
-          $t('messages.newMessage') }}</button>
-        <button class="btn btn-primary btn-group" @click="openNewGroup"><i class="fas fa-users"></i> {{
-          $t('messages.newGroup') }}</button>
+        <button class="btn btn-secondary" @click="openWorkspace()">
+          <i class="fas fa-briefcase"></i> {{ $t('messages.workspace') }}
+        </button>
+        <button class="btn btn-secondary" @click="refreshAll">
+          <i class="fas fa-rotate"></i> {{ $t('common.refresh') }}
+        </button>
+        <button class="btn btn-primary" @click="openNewMessage">
+          <i class="fas fa-paper-plane"></i> {{ $t('messages.newMessage') }}
+        </button>
+        <button class="btn btn-primary btn-group" @click="openNewGroup">
+          <i class="fas fa-users"></i> {{ $t('messages.newGroup') }}
+        </button>
       </div>
       <!-- Mobile: collapse the header actions into a dropdown -->
       <div class="head-actions-mobile">
@@ -70,7 +74,8 @@
               <strong>{{ $t('statuses.myStatus') }}</strong>
             </span>
             <span class="chat-item-sub">
-              <span class="muted chat-preview">{{ myStatusHas ? $t('statuses.viewHint') : $t('statuses.addStatusHint')
+              <span class="muted chat-preview">{{
+                myStatusHas ? $t('statuses.viewHint') : $t('statuses.addStatusHint')
               }}</span>
             </span>
           </span>
@@ -84,11 +89,18 @@
 
         <button v-for="chat in chats" :key="chat.kind + chat.id" class="chat-item"
           :class="{ active: chat.kind === activeKind && chat.id === activeId }" @click="openChat(chat)">
-          <span class="avatar"
-            :class="[chat.kind === 'group' ? 'avatar-group' : (chat.scope === 'global' ? 'avatar-global' : ''), avatarStatusClass(chat)]"
-            @click.stop="avatarStatusClass(chat) ? openUserStatus(chat.participant_id) : null">
+          <span class="avatar" :class="[
+            chat.kind === 'group'
+              ? 'avatar-group'
+              : chat.scope === 'global'
+                ? 'avatar-global'
+                : '',
+            avatarStatusClass(chat),
+          ]" @click.stop="avatarStatusClass(chat) ? openUserStatus(chat.participant_id) : null">
             <i v-if="chat.kind === 'group'" class="fas fa-users"></i>
             <template v-else>{{ initials(chat.name) }}</template>
+            <span v-if="chat.kind === 'direct' && isOnline(chat.participant_id)" class="online-dot"
+              :title="$t('messages.online')"></span>
           </span>
           <span class="chat-item-body">
             <span class="chat-item-top">
@@ -130,15 +142,27 @@
             <button class="btn btn-sm btn-secondary back-btn" @click="closeThread">
               <i class="fas fa-arrow-left"></i>
             </button>
-            <span class="avatar"
-              :class="[activeChat.kind === 'group' ? 'avatar-group' : (activeChat.scope === 'global' ? 'avatar-global' : ''), avatarStatusClass(activeChat)]"
-              @click="avatarStatusClass(activeChat) ? openUserStatus(activeChat.participant_id) : null">
+            <span class="avatar" :class="[
+              activeChat.kind === 'group'
+                ? 'avatar-group'
+                : activeChat.scope === 'global'
+                  ? 'avatar-global'
+                  : '',
+              avatarStatusClass(activeChat),
+            ]" @click="
+              avatarStatusClass(activeChat) ? openUserStatus(activeChat.participant_id) : null
+              ">
               <i v-if="activeChat.kind === 'group'" class="fas fa-users"></i>
               <template v-else>{{ initials(activeChat.name) }}</template>
             </span>
             <div class="chat-thread-who">
               <strong>{{ activeChat.name }}</strong>
               <div>
+                <span v-if="
+                  activeChat.kind === 'direct' && isOnline(activeChat.participant_id)
+                " class="badge badge-green chat-online">
+                  <i class="fas fa-circle"></i> {{ $t('messages.online') }}
+                </span>
                 <span class="badge" :class="activeChat.scope === 'global' ? 'badge-purple' : 'badge-blue'">
                   <i class="fas" :class="activeChat.scope === 'global' ? 'fa-globe' : 'fa-building'"></i>
                   {{ activeChat.scope === 'global' ? $t('messages.global') : $t('messages.hotel') }}
@@ -146,14 +170,17 @@
                 <span v-if="activeChat.kind === 'group'" class="muted">
                   {{ $t('messages.memberCount', { count: activeChat.member_count || 0 }) }}
                 </span>
-                <span v-else-if="activeChat.hotel_name" class="muted">{{ activeChat.hotel_name }}</span>
+                <span v-else-if="activeChat.hotel_name" class="muted">{{
+                  activeChat.hotel_name
+                }}</span>
               </div>
             </div>
             <!-- Thread actions: inline on desktop, collapsed into a dropdown on mobile -->
             <div class="thread-head-actions">
               <button v-for="tool in threadHeadTools" :key="tool.key" type="button"
-                class="btn btn-sm btn-secondary members-btn" :title="tool.label" @click="tool.handler">
-                <i class="fas" :class="tool.icon"></i>
+                class="btn btn-sm btn-secondary members-btn" :title="tool.label" @click="tool.handler"
+                :disabled="tool.busy">
+                <i class="fas" :class="tool.busy ? 'fa-spinner fa-spin' : tool.icon"></i>
                 <span v-if="tool.key === 'members'">{{ tool.label }}</span>
               </button>
             </div>
@@ -165,8 +192,8 @@
               </button>
               <div v-if="threadHeadMenuOpen" class="composer-tools-menu thread-head-menu" @click.stop>
                 <button v-for="tool in threadHeadTools" :key="tool.key" type="button" class="composer-tool-item"
-                  @click="threadHeadAction(tool)">
-                  <i class="fas" :class="tool.icon"></i>
+                  @click="threadHeadAction(tool)" :disabled="tool.busy">
+                  <i class="fas" :class="tool.busy ? 'fa-spinner fa-spin' : tool.icon"></i>
                   <span>{{ tool.label }}</span>
                 </button>
               </div>
@@ -177,11 +204,15 @@
 
           <!-- Message bubbles: text, media, view-once, polls, reactions, reply previews and read ticks -->
           <div v-else class="chat-messages">
-            <div v-if="!messages.length" class="chat-empty muted">{{ $t('messages.noMessages') }}</div>
+            <div v-if="!messages.length" class="chat-empty muted">
+              {{ $t('messages.noMessages') }}
+            </div>
             <div v-for="msg in messages" :key="msg.message_id || msg.group_message_id" class="bubble"
-              :id="'msg-' + (msg.message_id || msg.group_message_id)"
-              :class="[msg.sender_id === me.user_id ? 'mine' : 'theirs', msg.priority === 'urgent' ? 'urgent' : '', isStarred(msg) ? 'starred-bubble' : '']"
-              @contextmenu.prevent="openMsgMenu(msg, $event)">
+              :id="'msg-' + (msg.message_id || msg.group_message_id)" :class="[
+                msg.sender_id === me.user_id ? 'mine' : 'theirs',
+                msg.priority === 'urgent' ? 'urgent' : '',
+                isStarred(msg) ? 'starred-bubble' : '',
+              ]" @contextmenu.prevent="openMsgMenu(msg, $event)">
               <div v-if="msg.sender_id !== me.user_id && activeChat.kind === 'group'" class="bubble-sender">
                 {{ msg.sender?.full_name || '' }}
               </div>
@@ -204,17 +235,29 @@
                   <i class="fas fa-forward"></i> {{ $t('messages.forwarded') }}
                 </div>
                 <div v-if="msg.reply_to" class="reply-quote" @click.stop="scrollToMessage(msg)">
-                  <span v-if="msg.reply_to.sender_id === me.user_id" class="reply-quote-author">{{ $t('messages.you')
+                  <span v-if="msg.reply_to.sender_id === me.user_id" class="reply-quote-author">{{
+                    $t('messages.you')
                   }}</span>
-                  <span v-else class="reply-quote-author">{{ msg.reply_to.sender?.full_name ||
-                    $t('messages.unknownSender') }}</span>
-                  <span class="reply-quote-text">{{ msg.reply_to.body || $t('messages.attachment') }}</span>
+                  <span v-else class="reply-quote-author">{{
+                    msg.reply_to.sender?.full_name || $t('messages.unknownSender')
+                  }}</span>
+                  <span class="reply-quote-text">{{
+                    msg.reply_to.body || $t('messages.attachment')
+                  }}</span>
                 </div>
                 <div class="bubble-text">
-                  <button v-if="msg.view_once && !msg.media_url && !msg.viewed_at && msg.sender_id !== me.user_id"
-                    class="view-once-btn" :disabled="viewOnceLoading === msgId(msg)" @click="openViewOnce(msg)">
+                  <button v-if="
+                    msg.view_once &&
+                    !msg.media_url &&
+                    !msg.viewed_at &&
+                    msg.sender_id !== me.user_id
+                  " class="view-once-btn" :disabled="viewOnceLoading === msgId(msg)" @click="openViewOnce(msg)">
                     <i class="fas fa-eye"></i>
-                    {{ viewOnceLoading === msgId(msg) ? $t('common.loading') : $t('messages.viewOnceTap') }}
+                    {{
+                      viewOnceLoading === msgId(msg)
+                        ? $t('common.loading')
+                        : $t('messages.viewOnceTap')
+                    }}
                   </button>
                   <div v-else-if="msg.view_once && !msg.media_url && msg.viewed_at" class="view-once-open">
                     <i class="fas fa-check-circle"></i> {{ $t('messages.viewOnceOpened') }}
@@ -238,7 +281,7 @@
                   </span>
                   <div v-if="msg.translation && msg.translation !== msg.body" class="translation-box">
                     <i class="fas fa-language"></i> {{ msg.translation }}
-                    <span class="muted"> ({{ msg.translated_lang }})</span>
+                    <span class="muted"> ({{ langLabel(msg.translated_lang) }}<template v-if="msg.translation_provider === 'google'"> · Google</template>)</span>
                   </div>
                 </div>
                 <div v-if="msg.poll" class="bubble-poll">
@@ -261,9 +304,15 @@
                 </div>
               </template>
               <div class="bubble-meta">
-                <span>{{ msg.sender_id === me.user_id ? $t('messages.you') : (msg.sender?.full_name || '') }}</span>
+                <span>{{
+                  msg.sender_id === me.user_id ? $t('messages.you') : msg.sender?.full_name || ''
+                }}</span>
                 <span>·</span>
                 <span>{{ formatTime(msg.created_at) }}</span>
+                <span v-if="msg.disappears_at" class="disappear-chip" :title="$t('messages.disappearHint')">
+                  <i class="fas fa-hourglass-half"></i>
+                  {{ countdownTick >= 0 ? disappearCountdown(msg.disappears_at) : '' }}
+                </span>
                 <button v-if="translateLoading === (msg.message_id || msg.group_message_id)" class="bubble-translate"
                   disabled>
                   <i class="fas fa-language"></i>
@@ -313,8 +362,9 @@
                   <span>{{ formatFileSize(filePreview.size) }}</span>
                 </div>
               </div>
-              <label v-if="filePreview.type.startsWith('image/') || filePreview.type.startsWith('video/')"
-                class="view-once-toggle">
+              <label v-if="
+                filePreview.type.startsWith('image/') || filePreview.type.startsWith('video/')
+              " class="view-once-toggle">
                 <input v-model="fileViewOnce" type="checkbox" />
                 <i class="fas fa-eye"></i> {{ $t('messages.viewOnceSend') }}
               </label>
@@ -362,15 +412,27 @@
               <button type="submit" class="btn btn-primary composer-send"
                 :disabled="sending || (!draft.trim() && !isRecording)">
                 <i class="fas fa-paper-plane"></i>
-                <span class="composer-send-label">{{ sending ? $t('messages.sending') : $t('messages.send') }}</span>
+                <span class="composer-send-label">{{
+                  sending ? $t('messages.sending') : $t('messages.send')
+                }}</span>
               </button>
             </template>
 
             <!-- Emoji picker popover -->
             <div v-if="showEmojiPicker" class="emoji-picker">
-              <button v-for="emoji in EMOJIS" :key="emoji" type="button" class="emoji-item"
-                @click="insertEmoji(emoji)">{{ emoji
-                }}</button>
+              <button v-for="emoji in EMOJIS" :key="emoji" type="button" class="emoji-item" @click="insertEmoji(emoji)">
+                {{ emoji }}
+              </button>
+            </div>
+
+            <!-- Disappearing-message duration picker (WhatsApp-style) -->
+            <div v-if="showDisappearMenu" class="disappear-menu">
+              <div class="disappear-menu-head">{{ $t('messages.disappearing') }}</div>
+              <button v-for="opt in DISAPPEAR_OPTIONS" :key="opt" type="button" class="disappear-option"
+                :class="{ selected: disappearIn === opt }" @click="setDisappear(opt)">
+                <span>{{ disappearOptionLabel(opt) }}</span>
+                <i v-if="disappearIn === opt" class="fas fa-check"></i>
+              </button>
             </div>
 
             <div v-if="mentionSuggestions.length" class="mention-picker">
@@ -384,12 +446,17 @@
             <div v-if="replyTo" class="reply-bar">
               <div class="reply-bar-body">
                 <span class="reply-bar-author">
-                  {{ replyTo.sender_id === me.user_id ? $t('messages.you') : (replyTo.sender?.full_name ||
-                    $t('messages.unknownSender')) }}
+                  {{
+                    replyTo.sender_id === me.user_id
+                      ? $t('messages.you')
+                      : replyTo.sender?.full_name || $t('messages.unknownSender')
+                  }}
                 </span>
                 <span class="reply-bar-text">{{ replyTo.body || $t('messages.attachment') }}</span>
               </div>
-              <button type="button" class="icon-btn" @click="cancelReply"><i class="fas fa-xmark"></i></button>
+              <button type="button" class="icon-btn" @click="cancelReply">
+                <i class="fas fa-xmark"></i>
+              </button>
             </div>
 
             <!-- Poll builder popover (question + dynamic options) -->
@@ -399,8 +466,9 @@
               <div v-for="(opt, i) in pollOptions" :key="i" class="poll-builder-option">
                 <input v-model="pollOptions[i]" type="text" class="input"
                   :placeholder="`${$t('messages.pollOptionPlaceholder')} ${i + 1}`" />
-                <button type="button" class="icon-btn" @click="removePollOption(i)"><i
-                    class="fas fa-xmark"></i></button>
+                <button type="button" class="icon-btn" @click="removePollOption(i)">
+                  <i class="fas fa-xmark"></i>
+                </button>
               </div>
               <div class="poll-builder-actions">
                 <button type="button" class="btn btn-sm btn-secondary" @click="addPollOption">
@@ -418,8 +486,9 @@
               <button type="button" class="btn btn-sm btn-primary" :disabled="savingFeature" @click="scheduleMessage">
                 <i class="fas fa-clock"></i> {{ $t('messages.schedule') }}
               </button>
-              <button type="button" class="btn btn-sm btn-secondary" @click="closeScheduler"><i
-                  class="fas fa-xmark"></i></button>
+              <button type="button" class="btn btn-sm btn-secondary" @click="closeScheduler">
+                <i class="fas fa-xmark"></i>
+              </button>
             </div>
 
             <div v-if="showTemplatePicker" class="template-picker">
@@ -430,15 +499,18 @@
                   <option value="housekeeping">{{ $t('messages.catHousekeeping') }}</option>
                   <option value="frontdesk">{{ $t('messages.catFrontdesk') }}</option>
                 </select>
-                <button type="button" class="btn btn-sm btn-secondary" @click="closeTemplatePicker"><i
-                    class="fas fa-xmark"></i></button>
+                <button type="button" class="btn btn-sm btn-secondary" @click="closeTemplatePicker">
+                  <i class="fas fa-xmark"></i>
+                </button>
               </div>
               <button v-for="tpl in templates" :key="tpl.id" type="button" class="template-item"
                 @click="insertTemplate(tpl)">
                 <strong>{{ tpl.name }}</strong>
                 <span class="muted">{{ tpl.body }}</span>
               </button>
-              <div v-if="!templates.length" class="muted template-empty">{{ $t('messages.noTemplates') }}</div>
+              <div v-if="!templates.length" class="muted template-empty">
+                {{ $t('messages.noTemplates') }}
+              </div>
             </div>
           </form>
         </template>
@@ -447,10 +519,12 @@
           <i class="fas fa-comments"></i>
           <p class="muted">{{ $t('messages.noConversations') }}</p>
           <div class="placeholder-actions">
-            <button class="btn btn-primary" @click="openNewMessage"><i class="fas fa-paper-plane"></i> {{
-              $t('messages.newMessage') }}</button>
-            <button class="btn btn-primary btn-group" @click="openNewGroup"><i class="fas fa-users"></i> {{
-              $t('messages.newGroup') }}</button>
+            <button class="btn btn-primary" @click="openNewMessage">
+              <i class="fas fa-paper-plane"></i> {{ $t('messages.newMessage') }}
+            </button>
+            <button class="btn btn-primary btn-group" @click="openNewGroup">
+              <i class="fas fa-users"></i> {{ $t('messages.newGroup') }}
+            </button>
           </div>
         </div>
       </section>
@@ -486,9 +560,8 @@
 
         <div class="form-group">
           <label>{{ $t('common.search') }}</label>
-          <input v-model="userSearch" type="text" class="input"
-            :placeholder="newScope === 'global' ? $t('messages.searchGlobal') : $t('messages.searchColleagues')"
-            @input="searchUsers" />
+          <input v-model="userSearch" type="text" class="input" :placeholder="newScope === 'global' ? $t('messages.searchGlobal') : $t('messages.searchColleagues')
+            " @input="searchUsers" />
         </div>
 
         <div v-if="searchingUsers" class="alert alert-info">{{ $t('common.loading') }}</div>
@@ -496,7 +569,10 @@
         <div v-else-if="userResults.length" class="user-results">
           <button v-for="u in userResults" :key="u.user_id" class="user-result" @click="startConversation(u)"
             :disabled="startingWith === u.user_id">
-            <span class="avatar">{{ initials(u.full_name) }}</span>
+            <span class="avatar">
+              {{ initials(u.full_name) }}
+              <span v-if="isOnline(u.user_id)" class="online-dot" :title="$t('messages.online')"></span>
+            </span>
             <span class="user-result-body">
               <strong>{{ u.full_name }}</strong>
               <span class="muted">
@@ -508,7 +584,9 @@
           </button>
         </div>
 
-        <div v-else-if="userSearch.trim()" class="chat-empty muted">{{ $t('messages.noUsers') }}</div>
+        <div v-else-if="userSearch.trim()" class="chat-empty muted">
+          {{ $t('messages.noUsers') }}
+        </div>
       </div>
     </div>
 
@@ -559,11 +637,12 @@
         </div>
 
         <div class="form-group">
-          <label>{{ $t('messages.addMembers') }} <span class="muted">({{ $t('messages.selectMembersHint')
-          }})</span></label>
-          <input v-model="groupUserSearch" type="text" class="input"
-            :placeholder="groupScope === 'global' ? $t('messages.searchGlobal') : $t('messages.searchColleagues')"
-            @input="searchGroupUsers" />
+          <label>{{ $t('messages.addMembers') }}
+            <span class="muted">({{ $t('messages.selectMembersHint') }})</span></label>
+          <input v-model="groupUserSearch" type="text" class="input" :placeholder="groupScope === 'global'
+            ? $t('messages.searchGlobal')
+            : $t('messages.searchColleagues')
+            " @input="searchGroupUsers" />
         </div>
 
         <div v-if="searchingGroupUsers" class="alert alert-info">{{ $t('common.loading') }}</div>
@@ -582,13 +661,18 @@
           </label>
         </div>
 
-        <div v-else-if="groupUserSearch.trim()" class="chat-empty muted">{{ $t('messages.noUsers') }}</div>
+        <div v-else-if="groupUserSearch.trim()" class="chat-empty muted">
+          {{ $t('messages.noUsers') }}
+        </div>
 
         <div class="modal-foot">
-          <button type="button" class="btn btn-secondary" @click="closeNewGroup">{{ $t('common.cancel') }}</button>
+          <button type="button" class="btn btn-secondary" @click="closeNewGroup">
+            {{ $t('common.cancel') }}
+          </button>
           <button type="button" class="btn btn-primary" :disabled="creatingGroup || !groupName.trim()"
             @click="createGroup">
-            <i class="fas fa-users"></i> {{ creatingGroup ? $t('common.saving') : $t('messages.createGroup') }}
+            <i class="fas fa-users"></i>
+            {{ creatingGroup ? $t('common.saving') : $t('messages.createGroup') }}
           </button>
         </div>
       </div>
@@ -598,8 +682,13 @@
     <div v-if="showGroupManage" class="modal-overlay" @click.self="closeGroupManage">
       <div class="modal new-message-modal">
         <div class="modal-head">
-          <h2><i class="fas fa-user-group"></i> {{ $t('messages.membersManage') }} — {{ activeChat?.name }}</h2>
-          <button class="modal-close" @click="closeGroupManage"><i class="fas fa-xmark"></i></button>
+          <h2>
+            <i class="fas fa-user-group"></i> {{ $t('messages.membersManage') }} —
+            {{ activeChat?.name }}
+          </h2>
+          <button class="modal-close" @click="closeGroupManage">
+            <i class="fas fa-xmark"></i>
+          </button>
         </div>
 
         <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
@@ -607,9 +696,10 @@
 
         <div class="form-group">
           <label>{{ $t('messages.addMembers') }}</label>
-          <input v-model="groupUserSearch" type="text" class="input"
-            :placeholder="activeChat?.scope === 'global' ? $t('messages.searchGlobal') : $t('messages.searchColleagues')"
-            @input="searchGroupUsers" />
+          <input v-model="groupUserSearch" type="text" class="input" :placeholder="activeChat?.scope === 'global'
+            ? $t('messages.searchGlobal')
+            : $t('messages.searchColleagues')
+            " @input="searchGroupUsers" />
         </div>
 
         <div v-if="searchingGroupUsers" class="alert alert-info">{{ $t('common.loading') }}</div>
@@ -631,17 +721,27 @@
           </div>
         </div>
 
-        <div v-else-if="groupUserSearch.trim()" class="chat-empty muted">{{ $t('messages.noUsers') }}</div>
+        <div v-else-if="groupUserSearch.trim()" class="chat-empty muted">
+          {{ $t('messages.noUsers') }}
+        </div>
 
-        <h3 class="members-title"><i class="fas fa-users"></i> {{ $t('messages.membersManage') }}</h3>
+        <h3 class="members-title">
+          <i class="fas fa-users"></i> {{ $t('messages.membersManage') }}
+        </h3>
         <div v-if="groupMembers.length" class="user-results">
           <div v-for="m in groupMembers" :key="m.user_id" class="user-result">
-            <span class="avatar">{{ initials(m.full_name) }}</span>
+            <span class="avatar">
+              {{ initials(m.full_name) }}
+              <span v-if="isOnline(m.user_id)" class="online-dot" :title="$t('messages.online')"></span>
+            </span>
             <span class="user-result-body">
               <strong>{{ m.full_name }}</strong>
               <span class="muted">
                 {{ roleLabel(m.user_role) }}
                 <span v-if="m.user_id === me.user_id"> · {{ $t('messages.you') }}</span>
+                <span v-else-if="isOnline(m.user_id)" class="online-label">
+                  · {{ $t('messages.online') }}
+                </span>
               </span>
             </span>
             <button v-if="m.user_id === me.user_id" class="btn btn-sm btn-danger" :disabled="removingMember"
@@ -663,7 +763,9 @@
       @click.stop>
       <div class="msg-menu-reactions">
         <button v-for="e in REACTION_EMOJIS" :key="e" class="emoji-item" :title="$t('messages.react')"
-          @click="toggleReaction(msgMenu.msg, e)">{{ e }}</button>
+          @click="toggleReaction(msgMenu.msg, e)">
+          {{ e }}
+        </button>
       </div>
       <button class="msg-menu-item" @click="deleteMessage(msgMenu.msg, 'me')">
         <i class="fas fa-user-minus"></i> {{ $t('messages.deleteForMe') }}
@@ -706,7 +808,9 @@
     <!-- View-once media viewer -->
     <div v-if="viewOncePreview" class="modal-overlay" @click.self="closeViewOncePreview">
       <div class="view-once-viewer">
-        <button class="modal-close" @click="closeViewOncePreview"><i class="fas fa-xmark"></i></button>
+        <button class="modal-close" @click="closeViewOncePreview">
+          <i class="fas fa-xmark"></i>
+        </button>
         <img v-if="viewOncePreview.url" :src="viewOncePreview.url" alt="view-once" />
         <p class="muted">{{ $t('messages.viewOnceOpened') }}</p>
       </div>
@@ -714,10 +818,10 @@
 
     <!-- Call overlay -->
     <div v-if="callManager.call.visible" class="call-overlay">
-      <div class="call-card" :class="{ 'call-video': callManager.call.kind === 'video' }">
-        <video v-if="callManager.call.kind === 'video' && callManager.remoteVideoUrl" autoplay playsinline
+      <div class="call-card" :class="{ 'call-video': callManager.call.kind !== 'audio' }">
+        <video v-if="callManager.call.kind !== 'audio' && callManager.remoteVideoUrl" autoplay playsinline
           :src="callManager.remoteVideoUrl" class="call-remote"></video>
-        <video v-if="callManager.call.kind === 'video' && callManager.localVideoUrl" autoplay playsinline muted
+        <video v-if="callManager.call.kind !== 'audio' && callManager.localVideoUrl" autoplay playsinline muted
           :src="callManager.localVideoUrl" class="call-local"></video>
 
         <div class="call-body">
@@ -725,16 +829,22 @@
           <strong class="call-name">{{ callManager.call.peerName }}</strong>
           <span class="muted call-sub">
             <template v-if="callManager.call.status === 'ringing'">
-              {{ callManager.call.direction === 'outgoing' ? $t('messages.calling') : $t('messages.incomingCall', {
-                kind: callManager.call.kind
-              }) }}
+              {{
+                callManager.call.direction === 'outgoing'
+                  ? $t('messages.calling')
+                  : $t('messages.incomingCall', {
+                    kind: $t('messages.kinds.' + callManager.call.kind),
+                  })
+              }}
             </template>
             <template v-else>{{ callManager.formatElapsed(callManager.elapsed) }}</template>
           </span>
         </div>
 
         <div class="call-actions">
-          <template v-if="callManager.call.status === 'ringing' && callManager.call.direction === 'incoming'">
+          <template v-if="
+            callManager.call.status === 'ringing' && callManager.call.direction === 'incoming'
+          ">
             <button class="call-btn call-btn-decline" @click="callManager.declineIncoming">
               <i class="fas fa-phone-slash"></i>
             </button>
@@ -743,7 +853,7 @@
             </button>
           </template>
           <template v-else>
-            <button v-if="callManager.call.kind === 'video'" class="call-btn"
+            <button v-if="callManager.call.kind !== 'audio'" class="call-btn"
               :class="{ 'call-btn-off': callManager.camOff }" @click="callManager.toggleCamera">
               <i class="fas" :class="callManager.camOff ? 'fa-video-slash' : 'fa-video'"></i>
             </button>
@@ -763,7 +873,9 @@
       <div class="modal forward-modal">
         <div class="modal-head">
           <h2><i class="fas fa-forward"></i> {{ $t('messages.forward') }}</h2>
-          <button class="modal-close" @click="closeForwardPicker"><i class="fas fa-xmark"></i></button>
+          <button class="modal-close" @click="closeForwardPicker">
+            <i class="fas fa-xmark"></i>
+          </button>
         </div>
         <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
         <div class="form-group">
@@ -780,7 +892,9 @@
             <span class="forward-item-name">{{ target.name }}</span>
             <i class="fas fa-paper-plane forward-go"></i>
           </button>
-          <div v-if="!forwardResults.length" class="muted forward-empty">{{ $t('messages.noChats') }}</div>
+          <div v-if="!forwardResults.length" class="muted forward-empty">
+            {{ $t('messages.noChats') }}
+          </div>
         </div>
       </div>
     </div>
@@ -790,7 +904,9 @@
       <div class="modal side-modal">
         <div class="modal-head">
           <h2><i class="fas fa-thumbtack"></i> {{ $t('messages.pinnedMessages') }}</h2>
-          <button class="modal-close" @click="closePinnedPanel"><i class="fas fa-xmark"></i></button>
+          <button class="modal-close" @click="closePinnedPanel">
+            <i class="fas fa-xmark"></i>
+          </button>
         </div>
         <div class="side-list">
           <button v-for="m in pinnedMsgs" :key="m.message_id" class="side-item" @click="closePinnedPanel">
@@ -798,7 +914,9 @@
             <span class="side-item-body">{{ m.body || $t('messages.attachment') }}</span>
             <span class="muted">{{ formatTime(m.created_at) }}</span>
           </button>
-          <div v-if="!pinnedMsgs.length" class="muted side-empty">{{ $t('messages.noPinned') }}</div>
+          <div v-if="!pinnedMsgs.length" class="muted side-empty">
+            {{ $t('messages.noPinned') }}
+          </div>
         </div>
       </div>
     </div>
@@ -808,7 +926,9 @@
       <div class="modal side-modal">
         <div class="modal-head">
           <h2><i class="fas fa-magnifying-glass"></i> {{ $t('messages.searchInChat') }}</h2>
-          <button class="modal-close" @click="closeSearchPanel"><i class="fas fa-xmark"></i></button>
+          <button class="modal-close" @click="closeSearchPanel">
+            <i class="fas fa-xmark"></i>
+          </button>
         </div>
         <div class="form-group">
           <div class="search-inline">
@@ -821,12 +941,13 @@
         </div>
         <div class="side-list">
           <button v-for="m in searchResults" :key="m.message_id" class="side-item" @click="focusResult(m)">
-            <span class="side-item-meta">{{ m.sender?.full_name || $t('messages.you') }} · {{ formatTime(m.created_at)
-              }}</span>
+            <span class="side-item-meta">{{ m.sender?.full_name || $t('messages.you') }} ·
+              {{ formatTime(m.created_at) }}</span>
             <span class="side-item-body">{{ m.body || $t('messages.attachment') }}</span>
           </button>
           <div v-if="searchingMessages" class="muted side-empty">{{ $t('common.loading') }}</div>
-          <div v-else-if="searchQuery && !searchResults.length" class="muted side-empty">{{ $t('messages.noResults') }}
+          <div v-else-if="searchQuery && !searchResults.length" class="muted side-empty">
+            {{ $t('messages.noResults') }}
           </div>
         </div>
       </div>
@@ -837,7 +958,9 @@
       <div class="modal forward-modal">
         <div class="modal-head">
           <h2><i class="fas fa-hotel"></i> {{ $t('messages.linkRoom') }}</h2>
-          <button class="modal-close" @click="closeRoomLinkModal"><i class="fas fa-xmark"></i></button>
+          <button class="modal-close" @click="closeRoomLinkModal">
+            <i class="fas fa-xmark"></i>
+          </button>
         </div>
         <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
         <div class="form-group">
@@ -848,10 +971,12 @@
           <button v-for="room in roomLinkResults" :key="room.room_id" class="forward-item" @click="linkRoom(room)">
             <span class="avatar avatar-room"><i class="fas fa-bed"></i></span>
             <span class="forward-item-name">{{ room.room_number }} <span class="muted">{{ room.room_type || ''
-                }}</span></span>
+            }}</span></span>
             <i class="fas fa-link forward-go"></i>
           </button>
-          <div v-if="!roomLinkResults.length" class="muted forward-empty">{{ $t('messages.noRooms') }}</div>
+          <div v-if="!roomLinkResults.length" class="muted forward-empty">
+            {{ $t('messages.noRooms') }}
+          </div>
         </div>
         <div v-if="roomLinks.length" class="room-link-list">
           <div v-for="link in roomLinks" :key="link.id" class="room-link-item">
@@ -888,28 +1013,34 @@
           <button class="workspace-tab" :class="{ active: workspaceTab === 'guest' }" @click="workspaceTab = 'guest'">
             <i class="fas fa-envelope"></i> {{ $t('messages.guestSms') }}
           </button>
-          <button class="workspace-tab" :class="{ active: workspaceTab === 'nearby' }"
-            @click="workspaceTab = 'nearby'; loadNearbyStaff()">
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'nearby' }" @click="
+            workspaceTab = 'nearby'; loadNearbyStaff()
+            ">
             <i class="fas fa-location-dot"></i> {{ $t('messages.nearbyStaff') }}
           </button>
-          <button class="workspace-tab" :class="{ active: workspaceTab === 'escalations' }"
-            @click="workspaceTab = 'escalations'; loadEscalations()">
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'escalations' }" @click="
+            workspaceTab = 'escalations'; loadEscalations()
+            ">
             <i class="fas fa-bell"></i> {{ $t('messages.escalations') }}
           </button>
-          <button class="workspace-tab" :class="{ active: workspaceTab === 'sos' }"
-            @click="workspaceTab = 'sos'; loadSos()">
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'sos' }" @click="
+            workspaceTab = 'sos'; loadSos()
+            ">
             <i class="fas fa-shield-heart"></i> {{ $t('messages.sosAlerts') }}
           </button>
-          <button class="workspace-tab" :class="{ active: workspaceTab === 'scheduled' }"
-            @click="workspaceTab = 'scheduled'; loadScheduled()">
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'scheduled' }" @click="
+            workspaceTab = 'scheduled'; loadScheduled()
+            ">
             <i class="fas fa-clock"></i> {{ $t('messages.scheduledMessages') }}
           </button>
-          <button class="workspace-tab" :class="{ active: workspaceTab === 'starred' }"
-            @click="workspaceTab = 'starred'; loadStarred()">
+          <button class="workspace-tab" :class="{ active: workspaceTab === 'starred' }" @click="
+            workspaceTab = 'starred'; loadStarred()
+            ">
             <i class="fas fa-star"></i> {{ $t('messages.starredMessages') }}
           </button>
-          <button v-if="isAdmin" class="workspace-tab" :class="{ active: workspaceTab === 'retention' }"
-            @click="workspaceTab = 'retention'; loadPolicies()">
+          <button v-if="isAdmin" class="workspace-tab" :class="{ active: workspaceTab === 'retention' }" @click="
+            workspaceTab = 'retention'; loadPolicies()
+            ">
             <i class="fas fa-shield"></i> {{ $t('messages.retention') }}
           </button>
         </div>
@@ -947,10 +1078,12 @@
                   <i class="fas fa-check"></i> {{ $t('messages.acknowledge') }}
                 </button>
                 <span v-else class="badge badge-green"><i class="fas fa-check"></i> {{ $t('messages.acknowledged')
-                  }}</span>
+                }}</span>
               </div>
             </div>
-            <div v-if="!announcements.length" class="muted side-empty">{{ $t('messages.noAnnouncements') }}</div>
+            <div v-if="!announcements.length" class="muted side-empty">
+              {{ $t('messages.noAnnouncements') }}
+            </div>
           </div>
 
           <div v-if="workspaceTab === 'meetings'" class="ws-tab">
@@ -965,7 +1098,7 @@
                   @mousedown.prevent="toggleMeetingInvitee(u)">
                   <span class="avatar">{{ initials(u.full_name) }}</span>
                   <span class="mention-item-name">@{{ u.full_name }}</span>
-                  <i v-if="meetingInvitees.some((x) => x.user_id === u.user_id)" class="fas fa-check"></i>
+                  <i v-if="meetingInvitees.some((invitee) => invitee.user_id === u.user_id)" class="fas fa-check"></i>
                 </button>
               </div>
               <div v-if="meetingInvitees.length" class="meeting-invitees">
@@ -1000,7 +1133,9 @@
                 </button>
               </div>
             </div>
-            <div v-if="!meetings.length" class="muted side-empty">{{ $t('messages.noMeetings') }}</div>
+            <div v-if="!meetings.length" class="muted side-empty">
+              {{ $t('messages.noMeetings') }}
+            </div>
           </div>
 
           <div v-if="workspaceTab === 'handovers'" class="ws-tab">
@@ -1025,10 +1160,12 @@
                   <i class="fas fa-check"></i> {{ $t('messages.acknowledge') }}
                 </button>
                 <span v-else class="badge badge-green"><i class="fas fa-check"></i> {{ $t('messages.acknowledged')
-                  }}</span>
+                }}</span>
               </div>
             </div>
-            <div v-if="!handovers.length" class="muted side-empty">{{ $t('messages.noHandovers') }}</div>
+            <div v-if="!handovers.length" class="muted side-empty">
+              {{ $t('messages.noHandovers') }}
+            </div>
           </div>
 
           <div v-if="workspaceTab === 'guest'" class="ws-tab">
@@ -1042,6 +1179,27 @@
                 <i class="fas fa-envelope"></i> {{ $t('messages.sendGuestSms') }}
               </button>
             </div>
+
+            <!-- Automated guest SMS toggles: which lifecycle events the hotel auto-texts -->
+            <div v-if="notificationEvents.length" class="ws-tab-section">
+              <div class="ws-section-head">
+                <h4><i class="fas fa-bolt"></i> {{ $t('messages.autoGuestSms') }}</h4>
+                <button class="btn btn-secondary btn-sm" :disabled="savingSettings" @click="saveNotificationSettings">
+                  <i v-if="savingSettings" class="fas fa-spinner fa-spin" />
+                  <i v-else class="fas fa-check" /> {{ $t('messages.saveSettings') }}
+                </button>
+              </div>
+              <div v-if="settingsError" class="alert alert-error">{{ settingsError }}</div>
+              <div class="ws-toggle-list">
+                <label v-for="ev in notificationEvents" :key="ev.event" class="ws-toggle-row">
+                  <span class="ws-toggle-label">{{ ev.label }}
+                    <span v-if="ev.schedule_time" class="muted"> · {{ ev.schedule_time }}</span>
+                  </span>
+                  <input type="checkbox" class="toggle-check" v-model="ev.enabled" />
+                </label>
+              </div>
+            </div>
+
             <div v-for="g in guestMessages" :key="g.id" class="ws-card">
               <div class="ws-card-head">
                 <strong>{{ g.phone }}</strong>
@@ -1050,10 +1208,12 @@
               <p class="ws-card-body">{{ g.body }}</p>
               <div class="ws-card-foot">
                 <span class="badge" :class="g.status === 'delivered' ? 'badge-green' : 'badge-blue'">{{ g.status
-                  }}</span>
+                }}</span>
               </div>
             </div>
-            <div v-if="!guestMessages.length" class="muted side-empty">{{ $t('messages.noGuestMessages') }}</div>
+            <div v-if="!guestMessages.length" class="muted side-empty">
+              {{ $t('messages.noGuestMessages') }}
+            </div>
           </div>
 
           <div v-if="workspaceTab === 'nearby'" class="ws-tab">
@@ -1078,13 +1238,17 @@
                 <span v-if="s.floor" class="badge badge-blue">{{ s.floor }}</span>
               </div>
             </div>
-            <div v-if="!nearbyStaff.length" class="muted side-empty">{{ $t('messages.noNearby') }}</div>
+            <div v-if="!nearbyStaff.length" class="muted side-empty">
+              {{ $t('messages.noNearby') }}
+            </div>
           </div>
 
           <div v-if="workspaceTab === 'escalations'" class="ws-tab">
             <div v-for="e in escalations" :key="e.id" class="ws-card">
               <div class="ws-card-head">
-                <strong>{{ e.escalated_by ? e.escalated_by.full_name : (e.escalatedBy?.full_name || '') }}</strong>
+                <strong>{{
+                  e.escalated_by ? e.escalated_by.full_name : e.escalatedBy?.full_name || ''
+                }}</strong>
                 <span class="badge badge-red">{{ $t('messages.urgent') }}</span>
                 <span class="muted">{{ formatTime(e.escalated_at || e.created_at) }}</span>
               </div>
@@ -1096,7 +1260,9 @@
                 </button>
               </div>
             </div>
-            <div v-if="!escalations.length" class="muted side-empty">{{ $t('messages.noEscalations') }}</div>
+            <div v-if="!escalations.length" class="muted side-empty">
+              {{ $t('messages.noEscalations') }}
+            </div>
           </div>
 
           <div v-if="workspaceTab === 'sos'" class="ws-tab">
@@ -1106,12 +1272,14 @@
             <div v-for="s in sosAlerts" :key="s.id" class="ws-card" :class="{ urgent: s.status === 'active' }">
               <div class="ws-card-head">
                 <strong>{{ s.initiator?.full_name || '' }}</strong>
-                <span class="badge" :class="s.status === 'active' ? 'badge-red' : 'badge-green'">{{ s.status }}</span>
+                <span class="badge" :class="s.status === 'active' ? 'badge-red' : 'badge-green'">{{
+                  s.status
+                }}</span>
                 <span class="muted">{{ formatTime(s.created_at) }}</span>
               </div>
               <div class="ws-card-body">
                 <span v-if="s.message" class="badge badge-blue"><i class="fas fa-location-dot"></i> {{ s.message
-                  }}</span>
+                }}</span>
               </div>
               <div class="ws-card-foot">
                 <span class="muted">{{ s.ack_count || 0 }} {{ $t('messages.acknowledged') }}</span>
@@ -1141,7 +1309,9 @@
                 </button>
               </div>
             </div>
-            <div v-if="!scheduledList.length" class="muted side-empty">{{ $t('messages.noScheduled') }}</div>
+            <div v-if="!scheduledList.length" class="muted side-empty">
+              {{ $t('messages.noScheduled') }}
+            </div>
           </div>
 
           <div v-if="workspaceTab === 'starred'" class="ws-tab">
@@ -1152,7 +1322,9 @@
               </div>
               <p class="ws-card-body">{{ m.body || $t('messages.attachment') }}</p>
             </div>
-            <div v-if="!starredMsgs.length" class="muted side-empty">{{ $t('messages.noStarred') }}</div>
+            <div v-if="!starredMsgs.length" class="muted side-empty">
+              {{ $t('messages.noStarred') }}
+            </div>
           </div>
 
           <div v-if="workspaceTab === 'retention'" class="ws-tab">
@@ -1170,11 +1342,14 @@
                 <span class="muted">{{ p.days }} {{ $t('messages.days') }}</span>
               </div>
               <div class="ws-card-foot">
-                <button class="btn btn-sm btn-danger" @click="deleteRetention(p.id)"><i
-                    class="fas fa-trash"></i></button>
+                <button class="btn btn-sm btn-danger" @click="deleteRetention(p.id)">
+                  <i class="fas fa-trash"></i>
+                </button>
               </div>
             </div>
-            <div v-if="!policies.length" class="muted side-empty">{{ $t('messages.noPolicies') }}</div>
+            <div v-if="!policies.length" class="muted side-empty">
+              {{ $t('messages.noPolicies') }}
+            </div>
           </div>
         </div>
       </div>
@@ -1206,11 +1381,14 @@ import {
   taskGroupApi,
   staffLocationApi,
   guestMessageApi,
+  guestNotificationSettingsApi,
   meetingApi,
   sosApi,
 } from '@/api'
-import { initEcho, getEcho, destroyEcho } from '@/plugins/echo'
+import { initEcho, getEcho } from '@/plugins/echo'
 import { useCallManager } from '@/composables/useCallManager'
+import { isOnline } from '@/composables/usePresence'
+import { toast as showToast, toastError } from '@/utils/toast'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -1222,14 +1400,86 @@ const hotelName = computed(() => authStore.user?.tenant?.hotel_name || 'MRK Hote
 
 // Emoji palette offered by the composer picker (hotel-flavoured set).
 const EMOJIS = [
-  '😀', '😄', '😁', '😂', '🤣', '😊', '😇', '🙂', '😉', '😍',
-  '🤩', '😘', '😎', '🤗', '🤔', '🙃', '😴', '🥳', '😢', '😭',
-  '😡', '😱', '😅', '🤯', '😷', '🥺', '😤', '🤠', '😈', '💀',
-  '👍', '👎', '👏', '🙌', '🤝', '💪', '👌', '✌️', '🤙', '🙏',
-  '❤️', '🧡', '💛', '💚', '💙', '💜', '💯', '🔥', '✨', '⭐',
-  '🎉', '🎊', '🎂', '🏆', '🚀', '🎯', '💰', '📌', '✅', '❌',
-  '⏰', '📅', '📞', '📧', '📷', '🔒', '☕', '🍕', '🍔', '🍺',
-  '😴', '🎧', '💼', '🏨', '🛎️', '🗝️', '🧳', '🛏️', '🚿', '🍽️',
+  '😀',
+  '😄',
+  '😁',
+  '😂',
+  '🤣',
+  '😊',
+  '😇',
+  '🙂',
+  '😉',
+  '😍',
+  '🤩',
+  '😘',
+  '😎',
+  '🤗',
+  '🤔',
+  '🙃',
+  '😴',
+  '🥳',
+  '😢',
+  '😭',
+  '😡',
+  '😱',
+  '😅',
+  '🤯',
+  '😷',
+  '🥺',
+  '😤',
+  '🤠',
+  '😈',
+  '💀',
+  '👍',
+  '👎',
+  '👏',
+  '🙌',
+  '🤝',
+  '💪',
+  '👌',
+  '✌️',
+  '🤙',
+  '🙏',
+  '❤️',
+  '🧡',
+  '💛',
+  '💚',
+  '💙',
+  '💜',
+  '💯',
+  '🔥',
+  '✨',
+  '⭐',
+  '🎉',
+  '🎊',
+  '🎂',
+  '🏆',
+  '🚀',
+  '🎯',
+  '💰',
+  '📌',
+  '✅',
+  '❌',
+  '⏰',
+  '📅',
+  '📞',
+  '📧',
+  '📷',
+  '🔒',
+  '☕',
+  '🍕',
+  '🍔',
+  '🍺',
+  '😴',
+  '🎧',
+  '💼',
+  '🏨',
+  '🛎️',
+  '🗝️',
+  '🧳',
+  '🛏️',
+  '🚿',
+  '🍽️',
 ]
 
 // Quick-reaction emoji set shown in the message context menu.
@@ -1307,6 +1557,14 @@ const msgMenu = ref({ open: false, x: 0, y: 0, msg: null })
 const viewOnceLoading = ref('')
 const viewOncePreview = ref(null)
 const fileViewOnce = ref(false)
+// Disappearing-message timer for outgoing messages (seconds; 0 = off).
+const disappearIn = ref(0)
+const DISAPPEAR_OPTIONS = [0, 3600, 86400, 604800]
+// Whether the WhatsApp-style disappearing-message duration picker is open.
+const showDisappearMenu = ref(false)
+// Re-render trigger so countdown chips tick down every second.
+const countdownTick = ref(0)
+let disappearTimer = null
 const mentionSuggestions = ref([])
 const mentionQuery = ref('')
 let mentionTriggerPos = -1
@@ -1337,12 +1595,37 @@ const threadHeadMenuOpen = ref(false)
  * rendered inline on desktop and inside the mobile dropdown.
  * @returns {Array<{key: string, icon: string, label: string, handler: Function}>}
  */
+// True while the active chat history is being exported, so the button shows a
+// spinner and cannot be double-triggered.
+const exporting = ref(false)
+
 const threadHeadTools = computed(() => {
   const tools = [
-    { key: 'search', icon: 'fa-magnifying-glass', label: t('messages.searchInChat'), handler: openSearchPanel },
-    { key: 'pinned', icon: 'fa-thumbtack', label: t('messages.pinnedMessages'), handler: openPinnedPanel },
-    { key: 'linkroom', icon: 'fa-hotel', label: t('messages.linkRoom'), handler: openRoomLinkModal },
-    { key: 'export', icon: 'fa-file-export', label: t('messages.exportChat'), handler: exportHistory },
+    {
+      key: 'search',
+      icon: 'fa-magnifying-glass',
+      label: t('messages.searchInChat'),
+      handler: openSearchPanel,
+    },
+    {
+      key: 'pinned',
+      icon: 'fa-thumbtack',
+      label: t('messages.pinnedMessages'),
+      handler: openPinnedPanel,
+    },
+    {
+      key: 'linkroom',
+      icon: 'fa-hotel',
+      label: t('messages.linkRoom'),
+      handler: openRoomLinkModal,
+    },
+    {
+      key: 'export',
+      icon: 'fa-file-export',
+      label: t('messages.exportChat'),
+      handler: exportHistory,
+      busy: exporting.value,
+    },
     {
       key: 'mute',
       icon: isChatMuted() ? 'fa-volume-high' : 'fa-volume-xmark',
@@ -1351,7 +1634,12 @@ const threadHeadTools = computed(() => {
     },
   ]
   if (activeChat.value?.kind === 'group') {
-    tools.unshift({ key: 'members', icon: 'fa-user-group', label: t('messages.membersManage'), handler: openGroupManage })
+    tools.unshift({
+      key: 'members',
+      icon: 'fa-user-group',
+      label: t('messages.membersManage'),
+      handler: openGroupManage,
+    })
   } else {
     tools.unshift(
       {
@@ -1365,6 +1653,12 @@ const threadHeadTools = computed(() => {
         icon: 'fa-video',
         label: t('messages.videoCall'),
         handler: () => callManager.startCall('video', activeChat.value?.id, activeChat.value?.name),
+      },
+      {
+        key: 'share',
+        icon: 'fa-display',
+        label: t('messages.shareScreen'),
+        handler: () => callManager.startCall('share', activeChat.value?.id, activeChat.value?.name),
       },
     )
   }
@@ -1385,9 +1679,19 @@ function threadHeadAction(tool) {
  * @returns {Array<{key: string, icon: string, label: string, handler: Function}>}
  */
 const headActions = computed(() => [
-  { key: 'workspace', icon: 'fa-briefcase', label: t('messages.workspace'), handler: () => openWorkspace() },
+  {
+    key: 'workspace',
+    icon: 'fa-briefcase',
+    label: t('messages.workspace'),
+    handler: () => openWorkspace(),
+  },
   { key: 'refresh', icon: 'fa-rotate', label: t('common.refresh'), handler: refreshAll },
-  { key: 'newMessage', icon: 'fa-paper-plane', label: t('messages.newMessage'), handler: openNewMessage },
+  {
+    key: 'newMessage',
+    icon: 'fa-paper-plane',
+    label: t('messages.newMessage'),
+    handler: openNewMessage,
+  },
   { key: 'newGroup', icon: 'fa-users', label: t('messages.newGroup'), handler: openNewGroup },
 ])
 
@@ -1410,7 +1714,10 @@ const composerTools = computed(() => [
     icon: 'fa-face-smile',
     title: t('messages.emoji'),
     active: showEmojiPicker.value,
-    handler: () => { showEmojiPicker.value = !showEmojiPicker.value },
+    handler: () => {
+      showEmojiPicker.value = !showEmojiPicker.value
+      showDisappearMenu.value = false
+    },
   },
   {
     key: 'attach',
@@ -1431,14 +1738,20 @@ const composerTools = computed(() => [
     icon: 'fa-square-poll-vertical',
     title: t('messages.poll'),
     active: showPollBuilder.value,
-    handler: () => { showPollBuilder.value = !showPollBuilder.value },
+    handler: () => {
+      showPollBuilder.value = !showPollBuilder.value
+      showDisappearMenu.value = false
+    },
   },
   {
     key: 'schedule',
     icon: 'fa-clock',
     title: t('messages.scheduleMessage'),
     active: showScheduler.value,
-    handler: () => { showScheduler.value = !showScheduler.value },
+    handler: () => {
+      showScheduler.value = !showScheduler.value
+      showDisappearMenu.value = false
+    },
   },
   {
     key: 'template',
@@ -1450,9 +1763,17 @@ const composerTools = computed(() => [
   {
     key: 'priority',
     icon: 'fa-flag',
-    title: sendPriority.value === 'urgent' ? t('messages.priorityNormal') : t('messages.priorityUrgent'),
+    title:
+      sendPriority.value === 'urgent' ? t('messages.priorityNormal') : t('messages.priorityUrgent'),
     active: sendPriority.value === 'urgent',
     handler: togglePriority,
+  },
+  {
+    key: 'disappear',
+    icon: 'fa-hourglass-half',
+    title: disappearLabel.value,
+    active: disappearIn.value > 0,
+    handler: toggleDisappearMenu,
   },
 ])
 
@@ -1501,6 +1822,9 @@ const announcementBody = ref('')
 const announcementPriority = ref('normal')
 const guestPhone = ref('')
 const guestBody = ref('')
+const notificationEvents = ref([])
+const savingSettings = ref(false)
+const settingsError = ref('')
 const retentionDays = ref(30)
 const taskGroupType = ref('housekeeping')
 const isTaskGroupCreation = ref(false)
@@ -1524,8 +1848,10 @@ const callManager = useCallManager({
 })
 
 // The chat currently open in the thread pane (null when none is selected).
-const activeChat = computed(() =>
-  chats.value.find((c) => c.kind === activeKind.value && c.id === activeId.value) || null,
+const activeChat = computed(
+  () =>
+    chats.value.find((chat) => chat.kind === activeKind.value && chat.id === activeId.value) ||
+    null,
 )
 
 // Status-ring state: per-user has/unviewed flags plus whether I have a live status.
@@ -1595,49 +1921,53 @@ function openStatusCompose() {
 // Unified chat list: direct conversations and groups normalized to one shape, newest activity first.
 const chats = computed(() => {
   const all = [
-    ...conversations.value.map((c) => ({
+    ...conversations.value.map((conversation) => ({
       kind: 'direct',
-      id: c.conversation_id,
-      name: c.other_participant?.full_name || '—',
-      participant_id: c.other_participant?.user_id,
-      scope: c.scope,
-      hotel_name: c.other_participant?.hotel_name,
-      unread_count: c.unread_count || 0,
-      last_message_at: c.last_message_at || c.created_at,
-      last_message: c.last_message,
-      created_at: c.created_at,
+      id: conversation.conversation_id,
+      name: conversation.other_participant?.full_name || '—',
+      participant_id: conversation.other_participant?.user_id,
+      scope: conversation.scope,
+      hotel_name: conversation.other_participant?.hotel_name,
+      unread_count: conversation.unread_count || 0,
+      last_message_at: conversation.last_message_at || conversation.created_at,
+      last_message: conversation.last_message,
+      created_at: conversation.created_at,
     })),
-    ...groups.value.map((g) => ({
+    ...groups.value.map((group) => ({
       kind: 'group',
-      id: g.group_conversation_id,
-      name: g.name,
-      scope: g.scope,
-      unread_count: g.unread_count || 0,
-      member_count: g.member_count || 0,
-      last_message_at: g.last_message_at || g.created_at,
-      last_message: g.last_message,
-      created_at: g.created_at,
+      id: group.group_conversation_id,
+      name: group.name,
+      scope: group.scope,
+      unread_count: group.unread_count || 0,
+      member_count: group.member_count || 0,
+      last_message_at: group.last_message_at || group.created_at,
+      last_message: group.last_message,
+      created_at: group.created_at,
     })),
   ]
-  return all.sort((a, b) => String(b.last_message_at || '').localeCompare(String(a.last_message_at || '')))
+  return all.sort((itemA, itemB) =>
+    String(itemB.last_message_at || '').localeCompare(String(itemA.last_message_at || '')),
+  )
 })
 
 // True while either the conversation or the group list has another page.
 const hasMore = computed(() =>
-  (convMeta.value?.next_page_url || groupMeta.value?.next_page_url) ? true : false,
+  convMeta.value?.next_page_url || groupMeta.value?.next_page_url ? true : false,
 )
 
 // Members of the active group (empty for direct chats).
 const groupMembers = computed(() => groupInfo.value?.members || [])
 
 // True when the current user created the active group (grants moderation rights).
-const isGroupCreator = computed(() => activeChat.value?.kind === 'group' && groupInfo.value?.created_by === me.value.user_id)
+const isGroupCreator = computed(
+  () => activeChat.value?.kind === 'group' && groupInfo.value?.created_by === me.value.user_id,
+)
 
 // Users that can be @-mentioned in the active thread (group members, or the direct counterpart).
 const mentionableUsers = computed(() => {
   if (!activeId.value) return []
   if (activeKind.value === 'group') {
-    return groupMembers.value.filter((m) => m.user_id !== me.value.user_id)
+    return groupMembers.value.filter((member) => member.user_id !== me.value.user_id)
   }
   const other = activeChat.value
   return other ? [{ user_id: other.id, full_name: other.name }] : []
@@ -1652,7 +1982,7 @@ function initials(name) {
   return (name || '?')
     .split(' ')
     .filter(Boolean)
-    .map((w) => w[0])
+    .map((word) => word[0])
     .slice(0, 2)
     .join('')
     .toUpperCase()
@@ -1698,6 +2028,40 @@ function formatTime(iso) {
 }
 
 /**
+ * Formats the time left before a disappearing message self-destructs.
+ * @param {string} iso - ISO deadline of the message.
+ * @returns {string} Remaining time ("1h 04m", "23m 05s", "45s") or '' when gone/missing.
+ */
+function disappearCountdown(iso) {
+  if (!iso) return ''
+  const remaining = new Date(iso).getTime() - Date.now()
+  if (remaining <= 0) return ''
+  const total = Math.floor(remaining / 1000)
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  const seconds = total % 60
+  if (hours > 0) return `${hours}h ${String(minutes).padStart(2, '0')}m`
+  if (minutes > 0) return `${minutes}m ${String(seconds).padStart(2, '0')}s`
+  return `${seconds}s`
+}
+
+/**
+ * Removes any message whose disappearing deadline has passed and nudges the
+ * countdown chips to re-render. Runs once per second while a thread is open.
+ */
+function expireDisappearing() {
+  if (!activeId.value) return
+  const now = Date.now()
+  for (let i = messages.value.length - 1; i >= 0; i--) {
+    const msg = messages.value[i]
+    if (msg.disappears_at && new Date(msg.disappears_at).getTime() <= now) {
+      removeMessageLocally(msgId(msg), activeKind.value)
+    }
+  }
+  countdownTick.value++
+}
+
+/**
  * Builds the one-line preview for a chat-list entry, with icon placeholders
  * for deleted/view-once/audio/image/file messages and a "You:" prefix for
  * messages sent by the current user.
@@ -1713,7 +2077,8 @@ function lastPreview(chat) {
   if (lm.type === 'audio') return `${who}🎤 ${t('messages.previewAudio')}`
   if (lm.type === 'image') return `${who}🖼️ ${t('messages.previewImage')}`
   if (lm.type === 'file') return `${who}📎 ${t('messages.previewFile')}`
-  return `${who}${lm.body || ''}`
+  const disappearing = lm.disappears_at ? '⏳ ' : ''
+  return `${who}${disappearing}${lm.body || ''}`
 }
 
 /**
@@ -1769,7 +2134,9 @@ function messageType() {
  * @returns {boolean}
  */
 function canDeleteEveryone(msg) {
-  return msg.sender_id === me.value.user_id || (activeKind.value === 'group' && isGroupCreator.value)
+  return (
+    msg.sender_id === me.value.user_id || (activeKind.value === 'group' && isGroupCreator.value)
+  )
 }
 
 /**
@@ -1798,7 +2165,8 @@ async function deleteMessage(msg, scope) {
   closeMsgMenu()
   try {
     const id = msgId(msg)
-    if (activeKind.value === 'group') await messageActionApi.deleteGroupMessage(activeId.value, id, scope)
+    if (activeKind.value === 'group')
+      await messageActionApi.deleteGroupMessage(activeId.value, id, scope)
     else await messageActionApi.deleteConversationMessage(activeId.value, id, scope)
     applyDeletedLocally(msg, scope)
   } catch (err) {
@@ -1841,7 +2209,17 @@ function refreshThreadPreview() {
   const chat = activeChat.value
   if (!chat) return
   const last = messages.value[messages.value.length - 1]
-  chat.last_message = last ? { sender_id: last.sender_id, type: last.type, body: last.body, media_url: last.media_url, view_once: last.view_once, deleted: last.deleted, created_at: last.created_at } : null
+  chat.last_message = last
+    ? {
+      sender_id: last.sender_id,
+      type: last.type,
+      body: last.body,
+      media_url: last.media_url,
+      view_once: last.view_once,
+      deleted: last.deleted,
+      created_at: last.created_at,
+    }
+    : null
   chat.last_message_at = last ? last.created_at : chat.created_at
 }
 
@@ -1870,9 +2248,10 @@ async function openViewOnce(msg) {
   if (msg.viewed_at || msg.deleted || msg.sender_id === me.value.user_id) return
   viewOnceLoading.value = msgId(msg)
   try {
-    const res = activeKind.value === 'group'
-      ? await messageActionApi.openGroupViewOnce(activeId.value, msg.group_message_id)
-      : await messageActionApi.openViewOnce(activeId.value, msg.message_id)
+    const res =
+      activeKind.value === 'group'
+        ? await messageActionApi.openGroupViewOnce(activeId.value, msg.group_message_id)
+        : await messageActionApi.openViewOnce(activeId.value, msg.message_id)
     msg.viewed_at = res.data.viewed_at
     viewOncePreview.value = { url: res.data.media_url, msg }
   } catch (err) {
@@ -1894,7 +2273,9 @@ function closeViewOncePreview() {
  * @returns {boolean}
  */
 function isPinned(msg) {
-  return !!msg.pinned_at || pinnedMsgs.value.some((p) => p.message_id === msgId(msg))
+  return (
+    !!msg.pinned_at || pinnedMsgs.value.some((pinnedMsg) => pinnedMsg.message_id === msgId(msg))
+  )
 }
 /**
  * Checks whether a message is starred (flag on the record or in the starred list).
@@ -1902,7 +2283,9 @@ function isPinned(msg) {
  * @returns {boolean}
  */
 function isStarred(msg) {
-  return !!msg.starred_at || starredMsgs.value.some((s) => s.message_id === msgId(msg))
+  return (
+    !!msg.starred_at || starredMsgs.value.some((starredMsg) => starredMsg.message_id === msgId(msg))
+  )
 }
 
 /**
@@ -1914,14 +2297,14 @@ async function togglePin(msg) {
   closeMsgMenu()
   const was = isPinned(msg)
   try {
-    const res = was
-      ? await featuresApi.unpin({ message_type: messageType(msg), message_id: msgId(msg) })
-      : await featuresApi.pin({ message_type: messageType(msg), message_id: msgId(msg) })
-    msg.pinned_at = res.data.pinned ? new Date().toISOString() : null
+    await (was
+      ? featuresApi.unpin({ message_type: messageType(), message_id: msgId(msg) })
+      : featuresApi.pin({ message_type: messageType(), message_id: msgId(msg) }))
+    msg.pinned_at = was ? null : new Date().toISOString()
     loadPinned()
-    toast(res.data.pinned ? t('messages.pinned') : t('messages.unpinned'))
+    toast(was ? t('messages.unpinned') : t('messages.pinned'))
   } catch (err) {
-    modalError.value = flattenError(err)
+    toastError(flattenError(err))
   }
 }
 
@@ -1934,14 +2317,14 @@ async function toggleStar(msg) {
   closeMsgMenu()
   const was = isStarred(msg)
   try {
-    const res = was
-      ? await featuresApi.unstar({ message_type: messageType(msg), message_id: msgId(msg) })
-      : await featuresApi.star({ message_type: messageType(msg), message_id: msgId(msg) })
-    msg.starred_at = res.data.starred ? new Date().toISOString() : null
+    await (was
+      ? featuresApi.unstar({ message_type: messageType(), message_id: msgId(msg) })
+      : featuresApi.star({ message_type: messageType(), message_id: msgId(msg) }))
+    msg.starred_at = was ? null : new Date().toISOString()
     loadStarred()
-    toast(res.data.starred ? t('messages.starred') : t('messages.unstarred'))
+    toast(was ? t('messages.unstarred') : t('messages.starred'))
   } catch (err) {
-    modalError.value = flattenError(err)
+    toastError(flattenError(err))
   }
 }
 
@@ -1949,9 +2332,14 @@ async function toggleStar(msg) {
 async function loadPinned() {
   if (!activeId.value) return
   try {
-    const res = await featuresApi.pinned({ message_type: activeKind.value, chat_id: activeId.value })
+    const res = await featuresApi.pinned({
+      chat_type: messageType(),
+      chat_id: activeId.value,
+    })
     pinnedMsgs.value = res.data.data || []
-  } catch { /* Ignore: non-fatal. */ }
+  } catch {
+    /* Ignore: non-fatal. */
+  }
 }
 
 /** Loads the current user's starred messages. @returns {Promise<void>} */
@@ -1959,7 +2347,9 @@ async function loadStarred() {
   try {
     const res = await featuresApi.starred()
     starredMsgs.value = res.data.data || []
-  } catch { /* Ignore: non-fatal. */ }
+  } catch {
+    /* Ignore: non-fatal. */
+  }
 }
 
 /** Opens the pinned-messages panel, lazy-loading its data. */
@@ -1979,16 +2369,41 @@ function closePinnedPanel() {
  * @returns {Promise<void>}
  */
 async function votePoll(msg, option) {
+  if (msg.poll.closed || msg.poll.my_vote === option.poll_option_id) return
   try {
-    const res = await featuresApi.vote({
-      message_type: messageType(msg),
-      message_id: msgId(msg),
+    await featuresApi.vote({
       poll_id: msg.poll.poll_id,
-      option_id: option.poll_option_id,
+      option_ids: [option.poll_option_id],
     })
-    msg.poll = { ...msg.poll, ...res.data.poll }
+    applyVoteLocally(msg, option.poll_option_id)
   } catch (err) {
-    modalError.value = flattenError(err)
+    toastError(flattenError(err))
+  }
+}
+
+/**
+ * Updates the local poll state after a successful vote so the bubble reflects
+ * the new tally and the caller's selection without a full re-fetch.
+ * @param {Object} msg - The poll message.
+ * @param {string} optionId - The newly selected poll option id.
+ */
+function applyVoteLocally(msg, optionId) {
+  const previousVote = msg.poll.my_vote
+  const options = msg.poll.options.map((opt) => {
+    let votes = opt.votes
+    if (opt.poll_option_id === optionId) votes = previousVote === optionId ? votes : votes + 1
+    else if (opt.poll_option_id === previousVote) votes = votes - 1
+    return { ...opt, votes, pct: 0 }
+  })
+  const total = options.reduce((sum, opt) => sum + opt.votes, 0)
+  msg.poll = {
+    ...msg.poll,
+    my_vote: optionId,
+    total_votes: total,
+    options: options.map((opt) => ({
+      ...opt,
+      pct: total > 0 ? Math.round((opt.votes / total) * 100) : 0,
+    })),
   }
 }
 
@@ -2002,19 +2417,52 @@ async function translateMessage(msg) {
   const id = msgId(msg)
   if (translateLoading.value === id) return
   translateLoading.value = id
+  closeMsgMenu()
   try {
-    const res = await featuresApi.translate({
-      message_type: messageType(msg),
-      message_id: id,
-      text: msg.body,
-    })
-    msg.translation = res.data.translation
-    msg.translated_lang = res.data.to_lang
+    const target = translateTarget(msg.body)
+    const res = await featuresApi.translate({ text: msg.body, target })
+    msg.translation = res.data.text
+    msg.translated_lang = target
+    msg.translation_provider = res.data.provider
   } catch (err) {
-    modalError.value = flattenError(err)
+    toastError(flattenError(err))
   } finally {
     translateLoading.value = ''
   }
+}
+
+/** Swahili content words used to guess whether a message is written in Swahili. */
+const SWAHILI_MARKERS = [
+  'habari', 'karibu', 'asante', 'tafadhali', 'ndiyo', 'hapana', 'chumba', 'vyumba',
+  'ufunguo', 'funguo', 'maji', 'chakula', 'kifungua', 'bili', 'malipo', 'mapokezi',
+  'taulo', 'sabuni', 'shampuu', 'mto', 'blanketi', 'moto', 'baridi', 'kelele',
+  'utulivu', 'choo', 'msaada', 'dharura', 'wifi', 'imeharibika', 'imekamilika',
+  'nimekuja', 'tayari', 'haraka', 'sawa', 'kesho', 'leo', 'mgeni', 'wageni',
+  'ukumbi', 'ghorofa', 'jikoni', 'vinywaji', 'kahawa', 'chai', 'sukari',
+  'thibitisha', 'ghairi', 'fungua', 'funga', 'usalama', 'mlinzi', 'meneja',
+  'nitaangalia', 'nimesoma', 'dozi', 'usafishaji', 'matengenezo', 'njoo',
+]
+
+/**
+ * Picks the output language for a message so the service returns the
+ * opposite-language translation: English text is sent with target 'sw' (EN→SW)
+ * and Swahili text with target 'en' (SW→EN).
+ * @param {string} text - The message body.
+ * @returns {'en'|'sw'} The output language code to request.
+ */
+function translateTarget(text) {
+  const normalized = (text || '').toLowerCase()
+  const swahili = SWAHILI_MARKERS.some((word) => normalized.includes(word))
+  return swahili ? 'en' : 'sw'
+}
+
+/**
+ * Friendly, localized label for a translated message's language code.
+ * @param {string} code - 'en' or 'sw'.
+ * @returns {string} The language name.
+ */
+function langLabel(code) {
+  return code === 'sw' ? t('messages.langSwahili') : t('messages.langEnglish')
 }
 
 /**
@@ -2037,11 +2485,14 @@ async function loadTemplates() {
   try {
     const res = await templateApi.index({ category: templateCategory.value || undefined })
     templates.value = res.data.data || []
-  } catch { /* Ignore: non-fatal. */ }
+  } catch {
+    /* Ignore: non-fatal. */
+  }
 }
 /** Opens the template picker and loads the template list. */
 function openTemplatePicker() {
   showTemplatePicker.value = true
+  showDisappearMenu.value = false
   loadTemplates()
 }
 /** Closes the template picker. */
@@ -2096,7 +2547,9 @@ async function loadScheduled() {
   try {
     const res = await scheduledApi.index()
     scheduledList.value = res.data.data || []
-  } catch { /* Ignore: non-fatal. */ }
+  } catch {
+    /* Ignore: non-fatal. */
+  }
 }
 /**
  * Cancels a scheduled message and removes it from the local list.
@@ -2106,7 +2559,7 @@ async function loadScheduled() {
 async function cancelScheduled(id) {
   try {
     await scheduledApi.destroy(id)
-    scheduledList.value = scheduledList.value.filter((s) => s.id !== id)
+    scheduledList.value = scheduledList.value.filter((scheduled) => scheduled.id !== id)
   } catch (err) {
     modalError.value = flattenError(err)
   }
@@ -2136,10 +2589,20 @@ async function searchForwardTargets() {
       groupApi.index({ search: forwardSearch.value, per_page: 10 }),
     ])
     forwardResults.value = [
-      ...(c.data.data || []).map((x) => ({ kind: 'conversation', id: x.conversation_id, name: x.participant_name || t('messages.directChat') })),
-      ...(g.data.data || []).map((x) => ({ kind: 'group', id: x.group_conversation_id, name: x.name })),
+      ...(c.data.data || []).map((conversation) => ({
+        kind: 'conversation',
+        id: conversation.conversation_id,
+        name: conversation.participant_name || t('messages.directChat'),
+      })),
+      ...(g.data.data || []).map((group) => ({
+        kind: 'group',
+        id: group.group_conversation_id,
+        name: group.name,
+      })),
     ]
-  } catch { /* Ignore: non-fatal. */ }
+  } catch {
+    /* Ignore: non-fatal. */
+  }
 }
 /**
  * Forwards the held message to the chosen target chat.
@@ -2193,19 +2656,21 @@ async function runSearch() {
 }
 /**
  * Closes the search panel and smooth-scrolls to the chosen result bubble.
- * @param {Object} m - A search-result message (needs message_id for the DOM anchor).
+ * @param {Object} message - A search-result message (needs message_id for the DOM anchor).
  */
-function focusResult(m) {
+function focusResult(message) {
   closeSearchPanel()
-  const el = document.getElementById('msg-' + m.message_id)
+  const el = document.getElementById('msg-' + message.message_id)
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
 /** Exports the active chat history as CSV and triggers a browser download. @returns {Promise<void>} */
 async function exportHistory() {
+  if (exporting.value) return
+  exporting.value = true
   try {
     const res = await featuresApi.exportCsv({
-      message_type: activeKind.value,
+      chat_type: activeKind.value === 'group' ? 'group' : 'conversation',
       chat_id: activeId.value,
     })
     const blob = new Blob([res.data], { type: 'text/csv' })
@@ -2213,10 +2678,15 @@ async function exportHistory() {
     const a = document.createElement('a')
     a.href = url
     a.download = 'chat-export.csv'
+    document.body.appendChild(a)
     a.click()
+    a.remove()
     URL.revokeObjectURL(url)
+    toast(t('messages.exported'))
   } catch (err) {
-    modalError.value = flattenError(err)
+    toastError(flattenError(err))
+  } finally {
+    exporting.value = false
   }
 }
 
@@ -2236,7 +2706,9 @@ async function searchRooms() {
   try {
     const res = await roomLinkApi.searchRooms(roomLinkSearch.value)
     roomLinkResults.value = res.data.data || res.data || []
-  } catch { /* Ignore: non-fatal. */ }
+  } catch {
+    /* Ignore: non-fatal. */
+  }
 }
 /**
  * Maps the internal chat kind (direct|group) to the backend room-link API
@@ -2259,7 +2731,8 @@ async function linkRoom(room) {
       chat_id: activeId.value,
       room_id: room.room_id,
     })
-    if (!roomLinks.value.some((l) => l.id === res.data.item.id)) roomLinks.value.push(res.data.item)
+    if (!roomLinks.value.some((roomLink) => roomLink.id === res.data.item.id))
+      roomLinks.value.push(res.data.item)
     closeRoomLinkModal()
     loadRoomLinks()
     toast(t('messages.roomLinked'))
@@ -2275,7 +2748,7 @@ async function linkRoom(room) {
 async function unlinkRoom(id) {
   try {
     await roomLinkApi.destroy(id)
-    roomLinks.value = roomLinks.value.filter((l) => l.id !== id)
+    roomLinks.value = roomLinks.value.filter((roomLink) => roomLink.id !== id)
   } catch (err) {
     modalError.value = flattenError(err)
   }
@@ -2283,9 +2756,14 @@ async function unlinkRoom(id) {
 /** Loads the rooms linked to the active chat. @returns {Promise<void>} */
 async function loadRoomLinks() {
   try {
-    const res = await roomLinkApi.index({ chat_type: roomLinkChatType(activeKind.value), chat_id: activeId.value })
+    const res = await roomLinkApi.index({
+      chat_type: roomLinkChatType(activeKind.value),
+      chat_id: activeId.value,
+    })
     roomLinks.value = res.data.data || []
-  } catch { /* Ignore: non-fatal. */ }
+  } catch {
+    /* Ignore: non-fatal. */
+  }
 }
 
 /**
@@ -2325,6 +2803,7 @@ async function loadWorkspace() {
   loadEscalations()
   loadNearbyStaff()
   loadGuestMessages()
+  loadNotificationSettings()
   loadSos()
   loadPolicies()
   loadPreferences()
@@ -2335,7 +2814,9 @@ async function loadAnnouncements() {
   try {
     const res = await announcementApi.index()
     announcements.value = res.data.data || []
-  } catch { /* Ignore: non-fatal. */ }
+  } catch {
+    /* Ignore: non-fatal. */
+  }
 }
 /** Posts a new announcement (body required), then reloads the list. @returns {Promise<void>} */
 async function postAnnouncement() {
@@ -2375,7 +2856,9 @@ async function loadMeetings() {
   try {
     const res = await meetingApi.index()
     meetings.value = res.data.data || []
-  } catch { /* Ignore: non-fatal. */ }
+  } catch {
+    /* Ignore: non-fatal. */
+  }
 }
 /** Searches inviteable users for the meeting form (clears results on empty query). @returns {Promise<void>} */
 async function searchMeetingUsers() {
@@ -2386,14 +2869,16 @@ async function searchMeetingUsers() {
   try {
     const res = await meetingApi.searchUsers(meetingUserSearch.value)
     meetingUserResults.value = res.data.data || res.data || []
-  } catch { /* Ignore: non-fatal. */ }
+  } catch {
+    /* Ignore: non-fatal. */
+  }
 }
 /**
  * Toggles a user in/out of the meeting invitee selection.
  * @param {Object} user - The user record to toggle.
  */
 function toggleMeetingInvitee(user) {
-  const i = meetingInvitees.value.findIndex((u) => u.user_id === user.user_id)
+  const i = meetingInvitees.value.findIndex((invitee) => invitee.user_id === user.user_id)
   if (i >= 0) meetingInvitees.value.splice(i, 1)
   else meetingInvitees.value.push(user)
 }
@@ -2408,7 +2893,7 @@ async function createMeeting() {
     await meetingApi.store({
       title: meetingTitle.value.trim(),
       start_at: new Date(meetingStart.value).toISOString(),
-      invitee_ids: meetingInvitees.value.map((u) => u.user_id),
+      invitee_ids: meetingInvitees.value.map((invitee) => invitee.user_id),
     })
     meetingTitle.value = ''
     meetingStart.value = ''
@@ -2423,13 +2908,13 @@ async function createMeeting() {
 }
 /**
  * Responds to a meeting invitation (accept/decline), then reloads.
- * @param {Object} m - The meeting record.
+ * @param {Object} meeting - The meeting record.
  * @param {string} status - The response status.
  * @returns {Promise<void>}
  */
-async function respondMeeting(m, status) {
+async function respondMeeting(meeting, status) {
   try {
-    await meetingApi.respond(m.id, { status })
+    await meetingApi.respond(meeting.id, { status })
     loadMeetings()
   } catch (err) {
     modalError.value = flattenError(err)
@@ -2440,7 +2925,9 @@ async function loadHandovers() {
   try {
     const res = await handoverApi.index()
     handovers.value = res.data.data || []
-  } catch { /* Ignore: non-fatal. */ }
+  } catch {
+    /* Ignore: non-fatal. */
+  }
 }
 /** Posts a shift handover note (notes required), then reloads the list. @returns {Promise<void>} */
 async function createHandover() {
@@ -2479,7 +2966,9 @@ async function loadNearbyStaff() {
   try {
     const res = await staffLocationApi.nearby()
     nearbyStaff.value = res.data.data || res.data || []
-  } catch { /* Ignore: non-fatal. */ }
+  } catch {
+    /* Ignore: non-fatal. */
+  }
 }
 /** Publishes my current zone/floor so colleagues can find me. @returns {Promise<void>} */
 async function updateMyLocation() {
@@ -2495,7 +2984,34 @@ async function loadGuestMessages() {
   try {
     const res = await guestMessageApi.index()
     guestMessages.value = res.data.data || []
-  } catch { /* Ignore: non-fatal. */ }
+  } catch {
+    /* Ignore: non-fatal. */
+  }
+}
+/** Loads the automated guest-SMS toggles. @returns {Promise<void>} */
+async function loadNotificationSettings() {
+  try {
+    const res = await guestNotificationSettingsApi.index()
+    notificationEvents.value = res.data.events || []
+  } catch {
+    /* Ignore: non-fatal. */
+  }
+}
+/** Persists the automated guest-SMS toggles. @returns {Promise<void>} */
+async function saveNotificationSettings() {
+  savingSettings.value = true
+  settingsError.value = ''
+  try {
+    const res = await guestNotificationSettingsApi.update({
+      events: notificationEvents.value.map((ev) => ({ event: ev.event, enabled: ev.enabled })),
+    })
+    notificationEvents.value = res.data.events || []
+    toast(t('messages.settingsSaved'))
+  } catch (err) {
+    settingsError.value = err.response?.data?.message || err.message || t('common.actionFailed')
+  } finally {
+    savingSettings.value = false
+  }
 }
 /** Sends an SMS to a guest phone number (phone + body required). @returns {Promise<void>} */
 async function sendGuestMessage() {
@@ -2517,7 +3033,9 @@ async function loadEscalations() {
   try {
     const res = await escalationApi.index()
     escalations.value = res.data.data || []
-  } catch { /* Ignore: non-fatal. */ }
+  } catch {
+    /* Ignore: non-fatal. */
+  }
 }
 /**
  * Escalates a message to management.
@@ -2554,7 +3072,9 @@ async function loadPolicies() {
   try {
     const res = await retentionApi.index()
     policies.value = res.data.data || []
-  } catch { /* Ignore: non-fatal. */ }
+  } catch {
+    /* Ignore: non-fatal. */
+  }
 }
 /** Saves the global retention window (in days), then reloads policies. @returns {Promise<void>} */
 async function saveRetention() {
@@ -2586,26 +3106,29 @@ async function deleteRetention(id) {
 async function loadPreferences() {
   try {
     const res = await preferenceApi.index()
-    preferences.value = res.data.data || []
-  } catch { /* Ignore: non-fatal. */ }
+    preferences.value = res.data || []
+  } catch {
+    /* Ignore: non-fatal. */
+  }
 }
 /**
  * Toggles the muted flag of the active chat and toasts the outcome. @returns {Promise<void>} */
 async function muteCurrentChat() {
+  const scope = activeKind.value === 'group' ? 'group' : 'conversation'
   const pref = preferences.value.find(
-    (p) => p.message_type === activeKind.value && p.chat_id === activeId.value,
+    (preference) => preference.scope === scope && preference.target_id === activeId.value,
   )
-  const next = !(pref && pref.mutes)
+  const next = !(pref && pref.muted)
   try {
     await preferenceApi.store({
-      scope: activeKind.value === 'group' ? 'group' : 'conversation',
+      scope,
       target_id: activeId.value,
       muted: next,
     })
-    loadPreferences()
+    await loadPreferences()
     toast(next ? t('messages.muted') : t('messages.unmuted'))
   } catch (err) {
-    modalError.value = flattenError(err)
+    toastError(flattenError(err))
   }
 }
 /**
@@ -2614,14 +3137,19 @@ async function muteCurrentChat() {
  */
 function isChatMuted() {
   const scope = activeKind.value === 'group' ? 'group' : 'conversation'
-  return preferences.value.some((p) => p.scope === scope && p.target_id === activeId.value && p.muted)
+  return preferences.value.some(
+    (preference) =>
+      preference.scope === scope && preference.target_id === activeId.value && preference.muted,
+  )
 }
 /** Loads SOS alerts for the tenant. @returns {Promise<void>} */
 async function loadSos() {
   try {
     const res = await sosApi.index()
     sosAlerts.value = res.data.data || []
-  } catch { /* Ignore: non-fatal. */ }
+  } catch {
+    /* Ignore: non-fatal. */
+  }
 }
 /** Opens the workspace panel directly on the SOS tab. */
 function openSosPanel() {
@@ -2670,11 +3198,11 @@ async function resolveSos(id) {
   }
 }
 /**
- * Shows a transient toast via the globally registered helper, when available.
+ * Shows a transient toast via the global helper (imported from utils/toast).
  * @param {string} text - Message to display.
  */
 function toast(text) {
-  if (window.toast) window.toast(text)
+  showToast(text)
 }
 
 /**
@@ -2683,7 +3211,7 @@ function toast(text) {
  * @returns {string|null} The full name, or null when not mentionable here.
  */
 function mentionName(userId) {
-  const u = mentionableUsers.value.find((x) => x.user_id === userId)
+  const u = mentionableUsers.value.find((user) => user.user_id === userId)
   return u ? u.full_name : null
 }
 
@@ -2695,9 +3223,9 @@ function mentionName(userId) {
  */
 function renderBody(msg) {
   const body = msg.body || ''
-  const names = (msg.mentions || []).map((m) => mentionName(m.user_id)).filter(Boolean)
+  const names = (msg.mentions || []).map((mention) => mentionName(mention.user_id)).filter(Boolean)
   if (!names.length) return [{ text: body, isMention: false }]
-  const esc = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const esc = names.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
   const pattern = new RegExp('(@(?:' + esc.join('|') + '))\\b', 'gi')
   const parts = []
   let last = 0
@@ -2734,8 +3262,8 @@ function onDraftInput() {
   if (match) {
     mentionTriggerPos = match.index + match[1].length
     mentionQuery.value = match[2]
-    mentionSuggestions.value = mentionableUsers.value.filter((u) =>
-      u.full_name.toLowerCase().startsWith(mentionQuery.value.toLowerCase()),
+    mentionSuggestions.value = mentionableUsers.value.filter((user) =>
+      user.full_name.toLowerCase().startsWith(mentionQuery.value.toLowerCase()),
     )
   } else {
     mentionSuggestions.value = []
@@ -2790,20 +3318,20 @@ function scrollToMessage(msg) {
 
 /**
  * Normalizes a raw group record into the unified chat-list item shape.
- * @param {Object} g - The group record from the API.
+ * @param {Object} group - The group record from the API.
  * @returns {Object} A chat-list item ({ kind: 'group', ... }).
  */
-function toGroupItem(g) {
+function toGroupItem(group) {
   return {
     kind: 'group',
-    id: g.group_conversation_id,
-    name: g.name,
-    scope: g.scope,
-    unread_count: g.unread_count || 0,
-    member_count: g.member_count || 0,
-    last_message_at: g.last_message_at || g.created_at,
-    last_message: g.last_message,
-    created_at: g.created_at,
+    id: group.group_conversation_id,
+    name: group.name,
+    scope: group.scope,
+    unread_count: group.unread_count || 0,
+    member_count: group.member_count || 0,
+    last_message_at: group.last_message_at || group.created_at,
+    last_message: group.last_message,
+    created_at: group.created_at,
   }
 }
 
@@ -2821,8 +3349,10 @@ async function loadConversations(page = 1, replace = true) {
     const items = res.data.data || []
     if (replace) conversations.value = items
     else {
-      const ids = new Set(conversations.value.map((c) => c.conversation_id))
-      conversations.value.push(...items.filter((c) => !ids.has(c.conversation_id)))
+      const ids = new Set(conversations.value.map((conversation) => conversation.conversation_id))
+      conversations.value.push(
+        ...items.filter((conversation) => !ids.has(conversation.conversation_id)),
+      )
     }
     convPage.value = page
     convMeta.value = res.data
@@ -2847,8 +3377,8 @@ async function loadGroups(page = 1, replace = true) {
     const items = res.data.data || []
     if (replace) groups.value = items
     else {
-      const ids = new Set(groups.value.map((g) => g.group_conversation_id))
-      groups.value.push(...items.filter((g) => !ids.has(g.group_conversation_id)))
+      const ids = new Set(groups.value.map((group) => group.group_conversation_id))
+      groups.value.push(...items.filter((group) => !ids.has(group.group_conversation_id)))
     }
     groupPage.value = page
     groupMeta.value = res.data
@@ -2894,6 +3424,7 @@ async function openChat(chat) {
   cancelRecording()
   cancelFilePreview()
   showEmojiPicker.value = false
+  showDisappearMenu.value = false
   composerMenuOpen.value = false
   threadHeadMenuOpen.value = false
   mentionSuggestions.value = []
@@ -2936,6 +3467,10 @@ function closeThread() {
     activeThreadChannel.unsubscribe()
     activeThreadChannel = null
   }
+  if (disappearTimer) {
+    clearInterval(disappearTimer)
+    disappearTimer = null
+  }
   activeId.value = null
   messages.value = []
   groupInfo.value = null
@@ -2957,8 +3492,8 @@ function markReadSilently() {
     conversationApi.markRead(activeId.value).catch(() => { })
     const chat = activeChat.value
     if (chat) chat.unread_count = 0
-    messages.value.forEach((m) => {
-      if (m.sender_id !== me.value.user_id) m.read_at = new Date().toISOString()
+    messages.value.forEach((message) => {
+      if (message.sender_id !== me.value.user_id) message.read_at = new Date().toISOString()
     })
   }
 }
@@ -2999,10 +3534,17 @@ async function sendMessage() {
     if (replyTo.value) {
       payload.reply_to_id = msgId(replyTo.value)
     }
-    if (showPollBuilder.value && pollQuestion.value.trim() && pollOptions.value.filter((o) => o.trim()).length >= 2) {
+    if (disappearIn.value > 0) {
+      payload.disappears_in = disappearIn.value
+    }
+    if (
+      showPollBuilder.value &&
+      pollQuestion.value.trim() &&
+      pollOptions.value.filter((option) => option.trim()).length >= 2
+    ) {
       payload.poll = {
         question: pollQuestion.value.trim(),
-        options: pollOptions.value.filter((o) => o.trim()).map((o) => o.trim()),
+        options: pollOptions.value.filter((option) => option.trim()).map((option) => option.trim()),
         multiple: pollMultiple.value,
       }
     }
@@ -3029,6 +3571,8 @@ function clearComposerExtras() {
   showTemplatePicker.value = false
   showScheduler.value = false
   scheduleAt.value = ''
+  showDisappearMenu.value = false
+  disappearIn.value = 0
 }
 
 /**
@@ -3049,6 +3593,50 @@ function cancelReply() {
 /** Toggles the outgoing message priority between 'normal' and 'urgent'. */
 function togglePriority() {
   sendPriority.value = sendPriority.value === 'urgent' ? 'normal' : 'urgent'
+}
+
+/**
+ * Label for the disappearing-message composer toggle (e.g. "Disappearing: 1 day").
+ * @returns {string} Localized label for the currently selected duration.
+ */
+const disappearLabel = computed(() => {
+  return `${t('messages.disappearing')}: ${disappearOptionLabel(disappearIn.value)}`
+})
+
+/**
+ * Localized label for a disappearing-message duration option.
+ * @param {number} seconds - Duration in seconds (0 = off).
+ * @returns {string} Human-readable label for the option.
+ */
+function disappearOptionLabel(seconds) {
+  const map = {
+    0: t('messages.disappearOff'),
+    3600: t('messages.disappear1h'),
+    86400: t('messages.disappear1d'),
+    604800: t('messages.disappear7d'),
+  }
+  return map[seconds] || t('messages.disappearOff')
+}
+
+/**
+ * Opens/closes the disappearing-message duration picker, closing the other
+ * composer popovers so only one is visible at a time.
+ */
+function toggleDisappearMenu() {
+  showEmojiPicker.value = false
+  showPollBuilder.value = false
+  showScheduler.value = false
+  showTemplatePicker.value = false
+  showDisappearMenu.value = !showDisappearMenu.value
+}
+
+/**
+ * Applies the chosen disappearing-message duration and closes the picker.
+ * @param {number} seconds - Duration in seconds (0 disables it).
+ */
+function setDisappear(seconds) {
+  disappearIn.value = seconds
+  showDisappearMenu.value = false
 }
 
 /** Adds an empty option row to the poll builder. */
@@ -3125,6 +3713,7 @@ function sendFilePreview() {
   const fd = new FormData()
   fd.append('media', file)
   if (fileViewOnce.value) fd.append('view_once', 'true')
+  if (disappearIn.value > 0) fd.append('disappears_in', String(disappearIn.value))
   if (file.type?.startsWith('audio/')) fd.append('type', 'audio')
   else if (file.type?.startsWith('image/')) fd.append('type', 'image')
   else fd.append('type', 'file')
@@ -3134,6 +3723,7 @@ function sendFilePreview() {
     filePreview.value = null
     filePreviewUrl.value = ''
     fileViewOnce.value = false
+    disappearIn.value = 0
   })
 }
 
@@ -3185,8 +3775,8 @@ async function startRecording() {
     audioChunks = []
     recordingBlob.value = null
     recordingUrl.value = ''
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size) audioChunks.push(e.data)
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size) audioChunks.push(event.data)
     }
     mediaRecorder.onstop = () => {
       const blob = new Blob(audioChunks, { type: recMimeType })
@@ -3268,13 +3858,21 @@ function subscribeUserChannel() {
   echo.private(`user.${me.value.user_id}`).listen('.status.posted', handleStatusPosted)
   echo.private(`user.${me.value.user_id}`).listen('.meeting.invited', handleMeetingInvited)
   echo.private(`user.${me.value.user_id}`).listen('.meeting.response', handleMeetingResponse)
-  echo.private(`tenant.${me.value.tenant_id}`).listen('.announcement.posted', handleAnnouncementPosted)
-  echo.private(`tenant.${me.value.tenant_id}`).listen('.announcement.acknowledged', handleAnnouncementPosted)
+  echo
+    .private(`tenant.${me.value.tenant_id}`)
+    .listen('.announcement.posted', handleAnnouncementPosted)
+  echo
+    .private(`tenant.${me.value.tenant_id}`)
+    .listen('.announcement.acknowledged', handleAnnouncementPosted)
   echo.private(`tenant.${me.value.tenant_id}`).listen('.sos.initiated', handleSosInitiated)
   echo.private(`tenant.${me.value.tenant_id}`).listen('.sos.resolved', handleSosResolved)
   echo.private(`tenant.${me.value.tenant_id}`).listen('.handover.posted', handleHandoverPosted)
-  echo.private(`tenant.${me.value.tenant_id}`).listen('.handover.acknowledged', handleHandoverPosted)
-  echo.private(`tenant.${me.value.tenant_id}`).listen('.staff.location.updated', handleStaffLocationUpdated)
+  echo
+    .private(`tenant.${me.value.tenant_id}`)
+    .listen('.handover.acknowledged', handleHandoverPosted)
+  echo
+    .private(`tenant.${me.value.tenant_id}`)
+    .listen('.staff.location.updated', handleStaffLocationUpdated)
   echo.private(`tenant.${me.value.tenant_id}`).listen('.guest.message', handleGuestMessagePosted)
   echo.private(`tenant.${me.value.tenant_id}`).listen('.message.escalated', handleMessageEscalated)
 }
@@ -3355,7 +3953,9 @@ function handlePreviewUpdated(data) {
   const isDirect = data.kind === 'direct'
   const isActive = activeKind.value === data.kind && activeId.value === data.id
   const list = isDirect ? conversations.value : groups.value
-  const item = list.find((c) => (isDirect ? c.conversation_id === data.id : c.group_conversation_id === data.id))
+  const item = list.find((entry) =>
+    isDirect ? entry.conversation_id === data.id : entry.group_conversation_id === data.id,
+  )
   if (item) {
     item.last_message = data.last_message || null
     item.last_message_at = data.last_message_at || item.last_message_at
@@ -3394,6 +3994,11 @@ function subscribeThread() {
   activeThreadChannel.listen('.poll.created', handlePollVoted)
   activeThreadChannel.listen('.poll.voted', handlePollVoted)
   activeThreadChannel.listen('.task.converted', handleTaskConverted)
+  activeThreadChannel.listen('.message.disappeared', handleMessageDisappeared)
+
+  // Tick disappearing-message countdowns while this thread stays open.
+  if (disappearTimer) clearInterval(disappearTimer)
+  disappearTimer = setInterval(expireDisappearing, 1000)
 }
 
 /**
@@ -3402,7 +4007,7 @@ function subscribeThread() {
  * @param {boolean} pinned - New pinned state.
  */
 function setPinnedLocally(data, pinned) {
-  const msg = messages.value.find((m) => msgId(m) === data.message_id)
+  const msg = messages.value.find((message) => msgId(message) === data.message_id)
   if (msg) {
     msg.pinned_at = pinned ? new Date().toISOString() : null
     loadPinned()
@@ -3420,7 +4025,7 @@ function handleReplySent(data) {
   const isGroup = activeKind.value === 'group'
   const id = isGroup ? item.group_message_id : item.message_id
   if (item.sender_id === me.value.user_id) return
-  if (messages.value.some((m) => msgId(m) === id)) return
+  if (messages.value.some((message) => msgId(message) === id)) return
   messages.value.push(item)
   if (isGroup) {
     if (activeId.value !== item.group_conversation_id) return
@@ -3438,15 +4043,17 @@ function handleReplySent(data) {
  * @param {Object} data - Broadcast payload ({ poll_id | poll, options, total_votes }).
  */
 function handlePollVoted(data) {
-  const msg = messages.value.find((m) => m.poll && m.poll.poll_id === (data.poll_id || data.poll?.poll_id))
+  const msg = messages.value.find(
+    (message) => message.poll && message.poll.poll_id === (data.poll_id || data.poll?.poll_id),
+  )
   if (!msg) return
   if (data.poll) {
     msg.poll = { ...msg.poll, ...data.poll, options: data.poll.options }
   } else {
     const options = data.options || []
-    msg.poll.options = msg.poll.options.map((o) => {
-      const fresh = options.find((x) => x.poll_option_id === o.poll_option_id)
-      return fresh ? { ...o, votes: fresh.votes, pct: fresh.pct } : o
+    msg.poll.options = msg.poll.options.map((option) => {
+      const fresh = options.find((option) => option.poll_option_id === option.poll_option_id)
+      return fresh ? { ...option, votes: fresh.votes, pct: fresh.pct } : option
     })
     msg.poll.total_votes = data.total_votes
   }
@@ -3457,7 +4064,7 @@ function handlePollVoted(data) {
  * @param {Object} data - Broadcast payload ({ message_id, task }).
  */
 function handleTaskConverted(data) {
-  const msg = messages.value.find((m) => msgId(m) === data.message_id)
+  const msg = messages.value.find((message) => msgId(message) === data.message_id)
   if (msg) {
     msg.is_task = true
     msg.task_kind = data.task?.kind || msg.task_kind
@@ -3483,7 +4090,7 @@ function handleUserMessageDeleted(data) {
  * @param {Object} data - Broadcast payload ({ message_id, message_type, scope, deleted_by }).
  */
 function handleMessageDeleted(data) {
-  const msg = messages.value.find((m) => msgId(m) === data.message_id)
+  const msg = messages.value.find((message) => msgId(message) === data.message_id)
   if (!msg) return
   if (data.scope === 'everyone') {
     applyDeletedLocally(msg, 'everyone')
@@ -3497,7 +4104,7 @@ function handleMessageDeleted(data) {
  * @param {Object} data - Broadcast payload ({ message_id, reactions }).
  */
 function handleReactionUpdated(data) {
-  const msg = messages.value.find((m) => msgId(m) === data.message_id)
+  const msg = messages.value.find((message) => msgId(message) === data.message_id)
   if (msg) msg.reactions = data.reactions || []
 }
 
@@ -3506,8 +4113,17 @@ function handleReactionUpdated(data) {
  * @param {Object} data - Broadcast payload ({ message_id, viewed_at }).
  */
 function handleViewedOnce(data) {
-  const msg = messages.value.find((m) => msgId(m) === data.message_id)
+  const msg = messages.value.find((message) => msgId(message) === data.message_id)
   if (msg) msg.viewed_at = data.viewed_at
+}
+
+/**
+ * Removes a message whose disappearing timer lapsed (broadcast from the
+ * server-side purge), mirroring the local countdown expiry.
+ * @param {Object} data - Broadcast payload ({ message_id, message_type }).
+ */
+function handleMessageDisappeared(data) {
+  removeMessageLocally(data.message_id, data.message_type)
 }
 
 /**
@@ -3517,7 +4133,7 @@ function handleViewedOnce(data) {
  */
 function removeMessageLocally(id, kind) {
   const key = kind === 'group' ? 'group_message_id' : 'message_id'
-  const idx = messages.value.findIndex((m) => m[key] === id)
+  const idx = messages.value.findIndex((message) => message[key] === id)
   if (idx > -1) {
     messages.value.splice(idx, 1)
     refreshThreadPreview()
@@ -3531,7 +4147,7 @@ function removeMessageLocally(id, kind) {
  */
 function handleMessageSent(item) {
   if (activeKind.value !== 'direct' || activeId.value !== item.conversation_id) return
-  if (messages.value.some((m) => m.message_id === item.message_id)) return
+  if (messages.value.some((message) => message.message_id === item.message_id)) return
   messages.value.push(item)
   if (item.sender_id !== me.value.user_id) markReadSilently()
   scrollToBottom()
@@ -3543,7 +4159,7 @@ function handleMessageSent(item) {
  */
 function handleGroupMessageSent(item) {
   if (activeKind.value !== 'group' || activeId.value !== item.group_conversation_id) return
-  if (messages.value.some((m) => m.group_message_id === item.group_message_id)) return
+  if (messages.value.some((message) => message.group_message_id === item.group_message_id)) return
   messages.value.push(item)
   scrollToBottom()
 }
@@ -3677,7 +4293,11 @@ async function createGroup() {
   modalError.value = ''
   try {
     const res = isTaskGroupCreation.value
-      ? await taskGroupApi.store({ name, task_type: taskGroupType.value, member_ids: selectedGroupUsers.value })
+      ? await taskGroupApi.store({
+        name,
+        task_type: taskGroupType.value,
+        member_ids: selectedGroupUsers.value,
+      })
       : await groupApi.store({
         name,
         scope: groupScope.value,
@@ -3772,17 +4392,19 @@ onMounted(() => {
   loadStatusMap()
 })
 
-// Teardown: leave the thread channel, dispose the call manager, disconnect Echo
-// and release timers/the microphone so nothing leaks after navigation.
+// Teardown: leave the thread channel, dispose the call manager and release
+// timers/the microphone so nothing leaks after navigation. The Echo socket
+// itself is owned by the layout (it also feeds presence), so it stays alive.
 onUnmounted(() => {
   if (activeThreadChannel) {
     activeThreadChannel.unsubscribe()
     activeThreadChannel = null
   }
   callManager.dispose()
-  destroyEcho()
   clearTimeout(searchTimer)
   clearInterval(recTimer)
+  clearInterval(disappearTimer)
+  showDisappearMenu.value = false
   if (recStream) recStream.getTracks().forEach((tr) => tr.stop())
 })
 </script>
@@ -3905,6 +4527,29 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+
+.online-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #2ecc40;
+  border: 2px solid #fff;
+}
+
+.chat-online i {
+  font-size: 8px;
+  vertical-align: middle;
+  color: #2ecc40;
+}
+
+.online-label {
+  color: #2ecc40;
+  font-weight: 600;
 }
 
 .avatar-global {
@@ -3916,11 +4561,15 @@ onUnmounted(() => {
 }
 
 .status-ring.unviewed {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 5px #25d366;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 5px #25d366;
 }
 
 .status-ring.viewed {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 5px #c0c0c0;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 5px #c0c0c0;
 }
 
 .status-my {
@@ -4135,6 +4784,25 @@ onUnmounted(() => {
   font-size: 11px;
   margin-top: 3px;
   opacity: 0.75;
+}
+
+.disappear-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 3px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(211, 84, 0, 0.12);
+  color: #d35400;
+  white-space: nowrap;
+}
+
+.bubble.mine .disappear-chip {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
 }
 
 .ticks {
@@ -4668,6 +5336,59 @@ onUnmounted(() => {
   background: #f3f6fb;
 }
 
+/* WhatsApp-style disappearing-message duration picker. */
+.disappear-menu {
+  position: absolute;
+  left: 12px;
+  bottom: calc(100% + 8px);
+  min-width: 200px;
+  background: #fff;
+  border: 1px solid #e2e2e2;
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  padding: 6px;
+  z-index: 20;
+}
+
+.disappear-menu-head {
+  padding: 8px 12px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.disappear-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  color: #333;
+  text-align: left;
+  cursor: pointer;
+}
+
+.disappear-option:hover {
+  background: #f3f4f6;
+}
+
+.disappear-option.selected {
+  color: var(--brand);
+  background: #eaf4ff;
+  font-weight: 600;
+}
+
+.disappear-option i {
+  color: var(--brand);
+}
+
 .attachment-preview {
   display: flex;
   align-items: center;
@@ -4712,7 +5433,7 @@ onUnmounted(() => {
 
 .attachment-preview-file span {
   font-size: 12px;
-  color: #888;
+  color: #757575;
 }
 
 @keyframes pulse {
@@ -5586,6 +6307,69 @@ onUnmounted(() => {
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.ws-tab-section {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.ws-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ws-section-head h4 {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #005eb8;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ws-toggle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ws-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #eef0f3;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ws-toggle-row:last-child {
+  border-bottom: none;
+}
+
+.ws-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.toggle-check {
+  width: 18px;
+  height: 18px;
+  accent-color: #005eb8;
+  cursor: pointer;
 }
 
 .ws-card {

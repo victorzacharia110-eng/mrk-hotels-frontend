@@ -19,6 +19,21 @@
         <button v-if="canOperate" class="btn btn-primary" @click="openCreate">
           <i class="fas fa-plus"></i> {{ $t('reservations.newReservation') }}
         </button>
+        <TableExportButton
+          filename="reservations"
+          :load-all="loadAllReservations"
+          :columns="[
+            { key: 'guest_name', label: $t('reservations.guest') },
+            { key: 'guest_phone', label: $t('common.phone') },
+            { key: 'booking_type', label: $t('reservations.tableBookingType') },
+            { key: 'room_type', label: $t('reservations.room') },
+            { key: 'check_in_date', label: $t('reservations.tableStay') },
+            { key: 'check_out_date', label: $t('common.checkout') },
+            { key: 'total_amount', label: $t('reservations.tableTotal') },
+            { key: 'advance_payment', label: $t('reservations.tableBalance') },
+            { key: 'status', label: $t('reservations.status') },
+          ]"
+        />
       </div>
     </div>
 
@@ -102,119 +117,126 @@
     <!-- Reservation table; row actions depend on the reservation lifecycle status -->
     <div v-else class="table-scroll">
       <table class="table">
-      <thead>
-        <tr>
-          <th>{{ $t('reservations.guest') }}</th>
-          <th>{{ $t('reservations.tableBookingType') }}</th>
-          <th>{{ $t('reservations.room') }}</th>
-          <th>{{ $t('reservations.tableStay') }}</th>
-          <th>{{ $t('reservations.tableTimes') }}</th>
-          <th>{{ $t('reservations.tableTotal') }}</th>
-          <th>{{ $t('reservations.tableBalance') }}</th>
-          <th>{{ $t('reservations.status') }}</th>
-          <th>{{ $t('common.actions') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="r in reservations" :key="r.reservation_id">
-          <td>
-            <strong>{{ r.guest_name }}</strong>
-            <div class="sub">{{ r.guest_phone || r.guest_email || '—' }}</div>
-            <div v-if="r.city || r.country" class="sub">
-              <i class="fas fa-location-dot"></i>
-              {{ [r.city, r.country].filter(Boolean).join(', ') }}
-            </div>
-          </td>
-          <td>
-            <span class="badge badge-blue">{{ bookingTypeLabel(r.booking_type) }}</span>
-          </td>
-          <td>
-            <span v-if="r.room">
-              {{ $t('reservations.room') }} {{ r.room.room_number }}
-              <div class="sub capitalize">{{ roomTypeLabel(r.room_type || r.room.room_type) }}</div>
-            </span>
-            <span v-else class="sub">—</span>
-          </td>
-          <td>
-            <div>{{ formatDate(r.arrival_date) }} → {{ formatDate(r.departure_date) }}</div>
-            <div class="sub">
-              {{ r.num_days || r.nights }} {{ $t('reservations.nights') }} ·
-              {{ r.num_adults }} {{ $t('reservations.adults')
-              }}{{ r.num_children ? `, ${r.num_children} ${$t('reservations.children')}` : '' }}
-            </div>
-          </td>
-          <td>
-            <div v-if="r.checked_in_at">
-              <i class="fas fa-right-to-bracket"></i> {{ formatDateTime(r.checked_in_at) }}
-            </div>
-            <div class="sub" v-else>—</div>
-            <div v-if="r.checked_out_at">
-              <i class="fas fa-right-from-bracket"></i> {{ formatDateTime(r.checked_out_at) }}
-            </div>
-            <div v-if="r.checkout_reason" class="sub">
-              <i class="fas fa-comment"></i> “{{ r.checkout_reason }}”
-            </div>
-          </td>
-          <td><span class="price">TZS {{ Number(r.total_amount).toLocaleString() }}</span></td>
-          <td>
-            <span :class="{ due: Number(r.balance_due ?? r.balance) > 0 }">
-              TZS {{ Number(r.balance_due ?? r.balance).toLocaleString() }}
-            </span>
-            <div v-if="Number(r.room_charges) > 0" class="sub">
-              <i class="fas fa-receipt"></i> {{ $t('reservations.roomCharges') }} TZS {{ Number(r.room_charges).toLocaleString() }}
-            </div>
-          </td>
-          <td>
-            <span class="badge" :class="statusBadge(r.status)">{{ r.status.replace('_', ' ') }}</span>
-          </td>
-          <td>
-            <div class="actions">
-              <button class="btn btn-sm btn-secondary" @click="openDetail(r)">
-                <i class="fas fa-eye"></i> {{ $t('common.view') }}
-              </button>
-              <button
-                v-if="['pending', 'confirmed'].includes(r.status) && canOperate"
-                class="btn btn-sm btn-success"
-                @click="checkIn(r)"
-              >
-                <i class="fas fa-right-to-bracket"></i> {{ $t('reservations.checkIn') }}
-              </button>
-              <button
-                v-if="r.status === 'checked_in' && canOperate"
-                class="btn btn-sm btn-primary"
-                @click="openCheckout(r)"
-              >
-                <i class="fas fa-right-from-bracket"></i> {{ $t('reservations.checkOut') }}
-              </button>
-              <button
-                v-if="r.status === 'confirmed' && canOperate"
-                class="btn btn-sm btn-secondary"
-                @click="noShow(r)"
-              >
-                {{ $t('reservations.noShow') }}
-              </button>
-              <button
-                v-if="['pending', 'confirmed'].includes(r.status) && canOperate"
-                class="btn btn-sm btn-danger"
-                @click="cancel(r)"
-              >
-                <i class="fas fa-ban"></i> {{ $t('common.cancel') }}
-              </button>
-              <button
-                v-if="['checked_out', 'cancelled'].includes(r.status) && canOperate"
-                class="btn btn-sm btn-danger"
-                @click="openDelete(r)"
-              >
-                <i class="fas fa-trash-can"></i> {{ $t('reservations.deletePermanent') }}
-              </button>
-            </div>
-          </td>
-        </tr>
-        <tr v-if="!reservations.length && !loading">
-          <td colspan="9" class="sub">{{ $t('reservations.empty') }}</td>
-        </tr>
-      </tbody>
-    </table>
+        <thead>
+          <tr>
+            <th scope="col">{{ $t('reservations.guest') }}</th>
+            <th scope="col">{{ $t('reservations.tableBookingType') }}</th>
+            <th scope="col">{{ $t('reservations.room') }}</th>
+            <th scope="col">{{ $t('reservations.tableStay') }}</th>
+            <th scope="col">{{ $t('reservations.tableTimes') }}</th>
+            <th scope="col">{{ $t('reservations.tableTotal') }}</th>
+            <th scope="col">{{ $t('reservations.tableBalance') }}</th>
+            <th scope="col">{{ $t('reservations.status') }}</th>
+            <th scope="col">{{ $t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="r in reservations" :key="r.reservation_id">
+            <td>
+              <strong>{{ r.guest_name }}</strong>
+              <div class="sub">{{ r.guest_phone || r.guest_email || '—' }}</div>
+              <div v-if="r.city || r.country" class="sub">
+                <i class="fas fa-location-dot"></i>
+                {{ [r.city, r.country].filter(Boolean).join(', ') }}
+              </div>
+            </td>
+            <td>
+              <span class="badge badge-blue">{{ bookingTypeLabel(r.booking_type) }}</span>
+            </td>
+            <td>
+              <span v-if="r.room">
+                {{ $t('reservations.room') }} {{ r.room.room_number }}
+                <div class="sub capitalize">
+                  {{ roomTypeLabel(r.room_type || r.room.room_type) }}
+                </div>
+              </span>
+              <span v-else class="sub">—</span>
+            </td>
+            <td>
+              <div>{{ formatDate(r.arrival_date) }} → {{ formatDate(r.departure_date) }}</div>
+              <div class="sub">
+                {{ r.num_days || r.nights }} {{ $t('reservations.nights') }} · {{ r.num_adults }}
+                {{ $t('reservations.adults')
+                }}{{ r.num_children ? `, ${r.num_children} ${$t('reservations.children')}` : '' }}
+              </div>
+            </td>
+            <td>
+              <div v-if="r.checked_in_at">
+                <i class="fas fa-right-to-bracket"></i> {{ formatDateTime(r.checked_in_at) }}
+              </div>
+              <div class="sub" v-else>—</div>
+              <div v-if="r.checked_out_at">
+                <i class="fas fa-right-from-bracket"></i> {{ formatDateTime(r.checked_out_at) }}
+              </div>
+              <div v-if="r.checkout_reason" class="sub">
+                <i class="fas fa-comment"></i> “{{ r.checkout_reason }}”
+              </div>
+            </td>
+            <td>
+              <span class="price">TZS {{ Number(r.total_amount).toLocaleString() }}</span>
+            </td>
+            <td>
+              <span :class="{ due: Number(r.balance_due ?? r.balance) > 0 }">
+                TZS {{ Number(r.balance_due ?? r.balance).toLocaleString() }}
+              </span>
+              <div v-if="Number(r.room_charges) > 0" class="sub">
+                <i class="fas fa-receipt"></i> {{ $t('reservations.roomCharges') }} TZS
+                {{ Number(r.room_charges).toLocaleString() }}
+              </div>
+            </td>
+            <td>
+              <span class="badge" :class="statusBadge(r.status)">{{
+                r.status.replace('_', ' ')
+              }}</span>
+            </td>
+            <td>
+              <div class="actions">
+                <button class="btn btn-sm btn-secondary" @click="openDetail(r)">
+                  <i class="fas fa-eye"></i> {{ $t('common.view') }}
+                </button>
+                <button
+                  v-if="['pending', 'confirmed'].includes(r.status) && canOperate"
+                  class="btn btn-sm btn-success"
+                  @click="openCheckin(r)"
+                >
+                  <i class="fas fa-right-to-bracket"></i> {{ $t('reservations.checkIn') }}
+                </button>
+                <button
+                  v-if="r.status === 'checked_in' && canOperate"
+                  class="btn btn-sm btn-primary"
+                  @click="openCheckout(r)"
+                >
+                  <i class="fas fa-right-from-bracket"></i> {{ $t('reservations.checkOut') }}
+                </button>
+                <button
+                  v-if="r.status === 'confirmed' && canOperate"
+                  class="btn btn-sm btn-secondary"
+                  @click="noShow(r)"
+                >
+                  {{ $t('reservations.noShow') }}
+                </button>
+                <button
+                  v-if="['pending', 'confirmed'].includes(r.status) && canOperate"
+                  class="btn btn-sm btn-danger"
+                  @click="cancel(r)"
+                >
+                  <i class="fas fa-ban"></i> {{ $t('common.cancel') }}
+                </button>
+                <button
+                  v-if="['checked_out', 'cancelled'].includes(r.status) && canOperate"
+                  class="btn btn-sm btn-danger"
+                  @click="openDelete(r)"
+                >
+                  <i class="fas fa-trash-can"></i> {{ $t('reservations.deletePermanent') }}
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!reservations.length && !loading">
+            <td colspan="9" class="sub">{{ $t('reservations.empty') }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Pagination controls, only shown when there is more than one page -->
@@ -265,7 +287,12 @@
                 />
                 <small v-if="recognizedGuest" class="hint success">
                   <i class="fas fa-user-check"></i>
-                  {{ $t('reservations.guestRecognized', { name: recognizedGuest.full_name, hotel: recognizedGuest.hotel_name || '' }) }}
+                  {{
+                    $t('reservations.guestRecognized', {
+                      name: recognizedGuest.full_name,
+                      hotel: recognizedGuest.hotel_name || '',
+                    })
+                  }}
                 </small>
               </div>
               <div class="form-group">
@@ -408,13 +435,27 @@
               </div>
               <div class="form-group">
                 <label>{{ $t('bookingPage.sortBy') }}</label>
-                <SearchableSelect v-model="sortKey" :options="sortOptions" :placeholder="$t('bookingPage.sortBy')"
-                  @change="roomPage = 1" />
+                <SearchableSelect
+                  v-model="sortKey"
+                  :options="sortOptions"
+                  :placeholder="$t('bookingPage.sortBy')"
+                  @change="roomPage = 1"
+                />
               </div>
               <div class="form-group">
                 <label>&nbsp;</label>
-                <button type="button" class="btn btn-outline room-browser-dir" @click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'">
-                  <i :class="sortDir === 'asc' ? 'fas fa-arrow-up-wide-short' : 'fas fa-arrow-down-wide-short'"></i>
+                <button
+                  type="button"
+                  class="btn btn-outline room-browser-dir"
+                  @click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'"
+                >
+                  <i
+                    :class="
+                      sortDir === 'asc'
+                        ? 'fas fa-arrow-up-wide-short'
+                        : 'fas fa-arrow-down-wide-short'
+                    "
+                  ></i>
                   {{ sortDir === 'asc' ? $t('bookingPage.sortAsc') : $t('bookingPage.sortDesc') }}
                 </button>
               </div>
@@ -442,7 +483,8 @@
                   {{ $t('bookingPage.upTo') }} {{ room.max_occupancy }}
                 </p>
                 <p class="room-price">
-                  TZS {{ Number(room.price_per_night).toLocaleString() }} / {{ $t('home.perNight') }}
+                  TZS {{ Number(room.price_per_night).toLocaleString() }} /
+                  {{ $t('home.perNight') }}
                 </p>
               </article>
             </div>
@@ -451,16 +493,32 @@
               <strong>{{ $t('bookingPage.selectedRooms') }}:</strong> {{ selectedRooms.length }}
             </p>
             <p v-if="roomsSource.length" class="hint room-browser-count">
-              {{ $t('bookingPage.showingRooms', { from: rangeFrom, to: rangeTo, total: filteredCount }) }}
+              {{
+                $t('bookingPage.showingRooms', {
+                  from: rangeFrom,
+                  to: rangeTo,
+                  total: filteredCount,
+                })
+              }}
             </p>
 
             <!-- Pagination over the available rooms (15 per page) -->
             <div v-if="pageCount > 1" class="pagination">
-              <button type="button" class="btn btn-sm btn-outline" :disabled="roomPage <= 1" @click="roomPage--">
+              <button
+                type="button"
+                class="btn btn-sm btn-outline"
+                :disabled="roomPage <= 1"
+                @click="roomPage--"
+              >
                 <i class="fas fa-chevron-left"></i> {{ $t('common.previous') }}
               </button>
               <span>{{ $t('common.pageXOfY', { current: roomPage, total: pageCount }) }}</span>
-              <button type="button" class="btn btn-sm btn-outline" :disabled="roomPage >= pageCount" @click="roomPage++">
+              <button
+                type="button"
+                class="btn btn-sm btn-outline"
+                :disabled="roomPage >= pageCount"
+                @click="roomPage++"
+              >
                 {{ $t('common.next') }} <i class="fas fa-chevron-right"></i>
               </button>
             </div>
@@ -532,8 +590,8 @@
           <button class="modal-close" @click="closeCheckout"><i class="fas fa-xmark"></i></button>
         </div>
         <p class="muted">
-          <strong>{{ checkoutTarget?.guest_name }}</strong> ·
-          {{ $t('reservations.room') }} {{ checkoutTarget?.room?.room_number }}
+          <strong>{{ checkoutTarget?.guest_name }}</strong> · {{ $t('reservations.room') }}
+          {{ checkoutTarget?.room?.room_number }}
         </p>
         <p v-if="isEarlyCheckout" class="hint danger">
           <i class="fas fa-triangle-exclamation"></i> {{ $t('reservations.earlyCheckoutHint') }}
@@ -568,15 +626,30 @@
           <div v-if="checkoutBalance > 0" class="form-grid settlement-grid">
             <div class="form-group">
               <label>{{ $t('orders.method') }}<span class="req">*</span></label>
-              <SearchableSelect v-model="checkoutMethod" :options="checkoutMethodOptions" required />
+              <SearchableSelect
+                v-model="checkoutMethod"
+                :options="checkoutMethodOptions"
+                required
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('reservations.settlementAmount') }}<span class="req">*</span></label>
-              <input v-model.number="checkoutAmount" type="number" min="0" step="0.01" class="input" required />
+              <input
+                v-model.number="checkoutAmount"
+                type="number"
+                min="0"
+                step="0.01"
+                class="input"
+                required
+              />
             </div>
             <div v-if="checkoutNeedsProvider" class="form-group form-full">
               <label>{{ $t('paymentFields.provider') }}<span class="req">*</span></label>
-              <SearchableSelect v-model="checkoutProvider" :options="checkoutProviderOptions" required />
+              <SearchableSelect
+                v-model="checkoutProvider"
+                :options="checkoutProviderOptions"
+                required
+              />
             </div>
             <div class="form-group form-full">
               <label>{{ $t('common.notes') }}</label>
@@ -597,6 +670,90 @@
       </div>
     </div>
 
+    <!-- Check-in modal: payment verification and optional override -->
+    <div v-if="showCheckin" class="modal-overlay" @click.self="closeCheckin">
+      <div class="modal modal-sm">
+        <div class="modal-head">
+          <h2><i class="fas fa-right-to-bracket"></i> {{ $t('reservations.checkIn') }}</h2>
+          <button class="modal-close" @click="closeCheckin"><i class="fas fa-xmark"></i></button>
+        </div>
+        <p class="muted">
+          <strong>{{ checkinTarget?.guest_name }}</strong> · {{ $t('reservations.room') }}
+          {{ checkinTarget?.room?.room_number || checkinTarget?.room_type }}
+        </p>
+
+        <div v-if="checkinBalanceDue > 0" class="alert alert-warning" style="margin-bottom: 12px;">
+          <i class="fas fa-triangle-exclamation"></i>
+          {{ $t('reservations.unpaidWarning') }}
+        </div>
+
+        <!-- Active override badge -->
+        <div v-if="hasActiveOverride" class="alert alert-success" style="margin-bottom: 12px;">
+          <i class="fas fa-shield-halved"></i>
+          <span>
+            {{ $t('overrides.overrideFor', { name: activeOverride.guest_name }) }}
+            · {{ $t('overrides.remainingTime', { time: activeOverrideCountdown }) }}
+          </span>
+          <div v-if="activeOverride.notes" class="sub" style="margin-top: 4px;">{{ activeOverride.notes }}</div>
+        </div>
+
+        <div class="balance-box">
+          <div class="balance-row">
+            <span>{{ $t('reservations.tableTotal') }}</span>
+            <span>TZS {{ Number(checkinTarget?.total_amount || 0).toLocaleString() }}</span>
+          </div>
+          <div class="balance-row">
+            <span>{{ $t('reservations.advancePaid') || 'Paid' }}</span>
+            <span>TZS {{ Number(checkinTarget?.advance_payment || 0).toLocaleString() }}</span>
+          </div>
+          <div class="balance-row total" v-if="checkinBalanceDue > 0">
+            <span>{{ $t('reservations.outstanding') }}</span>
+            <span class="danger">TZS {{ Number(checkinBalanceDue).toLocaleString() }}</span>
+          </div>
+        </div>
+
+        <form @submit.prevent="confirmCheckin">
+          <!-- Manual override: only shown to managers when there is NO active override -->
+          <div v-if="checkinBalanceDue > 0 && authStore.roleLevel >= 80 && !hasActiveOverride" class="form-group">
+            <label class="toggle-label">
+              <input type="checkbox" v-model="checkinOverride" />
+              {{ $t('reservations.managerOverride') }}
+            </label>
+          </div>
+          <!-- Receptionist sees "manager required" only when there is NO active override -->
+          <div v-if="checkinBalanceDue > 0 && authStore.roleLevel < 80 && !hasActiveOverride" class="alert alert-warning" style="margin-bottom: 12px;">
+            <i class="fas fa-lock"></i>
+            {{ $t('reservations.managerOverrideRequired') }}
+          </div>
+          <div v-if="checkinOverride && checkinBalanceDue > 0 && !hasActiveOverride" class="form-group">
+            <label>{{ $t('reservations.overrideReason') }}<span class="req">*</span></label>
+            <input v-model="checkinOverrideReason" type="text" class="input" required />
+            <small class="hint">{{ $t('reservations.overrideReasonHint') }}</small>
+          </div>
+          <div class="modal-foot">
+            <button type="button" class="btn btn-secondary" @click="closeCheckin">
+              {{ $t('common.cancel') }}
+            </button>
+            <button
+              type="submit"
+              class="btn"
+              :class="checkinBalanceDue > 0 && !checkinOverride && !hasActiveOverride ? 'btn-danger' : 'btn-success'"
+              :disabled="checkingIn"
+            >
+              <i class="fas fa-check"></i>
+              {{
+                checkingIn
+                  ? $t('common.saving')
+                  : checkinBalanceDue > 0 && !checkinOverride && !hasActiveOverride
+                    ? $t('reservations.paymentRequired')
+                    : $t('reservations.checkIn')
+              }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Read-only reservation detail modal with invoice download -->
     <div v-if="showDetail" class="modal-overlay" @click.self="showDetail = false">
       <div class="modal modal-lg">
@@ -607,7 +764,9 @@
               {{ detail.status.replace('_', ' ') }}
             </span>
           </h2>
-          <button class="modal-close" @click="showDetail = false"><i class="fas fa-xmark"></i></button>
+          <button class="modal-close" @click="showDetail = false">
+            <i class="fas fa-xmark"></i>
+          </button>
         </div>
         <dl v-if="detail" class="detail-grid">
           <div>
@@ -648,7 +807,9 @@
           </div>
           <div>
             <dt>{{ $t('reservations.tableBalance') }}</dt>
-            <dd :class="{ due: Number(detail.balance) > 0 }">TZS {{ Number(detail.balance).toLocaleString() }}</dd>
+            <dd :class="{ due: Number(detail.balance) > 0 }">
+              TZS {{ Number(detail.balance).toLocaleString() }}
+            </dd>
           </div>
           <div>
             <dt>{{ $t('reservations.bookingSource') }}</dt>
@@ -678,10 +839,14 @@
             </button>
           </template>
           <template v-else-if="['pending', 'confirmed'].includes(detail?.status) && canOperate">
-            <button class="btn btn-success" @click="checkIn(detail)">
+            <button class="btn btn-success" @click="openCheckin(detail)">
               <i class="fas fa-right-to-bracket"></i> {{ $t('reservations.checkIn') }}
             </button>
-            <button v-if="detail.status === 'confirmed'" class="btn btn-secondary" @click="noShow(detail)">
+            <button
+              v-if="detail.status === 'confirmed'"
+              class="btn btn-secondary"
+              @click="noShow(detail)"
+            >
               {{ $t('reservations.noShow') }}
             </button>
             <button class="btn btn-danger" @click="cancel(detail)">
@@ -700,6 +865,41 @@
           <button class="modal-close" @click="closeDelete"><i class="fas fa-xmark"></i></button>
         </div>
         <p>{{ $t('reservations.deleteConfirm', { name: deleteTarget?.guest_name }) }}</p>
+
+        <!-- Deletion impact summary -->
+        <div v-if="loadingDeletePreview" class="delete-impact-loading">
+          <i class="fas fa-spinner fa-spin"></i> {{ $t('common.loading') }}
+        </div>
+        <div v-else-if="deletePreview" class="delete-impact">
+          <p class="delete-impact-title">{{ $t('reservations.deleteImpactTitle') }}</p>
+          <table class="delete-impact-table">
+            <tbody>
+              <tr v-if="deletePreview.payments_count > 0">
+                <td><i class="fas fa-credit-card"></i> {{ $t('reservations.deleteImpactPayments') }}</td>
+                <td class="text-right">
+                  {{ deletePreview.payments_count }} · TZS {{ Number(deletePreview.payments_total).toLocaleString() }}
+                </td>
+              </tr>
+              <tr v-if="deletePreview.orders_count > 0">
+                <td><i class="fas fa-utensils"></i> {{ $t('reservations.deleteImpactOrders') }}</td>
+                <td class="text-right">
+                  {{ deletePreview.orders_count }} · TZS {{ Number(deletePreview.orders_total).toLocaleString() }}
+                </td>
+              </tr>
+              <tr v-if="deletePreview.laundry_count > 0">
+                <td><i class="fas fa-shirt"></i> {{ $t('reservations.deleteImpactLaundry') }}</td>
+                <td class="text-right">
+                  {{ deletePreview.laundry_count }} · TZS {{ Number(deletePreview.laundry_total).toLocaleString() }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="delete-impact-warning">{{ $t('reservations.deleteImpactWarning') }}</p>
+        </div>
+        <div v-else-if="deleteTarget?.status === 'checked_out'" class="delete-impact">
+          <p class="delete-impact-warning">{{ $t('reservations.deleteImpactNoData') }}</p>
+        </div>
+
         <div class="form-group">
           <label>{{ $t('reservations.deleteTypeName') }}</label>
           <input
@@ -718,7 +918,8 @@
             :disabled="!deleteNameMatches || deleting"
             @click="confirmDelete"
           >
-            <i class="fas fa-trash-can"></i> {{ deleting ? $t('common.deleting') : $t('reservations.deletePermanent') }}
+            <i class="fas fa-trash-can"></i>
+            {{ deleting ? $t('common.deleting') : $t('reservations.deletePermanent') }}
           </button>
         </div>
       </div>
@@ -730,13 +931,15 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { guestApi, invoiceApi, paymentApi, publicApi, reservationApi } from '@/api'
+import { guestApi, invoiceApi, paymentApi, publicApi, reservationApi, checkinOverrideApi } from '@/api'
 import { saveBlob } from '@/utils/download'
+import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
 import StayDates from '@/components/StayDates.vue'
+import TableExportButton from '@/components/TableExportButton.vue'
 import { useRoomBrowser } from '@/composables/useRoomBrowser'
 import { addDays, todayISO } from '@/utils/dates'
 import { normalizePhoneNumber } from '@/utils/phone'
@@ -854,8 +1057,17 @@ const selectedRooms = computed(() => form.selected_rooms)
 // Search/sort/paginate the available rooms client-side; selections live in
 // form.selected_rooms (keyed by room_id) so they survive paging/sorting.
 const roomsSource = computed(() => availability.value?.available_rooms || [])
-const { query, sortKey, sortDir, page: roomPage, pageCount, pagedRooms, filteredCount, rangeFrom, rangeTo } =
-  useRoomBrowser(roomsSource)
+const {
+  query,
+  sortKey,
+  sortDir,
+  page: roomPage,
+  pageCount,
+  pagedRooms,
+  filteredCount,
+  rangeFrom,
+  rangeTo,
+} = useRoomBrowser(roomsSource)
 
 // Options for the room-sort dropdown.
 const sortOptions = computed(() => [
@@ -871,7 +1083,7 @@ const sortOptions = computed(() => [
  * @returns {boolean} Whether the room is selected.
  */
 function isRoomSelected(roomId) {
-  return form.selected_rooms.some((r) => r.room_id === roomId)
+  return form.selected_rooms.some((room) => room.room_id === roomId)
 }
 
 /**
@@ -879,7 +1091,7 @@ function isRoomSelected(roomId) {
  * @param {Object} room - The availability room card that was clicked.
  */
 function toggleRoom(room) {
-  const index = form.selected_rooms.findIndex((r) => r.room_id === room.room_id)
+  const index = form.selected_rooms.findIndex((room) => room.room_id === room.room_id)
   if (index >= 0) {
     form.selected_rooms.splice(index, 1)
   } else {
@@ -996,7 +1208,13 @@ async function load() {
   error.value = ''
   try {
     const res = await reservationApi.index({
-      status: filters.status || (tab.value === 'cancelled' ? 'cancelled' : tab.value === 'checked_out' ? 'checked_out' : undefined),
+      status:
+        filters.status ||
+        (tab.value === 'cancelled'
+          ? 'cancelled'
+          : tab.value === 'checked_out'
+            ? 'checked_out'
+            : undefined),
       exclude_status: tab.value === 'active' ? ['checked_out', 'cancelled', 'no_show'] : undefined,
       booking_type: filters.booking_type,
       from: filters.from,
@@ -1013,6 +1231,27 @@ async function load() {
     loading.value = false
   }
 }
+
+/** Fetches every reservation page for export, honouring the active tab and filters. */
+const loadAllReservations = () =>
+  collectAllRows((page, perPage) =>
+    reservationApi.index({
+      status:
+        filters.status ||
+        (tab.value === 'cancelled'
+          ? 'cancelled'
+          : tab.value === 'checked_out'
+            ? 'checked_out'
+            : undefined),
+      exclude_status: tab.value === 'active' ? ['checked_out', 'cancelled', 'no_show'] : undefined,
+      booking_type: filters.booking_type,
+      from: filters.from,
+      to: filters.to,
+      search: filters.search,
+      page,
+      per_page: perPage,
+    }),
+  )
 
 /** Active (default) hides checked-out stays; the checked-out tab is for records. */
 function switchTab(next) {
@@ -1034,12 +1273,12 @@ async function loadOptions() {
 }
 
 const guestOptions = computed(() =>
-  guests.value.map((g) => ({
-    value: g.guest_id,
+  guests.value.map((guest) => ({
+    value: guest.guest_id,
     label:
-      g.full_name +
-      (g.phone ? ` · ${g.phone}` : '') +
-      (g.hotel_name ? ` · ${g.hotel_name}` : ''),
+      guest.full_name +
+      (guest.phone ? ` · ${guest.phone}` : '') +
+      (guest.hotel_name ? ` · ${guest.hotel_name}` : ''),
   })),
 )
 
@@ -1188,7 +1427,7 @@ function closeModal() {
 
 /** Copies the selected guest profile into the form. */
 function fillGuest() {
-  const guest = guests.value.find((g) => g.guest_id === form.guest_id)
+  const guest = guests.value.find((guest) => guest.guest_id === form.guest_id)
   if (!guest) return
 
   recognizedGuest.value = null
@@ -1218,7 +1457,7 @@ function computeTotal() {
   }
 
   computedTotal.value = form.selected_rooms.reduce(
-    (sum, r) => sum + Math.round(nights * r.price_per_night),
+    (sum, room) => sum + Math.round(nights * room.price_per_night),
     0,
   )
   form.total_amount = computedTotal.value
@@ -1259,7 +1498,7 @@ async function checkAvailability() {
 // StayDates can change the length of stay without touching the room picker, so
 // the suggested total is recalculated whenever either input moves.
 watch(
-  () => [form.selected_rooms.map((r) => r.room_id).join(','), form.num_days],
+  () => [form.selected_rooms.map((room) => room.room_id).join(','), form.num_days],
   computeTotal,
 )
 
@@ -1394,6 +1633,126 @@ async function downloadInvoice() {
     invoiceLoading.value = false
   }
 }
+
+// ── Check-in modal state ──────────────────────────────────────────────────
+const showCheckin = ref(false)
+const checkinTarget = ref(null)
+const checkingIn = ref(false)
+const checkinOverride = ref(false)
+const checkinOverrideReason = ref('')
+const activeOverride = ref(null)
+const activeOverrideCountdown = ref('')
+
+/** Outstanding balance for the check-in target (total - advance_payment). */
+const checkinBalanceDue = computed(() => {
+  const t = checkinTarget.value
+  if (!t) return 0
+  return Math.max(0, Number(t.total_amount || 0) - Number(t.advance_payment || 0))
+})
+
+/** Whether the check-in target has an active manager override. */
+const hasActiveOverride = computed(() => {
+  if (!activeOverride.value) return false
+  return new Date(activeOverride.value.expires_at).getTime() > Date.now()
+})
+
+/** Opens the check-in modal, pre-filling payment info and fetching any active override. */
+async function openCheckin(reservation) {
+  checkinTarget.value = reservation
+  checkinOverride.value = false
+  checkinOverrideReason.value = ''
+  checkingIn.value = false
+  activeOverride.value = null
+  activeOverrideCountdown.value = ''
+  showCheckin.value = true
+
+  // Fetch active overrides to check if one already exists for this reservation.
+  try {
+    const res = await checkinOverrideApi.active()
+    const overrides = res.data.data || []
+    activeOverride.value = overrides.find((o) => {
+      const matchId = o.reservation_id && o.reservation_id === reservation.reservation_id
+      const matchName = o.guest_name === reservation.guest_name
+      return (matchId || matchName) && new Date(o.expires_at).getTime() > Date.now()
+    }) || null
+    if (activeOverride.value) updateOverrideCountdown()
+  } catch {
+    // Non-critical; proceed without override data.
+  }
+}
+
+/** Updates the countdown string for the active override. */
+function updateOverrideCountdown() {
+  if (!activeOverride.value) return
+  const diff = Math.max(0, new Date(activeOverride.value.expires_at).getTime() - Date.now())
+  if (diff <= 0) {
+    activeOverrideCountdown.value = t('overrides.expiredLabel')
+    activeOverride.value = null
+    return
+  }
+  const hours = Math.floor(diff / 3600000)
+  const minutes = Math.floor((diff % 3600000) / 60000)
+  const seconds = Math.floor((diff % 60000) / 1000)
+  if (hours > 0) activeOverrideCountdown.value = `${hours}h ${minutes}m ${seconds}s`
+  else if (minutes > 0) activeOverrideCountdown.value = `${minutes}m ${seconds}s`
+  else activeOverrideCountdown.value = `${seconds}s`
+}
+
+let overrideCountdownInterval = null
+watch(showCheckin, (open) => {
+  if (open && activeOverride.value) {
+    overrideCountdownInterval = setInterval(updateOverrideCountdown, 1000)
+  } else if (overrideCountdownInterval) {
+    clearInterval(overrideCountdownInterval)
+    overrideCountdownInterval = null
+  }
+})
+
+/** Closes the check-in modal. */
+function closeCheckin() {
+  showCheckin.value = false
+  checkinTarget.value = null
+  checkinOverride.value = false
+  checkinOverrideReason.value = ''
+  activeOverride.value = null
+  activeOverrideCountdown.value = ''
+  if (overrideCountdownInterval) {
+    clearInterval(overrideCountdownInterval)
+    overrideCountdownInterval = null
+  }
+}
+
+/** Executes the check-in, passing override when the balance is unpaid. */
+async function confirmCheckin() {
+  const target = checkinTarget.value
+  if (!target) return
+  checkingIn.value = true
+  error.value = ''
+  try {
+    const payload = {}
+    // Send override when there is an active pre-approved override or the manager manually checks it.
+    const unpaid = checkinBalanceDue.value > 0
+    const activeOverrideValid = unpaid && hasActiveOverride.value
+    const manualOverride = unpaid && checkinOverride.value && authStore.roleLevel >= 80
+    if (activeOverrideValid || manualOverride) {
+      payload.override = true
+      payload.override_id = activeOverrideValid ? activeOverride.value.id : undefined
+      payload.override_reason = activeOverrideValid
+        ? activeOverride.value.notes
+        : checkinOverrideReason.value
+    }
+    const res = await reservationApi.checkIn(target.reservation_id, payload)
+    success.value = res.data.message || t('reservations.checkedIn')
+    closeCheckin()
+    await load()
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    checkingIn.value = false
+  }
+}
+
+// ── Checkout modal state ──────────────────────────────────────────────────
 const showCheckout = ref(false)
 const checkoutTarget = ref(null)
 const checkoutReason = ref('')
@@ -1406,10 +1765,16 @@ const checkoutNotes = ref('')
 /** How much the guest still owes on the room account at checkout. */
 const checkoutBalance = computed(() => Math.max(0, Number(checkoutTarget.value?.balance_due || 0)))
 
-const checkoutMethodOptions = PAYMENT_METHODS.map((m) => ({ value: m, label: t(`paymentFields.methods.${m}`) }))
+const checkoutMethodOptions = PAYMENT_METHODS.map((method) => ({
+  value: method,
+  label: t(`paymentFields.methods.${method}`),
+}))
 
 const checkoutProviderOptions = computed(() =>
-  providersFor(checkoutMethod.value).map((p) => ({ value: p, label: t(`paymentFields.providers.${p}`) })),
+  providersFor(checkoutMethod.value).map((provider) => ({
+    value: provider,
+    label: t(`paymentFields.providers.${provider}`),
+  })),
 )
 
 const checkoutNeedsProvider = computed(() => requiresProvider(checkoutMethod.value))
@@ -1423,23 +1788,23 @@ const isEarlyCheckout = computed(() => {
 
 /**
  * Opens the read-only detail modal for a reservation.
- * @param {Object} r - The reservation row to inspect.
+ * @param {Object} reservation - The reservation row to inspect.
  */
-function openDetail(r) {
-  detail.value = r
+function openDetail(reservation) {
+  detail.value = reservation
   showDetail.value = true
 }
 
 /**
  * Opens the check-out modal, pre-filling the settlement amount with the balance due.
- * @param {Object} r - The reservation being checked out.
+ * @param {Object} reservation - The reservation being checked out.
  */
-function openCheckout(r) {
-  checkoutTarget.value = r
+function openCheckout(reservation) {
+  checkoutTarget.value = reservation
   // The receptionist supplies the reason; there is no default.
   checkoutReason.value = ''
   checkoutMethod.value = METHOD_CASH
-  checkoutAmount.value = Math.max(0, Number(r.balance_due || 0))
+  checkoutAmount.value = Math.max(0, Number(reservation.balance_due || 0))
   checkoutProvider.value = ''
   checkoutNotes.value = ''
   showCheckout.value = true
@@ -1455,7 +1820,11 @@ function closeCheckout() {
 async function confirmCheckout() {
   const target = checkoutTarget.value
   if (!target) return
-  if (checkoutBalance.value > 0 && requiresProvider(checkoutMethod.value) && !checkoutProvider.value) {
+  if (
+    checkoutBalance.value > 0 &&
+    requiresProvider(checkoutMethod.value) &&
+    !checkoutProvider.value
+  ) {
     error.value = t('paymentFields.selectProvider')
     return
   }
@@ -1504,49 +1873,57 @@ async function runAction(reservation, action, message, confirmMessage) {
 }
 
 // Per-row lifecycle actions, all funnelled through the shared runAction helper.
-const checkIn = (r) =>
+const cancel = (reservation) =>
   runAction(
-    r,
-    reservationApi.checkIn,
-    t('reservations.checkedIn'),
-    t('reservations.confirmCheckIn', { name: r.guest_name }),
-  )
-const cancel = (r) =>
-  runAction(
-    r,
+    reservation,
     reservationApi.cancel,
     t('reservations.cancelled'),
-    t('reservations.confirmCancel', { name: r.guest_name }),
+    t('reservations.confirmCancel', { name: reservation.guest_name }),
   )
-const noShow = (r) =>
+const noShow = (reservation) =>
   runAction(
-    r,
+    reservation,
     reservationApi.noShow,
     t('reservations.markedNoShow'),
-    t('reservations.confirmNoShow', { name: r.guest_name }),
+    t('reservations.confirmNoShow', { name: reservation.guest_name }),
   )
 
 const showDelete = ref(false)
 const deleteTarget = ref(null)
 const deleteName = ref('')
 const deleting = ref(false)
+const deletePreview = ref(null)
+const loadingDeletePreview = ref(false)
 
 /** The guest name must be typed in caps; the match itself is case-insensitive. */
 const deleteNameMatches = computed(() => {
   const target = deleteTarget.value
   if (!target) return false
-  const expected = String(target.guest_name || '').trim().toUpperCase()
+  const expected = String(target.guest_name || '')
+    .trim()
+    .toUpperCase()
   return expected.length > 0 && deleteName.value.trim().toUpperCase() === expected
 })
 
 /**
- * Opens the permanent-delete modal for a checked-out or cancelled reservation.
- * @param {Object} r - The reservation to delete.
+ * Opens the permanent-delete modal for a checked-out or cancelled reservation
+ * and fetches the deletion preview (counts of payments, orders, laundry).
+ * @param {Object} reservation - The reservation to delete.
  */
-function openDelete(r) {
-  deleteTarget.value = r
+async function openDelete(reservation) {
+  deleteTarget.value = reservation
   deleteName.value = ''
+  deletePreview.value = null
+  loadingDeletePreview.value = true
   showDelete.value = true
+  try {
+    const res = await reservationApi.deletionPreview(reservation.reservation_id)
+    deletePreview.value = res.data.preview
+  } catch {
+    deletePreview.value = null
+  } finally {
+    loadingDeletePreview.value = false
+  }
 }
 
 /** Closes the delete modal and clears the typed confirmation name. */
@@ -1554,6 +1931,7 @@ function closeDelete() {
   showDelete.value = false
   deleteTarget.value = null
   deleteName.value = ''
+  deletePreview.value = null
 }
 
 /** Permanently deletes the reservation once the typed guest name matches. */
@@ -1582,75 +1960,78 @@ onMounted(() => {
 })
 </script>
 
- <style scoped>
- .dashboard-page {
-   padding: 32px 20px;
- }
+<style scoped>
+.dashboard-page {
+  padding: 32px 20px;
+}
 
- .tabs {
-   display: flex;
-   gap: 10px;
-   margin-bottom: 18px;
-   flex-wrap: wrap;
- }
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
 
- .tab {
-   padding: 12px 22px;
-   border: 1px solid transparent;
-   border-radius: 10px;
-   cursor: pointer;
-   font-size: 15px;
-   font-weight: 700;
-   display: flex;
-   align-items: center;
-   gap: 8px;
-   transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
- }
+.tab {
+  padding: 12px 22px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
 
- .tab i {
-   font-size: 16px;
- }
+.tab i {
+  font-size: 16px;
+}
 
- .tab-active {
-   color: #005eb8;
-   border-color: #cfe3f5;
-   background: #eaf4ff;
- }
+.tab-active {
+  color: #005eb8;
+  border-color: #cfe3f5;
+  background: #eaf4ff;
+}
 
- .tab-active.active {
-   background: #005eb8;
-   border-color: #005eb8;
-   color: #fff;
-   box-shadow: 0 2px 8px rgba(0, 94, 184, 0.25);
- }
+.tab-active.active {
+  background: #005eb8;
+  border-color: #005eb8;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 94, 184, 0.25);
+}
 
- .tab-checked-out {
-   color: #b45309;
-   border-color: #fde3c2;
-   background: #fff7ec;
- }
+.tab-checked-out {
+  color: #b45309;
+  border-color: #fde3c2;
+  background: #fff7ec;
+}
 
- .tab-checked-out.active {
-   background: #b45309;
-   border-color: #b45309;
-   color: #fff;
-   box-shadow: 0 2px 8px rgba(180, 83, 9, 0.25);
- }
+.tab-checked-out.active {
+  background: #b45309;
+  border-color: #b45309;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(180, 83, 9, 0.25);
+}
 
- .tab-cancelled {
-   color: #b91c1c;
-   border-color: #f5c9c9;
-   background: #fef2f2;
- }
+.tab-cancelled {
+  color: #b91c1c;
+  border-color: #f5c9c9;
+  background: #fef2f2;
+}
 
- .tab-cancelled.active {
-   background: #b91c1c;
-   border-color: #b91c1c;
-   color: #fff;
-   box-shadow: 0 2px 8px rgba(185, 28, 28, 0.25);
- }
+.tab-cancelled.active {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(185, 28, 28, 0.25);
+}
 
- .page-head {
+.page-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1740,7 +2121,9 @@ onMounted(() => {
   flex-direction: column;
   gap: 6px;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
 .room-card.selected {
@@ -1869,7 +2252,7 @@ onMounted(() => {
   background: none;
   border: none;
   font-size: 18px;
-  color: #999;
+  color: #757575;
   cursor: pointer;
   padding: 4px;
 }
@@ -1937,6 +2320,94 @@ onMounted(() => {
 
 .settlement-grid {
   margin-top: 12px;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.danger {
+  color: #dc2626;
+}
+
+.alert-warning {
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  color: #92400e;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.alert-warning i {
+  color: #d97706;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
+.delete-impact {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+}
+
+.delete-impact-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #92400e;
+}
+
+.delete-impact-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+}
+
+.delete-impact-table td {
+  padding: 4px 0;
+  font-size: 0.88rem;
+}
+
+.delete-impact-table td i {
+  width: 18px;
+  margin-right: 6px;
+  color: #92400e;
+}
+
+.delete-impact-table .text-right {
+  text-align: right;
+  font-weight: 500;
+}
+
+.delete-impact-warning {
+  font-size: 0.82rem;
+  color: #b45309;
+  margin: 0;
+}
+
+.delete-impact-loading {
+  margin-bottom: 16px;
+  padding: 12px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.88rem;
 }
 
 @media (max-width: 768px) {

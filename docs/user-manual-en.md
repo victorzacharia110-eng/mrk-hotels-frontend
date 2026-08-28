@@ -1,6 +1,6 @@
 # MRK Hotels — User Manual (English)
 
-**Version 1.3**
+**Version 1.3** — code v1.1.0 · 15 August 2026
 
 ---
 
@@ -288,6 +288,21 @@ The Orders page handles service in the restaurant, bar and room service:
 - Track order status through preparation, served and billed.
 - Kitchen sees the queue of orders to prepare.
 
+### 12.3 The Order Pad (Take Order)
+
+Waiters and bartenders take table orders on the **Take Order** screen, built like a touch POS:
+
+- **Restaurant / Bar switch** — one tap at the top flips the whole pad: the category buttons, the open-orders queue and the order type all follow. Bartenders start on the Bar; anyone can switch.
+- **Category buttons** — tap a category (Grills, Cocktails, Desserts…) to pop up its items; tap an item and it lands on the ticket instantly.
+- **Diners (covers)** — set the head-count of the party once when seating (the − / + counter). It does not block anything: it simply travels with the ticket so reports can later compute average spend per guest and covers per day. A bar walk-up can leave it at zero.
+  - Covers are *not* proportional to orders: a family of five is one ticket with five covers; a solo beer is one ticket with one cover. Covers ÷ orders = your average party size — watch it drift to spot emptying tables even when revenue looks flat.
+- **Transaction type** is chosen for you: restaurant orders are Dine-in, bar orders are At-bar automatically; room-service orders taken from the Orders page stay Hotel-menu.
+- **Served with** — grill-style mains in the restaurant (mishkaki, nyama choma…) pop up an accompaniment question (wali, ugali, chips…). The choice prints on the kitchen ticket and stays on the order history.
+
+### 12.4 Working the Kitchen Board (single click)
+
+Kitchen staff land on a dedicated dark **Kitchen Board**: one card per open ticket showing the order number, table/room, department and minutes elapsed. Every dish on the card **is itself a button** — tap it once when it is ready, and a runner taps again once it reaches the guest. There are no modals, no filters and no saving; the board refreshes itself every 15 seconds so new tickets appear on their own, and "Served with" sides show right under their mains. Payment remains a separate manager/cashier step.
+
 <figure><img src="images/app-menu.png" alt="Menu items page"><figcaption>Menu items — what the hotel serves, with prices and categories.</figcaption></figure>
 
 <figure><img src="images/app-orders.png" alt="F&B orders page"><figcaption>F&B orders — service in the restaurant, bar and room service.</figcaption></figure>
@@ -370,12 +385,12 @@ The Staff page (admin/manager) manages the team:
 - Add staff with their role (manager, accountant, receptionist, housekeeping, kitchen, waiter, bartender, staff, …).
 - Each staff member gets a **registration number** (e.g. `EMP-2026-0004`) — it doubles as their identifier for PIN sign-in (section 2.4).
 - **Activate / deactivate** accounts, **reset passwords**, and **invite** staff to sign in.
-- **Set a 4-digit login PIN** from the staff row (**Set PIN**) so the member can use PIN sign-in on shared terminals. Enter the PIN twice; it is stored securely hashed and can be replaced at any time. You can only set PINs for roles at or below your own — and never your own.
+- **Set a 4-digit login PIN** from the staff row (**Set PIN**) so the member can use PIN sign-in on shared terminals. The dialog **auto-generates a secure random PIN** by default — re-roll it with the refresh button, copy it with the copy button, and share it with the member. Switch to **Type it myself** if you prefer to enter a PIN of your own choosing (both fields have an eye toggle to reveal what you typed). PINs are stored securely hashed and can be replaced at any time. You can only set PINs for roles at or below your own — and never your own.
 - Record ID/attachments for each member.
 
 <figure><img src="images/app-staff.png" alt="Staff page"><figcaption>Staff — manage the team, roles, accounts, invites, password resets and login PINs.</figcaption></figure>
 
-<figure><img src="images/app-staff-set-pin.png" alt="Set Login PIN dialog"><figcaption>Set Login PIN — enter the 4-digit PIN twice; it is stored securely hashed and can be replaced at any time.</figcaption></figure>
+<figure><img src="images/app-staff-set-pin.png" alt="Set Login PIN dialog"><figcaption>Set Login PIN — a random PIN is generated for you to share; or switch to typing one yourself. PINs are stored securely hashed and can be replaced at any time.</figcaption></figure>
 
 ---
 
@@ -390,6 +405,7 @@ Messages is the staff inbox. Every employee can chat one-to-one with colleagues 
   - **Global Messaging** — any staff member on the platform, across hotels.
 - Search for a colleague by name, then pick them — the chat opens instantly.
 - Unread messages show a blue badge on the conversation and on the Messages menu.
+- A green **online dot** next to an avatar (conversation list, thread header, group members, search results) means that colleague is connected right now — in your hotel or anywhere on the network; offline colleagues show no dot.
 
 ### 18.2 Group chats
 
@@ -486,7 +502,7 @@ After you send a message, a tick shows its state:
 ### 18.16 Nearby staff and guest SMS
 
 - **Nearby staff**: update your zone/floor in **Workspace → Nearby**, and see which colleagues are nearby (within the last 30 minutes). Your location updates your team live.
-- **Guest SMS**: from **Workspace → Guest SMS**, send a text message to a guest's phone (e.g. "your room is ready") — replies and history stay in the hotel.
+- **Guest SMS**: from **Workspace → Guest SMS**, send a text message to a guest's phone (e.g. "your room is ready") — this is one-way (hotel → guest): guests cannot reply by text, they call the help desk instead. All sent messages and history stay in the hotel.
 
 ### 18.17 Meetings and SOS alerts
 
@@ -530,8 +546,7 @@ Each section footer lets you jump between pages. The summary cards above the sec
 ## 20. Profile and Password
 
 - **Profile** shows your complete account details: name, staff/registration number, email, phone, country code, role and role level, department, position, ID type and number, your hotel, the sub-manager flag, account status, last login and the date you joined.
-- **Clock in / out** from the attendance card and see how long you have been on shift. If your hotel has location or QR checks enabled, the clock-in card will ask for your phone's location and, where required, to scan the office's QR code (shown on the manager's phone, refreshed every minute) before your shift starts — this proves you were actually at the hotel.
- - **Clock in / out** from the attendance card and see how long you have been on shift. If your hotel has location, QR, or selfie verification enabled, the clock-in card will ask for your phone's location, may request a selfie (you must grant camera access), and, where required, to scan the office's QR code (shown on the manager's phone, refreshed every minute) before your shift starts — this proves you were actually at the hotel.
+- **Clock in / out** from the attendance card and see how long you have been on shift. If your hotel has location, QR, or selfie verification enabled, the clock-in card will ask for your phone's location, may request a selfie (you must grant camera access), and, where required, to scan the office's QR code (shown on the manager's phone, refreshed every minute) before your shift starts — this proves you were actually at the hotel. The card also shows any suspicious flags or penalties raised by the anti-cheat checks, which a manager reviews.
 - **Change password** from your profile; pick a strong password and keep it safe.
 - If the hotel admin resets your password, sign in with the temporary one and change it immediately.
 
@@ -762,6 +777,11 @@ An **owner account** is for someone who owns **several hotels**. One sign-in cov
 
 - **My Hotels dashboard** — combined totals across every owned hotel: revenue (30 days), average occupancy, guests in house, active reservations and total rooms, plus a per-hotel comparison table.
 - **Hotel drill-down** — click any hotel name to see its details: contact info, TIN/VRN, rooms, occupancy, in-house guests, active reservations and revenue (30 days + total).
+- **Profile** — update your personal details, profile photo and password.
+
+<figure><img src="images/owner-dashboard.png" alt="Owner dashboard"><figcaption>Owner dashboard — combined KPIs and a per-hotel comparison table across every owned hotel.</figcaption></figure>
+<figure><img src="images/owner-hotel-detail.png" alt="Owner hotel drill-down"><figcaption>Hotel drill-down — contact info, rooms, occupancy, in-house guests and revenue for one hotel.</figcaption></figure>
+<figure><img src="images/owner-profile.png" alt="Owner profile page"><figcaption>Owner profile — edit your personal details, photo and password.</figcaption></figure>
 
 The superadmin creates owner accounts and assigns hotels to them (Hotel Management → select a hotel → **Owner** card).
 
@@ -782,6 +802,64 @@ Use the **EN / SW** button in the top bar to switch the whole interface between 
 | Password expired | The system resets it to your full name in capital letters; sign in and change it from Profile. |
 | Can't see a menu | That role is not allowed that menu. Ask your hotel admin or superadmin. |
 | Page looks stale | Hard-refresh with Ctrl+Shift+R. |
+
+---
+
+## 26. Customer Self-Service Portal
+
+Hotels that sign up through the TSCL pricing page use the **Customer Portal** to manage their subscription, view payments, and update hotel details — without needing superadmin help.
+
+### 26.1 Signing Up
+
+1. Visit **tscl.app/portal/pricing** to see available plans (Starter, Growth, Enterprise)
+2. Click **Get Started** on your preferred plan
+3. Fill in the registration form:
+   - Hotel name, contact person, email, phone, city, country
+   - **Legal registration**: TIN number, VRN number (if applicable), business registration number, country of registration
+   - Password (minimum 8 characters)
+4. Click **Create account** — your account will be pending approval with a 14-day free trial
+
+### 26.2 Signing In
+
+1. Visit **tscl.app/portal/login**
+2. Enter your email and password
+3. You will be directed to your portal dashboard
+
+### 26.3 Portal Dashboard
+
+The dashboard shows:
+- **Trial banner** with countdown (if on trial)
+- **KPI cards**: rooms, reservations, guests, revenue
+- **Quick actions**: jump to hotel details, subscription, or staff
+- **Account info**: current plan, status, subdomain, trial expiry
+
+### 26.4 Subscription Management
+
+Visit **/portal/subscription** to:
+- See your current plan and trial status
+- **Upgrade or downgrade** between Starter, Growth, and Enterprise plans
+- Changes take effect immediately
+
+### 26.5 Making Payments
+
+Visit **/portal/payments** to:
+- View payment history with search and filters
+- **Make a new payment** via:
+  - **Mobile Money**: M-Pesa, Tigo Pesa, Airtel Money, HaloPesa, EzyPesa — you receive a USSD prompt on your phone
+  - **Bank Transfer**: Select your bank (CRDB, NMB, Stanbic, ABSA, NCBA, Equity), enter account number and transaction reference — recorded as pending until confirmed by our team
+
+### 26.6 Hotel Details
+
+Visit **/portal/hotel** to update:
+- Hotel name, contact person, phone, city, country
+- TIN and VRN numbers
+- (Subdomain and email are read-only)
+
+### 26.7 Staff Management
+
+Visit **/portal/staff** to:
+- View all staff members with search and role filters
+- See role badges and status indicators
 
 ---
 

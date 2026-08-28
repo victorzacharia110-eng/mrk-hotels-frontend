@@ -34,7 +34,7 @@
 
       <!-- List of the hotel's rooms, each showing status, type and nightly price -->
       <div class="card">
-        <h2 class="card-title">{{ $t('hotelDetail.rooms') }} ({{ rooms.length }})</h2>
+        <h2 class="card-title">{{ $t('hotelDetail.rooms') }}</h2>
 
         <!-- Search, status filter and sort controls -->
         <div v-if="rooms.length" class="room-browser-bar">
@@ -65,8 +65,7 @@
         <div v-if="pagedRooms.length" class="room-grid">
           <article v-for="room in pagedRooms" :key="room.room_id" class="room-card">
             <span class="badge" :class="statusBadge(room.status)">{{ room.status }}</span>
-            <h3>{{ $t('bookingPage.room') }} {{ room.room_number }}</h3>
-            <p class="muted">{{ room.room_type }} &middot; {{ $t('rooms.floor') }} {{ room.floor }}</p>
+            <h3>{{ roomTypeLabel(room.room_type) }}</h3>
             <p class="muted">{{ $t('hotelDetail.capacity', { count: room.max_occupancy }) }}</p>
             <p class="room-price">TZS {{ room.price_per_night.toLocaleString() }} {{ $t('home.perNight') }}</p>
           </article>
@@ -117,12 +116,15 @@ const statusFilteredRooms = computed(() => {
 const { query, sortKey, sortDir, page, pageCount, pagedRooms, filteredCount, rangeFrom, rangeTo } =
   useRoomBrowser(statusFilteredRooms)
 
-// Options for the status filter dropdown (All plus every known room status).
+/** Translated label for a room type key (single, double, suite, ...). */
+function roomTypeLabel(type) {
+  return t(`common.roomTypes.${type}`)
+}
+
+// Options for the status filter dropdown (guests only see bookable statuses).
 const statusOptions = computed(() => [
   { value: 'available', label: t('rooms.statusAvailable') },
   { value: 'occupied', label: t('rooms.statusOccupied') },
-  { value: 'cleaning', label: t('rooms.statusCleaning') },
-  { value: 'maintenance', label: t('rooms.statusMaintenance') },
 ])
 
 // Options for the room-sort dropdown.

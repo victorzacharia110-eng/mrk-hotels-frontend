@@ -17,12 +17,14 @@
       :aria-haspopup="'listbox'"
       :aria-expanded="open"
       @click="toggle"
+      @keydown.down.prevent="openPanel(true)"
+      @keydown.up.prevent="openPanel(true, true)"
     >
       <span class="ss-trigger-label">{{ selectedLabel || placeholder }}</span>
     </button>
 
     <!-- Dropdown panel: search box, loading/empty states and the option list. -->
-    <div v-if="open" class="ss-panel" role="listbox" :style="panelStyle">
+    <div v-if="open" class="ss-panel" :style="panelStyle">
       <input
         v-if="showSearch"
         v-model="query"
@@ -30,27 +32,41 @@
         class="input ss-search"
         :placeholder="resolvedSearchPlaceholder"
         autocomplete="off"
+        :aria-label="resolvedSearchPlaceholder"
         @keydown.esc="close"
         @input="onSearchInput"
       />
-      <ul class="ss-list">
+      <ul
+        class="ss-list"
+        role="listbox"
+        :aria-label="resolvedListboxLabel"
+        @keydown="onListKeydown"
+      >
         <li
           v-if="emptyLabel !== null && emptyLabel !== undefined"
+          role="option"
+          tabindex="-1"
+          data-value=""
           class="ss-option"
           :class="{ 'is-active': !modelValue }"
+          :aria-selected="!modelValue ? 'true' : 'false'"
           @click="pick('')"
         >
           {{ emptyLabel }}
         </li>
         <li v-if="searching" class="ss-option ss-muted">
-          <i class="fas fa-spinner fa-spin" /> {{ resolvedLoadingLabel }}
+          <i class="fas fa-spinner fa-spin" aria-hidden="true" /> {{ resolvedLoadingLabel }}
         </li>
         <li
           v-for="o in filteredOptions"
           v-else
           :key="o.value"
+          :data-value="o.value"
+          role="option"
+          tabindex="-1"
           class="ss-option"
           :class="{ 'is-active': String(modelValue) === String(o.value) }"
+          :aria-selected="String(modelValue) === String(o.value) ? 'true' : 'false'"
           @click="pick(o.value)"
         >
           <slot name="option" :option="o" :active="String(modelValue) === String(o.value)">
@@ -117,9 +133,14 @@ const panelStyle = ref({ top: '0px', left: '0px', width: '200px' })
 const resolvedSearchPlaceholder = computed(() => props.searchPlaceholder || t('common.search'))
 const resolvedLoadingLabel = computed(() => props.loadingLabel || t('common.loading'))
 const resolvedNoResultsLabel = computed(() => props.noResultsLabel || t('common.noResults'))
+const resolvedListboxLabel = computed(
+  () => props.placeholder || props.searchPlaceholder || t('common.search'),
+)
 
 // A tiny list does not need a search box, unless the caller forces one.
-const showSearch = computed(() => props.searchable && (props.options.length > 7 || props.forceSearch))
+const showSearch = computed(
+  () => props.searchable && (props.options.length > 7 || props.forceSearch),
+)
 
 // Cap the initial render so huge option sets (e.g. all cities) stay fast;
 // typing a query narrows the list to actual matches.
@@ -127,7 +148,11 @@ const filteredOptions = computed(() => {
   const q = query.value.trim().toLowerCase()
   if (!q) return props.options.slice(0, 100)
   return props.options
-    .filter((o) => String(o.label || '').toLowerCase().includes(q))
+    .filter((option) =>
+      String(option.label || '')
+        .toLowerCase()
+        .includes(q),
+    )
     .slice(0, 200)
 })
 
@@ -138,7 +163,7 @@ const filteredOptions = computed(() => {
  * @returns {string} Displayed trigger label.
  */
 const selectedLabel = computed(() => {
-  const found = props.options.find((o) => String(o.value) === String(props.modelValue))
+  const found = props.options.find((option) => String(option.value) === String(props.modelValue))
   if (found) return found.label
   if (!props.modelValue && props.emptyLabel) return props.emptyLabel
   return ''
@@ -193,19 +218,75 @@ function onSearchInput() {
 
 /**
  * Opens the dropdown: resets the query, positions the panel and focuses the
- * search field on the next frame.
+ * search field (or the first/last option when opened with the arrow keys).
+ *
+ * @param {boolean} focusFirst - Move focus to the first option instead.
+ * @param {boolean} focusLast - Move focus to the last option instead.
  */
-function openPanel() {
+function openPanel(focusFirst = false, focusLast = false) {
   open.value = true
   query.value = ''
   emit('search', '')
   positionPanel()
-  requestAnimationFrame(() => rootEl.value?.querySelector('.ss-search')?.focus())
+  requestAnimationFrame(() => {
+    if (focusFirst || focusLast) {
+      const items = rootEl.value?.querySelectorAll('[role="option"]')
+      if (items?.length) items[focusLast ? items.length - 1 : 0].focus()
+    } else {
+      rootEl.value?.querySelector('.ss-search')?.focus()
+    }
+  })
 }
 
 /** Closes the dropdown. */
 function close() {
   open.value = false
+}
+
+/** Focuses the next or previous option in the list (roving tabindex). */
+function moveOption(dir) {
+  const items = Array.from(rootEl.value?.querySelectorAll('[role="option"]') || [])
+  if (!items.length) return
+  const current = items.findIndex((el) => el === document.activeElement)
+  const next =
+    current === -1
+      ? dir === 1
+        ? 0
+        : items.length - 1
+      : (current + dir + items.length) % items.length
+  items[next].focus()
+}
+
+/**
+ * Handles arrow-key navigation and selection inside the option list.
+ *
+ * @param {KeyboardEvent} event - The keydown event on the list.
+ */
+function onListKeydown(event) {
+  if (event.key === 'Escape') {
+    close()
+    rootEl.value?.querySelector('.ss-trigger')?.focus()
+  } else if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    moveOption(1)
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    moveOption(-1)
+  } else if (event.key === 'Home') {
+    event.preventDefault()
+    const items = rootEl.value?.querySelectorAll('[role="option"]')
+    items?.[0]?.focus()
+  } else if (event.key === 'End') {
+    event.preventDefault()
+    const items = rootEl.value?.querySelectorAll('[role="option"]')
+    items?.[items.length - 1]?.focus()
+  } else if (event.key === 'Enter' || event.key === ' ') {
+    const value = document.activeElement?.dataset?.value
+    if (value !== undefined) {
+      event.preventDefault()
+      pick(value)
+    }
+  }
 }
 
 /**
@@ -260,7 +341,7 @@ onBeforeUnmount(() => {
 .ss-trigger {
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid #ddd;
+  border: 1px solid #858585;
   border-radius: 4px;
   background: #fff;
   font: inherit;
@@ -285,7 +366,7 @@ onBeforeUnmount(() => {
 }
 
 .ss-trigger.is-empty {
-  color: #888;
+  color: #757575;
 }
 
 .ss-trigger.is-disabled {
@@ -339,7 +420,7 @@ onBeforeUnmount(() => {
 }
 
 .ss-option.ss-muted {
-  color: #888;
+  color: #757575;
   cursor: default;
   display: flex;
   align-items: center;

@@ -20,8 +20,28 @@
           {{ tenant.subdomain }} &middot; {{ [tenant.city, tenant.country].filter(Boolean).join(', ') || $t('superadmin.locationNotSpecified') }}
         </p>
         <p class="muted">{{ tenant.email }} {{ tenant.phone ? '· ' + tenant.phone : '' }}</p>
+        <form class="code-form" @submit.prevent="saveCode">
+          <label for="registration-code">{{ $t('superadmin.registrationCode') }}</label>
+          <input
+            id="registration-code"
+            v-model.trim="codeForm.registration_code"
+            type="text"
+            maxlength="6"
+            class="input input-sm code-input"
+            :placeholder="$t('superadmin.registrationCodePlaceholder')"
+          />
+          <button class="btn btn-sm" :disabled="codeSaving">
+            {{ codeSaving ? $t('common.saving') : $t('superadmin.saveCode') }}
+          </button>
+        </form>
       </div>
       <span class="badge" :class="statusBadge(tenant.status)">{{ tenant.status }}</span>
+    </div>
+
+    <div class="head-actions" style="margin-bottom: 1rem;">
+      <button class="btn btn-secondary" @click="downloadBackup">
+        <i class="fas fa-download"></i> {{ $t('superadmin.downloadBackup') }}
+      </button>
     </div>
 
     <!-- Operational analytics pulled from the reporting API -->
@@ -69,6 +89,53 @@
           {{ saving ? $t('common.saving') : $t('superadmin.updateSubscription') }}
         </button>
       </form>
+    </div>
+
+    <!-- Feature flags: check/uncheck individual features for this tenant -->
+    <div class="card">
+      <h2 class="card-title"><i class="fas fa-layer-group"></i> {{ $t('superadmin.featureManagement') }}</h2>
+      <p class="muted">
+        {{ $t('superadmin.featureHint') }}
+      </p>
+      <div v-if="planFeatureLabelsLoading" class="muted">{{ $t('superadmin.loadingFeatures') }}</div>
+      <template v-else>
+        <!-- Quick actions -->
+        <div class="feature-quick-actions">
+          <button type="button" class="btn btn-sm btn-secondary" @click="selectAllFeatures">
+            <i class="fas fa-check-double"></i> {{ $t('superadmin.selectAll') }}
+          </button>
+          <button type="button" class="btn btn-sm btn-secondary" @click="deselectAllFeatures">
+            <i class="fas fa-xmark"></i> {{ $t('superadmin.deselectAll') }}
+          </button>
+          <button type="button" class="btn btn-sm btn-secondary" @click="loadPlanFeatures">
+            <i class="fas fa-rotate"></i> {{ $t('superadmin.resetToPlan') }}
+          </button>
+        </div>
+        <!-- Grouped feature checkboxes -->
+        <div class="feature-groups">
+          <div v-for="(features, groupKey) in featureGroups" :key="groupKey" class="feature-group">
+            <h3 class="feature-group-title">{{ groupKey }}</h3>
+            <div class="feature-grid">
+              <label v-for="feat in features" :key="feat.key" class="feature-toggle">
+                <input
+                  type="checkbox"
+                  :value="feat.key"
+                  v-model="selectedFeatures"
+                  class="feature-checkbox"
+                />
+                <span class="feature-info">
+                  <span class="feature-name">{{ feat.label }}</span>
+                  <span class="feature-desc">{{ feat.description }}</span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <p class="feature-count">
+          {{ selectedFeatures.length }} {{ $t('superadmin.of') }} {{ allFeatureKeys.length }} {{ $t('superadmin.featuresEnabled') }}
+          <template v-if="tenant.features === null"> {{ $t('superadmin.allFeaturesActive') }}</template>
+        </p>
+      </template>
     </div>
 
     <!-- Tax details plus the signature and stamp images used on the hotel's documents -->
@@ -201,7 +268,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { tenantApi, superadminReportApi } from '@/api'
+import { tenantApi, superadminReportApi, planApi } from '@/api'
 import {
   ALL_PROVIDERS,
   METHOD_BANK,
@@ -224,12 +291,18 @@ const savingBranding = ref(false)
 const error = ref('')
 const subForm = ref({ subscription_plan: 'trial', subscription_status: 'active' })
 const taxForm = ref({ tin: '', vrn: '' })
+const codeForm = ref({ registration_code: '' })
+const codeSaving = ref(false)
 const brandingFiles = ref({ signature: null, stamp: null })
 const owners = ref([])
 const ownerForm = ref({ owner_id: '' })
 const newOwner = ref({ full_name: '', email: '' })
 const savingOwner = ref(false)
 const creatingOwner = ref(false)
+const selectedFeatures = ref([])
+const planFeatures = ref({})
+const planFeatureLabels = ref({})
+const planFeatureLabelsLoading = ref(true)
 
 // Options for the subscription plan / status selects and the assign-owner select
 const ownerOptions = computed(() => [
@@ -253,6 +326,66 @@ const subscriptionStatusOptions = computed(() => [
 // Static payment configuration plus the form collecting enabled methods and accounts
 const paymentMethods = PAYMENT_METHODS
 const paymentForm = ref({ methods: defaultPaymentMethods(), accounts: emptyAccounts() })
+
+// Feature toggle logic.
+const allFeatureKeys = computed(() => Object.keys(planFeatureLabels.value))
+
+const featureGroups = computed(() => {
+  const coreOps = t('superadmin.coreOperations')
+  const fb = t('superadmin.foodAndBeverage')
+  const ops = t('superadmin.operations')
+  const proc = t('superadmin.procurement')
+  const comm = t('superadmin.communication')
+  const ent = t('superadmin.enterpriseGroup')
+  const groups = {
+    [coreOps]: [], [fb]: [], [ops]: [], [proc]: [], [comm]: [], [ent]: [],
+  }
+  const grouping = {
+    reservations: coreOps, rooms: coreOps, guests: coreOps,
+    payments: coreOps, booking_requisitions: coreOps, staff: coreOps,
+    profile: coreOps, reports: coreOps, overview: coreOps,
+    orders: fb, menu: fb,
+    housekeeping: ops, laundry: ops, fun_games: ops,
+    inventory: ops, suppliers: ops, accounting: ops,
+    requisitions: proc, purchase_orders: proc, goods_received: proc,
+    issue_reports: comm, messages: comm, statuses: comm,
+    owner_portal: ent, multi_hotel: ent, advanced_analytics: ent,
+  }
+  allFeatureKeys.value.forEach((key) => {
+    const group = grouping[key] || coreOps
+    groups[group].push({ key, ...planFeatureLabels.value[key] })
+  })
+  return Object.fromEntries(Object.entries(groups).filter(([, v]) => v.length > 0))
+})
+
+function selectAllFeatures() {
+  selectedFeatures.value = [...allFeatureKeys.value]
+}
+
+function deselectAllFeatures() {
+  selectedFeatures.value = []
+}
+
+async function loadPlanFeatures() {
+  planFeatureLabelsLoading.value = true
+  try {
+    const { data } = await planApi.index()
+    planFeatures.value = data.plans
+    planFeatureLabels.value = data.feature_labels
+  } catch { /* ignore */ }
+  planFeatureLabelsLoading.value = false
+}
+
+function seedFeaturesFromTenant() {
+  // If tenant has explicit features, use them; otherwise use all from the plan.
+  if (tenant.value?.features && tenant.value.features.length) {
+    selectedFeatures.value = [...tenant.value.features]
+  } else {
+    const planKey = tenant.value?.subscription_plan || 'enterprise'
+    const planFeat = planFeatures.value[planKey]?.features || allFeatureKeys.value
+    selectedFeatures.value = [...planFeat]
+  }
+}
 
 /**
  * Returns a fresh copy of the default payment method list.
@@ -299,6 +432,7 @@ async function load() {
     subForm.value.subscription_status = tenant.value.subscription_status
     taxForm.value.tin = tenant.value.tin || ''
     taxForm.value.vrn = tenant.value.vrn || ''
+    codeForm.value.registration_code = tenant.value.registration_code || ''
     ownerForm.value.owner_id = tenant.value.owner_id || ''
     paymentForm.value.methods =
       tenant.value.payment_methods && tenant.value.payment_methods.length
@@ -308,6 +442,7 @@ async function load() {
     ALL_PROVIDERS.forEach((p) => {
       paymentForm.value.accounts[p] = accounts[p] || ''
     })
+    seedFeaturesFromTenant()
   } catch (err) {
     error.value = err.response?.data?.message || t('superadmin.failedToLoad')
   }
@@ -321,12 +456,13 @@ async function load() {
   loading.value = false
 }
 
-/** Persists the chosen subscription plan and status, then refreshes the tenant. */
+/** Persists the chosen subscription plan, status, and feature flags. */
 async function updateSubscription() {
   saving.value = true
   error.value = ''
   try {
-    const res = await tenantApi.updateSubscription(route.params.id, subForm.value)
+    const payload = { ...subForm.value, features: selectedFeatures.value }
+    const res = await tenantApi.updateSubscription(route.params.id, payload)
     window.alert(res.data.message || t('superadmin.subscriptionUpdated'))
     await load()
   } catch (err) {
@@ -352,6 +488,40 @@ async function saveTaxDetails() {
     error.value = err.response?.data?.message || t('superadmin.taxDetailsSaveError')
   } finally {
     savingTax.value = false
+  }
+}
+
+/** Updates the hotel's registration code (the segment inside every document number). */
+async function saveCode() {
+  codeSaving.value = true
+  error.value = ''
+  try {
+    const res = await tenantApi.update(route.params.id, {
+      registration_code: codeForm.value.registration_code.toUpperCase(),
+    })
+    tenant.value.registration_code = res.data.tenant?.registration_code ?? codeForm.value.registration_code.toUpperCase()
+    window.alert(res.data.message || t('superadmin.codeSaved'))
+  } catch (err) {
+    error.value = err.response?.data?.message || t('superadmin.codeSaveError')
+  } finally {
+    codeSaving.value = false
+  }
+}
+
+/** Downloads a JSON backup of this hotel's operational data. */
+async function downloadBackup() {
+  error.value = ''
+  try {
+    const res = await tenantApi.backup(route.params.id)
+    const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `backup-${tenant.value.hotel_name}-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  } catch (err) {
+    error.value = err.response?.data?.message || t('superadmin.backupFailed')
   }
 }
 
@@ -470,8 +640,9 @@ async function savePaymentMethods() {
   }
 }
 
-onMounted(() => {
-  load()
+onMounted(async () => {
+  await Promise.all([loadPlanFeatures(), load()])
+  seedFeaturesFromTenant()
   loadOwners()
 })
 </script>
@@ -506,6 +677,28 @@ onMounted(() => {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
   align-items: end;
+}
+
+.code-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.code-form label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #888;
+}
+
+.code-input {
+  width: 90px;
+  text-transform: uppercase;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+  letter-spacing: 1px;
 }
 
 .method-grid {
@@ -610,5 +803,87 @@ onMounted(() => {
   font-size: 13px;
   cursor: pointer;
   text-decoration: underline;
+}
+
+/* Feature toggles */
+.feature-quick-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.feature-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.feature-group-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155;
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px;
+}
+
+.feature-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: #fff;
+}
+
+.feature-toggle:hover {
+  border-color: #93c5fd;
+  background: #f0f7ff;
+}
+
+.feature-toggle:has(.feature-checkbox:checked) {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.feature-checkbox {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
+  flex-shrink: 0;
+}
+
+.feature-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.feature-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.feature-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.feature-count {
+  margin-top: 16px;
+  font-size: 13px;
+  color: #64748b;
 }
 </style>

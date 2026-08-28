@@ -16,10 +16,17 @@
         <p class="muted">{{ $t('requisitions.subtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="load"><i class="fas fa-rotate"></i> {{ $t('requisitions.refresh')
-        }}</button>
-        <button v-if="canOperate" class="btn btn-primary" @click="openCreate"><i class="fas fa-plus"></i> {{
-          $t('requisitions.newRequisition') }}</button>
+        <button class="btn btn-secondary" @click="load">
+          <i class="fas fa-rotate"></i> {{ $t('requisitions.refresh') }}
+        </button>
+        <button v-if="canOperate" class="btn btn-primary" @click="openCreate">
+          <i class="fas fa-plus"></i> {{ $t('requisitions.newRequisition') }}
+        </button>
+        <TableExportButton
+          filename="purchase-requisitions"
+          :load-all="loadAllRequisitions"
+          :title="$t('requisitions.title')"
+        />
       </div>
     </div>
 
@@ -32,22 +39,36 @@
       <div class="filter-grid">
         <div class="form-group">
           <label>{{ $t('requisitions.status') }}</label>
-          <SearchableSelect v-model="filters.status" :options="statusOptions" :empty-label="$t('common.all')"
-            @change="load" />
+          <SearchableSelect
+            v-model="filters.status"
+            :options="statusOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('requisitions.priority') }}</label>
-          <SearchableSelect v-model="filters.priority" :options="priorityOptions" :empty-label="$t('common.all')"
-            @change="load" />
+          <SearchableSelect
+            v-model="filters.priority"
+            :options="priorityOptions"
+            :empty-label="$t('common.all')"
+            @change="load"
+          />
         </div>
         <div class="form-group">
           <label>{{ $t('common.department') }}</label>
-          <input v-model="filters.department" type="text" class="input"
-            :placeholder="$t('requisitions.departmentPlaceholder')" @input="triggerSearch" />
+          <input
+            v-model="filters.department"
+            type="text"
+            class="input"
+            :placeholder="$t('requisitions.departmentPlaceholder')"
+            @input="triggerSearch"
+          />
         </div>
         <div class="filter-actions">
-          <button class="btn btn-secondary btn-sm" @click="clearFilters"><i class="fas fa-filter-circle-xmark"></i> {{
-            $t('common.clear') }}</button>
+          <button class="btn btn-secondary btn-sm" @click="clearFilters">
+            <i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}
+          </button>
         </div>
       </div>
     </div>
@@ -58,61 +79,96 @@
     <!-- Requisitions table: reference, department, requester, item count, total, priority and status badges -->
     <div v-else class="table-scroll">
       <table class="table">
-      <thead>
-        <tr>
-          <th>{{ $t('requisitions.reference') }}</th>
-          <th>{{ $t('common.department') }}</th>
-          <th>{{ $t('requisitions.requestedBy') }}</th>
-          <th>{{ $t('requisitions.items') }}</th>
-          <th>{{ $t('requisitions.total') }}</th>
-          <th>{{ $t('requisitions.priority') }}</th>
-          <th>{{ $t('requisitions.status') }}</th>
-          <th>{{ $t('common.actions') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="pr in requisitions" :key="pr.pr_id">
-          <td><strong>{{ pr.pr_number }}</strong></td>
-          <td class="capitalize">{{ pr.department }}</td>
-          <td>{{ pr.requester?.full_name || '-' }}</td>
-          <td>
-            <button class="link-btn" @click="openDetail(pr)">{{ $t('requisitions.viewItems', {
-              count: (pr.items ||
-                []).length
-            }) }}</button>
-          </td>
-          <td><span class="price">TZS {{ Number(pr.total_amount).toLocaleString() }}</span></td>
-          <td><span class="badge" :class="priorityBadge(pr.priority)">{{ pr.priority }}</span></td>
-          <td><span class="badge" :class="statusBadge(pr.status)">{{ pr.status }}</span></td>
-          <td>
-            <!-- Approve/reject/cancel actions, visible only for pending records with the right permission -->
-            <div class="actions">
-              <button v-if="pr.status === 'pending' && canApprove" class="btn btn-sm btn-success" @click="approve(pr)">
-                <i class="fas fa-check"></i> {{ $t('requisitions.approve') }}
+        <thead>
+          <tr>
+            <th scope="col">{{ $t('requisitions.reference') }}</th>
+            <th scope="col">{{ $t('common.department') }}</th>
+            <th scope="col">{{ $t('requisitions.requestedBy') }}</th>
+            <th scope="col">{{ $t('requisitions.items') }}</th>
+            <th scope="col">{{ $t('requisitions.total') }}</th>
+            <th scope="col">{{ $t('requisitions.priority') }}</th>
+            <th scope="col">{{ $t('requisitions.status') }}</th>
+            <th scope="col">{{ $t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="pr in requisitions" :key="pr.pr_id">
+            <td>
+              <strong>{{ pr.pr_number }}</strong>
+            </td>
+            <td class="capitalize">{{ pr.department }}</td>
+            <td>{{ pr.requester?.full_name || '-' }}</td>
+            <td>
+              <button class="link-btn" @click="openDetail(pr)">
+                {{
+                  $t('requisitions.viewItems', {
+                    count: (pr.items || []).length,
+                  })
+                }}
               </button>
-              <button v-if="pr.status === 'pending' && canApprove" class="btn btn-sm btn-danger"
-                @click="openReject(pr)">
-                <i class="fas fa-xmark"></i> {{ $t('requisitions.reject') }}
-              </button>
-              <button v-if="pr.status === 'pending' && canOperate" class="btn btn-sm btn-secondary" @click="cancel(pr)">{{
-                $t('common.cancel') }}</button>
-            </div>
-          </td>
-        </tr>
-        <tr v-if="!requisitions.length && !loading">
-          <td colspan="8" class="muted">{{ $t('requisitions.empty') }}</td>
-        </tr>
-      </tbody>
-    </table>
+            </td>
+            <td>
+              <span class="price">TZS {{ Number(pr.total_amount).toLocaleString() }}</span>
+            </td>
+            <td>
+              <span class="badge" :class="priorityBadge(pr.priority)">{{ pr.priority }}</span>
+            </td>
+            <td>
+              <span class="badge" :class="statusBadge(pr.status)">{{ pr.status }}</span>
+            </td>
+            <td>
+              <!-- Approve/reject/cancel actions, visible only for pending records with the right permission -->
+              <div class="actions">
+                <button
+                  v-if="pr.status === 'pending' && canApprove"
+                  class="btn btn-sm btn-success"
+                  @click="approve(pr)"
+                >
+                  <i class="fas fa-check"></i> {{ $t('requisitions.approve') }}
+                </button>
+                <button
+                  v-if="pr.status === 'pending' && canApprove"
+                  class="btn btn-sm btn-danger"
+                  @click="openReject(pr)"
+                >
+                  <i class="fas fa-xmark"></i> {{ $t('requisitions.reject') }}
+                </button>
+                <button
+                  v-if="pr.status === 'pending' && canOperate"
+                  class="btn btn-sm btn-secondary"
+                  @click="cancel(pr)"
+                >
+                  {{ $t('common.cancel') }}
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="!requisitions.length && !loading">
+            <td colspan="8" class="muted">{{ $t('requisitions.empty') }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Server-side pagination controls -->
     <div v-if="meta.total > meta.per_page" class="pagination">
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.prev_page_url" @click="goPage(meta.current_page - 1)">{{
-        $t('common.previous') }}</button>
-      <span class="muted">{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
-      <button class="btn btn-sm btn-secondary" :disabled="!meta.next_page_url" @click="goPage(meta.current_page + 1)">{{
-        $t('common.next') }}</button>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.prev_page_url"
+        @click="goPage(meta.current_page - 1)"
+      >
+        {{ $t('common.previous') }}
+      </button>
+      <span class="muted">{{
+        $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page })
+      }}</span>
+      <button
+        class="btn btn-sm btn-secondary"
+        :disabled="!meta.next_page_url"
+        @click="goPage(meta.current_page + 1)"
+      >
+        {{ $t('common.next') }}
+      </button>
     </div>
 
     <!-- Create purchase-requisition modal with line items -->
@@ -129,8 +185,13 @@
           <div class="form-grid">
             <div class="form-group">
               <label>{{ $t('common.department') }} *</label>
-              <input v-model="form.department" type="text" class="input" required
-                :placeholder="$t('requisitions.departmentPlaceholder')" />
+              <input
+                v-model="form.department"
+                type="text"
+                class="input"
+                required
+                :placeholder="$t('requisitions.departmentPlaceholder')"
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('requisitions.priority') }}</label>
@@ -144,8 +205,9 @@
 
           <div class="items-head">
             <h3>{{ $t('requisitions.items') }}</h3>
-            <button type="button" class="btn btn-sm btn-secondary" @click="addItem"><i class="fas fa-plus"></i> {{
-              $t('requisitions.addItem') }}</button>
+            <button type="button" class="btn btn-sm btn-secondary" @click="addItem">
+              <i class="fas fa-plus"></i> {{ $t('requisitions.addItem') }}
+            </button>
           </div>
 
           <div v-for="(item, idx) in form.items" :key="idx" class="item-row">
@@ -160,28 +222,50 @@
               </div>
               <div class="form-group">
                 <label>{{ $t('requisitions.quantity') }}</label>
-                <input v-model.number="item.quantity" type="number" min="0.01" step="0.01" class="input" required />
+                <input
+                  v-model.number="item.quantity"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  class="input"
+                  required
+                />
               </div>
               <div class="form-group">
                 <label>{{ $t('common.unit') }}</label>
-                <input v-model="item.unit" type="text" class="input"
-                  :placeholder="$t('requisitions.unitPlaceholder')" />
+                <input
+                  v-model="item.unit"
+                  type="text"
+                  class="input"
+                  :placeholder="$t('requisitions.unitPlaceholder')"
+                />
               </div>
               <div class="form-group">
                 <label>{{ $t('requisitions.estPrice') }}</label>
-                <input v-model.number="item.estimated_price" type="number" min="0" step="0.01" class="input" required />
+                <input
+                  v-model.number="item.estimated_price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="input"
+                  required
+                />
               </div>
               <div class="form-group item-remove">
-                <button type="button" class="btn btn-sm btn-danger" @click="removeItem(idx)"><i
-                    class="fas fa-trash"></i></button>
+                <button type="button" class="btn btn-sm btn-danger" @click="removeItem(idx)">
+                  <i class="fas fa-trash"></i>
+                </button>
               </div>
             </div>
           </div>
 
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="closeModal">{{ $t('common.cancel') }}</button>
+            <button type="button" class="btn btn-secondary" @click="closeModal">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="saving">
-              <i class="fas fa-check"></i> {{ saving ? $t('common.saving') : $t('requisitions.saveRequisition') }}
+              <i class="fas fa-check"></i>
+              {{ saving ? $t('common.saving') : $t('requisitions.saveRequisition') }}
             </button>
           </div>
         </form>
@@ -192,9 +276,13 @@
     <div v-if="showReject" class="modal-overlay" @click.self="showReject = false">
       <div class="modal modal-sm">
         <div class="modal-head">
-          <h2><i class="fas fa-xmark"></i> {{ $t('requisitions.rejectHeading', { reference: rejectPr?.pr_number }) }}
+          <h2>
+            <i class="fas fa-xmark"></i>
+            {{ $t('requisitions.rejectHeading', { reference: rejectPr?.pr_number }) }}
           </h2>
-          <button class="modal-close" @click="showReject = false"><i class="fas fa-xmark"></i></button>
+          <button class="modal-close" @click="showReject = false">
+            <i class="fas fa-xmark"></i>
+          </button>
         </div>
         <form @submit.prevent="reject">
           <div class="form-group">
@@ -202,8 +290,9 @@
             <textarea v-model="rejectComments" rows="3" class="textarea"></textarea>
           </div>
           <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="showReject = false">{{ $t('common.cancel')
-            }}</button>
+            <button type="button" class="btn btn-secondary" @click="showReject = false">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-danger" :disabled="saving">
               <i class="fas fa-xmark"></i> {{ $t('requisitions.reject') }}
             </button>
@@ -217,37 +306,41 @@
       <div class="modal modal-lg">
         <div class="modal-head">
           <h2><i class="fas fa-file-signature"></i> {{ detail?.pr_number }}</h2>
-          <button class="modal-close" @click="showDetail = false"><i class="fas fa-xmark"></i></button>
+          <button class="modal-close" @click="showDetail = false">
+            <i class="fas fa-xmark"></i>
+          </button>
         </div>
         <p class="muted">
-          {{ detail?.department }} · {{ detail?.priority }} · {{ $t('requisitions.requestedByLabel') }} {{
-            detail?.requester?.full_name || '-' }}
+          {{ detail?.department }} · {{ detail?.priority }} ·
+          {{ $t('requisitions.requestedByLabel') }} {{ detail?.requester?.full_name || '-' }}
           <span v-if="detail?.justification"> · {{ detail.justification }}</span>
         </p>
         <div class="table-scroll">
           <table class="table">
-          <thead>
-            <tr>
-              <th>{{ $t('requisitions.tableItem') }}</th>
-              <th>{{ $t('requisitions.tableQty') }}</th>
-              <th>{{ $t('requisitions.tableUnit') }}</th>
-              <th>{{ $t('requisitions.tableEstPrice') }}</th>
-              <th>{{ $t('requisitions.tableSubtotal') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in detail?.items || []" :key="item.pr_item_id">
-              <td>
-                <strong>{{ item.item_name }}</strong>
-                <div v-if="item.description" class="muted">{{ item.description }}</div>
-              </td>
-              <td>{{ item.quantity }}</td>
-              <td>{{ item.unit || '-' }}</td>
-              <td>TZS {{ Number(item.estimated_price).toLocaleString() }}</td>
-              <td><span class="price">TZS {{ Number(item.subtotal).toLocaleString() }}</span></td>
-            </tr>
-          </tbody>
-        </table>
+            <thead>
+              <tr>
+                <th scope="col">{{ $t('requisitions.tableItem') }}</th>
+                <th scope="col">{{ $t('requisitions.tableQty') }}</th>
+                <th scope="col">{{ $t('requisitions.tableUnit') }}</th>
+                <th scope="col">{{ $t('requisitions.tableEstPrice') }}</th>
+                <th scope="col">{{ $t('requisitions.tableSubtotal') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in detail?.items || []" :key="item.pr_item_id">
+                <td>
+                  <strong>{{ item.item_name }}</strong>
+                  <div v-if="item.description" class="muted">{{ item.description }}</div>
+                </td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.unit || '-' }}</td>
+                <td>TZS {{ Number(item.estimated_price).toLocaleString() }}</td>
+                <td>
+                  <span class="price">TZS {{ Number(item.subtotal).toLocaleString() }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -260,6 +353,8 @@ import { useAuthStore } from '@/stores/auth'
 import { purchaseRequisitionApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import TableExportButton from '@/components/TableExportButton.vue'
+import { collectAllRows } from '@/utils/export'
 
 const { t } = useI18n()
 
@@ -272,7 +367,14 @@ const canOperate = computed(() => authStore.canOperate)
 // List state: requisitions, pagination, filters, and load flags/messages.
 const requisitions = ref([])
 const page = ref(1)
-const meta = ref({ total: 0, per_page: 15, current_page: 1, last_page: 1, prev_page_url: null, next_page_url: null })
+const meta = ref({
+  total: 0,
+  per_page: 15,
+  current_page: 1,
+  last_page: 1,
+  prev_page_url: null,
+  next_page_url: null,
+})
 const filters = reactive({ status: '', priority: '', department: '' })
 const loading = ref(false)
 const error = ref('')
@@ -310,15 +412,20 @@ function emptyItem() {
 }
 
 /** Maps a requisition status to its badge CSS class for the table. */
-function statusBadge(s) {
-  const map = { pending: 'badge-yellow', approved: 'badge-green', rejected: 'badge-red', cancelled: 'badge-gray' }
-  return map[s] || 'badge-gray'
+function statusBadge(status) {
+  const map = {
+    pending: 'badge-yellow',
+    approved: 'badge-green',
+    rejected: 'badge-red',
+    cancelled: 'badge-gray',
+  }
+  return map[status] || 'badge-gray'
 }
 
 /** Maps a priority level to its badge CSS class for the table. */
-function priorityBadge(p) {
+function priorityBadge(priority) {
   const map = { urgent: 'badge-red', high: 'badge-yellow', normal: 'badge-blue', low: 'badge-gray' }
-  return map[p] || 'badge-gray'
+  return map[priority] || 'badge-gray'
 }
 
 /** Fetches the paged requisition list using the current filters. */
@@ -342,9 +449,20 @@ async function load() {
   }
 }
 
+const loadAllRequisitions = () =>
+  collectAllRows((page, perPage) =>
+    purchaseRequisitionApi.index({
+      status: filters.status,
+      priority: filters.priority,
+      department: filters.department,
+      page,
+      per_page: perPage,
+    }),
+  )
+
 /** Moves to the given page and reloads. */
-function goPage(p) {
-  page.value = p
+function goPage(page) {
+  page.value = page
   load()
 }
 
@@ -391,7 +509,7 @@ async function save() {
       department: form.department,
       priority: form.priority,
       justification: form.justification,
-      items: form.items.filter((i) => i.item_name),
+      items: form.items.filter((item) => item.item_name),
     })
     success.value = res.data.message || t('requisitions.createSuccess')
     showModal.value = false
@@ -434,7 +552,9 @@ async function reject() {
   error.value = ''
   saving.value = true
   try {
-    const res = await purchaseRequisitionApi.reject(rejectPr.value.pr_id, { comments: rejectComments.value })
+    const res = await purchaseRequisitionApi.reject(rejectPr.value.pr_id, {
+      comments: rejectComments.value,
+    })
     success.value = res.data.message || t('requisitions.rejected')
     showReject.value = false
     await load()
@@ -461,7 +581,9 @@ async function cancel(pr) {
 /** Flattens Laravel-style validation errors into a single readable message. */
 function flattenError(err) {
   const messages = err.response?.data?.errors
-  return messages ? Object.values(messages).flat().join(' ') : err.response?.data?.message || t('common.actionFailed')
+  return messages
+    ? Object.values(messages).flat().join(' ')
+    : err.response?.data?.message || t('common.actionFailed')
 }
 
 onMounted(load)
@@ -509,7 +631,7 @@ onMounted(load)
 }
 
 .muted {
-  color: #888;
+  color: #757575;
   font-size: 12px;
   margin-top: 2px;
 }
@@ -520,7 +642,7 @@ onMounted(load)
 
 .price {
   font-weight: 700;
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .actions {
@@ -530,7 +652,7 @@ onMounted(load)
 }
 
 .link-btn {
-  color: #005EB8;
+  color: #005eb8;
   font-weight: 600;
   background: none;
   border: none;
@@ -558,7 +680,7 @@ onMounted(load)
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .item-row {
@@ -625,14 +747,14 @@ onMounted(load)
 }
 
 .modal-head h2 i {
-  color: #005EB8;
+  color: #005eb8;
 }
 
 .modal-close {
   background: none;
   border: none;
   font-size: 18px;
-  color: #999;
+  color: #757575;
   cursor: pointer;
   padding: 4px;
 }

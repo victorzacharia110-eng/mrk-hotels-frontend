@@ -48,7 +48,6 @@ const error = ref('')
 
 let stream = null
 let raf = 0
-let opening = false
 let openingPromise = null
 let openCancelled = false
 
@@ -63,7 +62,6 @@ function stop() {
 
 async function start() {
   try {
-    opening = true
     openCancelled = false
     openingPromise = navigator.mediaDevices
       .getUserMedia({ audio: false, video: { facingMode: 'environment' } })
@@ -78,7 +76,6 @@ async function start() {
         return s
       })
     const s = await openingPromise
-    opening = false
     openingPromise = null
     if (!s) return
     if (!videoEl.value) return
@@ -89,7 +86,6 @@ async function start() {
     scanning.value = false
     error.value = t('attendance.cameraDenied')
   } finally {
-    opening = false
     openingPromise = null
   }
 }

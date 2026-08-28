@@ -50,7 +50,6 @@ const previewUrl = ref('')
 const error = ref('')
 
 let stream = null
-let opening = false
 let openingPromise = null
 let openCancelled = false
 
@@ -64,7 +63,6 @@ function stop() {
 
 async function start() {
   try {
-    opening = true
     openCancelled = false
     openingPromise = navigator.mediaDevices
       .getUserMedia({ audio: false, video: { facingMode: 'user' } })
@@ -77,7 +75,6 @@ async function start() {
         return s
       })
     const s = await openingPromise
-    opening = false
     openingPromise = null
     if (!s) return
     if (videoEl.value) {
