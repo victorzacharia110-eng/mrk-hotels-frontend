@@ -40,7 +40,7 @@
         <div v-if="rooms.length" class="room-browser-bar">
           <div class="form-group">
             <label>{{ $t('common.search') }}</label>
-            <input v-model.trim="query" type="search" class="input" :placeholder="$t('bookingPage.searchRoomsPlaceholder')" />
+            <input v-model.trim="query" type="search" class="input" :placeholder="$t('bookingPage.searchRoomsPlaceholderPublic')" />
           </div>
           <div class="form-group">
             <label>{{ $t('common.status') }}</label>

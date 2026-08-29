@@ -16,14 +16,21 @@ import { ref, computed, watch } from 'vue'
 
 /**
  * Builds a reactive search/sort/paginate pipeline over a rooms ref/computed.
+ *
+ * By default the free-text search does NOT match room numbers, so public pages
+ * cannot be used to probe or pin down specific rooms. Staff pages that need to
+ * find rooms by number opt in with `searchRoomsByNumber: true`.
+ *
  * @param {import('vue').Ref<Array>|import('vue').ComputedRef<Array>} roomsSource - Reactive list of room objects.
+ * @param {{ searchRoomsByNumber?: boolean }} [options]
  * @returns {object} Reactive controls and the derived page of rooms.
  */
-export function useRoomBrowser(roomsSource) {
+export function useRoomBrowser(roomsSource, { searchRoomsByNumber = false } = {}) {
   // Rooms shown per page.
   const PER_PAGE = 15
 
-  // Free-text search across room number, type and floor.
+  // Free-text search across room type and floor (room numbers are only
+  // searched when the caller opts in via `searchRoomsByNumber`).
   const query = ref('')
   // Active sort field and direction.
   const sortKey = ref('price_per_night')
@@ -33,17 +40,20 @@ export function useRoomBrowser(roomsSource) {
 
   /**
    * Rooms after applying the free-text search (case-insensitive match over
-   * room number, room type and floor).
+   * the room type and floor; room numbers only when opted in).
    */
   const filteredRooms = computed(() => {
     const rooms = roomsSource.value || []
     const q = query.value.trim().toLowerCase()
     if (!q) return rooms
-    return rooms.filter((room) =>
-      [room.room_number, room.room_type, room.floor]
+    return rooms.filter((room) => {
+      const fields = searchRoomsByNumber
+        ? [room.room_number, room.room_type, room.floor]
+        : [room.room_type, room.floor]
+      return fields
         .filter((v) => v !== null && v !== undefined)
-        .some((v) => String(v).toLowerCase().includes(q)),
-    )
+        .some((v) => String(v).toLowerCase().includes(q))
+    })
   })
 
   /**

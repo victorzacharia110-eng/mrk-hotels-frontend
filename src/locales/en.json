@@ -2566,6 +2566,7 @@
     "upTo": "Up to",
     "searchRooms": "Search rooms",
     "searchRoomsPlaceholder": "Room number, type or floor...",
+    "searchRoomsPlaceholderPublic": "Search by room type or floor…",
     "sortBy": "Sort by",
     "sortPrice": "Price",
     "sortRoomNumber": "Room number",

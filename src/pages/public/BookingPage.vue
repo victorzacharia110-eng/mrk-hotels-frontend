@@ -68,7 +68,7 @@
       <div v-if="availability.available_rooms?.length" class="room-browser-bar">
         <div class="form-group room-browser-search">
           <label>{{ $t('bookingPage.searchRooms') }}</label>
-          <input v-model="query" type="text" class="input" :placeholder="$t('bookingPage.searchRoomsPlaceholder')" />
+          <input v-model="query" type="text" class="input" :placeholder="$t('bookingPage.searchRoomsPlaceholderPublic')" />
         </div>
         <div class="form-group">
           <label>{{ $t('bookingPage.sortBy') }}</label>

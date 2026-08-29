@@ -23,12 +23,20 @@ describe('useRoomBrowser', () => {
     expect(pagedRooms.value).toHaveLength(10)
   })
 
-  it('filters by search query across number, type and floor', () => {
-    const { query, filteredCount } = useRoomBrowser(ref(makeRooms(20)))
+  it('filters by search query across number, type and floor when opted in', () => {
+    const { query, filteredCount } = useRoomBrowser(ref(makeRooms(20)), { searchRoomsByNumber: true })
     query.value = 'single'
     expect(filteredCount.value).toBe(10)
     query.value = '101'
     expect(filteredCount.value).toBe(1)
+  })
+
+  it('does not match room numbers by default (public pages)', () => {
+    const { query, filteredCount } = useRoomBrowser(ref(makeRooms(20)))
+    query.value = '102'
+    expect(filteredCount.value).toBe(0)
+    query.value = 'double'
+    expect(filteredCount.value).toBe(10)
   })
 
   it('sorts by price ascending and descending', () => {

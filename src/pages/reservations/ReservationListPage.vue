@@ -1067,7 +1067,7 @@ const {
   filteredCount,
   rangeFrom,
   rangeTo,
-} = useRoomBrowser(roomsSource)
+} = useRoomBrowser(roomsSource, { searchRoomsByNumber: true })
 
 // Options for the room-sort dropdown.
 const sortOptions = computed(() => [
