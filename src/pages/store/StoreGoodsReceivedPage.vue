@@ -204,7 +204,7 @@ async function loadPoItems() {
   form.items = []
   if (!form.po_id) return
   const res = await purchaseOrderApi.show(form.po_id)
-  const po = res.data.data || res.data
+  const po = res.data.purchase_order
   form.items = (po.items || []).map((item) => ({
     po_item_id: item.po_item_id,
     item_name: item.item_name,
@@ -241,7 +241,7 @@ async function save() {
 
 async function openDetail(grn) {
   const res = await goodsReceivedNoteApi.show(grn.grn_id)
-  detail.value = res.data.data || res.data
+  detail.value = res.data.grn
 }
 
 onMounted(async () => {

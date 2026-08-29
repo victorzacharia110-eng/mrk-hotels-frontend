@@ -18,6 +18,13 @@
         <button class="btn btn-secondary" @click="load">
           <i class="fas fa-rotate"></i> {{ $t('funGames.refresh') }}
         </button>
+        <button
+          v-if="canOperate && bulk.selectedCount > 0"
+          class="btn btn-danger"
+          @click="showBulkDelete = true"
+        >
+          <i class="fas fa-trash"></i> {{ $t('common.deleteSelected') }} ({{ bulk.selectedCount }})
+        </button>
         <button v-if="canOperate" class="btn btn-primary" @click="openCreate">
           <i class="fas fa-plus"></i> {{ $t('funGames.newOrder') }}
         </button>
@@ -80,6 +87,16 @@
       <table class="table">
         <thead>
           <tr>
+            <th scope="col" class="bulk-col">
+              <input
+                v-if="canOperate"
+                type="checkbox"
+                :checked="bulk.allSelected"
+                :indeterminate.prop="bulk.someSelected && !bulk.allSelected"
+                :aria-label="$t('common.selectAll')"
+                @change="bulk.toggleAll()"
+              />
+            </th>
             <th scope="col">{{ $t('funGames.orderNumber') }}</th>
             <th scope="col">{{ $t('funGames.game') }}</th>
             <th scope="col">{{ $t('funGames.guest') }}</th>
@@ -93,6 +110,14 @@
         </thead>
         <tbody>
           <tr v-for="order in orders" :key="order.fun_game_order_id">
+            <td class="bulk-col">
+              <input
+                v-if="canOperate"
+                type="checkbox"
+                :checked="bulk.isSelected(order.fun_game_order_id)"
+                @change="bulk.toggle(order.fun_game_order_id)"
+              />
+            </td>
             <td>
               <strong>{{ order.order_number }}</strong>
             </td>
@@ -135,7 +160,7 @@
             </td>
           </tr>
           <tr v-if="!orders.length && !loading">
-            <td colspan="9" class="muted">{{ $t('funGames.empty') }}</td>
+            <td colspan="10" class="muted">{{ $t('funGames.empty') }}</td>
           </tr>
         </tbody>
       </table>
@@ -239,6 +264,14 @@
         </form>
       </div>
     </div>
+
+    <!-- Confirmation modal for bulk deletion (type DELETE to confirm) -->
+    <DeleteConfirmModal
+      v-model="showBulkDelete"
+      :count="bulk.selectedCount"
+      :busy="deleting"
+      @confirm="bulkDelete"
+    />
   </div>
 </template>
 
@@ -250,6 +283,8 @@ import { funGameApi, userApi } from '@/api'
 import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
+import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
+import { useBulkSelection } from '@/composables/useBulkSelection'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -272,6 +307,10 @@ const filters = reactive({ status: '', date: '', supervisor_id: '', search: '' }
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
+
+const bulk = useBulkSelection(() => orders.value, { idKey: 'fun_game_order_id' })
+const showBulkDelete = ref(false)
+const deleting = ref(false)
 
 // Create/edit modal state.
 const showModal = ref(false)
@@ -477,6 +516,29 @@ async function remove(order) {
 }
 
 /**
+ * Deletes every selected order; the typed-confirmation modal guards the action.
+ */
+async function bulkDelete() {
+  error.value = ''
+  deleting.value = true
+  try {
+    const { tried, failed } = await bulk.removeMany((id) => funGameApi.destroy(id))
+    if (failed > 0) {
+      error.value = t('funGames.bulkDeletePartial', { tried, failed })
+    } else if (tried > 0) {
+      success.value = t('funGames.bulkDeleteSuccess', { count: tried })
+    }
+    bulk.clear()
+    showBulkDelete.value = false
+    await load()
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    deleting.value = false
+  }
+}
+
+/**
  * Flattens a validation/API error into a single readable message string.
  * @param {Error} err - The thrown request error.
  * @returns {string} A space-joined error message or the generic failure text.
@@ -539,6 +601,16 @@ onMounted(() => {
   color: #757575;
   font-size: 12px;
   margin-top: 2px;
+}
+
+.bulk-col {
+  width: 40px;
+}
+
+.bulk-col input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 
 .price {

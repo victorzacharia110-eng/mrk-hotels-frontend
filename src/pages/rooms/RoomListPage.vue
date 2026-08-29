@@ -15,6 +15,13 @@
         <button class="btn btn-secondary" @click="load">
           <i class="fas fa-rotate"></i> {{ $t('rooms.refresh') }}
         </button>
+        <button
+          v-if="canEdit && bulk.selectedCount > 0"
+          class="btn btn-danger"
+          @click="showBulkDelete = true"
+        >
+          <i class="fas fa-trash"></i> {{ $t('common.deleteSelected') }} ({{ bulk.selectedCount }})
+        </button>
         <button v-if="canEdit" class="btn btn-primary" @click="openCreate">
           <i class="fas fa-plus"></i> {{ $t('rooms.newRoom') }}
         </button>
@@ -82,6 +89,16 @@
       <table class="table">
         <thead>
           <tr>
+            <th scope="col" class="bulk-col">
+              <input
+                v-if="canEdit"
+                type="checkbox"
+                :checked="bulk.allSelected"
+                :indeterminate.prop="bulk.someSelected && !bulk.allSelected"
+                :aria-label="$t('common.selectAll')"
+                @change="bulk.toggleAll()"
+              />
+            </th>
             <th scope="col">{{ $t('rooms.tableRoom') }}</th>
             <th scope="col">{{ $t('rooms.tableType') }}</th>
             <th scope="col">{{ $t('rooms.floor') }}</th>
@@ -93,6 +110,14 @@
         </thead>
         <tbody>
           <tr v-for="room in rooms" :key="room.room_id">
+            <td class="bulk-col">
+              <input
+                v-if="canEdit"
+                type="checkbox"
+                :checked="bulk.isSelected(room.room_id)"
+                @change="bulk.toggle(room.room_id)"
+              />
+            </td>
             <td>
               <strong>{{ room.room_number }}</strong>
               <div v-if="room.current_reservation" class="muted">
@@ -130,7 +155,7 @@
             </td>
           </tr>
           <tr v-if="!rooms.length && !loading">
-            <td colspan="7" class="muted">{{ $t('rooms.empty') }}</td>
+            <td colspan="8" class="muted">{{ $t('rooms.empty') }}</td>
           </tr>
         </tbody>
       </table>
@@ -267,6 +292,14 @@
         </form>
       </div>
     </div>
+
+    <!-- Confirmation modal for bulk deletion (type DELETE to confirm) -->
+    <DeleteConfirmModal
+      v-model="showBulkDelete"
+      :count="bulk.selectedCount"
+      :busy="deleting"
+      @confirm="bulkDelete"
+    />
   </div>
 </template>
 
@@ -277,6 +310,8 @@ import { useAuthStore } from '@/stores/auth'
 import { roomApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
+import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
+import { useBulkSelection } from '@/composables/useBulkSelection'
 import { collectAllRows } from '@/utils/export'
 
 const { t } = useI18n()
@@ -298,6 +333,10 @@ const filters = reactive({ status: '', room_type: '', search: '' })
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
+
+const bulk = useBulkSelection(() => rooms.value, { idKey: 'room_id' })
+const showBulkDelete = ref(false)
+const deleting = ref(false)
 
 // Modal state: create/edit and status-change dialogs plus their form fields.
 const showModal = ref(false)
@@ -543,6 +582,29 @@ async function remove(room) {
 }
 
 /**
+ * Deletes every selected room; the typed-confirmation modal guards the action.
+ */
+async function bulkDelete() {
+  error.value = ''
+  deleting.value = true
+  try {
+    const { tried, failed } = await bulk.removeMany((id) => roomApi.destroy(id))
+    if (failed > 0) {
+      error.value = t('rooms.bulkDeletePartial', { tried, failed })
+    } else if (tried > 0) {
+      success.value = t('rooms.bulkDeleteSuccess', { count: tried })
+    }
+    bulk.clear()
+    showBulkDelete.value = false
+    await load()
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    deleting.value = false
+  }
+}
+
+/**
  * Flattens Laravel-style validation errors into a single readable message.
  * @param {Error} err - The thrown request error.
  * @returns {string} A space-joined error message or the generic failure text.
@@ -606,6 +668,16 @@ onMounted(load)
 
 .capitalize {
   text-transform: capitalize;
+}
+
+.bulk-col {
+  width: 40px;
+}
+
+.bulk-col input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 
 .actions {

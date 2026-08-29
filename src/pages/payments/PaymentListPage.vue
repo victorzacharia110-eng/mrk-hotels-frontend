@@ -14,6 +14,13 @@
         <button class="btn btn-secondary" @click="load">
           <i class="fas fa-rotate"></i> {{ $t('payments.refresh') }}
         </button>
+        <button
+          v-if="canOperate && bulk.selectedCount > 0"
+          class="btn btn-danger"
+          @click="showBulkDelete = true"
+        >
+          <i class="fas fa-trash"></i> {{ $t('common.deleteSelected') }} ({{ bulk.selectedCount }})
+        </button>
         <button v-if="canOperate" class="btn btn-primary" @click="openCreate">
           <i class="fas fa-plus"></i> {{ $t('payments.recordPayment') }}
         </button>
@@ -79,6 +86,16 @@
       <table class="table">
         <thead>
           <tr>
+            <th scope="col" class="bulk-col">
+              <input
+                v-if="canOperate"
+                type="checkbox"
+                :checked="bulk.allSelected"
+                :indeterminate.prop="bulk.someSelected && !bulk.allSelected"
+                :aria-label="$t('common.selectAll')"
+                @change="bulk.toggleAll()"
+              />
+            </th>
             <th scope="col">{{ $t('payments.tablePayment') }}</th>
             <th scope="col">{{ $t('payments.reservation') }}</th>
             <th scope="col">{{ $t('payments.tablePayer') }}</th>
@@ -90,6 +107,14 @@
         </thead>
         <tbody>
           <tr v-for="p in payments" :key="p.payment_id">
+            <td class="bulk-col">
+              <input
+                v-if="canOperate"
+                type="checkbox"
+                :checked="bulk.isSelected(p.payment_id)"
+                @change="bulk.toggle(p.payment_id)"
+              />
+            </td>
             <td>
               <strong class="mono">{{
                 p.transaction_reference || p.payment_id.slice(0, 8)
@@ -167,7 +192,7 @@
             </td>
           </tr>
           <tr v-if="!payments.length && !loading">
-            <td colspan="7" class="muted">{{ $t('payments.empty') }}</td>
+            <td colspan="8" class="muted">{{ $t('payments.empty') }}</td>
           </tr>
         </tbody>
       </table>
@@ -256,6 +281,14 @@
         </form>
       </div>
     </div>
+
+    <!-- Confirmation modal for bulk deletion (type DELETE to confirm) -->
+    <DeleteConfirmModal
+      v-model="showBulkDelete"
+      :count="bulk.selectedCount"
+      :busy="deleting"
+      @confirm="bulkDelete"
+    />
   </div>
 </template>
 
@@ -267,6 +300,8 @@ import { invoiceApi, paymentApi, reservationApi } from '@/api'
 import { saveBlob } from '@/utils/download'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
+import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
+import { useBulkSelection } from '@/composables/useBulkSelection'
 import { collectAllRows } from '@/utils/export'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import ProviderLogo from '@/components/ProviderLogo.vue'
@@ -294,6 +329,10 @@ const filters = reactive({ status: '', method: '', from: '', to: '' })
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
+
+const bulk = useBulkSelection(() => payments.value, { idKey: 'payment_id' })
+const showBulkDelete = ref(false)
+const deleting = ref(false)
 
 // Modal state: record-payment form and the invoice download tracker.
 const showModal = ref(false)
@@ -564,6 +603,29 @@ async function remove(payment) {
   }
 }
 
+/**
+ * Deletes every selected payment; the typed-confirmation modal guards the action.
+ */
+async function bulkDelete() {
+  error.value = ''
+  deleting.value = true
+  try {
+    const { tried, failed } = await bulk.removeMany((id) => paymentApi.destroy(id))
+    if (failed > 0) {
+      error.value = t('payments.bulkDeletePartial', { tried, failed })
+    } else if (tried > 0) {
+      success.value = t('payments.bulkDeleteSuccess', { count: tried })
+    }
+    bulk.clear()
+    showBulkDelete.value = false
+    await load()
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    deleting.value = false
+  }
+}
+
 /** Flattens Laravel-style validation errors into a single readable message. */
 function flattenError(err) {
   const messages = err.response?.data?.errors
@@ -631,6 +693,16 @@ onMounted(() => {
 
 .capitalize {
   text-transform: capitalize;
+}
+
+.bulk-col {
+  width: 40px;
+}
+
+.bulk-col input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 
 .price {

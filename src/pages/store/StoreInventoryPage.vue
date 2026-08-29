@@ -24,8 +24,12 @@
         <option value="low">{{ $t('storeManager.dashboard.lowStock') }}</option>
       </select>
       <span class="spacer"></span>
+      <button v-if="bulk.selectedCount > 0" class="sm-btn danger" @click="showBulkDelete = true"><i class="fas fa-trash"></i> {{ $t('common.deleteSelected') }} ({{ bulk.selectedCount }})</button>
       <button class="sm-btn" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('storeManager.dashboard.newItem') }}</button>
     </div>
+
+    <div v-if="success" class="alert alert-success">{{ success }}</div>
+    <div v-if="error" class="alert alert-error">{{ error }}</div>
 
     <section class="panel">
       <div v-if="loading" class="sm-loading"><i class="fas fa-circle-notch"></i> {{ $t('common.loading') }}</div>
@@ -34,6 +38,7 @@
         <table class="sm-table" v-if="items.length">
           <thead>
             <tr>
+              <th class="bulk-col"><input type="checkbox" :checked="bulk.allSelected" :indeterminate.prop="bulk.someSelected && !bulk.allSelected" :aria-label="$t('common.selectAll')" @change="bulk.toggleAll()" /></th>
               <th>{{ $t('inventory.itemName') }}</th>
               <th>{{ $t('inventory.category') }}</th>
               <th>{{ $t('inventory.inStock') }}</th>
@@ -45,6 +50,7 @@
           </thead>
           <tbody>
             <tr v-for="item in items" :key="item.item_id">
+              <td class="bulk-col"><input type="checkbox" :checked="bulk.isSelected(item.item_id)" @change="bulk.toggle(item.item_id)" /></td>
               <td><strong>{{ item.item_name }}</strong><br /><small class="muted">{{ item.unit }}</small></td>
               <td><span class="chip">{{ item.category }}</span></td>
               <td><span :class="isLow(item) ? 'stock-low' : 'stock-ok'">{{ item.quantity_in_stock }}</span></td>
@@ -155,6 +161,14 @@
         </div>
       </div>
     </div>
+
+    <!-- Confirmation modal for bulk deletion (type DELETE to confirm) -->
+    <DeleteConfirmModal
+      v-model="showBulkDelete"
+      :count="bulk.selectedCount"
+      :busy="deleting"
+      @confirm="bulkDelete"
+    />
   </div>
 </template>
 
@@ -163,6 +177,8 @@ import { onMounted, reactive, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { inventoryApi, inventoryOpsApi } from '@/api'
+import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
+import { useBulkSelection } from '@/composables/useBulkSelection'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -178,6 +194,12 @@ const showForm = ref(false)
 const editing = ref(null)
 const adjusting = ref(null)
 const formError = ref('')
+const success = ref('')
+const error = ref('')
+
+const bulk = useBulkSelection(() => items.value, { idKey: 'item_id' })
+const showBulkDelete = ref(false)
+const deleting = ref(false)
 
 // Department scope: the store keeper works one shelf at a time; the choice
 // persists for the session like the reference system's department bar.
@@ -297,6 +319,23 @@ async function remove(item) {
   await load()
 }
 
+async function bulkDelete() {
+  error.value = ''
+  deleting.value = true
+  try {
+    const { tried, failed } = await bulk.removeMany((id) => inventoryApi.destroy(id))
+    if (failed > 0) error.value = t('inventory.bulkDeletePartial', { tried, failed })
+    else if (tried > 0) success.value = t('inventory.bulkDeleteSuccess', { count: tried })
+    bulk.clear()
+    showBulkDelete.value = false
+    await load()
+  } catch (err) {
+    error.value = err.response?.data?.message || t('common.error')
+  } finally {
+    deleting.value = false
+  }
+}
+
 onMounted(async () => {
   inventoryOpsApi.departments().then((res) => { departments.value = res.data.departments || [] }).catch(() => {})
   await load(1)
@@ -306,6 +345,15 @@ onMounted(async () => {
 
 <style scoped>
 .dept-btn strong { margin-left: 4px; }
+.bulk-col {
+  width: 40px;
+}
+
+.bulk-col input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
 .dept-list { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
 .dept-option {
   display: flex; align-items: center; gap: 10px;

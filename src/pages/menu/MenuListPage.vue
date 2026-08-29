@@ -21,6 +21,13 @@
         <button v-if="canEdit" class="btn btn-secondary" @click="openCategories">
           <i class="fas fa-tags"></i> {{ $t('menu.manageCategories') }}
         </button>
+        <button
+          v-if="canEdit && bulk.selectedCount > 0"
+          class="btn btn-danger"
+          @click="showBulkDelete = true"
+        >
+          <i class="fas fa-trash"></i> {{ $t('common.deleteSelected') }} ({{ bulk.selectedCount }})
+        </button>
         <button v-if="canEdit" class="btn btn-primary" @click="openCreate">
           <i class="fas fa-plus"></i> {{ $t('menu.newItem') }}
         </button>
@@ -95,6 +102,16 @@
       <table class="table">
         <thead>
           <tr>
+            <th scope="col" class="bulk-col">
+              <input
+                v-if="canEdit"
+                type="checkbox"
+                :checked="bulk.allSelected"
+                :indeterminate.prop="bulk.someSelected && !bulk.allSelected"
+                :aria-label="$t('common.selectAll')"
+                @change="bulk.toggleAll()"
+              />
+            </th>
             <th scope="col">{{ $t('menu.tableItem') }}</th>
             <th scope="col">{{ $t('menu.category') }}</th>
             <th scope="col">{{ $t('common.department') }}</th>
@@ -107,6 +124,14 @@
         </thead>
         <tbody>
           <tr v-for="item in items" :key="item.menu_item_id">
+            <td class="bulk-col">
+              <input
+                v-if="canEdit"
+                type="checkbox"
+                :checked="bulk.isSelected(item.menu_item_id)"
+                @change="bulk.toggle(item.menu_item_id)"
+              />
+            </td>
             <td>
               <strong>{{ item.item_name }}</strong>
               <div v-if="item.description" class="muted">{{ item.description }}</div>
@@ -145,7 +170,7 @@
             </td>
           </tr>
           <tr v-if="!items.length && !loading">
-            <td colspan="8" class="muted">{{ $t('menu.empty') }}</td>
+            <td colspan="9" class="muted">{{ $t('menu.empty') }}</td>
           </tr>
         </tbody>
       </table>
@@ -368,6 +393,14 @@
         <p v-else class="muted">{{ $t('menu.categoriesEmpty') }}</p>
       </div>
     </div>
+
+    <!-- Confirmation modal for bulk deletion (type DELETE to confirm) -->
+    <DeleteConfirmModal
+      v-model="showBulkDelete"
+      :count="bulk.selectedCount"
+      :busy="deleting"
+      @confirm="bulkDelete"
+    />
   </div>
 </template>
 
@@ -378,6 +411,8 @@ import { useAuthStore } from '@/stores/auth'
 import { menuItemApi, menuCategoryApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
+import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
+import { useBulkSelection } from '@/composables/useBulkSelection'
 import { collectAllRows } from '@/utils/export'
 
 const { t } = useI18n()
@@ -410,6 +445,10 @@ const filters = reactive({ department: '', category: '', is_available: '', searc
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
+
+const bulk = useBulkSelection(() => items.value, { idKey: 'menu_item_id' })
+const showBulkDelete = ref(false)
+const deleting = ref(false)
 
 // Modal state: create/edit form fields.
 const showModal = ref(false)
@@ -595,6 +634,30 @@ async function remove(item) {
     await loadCategories()
   } catch (err) {
     error.value = flattenError(err)
+  }
+}
+
+/**
+ * Deletes every selected menu item; the typed-confirmation modal guards the action.
+ */
+async function bulkDelete() {
+  error.value = ''
+  deleting.value = true
+  try {
+    const { tried, failed } = await bulk.removeMany((id) => menuItemApi.destroy(id))
+    if (failed > 0) {
+      error.value = t('menu.bulkDeletePartial', { tried, failed })
+    } else if (tried > 0) {
+      success.value = t('menu.bulkDeleteSuccess', { count: tried })
+    }
+    bulk.clear()
+    showBulkDelete.value = false
+    await load()
+    await loadCategories()
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    deleting.value = false
   }
 }
 
@@ -809,6 +872,16 @@ onMounted(load)
 
 .capitalize {
   text-transform: capitalize;
+}
+
+.bulk-col {
+  width: 40px;
+}
+
+.bulk-col input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 
 .price {

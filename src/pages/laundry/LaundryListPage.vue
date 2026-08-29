@@ -19,6 +19,13 @@
         <button class="btn btn-secondary" @click="load">
           <i class="fas fa-rotate"></i> {{ $t('laundry.refresh') }}
         </button>
+        <button
+          v-if="canManage && bulk.selectedCount > 0"
+          class="btn btn-danger"
+          @click="showBulkDelete = true"
+        >
+          <i class="fas fa-trash"></i> {{ $t('common.deleteSelected') }} ({{ bulk.selectedCount }})
+        </button>
         <button v-if="canManage" class="btn btn-primary" @click="openCreate">
           <i class="fas fa-plus"></i> {{ $t('laundry.newOrder') }}
         </button>
@@ -90,6 +97,16 @@
       <table class="table">
         <thead>
           <tr>
+            <th scope="col" class="bulk-col">
+              <input
+                v-if="canManage"
+                type="checkbox"
+                :checked="bulk.allSelected"
+                :indeterminate.prop="bulk.someSelected && !bulk.allSelected"
+                :aria-label="$t('common.selectAll')"
+                @change="bulk.toggleAll()"
+              />
+            </th>
             <th scope="col">{{ $t('laundry.orderNumber') }}</th>
             <th scope="col">{{ $t('laundry.guest') }}</th>
             <th scope="col">{{ $t('laundry.room') }}</th>
@@ -105,6 +122,14 @@
         </thead>
         <tbody>
           <tr v-for="order in orders" :key="order.laundry_order_id">
+            <td class="bulk-col">
+              <input
+                v-if="canManage"
+                type="checkbox"
+                :checked="bulk.isSelected(order.laundry_order_id)"
+                @change="bulk.toggle(order.laundry_order_id)"
+              />
+            </td>
             <td>
               <strong>{{ order.order_number }}</strong>
             </td>
@@ -167,7 +192,7 @@
             </td>
           </tr>
           <tr v-if="!orders.length && !loading">
-            <td colspan="11" class="muted">{{ $t('laundry.empty') }}</td>
+            <td colspan="12" class="muted">{{ $t('laundry.empty') }}</td>
           </tr>
         </tbody>
       </table>
@@ -317,6 +342,14 @@
         </form>
       </div>
     </div>
+
+    <!-- Confirmation modal for bulk deletion (type DELETE to confirm) -->
+    <DeleteConfirmModal
+      v-model="showBulkDelete"
+      :count="bulk.selectedCount"
+      :busy="deleting"
+      @confirm="bulkDelete"
+    />
   </div>
 </template>
 
@@ -328,6 +361,8 @@ import { laundryApi, userApi } from '@/api'
 import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
+import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
+import { useBulkSelection } from '@/composables/useBulkSelection'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -350,6 +385,10 @@ const filters = reactive({ service: '', status: '', payment_status: '', date: ''
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
+
+const bulk = useBulkSelection(() => orders.value, { idKey: 'laundry_order_id' })
+const showBulkDelete = ref(false)
+const deleting = ref(false)
 
 // Create/edit modal state.
 const showModal = ref(false)
@@ -655,6 +694,29 @@ async function remove(order) {
 }
 
 /**
+ * Deletes every selected order; the typed-confirmation modal guards the action.
+ */
+async function bulkDelete() {
+  error.value = ''
+  deleting.value = true
+  try {
+    const { tried, failed } = await bulk.removeMany((id) => laundryApi.destroy(id))
+    if (failed > 0) {
+      error.value = t('laundry.bulkDeletePartial', { tried, failed })
+    } else if (tried > 0) {
+      success.value = t('laundry.bulkDeleteSuccess', { count: tried })
+    }
+    bulk.clear()
+    showBulkDelete.value = false
+    await load()
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    deleting.value = false
+  }
+}
+
+/**
  * Flattens a validation/API error into a single readable message string.
  * @param {Error} err - The thrown request error.
  * @returns {string} A space-joined error message or the generic failure text.
@@ -721,6 +783,16 @@ onMounted(() => {
 
 .capitalize {
   text-transform: capitalize;
+}
+
+.bulk-col {
+  width: 40px;
+}
+
+.bulk-col input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 
 .price {

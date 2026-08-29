@@ -13,6 +13,13 @@
         <button class="btn btn-secondary" @click="load">
           <i class="fas fa-rotate"></i> {{ $t('common.refresh') }}
         </button>
+        <button
+          v-if="canManage && bulk.selectedCount > 0"
+          class="btn btn-danger"
+          @click="showBulkDelete = true"
+        >
+          <i class="fas fa-trash"></i> {{ $t('common.deleteSelected') }} ({{ bulk.selectedCount }})
+        </button>
         <button v-if="canManage" class="btn btn-primary" @click="openCreate">
           <i class="fas fa-plus"></i> {{ $t('departments.newDepartment') }}
         </button>
@@ -47,6 +54,16 @@
       <table class="table">
         <thead>
           <tr>
+            <th scope="col" class="bulk-col">
+              <input
+                v-if="canManage"
+                type="checkbox"
+                :checked="bulk.allSelected"
+                :indeterminate.prop="bulk.someSelected && !bulk.allSelected"
+                :aria-label="$t('common.selectAll')"
+                @change="bulk.toggleAll()"
+              />
+            </th>
             <th scope="col">#</th>
             <th scope="col">{{ $t('departments.name') }}</th>
             <th scope="col">{{ $t('common.status') }}</th>
@@ -55,6 +72,14 @@
         </thead>
         <tbody>
           <tr v-for="(dept, idx) in filtered" :key="dept.department_id">
+            <td class="bulk-col">
+              <input
+                v-if="canManage"
+                type="checkbox"
+                :checked="bulk.isSelected(dept.department_id)"
+                @change="bulk.toggle(dept.department_id)"
+              />
+            </td>
             <td>{{ idx + 1 }}</td>
             <td><strong>{{ dept.name }}</strong></td>
             <td>
@@ -74,7 +99,7 @@
             </td>
           </tr>
           <tr v-if="!filtered.length && !loading">
-            <td colspan="4" class="muted">{{ $t('departments.empty') }}</td>
+            <td colspan="5" class="muted">{{ $t('departments.empty') }}</td>
           </tr>
         </tbody>
       </table>
@@ -119,6 +144,14 @@
         </form>
       </div>
     </div>
+
+    <!-- Confirmation modal for bulk deletion (type DELETE to confirm) -->
+    <DeleteConfirmModal
+      v-model="showBulkDelete"
+      :count="bulk.selectedCount"
+      :busy="deleting"
+      @confirm="bulkDelete"
+    />
   </div>
 </template>
 
@@ -127,6 +160,8 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { inventoryOpsApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
+import { useBulkSelection } from '@/composables/useBulkSelection'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -138,6 +173,10 @@ const error = ref('')
 const success = ref('')
 const search = ref('')
 const statusFilter = ref('')
+
+const bulk = useBulkSelection(() => filtered.value, { idKey: 'department_id' })
+const showBulkDelete = ref(false)
+const deleting = ref(false)
 
 const showModal = ref(false)
 const editing = ref(false)
@@ -222,6 +261,26 @@ async function remove(dept) {
   }
 }
 
+async function bulkDelete() {
+  error.value = ''
+  deleting.value = true
+  try {
+    const { tried, failed } = await bulk.removeMany((id) => inventoryOpsApi.deleteDepartment(id))
+    if (failed > 0) {
+      error.value = t('departments.bulkDeletePartial', { tried, failed })
+    } else if (tried > 0) {
+      success.value = t('departments.bulkDeleteSuccess', { count: tried })
+    }
+    bulk.clear()
+    showBulkDelete.value = false
+    await load()
+  } catch (err) {
+    error.value = err.response?.data?.message || t('common.actionFailed')
+  } finally {
+    deleting.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -234,6 +293,8 @@ onMounted(load)
 .filter-bar { margin-bottom: 16px; padding: 16px 20px; }
 .filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
 .actions { display: flex; gap: 6px; }
+.bulk-col { width: 40px; }
+.bulk-col input[type='checkbox'] { width: 16px; height: 16px; cursor: pointer; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
 .modal { background: #fff; border-radius: 8px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
 .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }

@@ -17,6 +17,13 @@
         <button class="btn btn-secondary" @click="load">
           <i class="fas fa-rotate"></i> {{ $t('bookingRequisitions.refresh') }}
         </button>
+        <button
+          v-if="bulk.selectedCount > 0"
+          class="btn btn-danger"
+          @click="showBulkDelete = true"
+        >
+          <i class="fas fa-trash"></i> {{ $t('common.deleteSelected') }} ({{ bulk.selectedCount }})
+        </button>
         <TableExportButton filename="booking-requisitions" :load-all="loadAllRequisitions" />
       </div>
     </div>
@@ -72,6 +79,15 @@
       <table class="table">
         <thead>
           <tr>
+            <th scope="col" class="bulk-col">
+              <input
+                type="checkbox"
+                :checked="bulk.allSelected"
+                :indeterminate.prop="bulk.someSelected && !bulk.allSelected"
+                :aria-label="$t('common.selectAll')"
+                @change="bulk.toggleAll()"
+              />
+            </th>
             <th scope="col">{{ $t('bookingRequisitions.tableReference') }}</th>
             <th scope="col">{{ $t('bookingRequisitions.tableGuest') }}</th>
             <th scope="col">{{ $t('bookingRequisitions.tableStay') }}</th>
@@ -83,6 +99,13 @@
         </thead>
         <tbody>
           <tr v-for="r in requisitions" :key="r.requisition_id">
+            <td class="bulk-col">
+              <input
+                type="checkbox"
+                :checked="bulk.isSelected(r.requisition_id)"
+                @change="bulk.toggle(r.requisition_id)"
+              />
+            </td>
             <td>
               <strong>{{ r.requisition_number }}</strong>
               <div class="muted">{{ formatDate(r.created_at) }}</div>
@@ -152,7 +175,7 @@
             </td>
           </tr>
           <tr v-if="!requisitions.length && !loading">
-            <td colspan="7" class="muted">{{ $t('bookingRequisitions.empty') }}</td>
+            <td colspan="8" class="muted">{{ $t('bookingRequisitions.empty') }}</td>
           </tr>
         </tbody>
       </table>
@@ -239,6 +262,14 @@
         </form>
       </div>
     </div>
+
+    <!-- Confirmation modal for bulk deletion (type DELETE to confirm) -->
+    <DeleteConfirmModal
+      v-model="showBulkDelete"
+      :count="bulk.selectedCount"
+      :busy="deleting"
+      @confirm="bulkDelete"
+    />
   </div>
 </template>
 
@@ -249,6 +280,8 @@ import { bookingRequisitionApi } from '@/api'
 import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
+import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
+import { useBulkSelection } from '@/composables/useBulkSelection'
 
 const { t } = useI18n()
 
@@ -267,6 +300,10 @@ const filters = reactive({ status: '', booking_type: '', search: '' })
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
+
+const bulk = useBulkSelection(() => requisitions.value, { idKey: 'requisition_id' })
+const showBulkDelete = ref(false)
+const deleting = ref(false)
 
 // Respond-modal state: the requisition being answered, its form model and save flag.
 const showRespond = ref(false)
@@ -445,6 +482,29 @@ async function remove(requisition) {
 }
 
 /**
+ * Deletes every selected requisition; the typed-confirmation modal guards the action.
+ */
+async function bulkDelete() {
+  error.value = ''
+  deleting.value = true
+  try {
+    const { tried, failed } = await bulk.removeMany((id) => bookingRequisitionApi.destroy(id))
+    if (failed > 0) {
+      error.value = t('bookingRequisitions.bulkDeletePartial', { tried, failed })
+    } else if (tried > 0) {
+      success.value = t('bookingRequisitions.bulkDeleteSuccess', { count: tried })
+    }
+    bulk.clear()
+    showBulkDelete.value = false
+    await load()
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    deleting.value = false
+  }
+}
+
+/**
  * Converts an Axios/Laravel error response into a single human-readable string,
  * joining per-field validation messages when present.
  * @param {Object} err - The caught Axios error.
@@ -509,6 +569,16 @@ onMounted(load)
 
 .capitalize {
   text-transform: capitalize;
+}
+
+.bulk-col {
+  width: 40px;
+}
+
+.bulk-col input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 
 .price {

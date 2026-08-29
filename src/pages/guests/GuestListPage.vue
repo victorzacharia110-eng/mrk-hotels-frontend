@@ -433,8 +433,8 @@ function loadAllGuests() {
  * Navigates to a given result page and reloads.
  * @param {number} page - 1-based page number.
  */
-function goPage(page) {
-  page.value = page
+function goPage(p) {
+  page.value = p
   load()
 }
 

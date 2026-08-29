@@ -10,8 +10,12 @@
         <input v-model="search" type="text" :placeholder="$t('common.search')" @input="debouncedLoad" />
       </div>
       <span class="spacer"></span>
+      <button v-if="bulk.selectedCount > 0" class="sm-btn danger" @click="showBulkDelete = true"><i class="fas fa-trash"></i> {{ $t('common.deleteSelected') }} ({{ bulk.selectedCount }})</button>
       <button class="sm-btn" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('storeManager.dashboard.newSupplier') }}</button>
     </div>
+
+    <div v-if="success" class="alert alert-success">{{ success }}</div>
+    <div v-if="error" class="alert alert-error">{{ error }}</div>
 
     <section class="panel">
       <div v-if="loading" class="sm-loading"><i class="fas fa-circle-notch"></i> {{ $t('common.loading') }}</div>
@@ -20,6 +24,7 @@
         <table class="sm-table" v-if="suppliers.length">
           <thead>
             <tr>
+              <th class="bulk-col"><input type="checkbox" :checked="bulk.allSelected" :indeterminate.prop="bulk.someSelected && !bulk.allSelected" :aria-label="$t('common.selectAll')" @change="bulk.toggleAll()" /></th>
               <th>{{ $t('suppliers.name') }}</th>
               <th>{{ $t('suppliers.contactPerson') }}</th>
               <th>{{ $t('suppliers.phone') }}</th>
@@ -31,6 +36,7 @@
           </thead>
           <tbody>
             <tr v-for="s in suppliers" :key="s.supplier_id">
+              <td class="bulk-col"><input type="checkbox" :checked="bulk.isSelected(s.supplier_id)" @change="bulk.toggle(s.supplier_id)" /></td>
               <td><strong>{{ s.supplier_name }}</strong></td>
               <td>{{ s.contact_person || '-' }}</td>
               <td>{{ s.phone || '-' }}</td>
@@ -93,6 +99,14 @@
         </form>
       </div>
     </div>
+
+    <!-- Confirmation modal for bulk deletion (type DELETE to confirm) -->
+    <DeleteConfirmModal
+      v-model="showBulkDelete"
+      :count="bulk.selectedCount"
+      :busy="deleting"
+      @confirm="bulkDelete"
+    />
   </div>
 </template>
 
@@ -101,6 +115,8 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { supplierApi } from '@/api'
+import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
+import { useBulkSelection } from '@/composables/useBulkSelection'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -113,6 +129,12 @@ const search = ref('')
 const showForm = ref(false)
 const editing = ref(null)
 const formError = ref('')
+const success = ref('')
+const error = ref('')
+
+const bulk = useBulkSelection(() => suppliers.value, { idKey: 'supplier_id' })
+const showBulkDelete = ref(false)
+const deleting = ref(false)
 
 const categories = ['food_beverage', 'housekeeping', 'maintenance', 'office', 'toiletries', 'linen', 'cleaning', 'general', 'other']
 
@@ -181,8 +203,37 @@ async function remove(s) {
   await load()
 }
 
+async function bulkDelete() {
+  error.value = ''
+  deleting.value = true
+  try {
+    const { tried, failed } = await bulk.removeMany((id) => supplierApi.destroy(id))
+    if (failed > 0) error.value = t('suppliers.bulkDeletePartial', { tried, failed })
+    else if (tried > 0) success.value = t('suppliers.bulkDeleteSuccess', { count: tried })
+    bulk.clear()
+    showBulkDelete.value = false
+    await load()
+  } catch (err) {
+    error.value = err.response?.data?.message || t('common.error')
+  } finally {
+    deleting.value = false
+  }
+}
+
 onMounted(async () => {
   await load(1)
   if (route.query.create === '1') openCreate()
 })
 </script>
+
+<style scoped>
+.bulk-col {
+  width: 40px;
+}
+
+.bulk-col input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+</style>
