@@ -945,7 +945,7 @@ async function loadFormOptions() {
 /** Loads the active restaurant/bar tables for the searchable table picker. */
 async function loadTables() {
   try {
-    const res = await tableApi.index({ is_active: 1, per_page: 200 })
+    const res = await tableApi.index({ is_active: 1, per_page: 100 })
     const data = res.data
     tables.value = Array.isArray(data) ? data : data?.data || []
   } catch {

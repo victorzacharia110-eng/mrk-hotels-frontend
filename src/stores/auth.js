@@ -144,14 +144,19 @@ export const useAuthStore = defineStore('auth', () => {
       permissions.value = response.data.permissions || []
       mustChangePassword.value = false
       return user.value
-    } catch {
-      // Session is stale or the account was removed — clear everything.
-      token.value = null
-      user.value = null
-      permissions.value = []
-      mustChangePassword.value = false
-      sessionStorage.removeItem('auth_token')
-      throw new Error('Failed to load profile')
+    } catch (error) {
+      // A genuinely expired/revoked session is hard-cleared so the router guard
+      // can bounce to /login; transient failures (5xx, network blips) keep the
+      // session intact and let the guard retry instead of logging the user out.
+      const status = error?.response?.status
+      if (status === 401 || status === 403) {
+        token.value = null
+        user.value = null
+        permissions.value = []
+        mustChangePassword.value = false
+        sessionStorage.removeItem('auth_token')
+      }
+      throw error
     } finally {
       loading.value = false
     }

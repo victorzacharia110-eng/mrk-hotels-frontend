@@ -180,7 +180,7 @@ async function load() {
     const [rc, rn, it] = await Promise.allSettled([
       inventoryOpsApi.recipes(),
       inventoryOpsApi.productionRuns({ per_page: 50 }),
-      inventoryApi.index({ per_page: 200 }),
+      inventoryApi.index({ per_page: 100 }),
     ])
     recipes.value = rc.status === 'fulfilled' ? (rc.value.data.recipes || []) : []
     runs.value = rn.status === 'fulfilled' ? (rn.value.data.runs || []) : []

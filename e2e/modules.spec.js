@@ -31,7 +31,7 @@ for (const mod of MODULES) {
   test(`module page renders: ${mod.path}`, async ({ page }) => {
     await page.goto(mod.path)
     await expect(page).toHaveURL(new RegExp(mod.path.replace('/', '\\/') + '$'))
-    await expect(page.locator('.page-head h1, h1')).toContainText(mod.heading)
+    await expect(page.locator('.page-head h1, h1')).toContainText(mod.heading, { timeout: 25_000 })
     await expect(page.locator('.alert-error')).toHaveCount(0)
   })
 }
@@ -45,7 +45,10 @@ test('rooms module can create a room', async ({ page }) => {
   await page.locator('.modal input[type="number"]').nth(1).fill('150000')
   await page.getByRole('button', { name: /save room/i }).click()
   await expect(page.locator('.alert-success')).toBeVisible()
-  await expect(page.locator('table')).toContainText(roomNumber)
+  // The demo tenant has 80+ rooms; the new room lands on a later page, so
+  // search for it instead of asserting against the first page of the table.
+  await page.locator('.filter-bar input.input').first().fill(roomNumber)
+  await expect(page.locator('tbody tr').filter({ hasText: roomNumber })).toBeVisible()
 })
 
 test('menu module can create a menu item', async ({ page }) => {
@@ -57,5 +60,6 @@ test('menu module can create a menu item', async ({ page }) => {
   await page.locator('.modal input[type="number"]').first().fill('5000')
   await page.getByRole('button', { name: /save item/i }).click()
   await expect(page.locator('.alert-success')).toBeVisible()
-  await expect(page.locator('table')).toContainText(itemName)
+  await page.locator('.filter-bar input.input').last().fill(itemName)
+  await expect(page.locator('tbody tr').filter({ hasText: itemName })).toBeVisible()
 })

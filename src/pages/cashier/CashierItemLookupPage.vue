@@ -129,7 +129,7 @@ function money(value) {
 }
 
 async function load() {
-  const params = { per_page: 200 }
+  const params = { per_page: 100 }
   if (department.value) params.department = department.value
   const { data } = await menuItemApi.index(params)
   items.value = data.data || data

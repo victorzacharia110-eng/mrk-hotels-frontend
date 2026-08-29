@@ -603,10 +603,26 @@ router.beforeEach(async (to) => {
     // Permissions come from /me, so make sure they are loaded before any
     // role/module check (a fresh login leaves them empty until fetched).
     if (!authStore.user || !authStore.permissions.length) {
-      try {
-        await authStore.fetchProfile()
-      } catch {
-        return { name: 'login' }
+      // Fresh page loads reset the store, so the profile is fetched here. A
+      // single transient failure (5xx/network) must not log the user out, so
+      // retry a few times and only fall back to login on a genuine 401/403.
+      let profileFailed = false
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          await authStore.fetchProfile()
+          profileFailed = false
+          break
+        } catch (err) {
+          profileFailed = true
+          if (err?.response?.status === 401 || err?.response?.status === 403 || !authStore.isAuthenticated) break
+          await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)))
+        }
+      }
+      if (profileFailed) {
+        if (!authStore.isAuthenticated) return { name: 'login', query: { redirect: to.fullPath } }
+        // Session is still valid — allow the page to mount and let its own
+        // requests surface any real problem instead of bouncing to login.
+        return undefined
       }
     }
 

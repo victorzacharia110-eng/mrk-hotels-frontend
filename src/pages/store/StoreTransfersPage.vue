@@ -116,7 +116,7 @@ async function load() {
     const [tr, dp, it] = await Promise.allSettled([
       inventoryOpsApi.transfers({ per_page: 50 }),
       inventoryOpsApi.departments(),
-      inventoryApi.index({ per_page: 200 }),
+      inventoryApi.index({ per_page: 100 }),
     ])
     transfers.value = tr.status === 'fulfilled' ? (tr.value.data.transfers || []) : []
     departments.value = dp.status === 'fulfilled' ? (dp.value.data.departments || []) : []

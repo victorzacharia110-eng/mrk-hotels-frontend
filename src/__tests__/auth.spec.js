@@ -242,15 +242,30 @@ describe('auth store', () => {
       expect(store.permissions).toEqual(['manage_rooms'])
     })
 
-    it('clears state when profile fetch fails', async () => {
-      authApi.me.mockRejectedValue(new Error('401'))
+    it('clears state when the session is genuinely expired (401/403)', async () => {
+      const err = new Error('Request failed with status code 401')
+      err.response = { status: 401 }
+      authApi.me.mockRejectedValue(err)
       const store = useAuthStore()
       store.token = 'tok'
       store.user = { user_role: 'old' }
 
-      await expect(store.fetchProfile()).rejects.toThrow('Failed to load profile')
+      await expect(store.fetchProfile()).rejects.toThrow('401')
       expect(store.token).toBeNull()
       expect(store.user).toBeNull()
+    })
+
+    it('keeps the session on transient failures (5xx/network)', async () => {
+      const err = new Error('network')
+      err.response = { status: 500 }
+      authApi.me.mockRejectedValue(err)
+      const store = useAuthStore()
+      store.token = 'tok'
+      store.user = { user_role: 'old' }
+
+      await expect(store.fetchProfile()).rejects.toThrow('network')
+      expect(store.token).toBe('tok')
+      expect(store.user).toEqual({ user_role: 'old' })
     })
 
     it('does nothing when no token exists', async () => {

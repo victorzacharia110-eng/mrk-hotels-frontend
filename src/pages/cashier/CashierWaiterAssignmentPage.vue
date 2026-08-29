@@ -539,7 +539,7 @@ async function load() {
   busy.value = true
   try {
     const [tablesRes, board] = await Promise.all([
-      tableApi.index({ per_page: 200 }),
+      tableApi.index({ per_page: 100 }),
       cashierApi.waiters(),
     ])
     const list = tablesRes.data.data || tablesRes.data

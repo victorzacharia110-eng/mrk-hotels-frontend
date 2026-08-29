@@ -122,7 +122,7 @@ async function load() {
     const [ind, dp, it] = await Promise.allSettled([
       inventoryOpsApi.indents({ per_page: 50 }),
       inventoryOpsApi.departments(),
-      inventoryApi.index({ per_page: 200 }),
+      inventoryApi.index({ per_page: 100 }),
     ])
     indents.value = ind.status === 'fulfilled' ? (ind.value.data.indents || []) : []
     departments.value = dp.status === 'fulfilled' ? (dp.value.data.departments || []) : []

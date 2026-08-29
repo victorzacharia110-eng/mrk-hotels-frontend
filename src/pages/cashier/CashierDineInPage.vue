@@ -344,7 +344,7 @@ async function load() {
   try {
     const today = new Date().toISOString().slice(0, 10)
     const [tablesRes, ordersRes, boardRes] = await Promise.all([
-      tableApi.index({ per_page: 200 }),
+      tableApi.index({ per_page: 100 }),
       orderApi.index({ status: 'pending', date: today, per_page: 100 }),
       cashierApi.waiters(),
     ])

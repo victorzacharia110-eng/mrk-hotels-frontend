@@ -113,7 +113,7 @@ async function load() {
   try {
     const [rt, it] = await Promise.allSettled([
       inventoryOpsApi.goodsReturns({ per_page: 50 }),
-      inventoryApi.index({ per_page: 200 }),
+      inventoryApi.index({ per_page: 100 }),
     ])
     returns.value = rt.status === 'fulfilled' ? (rt.value.data.returns || []) : []
     items.value = it.status === 'fulfilled' ? (it.value.data.data || it.value.data || []) : []
