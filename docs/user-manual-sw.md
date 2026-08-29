@@ -454,7 +454,7 @@ Baada ya kutuma ujumbe, alama inaonyesha hali yake:
 - Yeye huona skrini ya simu inayoingia na anaweza **Accept** (kukubali) au **Decline** (kukataa). Mwenzako aliye na shughuli anaweza pia kukataa, ikionyesha simu imekataliwa.
 - Simu inaunganisha moja kwa moja (hakuna seva ya media katikati) na inaisha upande wowote unaposimamisha. Simu ambazo hazijapokelewa zinaonekana kwenye **historia yako ya simu**.
 
-<figure><img src="images/app-messages.png" alt="Ukurasa wa Ujumbe"><figcaption>Ujumbe — mazungumzo yenye kura ya dharura, nukuu ya jibu na ujumbe uliopigwa pin.</figcaption></figure>
+<figure><img src="images/app-messages.png" alt="Ukurasa wa Ujumbe"><figcaption>Ujumbe — mazungumzo ya moja kwa moja na mfanyakazi mwenzako: orodha ya mazungumzo kushoto, viputo vya ujumbe, tiki na sehemu ya kuandika kulia.</figcaption></figure>
 
 ### 18.9 Majibu, kipaumbele na kura
 

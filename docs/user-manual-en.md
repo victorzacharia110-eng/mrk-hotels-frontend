@@ -454,7 +454,7 @@ After you send a message, a tick shows its state:
 - They see an incoming-call screen and can **Accept** or **Decline**. A busy colleague can also decline, showing as a declined call.
 - The call connects peer-to-peer (no server-side media) and ends when either side hangs up. Missed calls appear in your **call history**.
 
-<figure><img src="images/app-messages.png" alt="Messages page"><figcaption>Messages — a thread with an urgent poll, a reply quote and a pinned message.</figcaption></figure>
+<figure><img src="images/app-messages.png" alt="Messages page"><figcaption>Messages — a direct chat thread with a colleague: conversation list on the left, message bubbles, ticks and the composer on the right.</figcaption></figure>
 
 ### 18.9 Replies, priority and polls
 
