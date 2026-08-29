@@ -354,13 +354,16 @@
             </div>
           </div>
 
-          <!-- Mobile money: show the exact hotel number to pay and how -->
+          <!-- Mobile money: show the exact hotel number(s) to pay and how -->
           <div v-if="payment.method === METHOD_MOBILE_MONEY" class="pay-instr">
             <p class="pay-instr-lead">{{ $t('paymentInstructionCard.payUsingThisNumber') }}</p>
             <p v-if="payWithWallet" class="pay-instr-wallet">
               {{ $t('paymentInstructionCard.leadingTitle', { wallet: walletLabel, hotel: hotelDetails.hotel_name }) }}
             </p>
             <p v-if="payWithWallet" class="pay-instr-number mono">{{ payWithWallet }}</p>
+            <p v-if="payWithWallet && endpointName" class="pay-instr-receiver">
+              {{ $t('paymentInstructionCard.receivingParty') }}: <strong>{{ endpointName }}</strong>
+            </p>
             <ol v-if="payWithWallet" class="pay-instr-steps">
               <li>{{ $t('paymentInstructionCard.mobileStep1', { ussd: walletUssd, wallet: walletLabel }) }}</li>
               <li>{{ $t('paymentInstructionCard.mobileStep2') }}</li>
@@ -368,6 +371,26 @@
               <li>{{ $t('paymentInstructionCard.mobileStep4', { amount: formattedAmount }) }}</li>
               <li>{{ $t('paymentInstructionCard.mobileStep5') }}</li>
             </ol>
+
+            <!-- The same wallet often also takes Lipa / POS payments -->
+            <div v-if="payWithLipa" class="pay-instr-lipa">
+              <p class="pay-instr-lead">{{ $t('paymentInstructionCard.payUsingLipaNumber') }}</p>
+              <p class="pay-instr-wallet">
+                {{ $t('paymentInstructionCard.lipaLeadingTitle', { wallet: walletLabel, hotel: hotelDetails.hotel_name }) }}
+              </p>
+              <p class="pay-instr-number mono">{{ payWithLipa }}</p>
+              <p class="pay-instr-receiver">
+                {{ $t('paymentInstructionCard.receivingParty') }}: <strong>{{ endpointName || hotelDetails.hotel_name }}</strong>
+              </p>
+              <ol class="pay-instr-steps">
+                <li>{{ $t('paymentInstructionCard.lipaStep1', { ussd: walletUssd, wallet: walletLabel }) }}</li>
+                <li>{{ $t('paymentInstructionCard.lipaStep2') }}</li>
+                <li>{{ $t('paymentInstructionCard.lipaStep3', { number: payWithLipa }) }}</li>
+                <li>{{ $t('paymentInstructionCard.lipaStep4', { amount: formattedAmount }) }}</li>
+                <li>{{ $t('paymentInstructionCard.lipaStep5') }}</li>
+              </ol>
+            </div>
+
             <p v-if="payWithWallet" class="pay-instr-note">{{ $t('paymentInstructionCard.invoiceLinkAfterConfirmation') }}</p>
 
             <!-- The hotel's other lipa numbers with per-wallet instructions -->
@@ -382,7 +405,8 @@
               >
                 <span class="pay-instr-other-name">{{ w.label }}</span>
                 <span class="pay-instr-other-ussd mono">{{ $t('paymentInstructionCard.dial') }} {{ w.ussd }}</span>
-                <span class="pay-instr-other-number mono">{{ w.number }}</span>
+                <span v-if="w.number" class="pay-instr-other-number mono">{{ w.number }}</span>
+                <span v-if="w.lipa_number" class="pay-instr-other-lipa mono">{{ $t('paymentInstructionCard.lipaShort') }} {{ w.lipa_number }}</span>
               </div>
               <p v-if="!payment.provider" class="pay-instr-others-hint">{{ $t('paymentInstructionCard.chooseWalletFirst') }}</p>
             </div>
@@ -433,7 +457,7 @@ import { useRoute } from 'vue-router'
 import { publicApi } from '@/api'
 import { normalizePhoneNumber } from '@/utils/phone'
 import { getCountryName } from '@/utils/locations'
-import { METHOD_MOBILE_MONEY, METHOD_BANK, MOBILE_MONEY_PROVIDERS } from '@/utils/payments'
+import { METHOD_MOBILE_MONEY, METHOD_BANK, MOBILE_MONEY_PROVIDERS, normalizePaymentAccount } from '@/utils/payments'
 import { todayISO } from '@/utils/dates'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
@@ -532,22 +556,44 @@ const paymentAccounts = computed(() => hotelDetails.value?.payment_accounts || {
 /** USSD dial code for a wallet, from the locale map. */
 const ussdFor = (provider) => t(`paymentInstructionCard.ussd.${provider}`) || ''
 
-/** The hotel's mobile-money numbers (provider => wallet number + dial code). */
+/** One provider's normalised account record (number / lipa_number / name). */
+const accountFor = (provider) => normalizePaymentAccount(paymentAccounts.value?.[provider])
+
+/** The hotel's mobile-money accounts with per-wallet dial codes and lipa numbers. */
 const mobileWalletsWithAccounts = computed(() =>
-  Object.entries(paymentAccounts.value)
-    .filter(([provider]) => MOBILE_MONEY_PROVIDERS.includes(provider))
-    .map(([provider, number]) => ({
-      provider,
-      number,
-      ussd: ussdFor(provider),
-      label: t(`paymentFields.providers.${provider}`),
-    })),
+  Object.keys(paymentAccounts.value)
+    .filter((provider) => MOBILE_MONEY_PROVIDERS.includes(provider))
+    .map((provider) => {
+      const entry = accountFor(provider)
+      if (!entry) return null
+      return {
+        provider,
+        number: entry.number || '',
+        lipa_number: entry.lipa_number || '',
+        name: entry.name || '',
+        ussd: ussdFor(provider),
+        label: t(`paymentFields.providers.${provider}`),
+      }
+    })
+    .filter(Boolean),
 )
 
-/** The receiving account number for the selected mobile-money wallet. */
+/** The receiving phone number for the selected mobile-money wallet. */
 const payWithWallet = computed(() => {
   if (!MOBILE_MONEY_PROVIDERS.includes(payment.value.provider)) return ''
-  return paymentAccounts.value[payment.value.provider] || ''
+  return accountFor(payment.value.provider)?.number || ''
+})
+
+/** The Lipa/POS number to bill for the selected mobile-money wallet. */
+const payWithLipa = computed(() => {
+  if (!MOBILE_MONEY_PROVIDERS.includes(payment.value.provider)) return ''
+  return accountFor(payment.value.provider)?.lipa_number || ''
+})
+
+/** The registered receiver (endpoint) name shown on the wallet menu. */
+const endpointName = computed(() => {
+  if (!MOBILE_MONEY_PROVIDERS.includes(payment.value.provider)) return ''
+  return accountFor(payment.value.provider)?.name || hotelDetails.value?.hotel_name || ''
 })
 
 /** Display name of the selected wallet (e.g. "M-Pesa"). */
@@ -559,7 +605,7 @@ const walletUssd = computed(() => (payment.value.provider ? ussdFor(payment.valu
 /** The receiving account number for the selected bank. */
 const bankAccount = computed(() => {
   if (!payment.value.provider || MOBILE_MONEY_PROVIDERS.includes(payment.value.provider)) return ''
-  return paymentAccounts.value[payment.value.provider] || ''
+  return accountFor(payment.value.provider)?.number || ''
 })
 
 /** Total due in a guest-friendly thousand-separated form. */
@@ -1212,6 +1258,28 @@ onMounted(loadHotels)
   margin: 0;
 }
 
+.pay-instr-lipa {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px dashed #a7f3d0;
+  background: #f0fdf4;
+  border-radius: 10px;
+}
+
+.pay-instr-receiver {
+  font-size: 13px;
+  color: #334155;
+  background: #ffe4e6;
+  border: 1px solid #fecdd3;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin: 8px 0;
+}
+
+.pay-instr-receiver strong {
+  color: #9f1239;
+}
+
 .pay-instr-others {
   margin-top: 12px;
   padding-top: 12px;
@@ -1265,9 +1333,20 @@ onMounted(loadHotels)
 }
 
 .pay-instr-other-number.mono,
+.pay-instr-other-lipa.mono,
 .pay-instr-others-hint {
   font-family: 'SF Mono', 'Fira Code', monospace;
   letter-spacing: 0.5px;
+}
+
+.pay-instr-other-lipa {
+  font-size: 12px;
+  color: #065f46;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 6px;
+  padding: 1px 6px;
+  white-space: nowrap;
 }
 
 .pay-instr-others-hint {

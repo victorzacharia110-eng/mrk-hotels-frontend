@@ -32,6 +32,29 @@ export const BANK_PROVIDERS = ['crdb', 'nmb', 'nbc', 'other']
 /** All providers a hotel can receive money into, for which an account exists. */
 export const ALL_PROVIDERS = [...MOBILE_MONEY_PROVIDERS, ...BANK_PROVIDERS]
 
+/**
+ * Normalises a single per-provider payment account into the extended shape.
+ *
+ * The backend stores accounts either as a legacy flat string (provider =>
+ * number) or as the extended object ([number, lipa_number, name]). This turns
+ * either into `{ number, lipa_number?, name? }`, dropping blank fields, and
+ * returns null when nothing usable is left.
+ */
+export function normalizePaymentAccount(value) {
+  if (typeof value === 'string') {
+    if (!value.trim()) return null
+    return { number: value.trim() }
+  }
+  if (value && typeof value === 'object') {
+    const out = {}
+    for (const key of ['number', 'lipa_number', 'name']) {
+      if (value[key] != null && String(value[key]).trim()) out[key] = String(value[key]).trim()
+    }
+    return Object.keys(out).length ? out : null
+  }
+  return null
+}
+
 /** Local provider logos, bundled so the app never depends on a hotlink. */
 import mpesaLogo from '@/assets/logos/providers/mpesa.png'
 import airtelMoneyLogo from '@/assets/logos/providers/airtel_money.png'

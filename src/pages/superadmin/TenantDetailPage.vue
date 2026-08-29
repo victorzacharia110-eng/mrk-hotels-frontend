@@ -246,11 +246,29 @@
             </span>
             <input
               :id="`acc-${p}`"
-              v-model="paymentForm.accounts[p]"
+              v-model="paymentForm.accounts[p].number"
               type="text"
               class="input"
               :placeholder="$t('superadmin.accountPlaceholder')"
             />
+            <div v-if="MOBILE_MONEY_PROVIDERS.includes(p)" class="account-subfields">
+              <label class="account-sublabel" :for="`lipa-${p}`">{{ $t('superadmin.lipaNumberLabel') }}</label>
+              <input
+                :id="`lipa-${p}`"
+                v-model="paymentForm.accounts[p].lipa_number"
+                type="text"
+                class="input"
+                :placeholder="$t('superadmin.lipaNumberPlaceholder')"
+              />
+              <label class="account-sublabel" :for="`rcvr-${p}`">{{ $t('superadmin.receiverNameLabel') }}</label>
+              <input
+                :id="`rcvr-${p}`"
+                v-model="paymentForm.accounts[p].name"
+                type="text"
+                class="input"
+                :placeholder="$t('superadmin.receiverNamePlaceholder')"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -275,6 +293,7 @@ import {
   METHOD_MOBILE_MONEY,
   MOBILE_MONEY_PROVIDERS,
   PAYMENT_METHODS,
+  normalizePaymentAccount,
 } from '@/utils/payments'
 import ProviderLogo from '@/components/ProviderLogo.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
@@ -396,11 +415,19 @@ function defaultPaymentMethods() {
 }
 
 /**
- * Builds an accounts object with every provider keyed to an empty string.
- * @returns {Object<string, string>} Map of provider code to account number.
+ * Builds the per-provider account form entries in the object shape (number /
+ * lipa_number / name). Bank providers only use the number field.
+ * @returns {Object<string, Object<string, string>>} Map of provider code to account fields.
  */
 function emptyAccounts() {
-  return Object.fromEntries(ALL_PROVIDERS.map((p) => [p, '']))
+  return Object.fromEntries(
+    ALL_PROVIDERS.map((p) => [
+      p,
+      MOBILE_MONEY_PROVIDERS.includes(p)
+        ? { number: '', lipa_number: '', name: '' }
+        : { number: '' },
+    ]),
+  )
 }
 
 /** Providers worth configuring, based on which methods the hotel enables. */
@@ -440,7 +467,9 @@ async function load() {
         : defaultPaymentMethods()
     const accounts = tenant.value.payment_accounts || {}
     ALL_PROVIDERS.forEach((p) => {
-      paymentForm.value.accounts[p] = accounts[p] || ''
+      paymentForm.value.accounts[p] =
+        normalizePaymentAccount(accounts[p]) ||
+        (MOBILE_MONEY_PROVIDERS.includes(p) ? { number: '', lipa_number: '', name: '' } : { number: '' })
     })
     seedFeaturesFromTenant()
   } catch (err) {
@@ -618,13 +647,15 @@ async function loadOwners() {
   }
 }
 
-/** Persists the enabled payment methods and their (non-empty) account numbers. */
+/** Persists the enabled payment methods and their (non-empty) account details. */
 async function savePaymentMethods() {
   savingPayment.value = true
   error.value = ''
   try {
     const accounts = Object.fromEntries(
-      Object.entries(paymentForm.value.accounts).filter(([, v]) => v && v.trim()),
+      ALL_PROVIDERS.map((p) => [p, normalizePaymentAccount(paymentForm.value.accounts[p])]).filter(
+        ([, v]) => !!v,
+      ),
     )
     const res = await tenantApi.update(route.params.id, {
       payment_methods: paymentForm.value.methods,
@@ -760,6 +791,17 @@ onMounted(async () => {
   gap: 8px;
   font-weight: 600;
   font-size: 13px;
+}
+
+.account-subfields {
+  display: grid;
+  gap: 4px;
+}
+
+.account-sublabel {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
 }
 
 .branding-section {

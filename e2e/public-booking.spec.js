@@ -76,7 +76,21 @@ test.describe('public booking flow', () => {
     await expect(card).toContainText(/full amount TZS [\d,]+/)
     await expect(card).toContainText(/Confirm with your PIN/)
     await expect(card).toContainText(/text you the link to download your invoice/i)
-    await expect(page.locator('.pay-instr-number')).toBeVisible()
+    await expect(page.locator('.pay-instr > .pay-instr-number')).toBeVisible()
+
+    // Receiving endpoint name shown for authenticity on the phone-number flow.
+    await expect(page.locator('.pay-instr-receiver').first()).toContainText('MRK Grand Hotel')
+
+    // When the wallet has a Lipa number, its own steps and receiver show too.
+    await expect(page.locator('.pay-instr-lipa')).toBeVisible()
+    await expect(page.locator('.pay-instr-lipa')).toContainText('Lipa number')
+    await expect(page.locator('.pay-instr-lipa .pay-instr-number')).toHaveText(/4001202/)
+    await expect(page.locator('.pay-instr-lipa .pay-instr-receiver')).toContainText('MRK Grand Hotel')
+    await expect(page.locator('.pay-instr-lipa')).toContainText(/Choose “Lipa”/)
+    await expect(page.locator('.pay-instr-lipa')).toContainText(/Enter this exact Lipa number/)
+
+    // The other-wallets strip shows phone and Lipa numbers per provider.
+    await expect(page.locator('.pay-instr-other-lipa').last()).toContainText(/Lipa 4001203/)
 
     await expectMounted(page, errors)
   })

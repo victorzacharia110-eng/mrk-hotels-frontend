@@ -359,7 +359,13 @@
               <ProviderLogo :provider="p" />
               {{ $t(`paymentFields.providers.${p}`) }}
             </label>
-            <input v-model="hotelForm.payment_accounts[p]" type="text" class="input" :placeholder="$t('hotelSettings.accountPlaceholder')" />
+            <input v-model="hotelForm.payment_accounts[p].number" type="text" class="input" :placeholder="$t('hotelSettings.accountPlaceholder')" />
+            <div v-if="p === METHOD_MOBILE_MONEY || MOBILE_MONEY_PROVIDERS.includes(p)" class="account-subfields">
+              <label class="account-sublabel">{{ $t('hotelSettings.lipaNumberLabel') }}</label>
+              <input v-model="hotelForm.payment_accounts[p].lipa_number" type="text" class="input" :placeholder="$t('hotelSettings.lipaNumberPlaceholder')" />
+              <label class="account-sublabel">{{ $t('hotelSettings.receiverNameLabel') }}</label>
+              <input v-model="hotelForm.payment_accounts[p].name" type="text" class="input" :placeholder="$t('hotelSettings.receiverNamePlaceholder')" />
+            </div>
           </div>
         </div>
 
@@ -514,7 +520,7 @@ import { useI18n } from 'vue-i18n'
 import QRCode from 'qrcode'
 import { useAuthStore } from '@/stores/auth'
 import { attendanceApi, authApi, hotelSettingsApi } from '@/api'
-import { PAYMENT_METHODS, METHOD_MOBILE_MONEY, METHOD_BANK, MOBILE_MONEY_PROVIDERS, ALL_PROVIDERS } from '@/utils/payments'
+import { PAYMENT_METHODS, METHOD_MOBILE_MONEY, METHOD_BANK, MOBILE_MONEY_PROVIDERS, ALL_PROVIDERS, normalizePaymentAccount } from '@/utils/payments'
 import ChangePasswordForm from '@/components/ChangePasswordForm.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
 import AttendanceQrScanner from '@/components/AttendanceQrScanner.vue'
@@ -1014,7 +1020,11 @@ async function loadHotelSettings() {
     hotelForm.tin = h.tin || ''
     hotelForm.vrn = h.vrn || ''
     hotelForm.payment_methods = h.payment_methods || []
-    hotelForm.payment_accounts = h.payment_accounts || {}
+    hotelForm.payment_accounts = {}
+    ALL_PROVIDERS.forEach((p) => {
+      hotelForm.payment_accounts[p] =
+        normalizePaymentAccount(h.payment_accounts?.[p]) || { number: '', lipa_number: '', name: '' }
+    })
   } catch {
     // Silently ignore — the card simply won't show data.
   }
@@ -1027,8 +1037,11 @@ async function saveHotelSettings() {
   hotelSettingsSuccess.value = ''
   try {
     const payload = { ...hotelForm }
-    // Clone accounts so reactive changes don't leak.
-    payload.payment_accounts = { ...hotelForm.payment_accounts }
+    // Rebuild accounts into the per-provider object shape, dropping blanks.
+    payload.payment_accounts = Object.fromEntries(
+      ALL_PROVIDERS.map((p) => [p, normalizePaymentAccount(hotelForm.payment_accounts[p])])
+        .filter(([, v]) => !!v),
+    )
     const { data } = await hotelSettingsApi.update(payload)
     hotelSettingsSuccess.value = data.message || t('hotelSettings.saved')
   } catch (err) {
@@ -1527,5 +1540,17 @@ onUnmounted(() => clearInterval(qrTimer))
   font-size: 13px;
   font-weight: 500;
   margin-bottom: 4px;
+}
+
+.account-subfields {
+  margin-top: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.account-sublabel {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 6px;
 }
 </style>
