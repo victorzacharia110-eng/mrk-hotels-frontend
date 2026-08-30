@@ -119,7 +119,9 @@
     "name": "Name",
     "phone": "Phone",
     "email": "Email",
-    "time": "Time"
+    "time": "Time",
+    "add": "Add",
+    "update": "Update"
   },
   "laundry": {
     "title": "Laundry",
