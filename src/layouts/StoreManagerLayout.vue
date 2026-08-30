@@ -24,7 +24,7 @@
             <div v-if="isOpen(item.labelKey) && !sidebarCollapsed" class="sm-subnav">
               <router-link v-for="child in item.children" :key="child.to" :to="child.to" class="sm-nav-link sm-sub"
                 :class="{ active: isActive(child.to) }" @click="mobileOpen = false">
-                <i :class="child.icon || 'fas fa-angle-right'" aria-hidden="true"></i>
+                <i :class="child.icon || 'fas fa-circle'" aria-hidden="true"></i>
                 <span>{{ $t(child.labelKey) }}</span>
               </router-link>
             </div>
@@ -165,12 +165,12 @@ const navItems = [
     icon: 'fas fa-chart-line',
     labelKey: 'storeManager.nav.reports',
     children: [
-      { to: '/store-manager/reports?view=ledger-summary', labelKey: 'storeManager.reports.stockLedger' },
-      { to: '/store-manager/reports?view=transfer-register', labelKey: 'storeManager.reports.transferSummary' },
-      { to: '/store-manager/reports?view=movement-detail', labelKey: 'storeManager.reports.movementDetail' },
-      { to: '/store-manager/reports?view=stock-take-detail', labelKey: 'storeManager.reports.physicalStock' },
-      { to: '/store-manager/reports?view=closing-stock', labelKey: 'storeManager.reports.closingStock' },
-      { to: '/store-manager/reports?view=goods-return-register', labelKey: 'storeManager.reports.goodsReturns' },
+      { to: '/store-manager/reports?view=ledger-summary', icon: 'fas fa-book', labelKey: 'storeManager.reports.stockLedger' },
+      { to: '/store-manager/reports?view=transfer-register', icon: 'fas fa-right-left', labelKey: 'storeManager.reports.transferSummary' },
+      { to: '/store-manager/reports?view=movement-detail', icon: 'fas fa-arrow-trend-up', labelKey: 'storeManager.reports.movementDetail' },
+      { to: '/store-manager/reports?view=stock-take-detail', icon: 'fas fa-scale-balanced', labelKey: 'storeManager.reports.physicalStock' },
+      { to: '/store-manager/reports?view=closing-stock', icon: 'fas fa-warehouse', labelKey: 'storeManager.reports.closingStock' },
+      { to: '/store-manager/reports?view=goods-return-register', icon: 'fas fa-rotate-left', labelKey: 'storeManager.reports.goodsReturns' },
     ],
   },
   { to: '/store-manager/indents', icon: 'fas fa-file-import', labelKey: 'storeManager.nav.indents' },
@@ -179,11 +179,11 @@ const navItems = [
     icon: 'fas fa-boxes-stacked',
     labelKey: 'storeManager.nav.inventory',
     children: [
-      { to: '/store-manager/low-stock', labelKey: 'storeManager.nav.lowStock' },
-      { to: '/store-manager/stock-movements', labelKey: 'storeManager.nav.movements' },
-      { to: '/store-manager/transfers', labelKey: 'storeManager.nav.transfers' },
-      { to: '/store-manager/stock-counts', labelKey: 'storeManager.nav.stockCounts' },
-      { to: '/store-manager/stock-adjust', labelKey: 'storeManager.nav.stockAdjust' },
+      { to: '/store-manager/low-stock', icon: 'fas fa-triangle-exclamation', labelKey: 'storeManager.nav.lowStock' },
+      { to: '/store-manager/stock-movements', icon: 'fas fa-arrow-right-arrow-left', labelKey: 'storeManager.nav.movements' },
+      { to: '/store-manager/transfers', icon: 'fas fa-right-left', labelKey: 'storeManager.nav.transfers' },
+      { to: '/store-manager/stock-counts', icon: 'fas fa-clipboard-check', labelKey: 'storeManager.nav.stockCounts' },
+      { to: '/store-manager/stock-adjust', icon: 'fas fa-sliders', labelKey: 'storeManager.nav.stockAdjust' },
     ],
   },
   {
@@ -191,7 +191,7 @@ const navItems = [
     icon: 'fas fa-address-book',
     labelKey: 'storeManager.nav.backOffice',
     children: [
-      { to: '/store-manager/suppliers', labelKey: 'storeManager.nav.suppliers' },
+      { to: '/store-manager/suppliers', icon: 'fas fa-truck-ramp-box', labelKey: 'storeManager.nav.suppliers' },
     ],
   },
 ]
