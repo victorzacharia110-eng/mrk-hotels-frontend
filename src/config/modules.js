@@ -44,6 +44,8 @@ export const MODULES = [
   { key: 'statuses', to: '/app/statuses', icon: 'fas fa-circle-dot', labelKey: 'nav.statuses', roles: [] },
   // Menu item management.
   { key: 'menu', to: '/app/menu', icon: 'fas fa-book-open', labelKey: 'nav.menu', roles: ['hotel_admin', 'manager', 'kitchen'] },
+  // POS outlets (restaurant/bar) cashiers work from.
+  { key: 'outlets', to: '/app/outlets', icon: 'fas fa-store', labelKey: 'nav.outlets', roles: ['hotel_admin', 'manager'] },
   // Laundry orders; additionally gated by the manage_laundry permission.
   { key: 'laundry', to: '/app/laundry', icon: 'fas fa-jug-detergent', labelKey: 'laundry.title', roles: ['hotel_admin', 'manager', 'housekeeping'], permission: 'manage_laundry' },
   // Guest fun-game activities.

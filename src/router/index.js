@@ -56,6 +56,8 @@ const hotelChildren = [
   { path: 'statuses', name: 'hotel-statuses', component: () => import('@/pages/statuses/StatusesPage.vue'), meta: { module: 'statuses' } },
   // Menu item management.
   { path: 'menu', name: 'hotel-menu', component: () => import('@/pages/menu/MenuListPage.vue'), meta: { module: 'menu' } },
+  // POS outlets (restaurant/bar) cashiers pick from after login.
+  { path: 'outlets', name: 'hotel-outlets', component: () => import('@/pages/outlets/OutletManagePage.vue'), meta: { module: 'outlets' } },
   // Laundry order management.
   { path: 'laundry', name: 'hotel-laundry', component: () => import('@/pages/laundry/LaundryListPage.vue'), meta: { module: 'laundry' } },
   // Guest fun game activities.
