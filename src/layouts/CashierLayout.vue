@@ -41,6 +41,11 @@
           <i class="fas fa-flask" aria-hidden="true"></i>
           <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.ingredients') }}</span>
         </router-link>
+        <router-link :to="{ name: 'cashier-printer' }" class="pos-nav-link"
+          :class="{ active: isActive('/cashier/printer') }" @click="mobileOpen = false">
+          <i class="fas fa-print" aria-hidden="true"></i>
+          <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.printer') }}</span>
+        </router-link>
       </nav>
 
       <div class="pos-sidebar-footer">

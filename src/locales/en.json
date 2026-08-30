@@ -3712,6 +3712,7 @@
       "managerGroup": "Manager",
       "itemLookup": "Item Lookup",
       "ingredients": "Ingredients",
+      "printer": "Printer",
       "waiterAssignment": "Waiter Assignment"
     },
     "topbar": {
