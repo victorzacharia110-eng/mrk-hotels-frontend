@@ -17,7 +17,7 @@
       </div>
       <select v-model="category" class="sm-select" @change="load">
         <option value="">{{ $t('inventory.allCategories') }}</option>
-        <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
+        <option v-for="c in categories" :key="c" :value="c">{{ formatCategory(c) }}</option>
       </select>
       <select v-model="stockFilter" class="sm-select" @change="load">
         <option value="">{{ $t('storeManager.inventory.allStock') }}</option>
@@ -52,7 +52,7 @@
             <tr v-for="item in items" :key="item.item_id">
               <td class="bulk-col"><input type="checkbox" :checked="bulk.isSelected(item.item_id)" @change="bulk.toggle(item.item_id)" /></td>
               <td><strong>{{ item.item_name }}</strong><br /><small class="muted">{{ item.unit }}</small></td>
-              <td><span class="chip">{{ item.category }}</span></td>
+              <td><span class="chip">{{ formatCategory(item.category) }}</span></td>
               <td><span :class="isLow(item) ? 'stock-low' : 'stock-ok'">{{ item.quantity_in_stock }}</span></td>
               <td>{{ item.reorder_level }}</td>
               <td>TZS {{ Number(item.unit_cost || 0).toLocaleString() }}</td>
@@ -90,7 +90,7 @@
             <div class="form-field">
               <label>{{ $t('inventory.category') }}</label>
               <select v-model="form.category" class="sm-select" style="width:100%" required>
-                <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
+                <option v-for="c in categories" :key="c" :value="c">{{ formatCategory(c) }}</option>
               </select>
             </div>
             <div class="form-field">
@@ -100,11 +100,26 @@
                 <option v-for="d in departments" :key="d.department_id" :value="d.department_id">{{ d.name }}</option>
               </select>
             </div>
-            <div class="form-field"><label>{{ $t('inventory.unit') }}</label><input v-model="form.unit" class="sm-input" placeholder="pcs / kg / litres" /></div>
+            <div class="form-field">
+              <label>{{ $t('inventory.unit') }}</label>
+              <select v-model="form.unit" class="sm-select" style="width:100%">
+                <option value="" disabled>{{ $t('storeManager.inventory.pickUnit') }}</option>
+                <option v-for="u in unitOptions" :key="u" :value="u">{{ u }}</option>
+              </select>
+              <button type="button" class="sm-btn sm ghost unit-manage-btn" @click="showUnitsModal = true">
+                <i class="fas fa-gear"></i> {{ $t('storeManager.inventory.manageUnits') }}
+              </button>
+            </div>
             <div class="form-field" v-if="!editing"><label>{{ $t('inventory.openingStock') }}</label><input v-model.number="form.quantity_in_stock" type="number" min="0" class="sm-input" /></div>
             <div class="form-field"><label>{{ $t('inventory.reorderLevel') }}</label><input v-model.number="form.reorder_level" type="number" min="0" class="sm-input" /></div>
             <div class="form-field"><label>{{ $t('inventory.unitCost') }}</label><input v-model.number="form.unit_cost" type="number" min="0" step="0.01" class="sm-input" /></div>
-            <div class="form-field"><label>{{ $t('inventory.supplier') }}</label><input v-model="form.supplier" class="sm-input" /></div>
+            <div class="form-field">
+              <label>{{ $t('inventory.supplier') }}</label>
+              <select v-model="form.supplier" class="sm-select" style="width:100%">
+                <option value="">{{ $t('storeManager.inventory.noSupplier') }}</option>
+                <option v-for="s in supplierOptions" :key="s" :value="s">{{ s }}</option>
+              </select>
+            </div>
             <div class="form-field full"><label>{{ $t('common.notes') }}</label><textarea v-model="form.notes" rows="2" class="sm-textarea"></textarea></div>
           </div>
           <p v-if="formError" class="form-error">{{ formError }}</p>
@@ -169,6 +184,35 @@
       :busy="deleting"
       @confirm="bulkDelete"
     />
+
+    <!-- Unit registry: register new (SI) units that feed the unit dropdown. -->
+    <div v-if="showUnitsModal" class="sm-modal-backdrop" @click.self="showUnitsModal = false">
+      <div class="sm-modal">
+        <div class="sm-modal-head">
+          <h3>{{ $t('storeManager.inventory.manageUnits') }}</h3>
+          <button class="sm-modal-close" @click="showUnitsModal = false"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="sm-modal-body">
+          <div class="form-grid">
+            <div class="form-field full">
+              <label>{{ $t('storeManager.inventory.newUnit') }}</label>
+              <div class="unit-add-row">
+                <input v-model="newUnit" class="sm-input" :placeholder="$t('storeManager.inventory.unitPlaceholder')" @keyup.enter="addUnit" />
+                <button type="button" class="sm-btn" @click="addUnit"><i class="fas fa-plus"></i> {{ $t('storeManager.inventory.register') }}</button>
+              </div>
+            </div>
+          </div>
+          <div class="unit-list">
+            <h4>{{ $t('storeManager.inventory.registeredUnits') }}</h4>
+            <div class="unit-chip" v-for="u in customUnitsSorted" :key="u">
+              <span>{{ u }}</span>
+              <button class="unit-chip-x" @click="removeUnit(u)"><i class="fas fa-xmark"></i></button>
+            </div>
+            <p v-if="!customUnits.length" class="empty">{{ $t('storeManager.inventory.noCustomUnits') }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -176,9 +220,10 @@
 import { onMounted, reactive, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { inventoryApi, inventoryOpsApi } from '@/api'
+import { inventoryApi, inventoryOpsApi, supplierApi } from '@/api'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
+import { INVENTORY_CATEGORIES, formatCategory } from '@/utils/format'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -219,7 +264,48 @@ function pickDepartment(id) {
   load(1)
 }
 
-const categories = ['food_beverage', 'housekeeping', 'maintenance', 'office', 'toiletries', 'linen', 'cleaning', 'other']
+const categories = INVENTORY_CATEGORIES
+
+// Unit registry: common SI-ish units always available, plus user-registered
+// units persisted per device (later swappable for a shared backend registry).
+const DEFAULT_UNITS = ['kg', 'g', 'mg', 'L', 'mL', 'cm', 'm', 'ton', 'pcs', 'packet', 'box', 'carton', 'bottle', 'dozen', 'roll', 'pair']
+const CUSTOM_UNITS_KEY = 'store_custom_units'
+const customUnits = ref(loadCustomUnits())
+const newUnit = ref('')
+const showUnitsModal = ref(false)
+
+function loadCustomUnits() {
+  try { return JSON.parse(localStorage.getItem(CUSTOM_UNITS_KEY) || '[]') } catch { return [] }
+}
+function persistCustomUnits() {
+  localStorage.setItem(CUSTOM_UNITS_KEY, JSON.stringify(customUnits.value))
+}
+const customUnitsSorted = computed(() => [...customUnits.value].sort())
+const unitOptions = computed(() => {
+  const all = [...DEFAULT_UNITS, ...customUnits.value]
+  if (form.unit && !all.includes(form.unit)) all.push(form.unit)
+  return all
+})
+function addUnit() {
+  const u = newUnit.value.trim()
+  if (!u) return
+  if (!customUnits.value.includes(u)) customUnits.value.push(u)
+  persistCustomUnits()
+  newUnit.value = ''
+}
+function removeUnit(u) {
+  customUnits.value = customUnits.value.filter((x) => x !== u)
+  persistCustomUnits()
+}
+
+// Supplier directory feeds the supplier dropdown; legacy free-text suppliers
+// on existing items stay selectable.
+const suppliers = ref([])
+const supplierOptions = computed(() => {
+  const names = suppliers.value.map((s) => s.supplier_name)
+  if (form.supplier && !names.includes(form.supplier)) names.push(form.supplier)
+  return names
+})
 
 const form = reactive({ item_name: '', category: 'other', unit: '', quantity_in_stock: 0, reorder_level: 0, unit_cost: 0, supplier: '', notes: '', department_id: '' })
 const adjustForm = reactive({ type: 'in', quantity: 1, reason: '' })
@@ -302,8 +388,12 @@ async function saveAdjustment() {
   saving.value = true
   formError.value = ''
   try {
-    const qty = adjustForm.type === 'out' ? -Math.abs(adjustForm.quantity) : Math.abs(adjustForm.quantity)
-    await inventoryApi.adjust(adjusting.value.item_id, { quantity: qty, reason: adjustForm.reason })
+    // Backend contract: type (in|out), non-negative quantity, notes.
+    await inventoryApi.adjust(adjusting.value.item_id, {
+      type: adjustForm.type,
+      quantity: Math.abs(adjustForm.quantity),
+      notes: adjustForm.reason,
+    })
     adjusting.value = null
     await load()
   } catch (e) {
@@ -338,6 +428,7 @@ async function bulkDelete() {
 
 onMounted(async () => {
   inventoryOpsApi.departments().then((res) => { departments.value = res.data.departments || [] }).catch(() => {})
+  supplierApi.index({ per_page: 100 }).then((res) => { suppliers.value = res.data.data || res.data || [] }).catch(() => {})
   await load(1)
   if (route.query.create === '1') openCreate()
 })
@@ -362,4 +453,15 @@ onMounted(async () => {
 }
 .dept-option:hover { background: #f1f5f9; }
 .dept-option.active { background: var(--sm-blue, #1f6ea8); color: #fff; border-color: var(--sm-blue, #1f6ea8); }
+.unit-manage-btn { margin-top: 6px; width: 100%; }
+.unit-add-row { display: flex; gap: 8px; }
+.unit-add-row .sm-input { flex: 1; }
+.unit-list { margin-top: 14px; }
+.unit-list h4 { font-size: 13px; color: var(--sm-muted, #64748b); margin-bottom: 8px; }
+.unit-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 10px; border-radius: 999px; background: var(--sm-blue-light, #e8f1fa);
+  color: var(--sm-blue-dark, #00468c); font-size: 13px; margin: 0 6px 6px 0;
+}
+.unit-chip-x { border: none; background: none; color: inherit; cursor: pointer; padding: 0; font-size: 12px; }
 </style>

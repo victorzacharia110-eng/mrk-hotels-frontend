@@ -409,8 +409,8 @@ const adjustForm = reactive({ type: 'in', quantity: 0, reference_type: '', notes
 
 // Dropdown option lists for filters and forms.
 const categoryOptions = computed(() => [
-  { value: 'bar', label: t('inventory.categoryBar') },
-  { value: 'restaurant', label: t('inventory.categoryRestaurant') },
+  { value: 'food', label: t('inventory.categoryFood') },
+  { value: 'beverage', label: t('inventory.categoryBeverage') },
   { value: 'housekeeping', label: t('inventory.categoryHousekeeping') },
   { value: 'maintenance', label: t('inventory.categoryMaintenance') },
   { value: 'procurement', label: t('inventory.categoryProcurement') },

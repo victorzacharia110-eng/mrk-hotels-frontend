@@ -10,7 +10,7 @@
       <div v-if="loading" class="sm-loading"><i class="fas fa-circle-notch"></i> {{ $t('common.loading') }}</div>
       <div v-else class="cat-grid">
         <div v-for="c in filtered" :key="c.id || c.name" class="cat-card">
-          <div class="cat-head"><h4>{{ c.name }}</h4><span class="chip">{{ c.items_count ?? 0 }} {{ $t('storeManager.sales.items') }}</span></div>
+          <div class="cat-head"><h4>{{ capitalizeFirst(c.name) }}</h4><span class="chip">{{ c.items_count ?? 0 }} {{ $t('storeManager.sales.items') }}</span></div>
           <p class="muted">{{ c.description || '—' }}</p>
           <div class="row-actions">
             <button class="sm-btn sm ghost" @click="openEdit(c)"><i class="fas fa-pen"></i></button>
@@ -39,6 +39,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeApi } from '../../api'
+import { capitalizeFirst } from '@/utils/format'
 
 const { t } = useI18n()
 const cats = ref([])
@@ -60,8 +61,9 @@ function openEdit(c) { editing.value = c; Object.assign(form, { name: c.name, de
 async function save() {
   saving.value = true; formError.value = ''
   try {
-    if (editing.value) await storeApi.updateCategory(editing.value.id, form)
-    else await storeApi.storeCategory(form)
+    const payload = { ...form, name: capitalizeFirst(form.name) }
+    if (editing.value) await storeApi.updateCategory(editing.value.id, payload)
+    else await storeApi.storeCategory(payload)
     showForm.value = false; await load()
   } catch (e) { formError.value = e.response?.data?.message || t('common.error') } finally { saving.value = false }
 }

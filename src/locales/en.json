@@ -776,8 +776,6 @@
   "passwordRotated": "Your password was rotated. Use:",
   "modePassword": "Password",
   "modePin": "PIN",
-  "identifier": "Username or Registration Number",
-  "identifierPlaceholder": "Enter your username or registration number",
   "enterPin": "Enter your 4-digit PIN",
   "clearPin": "Clear PIN",
   "backspacePin": "Delete last digit",
@@ -785,7 +783,6 @@
    "emailRequired": "Email is required.",
    "emailInvalid": "Enter a valid email address.",
    "passwordRequired": "Password is required.",
-   "identifierRequired": "Username or registration number is required.",
    "pinInvalid": "PIN must be exactly 4 digits.",
    "connectionFailed": "Connection failed. Please try again."
   }
@@ -1378,6 +1375,8 @@
   "currentStock": "current stock",
   "categoryBar": "Bar",
   "categoryRestaurant": "Restaurant",
+  "categoryFood": "Food",
+  "categoryBeverage": "Beverage",
   "categoryHousekeeping": "Housekeeping",
   "categoryMaintenance": "Maintenance",
   "categoryProcurement": "Procurement",
@@ -3398,10 +3397,12 @@
    "settings": "Settings",
    "activityLog": "Activity Log",
    "indents": "Department Indents",
-   "marketLists": "Market Lists",
-   "production": "Production",
-   "goodsReturns": "Goods Returns"
-  },
+"marketLists": "Market Lists",
+    "production": "Production",
+    "goodsReturns": "Goods Returns",
+    "backOffice": "Back Office",
+    "stockAdjust": "Stock Adjustment"
+   },
   "dashboard": {
    "totalItems": "Stock items",
    "lowStock": "Low stock",
@@ -3422,7 +3423,15 @@
    "allStock": "All stock",
    "department": "Department",
    "pickDepartment": "Manage which department?",
-   "allDepartments": "All departments"
+   "allDepartments": "All departments",
+   "pickUnit": "Select a unit…",
+   "manageUnits": "Manage units",
+   "newUnit": "Register a new unit",
+   "register": "Register",
+   "unitPlaceholder": "e.g. bottle, litre, box (SI: kg, mL, m)",
+   "registeredUnits": "Your registered units",
+   "noCustomUnits": "No custom units yet. Register one to add it to the unit dropdown.",
+   "noSupplier": "No supplier"
   },
   "pos": {
    "searchProduct": "Search products...",
@@ -3471,10 +3480,14 @@
    "bulkDeletePartial": "Deleted {failed} of {tried} selected customers."
   },
   "reports": {
-   "salesReport": "Sales report",
-   "inventoryReport": "Inventory report",
-   "expenseReport": "Expense report",
+   "stockLedger": "Stock Ledger",
+   "transferSummary": "Stock Transfer Summary",
+   "movementDetail": "Stock Movement Detail",
+   "physicalStock": "Physical Stock Taking",
+   "closingStock": "Closing Stock",
+   "goodsReturns": "Goods Returns Report",
    "generate": "Generate",
+   "asOf": "As of",
    "pick": "Pick a date range and generate a report."
   },
   "movements": {

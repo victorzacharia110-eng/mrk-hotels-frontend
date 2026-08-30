@@ -776,8 +776,6 @@
   "passwordRotated": "Neno la siri lilibadilishwa. Tumia:",
   "modePassword": "Neno la Siri",
   "modePin": "PIN",
-  "identifier": "Jina la Mtumiaji au Namba ya Usajili",
-  "identifierPlaceholder": "Weka jina la mtumiaji au namba yako ya usajili",
   "enterPin": "Weka PIN yako ya tarakimu 4",
   "clearPin": "Futa PIN",
   "backspacePin": "Futa tarakimu ya mwisho",
@@ -785,7 +783,6 @@
    "emailRequired": "Barua pepe inahitajika.",
    "emailInvalid": "Weka anwani halali ya barua pepe.",
    "passwordRequired": "Neno la siri linahitajika.",
-   "identifierRequired": "Jina la mtumiaji au namba ya usajili inahitajika.",
    "pinInvalid": "PIN lazima iwe na tarakimu 4.",
    "connectionFailed": "Muunganisho umeshindikana. Tafadhali jaribu tena."
   }
@@ -1378,6 +1375,8 @@
   "currentStock": "hisa ya sasa",
   "categoryBar": "Baa",
   "categoryRestaurant": "Mkahawa",
+  "categoryFood": "Chakula",
+  "categoryBeverage": "Vinywaji",
   "categoryHousekeeping": "Usafi",
   "categoryMaintenance": "Matengenezo",
   "categoryProcurement": "Ununuzi",
@@ -3398,10 +3397,12 @@
    "settings": "Mipangilio",
    "activityLog": "Kumbukumbu za Shughuli",
    "indents": "Maombi ya Idara",
-   "marketLists": "Orodha za Soko",
-   "production": "Uzalishaji",
-   "goodsReturns": "Kurejesha Bidhaa"
-  },
+"marketLists": "Orodha za Soko",
+    "production": "Uzalishaji",
+    "goodsReturns": "Marejesho",
+    "backOffice": "Ofisi ya Nyuma",
+    "stockAdjust": "Marekebisho ya Akiba"
+   },
   "dashboard": {
    "totalItems": "Bidhaa ghala",
    "lowStock": "Bidhaa chache",
@@ -3418,11 +3419,19 @@
    "recentReceipts": "Bidhaa zilizopokelewa hivi karibuni",
    "noReceipts": "Hakuna bidhaa zilizopokelewa bado."
   },
-  "inventory": {
-   "allStock": "Hesabu zote",
+"inventory": {
+   "allStock": "Akiba zote",
    "department": "Idara",
-   "pickDepartment": "Dhibiti idara gani?",
-   "allDepartments": "Idara zote"
+   "pickDepartment": "Simamia idara ipi?",
+   "allDepartments": "Idara zote",
+   "pickUnit": "Chagua kipimo…",
+   "manageUnits": "Simamia vipimo",
+   "newUnit": "Sajili kipimo kipya",
+   "register": "Sajili",
+   "unitPlaceholder": "mf. chupa, lita, kasha (SI: kg, mL, m)",
+   "registeredUnits": "Vipimo ulivyosajili",
+   "noCustomUnits": "Bado hakuna vipimo maalum. Sajili moja ili lichukuliwe kwenye orodha ya vipimo.",
+   "noSupplier": "Hakuna muuzaji"
   },
   "pos": {
    "searchProduct": "Tafuta bidhaa...",
@@ -3471,10 +3480,14 @@
    "bulkDeletePartial": "Wamefutwa {failed} kati ya {tried} wateja waliochaguliwa."
   },
   "reports": {
-   "salesReport": "Ripoti ya mauzo",
-   "inventoryReport": "Ripoti ya hazina",
-   "expenseReport": "Ripoti ya matumizi",
+   "stockLedger": "Daftari la Akiba",
+   "transferSummary": "Muhtasari wa Uhamisho wa Akiba",
+   "movementDetail": "Maelezo ya Mabadiliko ya Akiba",
+   "physicalStock": "Hesabu za Stoo",
+   "closingStock": "Akiba ya Mwisho wa Siku",
+   "goodsReturns": "Ripoti ya Marejesho ya Bidhaa",
    "generate": "Tengeneza",
+   "asOf": "Kama ya",
    "pick": "Chagua kipindi cha tarehe kisha tengeneza ripoti."
   },
   "movements": {

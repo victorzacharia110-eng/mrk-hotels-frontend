@@ -390,20 +390,6 @@ const routes = [
         component: () => import('@/pages/messages/MessagesPage.vue'),
         meta: { titleKey: 'storeManager.nav.messages' },
       },
-      // Point-of-sale terminal.
-      {
-        path: 'pos',
-        name: 'store-pos',
-        component: () => import('@/pages/store/StorePosPage.vue'),
-        meta: { titleKey: 'storeManager.nav.pos' },
-      },
-      // Sales history.
-      {
-        path: 'sales',
-        name: 'store-sales',
-        component: () => import('@/pages/store/StoreSalesPage.vue'),
-        meta: { titleKey: 'storeManager.nav.sales' },
-      },
       // Inventory categories.
       {
         path: 'categories',
@@ -487,6 +473,13 @@ const routes = [
         name: 'store-activity',
         component: () => import('@/pages/store/StoreActivityLogPage.vue'),
         meta: { titleKey: 'storeManager.nav.activityLog' },
+      },
+      // Dedicated stock adjustment workbench (client menu group: Inventory).
+      {
+        path: 'stock-adjust',
+        name: 'store-stock-adjust',
+        component: () => import('@/pages/store/StoreStockAdjustPage.vue'),
+        meta: { titleKey: 'storeManager.nav.stockAdjust' },
       },
       // The store manager's own account: personal info and password.
       {

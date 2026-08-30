@@ -69,17 +69,8 @@
             class="fas fa-right-to-bracket"></i> {{ loading ? $t('auth.signInLoading') : $t('auth.signIn') }}</button>
       </form>
 
-      <!-- PIN sign-in mode: identifier + 4-digit PIN entered via the on-screen keypad; auto-submits at 4 digits -->
+      <!-- PIN sign-in mode: just the 4-digit PIN entered via the on-screen keypad; auto-submits at 4 digits -->
       <div v-else class="pin-mode">
-        <!-- Identifier accepts the user's username (email) or their registration number -->
-        <div class="form-group" :class="{ 'has-error': errors.identifier }">
-          <label>{{ $t('auth.identifier') }}</label>
-          <input v-model="pinForm.identifier" type="text" :placeholder="$t('auth.identifierPlaceholder')"
-            autocomplete="username" @blur="touch('identifier')" @input="validateField('identifier')" />
-          <span class="field-error" v-if="errors.identifier"><i class="fas fa-exclamation-triangle"></i> {{
-            errors.identifier }}</span>
-        </div>
-
         <!-- 4-dot progress indicator; dots fill as PIN digits are entered -->
         <div class="pin-dots">
           <span v-for="i in 4" :key="i" class="pin-dot" :class="{ filled: pinForm.pin.length >= i }"></span>
@@ -152,8 +143,8 @@ const toastMsg = ref('')
 
 // Sign-in mode: 'password' (classic form) or 'pin' (iPOS-style keypad).
 const mode = ref('password')
-// PIN-mode model: identifier (username/email or registration number) + the 4-digit PIN.
-const pinForm = ref({ identifier: '', pin: '' })
+// PIN-mode model: the 4-digit PIN (no identifier — PINs are globally unique).
+const pinForm = ref({ pin: '' })
 // Keypad digit keys 1-9; the bottom row (clear, 0, backspace) is rendered separately.
 const keypadDigits = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 
@@ -188,11 +179,10 @@ function touch(field) {
 /**
  * Validates a single field when it has been touched or already contains a value.
  * Skips untouched, empty fields so the form does not scream errors on first paint.
- * @param {string} field - Key of the form model to validate ('email' | 'password' | 'identifier').
+ * @param {string} field - Key of the form model to validate ('email' | 'password').
  */
 function validateField(field) {
-  // The PIN-mode identifier lives in pinForm; everything else in the password form model.
-  const value = field === 'identifier' ? pinForm.value.identifier : form.value[field]
+  const value = form.value[field]
   if (!touched.value[field] && !value) return
 
   switch (field) {
@@ -204,10 +194,6 @@ function validateField(field) {
     case 'password':
       if (!form.value.password) errors.value.password = t('auth.validation.passwordRequired')
       else delete errors.value.password
-      break
-    case 'identifier':
-      if (!pinForm.value.identifier.trim()) errors.value.identifier = t('auth.validation.identifierRequired')
-      else delete errors.value.identifier
       break
   }
 }
@@ -303,21 +289,13 @@ function pressClear() {
 
 /**
  * Performs the PIN sign-in, mirroring handleLogin's redirect and error
- * handling. Requires a non-empty identifier and a complete 4-digit PIN; on
- * failure the server message is surfaced and the PIN reset so it has to be
- * re-entered from scratch (iPOS behaviour).
+ * handling. Requires a complete 4-digit PIN; on failure the server message is
+ * surfaced and the PIN reset so it has to be re-entered from scratch (iPOS
+ * behaviour).
  * @returns {Promise<void>}
  */
 async function submitPin() {
   serverErrors.value = []
-  // Force the identifier error visible even when the field was never touched.
-  touched.value.identifier = true
-  validateField('identifier')
-  if (errors.value.identifier) {
-    // The user must fix the identifier first; drop the entered PIN as well.
-    pinForm.value.pin = ''
-    return
-  }
   if (pinForm.value.pin.length !== 4) {
     errors.value.pin = t('auth.validation.pinInvalid')
     return
@@ -325,7 +303,7 @@ async function submitPin() {
 
   loading.value = true
   try {
-    await authStore.loginPin({ identifier: pinForm.value.identifier.trim(), pin: pinForm.value.pin })
+    await authStore.loginPin({ pin: pinForm.value.pin })
     sessionStore.start()
     const redirect = route.query.redirect
     if (redirect) {

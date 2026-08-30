@@ -48,8 +48,8 @@
             <label>{{ $t('reports.stockCategory') }}</label>
             <select v-model="stockCategory" class="input" @change="loadStockLedger">
               <option value="">{{ $t('reports.allCategories') }}</option>
-              <option value="bar">Bar</option>
-              <option value="restaurant">Restaurant</option>
+              <option value="food">Food</option>
+              <option value="beverage">Beverage</option>
               <option value="housekeeping">Housekeeping</option>
               <option value="maintenance">Maintenance</option>
               <option value="procurement">Procurement</option>
@@ -164,8 +164,8 @@
             <label>{{ $t('reports.stockCategory') }}</label>
             <select v-model="stockCategory" class="input" @change="loadInventoryReport">
               <option value="">{{ $t('reports.allCategories') }}</option>
-              <option value="bar">Bar</option>
-              <option value="restaurant">Restaurant</option>
+              <option value="food">Food</option>
+              <option value="beverage">Beverage</option>
               <option value="housekeeping">Housekeeping</option>
               <option value="maintenance">Maintenance</option>
               <option value="procurement">Procurement</option>
@@ -598,7 +598,7 @@ function switchTab(tab) {
 // Ledger filters and result payload (items with movement rows plus totals).
 const stockFrom = ref(todayMinus(6))
 const stockTo = ref(today())
-const stockCategory = ref('bar')
+const stockCategory = ref('beverage')
 const stockIgnoreZero = ref(true)
 const stockData = ref({ items: [], totals: { opening_value: 0, closing_value: 0 } })
 const stockLoading = ref(false)

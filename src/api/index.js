@@ -103,7 +103,7 @@ export const authApi = {
   /**
    * Authenticates a user with their 4-digit staff PIN and returns the token + profile.
    * Mirrors login(); the response shape is identical to /auth/login.
-   * @param {object} data - PIN login credentials (identifier: username/email or registration number, pin: 4 digits).
+   * @param {object} data - PIN login credentials ({ pin: 4 digits }); an optional identifier is accepted by the API for legacy clients.
    * @returns {Promise} Axios response with token, user and permissions.
    */
   loginPin(data) {
@@ -941,9 +941,9 @@ export const inventoryApi = {
     return api.put(`${v1}/inventory/${id}`, data)
   },
   /**
-   * Records a stock adjustment (in/out) with a reason.
+   * Records a stock adjustment (in/out) with a note.
    * @param {string|number} id - Item identifier.
-   * @param {object} data - Adjustment payload (quantity, reason).
+   * @param {object} data - Adjustment payload (type, quantity, notes).
    * @returns {Promise} Axios response with the adjusted item.
    */
   adjust(id, data) {

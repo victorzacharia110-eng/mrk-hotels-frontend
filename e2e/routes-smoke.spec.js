@@ -20,9 +20,10 @@ const APP_ROUTES = [
 ]
 const STORE_ROUTES = [
   '', 'inventory', 'suppliers', 'requisitions', 'purchase-orders', 'goods-received',
-  'indents', 'market-lists', 'production', 'goods-returns', 'messages', 'pos', 'sales',
+  'indents', 'market-lists', 'production', 'goods-returns', 'messages',
   'categories', 'customers', 'reports', 'stock-movements', 'expenses', 'cash-register',
-  'discounts', 'transfers', 'stock-counts', 'low-stock', 'settings', 'activity-log', 'profile',
+  'discounts', 'transfers', 'stock-counts', 'low-stock', 'settings', 'activity-log',
+  'stock-adjust', 'profile',
 ]
 const CASHIER_ROUTES = ['dine-in', 'waiter-assignment', 'take-away', 'room-service', 'delivery', 'no-charge', 'order-summary', 'item-lookup', 'ingredients']
 const SUPERADMIN_ROUTES = ['', 'tenants', 'tenants/@id', 'reports', 'plans', 'integrations', 'profile']

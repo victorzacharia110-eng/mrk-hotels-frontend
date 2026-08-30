@@ -89,9 +89,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * Authenticates with a 4-digit staff PIN and stores the returned session.
-   * Mirrors login(); the identifier may be the user's username (email) or
-   * their registration number and the response shape is identical to /auth/login.
-   * @param {object} data - PIN login credentials (identifier, pin).
+   * Mirrors login(); the response shape is identical to /auth/login.
+   * @param {object} data - PIN login credentials ({ pin: 4 digits }).
    * @returns {Promise<object>} The login response payload.
    */
   async function loginPin(data) {

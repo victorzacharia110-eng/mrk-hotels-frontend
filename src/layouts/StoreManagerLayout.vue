@@ -13,12 +13,29 @@
       </router-link>
 
       <nav class="sm-nav">
-        <router-link v-for="item in navItems" :key="item.to" :to="item.to" class="sm-nav-link"
-          :class="{ active: isActive(item.to) }" :title="sidebarCollapsed ? $t(item.labelKey) : undefined"
-          @click="mobileOpen = false">
-          <i :class="item.icon" aria-hidden="true"></i>
-          <span v-show="!sidebarCollapsed">{{ $t(item.labelKey) }}</span>
-        </router-link>
+        <template v-for="item in navItems" :key="item.to">
+          <div v-if="item.children" class="sm-nav-group">
+            <button class="sm-nav-link sm-group" :class="{ active: groupActive(item), open: isOpen(item.labelKey) }"
+              @click="toggleGroup(item.labelKey)">
+              <i :class="item.icon" aria-hidden="true"></i>
+              <span v-show="!sidebarCollapsed">{{ $t(item.labelKey) }}</span>
+              <i v-show="!sidebarCollapsed" class="fas fa-chevron-down sm-chevron" aria-hidden="true"></i>
+            </button>
+            <div v-if="isOpen(item.labelKey) && !sidebarCollapsed" class="sm-subnav">
+              <router-link v-for="child in item.children" :key="child.to" :to="child.to" class="sm-nav-link sm-sub"
+                :class="{ active: isActive(child.to) }" @click="mobileOpen = false">
+                <i :class="child.icon || 'fas fa-angle-right'" aria-hidden="true"></i>
+                <span>{{ $t(child.labelKey) }}</span>
+              </router-link>
+            </div>
+          </div>
+          <router-link v-else :key="item.to" :to="item.to" class="sm-nav-link"
+            :class="{ active: isActive(item.to) }" :title="sidebarCollapsed ? $t(item.labelKey) : undefined"
+            @click="mobileOpen = false">
+            <i :class="item.icon" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t(item.labelKey) }}</span>
+          </router-link>
+        </template>
       </nav>
 
       <div class="sm-sidebar-footer">
@@ -78,46 +95,93 @@ watch(() => route.path, () => {
   mobileOpen.value = false
 })
 
-// Module navigation of the store manager panel.
+// Module navigation of the store manager panel, following the client's
+// requested menu: Dashboard, Purchase Orders, GRN, Expenses, Cash Register,
+// Reports, Department Indents, Inventory and Back Office. Reports, Inventory
+// and Back Office are expandable groups.
 const navItems = [
   { to: '/store-manager', icon: 'fas fa-gauge-high', labelKey: 'storeManager.nav.dashboard' },
-  { to: '/store-manager/pos', icon: 'fas fa-cash-register', labelKey: 'storeManager.nav.pos' },
-  { to: '/store-manager/sales', icon: 'fas fa-receipt', labelKey: 'storeManager.nav.sales' },
-  { to: '/store-manager/inventory', icon: 'fas fa-boxes-stacked', labelKey: 'storeManager.nav.inventory' },
-  { to: '/store-manager/categories', icon: 'fas fa-tags', labelKey: 'storeManager.nav.categories' },
-  { to: '/store-manager/low-stock', icon: 'fas fa-triangle-exclamation', labelKey: 'storeManager.nav.lowStock' },
-  { to: '/store-manager/stock-movements', icon: 'fas fa-arrows-rotate', labelKey: 'storeManager.nav.movements' },
-  { to: '/store-manager/stock-counts', icon: 'fas fa-clipboard-list', labelKey: 'storeManager.nav.stockCounts' },
-  { to: '/store-manager/transfers', icon: 'fas fa-truck-arrow-right', labelKey: 'storeManager.nav.transfers' },
-  { to: '/store-manager/indents', icon: 'fas fa-file-import', labelKey: 'storeManager.nav.indents' },
-  { to: '/store-manager/market-lists', icon: 'fas fa-basket-shopping', labelKey: 'storeManager.nav.marketLists' },
-  { to: '/store-manager/production', icon: 'fas fa-industry', labelKey: 'storeManager.nav.production' },
-  { to: '/store-manager/goods-returns', icon: 'fas fa-rotate-left', labelKey: 'storeManager.nav.goodsReturns' },
-  { to: '/store-manager/suppliers', icon: 'fas fa-truck', labelKey: 'storeManager.nav.suppliers' },
-  { to: '/store-manager/requisitions', icon: 'fas fa-file-signature', labelKey: 'storeManager.nav.requisitions' },
   { to: '/store-manager/purchase-orders', icon: 'fas fa-file-invoice', labelKey: 'storeManager.nav.purchaseOrders' },
   { to: '/store-manager/goods-received', icon: 'fas fa-clipboard-check', labelKey: 'storeManager.nav.goodsReceived' },
-  { to: '/store-manager/customers', icon: 'fas fa-users', labelKey: 'storeManager.nav.customers' },
-  { to: '/store-manager/discounts', icon: 'fas fa-percent', labelKey: 'storeManager.nav.discounts' },
   { to: '/store-manager/expenses', icon: 'fas fa-money-bill-wave', labelKey: 'storeManager.nav.expenses' },
   { to: '/store-manager/cash-register', icon: 'fas fa-vault', labelKey: 'storeManager.nav.cashRegister' },
-  { to: '/store-manager/reports', icon: 'fas fa-chart-line', labelKey: 'storeManager.nav.reports' },
-  { to: '/store-manager/activity-log', icon: 'fas fa-list-check', labelKey: 'storeManager.nav.activityLog' },
-  { to: '/store-manager/settings', icon: 'fas fa-gear', labelKey: 'storeManager.nav.settings' },
-  { to: '/store-manager/messages', icon: 'fas fa-comments', labelKey: 'storeManager.nav.messages' },
-  { to: '/store-manager/profile', icon: 'fas fa-user-circle', labelKey: 'storeManager.nav.profile' },
+  {
+    to: '/store-manager/reports',
+    icon: 'fas fa-chart-line',
+    labelKey: 'storeManager.nav.reports',
+    children: [
+      { to: '/store-manager/reports?view=ledger-summary', labelKey: 'storeManager.reports.stockLedger' },
+      { to: '/store-manager/reports?view=transfer-register', labelKey: 'storeManager.reports.transferSummary' },
+      { to: '/store-manager/reports?view=movement-detail', labelKey: 'storeManager.reports.movementDetail' },
+      { to: '/store-manager/reports?view=stock-take-detail', labelKey: 'storeManager.reports.physicalStock' },
+      { to: '/store-manager/reports?view=closing-stock', labelKey: 'storeManager.reports.closingStock' },
+      { to: '/store-manager/reports?view=goods-return-register', labelKey: 'storeManager.reports.goodsReturns' },
+    ],
+  },
+  { to: '/store-manager/indents', icon: 'fas fa-file-import', labelKey: 'storeManager.nav.indents' },
+  {
+    to: '/store-manager/inventory',
+    icon: 'fas fa-boxes-stacked',
+    labelKey: 'storeManager.nav.inventory',
+    children: [
+      { to: '/store-manager/low-stock', labelKey: 'storeManager.nav.lowStock' },
+      { to: '/store-manager/stock-movements', labelKey: 'storeManager.nav.movements' },
+      { to: '/store-manager/transfers', labelKey: 'storeManager.nav.transfers' },
+      { to: '/store-manager/stock-counts', labelKey: 'storeManager.nav.stockCounts' },
+      { to: '/store-manager/stock-adjust', labelKey: 'storeManager.nav.stockAdjust' },
+    ],
+  },
+  {
+    to: '/store-manager/back-office',
+    icon: 'fas fa-address-book',
+    labelKey: 'storeManager.nav.backOffice',
+    children: [
+      { to: '/store-manager/suppliers', labelKey: 'storeManager.nav.suppliers' },
+    ],
+  },
 ]
+
+// Sidebar groups currently expanded.
+const openGroups = ref(new Set())
+
+function isOpen(labelKey) {
+  return openGroups.value.has(labelKey)
+}
+
+function toggleGroup(labelKey) {
+  const next = new Set(openGroups.value)
+  if (next.has(labelKey)) next.delete(labelKey)
+  else next.add(labelKey)
+  openGroups.value = next
+}
+
+function groupActive(item) {
+  return item.children.some((child) => isActive(child.to))
+}
+
+// Active-link test. Leaf targets match exactly on path (+ query view when a
+// Reports child carries one); groups share their page's path.
+function isActive(target) {
+  const [path, qs] = target.split('?')
+  if (path !== route.path) return false
+  if (!qs) return true
+  return new URLSearchParams(qs).get('view') === route.query.view
+}
+
+watch(() => route.query, () => {
+  // Auto-expand whichever group contains the active route.
+  const next = new Set(openGroups.value)
+  for (const item of navItems) {
+    if (item.children && item.children.some((child) => isActive(child.to))) next.add(item.labelKey)
+  }
+  openGroups.value = next
+}, { immediate: true })
 
 const pageTitle = computed(() => (route.meta.titleKey ? t(route.meta.titleKey) : t('storeManager.panelTitle')))
 const userInitials = computed(() => {
   const name = authStore.user?.name || ''
   return name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || 'SM'
 })
-
-function isActive(to) {
-  if (to === '/store-manager') return route.path === to
-  return route.path.startsWith(to)
-}
 
 async function handleLogout() {
   await authStore.logout()
@@ -208,6 +272,18 @@ async function handleLogout() {
   box-shadow: 0 4px 14px rgba(6, 42, 82, 0.45);
   border-left: 3px solid var(--mrk-blue-bright, #1269bd);
 }
+.sm-nav-group { display: flex; flex-direction: column; gap: 2px; }
+.sm-chevron { margin-left: auto; transition: transform 0.2s ease; }
+.sm-group.open .sm-chevron { transform: rotate(180deg); }
+.sm-subnav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: 10px;
+  padding-left: 10px;
+  border-left: 2px solid rgba(255, 255, 255, 0.18);
+}
+.sm-nav-link.sm-sub { padding: 9px 12px; font-size: 13px; font-weight: 500; }
 .sm-sidebar-footer { padding: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
 .sm-logout:hover { background: rgba(220, 38, 38, 0.2); color: #fca5a5; }
 .sm-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }

@@ -1140,7 +1140,7 @@ const printedBy = computed(
 )
 
 // Inventory categories offered by the backend filter.
-const ledgerCategories = ['bar', 'restaurant', 'housekeeping', 'maintenance', 'procurement', 'other']
+const ledgerCategories = ['food', 'beverage', 'housekeeping', 'maintenance', 'procurement', 'other']
 
 // The stock ledger is an inventory/procurement function — receptionists and
 // other front-desk roles never see it (matches the inventory module matrix).
