@@ -189,11 +189,11 @@
             </div>
           </div>
           <div class="nav-right">
-            <button v-if="isAppMode && notifStore.unreadCount > 0" class="nav-bell"
-              @click="showNotifDropdown = !showNotifDropdown"
+            <button v-if="isAppMode" class="nav-bell"
+              @click="toggleNotifDropdown"
               :aria-label="$t('notifications.unreadCount', { count: notifStore.unreadCount })">
               <i class="fas fa-bell"></i>
-              <span class="nav-bell-badge">{{ notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount }}</span>
+              <span v-if="notifStore.unreadCount > 0" class="nav-bell-badge">{{ notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount }}</span>
             </button>
             <span v-if="isAppMode" class="nav-text"><i class="fas fa-user-shield" aria-hidden="true"></i> {{ roleLabel
             }}</span>
@@ -257,14 +257,10 @@
           </template>
         </nav>
         <div class="drawer-foot">
-          <button
-            v-if="notifStore.unreadCount > 0"
-            class="drawer-link drawer-notif"
-            @click="showNotifDropdown = true; sideOpen = false"
-          >
+          <button class="drawer-link drawer-notif" @click="toggleNotifDropdown(); sideOpen = false">
             <i class="fas fa-bell" aria-hidden="true"></i>
             {{ $t('notifications.title') }}
-            <span class="drawer-notif-badge">{{ notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount }}</span>
+            <span v-if="notifStore.unreadCount > 0" class="drawer-notif-badge">{{ notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount }}</span>
           </button>
           <router-link :to="{ name: 'public-home' }" class="drawer-link" @click="sideOpen = false">
             <i class="fas fa-store" aria-hidden="true"></i> {{ $t('nav.portal') }}
@@ -307,6 +303,17 @@
                 <i class="fas fa-xmark"></i>
               </button>
             </div>
+          </div>
+          <div v-if="notifStore.notifications.length" class="notif-section">
+            <p class="notif-section-label">{{ $t('notifications.recent') }}</p>
+            <button v-for="notif in notifStore.notifications" :key="notif.id" type="button"
+              class="notif-item notif-item-btn" @click="notifStore.markRead(notif.id)">
+              <div class="notif-item-body">
+                <strong class="notif-item-title">{{ notif.title }}</strong>
+                <p class="notif-item-text">{{ notif.body }}</p>
+                <span class="notif-item-time">{{ formatNotifTime(notif.created_at) }}</span>
+              </div>
+            </button>
           </div>
           <p v-if="!notifStore.alerts.length && !notifStore.notifications.length" class="notif-empty">
             {{ $t('notifications.noNotifications') }}
@@ -432,6 +439,16 @@ const navOpen = ref(false)
 // Staff drawer (hamburger menu) open state — collapsed by default.
 const sideOpen = ref(false)
 const showNotifDropdown = ref(false)
+
+/** Open/close the notification dropdown, refreshing counts and the list. */
+function toggleNotifDropdown() {
+  showNotifDropdown.value = !showNotifDropdown.value
+  if (showNotifDropdown.value) {
+    notifStore.fetchCounts()
+    notifStore.fetchAlerts()
+    notifStore.fetchNotifications({ per_page: 20 })
+  }
+}
 const searchQuery = ref(Array.isArray(route.query.search) ? route.query.search[0] : (route.query.search || ''))
 // Nav accordion groups that are currently expanded (e.g. Night Audit).
 const openAccordions = ref(new Set())
@@ -1882,6 +1899,15 @@ function formatNotifTime(iso) {
 
 .notif-item:hover {
   background: #f1f5f9;
+}
+
+.notif-item-btn {
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .notif-item--alert {
