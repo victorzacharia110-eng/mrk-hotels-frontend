@@ -1166,6 +1166,8 @@
     "deleteSuccess": "{name} deleted.",
     "toggled": "{name} is now {status}.",
     "deleteMessage": "Delete the outlet {name}? Orders already placed are kept, but this removes the outlet permanently.",
+    "deleteTitle": "Delete Outlet",
+    "deleteConfirmLabel": "Delete Outlet",
     "empty": "No outlets yet. Create one — cashiers need an outlet before taking orders."
   },
   "orders": {

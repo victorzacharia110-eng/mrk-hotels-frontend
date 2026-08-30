@@ -1166,6 +1166,8 @@
     "deleteSuccess": "{name} imefutwa.",
     "toggled": "{name} sasa ni {status}.",
     "deleteMessage": "Futa sehemu {name}? Maagizo yaliyowekwa tayari yanahifadhiwa, lakini hii inaiondoa kabisa.",
+    "deleteTitle": "Futa Sehemu",
+    "deleteConfirmLabel": "Futa Sehemu",
     "empty": "Hakuna sehemu bado. Unda moja — cashier anahitaji sehemu kabla ya kupokea maagizo."
   },
   "orders": {

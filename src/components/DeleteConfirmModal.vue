@@ -9,6 +9,7 @@
     count       - number of rows being deleted
     word        - the CAPS word to type (default "DELETE")
     busy        - disables the confirm button while deleting
+    confirmLabel- text for the confirm button (default: common.deleteSelected)
 
   Emits:
     update:modelValue, confirm, cancel
@@ -51,7 +52,7 @@
         </button>
         <button type="button" class="btn btn-danger" :disabled="!matched || busy" @click="submit">
           <i class="fas fa-trash"></i>
-          {{ busy ? $t('common.deleting') : $t('common.deleteSelected') }}
+          {{ busy ? $t('common.deleting') : (confirmLabel || $t('common.deleteSelected')) }}
         </button>
       </div>
     </div>
@@ -68,6 +69,7 @@ const props = defineProps({
   count: { type: Number, default: 0 },
   word: { type: String, default: 'DELETE' },
   busy: { type: Boolean, default: false },
+  confirmLabel: { type: String, default: '' },
 })
 
 const emit = defineEmits(['update:modelValue', 'confirm', 'cancel'])

@@ -56,7 +56,7 @@
                 <button class="btn btn-sm btn-secondary" @click="openEdit(outlet)">
                   <i class="fas fa-pen"></i>
                 </button>
-                <button class="btn btn-sm btn-danger" @click="remove(outlet)">
+                <button class="btn btn-sm btn-danger" @click="askDelete(outlet)">
                   <i class="fas fa-trash-can"></i>
                 </button>
               </div>
@@ -103,6 +103,16 @@
         </form>
       </div>
     </div>
+
+    <DeleteConfirmModal
+      v-model="showDelete"
+      :title="t('outlets.deleteTitle')"
+      :message="t('outlets.deleteMessage', { name: pendingDelete?.name })"
+      :confirm-label="t('outlets.deleteConfirmLabel')"
+      :busy="deleting"
+      @confirm="confirmDelete"
+      @cancel="pendingDelete = null"
+    />
   </div>
 </template>
 
@@ -112,6 +122,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { outletApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -140,6 +151,10 @@ const editingId = ref(null)
 const saving = ref(false)
 const modalError = ref('')
 const form = reactive({ name: '', type: 'restaurant' })
+
+const showDelete = ref(false)
+const pendingDelete = ref(null)
+const deleting = ref(false)
 
 async function load() {
   loading.value = true
@@ -212,15 +227,25 @@ async function toggleActive(outlet) {
   }
 }
 
-async function remove(outlet) {
-  if (!window.confirm(t('outlets.deleteMessage', { name: outlet.name }))) return
+function askDelete(outlet) {
+  pendingDelete.value = outlet
+  showDelete.value = true
+}
+
+async function confirmDelete() {
+  if (!pendingDelete.value) return
   error.value = ''
+  deleting.value = true
   try {
-    await outletApi.destroy(outlet.outlet_id)
-    success.value = t('outlets.deleteSuccess', { name: outlet.name })
+    await outletApi.destroy(pendingDelete.value.outlet_id)
+    success.value = t('outlets.deleteSuccess', { name: pendingDelete.value.name })
+    showDelete.value = false
+    pendingDelete.value = null
     await load()
   } catch (err) {
     error.value = flattenError(err)
+  } finally {
+    deleting.value = false
   }
 }
 
