@@ -284,6 +284,14 @@
     margin: 1mm 0;
   }
 
+  .receipt-print .print-logo {
+    display: block;
+    max-height: 28mm;
+    max-width: 80mm;
+    object-fit: contain;
+    margin: 3mm auto;
+  }
+
   .receipt-print p {
     margin: 1mm 0;
     font-size: 18px;

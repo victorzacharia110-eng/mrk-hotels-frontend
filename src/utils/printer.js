@@ -212,16 +212,85 @@ export async function disconnectPrinter() {
 }
 
 /**
- * Writes a set of receipt lines to the connected printer.
+ * Scales a logo down to a monochrome raster the thermal printer can draw and
+ * returns the ESC/POS "GS v 0" byte block that prints it.
  *
- * @param {Array<Array<string|boolean>>} lines  [text, bold?] rows.
+ * Transparent pixels become white; everything dark becomes a printed dot.
+ * Widths in dots: 384 for a 58mm roll, 576 for 80mm.
+ *
+ * @param {string} src  Logo URL. Must be same-origin or CORS-enabled.
+ * @param {number} [width]  Target width in printer dots.
+ * @returns {Promise<Uint8Array>} The raster command block.
+ */
+export async function rasterLogoBytes(src, width = 384) {
+  const image = await new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new Error('Could not load the logo for printing.'))
+    img.src = src
+  })
+
+  const scale = width / image.width
+  const height = Math.max(1, Math.round(image.height * scale))
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, width, height)
+  ctx.drawImage(image, 0, 0, width, height)
+  const { data } = ctx.getImageData(0, 0, width, height)
+
+  const rowBytes = Math.ceil(width / 8)
+  const out = []
+  for (let y = 0; y < height; y += 1) {
+    for (let col = 0; col < rowBytes; col += 1) {
+      let byte = 0
+      for (let bit = 0; bit < 8; bit += 1) {
+        const x = col * 8 + bit
+        // LSB-first: bit 0 is the leftmost dot.
+        if (x < width) {
+          const a = data[(y * width + x) * 4 + 3]
+          const lum = data[(y * width + x) * 4] * 0.299 + data[(y * width + x) * 4 + 1] * 0.587 + data[(y * width + x) * 4 + 2] * 0.114
+          if (a > 128 && lum < 140) {
+            byte |= 1 << bit
+          }
+        }
+      }
+      out.push(byte)
+    }
+  }
+
+  const heightBytes = out.length / rowBytes
+  const block = [
+    0x1d, 0x76, 0x30, 0x00, // GS v 0, m = normal raster
+    rowBytes & 0xff, rowBytes >> 8, // xL xH
+    heightBytes & 0xff, heightBytes >> 8, // yL yH
+    ...out,
+  ]
+  return Uint8Array.from(block)
+}
+
+/**
+ * Writes a set of receipt lines (plus an optional raster logo) to the
+ * connected printer.
+ *
+ * @param {Array<Array<string|boolean|number>>} lines  [text, bold?, size?] rows.
+ * @param {object} [opts]  Options.
+ * @param {string} [opts.logo]  Logo URL to raster a store brand on top of the sheet.
  * @returns {Promise<boolean>} True when the job was sent to the printer.
  */
-export async function printToPrinter(lines) {
+export async function printToPrinter(lines, opts = {}) {
   if (!port || !port.writable) return false
   try {
+    const raster = opts.logo ? await rasterLogoBytes(opts.logo) : null
+    const text = buildRecipt(lines)
+    const merged = new Uint8Array((raster ? raster.length : 0) + text.length)
+    if (raster) merged.set(raster, 0)
+    merged.set(text, raster ? raster.length : 0)
+
     const writer = port.writable.getWriter()
-    await writer.write(buildRecipt(lines))
+    await writer.write(merged)
     writer.releaseLock()
     return true
   } catch {

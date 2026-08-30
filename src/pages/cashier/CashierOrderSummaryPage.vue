@@ -138,12 +138,13 @@
     <!-- Printable receipt / KOT (hidden on screen, visible in print). -->
     <div ref="printArea" class="receipt-print">
       <template v-if="printing">
-        <div>
-          <h2 class="print-brand">{{ printing.kind === 'kot' ? 'KITCHEN ORDER TICKET' : 'MRK HOTELS' }}</h2>
-          <p class="print-sub">{{ printing.order.order_number }} — {{ printing.order.outlet_name || '' }}</p>
-          <p>Table: {{ printing.order.table_number || printing.order.room_number || '-' }} |
-            Waiter: {{ printing.order.waiter_name || '-' }}</p>
-        </div>
+<div>
+  <h2 class="print-brand">{{ printing.kind === 'kot' ? 'KITCHEN ORDER TICKET' : 'MRK HOTELS' }}</h2>
+  <img v-if="logoUrl" :src="logoUrl" alt="Hotel logo" class="print-logo" />
+  <p class="print-sub">{{ printing.order.order_number }} — {{ printing.order.outlet_name || '' }}</p>
+  <p>Table: {{ printing.order.table_number || printing.order.room_number || '-' }} |
+    Waiter: {{ printing.order.waiter_name || '-' }}</p>
+</div>
 
         <hr v-if="printing.kind !== 'kot'" />
 
@@ -176,7 +177,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { cashierApi, orderApi } from '@/api'
+import { cashierApi, orderApi, hotelSettingsApi } from '@/api'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import { PAYMENT_METHODS } from '@/utils/payments'
@@ -184,6 +185,17 @@ import { printToPrinter, restorePrinter } from '@/utils/printer'
 import { displayLines } from '@/utils/receipts'
 
 const { t, te } = useI18n()
+
+/** Hotel logo shown on receipts (per-hotel if set, else the generic mark). */
+const logoUrl = ref('')
+async function loadLogo() {
+  try {
+    const { data } = await hotelSettingsApi.show()
+    logoUrl.value = data?.hotel?.logo_url || ''
+  } catch {
+    logoUrl.value = ''
+  }
+}
 
 const orders = ref([])
 const error = ref('')
@@ -345,7 +357,7 @@ async function confirmPay() {
 }
 
 async function doPrint(order, kind) {
-  const sent = await printToPrinter(displayLines(order, kind))
+  const sent = await printToPrinter(displayLines(order, kind), { logo: logoUrl.value })
   if (sent) return
   printing.value = { order, kind }
   requestAnimationFrame(() => {
@@ -372,6 +384,7 @@ async function reprintKot(order) {
 
 onMounted(() => {
   load()
+  loadLogo()
   restorePrinter()
 })
 </script>
