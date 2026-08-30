@@ -53,6 +53,14 @@
         </button>
         <h1 class="sm-page-title">{{ pageTitle }}</h1>
         <div class="sm-topbar-right">
+          <button class="sm-icon-btn sm-notif-bell" :title="$t('notifications.title')"
+            :aria-label="$t('notifications.unreadCount', { count: notifStore.unreadCount })"
+            @click="toggleNotifDropdown">
+            <i class="fas fa-bell" aria-hidden="true"></i>
+            <span v-if="notifStore.unreadCount > 0" class="sm-notif-badge">
+              {{ notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount }}
+            </span>
+          </button>
           <router-link :to="{ name: 'store-messages' }" class="sm-icon-btn" :title="$t('storeManager.nav.messages')">
             <i class="fas fa-comments" aria-hidden="true"></i>
           </router-link>
@@ -70,21 +78,68 @@
         <router-view />
       </main>
     </div>
+
+    <!-- Notification dropdown panel -->
+    <div v-if="showNotifDropdown" class="notif-dropdown" @click.self="showNotifDropdown = false">
+      <div class="notif-panel">
+        <div class="notif-panel-head">
+          <h3>{{ $t('notifications.title') }}</h3>
+          <button v-if="notifStore.unreadCount > 0" class="notif-mark-all" @click="notifStore.markAllRead()">
+            {{ $t('notifications.markAllRead') }}
+          </button>
+        </div>
+        <div class="notif-panel-body">
+          <div v-if="notifStore.alerts.length" class="notif-section">
+            <p class="notif-section-label">{{ $t('notifications.needsAction') }}</p>
+            <div v-for="alert in notifStore.alerts" :key="alert.id" class="notif-item notif-item--alert">
+              <div class="notif-item-body">
+                <strong class="notif-item-title">{{ alert.title }}</strong>
+                <p class="notif-item-text">{{ alert.body }}</p>
+                <span class="notif-item-time">{{ formatNotifTime(alert.created_at) }}</span>
+              </div>
+              <button class="notif-item-dismiss" @click="notifStore.dismissAlert(alert.id)" :aria-label="$t('common.close')">
+                <i class="fas fa-xmark"></i>
+              </button>
+            </div>
+          </div>
+          <div v-if="notifStore.notifications.length" class="notif-section">
+            <p class="notif-section-label">{{ $t('notifications.recent') }}</p>
+            <button v-for="notif in notifStore.notifications" :key="notif.id" class="notif-item notif-item--read"
+              type="button" @click="notifStore.markRead(notif.id)">
+              <div class="notif-item-body">
+                <strong class="notif-item-title">{{ notif.title }}</strong>
+                <p class="notif-item-text">{{ notif.body }}</p>
+                <span class="notif-item-time">{{ formatNotifTime(notif.created_at) }}</span>
+              </div>
+            </button>
+          </div>
+          <p v-if="!notifStore.alerts.length && !notifStore.notifications.length" class="notif-empty">
+            {{ $t('notifications.noNotifications') }}
+          </p>
+        </div>
+        <div class="notif-panel-foot">
+          <button class="notif-close" @click="showNotifDropdown = false">{{ $t('common.close') }}</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useNotificationStore } from '@/stores/notifications'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 const authStore = useAuthStore()
+const notifStore = useNotificationStore()
 const sidebarCollapsed = ref(false)
 const mobileOpen = ref(false)
+const showNotifDropdown = ref(false)
 
 function toggleSidebar() {
   if (window.matchMedia('(max-width: 900px)').matches) mobileOpen.value = !mobileOpen.value
@@ -187,6 +242,38 @@ async function handleLogout() {
   await authStore.logout()
   router.push({ name: 'login' })
 }
+
+/** Open/close the notification dropdown, refreshing counts and the list. */
+function toggleNotifDropdown() {
+  showNotifDropdown.value = !showNotifDropdown.value
+  if (showNotifDropdown.value) {
+    notifStore.fetchCounts()
+    notifStore.fetchAlerts()
+    notifStore.fetchNotifications({ per_page: 20 })
+  }
+}
+
+/** Format a notification timestamp as a relative or absolute time string. */
+function formatNotifTime(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const now = new Date()
+  const diffMs = now - d
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return 'Just now'
+  if (diffMin < 60) return `${diffMin}m ago`
+  const diffHr = Math.floor(diffMin / 60)
+  if (diffHr < 24) return `${diffHr}h ago`
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+onMounted(() => {
+  notifStore.init()
+})
+
+onUnmounted(() => {
+  notifStore.destroy()
+})
 </script>
 
 <style>
@@ -351,4 +438,153 @@ async function handleLogout() {
   .sm-user-meta { display: none; }
   .sm-page-title { font-size: 16px; }
 }
+
+/* --- Notification bell & dropdown --- */
+.sm-notif-bell { position: relative; }
+.sm-notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
+}
+.notif-dropdown {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+}
+.notif-panel {
+  position: absolute;
+  top: 60px;
+  right: 16px;
+  width: 380px;
+  max-height: 70vh;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.notif-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.notif-panel-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.notif-mark-all {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.notif-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+.notif-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.04em;
+  padding: 4px 8px;
+  margin: 0;
+}
+.notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  transition: background 0.1s;
+}
+.notif-item:hover { background: #f1f5f9; }
+.notif-item--alert {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+.notif-item--alert:hover { background: #fef3c7; }
+.notif-item--read {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+.notif-item-body { flex: 1; min-width: 0; }
+.notif-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  display: block;
+}
+.notif-item-text {
+  font-size: 12px;
+  color: #64748b;
+  margin: 2px 0 0;
+  line-height: 1.4;
+}
+.notif-item-time {
+  font-size: 11px;
+  color: #94a3b8;
+}
+.notif-item-dismiss {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.notif-item-dismiss:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #64748b;
+}
+.notif-empty {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+  padding: 24px 16px;
+  margin: 0;
+}
+.notif-panel-foot {
+  padding: 10px 16px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+}
+.notif-close {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.notif-close:hover { background: #f1f5f9; }
 </style>
