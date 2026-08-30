@@ -14,10 +14,10 @@
       <div class="top-bar">
         <div class="container top-bar-inner">
           <div class="top-bar-left">
-            <span><i class="fas fa-phone" aria-hidden="true"></i> +255 700 000 000</span>
-            <span><i class="fas fa-envelope" aria-hidden="true"></i> bookings@mrkhotels.com</span>
+            <span><i class="fas fa-phone" aria-hidden="true"></i> {{ contactPhone }}</span>
+            <span><i class="fas fa-envelope" aria-hidden="true"></i> {{ contactEmail }}</span>
             <span><i class="fas fa-location-dot" aria-hidden="true"></i>
-              {{ $t('topBar.location') }}</span>
+              {{ contactLocation }}</span>
           </div>
           <div class="top-bar-right" v-if="!isAppMode">
             <span class="top-bar-tagline"><i class="fas fa-hotel" aria-hidden="true"></i> {{ $t('topBar.tagline')
@@ -374,9 +374,9 @@
         </div>
         <div>
           <h4>{{ $t('footer.contact') }}</h4>
-          <p><i class="fas fa-phone" aria-hidden="true"></i> +255 700 000 000</p>
-          <p><i class="fas fa-envelope" aria-hidden="true"></i> bookings@mrkhotels.com</p>
-          <p><i class="fas fa-location-dot" aria-hidden="true"></i> {{ $t('topBar.location') }}</p>
+          <p><i class="fas fa-phone" aria-hidden="true"></i> {{ contactPhone }}</p>
+          <p><i class="fas fa-envelope" aria-hidden="true"></i> {{ contactEmail }}</p>
+          <p><i class="fas fa-location-dot" aria-hidden="true"></i> {{ contactLocation }}</p>
         </div>
       </div>
       <div class="footer-bottom">
@@ -416,6 +416,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { publicApi } from '@/api'
 import { MODULES } from '@/config/modules'
 import { clearOwnerHotel, ownerHotelId, ownerHotelName } from '@/utils/ownerView'
 import { useHoliday } from '@/composables/useHoliday'
@@ -485,6 +486,46 @@ const hotelName = computed(() =>
     : authStore.user?.tenant?.hotel_name || 'MRK Hotels',
 )
 const roleLabel = computed(() => ROLE_LABELS[authStore.user?.user_role] || 'Staff')
+
+// Per-hotel public contact details: the top bar and footer show the currently
+// viewed hotel's stored phone/email/location when browsing its public pages,
+// falling back to the platform's own details elsewhere.
+const currentHotel = ref(null)
+const contactLoading = ref(false)
+
+/**
+ * The tenant id of the hotel currently being browsed on the public pages,
+ * or null when there is no single-hotel context (directory, auth screens...).
+ */
+const hotelContextId = computed(() => {
+  if (route.name === 'public-hotel') return route.params.id
+  if (route.name === 'public-booking') return route.query.hotel_id
+  return null
+})
+
+const contactPhone = computed(() => currentHotel.value?.phone || '+255 700 000 000')
+const contactEmail = computed(() => currentHotel.value?.email || 'bookings@mrkhotels.com')
+const contactLocation = computed(() => {
+  if (currentHotel.value) {
+    const parts = [currentHotel.value.address, currentHotel.value.city, currentHotel.value.country].filter(Boolean)
+    return parts.length ? parts.join(', ') : t('topBar.location')
+  }
+  return t('topBar.location')
+})
+
+watch(hotelContextId, async (id) => {
+  currentHotel.value = null
+  if (!id) return
+  contactLoading.value = true
+  try {
+    const res = await publicApi.hotelShow(id)
+    currentHotel.value = res.data.hotel
+  } catch {
+    currentHotel.value = null
+  } finally {
+    contactLoading.value = false
+  }
+}, { immediate: true })
 
 // Owner hotel-switching: an owner browsing one of their hotels, read-only.
 const viewingHotelName = computed(() => ownerHotelName() || '—')

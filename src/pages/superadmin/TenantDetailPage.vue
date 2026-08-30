@@ -68,6 +68,46 @@
       </div>
     </div>
 
+    <!-- Hotel business details: the name and contact info shown to guests on
+         the hotel's public pages (details, booking form, footer) -->
+    <div class="card">
+      <h2 class="card-title"><i class="fas fa-building"></i> {{ $t('hotelSettings.title') }}</h2>
+      <p class="muted">{{ $t('hotelSettings.hint') }}</p>
+      <form @submit.prevent="saveContact" class="sub-form">
+        <div class="form-group">
+          <label>{{ $t('hotelSettings.hotelName') }}</label>
+          <input v-model.trim="contactForm.hotel_name" type="text" class="input" required />
+        </div>
+        <div class="form-group">
+          <label>{{ $t('hotelSettings.contactPerson') }}</label>
+          <input v-model.trim="contactForm.contact_person" type="text" class="input" />
+        </div>
+        <div class="form-group">
+          <label>{{ $t('hotelSettings.email') }}</label>
+          <input v-model.trim="contactForm.email" type="email" class="input" />
+        </div>
+        <div class="form-group">
+          <label>{{ $t('hotelSettings.phone') }}</label>
+          <input v-model.trim="contactForm.phone" type="text" class="input" />
+        </div>
+        <div class="form-group">
+          <label>{{ $t('hotelSettings.city') }}</label>
+          <input v-model.trim="contactForm.city" type="text" class="input" />
+        </div>
+        <div class="form-group">
+          <label>{{ $t('hotelSettings.country') }}</label>
+          <input v-model.trim="contactForm.country" type="text" class="input" />
+        </div>
+        <div class="form-group">
+          <label>{{ $t('hotelSettings.address') }}</label>
+          <input v-model.trim="contactForm.address" type="text" class="input" />
+        </div>
+        <button class="btn" :disabled="savingContact">
+          {{ savingContact ? $t('common.saving') : $t('superadmin.updateTenant') }}
+        </button>
+      </form>
+    </div>
+
     <!-- Subscription plan and status management -->
     <div class="card">
       <h2 class="card-title">{{ $t('superadmin.subscription') }}</h2>
@@ -312,6 +352,8 @@ const subForm = ref({ subscription_plan: 'trial', subscription_status: 'active' 
 const taxForm = ref({ tin: '', vrn: '' })
 const codeForm = ref({ registration_code: '' })
 const codeSaving = ref(false)
+const contactForm = ref({ hotel_name: '', contact_person: '', email: '', phone: '', address: '', city: '', country: '' })
+const savingContact = ref(false)
 const brandingFiles = ref({ signature: null, stamp: null })
 const owners = ref([])
 const ownerForm = ref({ owner_id: '' })
@@ -460,6 +502,13 @@ async function load() {
     taxForm.value.tin = tenant.value.tin || ''
     taxForm.value.vrn = tenant.value.vrn || ''
     codeForm.value.registration_code = tenant.value.registration_code || ''
+    contactForm.value.hotel_name = tenant.value.hotel_name || ''
+    contactForm.value.contact_person = tenant.value.contact_person || ''
+    contactForm.value.email = tenant.value.email || ''
+    contactForm.value.phone = tenant.value.phone || ''
+    contactForm.value.address = tenant.value.address || ''
+    contactForm.value.city = tenant.value.city || ''
+    contactForm.value.country = tenant.value.country || ''
     ownerForm.value.owner_id = tenant.value.owner_id || ''
     paymentForm.value.methods =
       tenant.value.payment_methods && tenant.value.payment_methods.length
@@ -517,6 +566,32 @@ async function saveTaxDetails() {
     error.value = err.response?.data?.message || t('superadmin.taxDetailsSaveError')
   } finally {
     savingTax.value = false
+  }
+}
+
+/** Saves the hotel's business name and public contact details. */
+async function saveContact() {
+  savingContact.value = true
+  error.value = ''
+  try {
+    const res = await tenantApi.update(route.params.id, {
+      hotel_name: contactForm.value.hotel_name || null,
+      contact_person: contactForm.value.contact_person || null,
+      email: contactForm.value.email || null,
+      phone: contactForm.value.phone || null,
+      address: contactForm.value.address || null,
+      city: contactForm.value.city || null,
+      country: contactForm.value.country || null,
+    })
+    const updated = res.data.tenant || res.data.data || res.data
+    ;['hotel_name', 'contact_person', 'email', 'phone', 'address', 'city', 'country'].forEach((key) => {
+      if (updated[key] !== undefined) tenant.value[key] = updated[key]
+    })
+    window.alert(res.data.message || t('superadmin.updateSuccess'))
+  } catch (err) {
+    error.value = err.response?.data?.message || t('superadmin.updateError')
+  } finally {
+    savingContact.value = false
   }
 }
 
