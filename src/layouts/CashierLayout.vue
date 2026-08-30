@@ -116,6 +116,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { outletApi } from '@/api'
 import { selectedOutlet } from '@/pages/cashier/outlet-context'
+import { restorePrinter } from '@/utils/printer'
 
 const OUTLET_KEY = 'cashier_outlet'
 
@@ -182,7 +183,10 @@ async function handleLogout() {
   router.push({ name: 'login' })
 }
 
-onMounted(loadOutlets)
+onMounted(() => {
+  loadOutlets()
+  restorePrinter()
+})
 </script>
 
 <style>

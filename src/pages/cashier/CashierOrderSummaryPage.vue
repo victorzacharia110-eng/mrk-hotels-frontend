@@ -161,6 +161,8 @@ import { cashierApi, orderApi } from '@/api'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import { PAYMENT_METHODS } from '@/utils/payments'
+import { printToPrinter, restorePrinter } from '@/utils/printer'
+import { displayLines } from '@/utils/receipts'
 
 const { t, te } = useI18n()
 
@@ -316,7 +318,9 @@ async function confirmPay() {
   }
 }
 
-function doPrint(order, kind) {
+async function doPrint(order, kind) {
+  const sent = await printToPrinter(displayLines(order, kind))
+  if (sent) return
   printing.value = { order, kind }
   requestAnimationFrame(() => {
     window.print()
@@ -340,7 +344,10 @@ async function reprintKot(order) {
   doPrint(order, 'kot')
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  restorePrinter()
+})
 </script>
 
 
