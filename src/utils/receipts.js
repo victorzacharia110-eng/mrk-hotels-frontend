@@ -21,14 +21,15 @@ function divider(char = '-') {
 
 /**
  * Lines for a paid bill (guest receipt).
+ * Rows are [text, bold?, size?] where size 2 = double-width double-height.
  *
  * @param {object} order  Order (must carry items) with optional `_payment`.
- * @returns {Array<Array<string|boolean>>} [text, bold?] rows.
+ * @returns {Array<Array<string|boolean|number>>} The receipt rows.
  */
 export function orderReceiptLines(order) {
   const lines = [
-    ['MRK HOTELS', true],
-    [padLine(String(order.order_number || ''), 'center')],
+    ['MRK HOTELS', true, 2],
+    [padLine(String(order.order_number || ''), 'center'), false, 2],
     [order.outlet_name || order.department || ''],
     [`Table: ${order.table_number || order.room_number || '-'}   Waiter: ${order.waiter_name || '-'}`],
     [''],
@@ -40,13 +41,13 @@ export function orderReceiptLines(order) {
   }
 
   lines.push([divider()])
-  lines.push([itemRow('TOTAL', money(order.total_amount ?? 0))], [''], [''])
+  lines.push([itemRow('TOTAL', money(order.total_amount ?? 0)), true, 2], [''], [''])
 
   const payment = order._payment
   if (payment) {
     const method = payment.method || 'cash'
     const provider = payment.provider ? ` (${payment.provider})` : ''
-    lines.push([`PAID: ${method}${provider}`, false])
+    lines.push([`PAID: ${method}${provider}`, false, 2])
     if (payment.transaction_reference) {
       lines.push([`Ref: ${payment.transaction_reference}`])
     }
@@ -62,12 +63,12 @@ export function orderReceiptLines(order) {
  * Lines for a kitchen order ticket (no totals).
  *
  * @param {object} order  Order (must carry items).
- * @returns {Array<Array<string|boolean>>} [text, bold?] rows.
+ * @returns {Array<Array<string|boolean|number>>} [text, bold?, size?] rows.
  */
 export function kitchenTicketLines(order) {
   const lines = [
-    ['KITCHEN ORDER TICKET', true],
-    [String(order.order_number || '')],
+    ['KITCHEN ORDER TICKET', true, 2],
+    [String(order.order_number || ''), false, 2],
     [`Table: ${order.table_number || order.room_number || '-'}   Waiter: ${order.waiter_name || '-'}`],
     [`Type: ${order.order_type || 'dine_in'}   Covers: ${order.covers ?? '-'}`],
     [''],
@@ -88,13 +89,13 @@ export function kitchenTicketLines(order) {
 /** Lines used for the 'Test print' button on the printer settings page. */
 export function testPrintLines() {
   const lines = [
-    ['MRK HOTELS', true],
-    [padLine('Printer test', 'center')],
+    ['MRK HOTELS', true, 2],
+    [padLine('Printer test', 'center'), false, 2],
     [''],
     [itemRow('Line item A', 'TZS 5,000')],
     [itemRow('Line item B', 'TZS 2,500')],
     [divider()],
-    [itemRow('TOTAL', 'TZS 7,500'), true],
+    [itemRow('TOTAL', 'TZS 7,500'), true, 2],
     [''],
     [padLine('Connected: connectPrinter OK', 'center')],
     [padLine(new Date().toLocaleString(), 'center')],

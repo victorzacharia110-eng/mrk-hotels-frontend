@@ -30,7 +30,7 @@ export function printerSupported() {
 }
 
 /**
- * ESC/POS command bytes used to build a 58mm receipt.
+ * ESC/POS command bytes used to build a 58/80mm receipt.
  */
 const ESC = { init: 0x1b, feed: 0x64 }
 
@@ -40,8 +40,14 @@ const ESC = { init: 0x1b, feed: 0x64 }
  * @param {Uint8Array} out  The accumulating buffer.
  * @param {string} text     The line to print.
  * @param {boolean} bold    Bold line flag.
+ * @param {number} [size]   0 = normal, 1 = double height, 2 = double width.
  */
-function pushLine(out, text = '', bold = false) {
+function pushLine(out, text = '', bold = false, size = 0) {
+  if (size) {
+    // GS ! n — double height (1) and/or double width (2) characters so the
+    // header and total actually fill the paper instead of a thin single line.
+    out.push(0x1d, 0x21, size === 2 ? 0x11 : 0x01)
+  }
   if (bold) {
     out.push(ESC.init, 0x45, 0x01) // ESC E 1 (bold on)
   }
@@ -51,19 +57,22 @@ function pushLine(out, text = '', bold = false) {
   if (bold) {
     out.push(ESC.init, 0x45, 0x00) // ESC E 0 (bold off)
   }
+  if (size) {
+    out.push(0x1d, 0x21, 0x00) // back to normal size
+  }
 }
 
 /**
  * Builds the full ESC/POS byte stream for a receipt.
  *
- * @param {Array<Array<string|boolean>>} lines  [text, bold?] rows.
+ * @param {Array<Array<string|boolean|number>>} lines  [text, bold?, size?] rows.
  * @returns {Uint8Array} The bytes to write.
  */
 export function buildRecipt(lines) {
   const out = [ESC.init, ESC.init, 0x40] // ESC @ — reset the printer.
 
-  for (const [text, bold] of lines) {
-    pushLine(out, text, bold)
+  for (const [text, bold, size] of lines) {
+    pushLine(out, text, bold, size || 0)
   }
 
   out.push(ESC.init, ESC.feed, 3) // FF 3 — a few line feeds before the cut.

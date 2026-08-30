@@ -230,12 +230,47 @@
 }
 
 /* --- Thermal-print receipt / KOT ----------------------------------------- */
+/* Two print paths share this:
+ *   - direct: the connected ESC/POS printer takes the raw bytes and the
+ *     browser never opens a dialog — this CSS is not involved.
+ *   - browser: where there is no direct printer (Safari/Firefox/mobile or
+ *     nothing connected yet), the receipt renders here and is printed via
+ *     the print dialog. Fonts and margins below make the copy FILL the
+ *     paper instead of a small text block lost in the middle of a page.
+ */
 .receipt-print { display: none; }
+
 @media print {
+  @page { margin: 0; }
+
+  html, body { margin: 0; padding: 0; width: 100%; }
+
   body * { visibility: hidden; }
   .receipt-print, .receipt-print * { visibility: visible; }
   .receipt-print {
-    display: block; position: absolute; inset: 0;
-    width: 80mm; font-family: monospace; font-size: 12px; padding: 8px; color: #000;
+    display: block;
+    position: static;
+    width: 100%;
+    min-height: 100vh;
+    box-sizing: border-box;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 15px;
+    line-height: 1.3;
+    font-weight: 500;
+    padding: 4mm 3mm;
+    color: #000;
+    background: #fff;
   }
+  .receipt-print h2 {
+    font-size: 21px;
+    font-weight: 700;
+    margin: 2mm 0;
+    letter-spacing: 1px;
+  }
+  .receipt-print p { margin: 1.5mm 0; }
+  .receipt-print hr { border: none; border-top: 1px solid #000; margin: 2mm 0; }
+  .receipt-print table { width: 100%; border-collapse: collapse; }
+  .receipt-print table td { padding: 1mm 0; font-size: 15px; }
+  .receipt-print table td:first-child { white-space: nowrap; }
+  .receipt-print table td:nth-child(2) { padding-left: 2mm; }
 }
