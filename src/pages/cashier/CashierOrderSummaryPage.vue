@@ -138,28 +138,36 @@
     <!-- Printable receipt / KOT (hidden on screen, visible in print). -->
     <div ref="printArea" class="receipt-print">
       <template v-if="printing">
-        <h2 style="text-align:center;margin:4px 0">{{ printing.kind === 'kot' ? 'KITCHEN ORDER TICKET' : 'MRK HOTELS' }}</h2>
-        <p style="text-align:center;margin:2px 0">{{ printing.order.order_number }} — {{ printing.order.outlet_name || '' }}</p>
-        <p style="margin:2px 0">Table: {{ printing.order.table_number || printing.order.room_number || '-' }} |
-          Waiter: {{ printing.order.waiter_name || '-' }}</p>
-        <hr />
-        <table style="width:100%">
+        <div>
+          <h2 class="print-brand">{{ printing.kind === 'kot' ? 'KITCHEN ORDER TICKET' : 'MRK HOTELS' }}</h2>
+          <p class="print-sub">{{ printing.order.order_number }} — {{ printing.order.outlet_name || '' }}</p>
+          <p>Table: {{ printing.order.table_number || printing.order.room_number || '-' }} |
+            Waiter: {{ printing.order.waiter_name || '-' }}</p>
+        </div>
+
+        <hr v-if="printing.kind !== 'kot'" />
+
+        <table>
           <tbody>
             <tr v-for="item in printing.order.items" :key="item.order_item_id">
               <td>{{ item.quantity }} x</td>
               <td>{{ item.item_name }}</td>
-              <td style="text-align:right">{{ money(item.subtotal) }}</td>
+              <td>{{ money(item.subtotal) }}</td>
             </tr>
           </tbody>
         </table>
-        <hr />
-        <p v-if="printing.kind !== 'kot'" style="text-align:right"><strong>TOTAL: {{ money(printing.order.total_amount) }}</strong></p>
-        <p v-if="printing.kind !== 'kot' && printing.order._payment" style="text-align:right">
-          PAID: {{ paymentLabel(printing.order._payment) }}
-          <span v-if="printing.order._payment.transaction_reference"> · Ref {{ printing.order._payment.transaction_reference }}</span>
-          · {{ printing.order._payment.collected_by }}
-        </p>
-        <p style="text-align:center">{{ new Date().toLocaleString() }}</p>
+
+        <div v-if="printing.kind !== 'kot'">
+          <hr />
+          <p class="print-total">TOTAL: {{ money(printing.order.total_amount) }}</p>
+          <p v-if="printing.order._payment" class="print-paid">
+            PAID: {{ paymentLabel(printing.order._payment) }}
+            <span v-if="printing.order._payment.transaction_reference"> · Ref {{ printing.order._payment.transaction_reference }}</span>
+            · {{ printing.order._payment.collected_by }}
+          </p>
+        </div>
+
+        <p>{{ new Date().toLocaleString() }}</p>
       </template>
     </div>
   </div>

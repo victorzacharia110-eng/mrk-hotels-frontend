@@ -235,42 +235,101 @@
  *     browser never opens a dialog — this CSS is not involved.
  *   - browser: where there is no direct printer (Safari/Firefox/mobile or
  *     nothing connected yet), the receipt renders here and is printed via
- *     the print dialog. Fonts and margins below make the copy FILL the
- *     paper instead of a small text block lost in the middle of a page.
+ *     the print dialog. The layout below stretches the receipt across the
+ *     WHOLE sheet (header + items + total + footer spread top to bottom) and
+ *     scales the type up, so the paper is covered edge to edge instead of a
+ *     small block sitting in the corner.
  */
 .receipt-print { display: none; }
 
 @media print {
   @page { margin: 0; }
 
-  html, body { margin: 0; padding: 0; width: 100%; }
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
 
   body * { visibility: hidden; }
   .receipt-print, .receipt-print * { visibility: visible; }
+
   .receipt-print {
-    display: block;
-    position: static;
-    width: 100%;
-    min-height: 100vh;
+    position: fixed;
+    inset: 0;
     box-sizing: border-box;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 15px;
-    line-height: 1.3;
-    font-weight: 500;
-    padding: 4mm 3mm;
-    color: #000;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: stretch;
+    width: 100%;
+    height: 100%;
+    padding: 14mm 12mm;
+    margin: 0;
     background: #fff;
+    color: #000;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 18px;
+    line-height: 1.65;
+    font-weight: 500;
+    text-align: center;
   }
-  .receipt-print h2 {
-    font-size: 21px;
-    font-weight: 700;
+
+  .receipt-print h2,
+  .receipt-print .print-brand {
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    margin: 0;
+  }
+
+  .receipt-print .print-sub {
+    font-size: 19px;
+    margin: 1mm 0;
+  }
+
+  .receipt-print p {
+    margin: 1mm 0;
+    font-size: 18px;
+  }
+
+  .receipt-print hr {
+    border: none;
+    border-top: 1px solid #000;
+    width: 100%;
     margin: 2mm 0;
-    letter-spacing: 1px;
   }
-  .receipt-print p { margin: 1.5mm 0; }
-  .receipt-print hr { border: none; border-top: 1px solid #000; margin: 2mm 0; }
-  .receipt-print table { width: 100%; border-collapse: collapse; }
-  .receipt-print table td { padding: 1mm 0; font-size: 15px; }
-  .receipt-print table td:first-child { white-space: nowrap; }
-  .receipt-print table td:nth-child(2) { padding-left: 2mm; }
+
+  .receipt-print table {
+    width: 100%;
+    max-width: 160mm;
+    margin: 0 auto;
+    border-collapse: collapse;
+  }
+
+  .receipt-print table td {
+    font-size: 18px;
+    padding: 1.6mm 2mm;
+    vertical-align: top;
+  }
+
+  .receipt-print table td:first-child {
+    text-align: left;
+    white-space: nowrap;
+    width: 10%;
+  }
+
+  .receipt-print table td:nth-child(2) {
+    text-align: left;
+    width: auto;
+  }
+
+  .receipt-print table td:last-child {
+    text-align: right;
+    white-space: nowrap;
+    width: 22%;
+  }
+
+  .receipt-print .print-total,
+  .receipt-print .print-paid {
+    font-size: 26px;
+    font-weight: 800;
+    margin: 2mm 0;
+  }
 }
