@@ -23,6 +23,8 @@
       </div>
     </div>
 
+    <div v-if="error" class="alert alert-error">{{ error }}</div>
+
     <section class="panel">
       <table class="sm-table">
         <thead>
@@ -117,6 +119,7 @@ import PaginationBar from '@/components/store/PaginationBar.vue'
 const { t, te } = useI18n()
 
 const orders = ref([])
+const error = ref('')
 const date = ref(new Date().toISOString().slice(0, 10))
 const search = ref('')
 const activeTab = ref('running')
@@ -204,10 +207,24 @@ function recall(order) {
   window.alert(t('cashier.summary.recallHint', { number: order.order_number }))
 }
 
-/** Settle a running ticket in cash through the standard payment flow. */
+/**
+ * Settle a running ticket in cash through the standard payment flow, then
+ * print the paid bill so the guest walks away with a receipt.
+ */
 async function settle(order) {
-  await orderApi.pay(order.order_id, {})
-  await load()
+  error.value = ''
+  try {
+    const { data } = await orderApi.pay(order.order_id, {})
+    const settled = data.order
+    if (!settled.items?.length) {
+      const { data: detail } = await orderApi.show(settled.order_id)
+      settled.items = detail.order.items
+    }
+    doPrint(settled, 'receipt')
+    await load()
+  } catch (err) {
+    error.value = err.response?.data?.message || t('common.actionFailed')
+  }
 }
 
 function doPrint(order, kind) {
