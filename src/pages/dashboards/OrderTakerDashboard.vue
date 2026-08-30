@@ -385,11 +385,12 @@
     <!-- Manager-only table management modal (CRUD for the table list) -->
     <Teleport to="body">
       <Transition name="fade">
-        <div v-if="tableManagerOpen" class="cat-overlay" @click.self="tableManagerOpen = false">
-          <div class="cat-pop tm-pop" role="dialog" :aria-label="$t('orderTaker.manageTables')">
+        <div v-if="tableManagerOpen" class="cat-pop" @click.self="tableManagerOpen = false">
+          <div class="cat-pop-backdrop" @click="tableManagerOpen = false"></div>
+          <div class="cat-pop-panel tm-pop" role="dialog" :aria-label="$t('orderTaker.manageTables')">
             <header class="cat-pop-head">
               <strong>{{ $t('orderTaker.manageTables') }}</strong>
-              <button type="button" class="cat-close" @click="tableManagerOpen = false">
+              <button type="button" class="cat-pop-close" @click="tableManagerOpen = false">
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </header>
@@ -1085,26 +1086,23 @@ onUnmounted(() => clearInterval(openPoll))
 
 /* Manager table modal */
 .tm-pop {
-  width: 480px;
+  width: 520px;
   max-width: 94vw;
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
 }
 
 .tm-form {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  padding: 12px;
-  border-bottom: 1px solid #444;
+  padding: 14px;
+  border-bottom: 1px solid #eee;
 }
 
 .tm-input {
-  background: #252525;
-  border: 1px solid #444;
+  background: #fff;
+  border: 1px solid #d4d4d8;
   border-radius: 6px;
-  color: #eee;
+  color: #1f2937;
   padding: 8px 10px;
   font-size: 13px;
   flex: 1;
@@ -1127,56 +1125,58 @@ onUnmounted(() => clearInterval(openPoll))
 .tm-add:disabled { opacity: 0.5; cursor: wait; }
 
 .tm-cancel {
-  background: #444;
-  color: #ddd;
-  border: none;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #d4d4d8;
   border-radius: 6px;
   padding: 8px 12px;
   font-size: 13px;
   cursor: pointer;
 }
 
-.tm-error { color: #ff8a80; font-size: 13px; padding: 0 12px; }
+.tm-error { color: #dc2626; font-size: 13px; padding: 8px 14px 0; }
 
 .tm-list {
   list-style: none;
   margin: 0;
-  padding: 8px 12px 12px;
+  padding: 10px 14px 14px;
   overflow-y: auto;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .tm-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
-  border-radius: 6px;
-  padding: 8px 10px;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 9px 12px;
 }
 
-.tm-name { font-weight: 600; color: #eee; }
+.tm-name { font-weight: 600; color: #1f2937; }
 
-.tm-meta { color: #999; font-size: 12px; flex: 1; text-transform: capitalize; }
+.tm-meta { color: #64748b; font-size: 12px; flex: 1; text-transform: capitalize; }
 
 .tm-btn {
-  background: #3a3a3a;
-  color: #ccc;
-  border: none;
+  background: #fff;
+  color: #475569;
+  border: 1px solid #d4d4d8;
   border-radius: 5px;
   padding: 5px 9px;
   cursor: pointer;
   font-size: 12px;
 }
 
-.tm-btn:hover { background: #4a4a4a; }
-.tm-btn.danger { color: #ff8a80; }
-.tm-btn.danger:hover { background: #5c2a2a; }
+.tm-btn:hover { background: #f1f5f9; color: #1f2937; }
+.tm-btn.danger { color: #dc2626; }
+.tm-btn.danger:hover { background: #fef2f2; color: #b91c1c; }
 
-.tm-empty { color: #999; font-size: 13px; text-align: center; padding: 14px; }
+.tm-empty { color: #94a3b8; font-size: 13px; text-align: center; padding: 14px; }
 
 .oh-input {
   border: 1px solid #d4d4d8;
