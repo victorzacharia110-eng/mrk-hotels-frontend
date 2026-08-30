@@ -6,7 +6,15 @@
   command = "npm run build"
   publish = "dist"
 
-# SPA fallback: all routes serve index.html so Vue Router handles them.
+# Missing static assets must 404 — never let them fall back to index.html.
+# This stops a stale page from loading HTML as JS/CSS (MIME/nosniff errors)
+# and stops the CDN caching HTML under asset URLs.
+[[redirects]]
+  from = "/assets/*"
+  to = "/index.html"
+  status = 404
+
+# SPA fallback: all other routes serve index.html so Vue Router handles them.
 [[redirects]]
   from = "/*"
   to = "/index.html"
@@ -20,7 +28,7 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https: wss:; font-src 'self' data:;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; connect-src 'self' https: wss:; font-src 'self' data: https://fonts.gstatic.com;"
 
 # Cache static assets aggressively (Vite hashes filenames).
 [[headers]]
