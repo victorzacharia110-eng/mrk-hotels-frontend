@@ -1163,9 +1163,9 @@
     "loadError": "Imeshindwa kupakia sehemu.",
     "createSuccess": "Sehemu imeundwa.",
     "updateSuccess": "Sehemu imesasishwa.",
-    "deleteSuccess": "{name} imezimwa.",
+    "deleteSuccess": "{name} imefutwa.",
     "toggled": "{name} sasa ni {status}.",
-    "deleteMessage": "Zima sehemu {name}? Cashiers hawatakiona tena, lakini maagizo yaliyopo yanahifadhiwa.",
+    "deleteMessage": "Futa sehemu {name}? Maagizo yaliyowekwa tayari yanahifadhiwa, lakini hii inaiondoa kabisa.",
     "empty": "Hakuna sehemu bado. Unda moja — cashier anahitaji sehemu kabla ya kupokea maagizo."
   },
   "orders": {

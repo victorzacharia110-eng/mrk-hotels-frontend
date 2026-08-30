@@ -1163,9 +1163,9 @@
     "loadError": "Failed to load outlets.",
     "createSuccess": "Outlet created.",
     "updateSuccess": "Outlet updated.",
-    "deleteSuccess": "{name} deactivated.",
+    "deleteSuccess": "{name} deleted.",
     "toggled": "{name} is now {status}.",
-    "deleteMessage": "Deactivate the outlet {name}? Cashiers will no longer see it, but existing orders are kept.",
+    "deleteMessage": "Delete the outlet {name}? Orders already placed are kept, but this removes the outlet permanently.",
     "empty": "No outlets yet. Create one — cashiers need an outlet before taking orders."
   },
   "orders": {
