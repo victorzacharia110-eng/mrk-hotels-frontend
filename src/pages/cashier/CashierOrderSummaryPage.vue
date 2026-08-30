@@ -85,6 +85,45 @@
       <PaginationBar :page="page" :last-page="lastPage" @change="page = $event" />
     </section>
 
+    <!-- Settle payment modal: pick cash, a mobile-money wallet or a bank. -->
+    <div v-if="payOpen" class="pay-modal-overlay" @click.self="closePay">
+      <div class="pay-modal" role="dialog" aria-modal="true">
+        <div class="pay-modal-head">
+          <h2><i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('cashier.summary.settleTitle') }}</h2>
+          <button type="button" class="pay-modal-close" aria-label="Close" @click="closePay">
+            <i class="fas fa-xmark"></i>
+          </button>
+        </div>
+
+        <p v-if="payError" class="alert alert-error">{{ payError }}</p>
+
+        <p v-if="payingOrder" class="pay-order-line">
+          <strong>{{ payingOrder.order_number }}</strong>
+          <span> — {{ payingOrder.table_number || payingOrder.room_number || '—' }}</span>
+        </p>
+        <p class="pay-amount-label">{{ $t('cashier.summary.settleAmount') }}</p>
+        <p class="pay-amount">{{ money(payingOrder?.total_amount ?? 0) }}</p>
+
+        <form @submit.prevent="confirmPay">
+          <PaymentMethodSelect
+            v-model:method="payMethod"
+            v-model:provider="payProvider"
+            :methods="PAYMENT_METHODS"
+            :disabled="savingPay"
+          />
+          <div class="pay-modal-foot">
+            <button type="button" class="btn btn-secondary" :disabled="savingPay" @click="closePay">
+              {{ $t('common.cancel') }}
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="savingPay">
+              <i class="fas fa-check"></i>
+              {{ savingPay ? $t('common.saving') : $t('cashier.summary.settleConfirm') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Printable receipt / KOT (hidden on screen, visible in print). -->
     <div ref="printArea" class="receipt-print">
       <template v-if="printing">
@@ -104,6 +143,11 @@
         </table>
         <hr />
         <p v-if="printing.kind !== 'kot'" style="text-align:right"><strong>TOTAL: {{ money(printing.order.total_amount) }}</strong></p>
+        <p v-if="printing.kind !== 'kot' && printing.order._payment" style="text-align:right">
+          PAID: {{ paymentLabel(printing.order._payment) }}
+          <span v-if="printing.order._payment.transaction_reference"> · Ref {{ printing.order._payment.transaction_reference }}</span>
+          · {{ printing.order._payment.collected_by }}
+        </p>
         <p style="text-align:center">{{ new Date().toLocaleString() }}</p>
       </template>
     </div>
@@ -115,6 +159,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cashierApi, orderApi } from '@/api'
 import PaginationBar from '@/components/store/PaginationBar.vue'
+import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
+import { PAYMENT_METHODS } from '@/utils/payments'
 
 const { t, te } = useI18n()
 
@@ -125,6 +171,13 @@ const search = ref('')
 const activeTab = ref('running')
 const printing = ref(null)
 const printArea = ref(null)
+
+const payOpen = ref(false)
+const payingOrder = ref(null)
+const payMethod = ref('cash')
+const payProvider = ref('')
+const savingPay = ref(false)
+const payError = ref('')
 
 // "Voided" maps to cancelled orders; settled = paid/billed/completed.
 const isRunning = (order) => !['completed', 'cancelled'].includes(order.status)
@@ -207,23 +260,59 @@ function recall(order) {
   window.alert(t('cashier.summary.recallHint', { number: order.order_number }))
 }
 
+/** Render "M-Pesa", "Cash", "Bank (CRDB)" from the payment proof. */
+function paymentLabel(p) {
+  const method = p?.method || 'cash'
+  let label = te(`paymentFields.methods.${method}`) ? t(`paymentFields.methods.${method}`) : method
+  if (p?.provider) {
+    const prov = te(`paymentFields.providers.${p.provider}`) ? t(`paymentFields.providers.${p.provider}`) : p.provider
+    label += ` (${prov})`
+  }
+  return label
+}
+
+/** Opens the payment modal for a running ticket. */
+function settle(order) {
+  payError.value = ''
+  payingOrder.value = order
+  payMethod.value = 'cash'
+  payProvider.value = ''
+  payOpen.value = true
+}
+
+function closePay() {
+  if (savingPay.value) return
+  payOpen.value = false
+  payingOrder.value = null
+}
+
 /**
- * Settle a running ticket in cash through the standard payment flow, then
- * print the paid bill so the guest walks away with a receipt.
+ * Settles the ticket with the chosen method (cash, mobile money, bank, ...),
+ * then prints the paid bill so the guest walks away with a receipt.
  */
-async function settle(order) {
-  error.value = ''
+async function confirmPay() {
+  if (!payingOrder.value) return
+  payError.value = ''
+  savingPay.value = true
   try {
-    const { data } = await orderApi.pay(order.order_id, {})
+    const { data } = await orderApi.pay(payingOrder.value.order_id, {
+      method: payMethod.value,
+      provider: payProvider.value || null,
+    })
     const settled = data.order
+    settled._payment = data.payment
     if (!settled.items?.length) {
       const { data: detail } = await orderApi.show(settled.order_id)
       settled.items = detail.order.items
     }
+    payOpen.value = false
+    payingOrder.value = null
     doPrint(settled, 'receipt')
     await load()
   } catch (err) {
-    error.value = err.response?.data?.message || t('common.actionFailed')
+    payError.value = err.response?.data?.message || t('common.actionFailed')
+  } finally {
+    savingPay.value = false
   }
 }
 
@@ -260,4 +349,81 @@ onMounted(load)
 .frozen-tag { margin-left: 8px; font-size: 11px; color: #00468c; background: #e8f1fa; border-radius: 999px; padding: 2px 8px; font-weight: 700; }
 .nc-tag { margin-left: 6px; font-size: 11px; color: #333333; background: #ececec; border-radius: 999px; padding: 2px 8px; font-weight: 700; }
 .sm-inline-label { font-size: 13px; color: #475569; font-weight: 600; }
+
+.pay-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.pay-modal {
+  background: #fff;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 460px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 28px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.pay-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.pay-modal-head h2 {
+  font-size: 20px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.pay-modal-head h2 i {
+  color: #1e7e34;
+}
+
+.pay-modal-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #757575;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.pay-order-line {
+  margin: 8px 0 4px;
+  color: #424242;
+}
+
+.pay-amount-label {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #757575;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.pay-amount {
+  margin: 0 0 12px;
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.pay-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
 </style>

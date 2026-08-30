@@ -3845,7 +3845,10 @@
       "reprintKot": "Reprint KOT",
       "recall": "Recall",
       "recallHint": "Recall {number}: unfreeze it first, then continue editing from Dine In.",
-      "none": "No orders for this working date."
+      "none": "No orders for this working date.",
+      "settleTitle": "Settle Order",
+      "settleConfirm": "Confirm Payment",
+      "settleAmount": "Amount Due"
     },
     "types": {
       "dine_in": "Dine In",

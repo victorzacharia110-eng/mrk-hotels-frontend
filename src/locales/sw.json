@@ -3845,7 +3845,10 @@
       "reprintKot": "Chapisha KOT",
       "recall": "Rudisha",
       "recallHint": "Kuirudisha {number}: ifungue kwanza (unfreeze), kisha endelea kutoka Kula Ndani.",
-      "none": "Hakuna oda kwa tarehe hii ya kazi."
+      "none": "Hakuna oda kwa tarehe hii ya kazi.",
+      "settleTitle": "Lipua Agizo",
+      "settleConfirm": "Thibitisha Malipo",
+      "settleAmount": "Kiasi Kinachodaiwa"
     },
     "types": {
       "dine_in": "Kula Ndani",
