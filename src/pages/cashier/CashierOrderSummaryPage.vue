@@ -111,11 +111,22 @@
             :methods="PAYMENT_METHODS"
             :disabled="savingPay"
           />
+          <div v-if="needsRef" class="pay-ref">
+            <label :for="payRefId">{{ $t('cashier.summary.refLabel') }}</label>
+            <input
+              :id="payRefId"
+              v-model.trim="payRef"
+              type="text"
+              :placeholder="$t('cashier.summary.refPlaceholder')"
+              :disabled="savingPay"
+              maxlength="50"
+            />
+          </div>
           <div class="pay-modal-foot">
             <button type="button" class="btn btn-secondary" :disabled="savingPay" @click="closePay">
               {{ $t('common.cancel') }}
             </button>
-            <button type="submit" class="btn btn-primary" :disabled="savingPay">
+            <button type="submit" class="btn btn-primary" :disabled="savingPay || needsRef && !payRef">
               <i class="fas fa-check"></i>
               {{ savingPay ? $t('common.saving') : $t('cashier.summary.settleConfirm') }}
             </button>
@@ -178,8 +189,13 @@ const payOpen = ref(false)
 const payingOrder = ref(null)
 const payMethod = ref('cash')
 const payProvider = ref('')
+const payRef = ref('')
+const payRefId = `pay-ref-${Date.now()}`
 const savingPay = ref(false)
 const payError = ref('')
+
+/** A bank transfer needs the statement reference to be recorded on the till. */
+const needsRef = computed(() => payMethod.value === 'bank')
 
 // "Voided" maps to cancelled orders; settled = paid/billed/completed.
 const isRunning = (order) => !['completed', 'cancelled'].includes(order.status)
@@ -279,6 +295,7 @@ function settle(order) {
   payingOrder.value = order
   payMethod.value = 'cash'
   payProvider.value = ''
+  payRef.value = ''
   payOpen.value = true
 }
 
@@ -300,6 +317,7 @@ async function confirmPay() {
     const { data } = await orderApi.pay(payingOrder.value.order_id, {
       method: payMethod.value,
       provider: payProvider.value || null,
+      transaction_reference: payRef.value || null,
     })
     const settled = data.order
     settled._payment = data.payment
@@ -432,5 +450,33 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 8px;
+}
+
+.pay-ref {
+  margin-top: 14px;
+}
+
+.pay-ref label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #424242;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+}
+
+.pay-ref input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d4d4d4;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.pay-ref input:focus {
+  outline: none;
+  border-color: #1e7e34;
+  box-shadow: 0 0 0 3px rgba(30, 126, 52, 0.12);
 }
 </style>

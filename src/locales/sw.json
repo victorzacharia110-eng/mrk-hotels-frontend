@@ -3870,7 +3870,9 @@
       "none": "Hakuna oda kwa tarehe hii ya kazi.",
       "settleTitle": "Lipua Agizo",
       "settleConfirm": "Thibitisha Malipo",
-      "settleAmount": "Kiasi Kinachodaiwa"
+      "settleAmount": "Kiasi Kinachodaiwa",
+      "refLabel": "Namba ya muamala",
+      "refPlaceholder": "mf. namba ya muamala kutoka benki"
     },
     "types": {
       "dine_in": "Kula Ndani",

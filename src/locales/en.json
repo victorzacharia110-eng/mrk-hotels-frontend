@@ -3870,7 +3870,9 @@
       "none": "No orders for this working date.",
       "settleTitle": "Settle Order",
       "settleConfirm": "Confirm Payment",
-      "settleAmount": "Amount Due"
+      "settleAmount": "Amount Due",
+      "refLabel": "Transaction reference",
+      "refPlaceholder": "e.g. the bank statement reference from the transfer"
     },
     "types": {
       "dine_in": "Dine In",
