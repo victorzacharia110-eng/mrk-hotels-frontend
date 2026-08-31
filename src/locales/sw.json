@@ -3539,7 +3539,8 @@
       "generate": "Tengeneza",
       "asOf": "Kama ya",
       "pick": "Chagua kipindi cha tarehe kisha tengeneza ripoti.",
-      "printedBy": "Imechapishwa Na"
+      "printedBy": "Imechapishwa Na",
+      "allOutlets": "Sehemu Zote"
     },
     "movements": {
       "allTypes": "Aina zote",

@@ -12,6 +12,14 @@
       <select v-model="type" class="sm-select" @change="generate">
         <option v-for="(cfg, key) in REPORT_CONFIG" :key="key" :value="key">{{ $t(cfg.labelKey) }}</option>
       </select>
+      <select v-model="departmentId" class="sm-select">
+        <option :value="null">{{ $t('storeManager.inventory.allDepartments') }}</option>
+        <option v-for="d in departments" :key="d.department_id" :value="d.department_id">{{ d.name }}</option>
+      </select>
+      <select v-model="category" class="sm-select">
+        <option :value="null">{{ $t('storeManager.reports.allOutlets') }}</option>
+        <option v-for="c in CATEGORIES" :key="c" :value="c">{{ categoryLabel(c) }}</option>
+      </select>
       <button class="sm-btn" @click="generate"><i class="fas fa-chart-line"></i> {{ $t('storeManager.reports.generate') }}</button>
       <button v-if="data" class="sm-btn ghost" @click="printReport"><i class="fas fa-print"></i> {{ $t('common.print') }}</button>
     </div>
@@ -72,7 +80,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { reportApi, hotelSettingsApi } from '@/api'
+import { reportApi, hotelSettingsApi, inventoryOpsApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n()
@@ -90,6 +98,7 @@ const REPORT_CONFIG = {
     cols: [
       { field: 'item_name', label: 'Item' },
       { field: 'unit', label: 'Unit' },
+      { field: 'department', label: 'Department' },
       { field: 'opening_stock', label: 'Opening', num: true },
       { field: 'received', label: 'Received', num: true },
       { field: 'issued', label: 'Issued', num: true },
@@ -141,7 +150,8 @@ const REPORT_CONFIG = {
     rows: 'items',
     cols: [
       { field: 'item_name', label: 'Item' },
-      { field: 'category', label: 'Category' },
+      { field: 'category', label: 'Outlet' },
+      { field: 'department', label: 'Department' },
       { field: 'closing_stock', label: 'Qty on hand', num: true },
       { field: 'unit', label: 'Unit' },
       { field: 'unit_cost', label: 'Unit cost (TZS)', num: true, money: true },
@@ -169,6 +179,16 @@ const to = ref(new Date().toISOString().slice(0, 10))
 const type = ref('ledger-summary')
 const data = ref(null)
 const loading = ref(false)
+
+// Report filters: department (inventory scope) and category/outlet.
+const departments = ref([])
+const departmentId = ref(null)
+const category = ref(null)
+
+const CATEGORIES = ['bar', 'restaurant', 'food', 'beverage', 'housekeeping', 'maintenance', 'procurement', 'other']
+function categoryLabel(c) {
+  return c.charAt(0).toUpperCase() + c.slice(1)
+}
 
 const cfg = computed(() => REPORT_CONFIG[type.value])
 const cols = computed(() => cfg.value?.cols || [])
@@ -221,6 +241,8 @@ async function generate() {
       params.from = from.value
       params.to = to.value
     }
+    if (departmentId.value) params.department_id = departmentId.value
+    if (category.value) params.category = category.value
     const res = await reportApi.inventoryReport(type.value, params)
     data.value = res.data
   } catch {
@@ -232,7 +254,19 @@ async function generate() {
 
 function printReport() { window.print() }
 
-// Load the hotel logo for the branded report header.
+// Load the inventory departments available for filtering and the hotel logo.
+async function loadReportData() {
+  try {
+    const [dRes] = await Promise.allSettled([inventoryOpsApi.departments()])
+    if (dRes.status === 'fulfilled') {
+      departments.value = dRes.value?.data?.departments || []
+    }
+  } catch {
+    departments.value = []
+  }
+  await loadLogo()
+}
+
 async function loadLogo() {
   try {
     const res = await hotelSettingsApi.show()
@@ -243,7 +277,7 @@ async function loadLogo() {
 }
 
 onMounted(() => {
-  loadLogo()
+  loadReportData()
   if (!route.query.view) generate()
 })
 

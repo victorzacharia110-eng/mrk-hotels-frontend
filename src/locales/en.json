@@ -3539,7 +3539,8 @@
       "generate": "Generate",
       "asOf": "As of",
       "pick": "Pick a date range and generate a report.",
-      "printedBy": "Printed By"
+      "printedBy": "Printed By",
+      "allOutlets": "All Outlets"
     },
     "movements": {
       "allTypes": "All types",
