@@ -20,6 +20,16 @@
 
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <!-- Print-only Ezee-style brand header shown on every printed report. -->
+    <div class="print-brand-head">
+      <div class="report-brand">
+        <img v-if="reportLogo" :src="reportLogo" class="report-logo" alt="" />
+        <h2>{{ reportHotel }}</h2>
+      </div>
+      <h3 class="report-title">{{ $t('reports.title') }}</h3>
+      <span class="report-period">{{ stockFrom || '—' }} → {{ stockTo || '—' }}</span>
+    </div>
+
     <!-- Tab switcher between the overview and audit-log views -->
     <div class="tabs">
       <button v-for="item in tabs" :key="item.key" class="tab-btn" :class="{ active: activeTab === item.key }"
@@ -544,17 +554,27 @@
         </div>
       </div>
     </template>
+
+    <!-- Print-only footer with the person who ran the report, like Ezee. -->
+    <footer class="print-brand-foot">
+      {{ $t('reports.printedBy') }}: {{ reportUser }} · {{ printedAt }}
+    </footer>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { reportApi } from '@/api'
+import { reportApi, hotelSettingsApi } from '@/api'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { collectAllRows, exportCSV } from '@/utils/export'
+import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n()
+const authStore = useAuthStore()
+const reportHotel = computed(() => authStore.user?.tenant?.hotel_name || 'MRK Hotels')
+const reportUser = computed(() => authStore.user?.name || authStore.user?.full_name || '—')
+const reportLogo = ref('')
 
 // Tab definitions and the currently active tab.
 const tabs = [
@@ -1244,7 +1264,23 @@ function reload() {
   loadReports()
 }
 
-onMounted(reload)
+// Timestamp captured for the printed-by footer.
+const printedAt = new Date().toLocaleString()
+
+// Load the hotel logo once so the branded print header can show it.
+async function loadReportLogo() {
+  try {
+    const res = await hotelSettingsApi.show()
+    reportLogo.value = res?.data?.hotel?.logo_url || ''
+  } catch {
+    reportLogo.value = ''
+  }
+}
+
+onMounted(() => {
+  reload()
+  loadReportLogo()
+})
 </script>
 
 <style scoped>
@@ -1708,32 +1744,96 @@ onMounted(reload)
   font-size: 1rem;
 }
 
-/* Print: only the ledger survives, in landscape like classic POS reports. */
+/* Screen: the branded print header/footer are hidden on screen. */
+.print-brand-head,
+.print-brand-foot { display: none; }
+
+/* Print: only the report content survives, in Ezee style — brand header,
+   lines between every table row, and a printed-by footer. */
 @media print {
   body * {
     visibility: hidden;
   }
 
   #stock-ledger-print,
-  #stock-ledger-print * {
+  #stock-ledger-print *,
+  .print-brand-head,
+  .print-brand-head *,
+  .print-brand-foot,
+  .print-brand-foot *,
+  .card:has(table) .ledger-table,
+  .card:has(table) .ledger-table * {
     visibility: visible;
   }
 
-  #stock-ledger-print {
+  #stock-ledger-print,
+  .print-brand-head,
+  .print-brand-foot {
     position: absolute;
-    inset: 0;
     width: 100%;
+  }
+
+  .print-brand-head {
+    inset: 0 0 auto 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+    margin-bottom: 14px;
+  }
+  .print-brand-head .report-brand { display: flex; align-items: center; gap: 10px; }
+  .print-brand-head .report-logo { height: 40px; max-width: 160px; object-fit: contain; }
+  .print-brand-head .report-brand h2 {
+    margin: 0; font-size: 20px; letter-spacing: 0.5px; text-transform: uppercase; color: #0b1f33;
+  }
+  .print-brand-head .report-title {
+    margin: 0; font-size: 15px; text-transform: uppercase; letter-spacing: 1px; color: #00468c;
+  }
+  .print-brand-head .report-period { font-size: 12px; color: #555; }
+
+  .print-brand-foot {
+    inset: auto 0 0 0;
+    margin-top: 14px;
+    font-size: 12px;
+    color: #555;
+    display: block;
+  }
+
+  .print-brand-head { position: relative; display: flex; }
+
+  .ledger-table { border-collapse: collapse; width: 100%; }
+  .ledger-table th {
+    border: 1px solid #222;
+    background: #0b1f33 !important;
+    color: #fff;
+    padding: 6px 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+  }
+  .ledger-table td {
+    border: 1px solid #999;
+    padding: 5px 8px;
+  }
+  .ledger-table tbody tr { border-bottom: 1px solid #666; }
+  .ledger-table tfoot td,
+  .ledger-table .totals-row td {
+    border: 1px solid #222;
+    font-weight: 700;
+    background: #f0f0f0;
   }
 
   .no-print-summary .btn,
   .tabs,
-  .filter-bar {
+  .filter-bar,
+  .page-head,
+  .head-actions {
     display: none !important;
   }
 
   @page {
     size: A4 portrait;
-    margin: 10mm;
+    margin: 12mm;
   }
 }
 </style>

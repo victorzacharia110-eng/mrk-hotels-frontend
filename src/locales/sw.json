@@ -2420,7 +2420,8 @@
     "inv_goods-return-register": "Daftari la Marejesho",
     "inv_mms-consumption": "Matumizi (MMS)",
     "inv_mms-bill-passing": "Uhakiki wa Bili (MMS)",
-    "inv_tax-detail": "Maelezo ya Kodi (VAT)"
+    "inv_tax-detail": "Maelezo ya Kodi (VAT)",
+    "printedBy": "Imechapishwa Na"
   },
   "dashboard": {
     "title": "Dashibodi",

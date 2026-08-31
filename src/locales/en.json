@@ -2420,7 +2420,8 @@
     "inv_goods-return-register": "Goods Return Register",
     "inv_mms-consumption": "MMS Consumption",
     "inv_mms-bill-passing": "MMS Bill Passing",
-    "inv_tax-detail": "Tax Detail (VAT)"
+    "inv_tax-detail": "Tax Detail (VAT)",
+    "printedBy": "Printed By"
   },
   "dashboard": {
     "title": "Dashboard",
