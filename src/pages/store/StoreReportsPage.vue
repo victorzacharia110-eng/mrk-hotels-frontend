@@ -20,24 +20,33 @@
 
     <div v-if="data" id="sm-report-print" class="sm-report-print">
       <header class="report-print-head">
-        <h2>{{ $t(REPORT_CONFIG[type].labelKey) }}</h2>
-        <span v-if="type === 'closing-stock'">{{ $t('storeManager.reports.asOf') }}: {{ to || from }}</span>
-        <span v-else>{{ from || '—' }} → {{ to || '—' }}</span>
+        <div class="report-brand">
+          <img v-if="logoUrl" :src="logoUrl" class="report-logo" alt="" />
+          <h2>{{ hotelName }}</h2>
+        </div>
+        <h3 class="report-title">{{ $t(REPORT_CONFIG[type].labelKey) }}</h3>
+        <span v-if="type === 'closing-stock'" class="report-period">{{ $t('storeManager.reports.asOf') }}: {{ to || from }}</span>
+        <span v-else class="report-period">{{ from || '—' }} → {{ to || '—' }}</span>
       </header>
 
       <section class="panel">
         <div class="table-scroll">
-        <table class="sm-table" v-if="rows.length">
+        <table class="sm-table ezee-table" v-if="rows.length">
           <thead>
             <tr><th v-for="col in cols" :key="col.field">{{ col.label }}</th></tr>
           </thead>
           <tbody>
-            <tr v-for="(r, i) in rows" :key="i">
-              <td v-for="col in cols" :key="col.field">
-                <template v-if="col.money || col.num">{{ fmtNum(r[col.field]) }}</template>
-                <template v-else>{{ r[col.field] ?? '—' }}</template>
-              </td>
-            </tr>
+            <template v-for="(group, gi) in groupedRows" :key="gi">
+              <tr v-if="group.title" class="ezee-group-row">
+                <td :colspan="cols.length"><strong>{{ group.title }}</strong></td>
+              </tr>
+              <tr v-for="(r, i) in group.rows" :key="i">
+                <td v-for="col in cols" :key="col.field">
+                  <template v-if="col.money || col.num">{{ fmtNum(r[col.field]) }}</template>
+                  <template v-else>{{ r[col.field] ?? '—' }}</template>
+                </td>
+              </tr>
+            </template>
           </tbody>
           <tfoot v-if="totals.length">
             <tr>
@@ -47,8 +56,12 @@
           </tfoot>
         </table>
         <p v-else class="empty">{{ $t('common.noResults') }}</p>
-      </div>
+        </div>
       </section>
+
+      <footer class="report-print-foot">
+        {{ $t('storeManager.reports.printedBy') }}: {{ userName }} · {{ printedAt }}
+      </footer>
     </div>
 
     <section v-else-if="!loading" class="panel"><p class="empty">{{ $t('storeManager.reports.pick') }}</p></section>
@@ -59,10 +72,16 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { reportApi } from '@/api'
+import { reportApi, hotelSettingsApi } from '@/api'
+import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n()
 const route = useRoute()
+const authStore = useAuthStore()
+
+const hotelName = computed(() => authStore.user?.tenant?.hotel_name || 'MRK Hotels')
+const userName = computed(() => authStore.user?.name || authStore.user?.full_name || '—')
+const logoUrl = ref('')
 
 const REPORT_CONFIG = {
   'ledger-summary': {
@@ -167,6 +186,27 @@ const rows = computed(() => {
   }))
 })
 
+// Reports that carry a category column (e.g. closing-stock) are split into
+// Ezee-style group headers by category, with a final ungrouped total row.
+const groupBy = computed(() => (cfg.value?.group ?? '') || cols.value.some((c) => c.field === 'category') ? 'category' : '')
+const groupedRows = computed(() => {
+  const all = rows.value
+  if (!groupBy.value) return [{ title: '', rows: all }]
+  const groups = {}
+  for (const r of all) {
+    const key = r[groupBy.value] || '—'
+    ;(groups[key] = groups[key] || []).push(r)
+  }
+  const out = []
+  for (const [title, gr] of Object.entries(groups)) {
+    out.push({ title, rows: gr })
+  }
+  return out
+})
+
+// Timestamp captured each time a report is generated, shown in the footer.
+const printedAt = new Date().toLocaleString()
+
 function fmtNum(n) {
   if (n === null || n === undefined || n === '') return '—'
   return Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 })
@@ -192,6 +232,21 @@ async function generate() {
 
 function printReport() { window.print() }
 
+// Load the hotel logo for the branded report header.
+async function loadLogo() {
+  try {
+    const res = await hotelSettingsApi.show()
+    logoUrl.value = res?.data?.hotel?.logo_url || ''
+  } catch {
+    logoUrl.value = ''
+  }
+}
+
+onMounted(() => {
+  loadLogo()
+  if (!route.query.view) generate()
+})
+
 // Sidebar submenu links arrive as ?view=<report-key>; preselect that report.
 watch(() => route.query.view, (view) => {
   if (view && REPORT_CONFIG[view]) {
@@ -199,23 +254,90 @@ watch(() => route.query.view, (view) => {
     generate()
   }
 }, { immediate: true })
-
-onMounted(() => {
-  if (!route.query.view) generate()
-})
 </script>
 
 <style scoped>
 .report-print-head {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 4px;
   margin-bottom: 14px;
+  text-align: center;
 }
-.report-print-head h2 { margin: 0; font-size: 17px; color: var(--sm-blue-dark, #00468c); }
+.report-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.report-logo {
+  height: 40px;
+  max-width: 160px;
+  object-fit: contain;
+}
+.report-brand h2 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #0b1f33;
+}
+.report-title {
+  margin: 0;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #00468c;
+}
+.report-period {
+  font-size: 12px;
+  color: #555;
+}
 .totals-label { font-weight: 700; text-align: right; }
 .totals-value { font-weight: 700; }
+
+/* Ezee-style report table: vertically ruled columns with a line between
+   every row and a bold category group header row. */
+.ezee-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.ezee-table th {
+  border: 1px solid #222;
+  background: #0b1f33;
+  color: #fff;
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.ezee-table td {
+  border: 1px solid #999;
+  padding: 5px 8px;
+}
+.ezee-table tbody tr:not(.ezee-group-row) {
+  border-bottom: 1px solid #666;
+}
+.ezee-table .ezee-group-row td {
+  border: 1px solid #222;
+  background: #e6eee6;
+}
+.ezee-table .ezee-group-row strong {
+  text-transform: uppercase;
+  font-size: 12px;
+}
+.ezee-table tfoot td {
+  border: 1px solid #222;
+  font-weight: 700;
+  background: #f0f0f0;
+}
+.report-print-foot {
+  margin-top: 14px;
+  font-size: 12px;
+  color: #555;
+}
 </style>
 
 <style>

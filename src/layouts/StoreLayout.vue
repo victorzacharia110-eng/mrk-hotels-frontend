@@ -116,7 +116,7 @@
             </div>
 
             <template v-if="isAppMode">
-              <router-link v-for="item in visibleModules.filter((i) => !i.children)" :key="item.to" :to="item.to" class="mobile-link"
+              <router-link v-for="item in allModulesFlat" :key="item.to || item.key" :to="item.to" class="mobile-link"
                 @click="navOpen = false">
                 <i :class="item.icon" aria-hidden="true"></i> {{ item.label }}
               </router-link>
@@ -528,7 +528,7 @@ const dashboardRoute = computed(() => (authStore.isSuperadmin ? '/superadmin' : 
 
 /** Navigation modules the current user is allowed to see, with localised labels. */
 const visibleModules = computed(() => {
-  const items = MODULES.filter((item) => authStore.canAccess(item)).map((item) => ({
+  const allowed = MODULES.filter((item) => authStore.canAccess(item)).map((item) => ({
     ...item,
     label: t(item.labelKey),
   }))
@@ -536,7 +536,7 @@ const visibleModules = computed(() => {
   // Expand the flat "night audit" module into an accordion group holding the
   // three night-audit actions a receptionist runs: Run Night Audit, Night
   // Audit Log, and Insert Transaction.
-  return items.map((item) => {
+  const expand = (item) => {
     if (item.key === 'night-audit') {
       return {
         ...item,
@@ -561,8 +561,66 @@ const visibleModules = computed(() => {
       }
     }
     return item
-  })
+  }
+
+  const items = allowed.map(expand)
+  const byKey = Object.fromEntries(items.map((i) => [i.key, i]))
+
+  // Fold related flat modules into collapsible accordion groups so the drawer
+  // stays short. Modules not listed here remain as standalone links.
+  const GROUPING = [
+    {
+      key: 'group-front-desk', icon: 'fas fa-bed', labelKey: 'accordion.frontDesk',
+      keys: ['reservations', 'rooms', 'guests', 'payments', 'booking-requisitions', 'activity-log-report', 'overrides'],
+    },
+    {
+      key: 'group-fnb', icon: 'fas fa-utensils', labelKey: 'accordion.foodBeverage',
+      keys: ['take-order', 'orders', 'menu', 'outlets', 'issue-reports', 'housekeeping', 'laundry', 'fun-games'],
+    },
+    {
+      key: 'group-stock', icon: 'fas fa-boxes-stacked', labelKey: 'accordion.inventoryProcurement',
+      keys: ['inventory', 'departments', 'suppliers', 'requisitions', 'purchase-orders', 'goods-received'],
+    },
+    {
+      key: 'group-admin', icon: 'fas fa-user-tie', labelKey: 'accordion.administration',
+      keys: ['staff', 'reports', 'accounting', 'printer', 'imports', 'integrations/booking-com', 'integrations/quickbooks', 'integrations/xero'],
+    },
+    {
+      key: 'group-comms', icon: 'fas fa-comments', labelKey: 'accordion.communication',
+      keys: ['messages', 'statuses'],
+    },
+  ]
+
+  const standalone = []
+  const grouped = []
+  for (const group of GROUPING) {
+    const children = group.keys.map((k) => byKey[k]).filter(Boolean)
+    if (!children.length) continue
+    // Preserve the first child's icon/label for the group header.
+    grouped.push({
+      key: group.key,
+      icon: group.icon,
+      labelKey: group.labelKey,
+      label: t(group.labelKey),
+      to: undefined,
+      children,
+    })
+  }
+
+  for (const item of items) {
+    const inGroup = GROUPING.some((g) => g.keys.includes(item.key))
+    if (!inGroup) standalone.push(item)
+  }
+
+  return [...standalone, ...grouped]
 })
+
+/** Flat list of every module (used by the mobile menu so nothing is hidden). */
+const allModulesFlat = computed(() =>
+  visibleModules.value.flatMap((item) =>
+    item.children ? item.children.filter((c) => c.to) : [item],
+  ),
+)
 
 /** Toggle an accordion group open/closed in the staff drawer. */
 function toggleAccordion(key) {

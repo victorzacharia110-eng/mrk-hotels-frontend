@@ -3538,7 +3538,8 @@
       "goodsReturns": "Ripoti ya Marejesho ya Bidhaa",
       "generate": "Tengeneza",
       "asOf": "Kama ya",
-      "pick": "Chagua kipindi cha tarehe kisha tengeneza ripoti."
+      "pick": "Chagua kipindi cha tarehe kisha tengeneza ripoti.",
+      "printedBy": "Imechapishwa Na"
     },
     "movements": {
       "allTypes": "Aina zote",
@@ -3942,5 +3943,12 @@
       "mixx_by_yas": "*150*01#",
       "halopesa": "*150*88#"
     }
+  },
+  "accordion": {
+    "frontDesk": "Mapokezi",
+    "foodBeverage": "Mgahawa na Baa",
+    "inventoryProcurement": "Hifadhi na Ugavi",
+    "administration": "Usimamizi",
+    "communication": "Mawasiliano"
   }
 }

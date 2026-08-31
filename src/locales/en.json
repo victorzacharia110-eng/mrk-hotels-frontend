@@ -3538,7 +3538,8 @@
       "goodsReturns": "Goods Returns Report",
       "generate": "Generate",
       "asOf": "As of",
-      "pick": "Pick a date range and generate a report."
+      "pick": "Pick a date range and generate a report.",
+      "printedBy": "Printed By"
     },
     "movements": {
       "allTypes": "All types",
@@ -3942,5 +3943,12 @@
       "mixx_by_yas": "*150*01#",
       "halopesa": "*150*88#"
     }
+  },
+  "accordion": {
+    "frontDesk": "Front Desk",
+    "foodBeverage": "Restaurant & Bar",
+    "inventoryProcurement": "Inventory & Procurement",
+    "administration": "Administration",
+    "communication": "Communication"
   }
 }
