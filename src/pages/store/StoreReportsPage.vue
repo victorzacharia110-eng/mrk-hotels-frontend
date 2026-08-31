@@ -172,6 +172,22 @@ const REPORT_CONFIG = {
     ],
     totals: ['quantity', 'value'],
   },
+  'stock-adjustment-report': {
+    labelKey: 'storeManager.reports.stockAdjustment',
+    rows: 'items',
+    cols: [
+      { field: 'date', label: 'Date' },
+      { field: 'item_name', label: 'Item' },
+      { field: 'category', label: 'Outlet' },
+      { field: 'department', label: 'Department' },
+      { field: 'quantity', label: 'Qty', num: true },
+      { field: 'direction', label: 'Direction' },
+      { field: 'unit_cost', label: 'Unit cost (TZS)', num: true, money: true },
+      { field: 'value', label: 'Value (TZS)', num: true, money: true },
+      { field: 'recorded_by', label: 'Recorded by' },
+    ],
+    totals: ['value'],
+  },
 }
 
 const from = ref(new Date().toISOString().slice(0, 10))

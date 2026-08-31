@@ -3540,7 +3540,8 @@
       "asOf": "As of",
       "pick": "Pick a date range and generate a report.",
       "printedBy": "Printed By",
-      "allOutlets": "All Outlets"
+      "allOutlets": "All Outlets",
+      "stockAdjustment": "Stock Adjustment"
     },
     "movements": {
       "allTypes": "All types",

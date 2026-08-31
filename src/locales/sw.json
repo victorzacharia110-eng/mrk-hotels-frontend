@@ -3540,7 +3540,8 @@
       "asOf": "Kama ya",
       "pick": "Chagua kipindi cha tarehe kisha tengeneza ripoti.",
       "printedBy": "Imechapishwa Na",
-      "allOutlets": "Sehemu Zote"
+      "allOutlets": "Sehemu Zote",
+      "stockAdjustment": "Urekebishaji wa Hifadhi"
     },
     "movements": {
       "allTypes": "Aina zote",
