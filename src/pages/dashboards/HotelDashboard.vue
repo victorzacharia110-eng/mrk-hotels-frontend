@@ -20,6 +20,14 @@
     <template v-else>
       <!-- Toolbar: room/reservation status pills, search and assign-room shortcut -->
       <div class="sv-toolbar">
+        <!-- Signed-in session chip: avatar initial + name + role badge -->
+        <div class="session-chip">
+          <span class="session-avatar">{{ sessionInitial }}</span>
+          <span class="session-meta">
+            <span class="session-name">{{ authStore.user?.name }}</span>
+            <RoleBadge />
+          </span>
+        </div>
         <div class="sv-pills">
           <span v-for="pill in pills" :key="pill.key" class="sv-pill" :class="pill.key">
             {{ pill.label }} <strong>{{ pill.count }}</strong>
@@ -671,9 +679,13 @@ import { useNotificationStore } from '@/stores/notifications'
 import { roomApi, reservationApi, guestApi, housekeepingApi, invoiceApi, inventoryApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import AlertModal from '@/components/AlertModal.vue'
+import RoleBadge from '@/components/RoleBadge.vue'
 
 const { t, te } = useI18n()
 const notifStore = useNotificationStore()
+
+// First letter of the signed-in user's name for the session avatar.
+const sessionInitial = computed(() => (authStore.user?.name || '?').charAt(0).toUpperCase())
 
 // Number of day columns shown in the tape chart.
 const DAYS = 14
@@ -1531,6 +1543,45 @@ onUnmounted(() => clearInterval(refreshTimer))
   flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 14px;
+}
+
+.session-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 6px 6px;
+  border-radius: 999px;
+  background: #0b1f33;
+  color: #fff;
+}
+
+.session-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #ffb400;
+  color: #0b1f33;
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.session-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.session-name {
+  font-size: 12px;
+  font-weight: 600;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sv-pills {

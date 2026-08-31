@@ -80,7 +80,7 @@
             <span class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
             <span class="sm-user-meta">
               <strong>{{ authStore.user?.name }}</strong>
-              <small>{{ $t('common.roles.cashier') }}</small>
+              <RoleBadge />
             </span>
           </div>
         </div>
@@ -122,6 +122,7 @@ import { useAuthStore } from '@/stores/auth'
 import { outletApi } from '@/api'
 import { selectedOutlet } from '@/pages/cashier/outlet-context'
 import { restorePrinter } from '@/utils/printer'
+import RoleBadge from '@/components/RoleBadge.vue'
 
 const OUTLET_KEY = 'cashier_outlet'
 

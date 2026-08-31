@@ -68,7 +68,7 @@
             <span class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
             <span class="sm-user-meta">
               <strong>{{ authStore.user?.name }}</strong>
-              <small>{{ $t('common.roles.storeManager') }}</small>
+              <RoleBadge />
             </span>
           </div>
         </div>
@@ -131,6 +131,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notifications'
+import RoleBadge from '@/components/RoleBadge.vue'
 
 const route = useRoute()
 const router = useRouter()

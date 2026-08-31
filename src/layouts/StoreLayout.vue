@@ -195,8 +195,7 @@
               <i class="fas fa-bell"></i>
               <span v-if="notifStore.unreadCount > 0" class="nav-bell-badge">{{ notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount }}</span>
             </button>
-            <span v-if="isAppMode" class="nav-text"><i class="fas fa-user-shield" aria-hidden="true"></i> {{ roleLabel
-            }}</span>
+            <span v-if="isAppMode"><RoleBadge /></span>
             <span v-else class="nav-text"><i class="fas fa-moon" aria-hidden="true"></i> {{ $t('nav.fastBooking')
             }}</span>
           </div>
@@ -416,6 +415,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import RoleBadge from '@/components/RoleBadge.vue'
 import { publicApi } from '@/api'
 import { MODULES } from '@/config/modules'
 import { clearOwnerHotel, ownerHotelId, ownerHotelName } from '@/utils/ownerView'
@@ -454,23 +454,6 @@ const searchQuery = ref(Array.isArray(route.query.search) ? route.query.search[0
 // Nav accordion groups that are currently expanded (e.g. Night Audit).
 const openAccordions = ref(new Set())
 
-
-// Human-readable labels for every user role the portal can authenticate.
-const ROLE_LABELS = {
-  superadmin: 'Superadmin',
-  owner: 'Owner',
-  hotel_admin: 'Hotel Admin',
-  manager: 'Manager',
-  accountant: 'Accountant',
-  receptionist: 'Receptionist',
-  procurement_officer: 'Procurement Officer',
-  housekeeping: 'Housekeeping',
-  kitchen: 'Kitchen',
-  waiter: 'Waiter / Bartender',
-  bartender: 'Waiter / Bartender',
-  staff: 'Staff',
-}
-
 // Mode detection: whether the header renders the hotel app (/app) or the
 // public directory, and which root the logo should link to.
 const isAppMode = computed(() => route.path.startsWith('/app'))
@@ -478,14 +461,13 @@ const isDirectory = computed(() => route.name === 'public-home')
 
 const homeLink = computed(() => (isAppMode.value ? '/app' : '/'))
 
-// Branding and role text: the current hotel's name (or the viewed hotel when
-// an owner is browsing) and the user's role label.
+// Branding: the current hotel's name (or the viewed hotel when an owner is
+// browsing). The signed-in role is rendered by <RoleBadge /> in the header.
 const hotelName = computed(() =>
   isOwnerViewing.value
     ? viewingHotelName.value
     : authStore.user?.tenant?.hotel_name || 'MRK Hotels',
 )
-const roleLabel = computed(() => ROLE_LABELS[authStore.user?.user_role] || 'Staff')
 
 // Per-hotel public contact details: the top bar and footer show the currently
 // viewed hotel's stored phone/email/location when browsing its public pages,

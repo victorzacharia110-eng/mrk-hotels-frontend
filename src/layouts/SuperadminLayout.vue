@@ -115,6 +115,7 @@
           <span class="sa-badge"
             ><i class="fas fa-shield-halved" aria-hidden="true"></i> Superadmin</span
           >
+          <RoleBadge />
           <span class="sa-user">{{ authStore.user?.full_name }}</span>
         </div>
       </header>
@@ -129,6 +130,7 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import RoleBadge from '@/components/RoleBadge.vue'
 
 const router = useRouter()
 const route = useRoute()
