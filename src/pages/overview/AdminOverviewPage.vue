@@ -150,6 +150,33 @@
         </div>
       </div>
 
+      <!-- Housekeeping summary: room status at a glance (clean / dirty / under maintenance) -->
+      <div class="card dash-section">
+        <div class="section-header-row">
+          <h2><i class="fas fa-broom"></i> {{ $t('overview.housekeepingSummary') }}</h2>
+          <router-link to="/app/housekeeping" class="view-all-link"
+            >{{ $t('overview.viewAllHousekeeping') }} <i class="fas fa-arrow-right"></i
+          ></router-link>
+        </div>
+        <div class="house-strip">
+          <div class="house-chip house-clean">
+            <div class="house-num">{{ roomStatus.clean }}</div>
+            <div class="house-label">{{ $t('overview.roomsClean') }}</div>
+            <div class="house-fill" :style="{ width: roomPct(roomStatus.clean) + '%' }"></div>
+          </div>
+          <div class="house-chip house-dirty">
+            <div class="house-num">{{ roomStatus.dirty }}</div>
+            <div class="house-label">{{ $t('overview.roomsDirty') }}</div>
+            <div class="house-fill" :style="{ width: roomPct(roomStatus.dirty) + '%' }"></div>
+          </div>
+          <div class="house-chip house-blocked">
+            <div class="house-num">{{ roomStatus.blocked }}</div>
+            <div class="house-label">{{ $t('overview.roomsBlocked') }}</div>
+            <div class="house-fill" :style="{ width: roomPct(roomStatus.blocked) + '%' }"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Staff section: filterable/paginated staff table with activate/deactivate actions -->
       <div class="card dash-section">
         <div class="section-header-row">
@@ -602,6 +629,24 @@ const housekeeperOptions = computed(() =>
   housekeepers.value.map((user) => ({ value: user.user_id, label: user.full_name })),
 )
 
+// Housekeeping room-status summary: clean (available), dirty and under
+// maintenance/cleaning buckets derived from the backend room status counts.
+const roomStatus = computed(() => {
+  const rs = data.value?.stats?.room_status || {}
+  return {
+    clean: Number(rs.available) || 0,
+    dirty: Number(rs.dirty) || 0,
+    blocked: (Number(rs.maintenance) || 0) + (Number(rs.cleaning) || 0),
+  }
+})
+
+/** Share of the room stock a housekeeping bucket represents, for its bar. */
+function roomPct(value) {
+  const total = Number(data.value?.stats?.room_status?.total) || 0
+  if (total <= 0) return 0
+  return Math.min(100, ((Number(value) || 0) / total) * 100)
+}
+
 /**
  * Share of total room stock a metric represents, for the KPI bars.
  * Falls back to normalising against the busiest flow number when the
@@ -1032,6 +1077,49 @@ function dismissCurrentAlert() {
   border-radius: 3px;
   min-width: 2px;
   transition: width 0.4s ease;
+}
+
+/* Housekeeping summary: three colored room-status buckets with bars. */
+.house-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.house-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+.house-num {
+  font-size: 22px;
+  font-weight: 700;
+  color: #333;
+}
+.house-label {
+  font-size: 12px;
+  color: #757575;
+}
+.house-fill {
+  height: 6px;
+  border-radius: 3px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+.house-clean { border-top: 3px solid #1e8449; }
+.house-clean .house-fill { background: #1e8449; }
+.house-dirty { border-top: 3px solid #c0392b; }
+.house-dirty .house-fill { background: #c0392b; }
+.house-blocked { border-top: 3px solid #f1c40f; }
+.house-blocked .house-fill { background: #f1c40f; }
+
+@media (max-width: 768px) {
+  .house-strip {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
 }
 
 .fill-blue {

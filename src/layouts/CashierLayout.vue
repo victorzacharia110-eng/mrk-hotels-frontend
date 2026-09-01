@@ -16,36 +16,50 @@
       </router-link>
 
       <nav class="pos-nav">
-        <p class="pos-nav-heading" v-show="!sidebarCollapsed">{{ $t('cashier.nav.ordering') }}</p>
-        <router-link v-for="item in orderingNav" :key="item.to" :to="item.to" class="pos-nav-link"
-          :class="{ active: isActive(item.to) }" :title="$t(item.labelKey)" @click="mobileOpen = false">
-          <i :class="item.icon" aria-hidden="true"></i>
-          <span v-show="!sidebarCollapsed">{{ $t(item.labelKey) }}</span>
-        </router-link>
+        <button type="button" class="pos-nav-heading pos-group" :class="{ open: isOpen('ordering') }"
+          @click="toggleGroup('ordering')" v-show="!sidebarCollapsed"
+          :aria-expanded="isOpen('ordering')">
+          {{ $t('cashier.nav.ordering') }}
+          <i class="fas fa-chevron-down pos-chevron" aria-hidden="true"></i>
+        </button>
+        <div v-if="!sidebarCollapsed || isOpen('ordering')" class="pos-group-items">
+          <router-link v-for="item in orderingNav" :key="item.to" :to="item.to" class="pos-nav-link"
+            :class="{ active: isActive(item.to) }" :title="$t(item.labelKey)" @click="mobileOpen = false">
+            <i :class="item.icon" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t(item.labelKey) }}</span>
+          </router-link>
+        </div>
 
-        <p class="pos-nav-heading" v-show="!sidebarCollapsed">{{ $t('cashier.nav.summaryGroup') }}</p>
         <router-link :to="{ name: 'cashier-order-summary' }" class="pos-nav-link"
-          :class="{ active: isActive('/cashier/order-summary') }" @click="mobileOpen = false">
+          :class="{ active: isActive('/cashier/order-summary') }" @click="mobileOpen = false"
+          :title="$t('cashier.nav.orderSummary')">
           <i class="fas fa-list-ul" aria-hidden="true"></i>
           <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.orderSummary') }}</span>
         </router-link>
 
-        <p class="pos-nav-heading" v-show="!sidebarCollapsed">{{ $t('cashier.nav.managerGroup') }}</p>
-        <router-link :to="{ name: 'cashier-item-lookup' }" class="pos-nav-link"
-          :class="{ active: isActive('/cashier/item-lookup') }" @click="mobileOpen = false">
-          <i class="fas fa-book-open" aria-hidden="true"></i>
-          <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.itemLookup') }}</span>
-        </router-link>
-        <router-link :to="{ name: 'cashier-ingredients' }" class="pos-nav-link"
-          :class="{ active: isActive('/cashier/ingredients') }" @click="mobileOpen = false">
-          <i class="fas fa-flask" aria-hidden="true"></i>
-          <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.ingredients') }}</span>
-        </router-link>
-        <router-link :to="{ name: 'cashier-printer' }" class="pos-nav-link"
-          :class="{ active: isActive('/cashier/printer') }" @click="mobileOpen = false">
-          <i class="fas fa-print" aria-hidden="true"></i>
-          <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.printer') }}</span>
-        </router-link>
+        <button type="button" class="pos-nav-heading pos-group" :class="{ open: isOpen('manager') }"
+          @click="toggleGroup('manager')" v-show="!sidebarCollapsed"
+          :aria-expanded="isOpen('manager')">
+          {{ $t('cashier.nav.managerGroup') }}
+          <i class="fas fa-chevron-down pos-chevron" aria-hidden="true"></i>
+        </button>
+        <div v-if="!sidebarCollapsed || isOpen('manager')" class="pos-group-items">
+          <router-link :to="{ name: 'cashier-item-lookup' }" class="pos-nav-link"
+            :class="{ active: isActive('/cashier/item-lookup') }" @click="mobileOpen = false">
+            <i class="fas fa-book-open" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.itemLookup') }}</span>
+          </router-link>
+          <router-link :to="{ name: 'cashier-ingredients' }" class="pos-nav-link"
+            :class="{ active: isActive('/cashier/ingredients') }" @click="mobileOpen = false">
+            <i class="fas fa-flask" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.ingredients') }}</span>
+          </router-link>
+          <router-link :to="{ name: 'cashier-printer' }" class="pos-nav-link"
+            :class="{ active: isActive('/cashier/printer') }" @click="mobileOpen = false">
+            <i class="fas fa-print" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.printer') }}</span>
+          </router-link>
+        </div>
       </nav>
 
       <div class="pos-sidebar-footer">
@@ -135,6 +149,21 @@ const outlets = ref([])
 const gateOpen = ref(false)
 const sidebarCollapsed = ref(false)
 const mobileOpen = ref(false)
+// Accordion groups in the sidebar; expanded groups are held in a Set.
+const openGroups = ref(new Set(['ordering']))
+
+/** Whether the given accordion group is currently expanded. */
+function isOpen(key) {
+  return openGroups.value.has(key)
+}
+
+/** Toggles an accordion group open/closed. */
+function toggleGroup(key) {
+  const next = new Set(openGroups.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  openGroups.value = next
+}
 
 function toggleSidebar() {
   if (window.matchMedia('(max-width: 900px)').matches) mobileOpen.value = !mobileOpen.value
@@ -143,6 +172,17 @@ function toggleSidebar() {
 
 watch(() => route.path, () => {
   mobileOpen.value = false
+  // Keep the parent group open so the active item stays visible.
+  if (route.path.startsWith('/cashier/item-lookup') || route.path.startsWith('/cashier/ingredients') || route.path.startsWith('/cashier/printer')) {
+    const next = new Set(openGroups.value)
+    next.add('manager')
+    openGroups.value = next
+  }
+  if (route.path.startsWith('/cashier/dine-in') || route.path.startsWith('/cashier/take-away') || route.path.startsWith('/cashier/room-service') || route.path.startsWith('/cashier/delivery') || route.path.startsWith('/cashier/no-charge')) {
+    const next = new Set(openGroups.value)
+    next.add('ordering')
+    openGroups.value = next
+  }
 })
 
 const orderingNav = [
@@ -268,6 +308,23 @@ onMounted(() => {
   letter-spacing: 0.08em;
   color: #b0cde9;
 }
+.pos-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: none;
+  background: none;
+  width: calc(100% - 16px);
+  cursor: pointer;
+  font-family: inherit;
+  padding-inline: 8px;
+  text-align: left;
+}
+.pos-group:hover { color: #fff; }
+.pos-group .pos-chevron { transition: transform 0.2s ease; font-size: 12px; }
+.pos-group.open .pos-chevron { transform: rotate(180deg); }
+.pos-group-items { display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
 .pos-nav-link {
   display: flex;
   align-items: center;
