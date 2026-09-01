@@ -178,6 +178,22 @@ export async function connectPrinter(chosen = null) {
   }
 }
 
+// Best-effort friendly names for common ESC/POS thermal printer vendors.
+const VENDOR_NAMES = {
+  1046: 'Epson', // 0x0416
+  1208: 'Star Micronics', // 0x04B8
+  1271: 'HPRT', // 0x04F7
+  1659: 'Xprinter', // 0x067B
+  8968: 'Gprinter', // 0x2308
+  10081: 'Zjiang', // 0x2761
+}
+
+function deviceLabel(info) {
+  const vendorName = info.usbVendorId ? (VENDOR_NAMES[info.usbVendorId] || `Vendor ${info.usbVendorId}`) : 'Serial'
+  const product = info.usbProductId ? ` (product ${info.usbProductId})` : ''
+  return `${vendorName}${product}`.trim()
+}
+
 async function openPort(serialPort) {
   try {
     await serialPort.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: 'none' })
@@ -188,11 +204,12 @@ async function openPort(serialPort) {
   port = serialPort
   rememberPort()
   const info = port.getInfo()
-  printerState.connected = true
-  printerState.reason = ''
-  printerState.info = info.usbProductId
-    ? `USB printer (vendor ${info.usbVendorId}, product ${info.usbProductId})`
-    : 'Serial printer connected.'
+  // The machine is only truly "connected" when we can write to it. This stops
+  // the page showing "connected" before a test print has actually worked.
+  const writable = Boolean(serialPort.writable)
+  printerState.connected = writable
+  printerState.reason = writable ? '' : 'The printer port is open but not writable. Reconnect the cable and retry.'
+  printerState.info = deviceLabel(info)
 }
 
 /**
@@ -290,8 +307,18 @@ export async function printToPrinter(lines, opts = {}) {
     merged.set(text, raster ? raster.length : 0)
 
     const writer = port.writable.getWriter()
-    await writer.write(merged)
-    writer.releaseLock()
+    // Guard against a non-responsive printer hanging the write forever (the
+    // "saving..." that never stops). If nothing is sent in 8s we give up.
+    let timer = null
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('Timeout waiting for the printer.')), 8000)
+    })
+    try {
+      await Promise.race([writer.write(merged), timeout])
+    } finally {
+      clearTimeout(timer)
+      writer.releaseLock()
+    }
     return true
   } catch {
     printerState.reason = 'The printer is not responding. Check the cable and reconnect it.'
