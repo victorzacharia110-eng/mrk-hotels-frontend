@@ -109,6 +109,31 @@
           </div>
           <p v-else class="cat-empty">{{ $t('orderTaker.emptyCategory') }}</p>
         </div>
+
+        <!-- Dine-in table map: which tables are free vs occupied (and by whom) -->
+        <div class="table-map" v-if="tables.length">
+          <div class="cat-panel-head">
+            <i class="fas fa-chair" aria-hidden="true"></i> {{ $t('orderTaker.tablesLabel') }}
+            <span class="cat-dept"></span>
+          </div>
+          <div class="table-map-grid">
+            <button
+              v-for="tbl in tables"
+              :key="tbl.table_id"
+              type="button"
+              class="table-chip"
+              :class="tableOccupiedByOther(tbl.table_name) ? 'occupied' : 'free'"
+              :disabled="tableOccupiedByOther(tbl.table_name)"
+              @click="form.table_number = tbl.table_name"
+            >
+              <span class="table-chip-name">{{ tbl.table_name }}</span>
+              <span v-if="tableOccupiedByOther(tbl.table_name)" class="table-chip-occ">
+                {{ $t('orderTaker.occupiedBy', { waiter: occupiedTables.get(String(tbl.table_name)) }) }}
+              </span>
+              <span v-else class="table-chip-free">{{ $t('orderTaker.tableFree') }}</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- RIGHT: the selected order panel, like the Ezee order book -->
@@ -673,12 +698,41 @@ const sentToast = ref('')
 // Physical tables managed by the manager; the waiter only picks one.
 const tables = ref([])
 
-/** Active tables as searchable options (name + section for context). */
+// Tables currently held by an open, unpaid order (occupied until the bill is
+// settled) — map of table name -> waiter who occupies it. Shared from the
+// open-orders board so a waiter can never double-book a live table.
+const occupiedTables = computed(() => {
+  const map = new Map()
+  for (const order of openOrders.value) {
+    if (!order.table_number) continue
+    if (['completed', 'cancelled'].includes(order.status)) continue
+    if (order.payment_status === 'paid') continue
+    const key = String(order.table_number)
+    if (!map.has(key)) map.set(key, order.waiter_name || t('orderTaker.otherWaiter'))
+  }
+  return map
+})
+/** True when the named table is occupied by someone else (not this waiter). */
+function tableOccupiedByOther(name) {
+  return occupiedTables.value.has(String(name))
+}
+
+/** Active tables as searchable options (name + section for context). Occupied
+ *  tables are listed (with the occupant's name) but disabled for other waiters. */
 const tableOptions = computed(() =>
-  tables.value.map((tbl) => ({
-    value: tbl.table_name,
-    label: tbl.section ? `${tbl.table_name} · ${tbl.section}` : tbl.table_name,
-  })),
+  tables.value.map((tbl) => {
+    const name = String(tbl.table_name)
+    const occupant = occupiedTables.value.get(name)
+    const isSelf = occupant && String(occupant).toLowerCase() === String(waiterName.value).toLowerCase()
+    const disabled = Boolean(occupant) && !isSelf
+    const label = tbl.section ? `${tbl.table_name} · ${tbl.section}` : tbl.table_name
+    return {
+      value: tbl.table_name,
+      label: occupant && disabled ? `${label} — ${t('orderTaker.occupiedBy', { waiter: occupant })}` : label,
+      disabled,
+      _occupant: occupant,
+    }
+  }),
 )
 const canManageTables = computed(() => ['hotel_admin', 'manager'].includes(role.value))
 
@@ -954,6 +1008,10 @@ function removeLine(line) {
 /** Sends the order to the kitchen/bar; resets the ticket on success. */
 async function sendOrder() {
   if (!orderLines.value.length || sending.value) return
+  if (form.value.table_number && tableOccupiedByOther(form.value.table_number)) {
+    sendError.value = t('orderTaker.tableOccupied')
+    return
+  }
   sending.value = true
   sendError.value = ''
   try {
@@ -975,6 +1033,7 @@ async function sendOrder() {
     orderLines.value = []
     form.value = { table_number: '', covers: 0, order_type: defaultOrderType(), notes: '' }
     setTimeout(() => (sentToast.value = ''), 4000)
+    loadOpenOrders()
   } catch (err) {
     sendError.value = err.response?.data?.message || t('orderTaker.sendError')
   } finally {
@@ -1084,6 +1143,57 @@ function onKey(e) {
   background: #b8860b;
   color: #fff;
   border-color: #b8860b;
+}
+
+/* ---- Dine-in table map ---- */
+.table-map {
+  background: #fff;
+  border: 1px solid #d4d4d8;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.table-map-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+.table-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s;
+}
+.table-chip:disabled { cursor: not-allowed; }
+.table-chip.free {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+.table-chip.free:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: #16a34a;
+}
+.table-chip.occupied {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+.table-chip-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: #27272a;
+}
+.table-chip-occ {
+  font-size: 11px;
+  color: #b91c1c;
+}
+.table-chip-free {
+  font-size: 11px;
+  color: #15803d;
+  font-weight: 600;
 }
 
 @media (max-width: 820px) {

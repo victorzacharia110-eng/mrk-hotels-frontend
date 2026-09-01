@@ -3413,7 +3413,13 @@
     "receiptBy": "Collected by",
     "receiptThanks": "Asante — thank you!",
     "searchPlaceholder": "Search item or category",
-    "searchTitle": "Search results"
+    "searchTitle": "Search results",
+    "occupiedBy": "Occupied by {waiter}",
+    "tableOccupied": "That table is occupied. Pick a free table.",
+    "otherWaiter": "another waiter",
+    "tableFree": "Free",
+    "tableOccupiedShort": "Occupied",
+    "tablesLabel": "Tables (Dine In)"
   },
   "kitchen": {
     "title": "Kitchen Board",

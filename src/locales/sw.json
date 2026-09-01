@@ -3413,7 +3413,13 @@
     "receiptBy": "Alipokea",
     "receiptThanks": "Asante!",
     "searchPlaceholder": "Tafuta bidhaa au kategoria",
-    "searchTitle": "Matokeo ya utafutaji"
+    "searchTitle": "Matokeo ya utafutaji",
+    "occupiedBy": "Imeshikiliwa na {waiter}",
+    "tableOccupied": "Meza hiyo imeshikiliwa. Chagua meza iliyo wazi.",
+    "otherWaiter": "mhudumu mwingine",
+    "tableFree": "Wazi",
+    "tableOccupiedShort": "Imeshikiliwa",
+    "tablesLabel": "Meza (Dine In)"
   },
   "kitchen": {
     "title": "Ubao wa Jikoni",

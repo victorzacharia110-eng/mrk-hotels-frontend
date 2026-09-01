@@ -65,8 +65,9 @@
           role="option"
           tabindex="-1"
           class="ss-option"
-          :class="{ 'is-active': String(modelValue) === String(o.value) }"
+          :class="{ 'is-active': String(modelValue) === String(o.value), 'is-disabled': o.disabled }"
           :aria-selected="String(modelValue) === String(o.value) ? 'true' : 'false'"
+          :aria-disabled="o.disabled ? 'true' : 'false'"
           @click="pick(o.value)"
         >
           <slot name="option" :option="o" :active="String(modelValue) === String(o.value)">
@@ -92,7 +93,7 @@
       :value="modelValue"
       @change="pick($event.target.value)"
     >
-      <option v-for="o in options" :key="o.value" :value="o.value" />
+      <option v-for="o in options" :key="o.value" :value="o.value" :disabled="o.disabled" />
     </select>
   </div>
 </template>
@@ -297,6 +298,8 @@ function onListKeydown(event) {
  */
 function pick(value) {
   if (props.disabled) return
+  const target = props.options.find((option) => String(option.value) === String(value))
+  if (target?.disabled) return
   emit('update:modelValue', value)
   emit('change', value)
   close()
@@ -417,6 +420,15 @@ onBeforeUnmount(() => {
 .ss-option:hover,
 .ss-option.is-active {
   background: #f2f6fa;
+}
+
+.ss-option.is-disabled {
+  color: #b0b0b0;
+  cursor: not-allowed;
+  background: #f7f7f7;
+}
+.ss-option.is-disabled:hover {
+  background: #f7f7f7;
 }
 
 .ss-option.ss-muted {
