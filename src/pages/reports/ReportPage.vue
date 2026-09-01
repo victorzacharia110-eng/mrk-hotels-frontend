@@ -102,7 +102,8 @@
             </span>
           </header>
 
-          <table class="ledger-table" v-if="item.movements.length">
+          <div class="table-scroll" v-if="item.movements.length">
+          <table class="ledger-table">
             <thead>
               <tr>
                 <th>{{ $t('reports.date') }}</th>
@@ -137,6 +138,7 @@
               </tr>
             </tbody>
           </table>
+          </div>
           <p v-else class="no-movements">{{ $t('reports.noStockData') }}</p>
         </article>
 
@@ -203,6 +205,7 @@
       <div v-else class="card">
         <h2><i class="fas fa-boxes-stacked"></i> {{ invTitle }}</h2>
         <p class="hint muted">{{ stockData?.from || stockFrom }} → {{ stockData?.to || stockTo }}</p>
+        <div class="table-scroll">
         <table class="ledger-table">
           <thead>
             <tr>
@@ -217,6 +220,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
         <div v-if="invTotalsText" class="ledger-totals">
           <span v-for="tot in invTotalsText" :key="tot.label">
             {{ tot.label }}: <strong>TZS {{ tot.value }}</strong>
@@ -325,6 +329,7 @@
               <h2><i class="fas fa-trophy"></i> {{ $t('reports.topItems') }}</h2>
               <button class="btn btn-secondary btn-sm" @click="exportTopItems">CSV</button>
             </div>
+            <div class="table-scroll">
             <table class="mini-table">
               <thead><tr><th>{{ $t('menu.itemName') }}</th><th class="num">{{ $t('reports.qtySold') }}</th><th class="num">{{ $t('reports.value') }}</th></tr></thead>
               <tbody>
@@ -336,6 +341,7 @@
                 <tr v-if="!fnbData.top_items.length"><td colspan="3">{{ $t('reports.noStockData') }}</td></tr>
               </tbody>
             </table>
+            </div>
           </div>
         </div>
 
@@ -344,6 +350,7 @@
             <h2><i class="fas fa-user-clock"></i> {{ $t('reports.perWaiter') }}</h2>
             <button class="btn btn-secondary btn-sm" @click="exportWaiters">CSV</button>
           </div>
+          <div class="table-scroll">
           <table class="mini-table">
             <thead><tr><th>{{ $t('users.name') }}</th><th class="num">{{ $t('reports.fnbOrders') }}</th><th class="num">{{ $t('reports.value') }}</th></tr></thead>
             <tbody>
@@ -355,6 +362,7 @@
               <tr v-if="!fnbData.per_waiter.length"><td colspan="3">{{ $t('reports.noStockData') }}</td></tr>
             </tbody>
           </table>
+          </div>
         </div>
       </template>
     </template>
@@ -509,6 +517,7 @@
       <div v-if="auditLoading" class="alert alert-info">{{ $t('reports.loading') }}</div>
 
       <div v-else class="card dash-section">
+        <div class="table-scroll">
         <table class="table">
           <thead>
             <tr>
@@ -538,6 +547,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
 
         <div v-if="auditMeta.total > auditMeta.per_page" class="pagination">
           <button class="btn btn-sm btn-secondary" :disabled="!auditMeta.prev_page_url"
@@ -1693,6 +1703,13 @@ onMounted(() => {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
+}
+
+.table-scroll .ledger-table {
+  min-width: 860px;
+}
+.table-scroll .table {
+  min-width: 640px;
 }
 
 .ledger-table th,

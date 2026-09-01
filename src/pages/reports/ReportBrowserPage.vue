@@ -119,6 +119,7 @@
           <h3 class="rb-section-title">
             <i class="fas fa-chart-line" aria-hidden="true"></i> {{ $t('nightAudit.revenue') }}
           </h3>
+          <div class="table-scroll">
           <table class="rb-table">
             <thead>
               <tr>
@@ -149,10 +150,12 @@
               </tr>
             </tbody>
           </table>
+          </div>
 
           <h3 class="rb-section-title">
             <i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('reportBrowser.collections') }}
           </h3>
+          <div class="table-scroll">
           <table class="rb-table">
             <thead>
               <tr>
@@ -171,10 +174,12 @@
               </tr>
             </tbody>
           </table>
+          </div>
 
           <h3 class="rb-section-title">
             <i class="fas fa-bed" aria-hidden="true"></i> {{ $t('reportBrowser.occupancy') }}
           </h3>
+          <div class="table-scroll">
           <table class="rb-table">
             <thead>
               <tr>
@@ -201,6 +206,7 @@
               </tr>
             </tbody>
           </table>
+          </div>
 
           <button v-if="!report.closed" type="button" class="rb-btn rb-btn-primary" :disabled="saving" @click="closeDay">
             <i class="fas fa-lock" aria-hidden="true"></i> {{ $t('nightAudit.closeDay') }}
@@ -217,7 +223,8 @@
 
           <p class="rb-count">{{ $t('reportBrowser.totalRows', { count: report.count || 0 }) }}</p>
 
-          <table class="rb-table">
+          <div class="table-scroll">
+          <table class="rb-table rb-table-wide">
             <thead>
               <tr>
                 <th>{{ $t('reportBrowser.guestName') }}</th>
@@ -244,6 +251,7 @@
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
       </template>
     </template>
@@ -272,6 +280,7 @@
         </ul>
 
         <h4 v-if="activeConfig?.columns?.length"><i class="fas fa-table-list"></i> {{ $t('reportBrowser.columnExplanation') }}</h4>
+        <div class="table-scroll">
         <table v-if="activeConfig?.columns?.length" class="rb-help-table">
           <tbody>
             <tr v-for="c in activeConfig.columns" :key="c.column">
@@ -280,6 +289,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
     </details>
   </ReportBrowserLayout>
@@ -1260,6 +1270,9 @@ onMounted(() => {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+}
+.rb-table-wide {
+  min-width: 680px;
 }
 .rb-table th {
   text-align: left;

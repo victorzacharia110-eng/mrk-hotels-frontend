@@ -61,7 +61,8 @@
           <i class="fas fa-spinner fa-spin"></i>
         </div>
 
-        <table v-else-if="ingredients.length" class="sm-table">
+        <div v-else-if="ingredients.length" class="table-scroll">
+        <table class="sm-table">
           <thead>
             <tr>
               <th>{{ $t('cashier.ingredients.inventoryItem') }}</th>
@@ -91,6 +92,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
 
         <p v-else class="empty">
           <i class="fas fa-flask" aria-hidden="true"></i>

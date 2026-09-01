@@ -147,7 +147,8 @@
     <div class="card" style="padding: 20px; margin-top: 16px;">
       <h3 style="margin: 0 0 12px;"><i class="fas fa-clock-rotate-left" style="color: var(--mrk-blue);"></i> {{ $t('nightAudit.history') }}</h3>
       <div v-if="!history.length" class="muted">{{ $t('nightAudit.noHistory') }}</div>
-      <table v-else class="table">
+      <div v-else class="table-scroll">
+      <table class="table">
         <thead>
           <tr>
             <th>{{ $t('nightAudit.date') }}</th>
@@ -167,6 +168,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 </template>
@@ -249,5 +251,6 @@ onMounted(load)
 .text-red { color: #DC2626 !important; }
 .text-green { color: #16A34A !important; }
 .capitalize { text-transform: capitalize; }
+.table-scroll .table { min-width: 560px; }
 @media (max-width: 768px) { .dashboard-page { padding: 20px 16px; } .page-head { flex-direction: column; align-items: flex-start; } .date-row { flex-direction: column; align-items: stretch; } }
 </style>

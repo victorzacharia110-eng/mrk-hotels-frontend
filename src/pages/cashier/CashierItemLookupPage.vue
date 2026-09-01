@@ -43,6 +43,7 @@
           <h2><i class="fas fa-book-open" aria-hidden="true"></i> {{ $t('cashier.lookup.title') }}</h2>
           <span class="item-count">{{ items.length }} {{ $t('cashier.lookup.items') }}</span>
         </div>
+        <div class="table-scroll">
         <table class="sm-table">
           <thead>
             <tr>
@@ -73,6 +74,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
       </section>
     </div>
   </div>

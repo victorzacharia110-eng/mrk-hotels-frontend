@@ -162,6 +162,7 @@
           <h3><i class="fas fa-receipt" aria-hidden="true"></i> {{ ticketTable.table_name }}</h3>
           <button class="sm-btn ghost sm" @click="ticketTable = null">{{ $t('common.close') }}</button>
         </div>
+        <div class="table-scroll">
         <table class="sm-table">
           <thead>
             <tr>
@@ -195,6 +196,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   </div>

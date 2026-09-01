@@ -603,7 +603,8 @@
                   </small>
                 </div>
                 <p v-if="!ledger.groups.length" class="sv-muted">{{ $t('stayview.ledgerEmpty') }}</p>
-                <table v-else class="sv-ledger-table">
+                <div v-else class="table-scroll">
+                <table class="sv-ledger-table">
                   <thead>
                     <tr>
                       <th>{{ $t('stayview.date') }}</th>
@@ -637,6 +638,7 @@
                     </tbody>
                   </template>
                 </table>
+                </div>
               </div>
             </div>
             <div class="sv-modal-actions">
@@ -2122,6 +2124,7 @@ onUnmounted(() => clearInterval(refreshTimer))
 
 .sv-ledger-table {
   width: 100%;
+  min-width: 860px;
   border-collapse: collapse;
   font-size: 12px;
 }

@@ -26,6 +26,7 @@
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
     <section class="panel">
+      <div class="table-scroll">
       <table class="sm-table">
         <thead>
           <tr>
@@ -82,6 +83,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
       <PaginationBar :page="page" :last-page="lastPage" @change="page = $event" />
     </section>
 

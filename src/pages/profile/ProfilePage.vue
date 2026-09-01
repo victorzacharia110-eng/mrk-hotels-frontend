@@ -395,6 +395,7 @@
             :rows="security.devices"
           />
         </div>
+        <div class="table-scroll">
         <table class="security-table">
           <thead>
             <tr>
@@ -429,6 +430,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       <div class="security-block">
@@ -1392,6 +1394,7 @@ onUnmounted(() => clearInterval(qrTimer))
   border-collapse: collapse;
   font-size: 13px;
 }
+.table-scroll .security-table { min-width: 560px; }
 
 .security-table th,
 .security-table td {

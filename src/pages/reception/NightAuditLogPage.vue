@@ -44,7 +44,8 @@
       <div v-if="!loading && !logs.length" class="muted" style="text-align: center; padding: 24px;">
         {{ $t('nightAudit.noLogs') }}
       </div>
-      <table v-else class="table">
+      <div v-else class="table-scroll">
+      <table class="table">
         <thead>
           <tr>
             <th>{{ $t('nightAudit.dateTime') }}</th>
@@ -71,6 +72,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 </template>
@@ -134,6 +136,7 @@ watch([from, to], load)
 .filter-row .grow { flex: 1; }
 .action-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: #eef4ff; color: #005EB8; border-radius: 999px; font-size: 12px; font-weight: 600; }
 .action-detail { margin-left: 8px; font-size: 12px; color: #64748b; text-transform: capitalize; }
+.table-scroll .table { min-width: 780px; }
 @media (max-width: 768px) {
   .dashboard-page { padding: 20px 16px; }
   .page-head { flex-direction: column; align-items: flex-start; }

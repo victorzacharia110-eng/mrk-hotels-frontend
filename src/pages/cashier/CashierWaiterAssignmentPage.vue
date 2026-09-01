@@ -241,6 +241,7 @@
             <div v-if="ordersModal.loading" class="orders-modal-body"><p class="empty">{{ $t('common.loading') }}</p></div>
             <div v-else-if="!ordersModal.orders.length" class="orders-modal-body"><p class="empty">{{ $t('cashier.waiters.noOrdersToday') }}</p></div>
             <div v-else class="orders-modal-body">
+              <div class="table-scroll">
               <table class="orders-table">
                 <thead>
                   <tr>
@@ -261,6 +262,7 @@
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         </transition>
@@ -823,6 +825,7 @@ onUnmounted(unsubscribe)
 .picker-row .meta-chip { margin-left: auto; }
 
 .orders-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table-scroll .orders-table { min-width: 480px; }
 .orders-table th {
   text-align: left;
   font-size: 11px;

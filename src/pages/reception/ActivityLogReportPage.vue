@@ -93,6 +93,7 @@
         </button>
 
         <div v-if="expanded[row.period_start]" class="activity-details">
+          <div class="table-scroll">
           <table class="table" style="margin-top: 12px;">
             <thead>
               <tr>
@@ -115,6 +116,7 @@
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </template>
@@ -224,5 +226,6 @@ onMounted(load)
 .staff-label { font-size: 12px; color: #64748b; font-weight: 600; }
 .staff-chip { font-size: 11px; padding: 3px 8px; background: #E8F1FA; color: #005EB8; border-radius: 12px; font-weight: 500; }
 .capitalize { text-transform: capitalize; }
+.table-scroll .table { min-width: 640px; }
 @media (max-width: 768px) { .dashboard-page { padding: 20px 16px; } .page-head { flex-direction: column; align-items: flex-start; } .filter-grid { grid-template-columns: 1fr; } }
 </style>

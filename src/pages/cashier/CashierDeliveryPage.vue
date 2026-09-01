@@ -21,6 +21,7 @@
     </div>
 
     <section class="panel">
+      <div class="table-scroll">
       <table class="sm-table">
         <thead>
           <tr>
@@ -48,6 +49,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </section>
 
     <NewOrderModal v-if="showModal" mode="delivery" :title="$t('cashier.delivery.addOrder')"

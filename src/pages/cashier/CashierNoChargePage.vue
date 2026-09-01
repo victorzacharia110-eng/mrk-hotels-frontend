@@ -14,6 +14,7 @@
           <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('cashier.noCharge.newOrder') }}
         </button>
       </div>
+      <div class="table-scroll">
       <table class="sm-table">
         <thead>
           <tr>
@@ -37,6 +38,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </section>
 
     <!-- The modal opens automatically when the No Charge nav item is clicked. -->

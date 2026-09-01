@@ -57,7 +57,8 @@
       <div v-if="!loading && !logs.length" class="muted" style="text-align: center; padding: 24px;">
         {{ $t('distribution.noData') }}
       </div>
-      <table v-else class="table">
+      <div v-else class="table-scroll">
+      <table class="table">
         <thead>
           <tr>
             <th>{{ $t('distribution.source') }}</th>
@@ -85,6 +86,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
 
       <div v-if="lastPage > 1" class="pager">
         <button class="btn btn-secondary" :disabled="currentPage <= 1 || loading" @click="fetchPage(currentPage - 1)">
@@ -223,6 +225,7 @@ onMounted(async () => {
 .status-badge--failed { background: #fdeaea; color: #b91c1c; }
 .pager { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 20px; }
 .pager-count { font-size: 13px; color: #64748b; }
+.table-scroll .table { min-width: 760px; }
 @media (max-width: 768px) {
   .dashboard-page { padding: 20px 16px; }
   .page-head { flex-direction: column; align-items: flex-start; }
