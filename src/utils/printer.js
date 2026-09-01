@@ -303,3 +303,52 @@ export async function printToPrinter(lines, opts = {}) {
 export function printerReady() {
   return printerState.connected && Boolean(port?.writable)
 }
+
+/**
+ * Builds the ESC/POS text for a small, narrow report (adjustments, transfers,
+ * movements, goods returns) so it fits a 58/80mm thermal roll like receipts.
+ *
+ * The report is centred under a brand header, then printed as a compact
+ * two-column table: left label, right value, with a solid divider line
+ * underneath every row. It is NOT meant for the wide multi-column reports
+ * (stock ledger summary, closing stock) — those still print to A4 via the
+ * browser dialog.
+ *
+ * @param {object} opts  Options:
+ *   - hotel {string}  Hotel name for the header.
+ *   - title {string}  Report title, e.g. "Stock Transfer".
+ *   - period {string} The date range / as-of line.
+ *   - rows {Array<{label:string, right?:string|number, bold?:boolean}>}
+ *   - width {number}  Thermal line width in characters (42 for 58mm).
+ * @returns {Array<Array<string|boolean|number>>} Lines ready for printToPrinter.
+ */
+export function buildReportLines({ hotel, title, period, rows, printedBy, width = 42 }) {
+  const lines = []
+  const dash = '-'.repeat(width)
+  const gap = ' '.repeat(width)
+
+  lines.push([hotel || 'MRK Hotels', false, 2])
+  lines.push([title, true, 1])
+  if (period) lines.push([period, false, 1])
+  lines.push([dash, false, 0])
+
+  for (const row of rows || []) {
+    if (!row) continue
+    if (row.separator) {
+      lines.push([dash, false, 0])
+      continue
+    }
+    if (row.header) {
+      lines.push([(row.header + ' ' + '.'.repeat(width - row.header.length - 1)), true, 0])
+      continue
+    }
+    const label = String(row.label ?? '').slice(0, width)
+    const right = row.right === undefined || row.right === null || row.right === '' ? '' : String(row.right)
+    lines.push([itemRow(label, right, width), row.bold, 0])
+    lines.push(['-'.repeat(width), false, 0])
+  }
+
+  lines.push([gap, false, 0])
+  if (printedBy) lines.push([printedBy, false, 0])
+  return lines
+}

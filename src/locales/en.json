@@ -3542,7 +3542,8 @@
       "pick": "Pick a date range and generate a report.",
       "printedBy": "Printed By",
       "allOutlets": "All Outlets",
-      "stockAdjustment": "Stock Adjustment"
+      "stockAdjustment": "Stock Adjustment",
+      "printMachine": "Print to machine"
     },
     "movements": {
       "allTypes": "All types",

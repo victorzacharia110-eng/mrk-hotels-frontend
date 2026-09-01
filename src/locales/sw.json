@@ -3542,7 +3542,8 @@
       "pick": "Chagua kipindi cha tarehe kisha tengeneza ripoti.",
       "printedBy": "Imechapishwa Na",
       "allOutlets": "Sehemu Zote",
-      "stockAdjustment": "Urekebishaji wa Hifadhi"
+      "stockAdjustment": "Urekebishaji wa Hifadhi",
+      "printMachine": "Chapisha kwa mashine"
     },
     "movements": {
       "allTypes": "Aina zote",

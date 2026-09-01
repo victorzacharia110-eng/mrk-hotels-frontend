@@ -22,6 +22,9 @@
       </select>
       <button class="sm-btn" @click="generate"><i class="fas fa-chart-line"></i> {{ $t('storeManager.reports.generate') }}</button>
       <button v-if="data" class="sm-btn ghost" @click="printReport"><i class="fas fa-print"></i> {{ $t('common.print') }}</button>
+      <button v-if="data && isThermalReport" class="sm-btn ghost" @click="printToMachine" title="Print to the connected receipt/printer machine">
+        <i class="fas fa-print"></i> {{ $t('storeManager.reports.printMachine') }}
+      </button>
     </div>
 
     <section v-if="loading" class="panel"><div class="sm-loading"><i class="fas fa-circle-notch"></i> {{ $t('common.loading') }}</div></section>
@@ -82,6 +85,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { reportApi, hotelSettingsApi, inventoryOpsApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
+import { printToPrinter, restorePrinter, buildReportLines } from '@/utils/printer'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -270,6 +274,49 @@ async function generate() {
 
 function printReport() { window.print() }
 
+// Small reports that fit a 58/80mm thermal roll and print to the till machine.
+const THERMAL_TYPES = ['transfer-register', 'movement-detail', 'stock-adjustment-report', 'goods-return-register']
+const isThermalReport = computed(() => THERMAL_TYPES.includes(type.value))
+
+// Build the narrow thermal lines for the current small report.
+function buildThermalLines() {
+  const rows = data.value?.[cfg.value.rows] || []
+  const title = t(cfg.value.labelKey)
+  const period = type.value === 'closing-stock'
+    ? `${t('storeManager.reports.asOf')}: ${to.value || from.value}`
+    : `${from.value || '—'} → ${to.value || '—'}`
+  const report = { hotel: hotelName.value, title, period, printedBy: `${t('storeManager.reports.printedBy')}: ${userName.value}`, rows: [] }
+  const money = (v) => (v == null || v === '' ? '' : Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 }))
+
+  for (const r of rows) {
+    switch (type.value) {
+      case 'transfer-register':
+        report.rows.push({ label: r.transfer_number, right: r.status }, { label: ` ${r.date}  ${r.from_department} → ${r.to_department}` })
+        break
+      case 'movement-detail':
+        report.rows.push({ label: r.date, right: r.direction }, { label: ` ${r.item_name}  (${r.transaction})`, right: money(r.quantity) }, { label: `  Bal ${money(r.balance_after)}  ·  ${money(r.value)}` })
+        break
+      case 'stock-adjustment-report':
+        report.rows.push({ label: r.date, right: r.direction }, { label: ` ${r.item_name}  (${r.category}/${r.department})`, right: money(r.quantity) }, { label: `  ${money(r.quantity) || ''} × ${money(r.unit_cost)} = ${money(r.value)}` })
+        break
+      case 'goods-return-register':
+        report.rows.push({ label: r.return_number, right: r.status }, { label: ` ${r.date}  ${r.reason}`, right: money(r.quantity) }, { label: `  Value: ${money(r.value)}` })
+        break
+    }
+    report.rows.push({ separator: true })
+  }
+
+  if ((data.value?.totals?.value ?? data.value?.totals?.quantity) !== undefined) {
+    report.rows.push({ label: 'TOTAL', right: money(data.value.totals.value ?? data.value.totals.quantity), bold: true })
+  }
+  return report
+}
+
+async function printToMachine() {
+  const sent = await printToPrinter(buildReportLines(buildThermalLines()), { logo: logoUrl.value })
+  if (!sent) printReport()
+}
+
 // Load the inventory departments available for filtering and the hotel logo.
 async function loadReportData() {
   try {
@@ -294,6 +341,7 @@ async function loadLogo() {
 
 onMounted(() => {
   loadReportData()
+  restorePrinter()
   if (!route.query.view) generate()
 })
 
