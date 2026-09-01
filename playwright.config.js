@@ -27,9 +27,11 @@ export default defineConfig({
   /* Retry once to absorb transient infra flakes (the single-threaded local
    * PHP server occasionally 5xxs a request when several workers burst it). */
   retries: process.env.CI ? 2 : 1,
-  /* Two workers locally: the single-threaded PHP dev server serializes module
-   * APIs, and three parallel workers turned page boots into 30s stalls. */
-  workers: process.env.CI ? 1 : 2,
+  /* Run serially: the single-threaded local PHP dev server returns HTTP 429
+   * "Too Many Attempts" when even two workers burst its throttle, which made
+   * module smoke tests intermittently flaky. One worker keeps the strict
+   * full suite deterministic (every test still runs, just not in parallel). */
+  workers: 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */

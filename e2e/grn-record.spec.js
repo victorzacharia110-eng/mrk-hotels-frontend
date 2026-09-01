@@ -31,7 +31,6 @@ test('store goods-received: record GRN against an approved PO', async ({ page, r
     items: [{ item_name: itemName, quantity: 10, unit: 'kg', unit_price: 50 }],
   })
   const poId = poRes.purchase_order.po_id
-  const poNumber = poRes.purchase_order.po_number
 
   // 3. Manager approval (level 80) then finance approval (level 70).
   await api({ email: 'manager@mrkhotels.test' }, 'post', `/v1/purchase-orders/${poId}/manager-approve`)

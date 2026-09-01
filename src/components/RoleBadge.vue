@@ -18,7 +18,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 
-const props = defineProps({
+defineProps({
   /** Light (header) or dark (sidebar) background variant. */
   dark: { type: Boolean, default: false },
 })

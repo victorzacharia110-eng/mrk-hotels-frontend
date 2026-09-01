@@ -14,7 +14,6 @@ test('rooms bulk select-all opens typed-confirm delete modal', async ({ page }) 
   await expect(page).toHaveURL(/\/app\/rooms/)
   await expect(page.locator('table thead tr')).toBeVisible({ timeout: 15000 })
 
-  const rows = page.locator('table tbody tr[class]')
   const headerCheckbox = page.locator('table thead input[type="checkbox"]').first()
   await expect(headerCheckbox).toBeVisible({ timeout: 15000 })
   await headerCheckbox.check()
