@@ -3411,7 +3411,9 @@
     "receiptTitle": "RECEIPT",
     "receiptRef": "Ref",
     "receiptBy": "Collected by",
-    "receiptThanks": "Asante — thank you!"
+    "receiptThanks": "Asante — thank you!",
+    "searchPlaceholder": "Search item or category",
+    "searchTitle": "Search results"
   },
   "kitchen": {
     "title": "Kitchen Board",

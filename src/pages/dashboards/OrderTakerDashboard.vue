@@ -52,126 +52,168 @@
     </nav>
 
     <template v-if="activeTab === 'new'">
-    <!-- Order header: No, waiter, diners, VIP, transaction type -->
-    <header class="order-header">
-      <div class="oh-field">
-        <label>{{ $t('orderTaker.orderNo') }}</label>
-        <span class="oh-static">-</span>
-      </div>
-      <div class="oh-field">
-        <label>{{ $t('orderTaker.waiter') }}</label>
-        <span class="oh-static">{{ waiterName }}</span>
-      </div>
-      <div class="oh-field">
-        <label>{{ $t('orderTaker.diners') }}</label>
-        <div class="covers-step">
-          <button type="button" :disabled="!form.covers" @click="form.covers = Math.max(0, form.covers - 1)">-</button>
-          <span>{{ form.covers }}</span>
-          <button type="button" @click="form.covers = Math.min(999, form.covers + 1)">+</button>
+    <div class="taker-split">
+      <!-- LEFT: categories + search + inline items (Ezee-style picker) -->
+      <div class="ts-left">
+        <!-- Big category buttons, like the department buttons of the reference -->
+        <div class="cat-panel">
+          <div class="cat-panel-head">
+            <i class="fas fa-th-large" aria-hidden="true"></i> {{ $t('orderTaker.categories') }}
+            <span class="cat-dept">{{ $t(`orderTaker.${department}`) }}</span>
+            <input
+              v-model.trim="searchQuery"
+              type="search"
+              class="cat-search"
+              :placeholder="$t('orderTaker.searchPlaceholder')"
+              @focus="openCategory('')"
+              @keydown.esc="closeCategory"
+            />
+          </div>
+          <div v-if="menuLoading" class="cat-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></div>
+          <div v-else-if="categories.length" class="cat-grid">
+            <button
+              v-for="cat in categories"
+              :key="cat"
+              type="button"
+              class="cat-btn"
+              :class="{ active: activeCategory === cat }"
+              @click="openCategory(cat)"
+            >
+              {{ cat }}
+            </button>
+          </div>
+          <p v-else class="cat-empty">{{ $t('orderTaker.noCategories') }}</p>
+        </div>
+
+        <!-- Inline items for the active category / search result (non-blocking) -->
+        <div v-if="activeCategory || searchQuery" class="inline-items">
+          <header class="inline-items-head">
+            <strong>{{ searchQuery ? $t('orderTaker.searchTitle') : activeCategory }}</strong>
+            <button type="button" class="line-remove" :title="$t('orderTaker.close')" @click="closeCategory">
+              <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+          </header>
+          <div v-if="popupItems.length" class="cat-pop-grid inline-grid">
+            <button
+              v-for="item in popupItems"
+              :key="item.menu_item_id"
+              type="button"
+              class="cat-item"
+              :class="{ 'on-order': lineFor(item) }"
+              @click="addItem(item)"
+            >
+              <span class="cat-item-name">{{ item.item_name }}</span>
+              <span class="cat-item-price">TZS {{ money(item.price) }}</span>
+              <span v-if="qtyFor(item)" class="cat-item-qty">×{{ qtyFor(item) }}</span>
+            </button>
+          </div>
+          <p v-else class="cat-empty">{{ $t('orderTaker.emptyCategory') }}</p>
         </div>
       </div>
-      <div class="oh-field">
-        <label>{{ $t('orderTaker.table') }}</label>
-        <SearchableSelect
-          v-model="form.table_number"
-          :options="tableOptions"
-          :empty-label="$t('orderTaker.selectTable')"
-          force-search
-        />
-      </div>
-      <label class="oh-check">
-        <input type="checkbox" disabled />
-        <span>{{ $t('orderTaker.vip') }}</span>
-      </label>
-      <button
-        v-if="canManageTables"
-        type="button"
-        class="oh-manage"
-        @click="openTableManager"
-      >
-        <i class="fas fa-chair" aria-hidden="true"></i> {{ $t('orderTaker.manageTables') }}
-      </button>
-    </header>
 
-    <!-- Order lines table: Qty / Item / Price / Amount -->
-    <div class="lines-wrap">
-      <table class="lines-table">
-        <thead>
-          <tr>
-            <th class="col-qty">{{ $t('orderTaker.qty') }}</th>
-            <th>{{ $t('orderTaker.item') }}</th>
-            <th class="col-price">{{ $t('orderTaker.price') }}</th>
-            <th class="col-amount">{{ $t('orderTaker.amount') }}</th>
-            <th class="col-x"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="line in pagedLines" :key="line.key || line.menu_item_id">
-            <td class="col-qty">
-              <div class="qty-step">
-                <button type="button" :disabled="line.quantity <= 1" @click="stepQty(line, -1)">-</button>
-                <span>{{ line.quantity }}</span>
-                <button type="button" @click="stepQty(line, 1)">+</button>
-              </div>
-            </td>
-            <td>{{ line.item_name }}</td>
-            <td class="col-price">{{ money(line.unit_price) }}</td>
-            <td class="col-amount">{{ money(line.subtotal) }}</td>
-            <td class="col-x">
-              <button type="button" class="line-remove" :title="$t('orderTaker.removeLine')" @click="removeLine(line)">
-                <i class="fas fa-times" aria-hidden="true"></i>
-              </button>
-            </td>
-          </tr>
-          <tr v-if="!orderLines.length">
-            <td colspan="5" class="empty-cell">{{ $t('orderTaker.empty') }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <input v-model.trim="form.notes" type="text" class="notes-line" :placeholder="$t('orderTaker.notesPlaceholder')" />
-    </div>
+      <!-- RIGHT: the selected order panel, like the Ezee order book -->
+      <div class="ts-right">
+        <!-- Order header: No, waiter, diners, VIP, transaction type -->
+        <header class="order-header">
+          <div class="oh-field">
+            <label>{{ $t('orderTaker.orderNo') }}</label>
+            <span class="oh-static">-</span>
+          </div>
+          <div class="oh-field">
+            <label>{{ $t('orderTaker.waiter') }}</label>
+            <span class="oh-static">{{ waiterName }}</span>
+          </div>
+          <div class="oh-field">
+            <label>{{ $t('orderTaker.diners') }}</label>
+            <div class="covers-step">
+              <button type="button" :disabled="!form.covers" @click="form.covers = Math.max(0, form.covers - 1)">-</button>
+              <span>{{ form.covers }}</span>
+              <button type="button" @click="form.covers = Math.min(999, form.covers + 1)">+</button>
+            </div>
+          </div>
+          <div class="oh-field">
+            <label>{{ $t('orderTaker.table') }}</label>
+            <SearchableSelect
+              v-model="form.table_number"
+              :options="tableOptions"
+              :empty-label="$t('orderTaker.selectTable')"
+              force-search
+            />
+          </div>
+          <label class="oh-check">
+            <input type="checkbox" disabled />
+            <span>{{ $t('orderTaker.vip') }}</span>
+          </label>
+          <button
+            v-if="canManageTables"
+            type="button"
+            class="oh-manage"
+            @click="openTableManager"
+          >
+            <i class="fas fa-chair" aria-hidden="true"></i> {{ $t('orderTaker.manageTables') }}
+          </button>
+        </header>
 
-    <!-- Page start / page end + total + send -->
-    <div class="pager-row">
-      <button type="button" class="pager-btn" :disabled="page <= 1" @click="setPage(1)">
-        <i class="fas fa-angles-left" aria-hidden="true"></i> {{ $t('orderTaker.pageStart') }}
-      </button>
-      <div class="total-bar">
-        <span>{{ $t('orderTaker.total') }}</span>
-        <strong>TZS {{ money(grandTotal) }}</strong>
-      </div>
-      <button type="button" class="pager-btn" :disabled="page >= pageCount" @click="setPage(pageCount)">
-        {{ $t('orderTaker.pageEnd') }} <i class="fas fa-angles-right" aria-hidden="true"></i>
-      </button>
-    </div>
+        <!-- Order lines table: Qty / Item / Price / Amount -->
+        <div class="lines-wrap">
+          <table class="lines-table">
+            <thead>
+              <tr>
+                <th class="col-qty">{{ $t('orderTaker.qty') }}</th>
+                <th>{{ $t('orderTaker.item') }}</th>
+                <th class="col-price">{{ $t('orderTaker.price') }}</th>
+                <th class="col-amount">{{ $t('orderTaker.amount') }}</th>
+                <th class="col-x"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="line in pagedLines" :key="line.key || line.menu_item_id">
+                <td class="col-qty">
+                  <div class="qty-step">
+                    <button type="button" :disabled="line.quantity <= 1" @click="stepQty(line, -1)">-</button>
+                    <span>{{ line.quantity }}</span>
+                    <button type="button" @click="stepQty(line, 1)">+</button>
+                  </div>
+                </td>
+                <td>{{ line.item_name }}</td>
+                <td class="col-price">{{ money(line.unit_price) }}</td>
+                <td class="col-amount">{{ money(line.subtotal) }}</td>
+                <td class="col-x">
+                  <button type="button" class="line-remove" :title="$t('orderTaker.removeLine')" @click="removeLine(line)">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="!orderLines.length">
+                <td colspan="5" class="empty-cell">{{ $t('orderTaker.empty') }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <input v-model.trim="form.notes" type="text" class="notes-line" :placeholder="$t('orderTaker.notesPlaceholder')" />
+        </div>
 
-    <p v-if="sendError" class="send-error">{{ sendError }}</p>
+        <!-- Page start / page end + total + send -->
+        <div class="pager-row">
+          <button type="button" class="pager-btn" :disabled="page <= 1" @click="setPage(1)">
+            <i class="fas fa-angles-left" aria-hidden="true"></i> {{ $t('orderTaker.pageStart') }}
+          </button>
+          <div class="total-bar">
+            <span>{{ $t('orderTaker.total') }}</span>
+            <strong>TZS {{ money(grandTotal) }}</strong>
+          </div>
+          <button type="button" class="pager-btn" :disabled="page >= pageCount" @click="setPage(pageCount)">
+            {{ $t('orderTaker.pageEnd') }} <i class="fas fa-angles-right" aria-hidden="true"></i>
+          </button>
+        </div>
 
-    <button type="button" class="send-btn" :disabled="!orderLines.length || sending" @click="sendOrder">
-      <i v-if="sending" class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
-      <i v-else class="fas fa-paper-plane" aria-hidden="true"></i>
-      {{ sending ? $t('orderTaker.sending') : $t('orderTaker.send') }}
-    </button>
+        <p v-if="sendError" class="send-error">{{ sendError }}</p>
 
-    <!-- Big category buttons, like the department buttons of the reference -->
-    <div class="cat-panel">
-      <div class="cat-panel-head">
-        <i class="fas fa-th-large" aria-hidden="true"></i> {{ $t('orderTaker.categories') }}
-        <span class="cat-dept">{{ $t(`orderTaker.${department}`) }}</span>
-      </div>
-      <div v-if="menuLoading" class="cat-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></div>
-      <div v-else-if="categories.length" class="cat-grid">
-        <button
-          v-for="cat in categories"
-          :key="cat"
-          type="button"
-          class="cat-btn"
-          @click="openCategory(cat)"
-        >
-          {{ cat }}
+        <button type="button" class="send-btn" :disabled="!orderLines.length || sending" @click="sendOrder">
+          <i v-if="sending" class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+          <i v-else class="fas fa-paper-plane" aria-hidden="true"></i>
+          {{ sending ? $t('orderTaker.sending') : $t('orderTaker.send') }}
         </button>
       </div>
-      <p v-else class="cat-empty">{{ $t('orderTaker.noCategories') }}</p>
     </div>
     </template>
 
@@ -314,38 +356,6 @@
                 {{ $t('common.close') }}
               </button>
             </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
-
-    <!-- Category items popup -->
-    <Teleport to="body">
-      <Transition name="fade">
-        <div v-if="activeCategory" class="cat-pop" role="dialog" :aria-label="activeCategory">
-          <div class="cat-pop-backdrop" @click="closeCategory"></div>
-          <div class="cat-pop-panel">
-            <header class="cat-pop-head">
-              <strong>{{ activeCategory }}</strong>
-              <button type="button" class="cat-pop-close" :aria-label="$t('orderTaker.close')" @click="closeCategory">
-                <i class="fas fa-times" aria-hidden="true"></i>
-              </button>
-            </header>
-            <div v-if="categoryItems.length" class="cat-pop-grid">
-              <button
-                v-for="item in categoryItems"
-                :key="item.menu_item_id"
-                type="button"
-                class="cat-item"
-                :class="{ 'on-order': lineFor(item) }"
-                @click="addItem(item)"
-              >
-                <span class="cat-item-name">{{ item.item_name }}</span>
-                <span class="cat-item-price">TZS {{ money(item.price) }}</span>
-                <span v-if="qtyFor(item)" class="cat-item-qty">×{{ qtyFor(item) }}</span>
-              </button>
-            </div>
-            <p v-else class="cat-empty">{{ $t('orderTaker.emptyCategory') }}</p>
           </div>
         </div>
       </Transition>
@@ -775,6 +785,24 @@ const categoryItems = computed(() => {
   return availableMenu.value.filter((item) => item.category === activeCategory.value)
 })
 
+// Universal search: lets the waiter look up an item (or category) across the
+// whole department menu without having to reopen category by category.
+const searchQuery = ref('')
+/** Items that match the universal search across every category. */
+const searchResults = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return []
+  return availableMenu.value.filter(
+    (item) =>
+      item.item_name.toLowerCase().includes(q) ||
+      (item.category || '').toLowerCase().includes(q),
+  )
+})
+/** When a search is active we show results from every category at once. */
+const popupItems = computed(() =>
+  searchQuery.value.trim() ? searchResults.value : categoryItems.value,
+)
+
 // Lines table window: the reference shows 8 rows with PÁG. INICIO/FINAL.
 const LINES_PER_PAGE = 8
 const page = ref(1)
@@ -806,14 +834,16 @@ function setPage(p) {
   page.value = Math.min(Math.max(1, p), pageCount.value)
 }
 
-/** Opens the popup listing the items of a category. */
+/** Opens the popup listing the items of a category (and clears any search). */
 function openCategory(cat) {
   activeCategory.value = cat
+  searchQuery.value = ''
 }
 
-/** Closes the category popup. */
+/** Closes the category popup and clears any active search. */
 function closeCategory() {
   activeCategory.value = ''
+  searchQuery.value = ''
 }
 
 /** The existing line for a menu item (any accompaniment), or undefined. */
@@ -981,9 +1011,22 @@ onMounted(() => {
   openPoll = setInterval(() => {
     if (activeTab.value === 'open') loadOpenOrders()
   }, 30000)
+  document.addEventListener('keydown', onKey)
 })
 
-onUnmounted(() => clearInterval(openPoll))
+onUnmounted(() => {
+  clearInterval(openPoll)
+  document.removeEventListener('keydown', onKey)
+})
+
+/** Esc closes the category popup (and clears any search) — one tap to back out. */
+function onKey(e) {
+  if (e.key === 'Escape') {
+    if (activeCategory.value || searchQuery.value) closeCategory()
+    else if (payOrder.value) payOrder.value = null
+    else if (tableManagerOpen.value) tableManagerOpen.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -995,6 +1038,57 @@ onUnmounted(() => clearInterval(openPoll))
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* Ezee-style split: left = category/item picker, right = the selected order. */
+.taker-split {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+.ts-left,
+.ts-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.ts-right {
+  position: sticky;
+  top: 12px;
+}
+
+.inline-items {
+  background: #fff;
+  border: 1px solid #d4d4d8;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.inline-items-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #3f3f46;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+.inline-items-head strong { text-transform: uppercase; letter-spacing: 0.03em; }
+.inline-items-head .line-remove { color: #fff; background: none; border: none; font-size: 16px; cursor: pointer; }
+.inline-grid { max-height: none; }
+
+.cat-btn.active {
+  background: #b8860b;
+  color: #fff;
+  border-color: #b8860b;
+}
+
+@media (max-width: 820px) {
+  .taker-split { grid-template-columns: 1fr; }
+  .ts-right { position: static; }
 }
 
 /* ---- Order header ---- */
@@ -1408,6 +1502,7 @@ onUnmounted(() => clearInterval(openPoll))
 .cat-panel-head {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   font-size: 12px;
   font-weight: 700;
@@ -1423,6 +1518,25 @@ onUnmounted(() => clearInterval(openPoll))
   color: #92400e;
   padding: 3px 12px;
   border-radius: 999px;
+}
+
+.cat-search {
+  flex: 1 1 100%;
+  width: 100%;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 500;
+  color: #27272a;
+  background: #fafafa;
+}
+.cat-search:focus {
+  outline: none;
+  border-color: #b8860b;
+  background: #fff;
 }
 
 .cat-grid {
@@ -1495,6 +1609,7 @@ onUnmounted(() => clearInterval(openPoll))
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   padding: 14px 18px;
   background: #3f3f46;
   color: #fff;

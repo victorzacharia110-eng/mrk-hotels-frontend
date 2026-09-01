@@ -3411,7 +3411,9 @@
     "receiptTitle": "RISITI",
     "receiptRef": "Kumbukumbu",
     "receiptBy": "Alipokea",
-    "receiptThanks": "Asante!"
+    "receiptThanks": "Asante!",
+    "searchPlaceholder": "Tafuta bidhaa au kategoria",
+    "searchTitle": "Matokeo ya utafutaji"
   },
   "kitchen": {
     "title": "Ubao wa Jikoni",
