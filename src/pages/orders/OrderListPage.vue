@@ -154,7 +154,7 @@
             </td>
             <td>
               <span class="badge" :class="paymentBadge(order.payment_status)">{{
-                order.payment_status.replace('_', ' ')
+                String(order.payment_status || 'unpaid').replace('_', ' ')
               }}</span>
             </td>
             <td>
@@ -872,7 +872,13 @@ async function load() {
       page: page.value,
       per_page: 15,
     })
-    orders.value = res.data.data || []
+    orders.value = (res.data.data || []).map((order) => ({
+      ...order,
+      // Guard legacy/partial rows so the table can never white-screen on a null.
+      items: Array.isArray(order.items) ? order.items : [],
+      payment_status: order.payment_status || 'unpaid',
+      items_count: order.items_count ?? (Array.isArray(order.items) ? order.items.length : 0),
+    }))
     meta.value = res.data
   } catch (err) {
     error.value = err.response?.data?.message || t('orders.loadError')

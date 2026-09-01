@@ -29,6 +29,14 @@
         <i class="fas fa-list-check" aria-hidden="true"></i> {{ $t('orderTaker.tabOpenOrders') }}
         <span v-if="openOrders.length" class="pos-tab-badge">{{ openOrders.length }}</span>
       </button>
+      <button
+        type="button"
+        class="pos-tab"
+        :class="{ active: activeTab === 'summary' }"
+        @click="switchToSummary"
+      >
+        <i class="fas fa-chart-simple" aria-hidden="true"></i> {{ $t('orderTaker.tabOrderSummary') }}
+      </button>
 
       <!-- Department switch: flips menu categories, open orders and defaults -->
       <div class="dept-toggle" role="group" :aria-label="$t('orderTaker.department')">
@@ -243,7 +251,7 @@
     </template>
 
     <!-- Open orders: the whole service lifecycle on one screen, single taps -->
-    <div v-else class="open-panel">
+    <div v-else-if="activeTab === 'open'" class="open-panel">
       <div class="open-head">
         <h2>{{ $t('orderTaker.tabOpenOrders') }} · {{ $t(`orderTaker.${department}`) }}</h2>
         <button type="button" class="oh-manage" @click="loadOpenOrders">
@@ -324,6 +332,72 @@
           </div>
         </article>
       </div>
+    </div>
+
+    <!-- Order Summary: the signed-in waiter's tickets and totals for today -->
+    <div v-else class="summary-panel">
+      <div class="open-head">
+        <h2><i class="fas fa-chart-simple" aria-hidden="true"></i> {{ $t('orderTaker.summaryTitle') }}</h2>
+        <button type="button" class="oh-manage" @click="loadOrderSummary">
+          <i class="fas fa-rotate" aria-hidden="true"></i> {{ $t('orderTaker.refresh') }}
+        </button>
+      </div>
+      <p v-if="summaryLoading" class="cat-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></p>
+      <template v-else>
+        <p v-if="summaryError" class="send-error">{{ summaryError }}</p>
+        <div class="summary-kpis">
+          <div class="summary-kpi kpi-running">
+            <span class="sk-label">{{ $t('orderTaker.summaryRunning') }}</span>
+            <strong>{{ summaryRunning }}</strong>
+          </div>
+          <div class="summary-kpi kpi-settled">
+            <span class="sk-label">{{ $t('orderTaker.summarySettled') }}</span>
+            <strong>{{ summarySettled }}</strong>
+          </div>
+          <div class="summary-kpi kpi-voided">
+            <span class="sk-label">{{ $t('orderTaker.summaryVoided') }}</span>
+            <strong>{{ summaryVoided }}</strong>
+          </div>
+          <div class="summary-kpi kpi-total">
+            <span class="sk-label">{{ $t('orderTaker.summaryTotalToday') }}</span>
+            <strong>TZS {{ money(summaryTotal) }}</strong>
+          </div>
+        </div>
+
+        <div class="summary-quick">
+          <router-link to="/app/messages" class="summary-link"><i class="fas fa-comments" aria-hidden="true"></i> {{ $t('orderTaker.summaryMessages') }}</router-link>
+          <router-link to="/app/statuses" class="summary-link"><i class="fas fa-circle-dot" aria-hidden="true"></i> {{ $t('orderTaker.summaryStatuses') }}</router-link>
+          <router-link to="/app/issue-reports" class="summary-link"><i class="fas fa-flag" aria-hidden="true"></i> {{ $t('orderTaker.summaryIssueReports') }}</router-link>
+        </div>
+
+        <div class="panel table-card">
+          <p v-if="!myOrders.length" class="cat-empty">{{ $t('orderTaker.summaryNoOrders') }}</p>
+          <div v-else class="table-scroll">
+            <table class="lines-table summary-table">
+              <thead>
+                <tr>
+                  <th>{{ $t('orderTaker.summaryOrder') }}</th>
+                  <th>{{ $t('orderTaker.summaryTime') }}</th>
+                  <th>{{ $t('orderTaker.summaryWaiter') }}</th>
+                  <th>{{ $t('orderTaker.summaryType') }}</th>
+                  <th>{{ $t('orderTaker.summaryStatus') }}</th>
+                  <th class="col-amount">{{ $t('orderTaker.summaryAmount') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="order in myOrders" :key="order.order_id">
+                  <td><strong>{{ order.order_number }}</strong></td>
+                  <td>{{ timeOf(order.created_at) }}</td>
+                  <td>{{ order.waiter_name || '—' }}</td>
+                  <td>{{ orderTypeLabel(order) }}</td>
+                  <td><span class="badge" :class="statusBadge(order.status)">{{ statusLabel(order.status) }}</span></td>
+                  <td class="col-amount"><strong>TZS {{ money(order.total_amount) }}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
     </div>
 
     <!-- Collect payment popup (single tap on a method) -->
@@ -549,6 +623,71 @@ const paymentMethodOptions = PAYMENT_METHODS.map((method) => ({
 function switchToOpen() {
   activeTab.value = 'open'
   loadOpenOrders()
+}
+
+/* ---------------- Waiter account: order summary + quick links ---------------- */
+
+// The waiter's own orders for the day, plus their totals.
+const myOrders = ref([])
+const summaryLoading = ref(false)
+const summaryError = ref('')
+
+/** Whether the given order belongs to the currently signed-in waiter. */
+function isMine(order) {
+  const me = String(waiterName.value || '').trim().toLowerCase()
+  if (!me) return true
+  const theirs = String(order.waiter_name || '').trim().toLowerCase()
+  return !theirs || theirs === me
+}
+
+const summaryRunning = computed(
+  () => myOrders.value.filter((o) => !['completed', 'cancelled'].includes(o.status)).length,
+)
+const summarySettled = computed(
+  () => myOrders.value.filter((o) => o.status === 'completed' || o.payment_status !== 'unpaid').length,
+)
+const summaryVoided = computed(
+  () => myOrders.value.filter((o) => o.status === 'cancelled').length,
+)
+const summaryTotal = computed(() =>
+  myOrders.value.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0),
+)
+
+/** Switches to the order-summary tab and refreshes the waiter's tickets. */
+function switchToSummary() {
+  activeTab.value = 'summary'
+  loadOrderSummary()
+}
+
+/** Loads today's orders and keeps only those attributed to this waiter. */
+async function loadOrderSummary() {
+  summaryLoading.value = true
+  summaryError.value = ''
+  try {
+    const res = await orderApi.index({ department: department.value, per_page: 100 })
+    const rows = Array.isArray(res.data) ? res.data : res.data?.data || []
+    myOrders.value = rows.filter(isMine)
+  } catch (err) {
+    summaryError.value = err.response?.data?.message || t('orderTaker.loadOrdersError')
+    myOrders.value = []
+  } finally {
+    summaryLoading.value = false
+  }
+}
+
+/** Human time from an ISO string. */
+function timeOf(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+}
+
+/** Reads the order type, falling back to the room/table to label DINE IN etc. */
+function orderTypeLabel(order) {
+  const type = order.order_type
+  if (type) return type.replace('_', ' ').toUpperCase()
+  if (order.room_number) return t('orderTaker.orderTypeRoom')
+  if (order.table_number) return t('orderTaker.orderTypeDineIn')
+  return t('orderTaker.orderTypeTakeAway')
 }
 
 /** Loads today's still-open orders for this department (the kitchen queue). */
@@ -1965,6 +2104,58 @@ function onKey(e) {
   justify-content: space-between;
   font-size: 15px;
   color: #27272a;
+}
+
+/* Waiter account order summary */
+.summary-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.summary-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.summary-kpi {
+  background: #fff;
+  border: 1px solid #d4d4d8;
+  border-left: 4px solid #ccc;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.summary-kpi strong { font-size: 24px; color: #18181b; }
+.sk-label { font-size: 12px; color: #71717a; font-weight: 600; }
+.kpi-running { border-left-color: #f59e0b; }
+.kpi-settled { border-left-color: #16a34a; }
+.kpi-voided { border-left-color: #ef4444; }
+.kpi-total { border-left-color: #2563eb; }
+.summary-quick {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.summary-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f4f4f5;
+  border: 1px solid #d4d4d8;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #27272a;
+  text-decoration: none;
+}
+.summary-link:hover { background: #e4e4e7; }
+.summary-table th, .summary-table td { padding: 10px 12px; }
+
+@media (max-width: 768px) {
+  .summary-kpis { grid-template-columns: repeat(2, 1fr); }
 }
 
 .open-badge {
