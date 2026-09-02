@@ -140,37 +140,12 @@
     <!-- Printable receipt / KOT (hidden on screen, visible in print). -->
     <div ref="printArea" class="receipt-print">
       <template v-if="printing">
-<div>
-  <h2 class="print-brand">{{ printing.kind === 'kot' ? 'KITCHEN ORDER TICKET' : 'MRK HOTELS' }}</h2>
-  <img v-if="logoUrl" :src="logoUrl" alt="Hotel logo" class="print-logo" />
-  <p class="print-sub">{{ printing.order.order_number }} — {{ printing.order.outlet_name || '' }}</p>
-  <p>Table: {{ printing.order.table_number || printing.order.room_number || '-' }} |
-    Waiter: {{ printing.order.waiter_name || '-' }}</p>
-</div>
-
-        <hr v-if="printing.kind !== 'kot'" />
-
-        <table>
-          <tbody>
-            <tr v-for="item in printing.order.items" :key="item.order_item_id">
-              <td>{{ item.quantity }} x</td>
-              <td>{{ item.item_name }}</td>
-              <td>{{ money(item.subtotal) }}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div v-if="printing.kind !== 'kot'">
-          <hr />
-          <p class="print-total">TOTAL: {{ money(printing.order.total_amount) }}</p>
-          <p v-if="printing.order._payment" class="print-paid">
-            PAID: {{ paymentLabel(printing.order._payment) }}
-            <span v-if="printing.order._payment.transaction_reference"> · Ref {{ printing.order._payment.transaction_reference }}</span>
-            · {{ printing.order._payment.collected_by }}
-          </p>
+        <p class="print-brand">{{ printRows[0]?.[0] }}</p>
+        <div v-for="(row, i) in printRows" :key="i">
+          <p v-if="row[0]" class="print-line" :class="{ 'print-bold': row[1] }">{{ row[0] }}</p>
+          <div v-else class="print-gap"></div>
         </div>
-
-        <p>{{ new Date().toLocaleString() }}</p>
+        <img v-if="logoUrl && printing.kind !== 'kot'" :src="logoUrl" alt="Hotel logo" class="print-logo" />
       </template>
     </div>
   </div>
@@ -182,11 +157,13 @@ import { useI18n } from 'vue-i18n'
 import { cashierApi, orderApi, hotelSettingsApi } from '@/api'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
+import { useAuthStore } from '@/stores/auth'
 import { PAYMENT_METHODS } from '@/utils/payments'
 import { printToPrinter, restorePrinter } from '@/utils/printer'
 import { displayLines } from '@/utils/receipts'
 
 const { t, te } = useI18n()
+const authStore = useAuthStore()
 
 /** Hotel logo shown on receipts (per-hotel if set, else the generic mark). */
 const logoUrl = ref('')
@@ -255,6 +232,12 @@ const filterTabs = computed(() => [
   { key: 'voided', label: t('cashier.summary.tabVoided'), count: orders.value.filter((o) => o.status === 'cancelled').length },
 ])
 
+const printRows = computed(() => {
+  if (!printing.value) return []
+  const hotel = authStore.user?.tenant?.hotel_name || 'MRK HOTELS'
+  return displayLines(printing.value.order, printing.value.kind, { hotel })
+})
+
 function chipFor(order) {
   if (order.status === 'cancelled') return 'cancelled'
   if (isSettled(order)) return 'approved'
@@ -298,17 +281,6 @@ async function unfreeze(order) {
 /** Recall jumps the cashier back to the Dine In floor focused on this ticket. */
 function recall(order) {
   window.alert(t('cashier.summary.recallHint', { number: order.order_number }))
-}
-
-/** Render "M-Pesa", "Cash", "Bank (CRDB)" from the payment proof. */
-function paymentLabel(p) {
-  const method = p?.method || 'cash'
-  let label = te(`paymentFields.methods.${method}`) ? t(`paymentFields.methods.${method}`) : method
-  if (p?.provider) {
-    const prov = te(`paymentFields.providers.${p.provider}`) ? t(`paymentFields.providers.${p.provider}`) : p.provider
-    label += ` (${prov})`
-  }
-  return label
 }
 
 /** Opens the payment modal for a running ticket. */
@@ -359,7 +331,8 @@ async function confirmPay() {
 }
 
 async function doPrint(order, kind) {
-  const sent = await printToPrinter(displayLines(order, kind), { logo: logoUrl.value })
+  const hotel = authStore.user?.tenant?.hotel_name || 'MRK HOTELS'
+  const sent = await printToPrinter(displayLines(order, kind, { hotel }), { logo: logoUrl.value })
   if (sent) return
   printing.value = { order, kind }
   requestAnimationFrame(() => {

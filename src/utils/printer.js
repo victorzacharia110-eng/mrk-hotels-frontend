@@ -37,12 +37,21 @@ const ESC = { init: 0x1b, feed: 0x64 }
 /**
  * Wraps a text line into the byte stream for the printer.
  *
+ * Double-width (size 2) text takes two columns per character, so a line that
+ * was padded to the full 42-char width would overflow the roll and wrap onto
+ * a second line (paper runs long). Cap those lines at half the width — the
+ * exact number of columns a double-size 42-wide line can hold.
+ *
  * @param {Uint8Array} out  The accumulating buffer.
  * @param {string} text     The line to print.
  * @param {boolean} bold    Bold line flag.
- * @param {number} [size]   0 = normal, 1 = double height, 2 = double width.
+ * @param {number} [size]   0 = normal, 1 = double height, 2 = double width (+height).
  */
+const DOUBLE_WIDTH_CHARS = Math.floor(42 / 2) // 21 columns = a full 42-char line at double size.
 function pushLine(out, text = '', bold = false, size = 0) {
+  if (size === 2 && text.length > DOUBLE_WIDTH_CHARS) {
+    text = text.slice(0, DOUBLE_WIDTH_CHARS)
+  }
   if (size) {
     // GS ! n — double height (1) and/or double width (2) characters so the
     // header and total actually fill the paper instead of a thin single line.
@@ -69,7 +78,9 @@ function pushLine(out, text = '', bold = false, size = 0) {
  * @returns {Uint8Array} The bytes to write.
  */
 export function buildRecipt(lines) {
-  const out = [ESC.init, ESC.init, 0x40] // ESC @ — reset the printer.
+  const out = []
+  out.push(ESC.init, 0x40) // ESC @ — reset the printer.
+  out.push(0x1b, 0x4d, 0x01) // ESC M 1 — narrow 9-dot font so 42-char lines fit a 58mm roll.
 
   for (const [text, bold, size] of lines) {
     pushLine(out, text, bold, size || 0)
@@ -109,8 +120,9 @@ export function padLine(text, mode = 'left', width = 42) {
  */
 export function itemRow(item, right = '', width = 42) {
   if (!right) return padLine(item, 'left', width)
-  const amount = right.toString().padStart(10, ' ')
-  return (item + ' '.repeat(Math.max(0, width - 10 - item.length)) + amount).slice(0, width)
+  const amount = right.toString()
+  const joined = item + ' '.repeat(Math.max(0, width - item.length - amount.length)) + amount
+  return joined.slice(0, width)
 }
 
 /**

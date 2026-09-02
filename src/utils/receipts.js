@@ -12,7 +12,7 @@ import { itemRow, padLine } from '@/utils/printer'
 const WIDTH = 42
 
 function money(value) {
-  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value ?? 0)
+  return new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value ?? 0)
 }
 
 function divider(char = '-') {
@@ -20,19 +20,34 @@ function divider(char = '-') {
 }
 
 /**
- * Lines for a paid bill (guest receipt).
+ * Lines for a guest receipt — a compact bill that fits small receipt paper.
  * Rows are [text, bold?, size?] where size 2 = double-width double-height.
  *
+ * Layout mirrors the reference till receipt: brand header, Receipt, Table /
+ * Guest / Waiter, dated, then a Qty·Item·Amount column, Bill Amount / Total
+ * Tax / Total Discount / Total / Paid / Due, Thank you and Prepared By.
+ *
  * @param {object} order  Order (must carry items) with optional `_payment`.
+ * @param {object} [opts]  Options: `hotel` (brand name) — defaults to MRK HOTELS.
  * @returns {Array<Array<string|boolean|number>>} The receipt rows.
  */
-export function orderReceiptLines(order) {
+export function orderReceiptLines(order, opts = {}) {
+  const total = Number(order.total_amount ?? 0)
+  const paid = Number(order._payment?.amount ?? (order.payment_status === 'paid' ? total : 0))
+  const due = Math.max(0, total - paid)
+
   const lines = [
-    ['MRK HOTELS', true, 2],
-    [padLine(String(order.order_number || ''), 'center'), false, 2],
-    [order.outlet_name || order.department || ''],
-    [`Table: ${order.table_number || order.room_number || '-'}   Waiter: ${order.waiter_name || '-'}`],
+    [opts.hotel || 'MRK HOTELS', true, 2],
+    [padLine('Receipt', 'center', 21), false, 2],
+    [String(order.order_number || ''), false, 2],
     [''],
+    [`Table: ${order.table_number || order.room_number || '-'}`],
+    [`Guest: ${order.guest_name || '-'}`],
+    [`Date: ${new Date().toLocaleString()}`],
+    [`Waiter: ${order.waiter_name || '-'}`],
+    [''],
+    [itemRow('Qty  Item', 'Amount')],
+    [divider()],
   ]
 
   for (const item of order.items || []) {
@@ -41,21 +56,15 @@ export function orderReceiptLines(order) {
   }
 
   lines.push([divider()])
-  lines.push([itemRow('TOTAL', money(order.total_amount ?? 0)), true, 2], [''], [''])
-
-  const payment = order._payment
-  if (payment) {
-    const method = payment.method || 'cash'
-    const provider = payment.provider ? ` (${payment.provider})` : ''
-    lines.push([`PAID: ${method}${provider}`, false, 2])
-    if (payment.transaction_reference) {
-      lines.push([`Ref: ${payment.transaction_reference}`])
-    }
-    lines.push([`By: ${payment.collected_by || ''}`])
-  }
-
+  lines.push([itemRow('Bill Amount:', `${money(total)} TSh`)])
+  lines.push([itemRow('Total Tax:', `${money(order.tax_amount ?? 0)} TSh`)])
+  lines.push([itemRow('Total Discount:', `${money(order.discount_amount ?? 0)} TSh`)])
+  lines.push([itemRow('Total:', `${money(total)} TSh`), true])
+  lines.push([itemRow('Paid:', `${money(paid)} TSh`)])
+  lines.push([itemRow('Due:', `${money(due)} TSh`)])
   lines.push([''])
-  lines.push([padLine(new Date().toLocaleString(), 'center')])
+  lines.push([padLine('Thank you', 'center')])
+  lines.push([`Prepared By: ${order._payment?.collected_by || order.waiter_name || ''}`])
   return lines
 }
 
@@ -90,12 +99,12 @@ export function kitchenTicketLines(order) {
 export function testPrintLines() {
   const lines = [
     ['MRK HOTELS', true, 2],
-    [padLine('Printer test', 'center'), false, 2],
+    [padLine('Printer test', 'center', 21), false, 2],
     [''],
     [itemRow('Line item A', 'TZS 5,000')],
     [itemRow('Line item B', 'TZS 2,500')],
     [divider()],
-    [itemRow('TOTAL', 'TZS 7,500'), true, 2],
+    [itemRow('TOTAL', 'TZS 7,500', 21), true, 2],
     [''],
     [padLine('Connected: connectPrinter OK', 'center')],
     [padLine(new Date().toLocaleString(), 'center')],
@@ -109,8 +118,9 @@ export function testPrintLines() {
  *
  * @param {object} order  Order (must carry items), optional `_payment`.
  * @param {string} kind   'receipt' | 'kot'.
+ * @param {object} [opts]  Passed through to the formatter (e.g. { hotel }).
  * @returns {Array<Array<string|boolean>>} The rows.
  */
-export function displayLines(order, kind) {
-  return kind === 'kot' ? kitchenTicketLines(order) : orderReceiptLines(order)
+export function displayLines(order, kind, opts = {}) {
+  return kind === 'kot' ? kitchenTicketLines(order, opts) : orderReceiptLines(order, opts)
 }

@@ -254,10 +254,6 @@
     position: fixed;
     inset: 0;
     box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-evenly;
-    align-items: stretch;
     width: 100%;
     height: 100%;
     padding: 14mm 12mm;
@@ -265,23 +261,21 @@
     background: #fff;
     color: #000;
     font-family: 'Courier New', Courier, monospace;
-    font-size: 18px;
-    line-height: 1.65;
+    font-size: 17px;
+    line-height: 1.5;
     font-weight: 500;
-    text-align: center;
+    text-align: left;
+    white-space: pre;
+    overflow: hidden;
   }
 
-  .receipt-print h2,
   .receipt-print .print-brand {
-    font-size: 38px;
+    font-size: 34px;
     font-weight: 800;
     letter-spacing: 1.5px;
-    margin: 0;
-  }
-
-  .receipt-print .print-sub {
-    font-size: 19px;
-    margin: 1mm 0;
+    margin: 0 0 2mm;
+    text-align: center;
+    white-space: normal;
   }
 
   .receipt-print .print-logo {
@@ -292,52 +286,17 @@
     margin: 3mm auto;
   }
 
-  .receipt-print p {
-    margin: 1mm 0;
-    font-size: 18px;
+  .receipt-print .print-line {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.5;
   }
 
-  .receipt-print hr {
-    border: none;
-    border-top: 1px solid #000;
-    width: 100%;
-    margin: 2mm 0;
-  }
-
-  .receipt-print table {
-    width: 100%;
-    max-width: 160mm;
-    margin: 0 auto;
-    border-collapse: collapse;
-  }
-
-  .receipt-print table td {
-    font-size: 18px;
-    padding: 1.6mm 2mm;
-    vertical-align: top;
-  }
-
-  .receipt-print table td:first-child {
-    text-align: left;
-    white-space: nowrap;
-    width: 10%;
-  }
-
-  .receipt-print table td:nth-child(2) {
-    text-align: left;
-    width: auto;
-  }
-
-  .receipt-print table td:last-child {
-    text-align: right;
-    white-space: nowrap;
-    width: 22%;
-  }
-
-  .receipt-print .print-total,
-  .receipt-print .print-paid {
-    font-size: 26px;
+  .receipt-print .print-bold {
     font-weight: 800;
-    margin: 2mm 0;
+  }
+
+  .receipt-print .print-gap {
+    height: 1mm;
   }
 }
