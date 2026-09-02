@@ -570,6 +570,9 @@ import { useAuthStore } from '@/stores/auth'
 import { orderApi, menuItemApi, tableApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { PAYMENT_METHODS } from '@/utils/payments'
+import { printToPrinter, restorePrinter } from '@/utils/printer'
+import { displayLines } from '@/utils/receipts'
+import { toast } from '@/utils/toast'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -770,10 +773,29 @@ async function pay(method) {
   openError.value = ''
   try {
     const res = await orderApi.pay(payOrder.value.order_id, { method })
+    const payment = res.data?.payment || {}
+    const order = { ...payOrder.value, _payment: payment }
+    if (!order.items?.length) {
+      try {
+        const { data } = await orderApi.show(order.order_id)
+        order.items = data.order?.items || []
+      } catch {
+        /* receipt still prints with whatever items we have */
+      }
+    }
     receipt.value = {
-      ...res.data?.payment,
-      order_number: payOrder.value.order_number,
-      total: payOrder.value.total_amount,
+      order_number: order.order_number,
+      total: order.total_amount,
+      paid_at: payment.paid_at || new Date().toISOString(),
+      method: payment.method,
+      transaction_reference: payment.transaction_reference,
+      collected_by: payment.collected_by,
+      order,
+    }
+    // Silent till printing — no browser dialog.
+    const hotel = authStore.user?.tenant?.hotel_name || 'MRK Hotels'
+    if (!(await printToPrinter(displayLines(order, 'receipt', { hotel })))) {
+      toast(t('orderTaker.noPrinter'), 'error')
     }
     sentToast.value = t('orders.paymentCollected')
     setTimeout(() => (sentToast.value = ''), 3000)
@@ -791,9 +813,13 @@ function methodLabel(code) {
   return paymentMethodOptions.find((m) => m.value === code)?.label || code
 }
 
-/** Opens the browser print dialog showing only the receipt. */
-function printReceipt() {
-  window.print()
+/** Prints the receipt of the last collection silently on the till printer. */
+async function printReceipt() {
+  const order = receipt.value?.order
+  if (!order) return
+  const hotel = authStore.user?.tenant?.hotel_name || 'MRK Hotels'
+  const sent = await printToPrinter(displayLines(order, 'receipt', { hotel }))
+  if (!sent) toast(t('orderTaker.noPrinter'), 'error')
 }
 
 /** Bills an unpaid room order to the guest's room account with one tap. */
@@ -1202,6 +1228,7 @@ async function loadMenu() {
 }
 
 onMounted(() => {
+  restorePrinter()
   loadMenu()
   loadTables()
   loadOpenOrders()

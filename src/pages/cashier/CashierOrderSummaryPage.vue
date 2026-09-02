@@ -137,17 +137,8 @@
       </div>
     </div>
 
-    <!-- Printable receipt / KOT (hidden on screen, visible in print). -->
-    <div ref="printArea" class="receipt-print">
-      <template v-if="printing">
-        <p class="print-brand">{{ printRows[0]?.[0] }}</p>
-        <div v-for="(row, i) in printRows" :key="i">
-          <p v-if="row[0]" class="print-line" :class="{ 'print-bold': row[1] }">{{ row[0] }}</p>
-          <div v-else class="print-gap"></div>
-        </div>
-        <img v-if="logoUrl && printing.kind !== 'kot'" :src="logoUrl" alt="Hotel logo" class="print-logo" />
-      </template>
-    </div>
+    <!-- Silent till printing; no browser print dialog. -->
+    <div ref="printArea" class="receipt-print"></div>
   </div>
 </template>
 
@@ -161,6 +152,7 @@ import { useAuthStore } from '@/stores/auth'
 import { PAYMENT_METHODS } from '@/utils/payments'
 import { printToPrinter, restorePrinter } from '@/utils/printer'
 import { displayLines } from '@/utils/receipts'
+import { toast } from '@/utils/toast'
 
 const { t, te } = useI18n()
 const authStore = useAuthStore()
@@ -181,7 +173,6 @@ const error = ref('')
 const date = ref(new Date().toISOString().slice(0, 10))
 const search = ref('')
 const activeTab = ref('running')
-const printing = ref(null)
 const printArea = ref(null)
 
 const payOpen = ref(false)
@@ -231,12 +222,6 @@ const filterTabs = computed(() => [
   },
   { key: 'voided', label: t('cashier.summary.tabVoided'), count: orders.value.filter((o) => o.status === 'cancelled').length },
 ])
-
-const printRows = computed(() => {
-  if (!printing.value) return []
-  const hotel = authStore.user?.tenant?.hotel_name || 'MRK HOTELS'
-  return displayLines(printing.value.order, printing.value.kind, { hotel })
-})
 
 function chipFor(order) {
   if (order.status === 'cancelled') return 'cancelled'
@@ -333,12 +318,7 @@ async function confirmPay() {
 async function doPrint(order, kind) {
   const hotel = authStore.user?.tenant?.hotel_name || 'MRK HOTELS'
   const sent = await printToPrinter(displayLines(order, kind, { hotel }), { logo: logoUrl.value })
-  if (sent) return
-  printing.value = { order, kind }
-  requestAnimationFrame(() => {
-    window.print()
-    setTimeout(() => { printing.value = null }, 300)
-  })
+  if (!sent) toast(t('printer.noPrinter'), 'error')
 }
 
 async function reprint(order) {

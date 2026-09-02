@@ -1190,7 +1190,8 @@
     "how1": "Plug the receipt printer into this computer with USB or a serial cable.",
     "how2": "Click Connect Printer and choose the printer in the browser prompt.",
     "how3": "Press Test Print — a small receipt should come out of the printer.",
-    "how4": "The connection is saved for this device. When it prints, receipts and kitchen tickets go straight to the paper without asking."
+    "how4": "The connection is saved for this device. When it prints, receipts and kitchen tickets go straight to the paper without asking.",
+    "noPrinter": "No till printer is connected. Connect one in Printer Settings to print receipts silently."
   },
   "orders": {
     "title": "F&B Orders",
@@ -3416,6 +3417,7 @@
     "receiptRef": "Ref",
     "receiptBy": "Collected by",
     "receiptThanks": "Asante — thank you!",
+    "noPrinter": "No till printer is connected. Connect one in Printer Settings to print receipts silently.",
     "searchPlaceholder": "Search item or category",
     "searchTitle": "Search results",
     "occupiedBy": "Occupied by {waiter}",
