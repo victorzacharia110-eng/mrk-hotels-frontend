@@ -59,6 +59,11 @@
             <i class="fas fa-print" aria-hidden="true"></i>
             <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.printer') }}</span>
           </router-link>
+          <router-link :to="{ name: 'cashier-print-settings' }" class="pos-nav-link"
+            :class="{ active: isActive('/cashier/print-settings') }" @click="mobileOpen = false">
+            <i class="fas fa-cloud-arrow-up" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.printSettings') }}</span>
+          </router-link>
         </div>
       </nav>
 

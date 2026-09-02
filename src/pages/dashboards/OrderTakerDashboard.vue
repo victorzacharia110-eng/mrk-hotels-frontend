@@ -570,12 +570,14 @@ import { useAuthStore } from '@/stores/auth'
 import { orderApi, menuItemApi, tableApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { PAYMENT_METHODS } from '@/utils/payments'
-import { printToPrinter, restorePrinter } from '@/utils/printer'
+import { restorePrinter } from '@/utils/printer'
+import { usePrintSettingsStore } from '@/stores/printSettings'
 import { displayLines } from '@/utils/receipts'
 import { toast } from '@/utils/toast'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
+const printStore = usePrintSettingsStore()
 
 // The department defaults from the staff role (bartenders start on the bar)
 // but can be switched at any time with the Restaurant / Bar toggle.
@@ -749,6 +751,13 @@ async function advanceOrder(order, status) {
     sentToast.value = t('orderTaker.orderUpdated', { number: order.order_number })
     setTimeout(() => (sentToast.value = ''), 3000)
     await loadOpenOrders()
+    // Cloud Print Settings: print a void receipt when an order is cancelled.
+    if (status === 'cancelled' && printStore.printOnVoid && order) {
+      const hotel = authStore.user?.tenant?.hotel_name || 'MRK Hotels'
+      if (!(await printStore.print(displayLines(order, 'receipt', { hotel })))) {
+        toast(t('orderTaker.noPrinter'), 'error')
+      }
+    }
   } catch (err) {
     openError.value = err.response?.data?.message || t('common.actionFailed')
   }
@@ -793,9 +802,11 @@ async function pay(method) {
       order,
     }
     // Silent till printing — no browser dialog.
-    const hotel = authStore.user?.tenant?.hotel_name || 'MRK Hotels'
-    if (!(await printToPrinter(displayLines(order, 'receipt', { hotel })))) {
-      toast(t('orderTaker.noPrinter'), 'error')
+    if (printStore.printOnSettle) {
+      const hotel = authStore.user?.tenant?.hotel_name || 'MRK Hotels'
+      if (!(await printStore.print(displayLines(order, 'receipt', { hotel })))) {
+        toast(t('orderTaker.noPrinter'), 'error')
+      }
     }
     sentToast.value = t('orders.paymentCollected')
     setTimeout(() => (sentToast.value = ''), 3000)
@@ -818,7 +829,7 @@ async function printReceipt() {
   const order = receipt.value?.order
   if (!order) return
   const hotel = authStore.user?.tenant?.hotel_name || 'MRK Hotels'
-  const sent = await printToPrinter(displayLines(order, 'receipt', { hotel }))
+  const sent = await printStore.print(displayLines(order, 'receipt', { hotel }))
   if (!sent) toast(t('orderTaker.noPrinter'), 'error')
 }
 

@@ -118,6 +118,9 @@ import { useI18n } from 'vue-i18n'
 import { menuItemApi, orderApi } from '@/api'
 import { selectedOutlet } from '@/pages/cashier/outlet-context'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import { usePrintSettingsStore } from '@/stores/printSettings'
+import { displayLines } from '@/utils/receipts'
+import { toast } from '@/utils/toast'
 
 const props = defineProps({
   mode: { type: String, default: 'dine_in' }, // dine_in | takeaway | room_service | delivery | no_charge
@@ -130,6 +133,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'created'])
 
 const { t } = useI18n()
+const printStore = usePrintSettingsStore()
 
 const menu = ref([])
 const waiters = ref([])
@@ -224,13 +228,38 @@ async function submit() {
     }
 
     const { data } = await orderApi.store(payload)
-    emit('created', data.order)
+    const order = data.order
+    emit('created', order)
     emit('close')
+    printNewOrder(order)
   } catch (e) {
     error.value = e.response?.data?.message || e.message
   } finally {
     busy.value = false
   }
+}
+
+/**
+ * Prints the placed order according to the Cloud Print Settings:
+ *  - a receipt/guest check on save when "printOnSave" is on;
+ *  - a guest check when the order is not settled (left open on a table).
+ */
+async function printNewOrder(order) {
+  if (!order) return
+  const printGuestCheck = printStore.printOnSave || printStore.printGuestCheckWhenUnsettled
+  if (!printGuestCheck) return
+  let full = order
+  if (!full.items?.length) {
+    try {
+      const { data } = await orderApi.show(order.order_id)
+      full = data.order
+    } catch {
+      /* still print with whatever items we have */
+    }
+  }
+  const lines = displayLines(full, 'receipt', {})
+  const sent = await printStore.print(lines)
+  if (!sent) toast(t('orderTaker.noPrinter'), 'error')
 }
 
 onMounted(async () => {

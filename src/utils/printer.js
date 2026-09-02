@@ -314,21 +314,37 @@ export async function rasterLogoBytes(src, width = 384) {
 
 /**
  * Writes a set of receipt lines (plus an optional raster logo) to the
- * connected printer.
+ * printer.
+ *
+ * Transport is chosen by opts.transport:
+ *  - 'network' -> POST the raw ESC/POS bytes to opts.endpoint, a local bridge
+ *                 agent (http://host:port) that forwards them to the physical
+ *                 printer. This is how a hosted web app reaches a printer on
+ *                 another machine or a remote location (e.g. a USB printer
+ *                 shared via Tailscale).
+ *  - otherwise -> Web Serial, a USB printer physically attached to THIS
+ *                 machine.
  *
  * @param {Array<Array<string|boolean|number>>} lines  [text, bold?, size?] rows.
  * @param {object} [opts]  Options.
  * @param {string} [opts.logo]  Logo URL to raster a store brand on top of the sheet.
+ * @param {string} [opts.transport]  'network' or 'serial' (default).
+ * @param {string} [opts.endpoint]  Bridge agent base URL for the network transport.
  * @returns {Promise<boolean>} True when the job was sent to the printer.
  */
 export async function printToPrinter(lines, opts = {}) {
-  if (!port || !port.writable) return false
   try {
     const raster = opts.logo ? await rasterLogoBytes(opts.logo) : null
     const text = buildRecipt(lines)
     const merged = new Uint8Array((raster ? raster.length : 0) + text.length)
     if (raster) merged.set(raster, 0)
     merged.set(text, raster ? raster.length : 0)
+
+    if (opts.transport === 'network' && opts.endpoint) {
+      return sendToNetwork(opts.endpoint, merged)
+    }
+
+    if (!port || !port.writable) return false
 
     const writer = port.writable.getWriter()
     // Guard against a non-responsive printer hanging the write forever (the
@@ -353,6 +369,42 @@ export async function printToPrinter(lines, opts = {}) {
     printerState.reason =
       'The port is open but the printer is not responding. This usually means the chosen port is not a real thermal printer (e.g. a virtual COM port) or the cable is loose. Pick the printer, not a "COM" port, in the serial chooser.'
     return false
+  }
+}
+
+/**
+ * Posts a raw ESC/POS byte stream to a local bridge agent.
+ *
+ * The agent runs on the machine that owns the printer and forwards the bytes
+ * into it (USB/serial/network). This lets a hosted web app print to a till
+ * printer that is NOT attached to the browser's own machine — including a
+ * remote till reached over a tunnel/VPN (e.g. Tailscale).
+ *
+ * @param {string} endpoint  Base URL like http://127.0.0.1:9720 or http://100.x.y.z:9720.
+ * @param {Uint8Array} bytes  The ESC/POS byte stream to print.
+ * @returns {Promise<boolean>} True when the agent accepted the job.
+ */
+async function sendToNetwork(endpoint, bytes) {
+  const url = `${endpoint.replace(/\/+$/, '')}/print`
+  let timer = null
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('Timeout waiting for the print agent.')), 8000)
+  })
+  try {
+    const resp = await Promise.race([
+      fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: bytes }),
+      timeout,
+    ])
+    if (!resp.ok) throw new Error(`Print agent replied ${resp.status}`)
+    printerState.connected = true
+    printerState.reason = ''
+    return true
+  } catch (err) {
+    printerState.connected = false
+    printerState.reason = `Could not reach the print agent at ${endpoint}. Make sure it is running on the printer machine and reachable from this device (${err?.message || 'network error'}).`
+    return false
+  } finally {
+    clearTimeout(timer)
   }
 }
 

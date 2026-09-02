@@ -304,6 +304,12 @@ const routes = [
         meta: { titleKey: 'cashier.nav.printer' },
       },
       {
+        path: 'print-settings',
+        name: 'cashier-print-settings',
+        component: () => import('@/pages/cashier/CashierPrintSettingsPage.vue'),
+        meta: { titleKey: 'cashier.nav.printSettings' },
+      },
+      {
         path: 'item-lookup',
         name: 'cashier-item-lookup',
         component: () => import('@/pages/cashier/CashierItemLookupPage.vue'),

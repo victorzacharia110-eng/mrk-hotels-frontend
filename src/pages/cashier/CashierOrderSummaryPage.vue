@@ -158,12 +158,14 @@ import PaginationBar from '@/components/store/PaginationBar.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import { useAuthStore } from '@/stores/auth'
 import { PAYMENT_METHODS } from '@/utils/payments'
-import { printToPrinter, restorePrinter, printerState, connectPrinter, printerSupported } from '@/utils/printer'
+import { restorePrinter, printerState, connectPrinter, printerSupported } from '@/utils/printer'
+import { usePrintSettingsStore } from '@/stores/printSettings'
 import { displayLines } from '@/utils/receipts'
 import { toast } from '@/utils/toast'
 
 const { t, te } = useI18n()
 const authStore = useAuthStore()
+const printStore = usePrintSettingsStore()
 
 /** Hotel logo shown on receipts (per-hotel if set, else the generic mark). */
 const logoUrl = ref('')
@@ -316,7 +318,7 @@ async function confirmPay() {
     }
     payOpen.value = false
     payingOrder.value = null
-    doPrint(settled, 'receipt')
+    if (printStore.printOnSettle) doPrint(settled, 'receipt')
     await load()
   } catch (err) {
     payError.value = err.response?.data?.message || t('common.actionFailed')
@@ -327,7 +329,7 @@ async function confirmPay() {
 
 async function doPrint(order, kind) {
   const hotel = authStore.user?.tenant?.hotel_name || 'MRK HOTELS'
-  const sent = await printToPrinter(displayLines(order, kind, { hotel }), { logo: logoUrl.value })
+  const sent = await printStore.print(displayLines(order, kind, { hotel }), { logo: logoUrl.value })
   if (!sent) toast(printerState.reason || t('printer.noPrinter'), 'error')
 }
 
