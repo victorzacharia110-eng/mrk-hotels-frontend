@@ -163,7 +163,11 @@ const error = ref('')
  */
 function openPanel(hotel) {
   setOwnerHotel(hotel.tenant_id, hotel.hotel_name)
-  router.push('/app')
+  // The owner browses a hotel's panel with hotel_admin-level visibility, whose
+  // landing is the operational overview. Navigating to bare /app would hit the
+  // stay-view dashboard module gate (front-desk roles only) and bounce the
+  // owner straight back to /owner.
+  router.push('/app/overview')
 }
 
 /** Fetches the owner dashboard summary from the API and exposes it in `data`. */
