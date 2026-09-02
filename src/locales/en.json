@@ -3914,7 +3914,11 @@
       "settleConfirm": "Confirm Payment",
       "settleAmount": "Amount Due",
       "refLabel": "Transaction reference",
-      "refPlaceholder": "e.g. the bank statement reference from the transfer"
+      "refPlaceholder": "e.g. the bank statement reference from the transfer",
+      "printerNotConnected": "Till printer not connected. Connect one to print receipts silently.",
+      "connectPrinter": "Connect Printer",
+      "printerConnected": "Printer connected successfully.",
+      "connectFailed": "Could not connect to the printer."
     },
     "types": {
       "dine_in": "Dine In",

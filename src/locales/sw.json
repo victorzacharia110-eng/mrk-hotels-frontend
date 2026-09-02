@@ -3912,7 +3912,11 @@
       "settleConfirm": "Thibitisha Malipo",
       "settleAmount": "Kiasi Kinachodaiwa",
       "refLabel": "Namba ya muamala",
-      "refPlaceholder": "mf. namba ya muamala kutoka benki"
+      "refPlaceholder": "mf. namba ya muamala kutoka benki",
+      "printerNotConnected": "Printer ya kukokota haijaunganishwa. Unganisha kuprint risiti kimya kimya.",
+      "connectPrinter": "Unganisha Printer",
+      "printerConnected": "Printer imeunganishwa kikamilifu.",
+      "connectFailed": "Imeshindwa kuunganisha printer."
     },
     "types": {
       "dine_in": "Kula Ndani",

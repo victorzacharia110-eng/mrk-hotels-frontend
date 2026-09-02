@@ -25,6 +25,14 @@
 
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <div v-if="supported && !printerState.connected" class="printer-banner">
+      <i class="fas fa-plug-circle-xmark" aria-hidden="true"></i>
+      <span>{{ printerState.reason || $t('cashier.summary.printerNotConnected') }}</span>
+      <button class="sm-btn sm primary" :disabled="connecting" @click="connectFromPage">
+        <i class="fas fa-plug"></i> {{ connecting ? $t('common.saving') : $t('cashier.summary.connectPrinter') }}
+      </button>
+    </div>
+
     <section class="panel">
       <div class="table-scroll">
       <table class="sm-table">
@@ -150,7 +158,7 @@ import PaginationBar from '@/components/store/PaginationBar.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import { useAuthStore } from '@/stores/auth'
 import { PAYMENT_METHODS } from '@/utils/payments'
-import { printToPrinter, restorePrinter } from '@/utils/printer'
+import { printToPrinter, restorePrinter, printerState, connectPrinter, printerSupported } from '@/utils/printer'
 import { displayLines } from '@/utils/receipts'
 import { toast } from '@/utils/toast'
 
@@ -174,6 +182,8 @@ const date = ref(new Date().toISOString().slice(0, 10))
 const search = ref('')
 const activeTab = ref('running')
 const printArea = ref(null)
+const supported = computed(() => printerSupported())
+const connecting = ref(false)
 
 const payOpen = ref(false)
 const payingOrder = ref(null)
@@ -318,7 +328,18 @@ async function confirmPay() {
 async function doPrint(order, kind) {
   const hotel = authStore.user?.tenant?.hotel_name || 'MRK HOTELS'
   const sent = await printToPrinter(displayLines(order, kind, { hotel }), { logo: logoUrl.value })
-  if (!sent) toast(t('printer.noPrinter'), 'error')
+  if (!sent) toast(printerState.reason || t('printer.noPrinter'), 'error')
+}
+
+async function connectFromPage() {
+  connecting.value = true
+  try {
+    const ok = await connectPrinter()
+    if (ok) toast(t('cashier.summary.printerConnected'), 'success')
+    else toast(printerState.reason || t('cashier.summary.connectFailed'), 'error')
+  } finally {
+    connecting.value = false
+  }
 }
 
 async function reprint(order) {
@@ -350,6 +371,21 @@ onMounted(() => {
 .frozen-tag { margin-left: 8px; font-size: 11px; color: #00468c; background: #e8f1fa; border-radius: 999px; padding: 2px 8px; font-weight: 700; }
 .nc-tag { margin-left: 6px; font-size: 11px; color: #333333; background: #ececec; border-radius: 999px; padding: 2px 8px; font-weight: 700; }
 .sm-inline-label { font-size: 13px; color: #475569; font-weight: 600; }
+
+.printer-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #92400e;
+}
+.printer-banner i { font-size: 16px; color: #d97706; }
+.printer-banner span { flex: 1; }
 
 .pay-modal-overlay {
   position: fixed;
