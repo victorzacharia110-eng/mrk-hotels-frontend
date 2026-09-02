@@ -177,111 +177,37 @@
         </div>
       </div>
 
-      <!-- Staff section: filterable/paginated staff table with activate/deactivate actions -->
+      <!-- F&B orders: all / running / settled, and total sales = bar + restaurant -->
       <div class="card dash-section">
         <div class="section-header-row">
-          <h2><i class="fas fa-user-tie"></i> {{ $t('overview.staffSection') }}</h2>
-          <router-link to="/app/staff" class="view-all-link"
-            >{{ $t('overview.viewAllStaff') }} <i class="fas fa-arrow-right"></i
-          ></router-link>
-          <TableExportButton
-            filename="staff"
-            :title="$t('overview.staffSection')"
-            :load-all="loadAllStaff"
-          />
+          <h2><i class="fas fa-utensils"></i> {{ $t('overview.fnbTitle') }}</h2>
         </div>
-        <div class="filter-row">
-          <input
-            v-model="staff.search"
-            type="text"
-            class="input"
-            :placeholder="$t('overview.searchStaff')"
-            @input="onStaffFilter"
-          />
-          <select v-model="staff.role" class="input select-input" @change="onStaffFilter">
-            <option value="">{{ $t('overview.allRoles') }}</option>
-            <option v-for="r in ROLES" :key="r.value" :value="r.value">{{ r.label }}</option>
-          </select>
-          <select v-model="staff.status" class="input select-input" @change="onStaffFilter">
-            <option value="">{{ $t('overview.allStatuses') }}</option>
-            <option value="active">{{ $t('overview.active') }}</option>
-            <option value="inactive">{{ $t('overview.inactive') }}</option>
-          </select>
-        </div>
-        <div v-if="!data.staff.data.length" class="empty-mini">{{ $t('overview.staffEmpty') }}</div>
-        <div v-else class="table-scroll">
-          <table class="table">
-            <thead>
-              <tr>
-                <th scope="col">{{ $t('staff.tableStaff') }}</th>
-                <th scope="col">{{ $t('overview.role') }}</th>
-                <th scope="col">{{ $t('overview.department') }}</th>
-                <th scope="col">{{ $t('overview.lastLogin') }}</th>
-                <th scope="col">{{ $t('overview.status') }}</th>
-                <th scope="col">{{ $t('common.actions') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="u in data.staff.data" :key="u.user_id">
-                <td>
-                  <strong>{{ u.full_name }}</strong>
-                  <div class="sub">{{ u.email }}</div>
-                  <div v-if="u.registration_number" class="sub">{{ u.registration_number }}</div>
-                </td>
-                <td>
-                  <span class="badge" :class="roleBadge(u.user_role)">{{
-                    roleLabel(u.user_role)
-                  }}</span>
-                </td>
-                <td class="capitalize">{{ u.department || '—' }}</td>
-                <td>{{ formatDate(u.last_login) }}</td>
-                <td>
-                  <span class="badge" :class="u.is_active ? 'badge-green' : 'badge-gray'">{{
-                    u.is_active ? $t('overview.active') : $t('overview.inactive')
-                  }}</span>
-                </td>
-                <td>
-                  <div class="actions">
-                    <button v-if="!u.is_active" class="btn btn-sm btn-success" @click="activate(u)">
-                      <i class="fas fa-user-check"></i> {{ $t('overview.activate') }}
-                    </button>
-                    <button
-                      v-else-if="!isSelf(u)"
-                      class="btn btn-sm btn-danger"
-                      @click="deactivate(u)"
-                    >
-                      <i class="fas fa-user-slash"></i> {{ $t('overview.deactivate') }}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div
-          v-if="data.staff.meta && data.staff.meta.total > data.staff.meta.per_page"
-          class="pagination"
-        >
-          <button
-            class="btn btn-sm btn-secondary"
-            :disabled="data.staff.meta.current_page <= 1"
-            @click="goPage(staff, staff.page - 1)"
-          >
-            {{ $t('common.previous') }}
-          </button>
-          <span class="muted">{{
-            $t('common.pageXOfY', {
-              current: data.staff.meta.current_page,
-              total: data.staff.meta.last_page,
-            })
-          }}</span>
-          <button
-            class="btn btn-sm btn-secondary"
-            :disabled="data.staff.meta.current_page >= data.staff.meta.last_page"
-            @click="goPage(staff, staff.page + 1)"
-          >
-            {{ $t('common.next') }}
-          </button>
+        <div class="fnb-strip">
+          <div class="fnb-cell">
+            <div class="fnb-num">{{ fnb.orders_all }}</div>
+            <div class="fnb-label">{{ $t('overview.fnbAllToday') }}</div>
+          </div>
+          <div class="fnb-cell">
+            <div class="fnb-num">{{ fnb.orders_running }}</div>
+            <div class="fnb-label">{{ $t('overview.fnbRunning') }}</div>
+          </div>
+          <div class="fnb-cell">
+            <div class="fnb-num">{{ fnb.orders_settled }}</div>
+            <div class="fnb-label">{{ $t('overview.fnbSettled') }}</div>
+          </div>
+          <div class="fnb-cell fnb-total">
+            <div class="fnb-num">{{ formatMoney(fnb.total_sales) }}</div>
+            <div class="fnb-label">{{ $t('overview.totalSales') }}</div>
+            <div class="fnb-sub">{{ $t('overview.totalSalesHint') }}</div>
+          </div>
+          <div class="fnb-cell">
+            <div class="fnb-num">{{ formatMoney(fnb.bar_sales) }}</div>
+            <div class="fnb-label">{{ $t('overview.barSales') }}</div>
+          </div>
+          <div class="fnb-cell">
+            <div class="fnb-num">{{ formatMoney(fnb.restaurant_sales) }}</div>
+            <div class="fnb-label">{{ $t('overview.restaurantSales') }}</div>
+          </div>
         </div>
       </div>
 
@@ -586,9 +512,8 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notifications'
-import { reportApi, userApi, reservationApi, housekeepingApi } from '@/api'
+import { reportApi, reservationApi, housekeepingApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
-import TableExportButton from '@/components/TableExportButton.vue'
 import AlertModal from '@/components/AlertModal.vue'
 
 const authStore = useAuthStore()
@@ -605,8 +530,7 @@ const assignUserId = ref('')
 const modalError = ref('')
 const saving = ref(false)
 
-// Filter/page controls for the four dashboard sections (staff, in-house, upcoming, housekeeping).
-const staff = reactive({ search: '', role: '', status: '', page: 1 })
+// Filter/page controls for the three dashboard sections (in-house, upcoming, housekeeping).
 const inHouse = reactive({ search: '', page: 1 })
 const upcoming = reactive({ search: '', page: 1 })
 const housekeeping = reactive({ status: '', page: 1 })
@@ -639,6 +563,24 @@ const roomStatus = computed(() => {
     blocked: (Number(rs.maintenance) || 0) + (Number(rs.cleaning) || 0),
   }
 })
+
+// F&B orders + total sales (bar + restaurant) summary from the overview stats.
+const fnb = computed(() => {
+  const f = data.value?.stats?.fnb || {}
+  return {
+    orders_all: Number(f.orders_all) || 0,
+    orders_running: Number(f.orders_running) || 0,
+    orders_settled: Number(f.orders_settled) || 0,
+    total_sales: Number(f.total_sales) || 0,
+    bar_sales: Number(f.bar_sales) || 0,
+    restaurant_sales: Number(f.restaurant_sales) || 0,
+  }
+})
+
+/** Renders a money figure with thousands separators. */
+function formatMoney(value) {
+  return `TZS ${Number(value || 0).toLocaleString()}`
+}
 
 /** Share of the room stock a housekeeping bucket represents, for its bar. */
 function roomPct(value) {
@@ -681,20 +623,6 @@ function ratioPct(part, whole) {
   return Math.min(100, ((Number(part) || 0) / w) * 100)
 }
 
-// Staff role options for the staff-section filter dropdown.
-const ROLES = [
-  { value: 'hotel_admin', label: t('common.roles.hotelAdmin') },
-  { value: 'manager', label: t('common.roles.manager') },
-  { value: 'accountant', label: t('common.roles.accountant') },
-  { value: 'receptionist', label: t('common.roles.receptionist') },
-  { value: 'procurement_officer', label: t('common.roles.procurementOfficer') },
-  { value: 'housekeeping', label: t('common.roles.housekeeping') },
-  { value: 'kitchen', label: t('common.roles.kitchen') },
-  { value: 'waiter', label: t('common.roles.waiter') },
-  { value: 'bartender', label: t('common.roles.bartender') },
-  { value: 'staff', label: t('common.roles.staff') },
-]
-
 // Housekeeping task statuses used by the housekeeping filter dropdown.
 const HOUSE_STATUSES = {
   dirty: t('housekeeping.statusDirty'),
@@ -702,23 +630,6 @@ const HOUSE_STATUSES = {
   confirmed: t('housekeeping.statusConfirmed'),
   verified: t('housekeeping.statusVerified'),
   completed: t('housekeeping.statusCompleted'),
-}
-
-/** Resolves a role key to its translated display label. */
-function roleLabel(value) {
-  return ROLES.find((role) => role.value === value)?.label || value
-}
-
-/** Returns the CSS badge class for a user role. */
-function roleBadge(value) {
-  const map = {
-    hotel_admin: 'badge-red',
-    manager: 'badge-blue',
-    accountant: 'badge-blue',
-    receptionist: 'badge-green',
-    staff: 'badge-gray',
-  }
-  return map[value] || 'badge-yellow'
 }
 
 /** Resolves a housekeeping status key to its translated display label. */
@@ -743,11 +654,6 @@ function formatDate(date) {
   return date ? String(date).slice(0, 16).replace('T', ' ') : t('common.never')
 }
 
-/** Returns true when the given user row is the currently logged-in user. */
-function isSelf(user) {
-  return user.user_id === authStore.user?.user_id
-}
-
 /**
  * Flattens a validation/API error into a single readable message string.
  * @param {Error} err - The thrown request error.
@@ -767,10 +673,6 @@ function flattenError(err) {
  */
 function buildParams() {
   const params = {}
-  if (staff.search) params.staff_search = staff.search
-  if (staff.role) params.staff_role = staff.role
-  if (staff.status) params.staff_status = staff.status
-  if (staff.page > 1) params.staff_page = staff.page
   if (inHouse.search) params.in_house_search = inHouse.search
   if (inHouse.page > 1) params.in_house_page = inHouse.page
   if (upcoming.search) params.upcoming_search = upcoming.search
@@ -794,30 +696,10 @@ async function load() {
   }
 }
 
-async function loadAllStaff() {
-  const all = []
-  let page = 1
-  while (true) {
-    const res = await reportApi.overview({ ...buildParams(), staff_page: page })
-    const rows = res.data.staff?.data || []
-    const meta = res.data.staff?.meta
-    all.push(...rows)
-    if (!meta || page >= meta.last_page) break
-    page++
-  }
-  return all
-}
-
 /** Debounces reloads triggered by section filter changes (400ms). */
 function scheduleReload() {
   clearTimeout(reloadTimer)
   reloadTimer = setTimeout(load, 400)
-}
-
-/** Resets the staff section to page 1 and schedules a reload. */
-function onStaffFilter() {
-  staff.page = 1
-  scheduleReload()
 }
 
 /** Resets the in-house section to page 1 and schedules a reload. */
@@ -865,15 +747,7 @@ async function runAction(fn, message, confirmMsg) {
   }
 }
 
-// One-liner wrappers binding staff, reservation and housekeeping actions to runAction.
-const activate = (user) =>
-  runAction(() => userApi.activate(user.user_id), t('overview.activated', { name: user.full_name }))
-const deactivate = (user) =>
-  runAction(
-    () => userApi.destroy(user.user_id),
-    t('overview.deactivated', { name: user.full_name }),
-    t('overview.deactivateConfirm', { name: user.full_name }),
-  )
+// One-liner wrappers binding reservation and housekeeping actions to runAction.
 const checkOut = (reservation) =>
   runAction(
     () => reservationApi.checkOut(reservation.reservation_id),
@@ -1114,6 +988,52 @@ function dismissCurrentAlert() {
 .house-dirty .house-fill { background: #c0392b; }
 .house-blocked { border-top: 3px solid #f1c40f; }
 .house-blocked .house-fill { background: #f1c40f; }
+
+.fnb-strip {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+}
+.fnb-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+.fnb-num {
+  font-size: 20px;
+  font-weight: 700;
+  color: #333;
+}
+.fnb-label {
+  font-size: 12px;
+  color: #757575;
+}
+.fnb-sub {
+  font-size: 11px;
+  color: #9e9e9e;
+}
+.fnb-total {
+  border: 1px solid #005eb8;
+  border-top: 3px solid #005eb8;
+  background: #f2f8ff;
+}
+.fnb-total .fnb-num {
+  color: #005eb8;
+}
+
+@media (max-width: 1024px) {
+  .fnb-strip {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .fnb-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+}
 
 @media (max-width: 768px) {
   .house-strip {

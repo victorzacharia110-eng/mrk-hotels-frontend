@@ -132,7 +132,7 @@
               class="table-chip"
               :class="tableOccupiedByOther(tbl.table_name) ? 'occupied' : 'free'"
               :disabled="tableOccupiedByOther(tbl.table_name)"
-              @click="form.table_number = tbl.table_name"
+              @click="selectTable(tbl)"
             >
               <span class="table-chip-name">{{ tbl.table_name }}</span>
               <span v-if="tableOccupiedByOther(tbl.table_name)" class="table-chip-occ">
@@ -608,12 +608,14 @@ const openOrders = ref([])
 const openLoading = ref(false)
 const openError = ref('')
 
-/**
- * Payment collection: floor staff (waiters/bartenders) may settle the tickets
- * they took themselves; receptionist+ can settle anything. The API enforces
- * ticket ownership for staff below level 60.
- */
-const canCollect = computed(() => authStore.canOperate)
+// Waiters and bartenders take orders but never settle bills; settlements are
+// left to the cashier's Order Summary. Only receptionist (level 60) and above
+// may collect payment on a ticket.
+const canCollect = computed(() => authStore.can(60))
+
+// Floor staff (waiters/bartenders) only see and work their own tickets; the
+// Open Orders board is scoped to them so they never touch another waiter's.
+const isFloorStaff = computed(() => ['waiter', 'bartender'].includes(role.value))
 
 // Bill-to-room posts to a guest folio, so it stays at receptionist level (60)
 // and up — same gate as the backend's `level:60` middleware on that route.
@@ -702,9 +704,9 @@ async function loadOpenOrders() {
   try {
     const res = await orderApi.index({ department: department.value, per_page: 50 })
     const rows = Array.isArray(res.data) ? res.data : res.data?.data || []
-    openOrders.value = rows.filter(
-      (order) => !['completed', 'cancelled'].includes(order.status),
-    )
+    openOrders.value = rows
+      .filter((order) => !['completed', 'cancelled'].includes(order.status))
+      .filter((order) => (isFloorStaff.value ? isMine(order) : true))
   } catch (err) {
     openError.value = err.response?.data?.message || t('orderTaker.loadOrdersError')
     openOrders.value = []
@@ -870,6 +872,9 @@ const orderLines = ref([])
 const sending = ref(false)
 const sendError = ref('')
 const sentToast = ref('')
+// When a waiter re-opens one of their own tables, this holds the running order
+// id so sendOrder() appends the new lines instead of creating a duplicate order.
+const continueOrderId = ref(null)
 
 // Physical tables managed by the manager; the waiter only picks one.
 const tables = ref([])
@@ -888,9 +893,55 @@ const occupiedTables = computed(() => {
   }
   return map
 })
-/** True when the named table is occupied by someone else (not this waiter). */
-function tableOccupiedByOther(name) {
+/** True when the named table has any live (running, unpaid) order. */
+function tableHasLiveOrder(name) {
   return occupiedTables.value.has(String(name))
+}
+
+/** True when the named table is occupied by someone else (not this waiter), so
+ *  a waiter's own occupied table stays selectable for continuing its ticket. */
+function tableOccupiedByOther(name) {
+  const occupant = occupiedTables.value.get(String(name))
+  if (!occupant) return false
+  return String(occupant).toLowerCase() !== String(waiterName.value).toLowerCase()
+}
+
+/** The waiter's own running order sitting on the named table, if any. */
+function ownLiveOrderForTable(name) {
+  return openOrders.value.find(
+    (o) =>
+      String(o.table_number) === String(name) &&
+      String(o.waiter_name || '').toLowerCase() === String(waiterName.value).toLowerCase() &&
+      !['completed', 'cancelled'].includes(o.status),
+  )
+}
+
+/** Selects a table for the ticket. Re-opening the waiter's own occupied table
+ *  loads its existing lines so they can continue that ticket (issue 7); any
+ *  other table starts a fresh order. */
+function selectTable(tbl) {
+  const name = tbl.table_name
+  const continueTarget = ownLiveOrderForTable(name)
+
+  if (continueTarget) {
+    continueOrderId.value = continueTarget.order_id
+    orderLines.value = (continueTarget.items || []).map((item) => ({
+      key: `${item.menu_item_id}|${item.accompaniment || ''}`,
+      menu_item_id: item.menu_item_id,
+      item_name: item.item_name,
+      accompaniment: item.accompaniment || '',
+      unit_price: Number(item.unit_price) || 0,
+      quantity: Number(item.quantity) || 1,
+      subtotal: Number(item.subtotal) || 0,
+      existing: true,
+    }))
+  } else {
+    continueOrderId.value = null
+  }
+
+  form.value.table_number = name
+  form.value.covers = continueTarget?.covers || form.value.covers || 0
+  page.value = pageCount.value
 }
 
 /** Active tables as searchable options (name + section for context). Occupied
@@ -1181,33 +1232,51 @@ function removeLine(line) {
   orderLines.value = orderLines.value.filter((l) => (l.key || l.menu_item_id) !== (line.key || line.menu_item_id))
 }
 
-/** Sends the order to the kitchen/bar; resets the ticket on success. */
+/** Sends the ticket to the kitchen/bar. For a fresh order it creates one; for
+ *  a table the waiter already opened (continueOrderId) it appends the new
+ *  lines to that same order so nothing is ever duplicated. */
 async function sendOrder() {
   if (!orderLines.value.length || sending.value) return
-  if (form.value.table_number && tableOccupiedByOther(form.value.table_number)) {
+  // Creating a brand-new order on a table that already has a live ticket is
+  // blocked; continuing an ongoing ticket (continueOrderId) is allowed.
+  if (form.value.table_number && tableHasLiveOrder(form.value.table_number) && !continueOrderId.value) {
     sendError.value = t('orderTaker.tableOccupied')
     return
   }
   sending.value = true
   sendError.value = ''
   try {
-    const res = await orderApi.store({
-      department: department.value,
-      table_number: form.value.table_number || null,
-      covers: form.value.covers || null,
-      waiter_name: waiterName.value,
-      order_type: defaultOrderType(),
-      notes: form.value.notes || null,
-      items: orderLines.value.map((l) => ({
-        menu_item_id: l.menu_item_id,
-        quantity: l.quantity,
-        accompaniment: l.accompaniment || null,
-      })),
-    })
-    const number = res.data?.order?.order_number || ''
-    sentToast.value = t('orderTaker.sent', { number })
-    orderLines.value = []
-    form.value = { table_number: '', covers: 0, order_type: defaultOrderType(), notes: '' }
+    const newLines = orderLines.value.filter((l) => !l.existing)
+    const itemsPayload = newLines.map((l) => ({
+      menu_item_id: l.menu_item_id,
+      quantity: l.quantity,
+      accompaniment: l.accompaniment || null,
+    }))
+
+    if (continueOrderId.value) {
+      if (itemsPayload.length) {
+        const res = await orderApi.addItems(continueOrderId.value, { items: itemsPayload })
+        const number = res.data?.order?.order_number || ''
+        sentToast.value = t('orderTaker.sent', { number })
+      }
+      // The just-sent lines become part of the existing ticket so they are not
+      // re-appended next time; the waiter keeps adding to the same order.
+      orderLines.value = orderLines.value.map((l) => (l.existing ? l : { ...l, existing: true }))
+    } else {
+      const res = await orderApi.store({
+        department: department.value,
+        table_number: form.value.table_number || null,
+        covers: form.value.covers || null,
+        waiter_name: waiterName.value,
+        order_type: defaultOrderType(),
+        notes: form.value.notes || null,
+        items: itemsPayload,
+      })
+      const number = res.data?.order?.order_number || ''
+      sentToast.value = t('orderTaker.sent', { number })
+      orderLines.value = []
+      form.value = { table_number: '', covers: 0, order_type: defaultOrderType(), notes: '' }
+    }
     setTimeout(() => (sentToast.value = ''), 4000)
     loadOpenOrders()
   } catch (err) {
@@ -1333,6 +1402,9 @@ function onKey(e) {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 10px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 .table-chip {
   display: flex;

@@ -563,9 +563,9 @@ router.onError((error) => {
 export const dashboardMap = {
   superadmin: '/superadmin',
   owner: '/owner',
-  hotel_admin: '/app',
-  manager: '/app',
-  accountant: '/app',
+  hotel_admin: '/app/overview',
+  manager: '/app/overview',
+  accountant: '/app/overview',
   receptionist: '/app',
   store_manager: '/store-manager',
   procurement_officer: '/app',
@@ -649,7 +649,7 @@ router.beforeEach(async (to) => {
     // Module-guarded pages check the module's role/permission allow-list.
     const module = to.meta.module ? moduleByKey(to.meta.module) : null
     if (module && !authStore.canAccess(module)) {
-      return authStore.isSuperadmin ? '/superadmin' : '/app'
+      return authStore.isSuperadmin ? '/superadmin' : (dashboardMap[authStore.user?.user_role] || '/app')
     }
 
     // Order takers (waiter/bartender) have no business on the stay-view

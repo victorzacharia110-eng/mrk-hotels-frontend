@@ -14,9 +14,12 @@ describe('module config', () => {
       expect(moduleByKey('nonexistent')).toBeUndefined()
     })
 
-    it('dashboard has empty roles (visible to all)', () => {
+    it('dashboard (stay-view) is gated to front-desk roles, not management', () => {
       const mod = moduleByKey('dashboard')
-      expect(mod.roles).toEqual([])
+      expect(mod.roles).toContain('receptionist')
+      expect(mod.roles).not.toContain('manager')
+      expect(mod.roles).not.toContain('hotel_admin')
+      expect(mod.roles).not.toContain('accountant')
     })
   })
 

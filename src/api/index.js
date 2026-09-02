@@ -1246,6 +1246,16 @@ export const orderApi = {
     return api.post(`${v1}/orders`, data)
   },
   /**
+   * Appends line items to an existing running order (a waiter continuing a
+   * table ticket it already opened).
+   * @param {string|number} id - Order identifier.
+   * @param {object} data - The new line items ({ items: [...] }).
+   * @returns {Promise} Axios response with the updated order.
+   */
+  addItems(id, data) {
+    return api.post(`${v1}/orders/${id}/items`, data)
+  },
+  /**
    * Fetches a single order.
    * @param {string|number} id - Order identifier.
    * @returns {Promise} Axios response with the order record.

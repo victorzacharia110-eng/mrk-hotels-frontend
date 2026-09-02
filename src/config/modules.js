@@ -8,10 +8,11 @@
 // orders and receptionists could see procurement pages; explicit role lists
 // keep each panel to what its staff actually need.
 export const MODULES = [
-  // Landing dashboard, visible to all staff.
-  { key: 'dashboard', to: '/app', icon: 'fas fa-gauge-high', labelKey: 'nav.dashboard', roles: [] },
-  // Read-only operational overview for management.
-  { key: 'overview', to: '/app/overview', icon: 'fas fa-chart-simple', labelKey: 'overview.title', roles: ['hotel_admin', 'manager'] },
+  // Landing dashboard (reception stay-view). Management lands on the overview
+  // dashboard instead, so it is gated to the front-desk roles that use it.
+  { key: 'dashboard', to: '/app', icon: 'fas fa-gauge-high', labelKey: 'nav.dashboard', roles: ['receptionist', 'housekeeping', 'procurement_officer', 'staff', 'kitchen', 'waiter', 'bartender'] },
+  // Read-only operational dashboard for management.
+  { key: 'overview', to: '/app/overview', icon: 'fas fa-chart-simple', labelKey: 'overview.title', roles: ['hotel_admin', 'manager', 'accountant'] },
   // Reservations management.
   { key: 'reservations', to: '/app/reservations', icon: 'fas fa-calendar-check', labelKey: 'nav.reservations', roles: ['hotel_admin', 'manager', 'receptionist'] },
   // Room directory and statuses.
