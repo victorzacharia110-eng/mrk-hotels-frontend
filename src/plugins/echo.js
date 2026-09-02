@@ -4,6 +4,13 @@
  * initEcho() runs after login; private-channel authorisation goes through the
  * backend's /broadcasting/auth endpoint via the shared axios instance, so the
  * bearer token is attached automatically. destroyEcho() runs on logout.
+ *
+ * Host/scheme are inlined from VITE_* at build time. The connection is made
+ * resilient: transient "interrupted while the page was loading" interruptions
+ * (a full-page reload tearing down the socket mid-negotiation) are recovered
+ * silently by pusher-js's reconnection instead of surfacing as a permanent
+ * error. The port for a secure (wss) connection is pinned to 443 unless an
+ * explicit port is provided, which matches Laravel Cloud's Reverb edge.
  */
 
 import Echo from 'laravel-echo'
@@ -19,9 +26,14 @@ let echo = null
  */
 export function initEcho() {
   if (echo) return echo
+
   const scheme = import.meta.env.VITE_REVERB_SCHEME || 'http'
+  const secure = scheme === 'https' || scheme === 'wss'
+  const explicitPort = Number(import.meta.env.VITE_REVERB_PORT)
+
   // Pusher-js must be reachable as window.Pusher for Echo to find it.
   window.Pusher = Pusher
+
   echo = new Echo({
     broadcaster: 'reverb',
     key: import.meta.env.VITE_REVERB_APP_KEY || '',
@@ -38,11 +50,19 @@ export function initEcho() {
       },
     }),
     wsHost: import.meta.env.VITE_REVERB_HOST || '127.0.0.1',
-    wsPort: Number(import.meta.env.VITE_REVERB_PORT) || 8080,
-    wssPort: Number(import.meta.env.VITE_REVERB_PORT) || 443,
-    forceTLS: scheme === 'https',
-    enabledTransports: ['ws', 'wss'],
+    // wss on 443 by default (Laravel Cloud / managed Reverb); only use a
+    // custom port when one is explicitly configured.
+    wsPort: explicitPort || 80,
+    wssPort: explicitPort || 443,
+    forceTLS: secure,
+    enabledTransports: secure ? ['wss'] : ['ws'],
+    // Keep a quiet, mostly-idle socket alive through HF-style idle periods and
+    // reconnect promptly if a page-load or network blip interrupts it.
+    activityTimeout: 120000,
+    pongTimeout: 30000,
+    withCredentials: false,
   })
+
   return echo
 }
 
