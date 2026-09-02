@@ -512,10 +512,9 @@
                 required
               />
               <select v-model="tableForm.section" class="tm-input">
-                <option value="restaurant">{{ $t('orderTaker.restaurant') }}</option>
-                <option value="bar">{{ $t('orderTaker.bar') }}</option>
-                <option value="lounge">{{ $t('orderTaker.lounge') }}</option>
-                <option value="terrace">{{ $t('orderTaker.terrace') }}</option>
+                <option v-for="sec in sectionOptions" :key="sec" :value="sec">
+                  {{ $t('orderTaker.' + sec, sec) }}
+                </option>
               </select>
               <input
                 v-model.number="tableForm.capacity"
@@ -542,7 +541,7 @@
             <ul class="tm-list">
               <li v-for="tbl in tables" :key="tbl.table_id" class="tm-row">
                 <span class="tm-name">{{ tbl.table_name }}</span>
-                <span class="tm-meta">{{ $t('orderTaker.' + tbl.section) }} · {{ tbl.capacity }}</span>
+                <span class="tm-meta">{{ $t('orderTaker.' + tbl.section, tbl.section) }} · {{ tbl.capacity }}</span>
                 <button type="button" class="tm-btn" @click="editTable(tbl)">
                   <i class="fas fa-pen" aria-hidden="true"></i>
                 </button>
@@ -552,6 +551,40 @@
               </li>
               <li v-if="!tables.length" class="tm-empty">{{ $t('orderTaker.noTables') }}</li>
             </ul>
+
+            <div v-if="canManageTables" class="tm-locs">
+              <div class="tm-locs-head">
+                <strong>{{ $t('orderTaker.tableLocations') }}</strong>
+                <span class="tm-locs-hint">{{ $t('orderTaker.tableLocationsHint') }}</span>
+              </div>
+              <form class="tm-locs-form" @submit.prevent="addLocation">
+                <input
+                  v-model.trim="locationInput"
+                  type="text"
+                  class="tm-input"
+                  :placeholder="$t('orderTaker.locationPlaceholder')"
+                />
+                <button type="submit" class="tm-add" :disabled="locationSaving || !locationInput">
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                  {{ $t('common.add') }}
+                </button>
+              </form>
+              <p v-if="locationError" class="tm-error">{{ locationError }}</p>
+              <ul class="tm-chip-list">
+                <li v-for="loc in tableLocations" :key="loc.location_id" class="tm-chip">
+                  <span>{{ $t('orderTaker.' + loc.name, loc.name) }}</span>
+                  <button
+                    type="button"
+                    class="tm-chip-del"
+                    :aria-label="$t('common.delete')"
+                    @click="removeLocation(loc)"
+                  >
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                  </button>
+                </li>
+                <li v-if="!tableLocations.length" class="tm-empty">{{ $t('orderTaker.noLocations') }}</li>
+              </ul>
+            </div>
           </div>
         </div>
       </Transition>
@@ -567,7 +600,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { orderApi, menuItemApi, tableApi } from '@/api'
+import { orderApi, menuItemApi, tableApi, tableLocationApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { PAYMENT_METHODS } from '@/utils/payments'
 import { restorePrinter } from '@/utils/printer'
@@ -879,6 +912,11 @@ const continueOrderId = ref(null)
 // Physical tables managed by the manager; the waiter only picks one.
 const tables = ref([])
 
+// Registrable table locations backing the "second dropdown" in the table
+// manager. Defaults (restaurant/bar/lounge/terrace) are seeded server-side.
+const tableLocations = ref([])
+const DEFAULT_LOCATIONS = ['restaurant', 'bar', 'lounge', 'terrace']
+
 // Tables currently held by an open, unpaid order (occupied until the bill is
 // settled) — map of table name -> waiter who occupies it. Shared from the
 // open-orders board so a waiter can never double-book a live table.
@@ -986,7 +1024,27 @@ function openTableManager() {
   resetTableForm()
   tableManagerOpen.value = true
   loadTables()
+  loadTableLocations()
 }
+
+/** Loads the registrable locations for the section dropdown (all staff can read). */
+async function loadTableLocations() {
+  try {
+    const res = await tableLocationApi.index()
+    const d = res.data
+    tableLocations.value = Array.isArray(d) ? d : d?.data || []
+  } catch {
+    tableLocations.value = []
+  }
+}
+
+/** Order-preserving fallback so a bare select never renders empty: registered
+ *  locations first, then the built-in defaults for anything missing. */
+const sectionOptions = computed(() => {
+  const names = tableLocations.value.map((l) => String(l.name))
+  const extras = DEFAULT_LOCATIONS.filter((n) => !names.includes(n))
+  return [...tableLocations.value.map((l) => l.name), ...extras]
+})
 
 /** Clears the table form back to "add" mode. */
 function resetTableForm() {
@@ -1036,6 +1094,43 @@ async function deleteTable(tbl) {
     await loadTables()
   } catch (err) {
     tableError.value = err.response?.data?.message || t('orderTaker.tableSaveError')
+  }
+}
+
+/* ---------------- Manager: table locations (registrable dropdown) ---------------- */
+
+const locationInput = ref('')
+const locationSaving = ref(false)
+const locationError = ref('')
+
+/** Adds a new location so it becomes available in the section dropdown. */
+async function addLocation() {
+  const name = locationInput.value.trim()
+  if (!name) return
+  locationSaving.value = true
+  locationError.value = ''
+  try {
+    await tableLocationApi.store({ name })
+    locationInput.value = ''
+    await loadTableLocations()
+  } catch (err) {
+    locationError.value = err.response?.data?.message || t('orderTaker.locationSaveError')
+  } finally {
+    locationSaving.value = false
+  }
+}
+
+/** Removes a location from the dropdown (tables already using it keep their section). */
+async function removeLocation(loc) {
+  locationError.value = ''
+  try {
+    await tableLocationApi.destroy(loc.location_id)
+    if (tableForm.value.section === loc.name) {
+      tableForm.value.section = sectionOptions.value.find((s) => s !== loc.name) || 'restaurant'
+    }
+    await loadTableLocations()
+  } catch (err) {
+    locationError.value = err.response?.data?.message || t('orderTaker.locationSaveError')
   }
 }
 
@@ -1630,6 +1725,55 @@ function onKey(e) {
 .tm-btn.danger:hover { background: #fef2f2; color: #b91c1c; }
 
 .tm-empty { color: #94a3b8; font-size: 13px; text-align: center; padding: 14px; }
+
+.tm-locs {
+  border-top: 1px solid #eee;
+  padding: 12px 14px 14px;
+  background: #fafafa;
+}
+
+.tm-locs-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+.tm-locs-head strong { font-size: 13px; color: #1f2937; }
+.tm-locs-hint { font-size: 11px; color: #94a3b8; }
+
+.tm-locs-form { display: flex; gap: 8px; margin-bottom: 8px; }
+
+.tm-chip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 5px 6px 5px 12px;
+  font-size: 12px;
+  color: #1f2937;
+}
+
+.tm-chip-del {
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tm-chip-del:hover { background: #fee2e2; color: #b91c1c; }
 
 .oh-input {
   border: 1px solid #d4d4d8;

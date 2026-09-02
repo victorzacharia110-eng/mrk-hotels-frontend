@@ -1219,6 +1219,47 @@ export const tableApi = {
   },
 }
 
+/**
+ * Registrable table locations (the Manage Table "second dropdown": instead of a
+ * hardcoded list, managers register the service areas a table belongs to).
+ * Everyone can read the list so the dropdown renders; the manager/owner owns
+ * the create/update/delete.
+ */
+export const tableLocationApi = {
+  /**
+   * Lists the tenant's table locations (defaults are seeded automatically).
+   * @returns {Promise} Axios response with the location list.
+   */
+  index() {
+    return api.get(`${v1}/table-locations`)
+  },
+  /**
+   * Creates a new table location.
+   * @param {object} data - Location payload (name, is_active).
+   * @returns {Promise} Axios response with the created location.
+   */
+  store(data) {
+    return api.post(`${v1}/table-locations`, data)
+  },
+  /**
+   * Updates a table location.
+   * @param {string} id - Location identifier.
+   * @param {object} data - Fields to update.
+   * @returns {Promise} Axios response with the updated location.
+   */
+  update(id, data) {
+    return api.put(`${v1}/table-locations/${id}`, data)
+  },
+  /**
+   * Deletes a table location.
+   * @param {string} id - Location identifier.
+   * @returns {Promise} Axios response confirming deletion.
+   */
+  destroy(id) {
+    return api.delete(`${v1}/table-locations/${id}`)
+  },
+}
+
 /** F&B orders: cash/room-folio settlement and per-item kitchen status. */
 export const orderApi = {
   /**
