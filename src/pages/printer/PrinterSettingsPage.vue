@@ -91,6 +91,8 @@ async function connect() {
   const ok = await connectPrinter()
   if (!ok && !printerState.connected) {
     error.value = printerState.reason || t('printer.connectFailed')
+  } else {
+    error.value = printerState.reason || t('printer.readyToTest')
   }
 }
 

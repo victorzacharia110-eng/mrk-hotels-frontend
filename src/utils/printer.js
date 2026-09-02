@@ -15,7 +15,12 @@ import { reactive } from 'vue'
 
 /**
  * Shared connection state so any page sees whether the till printer is on.
- * - connected   -> a serial port is open and writable.
+ * - connected   -> a serial port is open AND a print has actually been sent
+ *                  out of it. Opening a port alone never claims the printer
+ *                  works, because browsers can also open virtual "COM" ports
+ *                  that are not real thermal printers (the write fails or
+ *                  hangs until the timeout, which is far more useful feedback
+ *                  than falsely showing "connected").
  * - info        -> human-readable port label shown in the UI.
  * - reason      -> why printing is unavailable (empty when it can).
  */
@@ -170,8 +175,12 @@ export async function restorePrinter() {
 /**
  * Opens (and remembers) a serial port the user granted via the picker.
  *
+ * Opening the port does not prove a printer is there — it just makes the port
+ * writable. The machine is only confirmed once a test/receipt print actually
+ * goes out (printToPrinter flips `connected` to true).
+ *
  * @param {SerialPort|null} [chosen]  A specific port, or null to show the picker.
- * @returns {Promise<boolean>} True when a printer is now connected.
+ * @returns {Promise<boolean>} True when the port is open and ready to test.
  */
 export async function connectPrinter(chosen = null) {
   if (!printerSupported()) {
@@ -216,11 +225,14 @@ async function openPort(serialPort) {
   port = serialPort
   rememberPort()
   const info = port.getInfo()
-  // The machine is only truly "connected" when we can write to it. This stops
-  // the page showing "connected" before a test print has actually worked.
-  const writable = Boolean(serialPort.writable)
-  printerState.connected = writable
-  printerState.reason = writable ? '' : 'The printer port is open but not writable. Reconnect the cable and retry.'
+  // A port that opens is NOT yet "connected" — the only truthful proof that a
+  // printer is there is a write actually going out. Web Serial can open virtual
+  // COM ports (e.g. Windows "Communications Port (COMx) - Paired") that are not
+  // thermal printers; claiming "connected" for those misleads the till user
+  // into thinking a receipt will print. We stay "not connected" until a real
+  // write succeeds in printToPrinter().
+  printerState.connected = false
+  printerState.reason = 'The port is open. Press Test Print to confirm the printer responds.'
   printerState.info = deviceLabel(info)
 }
 
@@ -331,14 +343,20 @@ export async function printToPrinter(lines, opts = {}) {
       clearTimeout(timer)
       writer.releaseLock()
     }
+    // A write that reaches the wire is the proof the printer is really there
+    // and talking. Only now do we mark the machine as connected.
+    printerState.connected = true
+    printerState.reason = ''
     return true
   } catch {
-    printerState.reason = 'The printer is not responding. Check the cable and reconnect it.'
+    printerState.connected = false
+    printerState.reason =
+      'The port is open but the printer is not responding. This usually means the chosen port is not a real thermal printer (e.g. a virtual COM port) or the cable is loose. Pick the printer, not a "COM" port, in the serial chooser.'
     return false
   }
 }
 
-/** Is a printer available right now? */
+/** Is a printer available right now? (Only true once a print has been verified.) */
 export function printerReady() {
   return printerState.connected && Boolean(port?.writable)
 }

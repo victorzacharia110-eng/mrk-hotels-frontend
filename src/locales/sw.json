@@ -1179,6 +1179,7 @@
     "test": "Jaribu Uchapishaji",
     "testFailed": "Printa haikujibu. Angalia kebo kisha ujaribu tena.",
     "connectFailed": "Imeshindwa kuunganisha printa. Angalia kifaa kisha ujaribu tena.",
+    "readyToTest": "Port imefunguliwa. Bonyeza Jaribu Uchapishaji kuhakikisha printa imeunganishwa.",
     "statusUnsupported": "Uchapishaji wa moja kwa moja hautumiki",
     "statusUnsupportedDetail": "Kivinjari hiki hakiwezi kuwasiliana moja kwa moja na printa. Tumia Chrome au Edge kwenye kompyuta; vinginevyo risiti zitachapishwa kupitia dirisha la kuchapisha.",
     "statusConnected": "Printa imeunganishwa",
@@ -1188,7 +1189,7 @@
     "unsupported": "Uchapishaji wa moja kwa moja unahitaji Web Serial API (Chrome/Edge, kompyuta, HTTPS). Hadi hapo, risiti bado zitachapishwa kupitia dirisha la kuchapisha.",
     "howTitle": "Jinsi ya kuunganisha",
     "how1": "Chomeka printa ya risiti kwenye kompyuta hii kwa kebo ya USB au serial.",
-    "how2": "Bonyeza Unganisha Printa na uchague printa kwenye kidokezo cha kivinjari.",
+    "how2": "Bonyeza Unganisha Printa na uchague PRINTA kwenye kidokezo cha kivinjari — usichague \"Communications Port (COMx)\", kwa kuwa hiyo mara nyingi ni bandari ya kawaida/virtual, si printa halisi.",
     "how3": "Bonyeza Jaribu Uchapishaji — risiti ndogo itatoka kwenye printa.",
     "how4": "Uunganisho unahifadhiwa kwa kifaa hiki. Wakati wa kuchapisha, risiti na tiketi za jikoni zinaenda moja kwa moja kwenye karatasi."
   },
