@@ -2546,7 +2546,8 @@
     "allRoles": "All roles",
     "allStatuses": "All statuses",
     "searchInHouse": "Search guest name, phone or room...",
-    "searchUpcoming": "Search upcoming guests..."
+    "searchUpcoming": "Search upcoming guests...",
+    "noDetails": "No details available."
   },
   "profile": {
     "title": "My Profile",

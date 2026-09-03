@@ -20,108 +20,164 @@
 
     <!-- Rendered only once the dashboard data has arrived -->
     <template v-else-if="data">
-      <!-- KPI cards summarising the owner's hotel portfolio -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon"><i class="fas fa-hotel"></i></div>
-          <div>
-            <span class="stat-value">{{ data.hotels_total }}</span
-            ><span class="stat-label">{{ $t('owner.myHotels') }}</span>
+      <!-- Top: owner portfolio figures represented as stay-view style bars -->
+      <div class="card sv-card">
+        <div class="sv-card-head"><h2><i class="fas fa-hotel"></i> {{ $t('owner.dashboardTitle') }}</h2></div>
+        <div class="sv-bar-row">
+          <span class="sv-row-label"><i class="fas fa-building"></i> {{ $t('owner.myHotels') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-blue" :style="{ width: pctOf(data.hotels_total, data.hotels_total) + '%' }">
+              <span class="sv-bar-label">{{ data.hotels_total }}</span>
+            </div>
           </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon revenue"><i class="fas fa-dollar-sign"></i></div>
-          <div>
-            <span class="stat-value">TZS {{ data.revenue_30_days.toLocaleString() }}</span
-            ><span class="stat-label">{{ $t('owner.revenue30d') }}</span>
+        <div class="sv-bar-row">
+          <span class="sv-row-label"><i class="fas fa-dollar-sign"></i> {{ $t('owner.revenue30d') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-green" :style="{ width: pctOf(data.revenue_30_days, data.revenue_total) + '%' }">
+              <span class="sv-bar-label">TZS {{ data.revenue_30_days.toLocaleString() }}</span>
+            </div>
           </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon active"><i class="fas fa-bed"></i></div>
-          <div>
-            <span class="stat-value">{{ data.avg_occupancy }}%</span
-            ><span class="stat-label">{{ $t('owner.avgOccupancy') }}</span>
+        <div class="sv-bar-row">
+          <span class="sv-row-label"><i class="fas fa-percent"></i> {{ $t('owner.avgOccupancy') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-blue" :style="{ width: Math.min(100, Number(data.avg_occupancy) || 0) + '%' }">
+              <span class="sv-bar-label">{{ data.avg_occupancy }}%</span>
+            </div>
           </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon guests"><i class="fas fa-users"></i></div>
-          <div>
-            <span class="stat-value">{{ data.guests_in_house }}</span
-            ><span class="stat-label">{{ $t('owner.guestsInHouse') }}</span>
+        <div class="sv-bar-row">
+          <span class="sv-row-label"><i class="fas fa-users"></i> {{ $t('owner.guestsInHouse') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-green" :style="{ width: pctOf(data.guests_in_house, data.rooms_total) + '%' }">
+              <span class="sv-bar-label">{{ data.guests_in_house }}</span>
+            </div>
           </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon bookings"><i class="fas fa-calendar-check"></i></div>
-          <div>
-            <span class="stat-value">{{ data.active_reservations }}</span
-            ><span class="stat-label">{{ $t('owner.activeReservations') }}</span>
+        <div class="sv-bar-row">
+          <span class="sv-row-label"><i class="fas fa-calendar-check"></i> {{ $t('owner.activeReservations') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-green" :style="{ width: pctOf(data.active_reservations, data.rooms_total) + '%' }">
+              <span class="sv-bar-label">{{ data.active_reservations }}</span>
+            </div>
           </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon rooms"><i class="fas fa-door-open"></i></div>
-          <div>
-            <span class="stat-value">{{ data.rooms_total }}</span
-            ><span class="stat-label">{{ $t('owner.roomsTotal') }}</span>
+        <div class="sv-bar-row">
+          <span class="sv-row-label"><i class="fas fa-door-open"></i> {{ $t('owner.roomsTotal') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-blue" :style="{ width: pctOf(data.rooms_total, data.rooms_total) + '%' }">
+              <span class="sv-bar-label">{{ data.rooms_total }}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Side-by-side comparison of every hotel the owner manages -->
-      <div class="card">
-        <div class="card-head-row">
-          <h2 class="card-title">
-            <i class="fas fa-building"></i> {{ $t('owner.hotelsComparison') }}
-          </h2>
-          <TableExportButton
-            filename="owner-hotels"
-            :title="$t('owner.hotelsComparison')"
-            :rows="data.hotels"
-          />
+      <!-- Bottom: the owner's admin-style overview (KPIs + per-hotel comparison) -->
+      <div class="owner-overview">
+        <!-- KPI cards summarising the owner's hotel portfolio -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-hotel"></i></div>
+            <div>
+              <span class="stat-value">{{ data.hotels_total }}</span
+              ><span class="stat-label">{{ $t('owner.myHotels') }}</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon revenue"><i class="fas fa-dollar-sign"></i></div>
+            <div>
+              <span class="stat-value">TZS {{ data.revenue_30_days.toLocaleString() }}</span
+              ><span class="stat-label">{{ $t('owner.revenue30d') }}</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon active"><i class="fas fa-bed"></i></div>
+            <div>
+              <span class="stat-value">{{ data.avg_occupancy }}%</span
+              ><span class="stat-label">{{ $t('owner.avgOccupancy') }}</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon guests"><i class="fas fa-users"></i></div>
+            <div>
+              <span class="stat-value">{{ data.guests_in_house }}</span
+              ><span class="stat-label">{{ $t('owner.guestsInHouse') }}</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon bookings"><i class="fas fa-calendar-check"></i></div>
+            <div>
+              <span class="stat-value">{{ data.active_reservations }}</span
+              ><span class="stat-label">{{ $t('owner.activeReservations') }}</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon rooms"><i class="fas fa-door-open"></i></div>
+            <div>
+              <span class="stat-value">{{ data.rooms_total }}</span
+              ><span class="stat-label">{{ $t('owner.roomsTotal') }}</span>
+            </div>
+          </div>
         </div>
-        <div class="table-scroll">
-          <table class="table">
-            <thead>
-              <tr>
-                <th scope="col">{{ $t('owner.hotel') }}</th>
-                <th scope="col">{{ $t('owner.location') }}</th>
-                <th scope="col">{{ $t('owner.rooms') }}</th>
-                <th scope="col">{{ $t('owner.occupancy') }}</th>
-                <th scope="col">{{ $t('owner.guestsInHouse') }}</th>
-                <th scope="col">{{ $t('owner.activeReservations') }}</th>
-                <th scope="col" class="num">TZS · {{ $t('owner.revenue30d') }}</th>
-                <th scope="col" class="num">TZS · {{ $t('owner.revenueTotal') }}</th>
-                <th scope="col">{{ $t('owner.actions') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="h in data.hotels" :key="h.tenant_id">
-                <td>
-                  <router-link
-                    :to="{ name: 'owner-hotel-detail', params: { id: h.tenant_id } }"
-                    class="hotel-link"
-                  >
-                    {{ h.hotel_name }}
-                  </router-link>
-                </td>
-                <td>{{ [h.city, h.country].filter(Boolean).join(', ') || '—' }}</td>
-                <td>{{ h.rooms }}</td>
-                <td>{{ h.occupancy_rate }}%</td>
-                <td>{{ h.guests_in_house }}</td>
-                <td>{{ h.active_reservations }}</td>
-                <td class="num">{{ h.revenue_30_days.toLocaleString() }}</td>
-                <td class="num">{{ h.revenue_total.toLocaleString() }}</td>
-                <td>
-                  <button class="btn btn-sm btn-secondary" @click="openPanel(h)">
-                    <i class="fas fa-arrow-up-right-from-square"></i> {{ $t('owner.viewPanel') }}
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+
+        <!-- Side-by-side comparison of every hotel the owner manages -->
+        <div class="card">
+          <div class="card-head-row">
+            <h2 class="card-title">
+              <i class="fas fa-building"></i> {{ $t('owner.hotelsComparison') }}
+            </h2>
+            <TableExportButton
+              filename="owner-hotels"
+              :title="$t('owner.hotelsComparison')"
+              :rows="data.hotels"
+            />
+          </div>
+          <div class="table-scroll">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th scope="col">{{ $t('owner.hotel') }}</th>
+                  <th scope="col">{{ $t('owner.location') }}</th>
+                  <th scope="col">{{ $t('owner.rooms') }}</th>
+                  <th scope="col">{{ $t('owner.occupancy') }}</th>
+                  <th scope="col">{{ $t('owner.guestsInHouse') }}</th>
+                  <th scope="col">{{ $t('owner.activeReservations') }}</th>
+                  <th scope="col" class="num">TZS · {{ $t('owner.revenue30d') }}</th>
+                  <th scope="col" class="num">TZS · {{ $t('owner.revenueTotal') }}</th>
+                  <th scope="col">{{ $t('owner.actions') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="h in data.hotels" :key="h.tenant_id">
+                  <td>
+                    <router-link
+                      :to="{ name: 'owner-hotel-detail', params: { id: h.tenant_id } }"
+                      class="hotel-link"
+                    >
+                      {{ h.hotel_name }}
+                    </router-link>
+                  </td>
+                  <td>{{ [h.city, h.country].filter(Boolean).join(', ') || '—' }}</td>
+                  <td>{{ h.rooms }}</td>
+                  <td>{{ h.occupancy_rate }}%</td>
+                  <td>{{ h.guests_in_house }}</td>
+                  <td>{{ h.active_reservations }}</td>
+                  <td class="num">{{ h.revenue_30_days.toLocaleString() }}</td>
+                  <td class="num">{{ h.revenue_total.toLocaleString() }}</td>
+                  <td>
+                    <button class="btn btn-sm btn-secondary" @click="openPanel(h)">
+                      <i class="fas fa-arrow-up-right-from-square"></i> {{ $t('owner.viewPanel') }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p v-if="!data.hotels.length" class="empty-mini">
+            <i class="fas fa-hotel"></i> {{ $t('owner.noHotels') }}
+          </p>
         </div>
-        <p v-if="!data.hotels.length" class="empty-mini">
-          <i class="fas fa-hotel"></i> {{ $t('owner.noHotels') }}
-        </p>
       </div>
     </template>
 
@@ -168,6 +224,13 @@ function openPanel(hotel) {
   // stay-view dashboard module gate (front-desk roles only) and bounce the
   // owner straight back to /owner.
   router.push('/app/overview')
+}
+
+/** Normalized percentage of a part over its whole, for the bar widths. */
+function pctOf(part, whole) {
+  const w = Number(whole) || 0
+  if (w <= 0) return part ? 6 : 0
+  return Math.max(4, Math.min(100, ((Number(part) || 0) / w) * 100))
 }
 
 /** Fetches the owner dashboard summary from the API and exposes it in `data`. */
@@ -375,6 +438,112 @@ function dismissCurrentAlert() {
     align-items: flex-start;
     gap: 8px;
     padding: 14px;
+  }
+
+  .sv-bar-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+/* ------- Stay-view style bars ------- */
+.sv-card {
+  padding: 22px 24px;
+  margin-bottom: 24px;
+}
+
+.sv-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.sv-card-head h2 {
+  font-size: 17px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sv-card-head h2 i {
+  color: #005eb8;
+}
+
+.sv-bar-row {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.sv-row-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sv-row-label i {
+  color: #005eb8;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sv-track {
+  height: 30px;
+  background: #f0f2f5;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.sv-track .sv-bar {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  white-space: nowrap;
+  min-width: 44px;
+  animation: sv-bar-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  transition: filter 0.2s ease;
+}
+
+.sv-track .sv-bar:hover {
+  filter: brightness(0.92);
+}
+
+.sv-track .sv-bar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sv-bar.bar-green { background: #28c76f; }
+.sv-bar.bar-red { background: #ff6b6b; }
+.sv-bar.bar-blue { background: #3b82f6; }
+
+@keyframes sv-bar-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px) scaleX(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scaleX(1);
   }
 }
 </style>

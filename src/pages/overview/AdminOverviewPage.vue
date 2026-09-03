@@ -27,434 +27,351 @@
       <div v-if="error" class="alert alert-error">{{ error }}</div>
       <div v-if="success" class="alert alert-success">{{ success }}</div>
 
-      <!-- KPI stat cards: every metric rendered as a value plus a proportional bar.
-           Blue = occupancy & stay pipeline, green = today's flow & staffing, red = attention items. -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon"><i class="fas fa-users"></i></div>
-          <div class="stat-body">
-            <span class="stat-value">{{ data.stats.guests_in_house }}</span
-            ><span class="stat-label">{{ $t('overview.inHouse') }}</span>
-            <div class="stat-bar">
-              <div
-                class="stat-fill fill-blue"
-                :style="{ width: pctOfRooms(data.stats.guests_in_house) + '%' }"
-              ></div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon checkin"><i class="fas fa-right-to-bracket"></i></div>
-          <div class="stat-body">
-            <span class="stat-value">{{ data.stats.arrivals_today }}</span
-            ><span class="stat-label">{{ $t('overview.arrivalsToday') }}</span>
-            <div class="stat-bar">
-              <div
-                class="stat-fill fill-green"
-                :style="{ width: pctOfFlow(data.stats.arrivals_today) + '%' }"
-              ></div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon checkout"><i class="fas fa-right-from-bracket"></i></div>
-          <div class="stat-body">
-            <span class="stat-value">{{ data.stats.departures_today }}</span
-            ><span class="stat-label">{{ $t('overview.departuresToday') }}</span>
-            <div class="stat-bar">
-              <div
-                class="stat-fill fill-green"
-                :style="{ width: pctOfFlow(data.stats.departures_today) + '%' }" 
-              ></div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon bookings"><i class="fas fa-calendar-check"></i></div>
-          <div class="stat-body">
-            <span class="stat-value">{{ data.stats.upcoming_arrivals }}</span
-            ><span class="stat-label">{{ $t('overview.upcomingArrivals') }}</span>
-            <div class="stat-bar">
-              <div
-                class="stat-fill fill-blue"
-                :style="{ width: pctOfRooms(data.stats.upcoming_arrivals) + '%' }"
-              ></div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon staff"><i class="fas fa-user-tie"></i></div>
-          <div class="stat-body">
-            <span class="stat-value"
-              >{{ data.stats.staff_active }}/{{ data.stats.staff_total }}</span
-            ><span class="stat-label">{{ $t('overview.staffActive') }}</span>
-            <div class="stat-bar">
-              <div
-                class="stat-fill fill-green"
-                :style="{ width: ratioPct(data.stats.staff_active, data.stats.staff_total) + '%' }"
-              ></div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon cleaning"><i class="fas fa-broom"></i></div>
-          <div class="stat-body">
-            <span class="stat-value">{{ data.stats.pending_housekeeping }}</span
-            ><span class="stat-label">{{ $t('overview.pendingHousekeeping') }}</span>
-            <div class="stat-bar">
-              <div
-                class="stat-fill fill-red"
-                :style="{ width: pctOfRooms(data.stats.pending_housekeeping) + '%' }"
-              ></div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon rooms"><i class="fas fa-bed"></i></div>
-          <div class="stat-body">
-            <span class="stat-value">{{ data.stats.occupied_rooms }}</span
-            ><span class="stat-label">{{ $t('overview.occupiedRooms') }}</span>
-            <div class="stat-bar">
-              <div
-                class="stat-fill fill-blue"
-                :style="{ width: pctOfRooms(data.stats.occupied_rooms) + '%' }"
-              ></div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon occupancy"><i class="fas fa-percent"></i></div>
-          <div class="stat-body">
-            <span class="stat-value">{{ data.stats.occupancy_rate }}%</span
-            ><span class="stat-label">{{ $t('overview.occupancyRate') }}</span>
-            <div class="stat-bar">
-              <div
-                class="stat-fill fill-blue"
-                :style="{ width: Math.min(100, Number(data.stats.occupancy_rate) || 0) + '%' }"
-              ></div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon issues"><i class="fas fa-flag"></i></div>
-          <div class="stat-body">
-            <span class="stat-value">{{ data.stats.open_issues }}</span
-            ><span class="stat-label">{{ $t('overview.openIssues') }}</span>
-            <div class="stat-bar">
-              <div
-                class="stat-fill fill-red"
-                :style="{ width: pctOfRooms(data.stats.open_issues) + '%' }"
-              ></div>
-            </div>
-          </div>
-        </div>
+      <!-- Summary status pills (stay-view style) computed from the same data -->
+      <div class="sv-pills">
+        <span v-for="pill in statusPills" :key="pill.key" class="sv-pill" :class="pill.key">
+          {{ pill.label }} <strong>{{ pill.count }}</strong>
+        </span>
       </div>
 
-      <!-- Housekeeping summary: room status at a glance (clean / dirty / under maintenance) -->
-      <div class="card dash-section">
-        <div class="section-header-row">
-          <h2><i class="fas fa-broom"></i> {{ $t('overview.housekeepingSummary') }}</h2>
+      <!-- Room status distribution as one segmented track bar (stay-view style) -->
+      <div class="card sv-card">
+        <div class="sv-card-head">
+          <h2><i class="fas fa-bed"></i> {{ $t('overview.housekeepingSummary') }}</h2>
           <router-link to="/app/housekeeping" class="view-all-link"
             >{{ $t('overview.viewAllHousekeeping') }} <i class="fas fa-arrow-right"></i
           ></router-link>
         </div>
-        <div class="house-strip">
-          <div class="house-chip house-clean">
-            <div class="house-num">{{ roomStatus.clean }}</div>
-            <div class="house-label">{{ $t('overview.roomsClean') }}</div>
-            <div class="house-fill" :style="{ width: roomPct(roomStatus.clean) + '%' }"></div>
-          </div>
-          <div class="house-chip house-dirty">
-            <div class="house-num">{{ roomStatus.dirty }}</div>
-            <div class="house-label">{{ $t('overview.roomsDirty') }}</div>
-            <div class="house-fill" :style="{ width: roomPct(roomStatus.dirty) + '%' }"></div>
-          </div>
-          <div class="house-chip house-blocked">
-            <div class="house-num">{{ roomStatus.blocked }}</div>
-            <div class="house-label">{{ $t('overview.roomsBlocked') }}</div>
-            <div class="house-fill" :style="{ width: roomPct(roomStatus.blocked) + '%' }"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- F&B orders: all / running / settled, and total sales = bar + restaurant -->
-      <div class="card dash-section">
-        <div class="section-header-row">
-          <h2><i class="fas fa-utensils"></i> {{ $t('overview.fnbTitle') }}</h2>
-        </div>
-        <div class="fnb-strip">
-          <div class="fnb-cell">
-            <div class="fnb-num">{{ fnb.orders_all }}</div>
-            <div class="fnb-label">{{ $t('overview.fnbAllToday') }}</div>
-          </div>
-          <div class="fnb-cell">
-            <div class="fnb-num">{{ fnb.orders_running }}</div>
-            <div class="fnb-label">{{ $t('overview.fnbRunning') }}</div>
-          </div>
-          <div class="fnb-cell">
-            <div class="fnb-num">{{ fnb.orders_settled }}</div>
-            <div class="fnb-label">{{ $t('overview.fnbSettled') }}</div>
-          </div>
-          <div class="fnb-cell fnb-total">
-            <div class="fnb-num">{{ formatMoney(fnb.total_sales) }}</div>
-            <div class="fnb-label">{{ $t('overview.totalSales') }}</div>
-            <div class="fnb-sub">{{ $t('overview.totalSalesHint') }}</div>
-          </div>
-          <div class="fnb-cell">
-            <div class="fnb-num">{{ formatMoney(fnb.bar_sales) }}</div>
-            <div class="fnb-label">{{ $t('overview.barSales') }}</div>
-          </div>
-          <div class="fnb-cell">
-            <div class="fnb-num">{{ formatMoney(fnb.restaurant_sales) }}</div>
-            <div class="fnb-label">{{ $t('overview.restaurantSales') }}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- In-house section: currently checked-in guests with quick check-out action -->
-      <div class="dash-grid">
-        <div class="card dash-section">
-          <div class="section-header-row">
-            <h2><i class="fas fa-bed"></i> {{ $t('overview.inHouseSection') }}</h2>
-            <router-link to="/app/reservations" class="view-all-link"
-              >{{ $t('overview.viewAllReservations') }} <i class="fas fa-arrow-right"></i
-            ></router-link>
-          </div>
-          <div class="filter-row">
-            <input
-              v-model="inHouse.search"
-              type="text"
-              class="input"
-              :placeholder="$t('overview.searchInHouse')"
-              @input="onInHouseFilter"
-            />
-          </div>
-          <div v-if="!data.in_house.data.length" class="empty-mini">
-            {{ $t('overview.inHouseEmpty') }}
-          </div>
-          <div v-else class="table-scroll">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th scope="col">{{ $t('overview.guest') }}</th>
-                  <th scope="col">{{ $t('overview.room') }}</th>
-                  <th scope="col">{{ $t('overview.stay') }}</th>
-                  <th scope="col">{{ $t('overview.balance') }}</th>
-                  <th scope="col">{{ $t('common.actions') }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="r in data.in_house.data" :key="r.reservation_id">
-                  <td>
-                    <strong>{{ r.guest_name }}</strong>
-                    <div v-if="r.guest_phone" class="sub">{{ r.guest_phone }}</div>
-                  </td>
-                  <td>
-                    <span v-if="r.room">
-                      {{ $t('reservations.room') }} {{ r.room.room_number }}
-                      <div class="sub capitalize">{{ r.room_type || r.room.room_type }}</div>
-                    </span>
-                    <span v-else class="sub">—</span>
-                  </td>
-                  <td>
-                    <div>{{ formatDate(r.arrival_date) }} → {{ formatDate(r.departure_date) }}</div>
-                    <div class="sub">
-                      {{ r.num_days || r.nights }} {{ $t('reservations.nights') }}
-                    </div>
-                  </td>
-                  <td>
-                    <span :class="{ due: Number(r.balance) > 0 }"
-                      >TZS {{ Number(r.balance).toLocaleString() }}</span
-                    >
-                  </td>
-                  <td>
-                    <div class="actions">
-                      <button class="btn btn-sm btn-primary" @click="checkOut(r)">
-                        <i class="fas fa-right-from-bracket"></i> {{ $t('overview.checkOut') }}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        <div class="sv-segbar">
           <div
-            v-if="data.in_house.meta && data.in_house.meta.total > data.in_house.meta.per_page"
-            class="pagination"
-          >
-            <button
-              class="btn btn-sm btn-secondary"
-              :disabled="data.in_house.meta.current_page <= 1"
-              @click="goPage(inHouse, inHouse.page - 1)"
-            >
-              {{ $t('common.previous') }}
-            </button>
-            <span class="muted">{{
-              $t('common.pageXOfY', {
-                current: data.in_house.meta.current_page,
-                total: data.in_house.meta.last_page,
-              })
-            }}</span>
-            <button
-              class="btn btn-sm btn-secondary"
-              :disabled="data.in_house.meta.current_page >= data.in_house.meta.last_page"
-              @click="goPage(inHouse, inHouse.page + 1)"
-            >
-              {{ $t('common.next') }}
-            </button>
-          </div>
+            class="sv-seg seg-clean"
+            :style="{ width: roomPct(roomStatus.clean) + '%' }"
+            :title="`${$t('overview.roomsClean')}: ${roomStatus.clean}`"
+          ></div>
+          <div
+            class="sv-seg seg-dirty"
+            :style="{ width: roomPct(roomStatus.dirty) + '%' }"
+            :title="`${$t('overview.roomsDirty')}: ${roomStatus.dirty}`"
+          ></div>
+          <div
+            class="sv-seg seg-blocked"
+            :style="{ width: roomPct(roomStatus.blocked) + '%' }"
+            :title="`${$t('overview.roomsBlocked')}: ${roomStatus.blocked}`"
+          ></div>
         </div>
+        <div class="sv-seg-legend">
+          <span class="legend-item"><i class="dot dot-clean"></i> {{ $t('overview.roomsClean') }} — <strong>{{ roomStatus.clean }}</strong></span>
+          <span class="legend-item"><i class="dot dot-dirty"></i> {{ $t('overview.roomsDirty') }} — <strong>{{ roomStatus.dirty }}</strong></span>
+          <span class="legend-item"><i class="dot dot-blocked"></i> {{ $t('overview.roomsBlocked') }} — <strong>{{ roomStatus.blocked }}</strong></span>
+        </div>
+      </div>
 
-        <div>
-          <!-- Upcoming arrivals list -->
-          <div class="card dash-section">
-            <div class="section-header-row">
-              <h2><i class="fas fa-calendar-check"></i> {{ $t('overview.upcomingSection') }}</h2>
-            </div>
-            <div class="filter-row">
-              <input
-                v-model="upcoming.search"
-                type="text"
-                class="input"
-                :placeholder="$t('overview.searchUpcoming')"
-                @input="onUpcomingFilter"
-              />
-            </div>
-            <div v-if="!data.upcoming.data.length" class="empty-mini">
-              {{ $t('overview.upcomingEmpty') }}
-            </div>
-            <div v-for="r in data.upcoming.data" :key="r.reservation_id" class="list-item">
-              <i class="fas fa-user"></i>
-              <div>
-                <strong>{{ r.guest_name }}</strong>
-                <div class="sub">
-                  {{ $t('reservations.room') }} {{ r.room?.room_number || '—' }} ·
-                  {{ formatDate(r.arrival_date) }} · {{ r.num_days || r.nights }}
-                  {{ $t('reservations.nights') }}
-                </div>
-              </div>
-              <span class="badge badge-yellow">{{ r.status.replace('_', ' ') }}</span>
-            </div>
-            <div
-              v-if="data.upcoming.meta && data.upcoming.meta.total > data.upcoming.meta.per_page"
-              class="pagination"
-            >
-              <button
-                class="btn btn-sm btn-secondary"
-                :disabled="data.upcoming.meta.current_page <= 1"
-                @click="goPage(upcoming, upcoming.page - 1)"
-              >
-                {{ $t('common.previous') }}
-              </button>
-              <span class="muted">{{
-                $t('common.pageXOfY', {
-                  current: data.upcoming.meta.current_page,
-                  total: data.upcoming.meta.last_page,
-                })
-              }}</span>
-              <button
-                class="btn btn-sm btn-secondary"
-                :disabled="data.upcoming.meta.current_page >= data.upcoming.meta.last_page"
-                @click="goPage(upcoming, upcoming.page + 1)"
-              >
-                {{ $t('common.next') }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Housekeeping section: task list with assign/confirm/verify/complete actions -->
-          <div class="card dash-section">
-            <div class="section-header-row">
-              <h2><i class="fas fa-broom"></i> {{ $t('overview.housekeepingSection') }}</h2>
-              <router-link to="/app/housekeeping" class="view-all-link"
-                >{{ $t('overview.viewAllHousekeeping') }} <i class="fas fa-arrow-right"></i
-              ></router-link>
-            </div>
-            <div class="filter-row">
-              <select
-                v-model="housekeeping.status"
-                class="input select-input"
-                @change="onHousekeepingFilter"
-              >
-                <option value="">{{ $t('overview.allStatuses') }}</option>
-                <option v-for="(label, value) in HOUSE_STATUSES" :key="value" :value="value">
-                  {{ label }}
-                </option>
-              </select>
-            </div>
-            <div v-if="!data.housekeeping.data.length" class="empty-mini">
-              {{ $t('overview.housekeepingEmpty') }}
-            </div>
-            <div v-for="t in data.housekeeping.data" :key="t.task_id" class="list-item">
-              <i class="fas fa-broom"></i>
-              <div>
-                <strong>{{ $t('reservations.room') }} {{ t.room?.room_number || '—' }}</strong>
-                <div class="sub">{{ houseStatusLabel(t.status) }}</div>
-              </div>
-              <span class="badge" :class="houseBadge(t.status)">{{
-                houseStatusLabel(t.status)
-              }}</span>
-              <div class="actions">
-                <button
-                  v-if="t.status === 'dirty'"
-                  class="btn btn-sm btn-secondary"
-                  @click="openAssign(t)"
-                >
-                  <i class="fas fa-user-plus"></i> {{ $t('housekeeping.assign') }}
-                </button>
-                <button
-                  v-if="t.status === 'in_progress' && canConfirm"
-                  class="btn btn-sm btn-secondary"
-                  @click="confirmTask(t)"
-                >
-                  {{ $t('overview.confirm') }}
-                </button>
-                <button
-                  v-if="t.status === 'confirmed' && canVerify"
-                  class="btn btn-sm btn-secondary"
-                  @click="verifyTask(t)"
-                >
-                  {{ $t('overview.verify') }}
-                </button>
-                <button
-                  v-if="t.status === 'verified'"
-                  class="btn btn-sm btn-success"
-                  @click="completeTask(t)"
-                >
-                  {{ $t('overview.complete') }}
-                </button>
-              </div>
-            </div>
-            <div
-              v-if="
-                data.housekeeping.meta &&
-                data.housekeeping.meta.total > data.housekeeping.meta.per_page
-              "
-              class="pagination"
-            >
-              <button
-                class="btn btn-sm btn-secondary"
-                :disabled="data.housekeeping.meta.current_page <= 1"
-                @click="goPage(housekeeping, housekeeping.page - 1)"
-              >
-                {{ $t('common.previous') }}
-              </button>
-              <span class="muted">{{
-                $t('common.pageXOfY', {
-                  current: data.housekeeping.meta.current_page,
-                  total: data.housekeeping.meta.last_page,
-                })
-              }}</span>
-              <button
-                class="btn btn-sm btn-secondary"
-                :disabled="data.housekeeping.meta.current_page >= data.housekeeping.meta.last_page"
-                @click="goPage(housekeeping, housekeeping.page + 1)"
-              >
-                {{ $t('common.next') }}
-              </button>
+      <!-- Occupancy & guest flow represented as horizontal bars -->
+      <div class="card sv-card">
+        <div class="sv-card-head"><h2><i class="fas fa-gauge-high"></i> {{ $t('overview.occupancyRate') }} & {{ $t('overview.inHouse') }}</h2></div>
+        <div
+          class="sv-bar-row has-pop-row"
+          @mouseenter="showBarTip($event, 'occupancy')"
+          @mousemove="moveBarTip"
+          @mouseleave="hideBarTip"
+        >
+          <span class="sv-row-label"><i class="fas fa-percent"></i> {{ $t('overview.occupancyRate') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-blue" :style="{ width: Math.min(100, Number(data.stats.occupancy_rate) || 0) + '%' }">
+              <span class="sv-bar-label">{{ data.stats.occupancy_rate }}%</span>
             </div>
           </div>
         </div>
+        <div
+          class="sv-bar-row has-pop-row"
+          @mouseenter="showBarTip($event, 'in-house')"
+          @mousemove="moveBarTip"
+          @mouseleave="hideBarTip"
+        >
+          <span class="sv-row-label"><i class="fas fa-users"></i> {{ $t('overview.inHouse') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-blue" :style="{ width: pctOfRooms(data.stats.guests_in_house) + '%' }">
+              <span class="sv-bar-label">{{ data.stats.guests_in_house }}</span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="sv-bar-row has-pop-row"
+          @mouseenter="showBarTip($event, 'occupied')"
+          @mousemove="moveBarTip"
+          @mouseleave="hideBarTip"
+        >
+          <span class="sv-row-label"><i class="fas fa-bed"></i> {{ $t('overview.occupiedRooms') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-blue" :style="{ width: pctOfRooms(data.stats.occupied_rooms) + '%' }">
+              <span class="sv-bar-label">{{ data.stats.occupied_rooms }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Today's arrivals / departures / upcoming flow as bars -->
+      <div class="card sv-card">
+        <div class="sv-card-head"><h2><i class="fas fa-right-left"></i> {{ $t('overview.arrivalsToday') }}</h2></div>
+        <div
+          class="sv-bar-row has-pop-row"
+          @mouseenter="showBarTip($event, 'arrivals')"
+          @mousemove="moveBarTip"
+          @mouseleave="hideBarTip"
+        >
+          <span class="sv-row-label"><i class="fas fa-right-to-bracket"></i> {{ $t('overview.arrivalsToday') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-green" :style="{ width: pctOfFlow(data.stats.arrivals_today) + '%' }">
+              <span class="sv-bar-label">{{ data.stats.arrivals_today }}</span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="sv-bar-row has-pop-row"
+          @mouseenter="showBarTip($event, 'departures')"
+          @mousemove="moveBarTip"
+          @mouseleave="hideBarTip"
+        >
+          <span class="sv-row-label"><i class="fas fa-right-from-bracket"></i> {{ $t('overview.departuresToday') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-green" :style="{ width: pctOfFlow(data.stats.departures_today) + '%' }">
+              <span class="sv-bar-label">{{ data.stats.departures_today }}</span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="sv-bar-row has-pop-row"
+          @mouseenter="showBarTip($event, 'upcoming')"
+          @mousemove="moveBarTip"
+          @mouseleave="hideBarTip"
+        >
+          <span class="sv-row-label"><i class="fas fa-calendar-check"></i> {{ $t('overview.upcomingArrivals') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-green" :style="{ width: pctOfRooms(data.stats.upcoming_arrivals) + '%' }">
+              <span class="sv-bar-label">{{ data.stats.upcoming_arrivals }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Staff, housekeeping queue and open issues as bars -->
+      <div class="card sv-card">
+        <div class="sv-card-head"><h2><i class="fas fa-user-tie"></i> {{ $t('overview.staffSection') }}</h2></div>
+        <div
+          class="sv-bar-row has-pop-row"
+          @mouseenter="showBarTip($event, 'staff')"
+          @mousemove="moveBarTip"
+          @mouseleave="hideBarTip"
+        >
+          <span class="sv-row-label"><i class="fas fa-user-tie"></i> {{ $t('overview.staffActive') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-green" :style="{ width: ratioPct(data.stats.staff_active, data.stats.staff_total) + '%' }">
+              <span class="sv-bar-label">{{ data.stats.staff_active }}/{{ data.stats.staff_total }}</span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="sv-bar-row has-pop-row"
+          @mouseenter="showBarTip($event, 'housekeeping')"
+          @mousemove="moveBarTip"
+          @mouseleave="hideBarTip"
+        >
+          <span class="sv-row-label"><i class="fas fa-broom"></i> {{ $t('overview.pendingHousekeeping') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-red" :style="{ width: pctOfRooms(data.stats.pending_housekeeping) + '%' }">
+              <span class="sv-bar-label">{{ data.stats.pending_housekeeping }}</span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="sv-bar-row has-pop-row"
+          @mouseenter="showBarTip($event, 'issues')"
+          @mousemove="moveBarTip"
+          @mouseleave="hideBarTip"
+        >
+          <span class="sv-row-label"><i class="fas fa-flag"></i> {{ $t('overview.openIssues') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-red" :style="{ width: pctOfRooms(data.stats.open_issues) + '%' }">
+              <span class="sv-bar-label">{{ data.stats.open_issues }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- F&B orders and sales as bars -->
+      <div class="card sv-card">
+        <div class="sv-card-head"><h2><i class="fas fa-utensils"></i> {{ $t('overview.fnbTitle') }}</h2></div>
+        <div
+          class="sv-bar-row has-pop-row"
+          @mouseenter="showBarTip($event, 'orders-all')"
+          @mousemove="moveBarTip"
+          @mouseleave="hideBarTip"
+        >
+          <span class="sv-row-label"><i class="fas fa-receipt"></i> {{ $t('overview.fnbAllToday') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-blue" :style="{ width: orderPct(fnb.orders_all, 0) + '%' }">
+              <span class="sv-bar-label">{{ fnb.orders_all }}</span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="sv-bar-row has-pop-row"
+          @mouseenter="showBarTip($event, 'orders-running')"
+          @mousemove="moveBarTip"
+          @mouseleave="hideBarTip"
+        >
+          <span class="sv-row-label"><i class="fas fa-fire"></i> {{ $t('overview.fnbRunning') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-green" :style="{ width: orderPct(fnb.orders_running, fnb.orders_all) + '%' }">
+              <span class="sv-bar-label">{{ fnb.orders_running }}</span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="sv-bar-row has-pop-row"
+          @mouseenter="showBarTip($event, 'orders-settled')"
+          @mousemove="moveBarTip"
+          @mouseleave="hideBarTip"
+        >
+          <span class="sv-row-label"><i class="fas fa-check-double"></i> {{ $t('overview.fnbSettled') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-green" :style="{ width: orderPct(fnb.orders_settled, fnb.orders_all) + '%' }">
+              <span class="sv-bar-label">{{ fnb.orders_settled }}</span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="sv-bar-row has-pop-row"
+          @mouseenter="showBarTip($event, 'sales-total')"
+          @mousemove="moveBarTip"
+          @mouseleave="hideBarTip"
+        >
+          <span class="sv-row-label"><i class="fas fa-dollar-sign"></i> {{ $t('overview.totalSales') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-green" :style="{ width: salesPct(fnb.total_sales, fnb.total_sales) + '%' }">
+              <span class="sv-bar-label">{{ formatMoney(fnb.total_sales) }}</span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="sv-bar-row has-pop-row"
+          @mouseenter="showBarTip($event, 'sales-bar')"
+          @mousemove="moveBarTip"
+          @mouseleave="hideBarTip"
+        >
+          <span class="sv-row-label"><i class="fas fa-martini-glass"></i> {{ $t('overview.barSales') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-blue" :style="{ width: salesPct(fnb.bar_sales, fnb.total_sales) + '%' }">
+              <span class="sv-bar-label">{{ formatMoney(fnb.bar_sales) }}</span>
+            </div>
+          </div>
+        </div>
+        <div
+          class="sv-bar-row has-pop-row"
+          @mouseenter="showBarTip($event, 'sales-restaurant')"
+          @mousemove="moveBarTip"
+          @mouseleave="hideBarTip"
+        >
+          <span class="sv-row-label"><i class="fas fa-utensils"></i> {{ $t('overview.restaurantSales') }}</span>
+          <div class="sv-track">
+            <div class="sv-bar bar-blue" :style="{ width: salesPct(fnb.restaurant_sales, fnb.total_sales) + '%' }">
+              <span class="sv-bar-label">{{ formatMoney(fnb.restaurant_sales) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hover popover on bars: shows the detail records (in-house / upcoming / housekeeping) -->
+      <div
+        v-if="barTip"
+        class="sv-popover"
+        :style="{ left: barTip.x + 'px', top: barTip.y + 'px' }"
+        @mouseenter="keepBarTip()"
+        @mouseleave="hideBarTip()"
+      >
+        <div class="sv-popover-head">
+          <span v-if="tipHeader(barTip.key).icon" class="sv-popover-icon">
+            <i :class="['fas', tipHeader(barTip.key).icon]"></i>
+          </span>
+          <div class="sv-popover-title">{{ tipHeader(barTip.key).title }}</div>
+        </div>
+
+        <template v-if="barTip.key === 'in-house'">
+          <div v-if="!inHouseRows.length" class="sv-popover-empty">{{ $t('overview.inHouseEmpty') }}</div>
+          <div v-for="r in inHouseRows" :key="r.reservation_id" class="sv-popover-item">
+            <div class="sv-popover-main">
+              <strong>{{ r.guest_name }}</strong>
+              <span v-if="r.guest_phone" class="sv-popover-sub">{{ r.guest_phone }}</span>
+              <span v-if="r.room" class="sv-popover-sub">{{ $t('reservations.room') }} {{ r.room.room_number }} · {{ r.room_type || r.room.room_type }}</span>
+              <span class="sv-popover-sub">{{ formatDate(r.arrival_date) }} → {{ formatDate(r.departure_date) }} · {{ r.num_days || r.nights }} {{ $t('reservations.nights') }}</span>
+              <span class="sv-popover-sub" :class="{ due: Number(r.balance) > 0 }">TZS {{ Number(r.balance).toLocaleString() }}</span>
+            </div>
+            <button class="btn btn-sm btn-primary" @click="checkOut(r)"><i class="fas fa-right-from-bracket"></i> {{ $t('overview.checkOut') }}</button>
+          </div>
+        </template>
+
+        <template v-else-if="barTip.key === 'upcoming'">
+          <div v-if="!upcomingRows.length" class="sv-popover-empty">{{ $t('overview.upcomingEmpty') }}</div>
+          <div v-for="r in upcomingRows" :key="r.reservation_id" class="sv-popover-item">
+            <div class="sv-popover-main">
+              <strong>{{ r.guest_name }}</strong>
+              <span class="sv-popover-sub">{{ $t('reservations.room') }} {{ r.room?.room_number || '—' }} · {{ formatDate(r.arrival_date) }} · {{ r.num_days || r.nights }} {{ $t('reservations.nights') }}</span>
+              <span class="sv-popover-sub">{{ r.status.replace('_', ' ') }}</span>
+            </div>
+            <span class="badge badge-yellow">{{ r.status.replace('_', ' ') }}</span>
+          </div>
+        </template>
+
+        <template v-else-if="barTip.key === 'housekeeping'">
+          <div v-if="!housekeepingRows.length" class="sv-popover-empty">{{ $t('overview.housekeepingEmpty') }}</div>
+          <div v-for="task in housekeepingRows" :key="task.task_id" class="sv-popover-item sv-popover-stack">
+            <div class="sv-popover-stack-top">
+              <div class="sv-popover-main">
+                <strong>{{ $t('reservations.room') }} {{ task.room?.room_number || '—' }}</strong>
+                <span class="sv-popover-sub">{{ houseStatusLabel(task.status) }}</span>
+              </div>
+              <span class="badge" :class="houseBadge(task.status)">{{ houseStatusLabel(task.status) }}</span>
+            </div>
+            <div class="sv-popover-actions">
+              <button
+                v-if="task.status === 'dirty'"
+                class="btn btn-sm btn-secondary"
+                @click="openAssign(task)"
+              >
+                <i class="fas fa-user-plus"></i> {{ $t('housekeeping.assign') }}
+              </button>
+              <button
+                v-if="task.status === 'in_progress' && canConfirm"
+                class="btn btn-sm btn-secondary"
+                @click="confirmTask(task)"
+              >
+                {{ $t('overview.confirm') }}
+              </button>
+              <button
+                v-if="task.status === 'confirmed' && canVerify"
+                class="btn btn-sm btn-secondary"
+                @click="verifyTask(task)"
+              >
+                {{ $t('overview.verify') }}
+              </button>
+              <button
+                v-if="task.status === 'verified'"
+                class="btn btn-sm btn-success"
+                @click="completeTask(task)"
+              >
+                {{ $t('overview.complete') }}
+              </button>
+            </div>
+          </div>
+        </template>
+
+        <template v-else>
+          <div v-if="!tipSummary(barTip.key).length" class="sv-popover-empty">{{ $t('overview.noDetails') }}</div>
+          <div v-for="(row, i) in tipSummary(barTip.key)" :key="i" class="sv-summary-row">
+            <span class="sv-summary-label">{{ row.label }}</span>
+            <strong class="sv-summary-value">{{ row.value }}</strong>
+          </div>
+        </template>
       </div>
     </template>
 
@@ -519,26 +436,167 @@ import AlertModal from '@/components/AlertModal.vue'
 const authStore = useAuthStore()
 const notifStore = useNotificationStore()
 const { t } = useI18n()
-// Root dashboard data, loading/feedback state, and the housekeeping assign modal state.
+// Root dashboard data and loading/feedback state.
 const data = ref(null)
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
+
+// Filter/page controls for the three dashboard sections (in-house, upcoming, housekeeping).
+const inHouse = reactive({ search: '', page: 1 })
+const upcoming = reactive({ search: '', page: 1 })
+const housekeeping = reactive({ status: '', page: 1 })
+
+// Housekeeping assign-modal state.
 const showAssign = ref(false)
 const assignTaskId = ref('')
 const assignUserId = ref('')
 const modalError = ref('')
 const saving = ref(false)
 
-// Filter/page controls for the three dashboard sections (in-house, upcoming, housekeeping).
-const inHouse = reactive({ search: '', page: 1 })
-const upcoming = reactive({ search: '', page: 1 })
-const housekeeping = reactive({ status: '', page: 1 })
-// Debounce timer handle for filter-triggered reloads.
-let reloadTimer = null
+/* ---------------- Bar hover popover (stay-view popover style) ---------------- */
 
-// Derived values: hotel name, action permissions and housekeeper options for the assign modal.
+// Hovered bar payload + viewport coordinates for the popover card. The
+// popover reuses the same detail lists that used to render as tables below
+// the bars, so hovering a bar shows its underlying records.
+const barTip = ref(null)
+// Timer used to delay the popover hide so the cursor can move onto it.
+let barTipTimer = null
+
+/** Positions the popover near the cursor, clamped inside the viewport. */
+function tipPosition(event) {
+  const width = 320
+  const height = 320
+  const x = Math.min(event.clientX + 14, window.innerWidth - width - 12)
+  const y = Math.min(event.clientY + 14, window.innerHeight - height - 12)
+  return { x: Math.max(8, x), y: Math.max(8, y) }
+}
+
+/** Shows a popover for the given bar group anchored at the cursor. */
+function showBarTip(event, key) {
+  clearTimeout(barTipTimer)
+  barTip.value = { key, ...tipPosition(event) }
+}
+
+/** Keeps the popover glued to the cursor while moving within a bar. */
+function moveBarTip(event) {
+  if (barTip.value) Object.assign(barTip.value, tipPosition(event))
+}
+
+/** Hides the popover after a short delay so the cursor can reach it. */
+function hideBarTip() {
+  clearTimeout(barTipTimer)
+  barTipTimer = setTimeout(() => {
+    barTip.value = null
+  }, 250)
+}
+
+/** Cancels the pending hide while the cursor is over the popover or bar. */
+function keepBarTip() {
+  clearTimeout(barTipTimer)
+}
+
+/** Detail records for the "guests in house" bar (in-house reservations). */
+const inHouseRows = computed(() => data.value?.in_house?.data || [])
+
+/** Detail records for the "upcoming arrivals" bar. */
+const upcomingRows = computed(() => data.value?.upcoming?.data || [])
+
+/** Detail records for the "tasks in queue" bar (housekeeping tasks). */
+const housekeepingRows = computed(() => data.value?.housekeeping?.data || [])
+
+/** Icon and title for the popover header of a given bar key. */
+function tipHeader(key) {
+  const map = {
+    occupancy: { icon: 'fa-percent', title: t('overview.occupancyRate') },
+    'in-house': { icon: 'fa-users', title: t('overview.inHouse') },
+    occupied: { icon: 'fa-bed', title: t('overview.occupiedRooms') },
+    arrivals: { icon: 'fa-right-to-bracket', title: t('overview.arrivalsToday') },
+    departures: { icon: 'fa-right-from-bracket', title: t('overview.departuresToday') },
+    upcoming: { icon: 'fa-calendar-check', title: t('overview.upcomingSection') },
+    staff: { icon: 'fa-user-tie', title: t('overview.staffSection') },
+    housekeeping: { icon: 'fa-broom', title: t('overview.housekeepingSection') },
+    issues: { icon: 'fa-flag', title: t('overview.openIssues') },
+    'orders-all': { icon: 'fa-receipt', title: t('overview.fnbAllToday') },
+    'orders-running': { icon: 'fa-fire', title: t('overview.fnbRunning') },
+    'orders-settled': { icon: 'fa-check-double', title: t('overview.fnbSettled') },
+    'sales-total': { icon: 'fa-dollar-sign', title: t('overview.totalSales') },
+    'sales-bar': { icon: 'fa-martini-glass', title: t('overview.barSales') },
+    'sales-restaurant': { icon: 'fa-utensils', title: t('overview.restaurantSales') },
+  }
+  return map[key] || { icon: 'fa-chart-simple', title: '' }
+}
+
+/**
+ * Summary detail rows for aggregate bars (no per-item list in the payload).
+ * Returns an array of { label, value } shown inside the popover.
+ */
+function tipSummary(key) {
+  const s = data.value?.stats || {}
+  const f = fnb.value
+  const rows = {
+    occupancy: [
+      { label: t('overview.occupiedRooms'), value: String(Number(s.occupied_rooms) || 0) },
+      { label: t('overview.roomsClean'), value: String(roomStatus.value.clean) },
+      { label: t('overview.roomsDirty'), value: String(roomStatus.value.dirty) },
+      { label: t('overview.roomsBlocked'), value: String(roomStatus.value.blocked) },
+    ],
+    occupied: [
+      { label: t('overview.occupancyRate'), value: (Number(s.occupancy_rate) || 0) + '%' },
+      { label: t('overview.inHouse'), value: String(Number(s.guests_in_house) || 0) },
+      { label: t('overview.roomsClean'), value: String(roomStatus.value.clean) },
+      { label: t('overview.roomsDirty'), value: String(roomStatus.value.dirty) },
+    ],
+    arrivals: [
+      { label: t('overview.upcomingArrivals'), value: String(Number(s.upcoming_arrivals) || 0) },
+      { label: t('overview.arrivalsToday'), value: String(Number(s.arrivals_today) || 0) },
+    ],
+    departures: [
+      { label: t('overview.departuresToday'), value: String(Number(s.departures_today) || 0) },
+      { label: t('overview.inHouse'), value: String(Number(s.guests_in_house) || 0) },
+    ],
+    staff: [
+      { label: t('overview.staffActive'), value: `${Number(s.staff_active) || 0} / ${Number(s.staff_total) || 0}` },
+      { label: t('overview.staffTotal'), value: String(Number(s.staff_total) || 0) },
+    ],
+    issues: [
+      { label: t('overview.openIssues'), value: String(Number(s.open_issues) || 0) },
+    ],
+    'orders-all': [
+      { label: t('overview.fnbRunning'), value: String(Number(f.orders_running) || 0) },
+      { label: t('overview.fnbSettled'), value: String(Number(f.orders_settled) || 0) },
+    ],
+    'orders-running': [
+      { label: t('overview.fnbAllToday'), value: String(Number(f.orders_all) || 0) },
+      { label: t('overview.fnbSettled'), value: String(Number(f.orders_settled) || 0) },
+    ],
+    'orders-settled': [
+      { label: t('overview.fnbAllToday'), value: String(Number(f.orders_all) || 0) },
+      { label: t('overview.fnbRunning'), value: String(Number(f.orders_running) || 0) },
+    ],
+    'sales-total': [
+      { label: t('overview.barSales'), value: formatMoney(f.bar_sales) },
+      { label: t('overview.restaurantSales'), value: formatMoney(f.restaurant_sales) },
+    ],
+    'sales-bar': [
+      { label: t('overview.totalSales'), value: formatMoney(f.total_sales) },
+      { label: t('overview.restaurantSales'), value: formatMoney(f.restaurant_sales) },
+    ],
+    'sales-restaurant': [
+      { label: t('overview.totalSales'), value: formatMoney(f.total_sales) },
+      { label: t('overview.barSales'), value: formatMoney(f.bar_sales) },
+    ],
+  }
+  return rows[key] || []
+}
+
+/* ---------------- End bar hover popover ---------------- */
+
+
+// Derived value: the tenant's hotel name shown in greeting text.
 const hotelName = computed(() => authStore.user?.tenant?.hotel_name || 'MRK Hotels')
+
+// Action permissions and housekeeper options for the assign modal.
 const canConfirm = computed(() => authStore.can(80) && authStore.canOperate)
 const canVerify = computed(
   () => authStore.canOperate && (!!authStore.user?.is_sub_manager || authStore.can(80)),
@@ -562,6 +620,18 @@ const roomStatus = computed(() => {
     dirty: Number(rs.dirty) || 0,
     blocked: (Number(rs.maintenance) || 0) + (Number(rs.cleaning) || 0),
   }
+})
+
+// Summary status pills (front-desk style) computed from the overview stats.
+const statusPills = computed(() => {
+  const s = data.value?.stats || {}
+  return [
+    { key: 'vacant', label: t('overview.roomsClean'), count: roomStatus.value.clean },
+    { key: 'occupied', label: t('overview.occupiedRooms'), count: Number(s.occupied_rooms) || 0 },
+    { key: 'reserved', label: t('overview.upcomingArrivals'), count: Number(s.upcoming_arrivals) || 0 },
+    { key: 'dueout', label: t('overview.departuresToday'), count: Number(s.departures_today) || 0 },
+    { key: 'dirty', label: t('overview.roomsDirty'), count: roomStatus.value.dirty },
+  ]
 })
 
 // F&B orders + total sales (bar + restaurant) summary from the overview stats.
@@ -621,6 +691,27 @@ function ratioPct(part, whole) {
   const w = Number(whole) || 0
   if (w <= 0) return 0
   return Math.min(100, ((Number(part) || 0) / w) * 100)
+}
+
+/**
+ * Percentage of the "total orders" number a bucket (e.g. running/settled)
+ * represents, for the F&B bars. Falls back to a fixed share when the total
+ * is unknown so the bars never render empty.
+ */
+function orderPct(value, total) {
+  const t = Number(total) || 0
+  if (t <= 0) return value ? 30 : 0
+  return Math.min(100, ((Number(value) || 0) / t) * 100)
+}
+
+/**
+ * Percentage of the total sales a subgroup (bar/restaurant) represents.
+ * The total-bar always fills to 100; subgroups share against the same base.
+ */
+function salesPct(value, total) {
+  const t = Number(total) || 0
+  if (t <= 0) return value ? 30 : 0
+  return Math.max(4, Math.min(100, ((Number(value) || 0) / t) * 100))
 }
 
 // Housekeeping task statuses used by the housekeeping filter dropdown.
@@ -696,37 +787,6 @@ async function load() {
   }
 }
 
-/** Debounces reloads triggered by section filter changes (400ms). */
-function scheduleReload() {
-  clearTimeout(reloadTimer)
-  reloadTimer = setTimeout(load, 400)
-}
-
-/** Resets the in-house section to page 1 and schedules a reload. */
-function onInHouseFilter() {
-  inHouse.page = 1
-  scheduleReload()
-}
-
-/** Resets the upcoming section to page 1 and schedules a reload. */
-function onUpcomingFilter() {
-  upcoming.page = 1
-  scheduleReload()
-}
-
-/** Resets the housekeeping section to page 1 and schedules a reload. */
-function onHousekeepingFilter() {
-  housekeeping.page = 1
-  scheduleReload()
-}
-
-/** Navigates one section to the given page (ignoring pages below 1) and reloads immediately. */
-function goPage(section, page) {
-  if (page < 1) return
-  section.page = page
-  load()
-}
-
 /**
  * Runs an action against the API with an optional confirmation prompt,
  * then shows its success message and reloads the overview.
@@ -747,13 +807,15 @@ async function runAction(fn, message, confirmMsg) {
   }
 }
 
-// One-liner wrappers binding reservation and housekeeping actions to runAction.
+// One-liner wrapper binding the check-out action shown in the in-house popover.
 const checkOut = (reservation) =>
   runAction(
     () => reservationApi.checkOut(reservation.reservation_id),
     t('overview.checkedOut', { name: reservation.guest_name }),
     t('overview.confirmCheckOut', { name: reservation.guest_name }),
   )
+
+// Housekeeping task actions shown in the housekeeping hover popover.
 const confirmTask = (task) =>
   runAction(() => housekeepingApi.confirm(task.task_id), t('overview.confirmed'))
 const verifyTask = (task) =>
@@ -1224,5 +1286,363 @@ function dismissCurrentAlert() {
   .dash-grid {
     grid-template-columns: 1fr;
   }
+
+  .sv-bar-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+/* ------- Stay-view style bars ------- */
+
+/* Summary status pills (mirror the reception stay-view toolbar) */
+.sv-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.sv-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  background: #f1f3f5;
+  color: #333;
+}
+
+.sv-pill strong {
+  font-weight: 700;
+}
+
+.sv-pill.vacant { background: #e7f6ec; color: #1e7e34; }
+.sv-pill.occupied { background: #fde8e8; color: #c0392b; }
+.sv-pill.reserved { background: #fff3cd; color: #856404; }
+.sv-pill.dueout { background: #d1ecf1; color: #0c5460; }
+.sv-pill.dirty { background: #f8d7da; color: #721c24; }
+
+/* Cards holding the bar representations */
+.sv-card {
+  padding: 22px 24px;
+  margin-bottom: 20px;
+}
+
+.sv-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.sv-card-head h2 {
+  font-size: 17px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sv-card-head h2 i {
+  color: #005eb8;
+}
+
+/* One metric row: label on the left, a track with a colored bar on the right */
+.sv-bar-row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.sv-row-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sv-row-label i {
+  color: #005eb8;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sv-track {
+  height: 30px;
+  background: #f0f2f5;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* The stay-view style bar: bold colored rounded block with a label inside */
+.sv-track .sv-bar {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  white-space: nowrap;
+  min-width: 44px;
+  animation: sv-bar-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  transition: filter 0.2s ease;
+}
+
+.sv-track .sv-bar:hover {
+  filter: brightness(0.92);
+}
+
+.sv-track .sv-bar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sv-bar.bar-green { background: #28c76f; }
+.sv-bar.bar-red { background: #ff6b6b; }
+.sv-bar.bar-blue { background: #3b82f6; }
+
+@keyframes sv-bar-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px) scaleX(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scaleX(1);
+  }
+}
+
+/* Segmented room-status bar (one full-width track split by color segments) */
+.sv-segbar {
+  display: flex;
+  height: 34px;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f0f2f5;
+}
+
+.sv-seg {
+  height: 100%;
+  min-width: 0;
+  transition: width 0.4s ease;
+}
+
+.sv-seg.seg-clean { background: #28c76f; }
+.sv-seg.seg-dirty { background: #ff6b6b; }
+.sv-seg.seg-blocked { background: #f1c40f; }
+
+.sv-seg-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: #555;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-item .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.dot-clean { background: #28c76f; }
+.dot-dirty { background: #ff6b6b; }
+.dot-blocked { background: #f1c40f; }
+
+/* Bars with detail data are hoverable: show a help cursor and gentle lift */
+.sv-track .sv-bar.has-pop {
+  cursor: help;
+}
+.sv-track .sv-bar.has-pop:hover {
+  filter: brightness(0.94);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+}
+
+/* The whole row is the hover target (bigger/easier to hit than the bar) */
+.sv-bar-row.has-pop-row {
+  cursor: help;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+.sv-bar-row.has-pop-row:hover {
+  background: rgba(59, 130, 246, 0.06);
+}
+
+/* Hover popover shown when a bar with detail data is hovered (reception style) */
+.sv-popover {
+  position: fixed;
+  z-index: 1400;
+  width: 320px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.18);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  pointer-events: auto;
+  animation: sv-pop-in 0.16s ease;
+}
+
+@keyframes sv-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sv-popover-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #f6f8fb;
+  border-bottom: 1px solid #eef1f5;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.sv-popover-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #3b82f6;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.sv-popover-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.sv-popover-empty {
+  padding: 18px 14px;
+  color: #94a3b8;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Summary rows shown for aggregate bars (label + value pairs) */
+.sv-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+}
+.sv-summary-row:last-child {
+  border-bottom: none;
+}
+.sv-summary-label {
+  color: #64748b;
+}
+.sv-summary-value {
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.sv-popover-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.sv-popover-item:last-child {
+  border-bottom: none;
+}
+
+/* Stacked housekeeping item: info on top, action buttons below */
+.sv-popover-item.sv-popover-stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.sv-popover-stack-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sv-popover-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sv-popover-actions .btn {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.sv-popover-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sv-popover-main strong {
+  font-size: 13px;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sv-popover-sub {
+  font-size: 12px;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sv-popover-sub.due {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.sv-popover-item > strong {
+  font-size: 13px;
+  color: #1e293b;
 }
 </style>
