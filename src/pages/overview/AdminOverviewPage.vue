@@ -1286,11 +1286,6 @@ function dismissCurrentAlert() {
   .dash-grid {
     grid-template-columns: 1fr;
   }
-
-  .sv-bar-row {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
 }
 
 /* ------- Stay-view style bars ------- */
@@ -1644,5 +1639,12 @@ function dismissCurrentAlert() {
 .sv-popover-item > strong {
   font-size: 13px;
   color: #1e293b;
+}
+
+@media (max-width: 768px) {
+  .sv-bar-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
 }
 </style>

@@ -439,11 +439,6 @@ function dismissCurrentAlert() {
     gap: 8px;
     padding: 14px;
   }
-
-  .sv-bar-row {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
 }
 
 /* ------- Stay-view style bars ------- */
@@ -544,6 +539,13 @@ function dismissCurrentAlert() {
   to {
     opacity: 1;
     transform: translateX(0) scaleX(1);
+  }
+}
+
+@media (max-width: 768px) {
+  .sv-bar-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 }
 </style>
