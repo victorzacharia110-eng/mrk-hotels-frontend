@@ -10,10 +10,13 @@
         <i class="fas fa-magnifying-glass"></i>
         <input v-model="search" type="text" :placeholder="$t('common.search')" @input="debouncedLoad" />
       </div>
-      <select v-model="category" class="sm-select" @change="load">
-        <option value="">{{ $t('inventory.allCategories') }}</option>
-        <option v-for="c in categories" :key="c" :value="c">{{ formatCategory(c) }}</option>
-      </select>
+      <SearchableSelect
+        v-model="category"
+        :options="categoryOptions"
+        :empty-label="$t('inventory.allCategories')"
+        force-search
+        @change="load"
+      />
     </div>
 
     <div v-if="success" class="alert alert-success">{{ success }}</div>
@@ -86,10 +89,11 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { inventoryApi } from '@/api'
 import { INVENTORY_CATEGORIES, formatCategory } from '@/utils/format'
+import SearchableSelect from '@/components/SearchableSelect.vue'
 
 const { t } = useI18n()
 
@@ -105,7 +109,9 @@ const formError = ref('')
 const success = ref('')
 const error = ref('')
 
-const categories = INVENTORY_CATEGORIES
+const categoryOptions = computed(() =>
+  INVENTORY_CATEGORIES.map((c) => ({ value: c, label: formatCategory(c) })),
+)
 
 function isLow(item) {
   return Number(item.quantity_in_stock) <= Number(item.reorder_level || 0)

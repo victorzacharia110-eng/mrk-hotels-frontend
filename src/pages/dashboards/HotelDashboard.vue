@@ -669,10 +669,12 @@
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.category') }}</span>
-                  <select v-model="ledgerForm.category" class="input">
-                    <option value="">{{ $t('stayview.allCategories') }}</option>
-                    <option v-for="c in ledgerCategories" :key="c" :value="c" class="sv-cap">{{ c }}</option>
-                  </select>
+                  <SearchableSelect
+                    v-model="ledgerForm.category"
+                    :options="ledgerCategoryOptions"
+                    :empty-label="$t('stayview.allCategories')"
+                    force-search
+                  />
                 </label>
                 <label class="sv-field sv-check">
                   <input v-model="ledgerForm.ignoreZero" type="checkbox" />
@@ -772,6 +774,7 @@ import { roomApi, reservationApi, guestApi, housekeepingApi, invoiceApi, invento
 import { useAuthStore } from '@/stores/auth'
 import AlertModal from '@/components/AlertModal.vue'
 import RoleBadge from '@/components/RoleBadge.vue'
+import SearchableSelect from '@/components/SearchableSelect.vue'
 
 const { t, te } = useI18n()
 const notifStore = useNotificationStore()
@@ -1278,6 +1281,10 @@ const printedBy = computed(
 
 // Inventory categories offered by the backend filter.
 const ledgerCategories = ['food', 'beverage', 'housekeeping', 'maintenance', 'procurement', 'other']
+
+const ledgerCategoryOptions = computed(() =>
+  ledgerCategories.map((c) => ({ value: c, label: c })),
+)
 
 // The stock ledger is an inventory/procurement function — receptionists and
 // other front-desk roles never see it (matches the inventory module matrix).

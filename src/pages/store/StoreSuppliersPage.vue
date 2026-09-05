@@ -76,9 +76,7 @@
             <div class="form-field"><label>{{ $t('suppliers.email') }}</label><input v-model="form.email" type="email" class="sm-input" /></div>
             <div class="form-field">
               <label>{{ $t('suppliers.category') }}</label>
-              <select v-model="form.category" class="sm-select" style="width:100%" required>
-                <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
-              </select>
+              <SearchableSelect v-model="form.category" :options="categoryOptions" force-search required />
             </div>
             <div class="form-field">
               <label>{{ $t('common.status') }}</label>
@@ -111,11 +109,12 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { supplierApi } from '@/api'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
+import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 
 const route = useRoute()
@@ -137,6 +136,10 @@ const showBulkDelete = ref(false)
 const deleting = ref(false)
 
 const categories = ['food_beverage', 'housekeeping', 'maintenance', 'office', 'toiletries', 'linen', 'cleaning', 'general', 'other']
+
+const categoryOptions = computed(() =>
+  categories.map((c) => ({ value: c, label: c })),
+)
 
 const form = reactive({
   supplier_name: '', contact_person: '', phone: '', email: '',

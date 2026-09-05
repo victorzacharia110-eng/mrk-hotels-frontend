@@ -15,10 +15,13 @@
         <i class="fas fa-magnifying-glass"></i>
         <input v-model="search" type="text" :placeholder="$t('common.search')" @input="debouncedLoad" />
       </div>
-      <select v-model="category" class="sm-select" @change="load">
-        <option value="">{{ $t('inventory.allCategories') }}</option>
-        <option v-for="c in categories" :key="c" :value="c">{{ formatCategory(c) }}</option>
-      </select>
+      <SearchableSelect
+        v-model="category"
+        :options="categoryOptions"
+        :empty-label="$t('inventory.allCategories')"
+        force-search
+        @change="load"
+      />
       <select v-model="stockFilter" class="sm-select" @change="load">
         <option value="">{{ $t('storeManager.inventory.allStock') }}</option>
         <option value="low">{{ $t('storeManager.dashboard.lowStock') }}</option>
@@ -89,9 +92,7 @@
             <div class="form-field full"><label>{{ $t('inventory.itemName') }}</label><input v-model="form.item_name" class="sm-input" required /></div>
             <div class="form-field">
               <label>{{ $t('inventory.category') }}</label>
-              <select v-model="form.category" class="sm-select" style="width:100%" required>
-                <option v-for="c in categories" :key="c" :value="c">{{ formatCategory(c) }}</option>
-              </select>
+              <SearchableSelect v-model="form.category" :options="categoryOptions" force-search required />
             </div>
             <div class="form-field">
               <label>{{ $t('storeManager.inventory.department') }}</label>
@@ -279,6 +280,7 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { inventoryApi, inventoryOpsApi, supplierApi, unitsApi } from '@/api'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
+import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 import { INVENTORY_CATEGORIES, formatCategory } from '@/utils/format'
 
@@ -321,7 +323,9 @@ function pickDepartment(id) {
   load(1)
 }
 
-const categories = INVENTORY_CATEGORIES
+const categoryOptions = computed(() =>
+  INVENTORY_CATEGORIES.map((c) => ({ value: c, label: formatCategory(c) })),
+)
 
 // Unit registry: common SI-ish units always available, plus the shared
 // backend registry (and a per-device fallback). These feed the primary unit

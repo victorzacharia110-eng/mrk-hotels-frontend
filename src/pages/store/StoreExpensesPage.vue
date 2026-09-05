@@ -5,10 +5,13 @@
       <div class="sm-search"><i class="fas fa-magnifying-glass"></i><input v-model="q" type="text" :placeholder="$t('common.search')" @input="debouncedLoad" /></div>
     <input v-model="fromDate" type="date" class="sm-input" @change="load(1)" />
     <input v-model="toDate" type="date" class="sm-input" @change="load(1)" />
-    <select v-model="catFilter" class="sm-select" @change="load(1)">
-        <option value="">{{ $t('inventory.allCategories') }}</option>
-        <option v-for="c in expenseCats" :key="c" :value="c">{{ $t('storeManager.expenses.cats.' + c) }}</option>
-      </select>
+    <SearchableSelect
+        v-model="catFilter"
+        :options="expenseCategoryOptions"
+        :empty-label="$t('inventory.allCategories')"
+        force-search
+        @change="load(1)"
+      />
       <span class="spacer"></span>
       <div class="kpi-inline"><span>{{ $t('storeManager.expenses.total') }}:</span> <strong>TZS {{ total.toLocaleString() }}</strong></div>
       <button v-if="bulk.selectedCount > 0" class="sm-btn danger" @click="showBulkDelete = true"><i class="fas fa-trash"></i> {{ $t('common.deleteSelected') }} ({{ bulk.selectedCount }})</button>
@@ -47,9 +50,7 @@
         <div class="sm-modal-head"><h3>{{ $t('storeManager.expenses.add') }}</h3><button class="x" @click="showForm = false">×</button></div>
         <label class="fld"><span>{{ $t('common.description') }}</span><input v-model="form.description" class="sm-input" /></label>
         <label class="fld"><span>{{ $t('inventory.category') }}</span>
-          <select v-model="form.category" class="sm-select">
-            <option v-for="c in expenseCats" :key="c" :value="c">{{ $t('storeManager.expenses.cats.' + c) }}</option>
-          </select>
+          <SearchableSelect v-model="form.category" :options="expenseCategoryOptions" force-search />
         </label>
         <label class="fld"><span>{{ $t('storeManager.expenses.amount') }}</span><input v-model.number="form.amount" type="number" min="0" class="sm-input" /></label>
         <p v-if="formError" class="sm-error">{{ formError }}</p>
@@ -76,6 +77,7 @@ import { useI18n } from 'vue-i18n'
 import { storeApi } from '../../api'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
+import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 
 const { t } = useI18n()
@@ -94,6 +96,9 @@ const formError = ref('')
 const success = ref('')
 const error = ref('')
 const expenseCats = ['supplies', 'utilities', 'maintenance', 'transport', 'salaries', 'other']
+const expenseCategoryOptions = computed(() =>
+  expenseCats.map((c) => ({ value: c, label: t(`storeManager.expenses.cats.${c}`) })),
+)
 const form = reactive({ description: '', category: 'supplies', amount: 0 })
 
 const bulk = useBulkSelection(() => expenses.value, { idKey: 'id' })

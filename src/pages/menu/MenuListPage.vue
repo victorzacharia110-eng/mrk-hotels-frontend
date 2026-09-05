@@ -53,19 +53,13 @@
         </div>
         <div class="form-group">
           <label>{{ $t('menu.category') }}</label>
-          <input
+          <SearchableSelect
             v-model="filters.category"
-            type="text"
-            class="input"
-            list="menu-filter-categories"
-            :placeholder="$t('menu.namePlaceholder')"
-            @input="triggerSearch"
+            :options="filtersCategoryOptions"
+            :empty-label="$t('common.all')"
+            force-search
+            @change="load"
           />
-          <datalist id="menu-filter-categories">
-            <option v-for="c in filterCategoryOptions" :key="'f-' + c.category_id" :value="c.name">
-              {{ c.name }}
-            </option>
-          </datalist>
         </div>
         <div class="form-group">
           <label>{{ $t('menu.available') }}</label>
@@ -250,18 +244,12 @@
             </div>
             <div class="form-group">
               <label>{{ $t('menu.category') }}</label>
-              <input
+              <SearchableSelect
                 v-model="form.category"
-                type="text"
-                class="input"
-                list="menu-form-categories"
+                :options="formCategoryOptions"
                 :placeholder="$t('menu.namePlaceholder')"
+                force-search
               />
-              <datalist id="menu-form-categories">
-                <option v-for="c in categoryOptions" :key="c.category_id" :value="c.name">
-                  {{ c.name }}
-                </option>
-              </datalist>
             </div>
             <div class="form-group">
               <label>{{ $t('menu.priceTzs') }}</label>
@@ -740,6 +728,16 @@ const categoryOptions = computed(() =>
 /** Category suggestions for the filter bar, any relevant department. */
 const filterCategoryOptions = computed(() =>
   categories.value.filter((c) => !filters.department || c.department === filters.department),
+)
+
+/** Searchable-dropdown options for the item form (current department). */
+const formCategoryOptions = computed(() =>
+  categoryOptions.value.map((c) => ({ value: c.name, label: c.name })),
+)
+
+/** Searchable-dropdown options for the filter bar (any relevant department). */
+const filtersCategoryOptions = computed(() =>
+  filterCategoryOptions.value.map((c) => ({ value: c.name, label: c.name })),
 )
 
 /** Pulls the ordered category list for a department (best-effort). */
