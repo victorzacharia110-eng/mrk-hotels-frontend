@@ -121,7 +121,11 @@
     "email": "Barua Pepe",
     "time": "Muda",
     "add": "Ongeza",
-    "update": "Sasisha"
+    "update": "Sasisha",
+    "createSuccess": "Imeundwa.",
+    "deleteSuccess": "Imeondolewa.",
+    "loadError": "Imeshindikana kupakia.",
+    "updateSuccess": "Imesasishwa."
   },
   "laundry": {
     "title": "Dobi",
@@ -1225,7 +1229,8 @@
     "how1": "Chomeka printa ya risiti kwenye kompyuta hii kwa kebo ya USB au serial.",
     "how2": "Bonyeza Unganisha Printa na uchague PRINTA kwenye kidokezo cha kivinjari — usichague \"Communications Port (COMx)\", kwa kuwa hiyo mara nyingi ni bandari ya kawaida/virtual, si printa halisi.",
     "how3": "Bonyeza Jaribu Uchapishaji — risiti ndogo itatoka kwenye printa.",
-    "how4": "Uunganisho unahifadhiwa kwa kifaa hiki. Wakati wa kuchapisha, risiti na tiketi za jikoni zinaenda moja kwa moja kwenye karatasi."
+    "how4": "Uunganisho unahifadhiwa kwa kifaa hiki. Wakati wa kuchapisha, risiti na tiketi za jikoni zinaenda moja kwa moja kwenye karatasi.",
+    "noPrinter": "Hakuna printer ya till imeunganishwa. Unganisha moja kwenye Mipangilio ya Printer ili kuchapisha risiti kimya."
   },
   "orders": {
     "title": "Maagizo ya Chakula",
@@ -1478,7 +1483,9 @@
     "bulkDeleteSuccess": "Bidhaa {count} zimefutwa kwa mafanikio.",
     "bulkDeletePartial": "Imefutwa {failed} kati ya {tried} bidhaa zilizochaguliwa.",
     "adjustmentType": "Aina ya marekebisho",
-    "noCategory": "Hakuna kitengo"
+    "noCategory": "Hakuna kitengo",
+    "searchItems": "Tafuta bidhaa zilizosajiliwa...",
+    "selectItem": "Chagua bidhaa"
   },
   "departments": {
     "title": "Idara",
@@ -2586,7 +2593,8 @@
     "allRoles": "Nafasi zote",
     "allStatuses": "Hali zote",
     "searchInHouse": "Tafuta jina la mgeni, namba au chumba...",
-    "searchUpcoming": "Tafuta wageni wanaokuja..."
+    "searchUpcoming": "Tafuta wageni wanaokuja...",
+    "noDetails": "Hakuna maelezo."
   },
   "profile": {
     "title": "Wasifu Wangu",
@@ -3395,7 +3403,9 @@
     "stockValue": "Thamani ya Stoo",
     "printedBy": "Imechapishwa na",
     "ledgerEmpty": "Hakuna miamala ya stoo katika kipindi hiki.",
-    "ledgerError": "Imeshindwa kutengeneza ripoti."
+    "ledgerError": "Imeshindwa kutengeneza ripoti.",
+    "advanceAccount": "Chanzo cha malipo ya mapema",
+    "advanceDate": "Tarehe ya malipo ya mapema"
   },
   "orderTaker": {
     "title": "Chukua Oda",
@@ -3504,7 +3514,8 @@
     "summaryViewAll": "Ona zote",
     "outOfStock": "IMEKWIISHA",
     "outOfStockToast": "{name} imekwisha — hakuna stoo ya kuuza.",
-    "inStockQty": "Stoo {qty} {unit}"
+    "inStockQty": "Stoo {qty} {unit}",
+    "noPrinter": "Hakuna printer ya till imeunganishwa. Unganisha moja kwenye Mipangilio ya Printer ili kuchapisha risiti kimya."
   },
   "kitchen": {
     "title": "Ubao wa Jikoni",
@@ -3575,7 +3586,11 @@
       "unitPlaceholder": "mf. chupa, lita, kasha (SI: kg, mL, m)",
       "registeredUnits": "Vipimo ulivyosajili",
       "noCustomUnits": "Bado hakuna vipimo maalum. Sajili moja ili lichukuliwe kwenye orodha ya vipimo.",
-      "noSupplier": "Hakuna muuzaji"
+      "noSupplier": "Hakuna muuzaji",
+      "currencyType": "Aina ya sarafu",
+      "noCurrency": "Hakuna sarafu",
+      "noDepartments": "Hakuna idara zilizosajiliwa bado",
+      "siUnits": "Vitengo vya SI (vimiliki katika PO / GRN)"
     },
     "pos": {
       "searchProduct": "Tafuta bidhaa...",
@@ -4083,5 +4098,95 @@
     "inventoryProcurement": "Hifadhi na Ugavi",
     "administration": "Usimamizi",
     "communication": "Mawasiliano"
+  },
+  "receptionPanel": {
+    "addRate": "Ongeza kiwango",
+    "addSource": "Ongeza chaneli",
+    "amount": "Kiasi",
+    "amountTzs": "Kiasi (TZS)",
+    "autoBalances": "Kila mauzo yanasasisha salio la folio ya chumba kiotomatiki kwa ajili ya kuondoka.",
+    "businessSource": "Chanzo cha Biashara",
+    "businessSourceSubtitle": "Chaneli za usambazaji zinazoleta uhifadhi.",
+    "cashDrawer": "Sanduku la Fedha",
+    "cashDrawerSubtitle": "Fuatilia fedha taslimu za leo mahali pamoja.",
+    "cashReceived": "Fedha zilizopokelewa",
+    "cashTransactions": "Miamala ya fedha taslimu",
+    "cashieringCenter": "Kituo cha Malipo",
+    "cashieringSubtitle": "Pokewa na uthibitishe malipo dhidi ya uhifadhi wa leo.",
+    "chargeDescription": "Maelezo",
+    "chargeDescriptionPlaceholder": "mf. Chakula cha jioni, Dobi, Mini-baa",
+    "chargePosted": "Gharama imewekwa kwenye folio.",
+    "chargeTypes": "Aina za kawaida za gharama",
+    "chooseHouseGuest": "Chagua mgeni wa ndani",
+    "collectionsForDate": "Malipo kwa tarehe iliyochaguliwa",
+    "companyAddress": "Anwani",
+    "companyData": "Taarifa za Kampuni",
+    "companyDataSubtitle": "Maelezo ya kisheria na mawasiliano ya hoteli yako kwa ajili ya risiti.",
+    "companyEmail": "Barua pepe",
+    "companyName": "Jina la hoteli",
+    "companyPhone": "Simu",
+    "companySaved": "Taarifa za kampuni zimehifadhiwa.",
+    "confirmDeleteRate": "Futa kiwango cha {code}?",
+    "confirmDeleteSource": "Futa chaneli \"{name}\"?",
+    "currency": "Sarafu",
+    "currencyCode": "Msimbo wa sarafu",
+    "currencyName": "Jina la sarafu",
+    "editRate": "Hariri kiwango",
+    "editSource": "Hariri chaneli",
+    "exchangeRate": "Kiwango cha Ubadilishaji",
+    "exchangeRateSubtitle": "Viwango vya fedha za kigeni hadi TZS kwa malipo ya mgeni.",
+    "forReservation": "Uhifadhi / mgeni",
+    "insertTransaction": "Ingiza miamala",
+    "netCashPosition": "Hali halisi ya fedha taslimu",
+    "nightAuditTransactions": "Miamala ya ukaguzi wa usiku",
+    "noRates": "Hakuna viwango vya ubadilishaji vilivyowekwa.",
+    "noSources": "Hakuna chaneli za usambazaji zilizowekwa.",
+    "pos": "POS",
+    "posSubtitle": "Weka gharama za mgahawa, baa na dobi kwenye folio ya chumba.",
+    "postCharge": "Weka gharama ya chumba",
+    "postToFolio": "Weka kwenye folio",
+    "postedAt": "Iliwekwa saa",
+    "ratePerTzs": "Kiwango hadi TZS",
+    "rateToTzs": "Kiwango hadi TZS",
+    "recorded": "Imerekodiwa",
+    "selectRoom": "Mgeni wa ndani / chumba",
+    "symbol": "Alama",
+    "todayCashPayments": "Malipo ya fedha taslimu leo",
+    "totalCollected": "Jumla iliyokusanywa",
+    "typeBar": "Baa",
+    "typeLaundry": "Dobi",
+    "typeMiniBar": "Mini-baa",
+    "typeRestaurant": "Mgahawa",
+    "typeShop": "Duka"
+  },
+  "folio": {
+    "auditTrail": "Rekodi ya miamala",
+    "balance": "Salio linalodaiwa",
+    "empty": "Hakuna michango kwenye folio bado.",
+    "laundry": "Dobi",
+    "order": "Agizo",
+    "payment": "Malipo",
+    "roomCharges": "Gharama za chumba",
+    "title": "Folio"
+  },
+  "receptionMenu": {
+    "bookingRequests": "Maombi ya Kuhifadhi",
+    "businessSource": "Chanzo cha Biashara",
+    "cashDrawer": "Sanduku la Fedha",
+    "cashieringCenter": "Kituo cha Malipo",
+    "channelBookings": "Uhifadhi kwa Chaneli",
+    "companyData": "Taarifa za Kampuni",
+    "exchangeRate": "Kiwango cha Ubadilishaji",
+    "manualBooking": "Kuhifadhi kwa Mkono",
+    "pos": "POS",
+    "rates": "Viwango vya Ubadilishaji"
+  },
+  "sessionSettings": {
+    "hint": "Panel ya wafanyakazi inarudi kwenye ukurasa wa kuingia kwa PIN baada ya muda huu bila shughuli.",
+    "idleTimeoutHint": "Weka muda wa ofisi iliyoko wazi itakapohitaji PIN tena (dakika 1–120).",
+    "idleTimeoutLabel": "Muda wa kutofanya shughuli",
+    "minutes": "dakika",
+    "saved": "Mipangilio ya kikao imehifadhiwa. Kuingia kunarudi baada ya dakika {minutes} za kutofanya shughuli.",
+    "title": "Kikao na Kuingia kwa PIN"
   }
 }
