@@ -140,4 +140,62 @@ describe('export functions', () => {
     exportCSV('test', rows, [{ key: 'name', label: 'Name' }])
     expect(saveBlob).toHaveBeenCalledTimes(1)
   })
+
+  it('flattens nested arrays into readable text without JSON braces', async () => {
+    const { exportCSV } = await import('@/utils/export')
+    const { saveBlob } = await import('@/utils/download')
+    vi.mocked(saveBlob).mockClear()
+    const rows = [
+      {
+        order_number: 'LND-001',
+        items: [
+          { item_name: 'T Shirt', quantity: 2 },
+          { item_name: 'Kurta', quantity: 1 },
+        ],
+      },
+    ]
+    exportCSV('laundry', rows, [{ key: 'order_number', label: 'Order' }, { key: 'items', label: 'Items' }])
+    const [blob] = saveBlob.mock.calls[0]
+    const text = await blob.text()
+    expect(text).toContain('T Shirt x2; Kurta')
+    expect(text).not.toContain('{')
+    expect(text).not.toContain('[')
+    expect(text).not.toContain('item_name')
+  })
+
+  it('renders nested object records by their primary label', async () => {
+    const { exportCSV } = await import('@/utils/export')
+    const { saveBlob } = await import('@/utils/download')
+    vi.mocked(saveBlob).mockClear()
+    const rows = [{ order_number: 'LND-001', attendant: { user_id: 'u1', full_name: 'Jane Doe', role: 'laundry' } }]
+    exportCSV('laundry', rows, [{ key: 'order_number', label: 'Order' }, { key: 'attendant', label: 'Attendant' }])
+    const [blob] = saveBlob.mock.calls[0]
+    const text = await blob.text()
+    expect(text).toContain('Jane Doe')
+    expect(text).not.toContain('{')
+  })
+
+  it('renders nameless records as key:value pairs, still without braces', async () => {
+    const { exportCSV } = await import('@/utils/export')
+    const { saveBlob } = await import('@/utils/download')
+    vi.mocked(saveBlob).mockClear()
+    const rows = [{ meta: { code: 'USD', rate: 1.5 } }]
+    exportCSV('rates', rows, [{ key: 'meta', label: 'Meta' }])
+    const [blob] = saveBlob.mock.calls[0]
+    const text = await blob.text()
+    expect(text).toContain('Code: USD, Rate: 1.5')
+    expect(text).not.toContain('{')
+  })
+
+  it('drops tenant_id from auto-generated columns', async () => {
+    const { exportCSV } = await import('@/utils/export')
+    const { saveBlob } = await import('@/utils/download')
+    vi.mocked(saveBlob).mockClear()
+    const rows = [{ tenant_id: 't1', room_number: '101' }]
+    exportCSV('rooms', rows)
+    const [blob] = saveBlob.mock.calls[0]
+    const text = await blob.text()
+    expect(text).toContain('Room Number')
+    expect(text).not.toContain('Tenant Id')
+  })
 })

@@ -32,7 +32,7 @@
         <button v-if="canManage" class="btn btn-secondary" @click="$router.push('/app/laundry/cloth-types')">
           <i class="fas fa-shirt"></i> {{ $t('laundry.clothTypes') }}
         </button>
-        <TableExportButton filename="laundry" :load-all="loadAllOrders" />
+        <TableExportButton filename="laundry" :load-all="laundryExportRows" :columns="exportColumns" />
       </div>
     </div>
 
@@ -580,6 +580,16 @@ function paymentBadge(status) {
   return map[status] || 'badge-gray'
 }
 
+/** Maps a payment status key to its translated display label. */
+function paymentLabel(status) {
+  const map = {
+    unpaid: t('orders.paymentUnpaid'),
+    paid: t('orders.paymentPaid'),
+    billed_to_room: t('orders.paymentBilledToRoom'),
+  }
+  return map[status] || status
+}
+
 /** Maps a laundry service key to its translated display label. */
 function serviceLabel(service) {
   const map = {
@@ -657,6 +667,50 @@ const loadAllOrders = () =>
       per_page: perPage,
     }),
   )
+
+// Ordered, human-readable columns for the CSV/Excel/PDF export.
+const exportColumns = [
+  { key: 'order_number', label: 'Order Number' },
+  { key: 'guest_name', label: 'Guest' },
+  { key: 'room_number', label: 'Room' },
+  { key: 'service', label: 'Service' },
+  { key: 'items', label: 'Items' },
+  { key: 'items_count', label: 'Items Count' },
+  { key: 'total_charge', label: 'Total Charge' },
+  { key: 'status', label: 'Status' },
+  { key: 'payment_status', label: 'Payment' },
+  { key: 'order_date', label: 'Order Date' },
+  { key: 'notes', label: 'Notes' },
+  { key: 'ready_at', label: 'Ready' },
+  { key: 'delivered_at', label: 'Delivered' },
+  { key: 'created_at', label: 'Created' },
+]
+
+/** Turns a raw API order into a flat, export-ready row (no nested objects). */
+function toExportRow(order) {
+  return {
+    order_number: order.order_number,
+    guest_name: order.guest_name || '',
+    room_number: order.room_number || '',
+    service: serviceLabel(order.service),
+    items: (order.items || [])
+      .map((item) => (Number(item.quantity) > 1 ? `${item.item_name} x${item.quantity}` : item.item_name))
+      .filter(Boolean)
+      .join('; '),
+    items_count: order.items_count,
+    total_charge: Number(order.total_charge || 0).toFixed(2),
+    status: statusLabel(order.status),
+    payment_status: paymentLabel(order.payment_status),
+    order_date: order.order_date || '',
+    notes: order.notes || '',
+    ready_at: formatDateTime(order.ready_at),
+    delivered_at: formatDateTime(order.delivered_at),
+    created_at: formatDateTime(order.created_at),
+  }
+}
+
+/** Fetches every order and maps it to the flat, human-readable export shape. */
+const laundryExportRows = async () => (await loadAllOrders()).map(toExportRow)
 
 /** Loads the list of users for the attendant selector; failures are silently ignored. */
 async function loadUsers() {

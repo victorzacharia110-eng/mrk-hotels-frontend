@@ -12,12 +12,68 @@ import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 import { saveBlob } from './download'
 
-/** Reads a cell value out of a row; objects are JSON-stringified. */
+// Keys that add no value to a human-readable export sheet.
+const NOISE_KEYS = new Set(['tenant_id', 'created_at', 'updated_at', 'deleted_at'])
+
+// Field names that carry a record's primary display label.
+const NAME_KEYS = ['item_name', 'name', 'full_name', 'label', 'title', 'room_number', 'order_number', 'first_name', 'last_name']
+
+/** True for technical identity/audit keys that should stay out of cells. */
+function isNoiseKey(key) {
+  return NOISE_KEYS.has(key) || key.startsWith('_')
+}
+
+/** Picks the primary displayable label from a record, or null. */
+function primaryLabel(record) {
+  for (const key of NAME_KEYS) {
+    const value = record[key]
+    if (value !== null && value !== undefined && String(value).trim() !== '') return String(value)
+  }
+  return null
+}
+
+/**
+ * Renders a value as plain, human-readable text.
+ *
+ * The old implementation JSON.stringify'd nested objects and arrays, which put
+ * raw braces/quoted keys into every cell and scrambled wide tables. Instead:
+ *  - objects render as their primary label, falling back to "Key: Value" pairs;
+ *  - arrays render as "Item xQty; Item xQty" (or the pair form for records
+ *    without a name);
+ *  - technical keys (ids, audit timestamps) are dropped.
+ * No JSON ever reaches the sheet, so CSV/Excel/PDF are always readable.
+ */
+function readableCell(value) {
+  if (value === null || value === undefined || value === '') return ''
+  if (typeof value === 'string') return value.replace(/\s+/g, ' ').trim()
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  if (Array.isArray(value)) {
+    return value.map((item) => (item !== null && typeof item === 'object' ? recordText(item) : readableCell(item))).filter(Boolean).join('; ')
+  }
+  return recordText(value)
+}
+
+/** Describes a nested record, e.g. { item_name, quantity } -> "T Shirt x2". */
+function recordText(record) {
+  if (record === null || typeof record !== 'object') return readableCell(record)
+  const label = primaryLabel(record)
+  if (typeof record.quantity === 'number' && record.quantity > 1) {
+    return `${label || 'Item'} x${record.quantity}`
+  }
+  if (label) return label
+  const pairs = []
+  for (const [key, value] of Object.entries(record)) {
+    if (value === null || value === undefined || value === '') continue
+    if (isNoiseKey(key)) continue
+    if (typeof value === 'object') continue
+    pairs.push(`${humanizeKey(key)}: ${value}`)
+  }
+  return pairs.join(', ')
+}
+
+/** Reads a cell value out of a row as human-readable text. */
 function cellValue(row, key) {
-  const value = row[key]
-  if (value === null || value === undefined) return ''
-  if (typeof value === 'object') return JSON.stringify(value)
-  return String(value)
+  return readableCell(row[key])
 }
 
 /** Turns a raw field key into a readable header ("subscription_plan" -> "Subscription Plan"). */
@@ -31,7 +87,9 @@ function humanizeKey(key) {
 function columnsFor(rows, columns) {
   if (columns?.length) return columns
   if (!rows.length) return []
-  return Object.keys(rows[0]).map((key) => ({ key, label: humanizeKey(key) }))
+  return Object.keys(rows[0])
+    .filter((key) => !['tenant_id', 'deleted_at'].includes(key))
+    .map((key) => ({ key, label: humanizeKey(key) }))
 }
 
 /**
@@ -100,9 +158,15 @@ export function exportPDF(filename, rows, columns, title) {
   }
   doc.autoTable({
     head: [cols.map((c) => c.label)],
-    body: rows.map((row) => cols.map((c) => cellValue(row, c.key))),
+    body: rows.map((row) =>
+      cols.map((c) => {
+        const text = cellValue(row, c.key)
+        // Cap very long cells so a single giant value cannot warp the layout.
+        return text.length > 400 ? `${text.slice(0, 397)}…` : text
+      }),
+    ),
     startY,
-    styles: { fontSize: cols.length > 12 ? 6.5 : cols.length > 8 ? 7.5 : 9, cellPadding: cols.length > 8 ? 1 : 2 },
+    styles: { fontSize: cols.length > 12 ? 6.5 : cols.length > 8 ? 7.5 : 9, cellPadding: cols.length > 8 ? 1 : 2, overflow: 'linebreak' },
     headStyles: { fillColor: [0, 94, 184] },
     margin: { top: 12, bottom: 12, left: 10, right: 10 },
   })
