@@ -74,7 +74,7 @@
         </div>
         <form class="sm-modal-body" @submit.prevent="save">
           <div class="form-grid">
-            <div class="form-field"><label>{{ $t('requisitions.department') }}</label><input v-model="form.department" class="sm-input" required /></div>
+            <div class="form-field"><label>{{ $t('requisitions.department') }}</label><SearchableSelect v-model="form.department" :options="departmentOptions" :placeholder="$t('requisitions.departmentPlaceholder')" :force-search="true" :required="true" /></div>
             <div class="form-field">
               <label>{{ $t('requisitions.priority') }}</label>
               <select v-model="form.priority" class="sm-select" style="width:100%">
@@ -161,7 +161,8 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { purchaseRequisitionApi } from '@/api'
+import { inventoryOpsApi, purchaseRequisitionApi } from '@/api'
+import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
 
@@ -181,6 +182,22 @@ const detail = ref(null)
 const formError = ref('')
 
 const form = reactive({ department: '', priority: 'normal', justification: '', items: [emptyItem()] })
+
+// Department options sourced from the live departments registry so the
+// field is a searchable dropdown rather than free text (department name
+// is still what gets stored on the requisition).
+const departmentOptions = ref([])
+
+async function loadDepartments() {
+  try {
+    const res = await inventoryOpsApi.departments()
+    departmentOptions.value = (res.data.departments || [])
+      .map((d) => ({ value: d.name, label: d.name }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  } catch {
+    departmentOptions.value = []
+  }
+}
 
 function emptyItem() {
   return { item_name: '', description: '', quantity: null, unit: '', estimated_price: null }
@@ -268,7 +285,7 @@ async function openDetail(req) {
 }
 
 onMounted(async () => {
-  await load(1)
+  await Promise.all([loadDepartments(), load(1)])
   if (route.query.create === '1') openCreate()
 })
 </script>

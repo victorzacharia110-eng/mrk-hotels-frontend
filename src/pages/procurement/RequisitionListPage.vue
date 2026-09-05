@@ -57,12 +57,12 @@
         </div>
         <div class="form-group">
           <label>{{ $t('common.department') }}</label>
-          <input
+          <SearchableSelect
             v-model="filters.department"
-            type="text"
-            class="input"
-            :placeholder="$t('requisitions.departmentPlaceholder')"
-            @input="triggerSearch"
+            :options="departmentOptions"
+            :empty-label="$t('common.all')"
+            :force-search="true"
+            @change="load"
           />
         </div>
         <div class="filter-actions">
@@ -185,12 +185,12 @@
           <div class="form-grid">
             <div class="form-group">
               <label>{{ $t('common.department') }} *</label>
-              <input
+              <SearchableSelect
                 v-model="form.department"
-                type="text"
-                class="input"
-                required
+                :options="departmentOptions"
                 :placeholder="$t('requisitions.departmentPlaceholder')"
+                :force-search="true"
+                :required="true"
               />
             </div>
             <div class="form-group">
@@ -350,7 +350,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { purchaseRequisitionApi } from '@/api'
+import { inventoryOpsApi, purchaseRequisitionApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
@@ -405,6 +405,21 @@ const priorityOptions = computed(() => [
   { value: 'high', label: t('requisitions.priorityHigh') },
   { value: 'urgent', label: t('requisitions.priorityUrgent') },
 ])
+
+// Department options sourced from the live departments registry so the
+// field is a searchable dropdown rather than free text (department name
+// is still what gets stored on the requisition).
+const departmentOptions = ref([])
+async function loadDepartments() {
+  try {
+    const res = await inventoryOpsApi.departments()
+    departmentOptions.value = (res.data.departments || [])
+      .map((d) => ({ value: d.name, label: d.name }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  } catch {
+    departmentOptions.value = []
+  }
+}
 
 /** Returns a fresh blank requisition line item. */
 function emptyItem() {
@@ -586,7 +601,10 @@ function flattenError(err) {
     : err.response?.data?.message || t('common.actionFailed')
 }
 
-onMounted(load)
+onMounted(() => {
+  loadDepartments()
+  load()
+})
 </script>
 
 <style scoped>

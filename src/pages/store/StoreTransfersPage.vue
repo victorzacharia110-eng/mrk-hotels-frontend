@@ -42,14 +42,10 @@
       <div class="sm-modal">
         <div class="sm-modal-head"><h3>{{ $t('storeManager.transfers.add') }}</h3><button class="x" @click="showForm = false">×</button></div>
         <label class="fld"><span>{{ $t('storeManager.transfers.from') }}</span>
-          <select v-model="form.from_department_id" class="sm-select">
-            <option v-for="d in departments" :key="d.department_id" :value="d.department_id">{{ d.name }}</option>
-          </select>
+          <SearchableSelect v-model="form.from_department_id" :options="departmentOptions" :force-search="true" />
         </label>
         <label class="fld"><span>{{ $t('storeManager.transfers.to') }}</span>
-          <select v-model="form.to_department_id" class="sm-select">
-            <option v-for="d in departments" :key="d.department_id" :value="d.department_id">{{ d.name }}</option>
-          </select>
+          <SearchableSelect v-model="form.to_department_id" :options="departmentOptions" :force-search="true" />
         </label>
         <label class="fld"><span>{{ $t('inventory.itemName') }}</span>
           <select v-model="form.item_id" class="sm-select">
@@ -80,9 +76,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { inventoryApi, inventoryOpsApi } from '../../api'
+import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
 
@@ -90,6 +87,9 @@ const { t } = useI18n()
 const transfers = ref([])
 const { q, status, statuses, page, lastPage, paged } = useClientTable(transfers, { pageSize: 15, searchFields: ['transfer_id', 'status', (r) => deptName(r.from_department_id), (r) => deptName(r.to_department_id)] })
 const departments = ref([])
+const departmentOptions = computed(() =>
+  departments.value.map((d) => ({ value: d.department_id, label: d.name })),
+)
 const items = ref([])
 const loading = ref(false)
 const saving = ref(false)

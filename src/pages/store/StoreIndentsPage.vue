@@ -49,9 +49,7 @@
       <div class="sm-modal">
         <div class="sm-modal-head"><h3>{{ $t('storeManager.indents.new') }}</h3><button class="x" @click="showForm = false">×</button></div>
         <label class="fld"><span>{{ $t('storeManager.indents.department') }}</span>
-          <select v-model="form.department_id" class="sm-select">
-            <option v-for="d in departments" :key="d.department_id" :value="d.department_id">{{ d.name }}</option>
-          </select>
+          <SearchableSelect v-model="form.department_id" :options="departmentOptions" :force-search="true" />
         </label>
         <div class="fld">
           <span>{{ $t('storeManager.sales.items') }}</span>
@@ -91,9 +89,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { inventoryApi, inventoryOpsApi } from '../../api'
+import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
 
@@ -101,6 +100,9 @@ const { t } = useI18n()
 const indents = ref([])
 const { q, status, statuses, page, lastPage, paged } = useClientTable(indents, { pageSize: 15, searchFields: ['indent_id', 'status', (r) => r.department?.name, (r) => lineSummary(r)] })
 const departments = ref([])
+const departmentOptions = computed(() =>
+  departments.value.map((d) => ({ value: d.department_id, label: d.name })),
+)
 const items = ref([])
 const loading = ref(false)
 const saving = ref(false)
