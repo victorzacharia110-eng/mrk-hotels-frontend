@@ -102,7 +102,7 @@
         <form @submit.prevent="save">
           <div class="form-grid">
             <div class="form-group">
-              <label>{{ $t('categoryManager.group') }}</label>
+              <label>{{ $t('categoryManager.groupLabel') }}</label>
               <select v-model="form.group" class="input" :disabled="editing">
                 <option v-for="group in GROUPS" :key="group" :value="group">
                   {{ $t(`categoryManager.group.${group}`) }}

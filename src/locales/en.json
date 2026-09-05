@@ -1527,6 +1527,7 @@
       "supplier": "Suppliers",
       "expense": "Expenses"
     },
+    "groupLabel": "Group",
     "label": "Display Name",
     "value": "Value (code)",
     "valuePlaceholder": "e.g. cleaning_chemicals",
