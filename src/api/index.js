@@ -1957,6 +1957,24 @@ export const purchaseOrderApi = {
   reject(id, data) {
     return api.post(`${v1}/purchase-orders/${id}/reject`, data)
   },
+  /**
+   * Edits a pending/manager-approved purchase order (header + line items).
+   * @param {string|number} id - Purchase order identifier.
+   * @param {object} data - Same payload as creation.
+   * @returns {Promise} Axios response with the updated order.
+   */
+  update(id, data) {
+    return api.put(`${v1}/purchase-orders/${id}`, data)
+  },
+  /**
+   * Voids a purchase order that has not been fully received.
+   * @param {string|number} id - Purchase order identifier.
+   * @param {object} data - Void payload (reason).
+   * @returns {Promise} Axios response with the updated order.
+   */
+  void(id, data) {
+    return api.post(`${v1}/purchase-orders/${id}/void`, data)
+  },
 }
 
 /** Goods received notes recorded against purchase orders. */
@@ -1984,6 +2002,24 @@ export const goodsReceivedNoteApi = {
    */
   show(id) {
     return api.get(`${v1}/goods-received-notes/${id}`)
+  },
+  /**
+   * Recalls (edits) a goods received note on/across its receiving day.
+   * @param {string|number} id - GRN identifier.
+   * @param {FormData|object} data - Reason + adjusted header/items (+ files).
+   * @returns {Promise} Axios response with the updated GRN.
+   */
+  update(id, data) {
+    return api.put(`${v1}/goods-received-notes/${id}`, data)
+  },
+  /**
+   * Voids a goods received note and reverses the received stock.
+   * @param {string|number} id - GRN identifier.
+   * @param {object} data - Void payload (reason).
+   * @returns {Promise} Axios response with the updated GRN.
+   */
+  void(id, data) {
+    return api.post(`${v1}/goods-received-notes/${id}/void`, data)
   },
 }
 
