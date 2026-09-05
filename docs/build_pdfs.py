@@ -170,4 +170,17 @@ REVIEW_BOOKS = [
 ]
 for src, out, title in REVIEW_BOOKS:
     build(REVIEW_DIR / src, out, title)
+
+# Client understanding: plain-language problem/solution docs per change.
+CLIENT_DIR = HERE / "client-understanding"
+CLIENT_BOOKS = [
+    ("00-overview.md", "MRK_Hotels_Client_Understanding_Overview.pdf", "Understanding the Latest Updates"),
+    ("01-kitchen-ready-notification.md", "MRK_Hotels_Client_Understanding_01_Restaurant_Waiter_Notifications.pdf", "Update 1 — Food Ready Notifications for Waiters"),
+    ("02-housekeeping-sidebar.md", "MRK_Hotels_Client_Understanding_02_Housekeeping_Sidebar.pdf", "Update 2 — A Cleaner Housekeeping Menu"),
+    ("03-housekeeping-export.md", "MRK_Hotels_Client_Understanding_03_Housekeeping_Export.pdf", "Update 3 — Reliable Spreadsheet Export"),
+    ("04-laundry-price-list.md", "MRK_Hotels_Client_Understanding_04_Laundry_Price_List.pdf", "Update 4 — Your Own Laundry Price List"),
+    ("05-laundry-bills.md", "MRK_Hotels_Client_Understanding_05_Laundry_Bills.pdf", "Update 5 — Settling Laundry Bills Correctly"),
+]
+for src, out, title in CLIENT_BOOKS:
+    build(CLIENT_DIR / src, out, title)
 print("All PDFs generated.")
