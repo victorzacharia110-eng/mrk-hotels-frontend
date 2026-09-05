@@ -7,6 +7,7 @@
         <option value="">{{ $t('storeManager.movements.allTypes') }}</option>
         <option value="in">{{ $t('storeManager.movements.in') }}</option>
         <option value="out">{{ $t('storeManager.movements.out') }}</option>
+        <option value="adjustment">{{ $t('storeManager.movements.adjustment') }}</option>
       </select>
     </div>
     <section class="panel">
@@ -20,12 +21,14 @@
             <th>{{ $t('storeManager.movements.reason') }}</th><th>{{ $t('storeManager.movements.by') }}</th>
           </tr></thead>
           <tbody>
-            <tr v-for="m in movements" :key="m.id">
+            <tr v-for="m in movements" :key="m.movement_id || m.id">
               <td>{{ fmtDate(m.created_at) }}</td>
               <td><strong>{{ m.item_name || m.item?.item_name }}</strong></td>
-              <td><span class="chip" :class="m.type === 'in' ? 'chip-green' : 'chip-red'">{{ m.type }}</span></td>
+              <td>
+                <span class="chip" :class="typeChipClass(m.type || m.movement_type)">{{ m.type || m.movement_type }}</span>
+              </td>
               <td>{{ m.quantity }}</td>
-              <td>{{ m.reason || '-' }}</td>
+              <td>{{ m.notes || m.reason || '-' }}</td>
               <td>{{ m.user_name || m.user?.name || '-' }}</td>
             </tr>
           </tbody>
@@ -54,6 +57,12 @@ const typeFilter = ref('')
 let debounce
 function debounced() { clearTimeout(debounce); debounce = setTimeout(() => load(1), 300) }
 function fmtDate(d) { return d ? new Date(d).toLocaleString() : '-' }
+
+function typeChipClass(type) {
+  if (type === 'in') return 'chip-green'
+  if (type === 'out') return 'chip-red'
+  return 'chip-blue'
+}
 
 async function load(page = 1) {
   loading.value = true

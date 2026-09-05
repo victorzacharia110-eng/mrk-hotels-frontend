@@ -3666,7 +3666,8 @@
       "type": "Aina",
       "reason": "Sababu",
       "by": "Na",
-      "empty": "Hakuna miamala ya akiba bado."
+      "empty": "Hakuna miamala ya akiba bado.",
+      "adjustment": "Marekebisho"
     },
     "expenses": {
       "add": "Ongeza matumizi",

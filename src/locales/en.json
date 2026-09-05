@@ -3666,7 +3666,8 @@
       "type": "Type",
       "reason": "Reason",
       "by": "By",
-      "empty": "No stock movements yet."
+      "empty": "No stock movements yet.",
+      "adjustment": "Adjustment"
     },
     "expenses": {
       "add": "Add expense",

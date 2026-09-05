@@ -128,6 +128,7 @@
 .chip.partial { background: var(--mrk-blue-pale); color: var(--mrk-blue); }
 .chip.green, .chip-green { background: #dcfce7; color: #15803d; }
 .chip.red, .chip-red { background: #fee2e2; color: #b91c1c; }
+.chip.blue, .chip-blue { background: var(--mrk-blue-pale); color: var(--mrk-blue); }
 
 .stock-low { color: #dc2626; font-weight: 700; }
 .stock-ok { color: #16a34a; font-weight: 600; }
