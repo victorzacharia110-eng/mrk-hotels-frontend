@@ -5,10 +5,13 @@ import { inventoryOpsApi } from '@/api'
 import { formatCategory } from '@/utils/format'
 
 /**
- * Backend-truth category vocabularies. The server (config/categories.php)
- * owns these lists — this file only seeds an offline fallback so forms still
- * render before/without a successful fetch; /api/v1/categories overwrites
- * them on load, so the server is the single source of truth.
+ * Backend-truth category vocabularies. The server owns these lists
+ * (config/categories.php seeded into each tenant's `categories` table) —
+ * this file only seeds an offline fallback so forms still render before a
+ * successful fetch. /api/v1/categories returns the tenant's rows under
+ * `data.categories` (group/value/label/...) plus the issue vocab, and
+ * overrides the seeded values on load, so the server is the single source of
+ * truth everywhere.
  */
 const FALLBACK = {
   inventory: ['food', 'beverage', 'bar', 'restaurant', 'housekeeping', 'maintenance', 'procurement', 'other'],
@@ -17,7 +20,7 @@ const FALLBACK = {
   issue: ['billing', 'reservation', 'housekeeping', 'food_beverage', 'inventory', 'facility', 'it_system', 'other'],
 }
 
-/** i18n keys for each category code — labels are defined once, used everywhere. */
+/** i18n keys for each built-in category code — labels are defined once, used everywhere. */
 const LABEL_KEYS = {
   inventory: {
     food: 'inventory.categoryFood',
@@ -48,7 +51,16 @@ const LABEL_KEYS = {
     it_system: 'issueReports.categoryItSystem',
     other: 'issueReports.categoryOther',
   },
+  expense: {
+    supplies: 'storeManager.expenses.cats.supplies',
+    maintenance: 'storeManager.expenses.cats.maintenance',
+    utilities: 'storeManager.expenses.cats.utilities',
+    marketing: 'storeManager.expenses.cats.marketing',
+    other: 'storeManager.expenses.cats.other',
+  },
 }
+
+const DEFAULT_GROUPS = ['inventory', 'supplier', 'expense']
 
 export const useCategoriesStore = defineStore('categories', () => {
   const { t } = useI18n()
@@ -57,29 +69,45 @@ export const useCategoriesStore = defineStore('categories', () => {
   const supplier = ref([...FALLBACK.supplier])
   const expense = ref([...FALLBACK.expense])
   const issue = ref([...FALLBACK.issue])
+  /** Server-provided labels (value -> label) for codes without a translation. */
+  const serverLabels = ref({})
   const loading = ref(false)
   const loaded = ref(false)
 
-  /** Resolves a category code to its shared label, pretty-formatting any unknown code. */
-  function localizedLabel(code, keys) {
-    const key = keys[code]
-    return key ? t(key) : formatCategory(code)
+  /** Applies a group's catalog rows: value order + server labels. */
+  function applyRows(group, rows) {
+    const values = (rows || []).map((row) => row && row.value ? row.value : row).filter(Boolean)
+    if (!values.length) return
+    const groupRef = { inventory, supplier, expense }[group]
+    if (groupRef) groupRef.value = values
+    serverLabels.value[group] = Object.fromEntries((rows || []).map((row) => [row.value, row.label]))
+  }
+
+  /**
+   * Resolves a category code to its label: the built-in translation wins
+   * (server labels are English fallbacks), then the server's stored label,
+   * then a pretty-format of the raw code.
+   */
+  function localizedLabel(code, keys, group) {
+    if (keys && keys[code]) return t(keys[code])
+    const serverLabel = serverLabels.value[group]?.[code]
+    return serverLabel || formatCategory(code)
   }
 
   const inventoryCategoryOptions = computed(() =>
-    inventory.value.map((code) => ({ value: code, label: localizedLabel(code, LABEL_KEYS.inventory) })),
+    inventory.value.map((code) => ({ value: code, label: localizedLabel(code, LABEL_KEYS.inventory, 'inventory') })),
   )
 
   const supplierCategoryOptions = computed(() =>
-    supplier.value.map((code) => ({ value: code, label: localizedLabel(code, LABEL_KEYS.supplier) })),
+    supplier.value.map((code) => ({ value: code, label: localizedLabel(code, LABEL_KEYS.supplier, 'supplier') })),
   )
 
   const expenseCategoryOptions = computed(() =>
-    expense.value.map((code) => ({ value: code, label: t(`storeManager.expenses.cats.${code}`) })),
+    expense.value.map((code) => ({ value: code, label: localizedLabel(code, LABEL_KEYS.expense, 'expense') })),
   )
 
   const issueCategoryOptions = computed(() =>
-    issue.value.map((code) => ({ value: code, label: localizedLabel(code, LABEL_KEYS.issue) })),
+    issue.value.map((code) => ({ value: code, label: localizedLabel(code, LABEL_KEYS.issue, 'issue') })),
   )
 
   /** Fetches the server catalog once; failures keep the seeded fallbacks. */
@@ -89,9 +117,13 @@ export const useCategoriesStore = defineStore('categories', () => {
     try {
       const { data } = await inventoryOpsApi.categories()
       const catalog = data.data || {}
-      if (Array.isArray(catalog.inventory) && catalog.inventory.length) inventory.value = catalog.inventory
-      if (Array.isArray(catalog.supplier) && catalog.supplier.length) supplier.value = catalog.supplier
-      if (Array.isArray(catalog.expense) && catalog.expense.length) expense.value = catalog.expense
+      const rows = catalog.categories || []
+      if (Array.isArray(rows)) {
+        const byGroup = {}
+        for (const row of rows) byGroup[row.group] = byGroup[row.group] || []
+        for (const row of rows) byGroup[row.group].push(row)
+        for (const group of DEFAULT_GROUPS) applyRows(group, byGroup[group] || [])
+      }
       if (Array.isArray(catalog.issue) && catalog.issue.length) issue.value = catalog.issue
       loaded.value = true
     } catch {
@@ -101,11 +133,19 @@ export const useCategoriesStore = defineStore('categories', () => {
     }
   }
 
+  /** Force-refetches the catalog (used after a manager edits categories). */
+  async function reload() {
+    loaded.value = false
+    loading.value = false
+    await ensureLoaded()
+  }
+
   return {
     inventory,
     supplier,
     expense,
     issue,
+    serverLabels,
     loading,
     loaded,
     inventoryCategoryOptions,
@@ -113,5 +153,6 @@ export const useCategoriesStore = defineStore('categories', () => {
     expenseCategoryOptions,
     issueCategoryOptions,
     ensureLoaded,
+    reload,
   }
 })

@@ -60,6 +60,8 @@ export const MODULES = [
   { key: 'inventory', to: '/app/inventory', icon: 'fas fa-boxes-stacked', labelKey: 'nav.inventory', roles: ['hotel_admin', 'manager', 'procurement_officer'], feature: 'inventory' },
   // Inventory departments.
   { key: 'departments', to: '/app/departments', icon: 'fas fa-building', labelKey: 'nav.departments', roles: ['hotel_admin', 'manager', 'procurement_officer'], feature: 'inventory' },
+  // Single-source category vocabularies (inventory/supplier/expense).
+  { key: 'categories', to: '/app/categories', icon: 'fas fa-tags', labelKey: 'nav.categories', roles: ['hotel_admin', 'manager', 'procurement_officer'], feature: 'inventory' },
   // Supplier records.
   { key: 'suppliers', to: '/app/suppliers', icon: 'fas fa-truck', labelKey: 'nav.suppliers', roles: ['hotel_admin', 'manager', 'procurement_officer'], feature: 'suppliers' },
   // Purchase requisitions.

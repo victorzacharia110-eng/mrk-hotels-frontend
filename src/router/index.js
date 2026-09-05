@@ -82,6 +82,8 @@ const hotelChildren = [
   { path: 'inventory', name: 'hotel-inventory', component: () => import('@/pages/inventory/InventoryListPage.vue'), meta: { module: 'inventory' } },
   // Inventory departments.
   { path: 'departments', name: 'hotel-departments', component: () => import('@/pages/inventory/DepartmentListPage.vue'), meta: { module: 'departments' } },
+  // Single-source inventory/supplier/expense categories.
+  { path: 'categories', name: 'hotel-categories', component: () => import('@/pages/inventory/CategoryListPage.vue'), meta: { module: 'categories' } },
   // Supplier records.
   { path: 'suppliers', name: 'hotel-suppliers', component: () => import('@/pages/suppliers/SupplierListPage.vue'), meta: { module: 'suppliers' } },
   // Purchase requisitions workflow.

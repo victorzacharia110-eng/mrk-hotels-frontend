@@ -742,6 +742,7 @@
     "printer": "Printa",
     "inventory": "Hesabu",
     "departments": "Idara",
+    "categories": "Aina",
     "suppliers": "Wasambazaji",
     "requisitions": "Ombi la Ununuzi",
     "purchaseOrders": "Oda za Ununuzi",
@@ -1515,6 +1516,27 @@
     "deleted": "Idara \"{name}\" imefutwa.",
     "bulkDeleteSuccess": "Idara {count} zimefutwa kwa mafanikio.",
     "bulkDeletePartial": "Zimefutwa {failed} kati ya {tried} idara zilizochaguliwa."
+  },
+  "categoryManager": {
+    "title": "Aina",
+    "subtitle": "Kamusi moja kwa aina za hesabu, wasambazaji na matumizi.",
+    "newCategory": "Aina Mpya",
+    "editCategory": "Hariri Aina",
+    "group": {
+      "inventory": "Hesabu",
+      "supplier": "Wasambazaji",
+      "expense": "Matumizi"
+    },
+    "label": "Jina la Onyesho",
+    "value": "Thamani (msimbo)",
+    "valuePlaceholder": "mf. cleaning_chemicals",
+    "valueHint": "Herufi ndogo, namba, underscore au dashes. Thamani ni kile rekodi huhifadhi, kwa hivyo haiwezi kubadilishwa baada ya kuundwa.",
+    "searchPlaceholder": "Tafuta aina...",
+    "empty": "Hakuna aina.",
+    "createSuccess": "Aina imeundwa kwa mafanikio.",
+    "updateSuccess": "Aina imesasishwa kwa mafanikio.",
+    "deleteMessage": "Futa aina \"{label}\"?",
+    "deleted": "Aina \"{label}\" imefutwa."
   },
   "suppliers": {
     "title": "Wasambazaji",
