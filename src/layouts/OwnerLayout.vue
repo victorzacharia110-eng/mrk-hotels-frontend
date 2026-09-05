@@ -138,7 +138,8 @@ async function handleLogout() {
 <style scoped>
 .owner-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: #f0f2f5;
 }
 
@@ -259,7 +260,7 @@ async function handleLogout() {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 .sa-header {
@@ -308,6 +309,7 @@ async function handleLogout() {
 
 .sa-content {
   flex: 1;
+  overflow-y: auto;
   padding: 32px;
 }
 
