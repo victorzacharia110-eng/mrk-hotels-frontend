@@ -216,7 +216,7 @@
     <Teleport to="body">
       <Transition name="sv-modal">
         <div v-if="activeBar" class="sv-modal-backdrop" @click.self="closeBarModal">
-          <div class="sv-modal" role="dialog" aria-modal="true" :aria-label="activeBar.label">
+          <div class="sv-modal sv-modal-tabs" role="dialog" aria-modal="true" :aria-label="activeBar.label">
             <div class="sv-modal-head" :class="activeBar.colorClass">
               <span class="sv-modal-head-icon"><i class="fas fa-hotel" aria-hidden="true"></i></span>
               <div class="sv-modal-head-text">
@@ -228,131 +228,241 @@
               </button>
             </div>
             <div class="sv-modal-body">
-              <!-- Stay details -->
-              <div class="sv-modal-section">{{ $t('stayview.stayDetails') }}</div>
-              <div class="sv-modal-row">
-                <i class="fas fa-hashtag" aria-hidden="true"></i>
-                <span>{{ $t('stayview.reference') }}: <strong>{{ activeBar.reference }}</strong></span>
-              </div>
-              <div class="sv-modal-row">
-                <i class="fas fa-calendar-days" aria-hidden="true"></i>
-                <span>{{ activeBar.dates }} · {{ activeBar.nights }} {{ $t('stayview.nights') }}</span>
-              </div>
-              <div class="sv-modal-row">
-                <i class="fas fa-bed" aria-hidden="true"></i>
-                <span>{{ $t('stayview.room') }} {{ activeBar.roomNumber }} · {{ activeBar.roomType }}</span>
-              </div>
-              <div class="sv-modal-row">
-                <i class="fas fa-users" aria-hidden="true"></i>
-                <span>{{ activeBar.guests }}</span>
-              </div>
-              <div class="sv-modal-row">
-                <i class="fas fa-globe" aria-hidden="true"></i>
-                <span class="sv-cap">{{ $t('stayview.source') }}: {{ activeBar.source }}</span>
-              </div>
-              <div v-if="activeBar.checkedInAt" class="sv-modal-row">
-                <i class="fas fa-right-to-bracket" aria-hidden="true"></i>
-                <span>{{ $t('stayview.checkedInAt') }}: {{ activeBar.checkedInAt }}</span>
-              </div>
-              <div v-if="activeBar.checkedOutAt" class="sv-modal-row">
-                <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
-                <span>{{ $t('stayview.checkedOutAt') }}: {{ activeBar.checkedOutAt }}</span>
+              <!-- Stay summary strip (matches the reference panel header) -->
+              <div class="sv-stay-strip">
+                <div v-for="s in stayStrip" :key="s.key" class="sv-stay-item">
+                  <span>{{ s.label }}</span>
+                  <strong>{{ s.value }}</strong>
+                </div>
               </div>
 
-              <!-- Client contact details -->
-              <div class="sv-modal-section">{{ $t('stayview.clientDetails') }}</div>
-              <div class="sv-modal-row">
-                <i class="fas fa-envelope" aria-hidden="true"></i>
-                <span>{{ activeBar.email }}</span>
-              </div>
-              <div class="sv-modal-row">
-                <i class="fas fa-phone" aria-hidden="true"></i>
-                <span>{{ activeBar.phone }}</span>
-              </div>
-              <div class="sv-modal-row">
-                <i class="fas fa-location-dot" aria-hidden="true"></i>
-                <span>{{ activeBar.location }}</span>
-              </div>
-
-              <!-- Payment summary -->
-              <div class="sv-modal-section">{{ $t('stayview.paymentDetails') }}</div>
-              <div class="sv-modal-row">
-                <i class="fas fa-receipt" aria-hidden="true"></i>
-                <span>{{ $t('stayview.total') }}: <strong>TZS {{ activeBar.total }}</strong></span>
-              </div>
-              <div class="sv-modal-row">
-                <i class="fas fa-money-bill-wave" aria-hidden="true"></i>
-                <span>{{ $t('stayview.advancePaid') }}: TZS {{ activeBar.advance }}</span>
-              </div>
-              <div class="sv-modal-row" :class="activeBar.paymentPending ? 'pay-pending' : 'pay-ok'">
-                <i class="fas fa-dollar-sign" aria-hidden="true"></i>
-                <span>
-                  {{ activeBar.paymentPending ? $t('stayview.paymentPending') : $t('stayview.paymentPaid') }}
-                  <strong v-if="activeBar.paymentPending"> · TZS {{ activeBar.balance }}</strong>
-                </span>
+              <!-- Stay-view tabs -->
+              <div class="sv-tabs" role="tablist">
+                <button
+                  v-for="tab in stayTabs"
+                  :key="tab.key"
+                  type="button"
+                  class="sv-tab"
+                  :class="{ active: stayTab === tab.key }"
+                  role="tab"
+                  :aria-selected="stayTab === tab.key"
+                  @click="setStayTab(tab.key)"
+                >
+                  <i :class="tab.icon" aria-hidden="true"></i>
+                  <span>{{ tab.label }}</span>
+                </button>
               </div>
 
-              <!-- Folio: room charges, postings and audit trail -->
-              <div v-if="folio" class="sv-modal-section">
-                {{ $t('folio.title') }}
+              <!-- Folio Operations -->
+              <div v-if="stayTab === 'folio'" class="sv-tab-panel" role="tabpanel">
+                <div class="sv-panel-cards">
+                  <div class="sv-panel-card">
+                    <span>{{ $t('stayview.total') }}</span>
+                    <strong>TZS {{ fmtNum(folio?.reservation?.total_amount ?? activeBar.total) }}</strong>
+                  </div>
+                  <div class="sv-panel-card">
+                    <span>{{ $t('stayview.advancePaid') }}</span>
+                    <strong>TZS {{ fmtNum(folio?.reservation?.advance_payment ?? activeBar.advance) }}</strong>
+                  </div>
+                  <div class="sv-panel-card" :class="activeBar.paymentPending ? 'pay-pending' : 'pay-ok'">
+                    <span>{{ $t('stayview.balance') }}</span>
+                    <strong>TZS {{ fmtNum(folio?.folio?.balance_due ?? activeBar.balance) }}</strong>
+                  </div>
+                </div>
+
+                <div v-if="folioLoading" class="sv-modal-row muted">
+                  <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+                  <span>{{ $t('common.loading') }}</span>
+                </div>
+                <template v-else-if="folio">
+                  <div class="sv-modal-row">
+                    <i class="fas fa-database" aria-hidden="true"></i>
+                    <span>
+                      {{ $t('folio.roomCharges') }}: <strong>TZS {{ fmtNum(folio.folio?.room_charges) }}</strong>
+                      <span class="sv-cap"> · {{ $t('folio.balance') }} TZS {{ fmtNum(folio.folio?.balance_due) }}</span>
+                    </span>
+                  </div>
+                  <div v-for="(p, i) in folio.payments" :key="'p' + i" class="sv-modal-row">
+                    <i class="fas fa-money-bill-wave" aria-hidden="true"></i>
+                    <span class="sv-cap">
+                      {{ $t('folio.payment') }} · {{ p.payment_method }} · TZS {{ fmtNum(p.amount) }}
+                    </span>
+                  </div>
+                  <div v-for="(o, i) in folio.orders" :key="'o' + i" class="sv-modal-row">
+                    <i class="fas fa-utensils" aria-hidden="true"></i>
+                    <span class="sv-cap">
+                      {{ $t('folio.order') }} {{ o.reference || o.order_number || '' }} · TZS {{ fmtNum(o.total_amount ?? o.total) }}
+                    </span>
+                  </div>
+                  <div v-for="(l, i) in folio.laundry" :key="'l' + i" class="sv-modal-row">
+                    <i class="fas fa-shirt" aria-hidden="true"></i>
+                    <span class="sv-cap">
+                      {{ $t('folio.laundry') }} · TZS {{ fmtNum(l.total_charge ?? l.total_amount ?? l.total) }}
+                    </span>
+                  </div>
+                  <div v-if="!folio.payments?.length && !folio.orders?.length && !folio.laundry?.length" class="sv-modal-row muted">
+                    <i class="fas fa-receipt" aria-hidden="true"></i>
+                    <span>{{ $t('folio.empty') }}</span>
+                  </div>
+                </template>
+
+                <template v-if="activeBar.specialRequests || activeBar.notes">
+                  <div class="sv-tab-section">{{ $t('stayview.requestsNotes') }}</div>
+                  <div v-if="activeBar.specialRequests" class="sv-modal-row">
+                    <i class="fas fa-star" aria-hidden="true"></i>
+                    <span>{{ activeBar.specialRequests }}</span>
+                  </div>
+                  <div v-if="activeBar.notes" class="sv-modal-row">
+                    <i class="fas fa-note-sticky" aria-hidden="true"></i>
+                    <span>{{ activeBar.notes }}</span>
+                  </div>
+                </template>
+
+                <div v-if="canSeeFrontDesk" class="sv-panel-actions">
+                  <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="openPaymentModal">
+                    <i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('stayview.addPayment') }}
+                  </button>
+                  <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="openChargeModal">
+                    <i class="fas fa-receipt" aria-hidden="true"></i> {{ $t('stayview.addCharges') }}
+                  </button>
+                </div>
               </div>
-              <div v-if="folioLoading" class="sv-modal-row muted">
-                <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
-                <span>{{ $t('common.loading') }}</span>
+
+              <!-- Booking Details -->
+              <div v-else-if="stayTab === 'booking'" class="sv-tab-panel" role="tabpanel">
+                <div class="sv-tab-section">{{ $t('stayview.tabs.booking') }}</div>
+                <div class="sv-grid">
+                  <div v-for="(g, i) in bookingGrid" :key="'b' + i" class="sv-grid-item">
+                    <span>{{ g.label }}</span>
+                    <strong>{{ g.value }}</strong>
+                  </div>
+                </div>
               </div>
-              <template v-else-if="folio">
-                <div class="sv-modal-row">
-                  <i class="fas fa-database" aria-hidden="true"></i>
-                  <span>
-                    {{ $t('folio.roomCharges') }}: <strong>TZS {{ fmtNum(folio.folio?.room_charges) }}</strong>
-                    <span class="sv-cap"> · {{ $t('folio.balance') }} TZS {{ fmtNum(folio.folio?.balance_due) }}</span>
-                  </span>
+
+              <!-- Guest Details -->
+              <div v-else-if="stayTab === 'guest'" class="sv-tab-panel" role="tabpanel">
+                <div class="sv-tab-section">{{ $t('stayview.tabs.guest') }}</div>
+                <div class="sv-grid">
+                  <div v-for="(g, i) in guestGrid" :key="'g' + i" class="sv-grid-item">
+                    <span>{{ g.label }}</span>
+                    <strong>{{ g.value }}</strong>
+                  </div>
                 </div>
-                <div v-for="(p, i) in folio.payments" :key="i" class="sv-modal-row">
-                  <i class="fas fa-money-bill-wave" aria-hidden="true"></i>
-                  <span class="sv-cap">
-                    {{ $t('folio.payment') }} · {{ p.payment_method }} · TZS {{ fmtNum(p.amount) }}
-                  </span>
+              </div>
+
+              <!-- Room Charges -->
+              <div v-else-if="stayTab === 'charges'" class="sv-tab-panel" role="tabpanel">
+                <div class="sv-panel-cards">
+                  <div class="sv-panel-card">
+                    <span>{{ $t('folio.roomCharges') }}</span>
+                    <strong>TZS {{ fmtNum(folio?.folio?.room_charges) }}</strong>
+                  </div>
+                  <div class="sv-panel-card">
+                    <span>{{ $t('stayview.total') }}</span>
+                    <strong>TZS {{ fmtNum(folio?.reservation?.total_amount ?? activeBar.total) }}</strong>
+                  </div>
+                  <div class="sv-panel-card">
+                    <span>{{ $t('folio.balance') }}</span>
+                    <strong>TZS {{ fmtNum(folio?.folio?.balance_due ?? activeBar.balance) }}</strong>
+                  </div>
                 </div>
-                <div v-for="(o, i) in folio.orders" :key="'o' + i" class="sv-modal-row">
-                  <i class="fas fa-utensils" aria-hidden="true"></i>
-                  <span class="sv-cap">
-                    {{ $t('folio.order') }} {{ o.reference || o.order_number || '' }} · TZS {{ fmtNum(o.total_amount ?? o.total) }}
-                  </span>
+                <div v-if="chargeNights.length" class="sv-table-wrap">
+                  <table class="sv-table">
+                    <thead>
+                      <tr>
+                        <th>{{ $t('stayview.date') }}</th>
+                        <th>{{ $t('stayview.day') }}</th>
+                        <th class="num">{{ $t('stayview.rate') }}</th>
+                        <th class="num">{{ $t('stayview.value') }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(n, i) in chargeNights" :key="i">
+                        <td>{{ n.date }}</td>
+                        <td>{{ n.day }}</td>
+                        <td class="num">TZS {{ fmtNum(n.rate) }}</td>
+                        <td class="num">TZS {{ fmtNum(n.rate) }}</td>
+                      </tr>
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colspan="3">{{ $t('stayview.nightTotal') }}</td>
+                        <td class="num"><strong>TZS {{ fmtNum(nightTotal) }}</strong></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                  <p class="sv-cap sv-note">{{ $t('stayview.rateHint') }}</p>
                 </div>
-                <div v-for="(l, i) in folio.laundry" :key="'l' + i" class="sv-modal-row">
-                  <i class="fas fa-shirt" aria-hidden="true"></i>
-                  <span class="sv-cap">
-                    {{ $t('folio.laundry') }} · TZS {{ fmtNum(l.total_charge ?? l.total_amount ?? l.total) }}
-                  </span>
+                <div v-else class="sv-modal-row muted">
+                  <i class="fas fa-bed" aria-hidden="true"></i>
+                  <span>{{ $t('stayview.noCharges') }}</span>
                 </div>
-                <div v-if="folio.audit_trail?.length" class="sv-modal-section">
-                  {{ $t('folio.auditTrail') }}
+              </div>
+
+              <!-- Credit Card -->
+              <div v-else-if="stayTab === 'card'" class="sv-tab-panel" role="tabpanel">
+                <div class="sv-empty-state">
+                  <i class="fas fa-credit-card" aria-hidden="true"></i>
+                  <p>{{ $t('stayview.cardEmpty') }}</p>
                 </div>
-                <div v-for="(a, i) in folio.audit_trail" :key="'a' + i" class="sv-modal-row">
+              </div>
+
+              <!-- Tasks -->
+              <div v-else-if="stayTab === 'tasks'" class="sv-tab-panel" role="tabpanel">
+                <div class="sv-tab-head">
+                  <span class="sv-tab-section">{{ $t('stayview.tasksForRoom') }}</span>
+                  <button v-if="canSeeFrontDesk" type="button" class="btn btn-secondary btn-sm" :disabled="actionBusy" @click="openTasksModal(activeBar.roomId)">
+                    <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('stayview.taskAdd') }}
+                  </button>
+                </div>
+                <div v-if="roomTasksLoading" class="sv-modal-row muted">
+                  <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+                  <span>{{ $t('common.loading') }}</span>
+                </div>
+                <template v-else>
+                  <div v-for="(tk, i) in roomTasks" :key="'t' + i" class="sv-task-row">
+                    <span class="sv-task-icon"><i class="fas fa-broom" aria-hidden="true"></i></span>
+                    <div class="sv-task-main">
+                      <strong>{{ tk.task_type }}</strong>
+                      <span class="sv-cap">{{ tk.priority }} · {{ fmtDate(tk.created_at) }}</span>
+                    </div>
+                    <span class="sv-task-status">{{ tk.status }}</span>
+                  </div>
+                  <div v-if="!roomTasks.length" class="sv-modal-row muted">
+                    <i class="fas fa-circle-check" aria-hidden="true"></i>
+                    <span>{{ $t('stayview.tasksEmpty') }}</span>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Audit Trail -->
+              <div v-else class="sv-tab-panel" role="tabpanel">
+                <div class="sv-tab-section">{{ $t('stayview.tabs.audit') }}</div>
+                <div v-if="folio?.audit_trail?.length" class="sv-table-wrap">
+                  <table class="sv-table">
+                    <thead>
+                      <tr>
+                        <th>{{ $t('stayview.date') }}</th>
+                        <th>{{ $t('stayview.action') }}</th>
+                        <th>{{ $t('stayview.user') }}</th>
+                        <th>IP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(a, i) in folio.audit_trail" :key="'a' + i">
+                        <td>{{ fmtDate(a.created_at) }}</td>
+                        <td>{{ a.action }}</td>
+                        <td>{{ a.actor }}</td>
+                        <td>{{ a.ip_address || '—' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div v-else class="sv-modal-row muted">
                   <i class="fas fa-magnifying-glass-chart" aria-hidden="true"></i>
-                  <span class="sv-cap">
-                    {{ a.action }} · {{ a.actor }} · {{ a.created_at ? new Date(a.created_at).toLocaleString() : '' }}
-                  </span>
+                  <span>{{ $t('stayview.auditEmpty') }}</span>
                 </div>
-                <div v-if="!folio.payments?.length && !folio.orders?.length && !folio.laundry?.length && !folio.audit_trail?.length" class="sv-modal-row muted">
-                  <i class="fas fa-receipt" aria-hidden="true"></i>
-                  <span>{{ $t('folio.empty') }}</span>
-                </div>
-              </template>
-
-              <!-- Requests & notes -->
-              <template v-if="activeBar.specialRequests || activeBar.notes">
-                <div class="sv-modal-section">{{ $t('stayview.requestsNotes') }}</div>
-                <div v-if="activeBar.specialRequests" class="sv-modal-row">
-                  <i class="fas fa-star" aria-hidden="true"></i>
-                  <span>{{ activeBar.specialRequests }}</span>
-                </div>
-                <div v-if="activeBar.notes" class="sv-modal-row">
-                  <i class="fas fa-note-sticky" aria-hidden="true"></i>
-                  <span>{{ activeBar.notes }}</span>
-                </div>
-              </template>
+              </div>
             </div>
             <div v-if="canSeeFrontDesk" class="sv-modal-actions">
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
@@ -393,6 +503,232 @@
               >
                 <i class="fas fa-print" aria-hidden="true"></i>
                 {{ invoiceBusy ? $t('invoices.preparing') : $t('stayview.printInvoice') }}
+              </button>
+              <div class="sv-dropdown">
+                <button
+                  type="button"
+                  class="btn btn-secondary sv-modal-manage"
+                  :disabled="actionBusy"
+                  @click="moreOpen = !moreOpen"
+                >
+                  <i class="fas fa-ellipsis" aria-hidden="true"></i> {{ $t('stayview.more') }}
+                </button>
+                <Transition name="sv-pop">
+                  <ul v-if="moreOpen" class="sv-dropdown-menu">
+                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                      <button type="button" @click="openPaymentModal">
+                        <i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('stayview.addPayment') }}
+                      </button>
+                    </li>
+                    <li v-if="['pending', 'confirmed'].includes(activeBar.rawStatus)">
+                      <button type="button" @click="openAmendModal(false)">
+                        <i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('stayview.amendStay') }}
+                      </button>
+                    </li>
+                    <li v-if="['pending', 'confirmed'].includes(activeBar.rawStatus)">
+                      <button type="button" @click="openAmendModal(true)">
+                        <i class="fas fa-arrows-left-right" aria-hidden="true"></i> {{ $t('stayview.roomMove') }}
+                      </button>
+                    </li>
+                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                      <button type="button" @click="openChargeModal">
+                        <i class="fas fa-receipt" aria-hidden="true"></i> {{ $t('stayview.addCharges') }}
+                      </button>
+                    </li>
+                    <li>
+                      <button type="button" @click="openNewBooking">
+                        <i class="fas fa-calendar-plus" aria-hidden="true"></i> {{ $t('stayview.addNewBooking') }}
+                      </button>
+                    </li>
+                    <li>
+                      <button type="button" class="danger" @click="openVoid">
+                        <i class="fas fa-trash-can" aria-hidden="true"></i> {{ $t('stayview.voidReservation') }}
+                      </button>
+                    </li>
+                  </ul>
+                </Transition>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Add payment modal for the active stay -->
+    <Teleport to="body">
+      <Transition name="sv-modal">
+        <div v-if="paymentModal" class="sv-modal-backdrop" @click.self="paymentModal = false">
+          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="$t('stayview.addPayment')">
+            <div class="sv-modal-head bar-green">
+              <span class="sv-modal-head-icon"><i class="fas fa-money-bill-wave" aria-hidden="true"></i></span>
+              <div class="sv-modal-head-text">
+                <h3>{{ $t('stayview.paymentTitle') }}</h3>
+                <span class="sv-modal-status">{{ activeBar?.label }}</span>
+              </div>
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="paymentModal = false">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="sv-modal-body">
+              <label class="sv-field">
+                <span>{{ $t('stayview.paymentAmount') }}</span>
+                <input v-model.number="paymentForm.amount" type="number" min="0" step="0.01" class="input" required />
+              </label>
+              <div class="sv-field">
+                <PaymentMethodSelect
+                  v-model:method="paymentForm.payment_method"
+                  v-model:provider="paymentForm.payment_provider"
+                />
+              </div>
+              <label class="sv-field">
+                <span>{{ $t('stayview.paymentRef') }}</span>
+                <input v-model="paymentForm.transaction_reference" type="text" class="input" />
+              </label>
+              <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
+            </div>
+            <div class="sv-modal-actions">
+              <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="paymentModal = false">
+                {{ $t('common.close') }}
+              </button>
+              <button type="button" class="btn btn-primary" :disabled="actionBusy || !(paymentForm.amount > 0)" @click="submitPayment">
+                <i class="fas fa-check" aria-hidden="true"></i>
+                {{ actionBusy ? $t('common.loading') : $t('stayview.savePayment') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Amend stay / room move modal -->
+    <Teleport to="body">
+      <Transition name="sv-modal">
+        <div v-if="amendModal" class="sv-modal-backdrop" @click.self="amendModal = false">
+          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="$t('stayview.amendStay')">
+            <div class="sv-modal-head bar-blue">
+              <span class="sv-modal-head-icon"><i class="fas fa-calendar-check" aria-hidden="true"></i></span>
+              <div class="sv-modal-head-text">
+                <h3>{{ amendIsRoomMove ? $t('stayview.roomMove') : $t('stayview.amendStay') }}</h3>
+                <span class="sv-modal-status">{{ activeBar?.label }}</span>
+              </div>
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="amendModal = false">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="sv-modal-body">
+              <label class="sv-field">
+                <span>{{ $t('stayview.room') }}</span>
+                <select v-model="amendForm.room_id" class="input" required>
+                  <option v-for="room in rooms" :key="room.room_id" :value="room.room_id">
+                    {{ room.room_number }} · {{ roomTypeLabel(room.room_type) }} · TZS {{ formatPrice(room.price_per_night) }}
+                  </option>
+                </select>
+              </label>
+              <div class="sv-field-row">
+                <label class="sv-field">
+                  <span>{{ $t('stayview.arrival') }}</span>
+                  <input v-model="amendForm.check_in_date" type="date" class="input" required />
+                </label>
+                <label class="sv-field">
+                  <span>{{ $t('stayview.departure') }}</span>
+                  <input v-model="amendForm.check_out_date" type="date" class="input" required />
+                </label>
+              </div>
+              <div class="sv-field-row">
+                <label class="sv-field">
+                  <span>{{ $t('reservations.adultsLabel') }}</span>
+                  <input v-model.number="amendForm.num_adults" type="number" min="1" class="input" required />
+                </label>
+                <label class="sv-field">
+                  <span>{{ $t('reservations.childrenLabel') }}</span>
+                  <input v-model.number="amendForm.num_children" type="number" min="0" class="input" />
+                </label>
+              </div>
+              <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
+            </div>
+            <div class="sv-modal-actions">
+              <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="amendModal = false">
+                {{ $t('common.close') }}
+              </button>
+              <button type="button" class="btn btn-primary" :disabled="actionBusy" @click="submitAmend">
+                <i class="fas fa-check" aria-hidden="true"></i>
+                {{ actionBusy ? $t('common.loading') : $t('stayview.saveAmend') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Add charges modal for the active stay -->
+    <Teleport to="body">
+      <Transition name="sv-modal">
+        <div v-if="chargeModal" class="sv-modal-backdrop" @click.self="chargeModal = false">
+          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="$t('stayview.addCharges')">
+            <div class="sv-modal-head bar-blue">
+              <span class="sv-modal-head-icon"><i class="fas fa-receipt" aria-hidden="true"></i></span>
+              <div class="sv-modal-head-text">
+                <h3>{{ $t('stayview.chargeTitle') }}</h3>
+                <span class="sv-modal-status">{{ activeBar?.label }}</span>
+              </div>
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="chargeModal = false">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="sv-modal-body">
+              <label class="sv-field">
+                <span>{{ $t('stayview.chargeDescription') }}</span>
+                <input v-model="chargeForm.description" type="text" class="input" required maxlength="255" />
+              </label>
+              <label class="sv-field">
+                <span>{{ $t('stayview.paymentAmount') }}</span>
+                <input v-model.number="chargeForm.amount" type="number" min="0" step="0.01" class="input" required />
+              </label>
+              <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
+            </div>
+            <div class="sv-modal-actions">
+              <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="chargeModal = false">
+                {{ $t('common.close') }}
+              </button>
+              <button type="button" class="btn btn-primary" :disabled="actionBusy || !chargeForm.description || !(chargeForm.amount > 0)" @click="submitCharge">
+                <i class="fas fa-check" aria-hidden="true"></i>
+                {{ actionBusy ? $t('common.loading') : $t('stayview.saveCharge') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Void reservation modal -->
+    <Teleport to="body">
+      <Transition name="sv-modal">
+        <div v-if="voidOpen" class="sv-modal-backdrop" @click.self="voidOpen = false">
+          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="$t('stayview.voidReservation')">
+            <div class="sv-modal-head bar-red">
+              <span class="sv-modal-head-icon"><i class="fas fa-trash-can" aria-hidden="true"></i></span>
+              <div class="sv-modal-head-text">
+                <h3>{{ $t('stayview.voidTitle') }}</h3>
+                <span class="sv-modal-status">{{ activeBar?.label }}</span>
+              </div>
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="voidOpen = false">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="sv-modal-body">
+              <p class="sv-void-hint">{{ $t('stayview.voidHint') }}</p>
+              <label class="sv-field">
+                <span>{{ $t('stayview.guestName') }}</span>
+                <input v-model="voidName" type="text" class="input" required :placeholder="activeBar?.label || ''" />
+              </label>
+              <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
+            </div>
+            <div class="sv-modal-actions">
+              <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="voidOpen = false">
+                {{ $t('common.close') }}
+              </button>
+              <button type="button" class="btn sv-modal-danger" :disabled="actionBusy || !voidName.trim()" @click="confirmVoid">
+                {{ actionBusy ? $t('common.loading') : $t('stayview.confirmVoid') }}
               </button>
             </div>
           </div>
@@ -770,11 +1106,13 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useNotificationStore } from '@/stores/notifications'
-import { roomApi, reservationApi, guestApi, housekeepingApi, invoiceApi, inventoryApi } from '@/api'
+import { roomApi, reservationApi, guestApi, housekeepingApi, invoiceApi, inventoryApi, paymentApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import AlertModal from '@/components/AlertModal.vue'
 import RoleBadge from '@/components/RoleBadge.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
+import { requiresProvider } from '@/utils/payments'
 import { useCategoriesStore } from '@/stores/categories'
 
 const { t, te } = useI18n()
@@ -995,6 +1333,9 @@ const barsByRoom = computed(() => {
     const fmt = (d) => d.toLocaleDateString([], { day: 'numeric', month: 'short' })
     ;(map[roomId] ||= []).push({
       id: r.reservation_id,
+      roomId,
+      arrivalIso: isoKey(arrival),
+      departureIso: isoKey(departure),
       label: (r.guest_name || '—').toUpperCase(),
       start: startIdx + 1,
       span: endIdx - startIdx,
@@ -1163,6 +1504,10 @@ function openBarModal(bar) {
   hideBarTip()
   activeBar.value = bar
   folio.value = null
+  stayTab.value = 'folio'
+  moreOpen.value = false
+  roomTasks.value = []
+  roomTasksLoaded.value = false
   if (bar?.id) loadFolio(bar.id)
   else folioLoading.value = false
 }
@@ -1172,6 +1517,10 @@ function closeBarModal() {
   activeBar.value = null
   folio.value = null
   folioLoading.value = false
+  stayTab.value = 'folio'
+  moreOpen.value = false
+  roomTasks.value = []
+  roomTasksLoaded.value = false
 }
 
 /** Formats a numeric amount with thousands separators. */
@@ -1188,11 +1537,149 @@ async function loadFolio(id) {
   try {
     const res = await reservationApi.folio(id)
     folio.value = res.data
-  } catch (err) {
+  } catch {
     folio.value = null
   } finally {
     folioLoading.value = false
   }
+}
+
+/* ---------------- Stay-view tabs & panels ---------------- */
+
+// Active tab in the stay-view modal; "More" dropdown open state.
+const stayTab = ref('folio')
+const moreOpen = ref(false)
+
+// The reference panel's tab strip: Folio Operations, Booking Details, Guest
+// Details, Room Charges, Credit Card, Tasks and Audit Trail.
+const stayTabs = computed(() => [
+  { key: 'folio', icon: 'fas fa-receipt', label: t('stayview.tabs.folio') },
+  { key: 'booking', icon: 'fas fa-calendar-days', label: t('stayview.tabs.booking') },
+  { key: 'guest', icon: 'fas fa-user', label: t('stayview.tabs.guest') },
+  { key: 'charges', icon: 'fas fa-bed', label: t('stayview.tabs.charges') },
+  { key: 'card', icon: 'fas fa-credit-card', label: t('stayview.tabs.card') },
+  { key: 'tasks', icon: 'fas fa-broom', label: t('stayview.tabs.tasks') },
+  { key: 'audit', icon: 'fas fa-magnifying-glass-chart', label: t('stayview.tabs.audit') },
+])
+
+/** Compact header strip under the modal title (arrival/departure/nights/room/no). */
+const stayStrip = computed(() => {
+  const bar = activeBar.value
+  if (!bar) return []
+  const parts = String(bar.dates || '').split('→').map((s) => s.trim())
+  return [
+    { key: 'arrival', label: t('stayview.arrival'), value: bar.checkedInAt || parts[0] || '—' },
+    { key: 'departure', label: t('stayview.departure'), value: parts[1] || '—' },
+    { key: 'nights', label: t('stayview.nights'), value: String(bar.nights ?? '—') },
+    {
+      key: 'room',
+      label: t('stayview.room'),
+      value: [bar.roomNumber, bar.roomType].filter((v) => v && v !== '—').join(' · ') || '—',
+    },
+    { key: 'resno', label: t('stayview.resNo'), value: bar.reference || '—' },
+  ]
+})
+
+/** Formats an ISO date/time string for the audit trail and task rows. */
+function fmtDate(iso) {
+  return iso ? new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '—'
+}
+
+/** Label/value rows for the Booking Details tab (folio-aware with bar fallback). */
+const bookingGrid = computed(() => {
+  const res = folio.value?.reservation || null
+  const src = res || activeBar.value || {}
+  const show = (v) => (v === undefined || v === null || v === '' ? '—' : String(v))
+  const fmtDay = (v) => (v ? new Date(v).toLocaleDateString() : '')
+  const roomName = res?.room
+    ? `${res.room.room_number || ''}${res.room.room_type ? ' · ' + res.room.room_type : ''}`.trim()
+    : ''
+  return [
+    { label: t('reservations.guestName'), value: show(src.guest_name || src.label) },
+    { label: t('common.status'), value: show(String(src.status || '').replace('_', ' ')) },
+    { label: t('reservations.bookingType'), value: show(String(src.booking_type || '').replace('_', ' ')) },
+    { label: t('reservations.bookingSource'), value: show(String(src.booking_source || src.source || '').replace('_', ' ')) },
+    { label: t('reservations.bookingDate'), value: show(fmtDay(src.booking_date)) },
+    { label: t('stayview.reference'), value: show(src.booking_reference || src.reference) },
+    { label: t('stayview.room'), value: show(roomName || src.roomNumber) },
+    {
+      label: t('stayview.arrival'),
+      value: show(fmtDay(src.check_in_date || src.arrival_date) || (src.arrivalIso ? new Date(src.arrivalIso).toLocaleDateString() : '')),
+    },
+    {
+      label: t('stayview.departure'),
+      value: show(fmtDay(src.check_out_date || src.departure_date) || (src.departureIso ? new Date(src.departureIso).toLocaleDateString() : '')),
+    },
+    { label: t('reservations.nights'), value: show(src.nights ?? src.num_days ?? '') },
+    { label: t('reservations.adultsLabel'), value: show(src.num_adults ?? '') },
+    { label: t('reservations.childrenLabel'), value: show(src.num_children ?? '') },
+    { label: t('stayview.total'), value: `TZS ${fmtNum(src.total_amount ?? src.total)}` },
+    { label: t('stayview.advancePaid'), value: `TZS ${fmtNum(src.advance_payment ?? src.advance ?? 0)}` },
+    { label: t('stayview.balance'), value: `TZS ${fmtNum(src.balance_due ?? src.balance ?? 0)}` },
+  ]
+})
+
+/** Label/value rows for the Guest Details tab. */
+const guestGrid = computed(() => {
+  const res = folio.value?.reservation
+  const g = res?.guest || res || activeBar.value || {}
+  const show = (v) => (v === undefined || v === null || v === '' ? '—' : String(v))
+  return [
+    { label: t('stayview.guestName'), value: show(g.full_name || g.guest_name || g.label) },
+    { label: t('stayview.phone'), value: show(g.phone || g.guest_phone) },
+    { label: t('stayview.email'), value: show(g.email || g.guest_email) },
+    { label: t('guests.nationality'), value: show(g.nationality || g.country) },
+    { label: t('guests.idType'), value: show(g.id_type) },
+    { label: t('guests.idNumber'), value: show(g.id_number) },
+    { label: t('guests.vipStatus'), value: show(g.vip_status ? t('guests.typeVip') : t('guests.typeRegular')) },
+  ]
+})
+
+/** Per-night room charge rows derived from the stay dates and room rate. */
+const chargeNights = computed(() => {
+  const res = folio.value?.reservation || activeBar.value || {}
+  const cIn = res.check_in_date || res.arrival_date || res.arrivalIso
+  const cOut = res.check_out_date || res.departure_date || res.departureIso
+  if (!cIn || !cOut) return []
+  const rate = Number(res.room?.price_per_night || 0)
+  if (!(rate > 0)) return []
+  const nights = []
+  for (let d = parseDate(cIn); d < parseDate(cOut); d = addDays(d, 1)) {
+    nights.push({ date: d.toLocaleDateString(), day: d.toLocaleDateString([], { weekday: 'short' }), rate })
+  }
+  return nights
+})
+const nightTotal = computed(() => chargeNights.value.reduce((s, n) => s + n.rate, 0))
+
+// Housekeeping tasks for the active stay's room (Tasks tab).
+const roomTasks = ref([])
+const roomTasksLoading = ref(false)
+const roomTasksLoaded = ref(false)
+
+/** Loads open tasks filtered to the active stay's room. Non-fatal on error. */
+async function loadRoomTasks() {
+  const room = activeBar.value?.roomId
+  roomTasksLoading.value = true
+  try {
+    if (!room) {
+      roomTasks.value = []
+      return
+    }
+    const p = (await housekeepingApi.index({ room_id: room, per_page: 50 })).data
+    roomTasks.value = Array.isArray(p) ? p : p?.data || []
+  } catch {
+    roomTasks.value = []
+  } finally {
+    roomTasksLoading.value = false
+    roomTasksLoaded.value = true
+  }
+}
+
+/** Switches the stay-view tab, lazily loading the room's tasks when needed. */
+function setStayTab(key) {
+  stayTab.value = key
+  moreOpen.value = false
+  if (key === 'tasks' && !roomTasksLoaded.value) loadRoomTasks()
 }
 
 /* ---------------- In-place front-desk actions (no navigation) ---------------- */
@@ -1229,6 +1716,127 @@ function doCheckOut(bar) {
 /** Cancels the booking (pending/confirmed bars). */
 function doCancel(bar) {
   runAction(() => reservationApi.cancel(bar.id))
+}
+
+/* ---------------- Stay-view sub-actions (keep the modal open) ---------------- */
+
+/** Runs a stay-view action, keeps the modal open and refreshes folio + chart. */
+async function runStayAction(fn) {
+  actionBusy.value = true
+  actionError.value = ''
+  try {
+    await fn()
+    if (activeBar.value?.id) await loadFolio(activeBar.value.id)
+    await load(true)
+  } catch (err) {
+    actionError.value = err.response?.data?.message || t('stayview.actionError')
+  } finally {
+    actionBusy.value = false
+  }
+}
+
+/* ----- Add Payment ----- */
+const paymentModal = ref(false)
+const paymentForm = ref({})
+function openPaymentModal() {
+  moreOpen.value = false
+  paymentForm.value = { amount: null, payment_method: 'cash', payment_provider: '', transaction_reference: '' }
+  actionError.value = ''
+  paymentModal.value = true
+}
+async function submitPayment() {
+  const f = paymentForm.value
+  if (!activeBar.value?.id || !(Number(f.amount) > 0)) return
+  if (requiresProvider(f.payment_method) && !f.payment_provider) return
+  const payload = {
+    reservation_id: activeBar.value.id,
+    amount: f.amount,
+    payment_method: f.payment_method,
+    payment_provider: f.payment_provider || null,
+    transaction_reference: f.transaction_reference || null,
+  }
+  paymentModal.value = false
+  await runStayAction(() => paymentApi.store(payload))
+  if (actionError.value) paymentModal.value = true
+}
+
+/* ----- Add Charges ----- */
+const chargeModal = ref(false)
+const chargeForm = ref({})
+function openChargeModal() {
+  moreOpen.value = false
+  chargeForm.value = { description: '', amount: null }
+  actionError.value = ''
+  chargeModal.value = true
+}
+async function submitCharge() {
+  const f = chargeForm.value
+  if (!activeBar.value?.id || !f.description || !(Number(f.amount) > 0)) return
+  chargeModal.value = false
+  await runStayAction(() =>
+    reservationApi.postRoomCharge(activeBar.value.id, { description: f.description, amount: f.amount }),
+  )
+  if (actionError.value) chargeModal.value = true
+}
+
+/* ----- Amend stay / room move ----- */
+const amendModal = ref(false)
+const amendIsRoomMove = ref(false)
+const amendForm = ref({})
+function openAmendModal(roomMove = false) {
+  moreOpen.value = false
+  const res = folio.value?.reservation || activeBar.value || {}
+  amendIsRoomMove.value = roomMove
+  amendForm.value = {
+    room_id: res.room_id || res.room?.room_id || null,
+    check_in_date: res.check_in_date || res.arrivalIso || '',
+    check_out_date: res.check_out_date || res.departureIso || '',
+    num_adults: res.num_adults ?? 1,
+    num_children: res.num_children ?? 0,
+  }
+  actionError.value = ''
+  amendModal.value = true
+}
+async function submitAmend() {
+  const f = amendForm.value
+  if (!activeBar.value?.id || !f.room_id || !f.check_in_date || !f.check_out_date || !(Number(f.num_adults) > 0)) return
+  amendModal.value = false
+  await runStayAction(() =>
+    reservationApi.update(activeBar.value.id, {
+      room_id: f.room_id,
+      check_in_date: f.check_in_date,
+      check_out_date: f.check_out_date,
+      num_adults: Number(f.num_adults) || 1,
+      num_children: Number(f.num_children) || 0,
+    }),
+  )
+  if (actionError.value) amendModal.value = true
+}
+
+/* ----- Void reservation ----- */
+const voidOpen = ref(false)
+const voidName = ref('')
+function openVoid() {
+  moreOpen.value = false
+  voidName.value = ''
+  actionError.value = ''
+  voidOpen.value = true
+}
+async function confirmVoid() {
+  const bar = activeBar.value
+  if (!bar?.id || !voidName.value.trim()) return
+  actionBusy.value = true
+  actionError.value = ''
+  try {
+    await reservationApi.destroy(bar.id, { confirmed_name: voidName.value.trim() })
+    voidOpen.value = false
+    closeBarModal()
+    await load(true)
+  } catch (err) {
+    actionError.value = err.response?.data?.message || t('stayview.actionError')
+  } finally {
+    actionBusy.value = false
+  }
 }
 
 /* ---------------- Invoice printing ---------------- */
@@ -1652,8 +2260,8 @@ const tasks = ref([])
 const taskForm = ref({})
 
 /** Opens the housekeeping panel and loads open tasks. */
-async function openTasksModal() {
-  taskForm.value = { room_id: rooms.value[0]?.room_id || null, priority: 'normal' }
+async function openTasksModal(roomId = null) {
+  taskForm.value = { room_id: roomId || rooms.value[0]?.room_id || null, priority: 'normal' }
   actionError.value = ''
   tasksModal.value = true
   try {
@@ -2650,6 +3258,374 @@ onUnmounted(() => clearInterval(refreshTimer))
   .sv-toolbar-right {
     width: 100%;
   }
+}
+
+/* ---- Stay-view tabs (reference panel layout) ---- */
+
+/* The stay-view modal is wider than the small action modals. */
+.sv-modal-tabs {
+  width: 640px;
+}
+
+/* Small sub-modals (add payment / amend / void). */
+.sv-modal-sm {
+  width: 420px;
+}
+
+/* Compact header strip under the modal title. */
+.sv-stay-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  padding: 10px;
+  margin: 0 0 12px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.sv-stay-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sv-stay-item span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #9ca3af;
+}
+
+.sv-stay-item strong {
+  font-size: 13px;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Tab strip. */
+.sv-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-bottom: 10px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.sv-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 12.5px;
+  color: #6b7280;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sv-tab:hover {
+  background: #f3f6f9;
+  color: #005eb8;
+}
+
+.sv-tab.active {
+  background: #eaf3fb;
+  border-color: #005eb8;
+  color: #005eb8;
+  font-weight: 600;
+}
+
+.sv-tab i {
+  font-size: 12px;
+}
+
+/* Panel + section primitives. */
+.sv-tab-panel {
+  min-height: 120px;
+}
+
+.sv-tab-section {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #9ca3af;
+  margin: 12px 0 6px;
+}
+
+.sv-tab-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sv-tab-head .sv-tab-section {
+  margin: 0;
+}
+
+/* Summary cards used by the Folio Operations and Room Charges tabs. */
+.sv-panel-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.sv-panel-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #eef0f3;
+  border-radius: 10px;
+}
+
+.sv-panel-card span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #9ca3af;
+}
+
+.sv-panel-card strong {
+  font-size: 15px;
+  color: #1f2937;
+}
+
+.sv-panel-card.pay-pending strong { color: #c0392b; }
+.sv-panel-card.pay-ok strong { color: #1e7e34; }
+
+/* Label/value grid used by Booking and Guest details tabs. */
+.sv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sv-grid-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #eef0f3;
+  border-radius: 8px;
+  min-width: 0;
+}
+
+.sv-grid-item span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #9ca3af;
+}
+
+.sv-grid-item strong {
+  font-size: 13px;
+  color: #374151;
+  word-break: break-word;
+}
+
+/* Compact tables (room charges, audit trail). */
+.sv-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.sv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.sv-table th,
+.sv-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #f0f2f5;
+  text-align: left;
+}
+
+.sv-table th {
+  background: #f8fafc;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #6b7280;
+}
+
+.sv-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.sv-table tfoot td {
+  border-bottom: none;
+  font-weight: 600;
+  background: #f8fafc;
+}
+
+.sv-note {
+  margin: 8px 2px 0;
+  font-size: 12px;
+}
+
+/* Folio tab action buttons under the postings. */
+.sv-panel-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sv-panel-actions .btn {
+  flex: 1;
+}
+
+/* Empty state (credit card tab). */
+.sv-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 34px 16px;
+  text-align: center;
+  color: #9ca3af;
+}
+
+.sv-empty-state i {
+  font-size: 28px;
+  color: #cbd5e1;
+}
+
+.sv-empty-state p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 320px;
+}
+
+/* Task icon + main block in the Tasks tab. */
+.sv-task-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #f0f6fc;
+  color: #005eb8;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.sv-task-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sv-task-status {
+  text-transform: capitalize;
+}
+
+/* More actions dropdown. */
+.sv-dropdown {
+  position: relative;
+}
+
+.sv-dropdown-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 30;
+  min-width: 220px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.14);
+  list-style: none;
+}
+
+.sv-dropdown-menu li {
+  margin: 0;
+  padding: 0;
+}
+
+.sv-dropdown-menu li button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sv-dropdown-menu li button i {
+  width: 16px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.sv-dropdown-menu li button:hover {
+  background: #f0f6fc;
+  color: #005eb8;
+}
+
+.sv-dropdown-menu li button.danger {
+  color: #c0392b;
+}
+
+.sv-dropdown-menu li button.danger:hover {
+  background: #fdecec;
+  color: #c0392b;
+}
+
+.sv-dropdown-menu li button.danger i {
+  color: #c0392b;
+}
+
+/* Pop transition for the More dropdown. */
+.sv-pop-enter-active,
+.sv-pop-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.sv-pop-enter-from,
+.sv-pop-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+/* Void confirmation hint. */
+.sv-void-hint {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+/* Small buttons used inside tabs. */
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
 }
 </style>
 
