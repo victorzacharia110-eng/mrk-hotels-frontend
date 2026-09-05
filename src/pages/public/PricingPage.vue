@@ -351,7 +351,7 @@ onUnmounted(() => { if (tooltipTimer) clearTimeout(tooltipTimer) })
 }
 
 .pricing-excluded li i.fa-xmark {
-  color: #e2e8f0;
+  color: #ef4444;
 }
 
 /* CTA button */

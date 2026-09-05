@@ -2979,6 +2979,7 @@
     "daysUnit": "siku",
     "descriptionPlaceholder": "Maelezo",
     "includedFeatures": "Vipengele Vilivyojumuishwa",
+    "clickToToggle": "Bofya kuwasha/kuzima kipengele hiki kwa mpango",
     "removeFeature": "Ondoa",
     "addFeature": "+ Ongeza kipengele…",
     "activeLabel": "Amilifu",

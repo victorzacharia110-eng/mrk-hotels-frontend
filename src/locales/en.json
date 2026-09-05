@@ -2979,6 +2979,7 @@
     "daysUnit": "days",
     "descriptionPlaceholder": "Description",
     "includedFeatures": "Included Features",
+    "clickToToggle": "Click to toggle this feature for the plan",
     "removeFeature": "Remove",
     "addFeature": "+ Add feature…",
     "activeLabel": "Active",

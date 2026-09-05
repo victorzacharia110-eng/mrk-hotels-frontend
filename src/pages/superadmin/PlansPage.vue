@@ -70,26 +70,25 @@
           </div>
           <div class="tier-features">
             <div class="tier-features-header">
-              <h3>{{ $t('superadmin.includedFeatures') }} ({{ plan.features?.length || 0 }})</h3>
+              <h3>{{ $t('superadmin.includedFeatures') }} ({{ plan.features?.length || 0 }}/{{ allFeatureKeys.length }})</h3>
             </div>
             <ul class="tier-feature-list">
-              <li v-for="feat in plan.features || []" :key="feat" class="tier-feature-item">
-                <button class="feature-remove" @click="removeFeature(plan, feat)" :title="$t('superadmin.removeFeature')">
-                  <i class="fas fa-times"></i>
-                </button>
-                <span>{{ featureLabel(feat) }}</span>
+              <li
+                v-for="featKey in allFeatureKeys"
+                :key="featKey"
+                class="tier-feature-item"
+                :class="{ 'tier-feature-item--on': (plan.features || []).includes(featKey) }"
+                @click="toggleFeature(plan, featKey)"
+                :title="$t('superadmin.clickToToggle')"
+              >
+                <i
+                  v-if="(plan.features || []).includes(featKey)"
+                  class="fas fa-check-circle check-yes"
+                ></i>
+                <i v-else class="fas fa-times-circle check-no"></i>
+                <span>{{ featureLabel(featKey) }}</span>
               </li>
             </ul>
-            <div class="add-feature-row">
-              <select v-model="plan._addFeat" class="feature-select" @change="addFeature(plan)">
-                <option value="" disabled>{{ $t('superadmin.addFeature') }}</option>
-                <option
-                  v-for="fk in availableFeatures(plan)"
-                  :key="fk"
-                  :value="fk"
-                >{{ featureLabel(fk) }}</option>
-              </select>
-            </div>
           </div>
           <div class="tier-actions">
             <label class="toggle-label">
@@ -218,20 +217,13 @@ function featureLabel(key) {
   return featureLabels.value[key]?.label || key
 }
 
-function availableFeatures(plan) {
-  return allFeatureKeys.value.filter((f) => !(plan.features || []).includes(f))
-}
-
-function addFeature(plan) {
-  if (plan._addFeat && !plan.features.includes(plan._addFeat)) {
-    plan.features.push(plan._addFeat)
-    plan._addFeat = ''
-    savePlan(plan)
+function toggleFeature(plan, featKey) {
+  const idx = (plan.features || []).indexOf(featKey)
+  if (idx >= 0) {
+    plan.features.splice(idx, 1)
+  } else {
+    plan.features.push(featKey)
   }
-}
-
-function removeFeature(plan, feat) {
-  plan.features = plan.features.filter((f) => f !== feat)
   savePlan(plan)
 }
 
@@ -296,7 +288,7 @@ async function createPlan() {
 onMounted(async () => {
   try {
     const { data } = await planApi.index()
-    plansList.value = data.plans.map((p) => ({ ...p, _addFeat: '', _saving: false }))
+    plansList.value = data.plans.map((p) => ({ ...p, _saving: false }))
     featureLabels.value = data.feature_labels
   } catch {
     error.value = t('superadmin.failedToLoadPlans')
@@ -341,11 +333,12 @@ onMounted(async () => {
 .tier-features-header { border-top: 1px solid #e2e8f0; padding-top: 16px; margin-bottom: 12px; }
 .tier-features-header h3 { margin: 0; font-size: 13px; font-weight: 600; color: #334155; }
 .tier-feature-list { list-style: none; padding: 0; margin: 0 0 12px; }
-.tier-feature-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; color: #334155; }
-.feature-remove { background: none; border: none; color: #e2e8f0; cursor: pointer; padding: 2px; font-size: 11px; transition: color 0.15s; }
-.feature-remove:hover { color: #ef4444; }
-.add-feature-row { margin-top: 8px; }
-.feature-select { width: 100%; padding: 6px 8px; border: 1px dashed #cbd5e1; border-radius: 6px; font-size: 12px; color: #475569; background: #f8fafc; cursor: pointer; }
+.tier-feature-item { display: flex; align-items: center; gap: 8px; padding: 5px 8px; font-size: 13px; color: #94a3b8; border-radius: 6px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.tier-feature-item:hover { background: #f1f5f9; }
+.tier-feature-item--on { color: #334155; }
+.tier-feature-item--on:hover { background: #f0fdf4; }
+.tier-feature-item .check-yes { font-size: 13px; }
+.tier-feature-item .check-no { font-size: 13px; }
 
 .tier-actions { padding: 12px 24px 20px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
 .toggle-label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #475569; cursor: pointer; }
@@ -361,7 +354,7 @@ onMounted(async () => {
 .comparison-plan-header { text-align: center !important; }
 .comparison-check { text-align: center !important; }
 .check-yes { color: #10b981; font-size: 16px; }
-.check-no { color: #e2e8f0; font-size: 16px; }
+.check-no { color: #ef4444; font-size: 16px; }
 
 /* Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
