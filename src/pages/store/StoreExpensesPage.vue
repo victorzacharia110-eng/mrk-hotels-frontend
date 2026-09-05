@@ -78,6 +78,7 @@ import { storeApi } from '../../api'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import { useCategoriesStore } from '@/stores/categories'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 
 const { t } = useI18n()
@@ -95,10 +96,8 @@ function debouncedLoad() { clearTimeout(debounce); debounce = setTimeout(() => l
 const formError = ref('')
 const success = ref('')
 const error = ref('')
-const expenseCats = ['supplies', 'utilities', 'maintenance', 'transport', 'salaries', 'other']
-const expenseCategoryOptions = computed(() =>
-  expenseCats.map((c) => ({ value: c, label: t(`storeManager.expenses.cats.${c}`) })),
-)
+const categoriesStore = useCategoriesStore()
+const expenseCategoryOptions = categoriesStore.expenseCategoryOptions
 const form = reactive({ description: '', category: 'supplies', amount: 0 })
 
 const bulk = useBulkSelection(() => expenses.value, { idKey: 'id' })

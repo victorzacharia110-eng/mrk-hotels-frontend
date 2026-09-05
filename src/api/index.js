@@ -1032,6 +1032,8 @@ export const inventoryOpsApi = {
   updateDepartment: (id, data) => api.put(`${v1}/departments/${id}`, data),
   deleteDepartment: (id) => api.delete(`${v1}/departments/${id}`),
 
+  categories: () => api.get(`${v1}/categories`),
+
   transfers: (params) => api.get(`${v1}/inventory-transfers`, { params }),
   storeTransfer: (data) => api.post(`${v1}/inventory-transfers`, data),
   voidTransfer: (id, reason) => api.post(`${v1}/inventory-transfers/${id}/void`, { reason }),

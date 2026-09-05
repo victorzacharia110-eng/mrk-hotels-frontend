@@ -109,12 +109,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { supplierApi } from '@/api'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import { useCategoriesStore } from '@/stores/categories'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 
 const route = useRoute()
@@ -135,15 +136,12 @@ const bulk = useBulkSelection(() => suppliers.value, { idKey: 'supplier_id' })
 const showBulkDelete = ref(false)
 const deleting = ref(false)
 
-const categories = ['food_beverage', 'housekeeping', 'maintenance', 'office', 'toiletries', 'linen', 'cleaning', 'general', 'other']
-
-const categoryOptions = computed(() =>
-  categories.map((c) => ({ value: c, label: c })),
-)
+const categoriesStore = useCategoriesStore()
+const categoryOptions = categoriesStore.supplierCategoryOptions
 
 const form = reactive({
   supplier_name: '', contact_person: '', phone: '', email: '',
-  category: 'general', status: 'active', payment_terms: '', address: '', notes: '',
+  category: 'other', status: 'active', payment_terms: '', address: '', notes: '',
 })
 
 let debounce
@@ -169,7 +167,7 @@ function go(page) { load(page) }
 
 function openCreate() {
   editing.value = null
-  Object.assign(form, { supplier_name: '', contact_person: '', phone: '', email: '', category: 'general', status: 'active', payment_terms: '', address: '', notes: '' })
+  Object.assign(form, { supplier_name: '', contact_person: '', phone: '', email: '', category: 'other', status: 'active', payment_terms: '', address: '', notes: '' })
   formError.value = ''
   showForm.value = true
 }

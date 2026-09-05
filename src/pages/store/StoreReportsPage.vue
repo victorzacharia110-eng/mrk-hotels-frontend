@@ -12,14 +12,18 @@
       <select v-model="type" class="sm-select" @change="generate">
         <option v-for="(cfg, key) in REPORT_CONFIG" :key="key" :value="key">{{ $t(cfg.labelKey) }}</option>
       </select>
-      <select v-model="departmentId" class="sm-select">
-        <option :value="null">{{ $t('storeManager.inventory.allDepartments') }}</option>
-        <option v-for="d in departments" :key="d.department_id" :value="d.department_id">{{ d.name }}</option>
-      </select>
-      <select v-model="category" class="sm-select">
-        <option :value="null">{{ $t('storeManager.reports.allOutlets') }}</option>
-        <option v-for="c in CATEGORIES" :key="c" :value="c">{{ categoryLabel(c) }}</option>
-      </select>
+      <SearchableSelect
+        v-model="departmentId"
+        :options="departmentOptions"
+        :empty-label="$t('storeManager.inventory.allDepartments')"
+        force-search
+      />
+      <SearchableSelect
+        v-model="category"
+        :options="categoryOptions"
+        :empty-label="$t('storeManager.reports.allOutlets')"
+        force-search
+      />
       <button class="sm-btn" @click="generate"><i class="fas fa-chart-line"></i> {{ $t('storeManager.reports.generate') }}</button>
       <button v-if="data" class="sm-btn ghost" @click="openReportWindow"><i class="fas fa-window-restore"></i> {{ $t('storeManager.reports.openWindow') }}</button>
       <button v-if="data" class="sm-btn ghost" @click="printReport"><i class="fas fa-print"></i> {{ $t('common.print') }}</button>
@@ -86,6 +90,8 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { reportApi, hotelSettingsApi, inventoryOpsApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
+import SearchableSelect from '@/components/SearchableSelect.vue'
+import { useCategoriesStore } from '@/stores/categories'
 import { printToPrinter, restorePrinter, buildReportLines } from '@/utils/printer'
 
 const { t } = useI18n()
@@ -206,10 +212,11 @@ const departments = ref([])
 const departmentId = ref(null)
 const category = ref(null)
 
-const CATEGORIES = ['bar', 'restaurant', 'food', 'beverage', 'housekeeping', 'maintenance', 'procurement', 'other']
-function categoryLabel(c) {
-  return c.charAt(0).toUpperCase() + c.slice(1)
-}
+const categoriesStore = useCategoriesStore()
+const categoryOptions = categoriesStore.inventoryCategoryOptions
+const departmentOptions = computed(() =>
+  departments.value.map((d) => ({ value: d.department_id, label: d.name })),
+)
 
 const cfg = computed(() => REPORT_CONFIG[type.value])
 const cols = computed(() => cfg.value?.cols || [])

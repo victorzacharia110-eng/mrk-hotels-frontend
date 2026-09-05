@@ -89,11 +89,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { inventoryApi } from '@/api'
-import { INVENTORY_CATEGORIES, formatCategory } from '@/utils/format'
+import { formatCategory } from '@/utils/format'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import { useCategoriesStore } from '@/stores/categories'
 
 const { t } = useI18n()
 
@@ -109,9 +110,8 @@ const formError = ref('')
 const success = ref('')
 const error = ref('')
 
-const categoryOptions = computed(() =>
-  INVENTORY_CATEGORIES.map((c) => ({ value: c, label: formatCategory(c) })),
-)
+const categoriesStore = useCategoriesStore()
+const categoryOptions = categoriesStore.inventoryCategoryOptions
 
 function isLow(item) {
   return Number(item.quantity_in_stock) <= Number(item.reorder_level || 0)

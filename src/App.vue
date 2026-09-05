@@ -10,13 +10,16 @@
 import { onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useSessionStore } from "@/stores/session";
+import { useCategoriesStore } from "@/stores/categories";
 
 const authStore = useAuthStore();
 const sessionStore = useSessionStore();
+const categoriesStore = useCategoriesStore();
 
 onMounted(() => {
   if (authStore.isAuthenticated) {
     sessionStore.start();
+    categoriesStore.ensureLoaded();
   }
 });
 </script>

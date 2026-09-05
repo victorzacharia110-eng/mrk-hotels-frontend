@@ -775,6 +775,7 @@ import { useAuthStore } from '@/stores/auth'
 import AlertModal from '@/components/AlertModal.vue'
 import RoleBadge from '@/components/RoleBadge.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import { useCategoriesStore } from '@/stores/categories'
 
 const { t, te } = useI18n()
 const notifStore = useNotificationStore()
@@ -1279,12 +1280,9 @@ const printedBy = computed(
     '',
 )
 
-// Inventory categories offered by the backend filter.
-const ledgerCategories = ['food', 'beverage', 'housekeeping', 'maintenance', 'procurement', 'other']
-
-const ledgerCategoryOptions = computed(() =>
-  ledgerCategories.map((c) => ({ value: c, label: c })),
-)
+// Inventory categories come from the shared catalog (single source of truth).
+const categoriesStore = useCategoriesStore()
+const ledgerCategoryOptions = categoriesStore.inventoryCategoryOptions
 
 // The stock ledger is an inventory/procurement function — receptionists and
 // other front-desk roles never see it (matches the inventory module matrix).

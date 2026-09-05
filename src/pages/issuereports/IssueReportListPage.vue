@@ -363,6 +363,7 @@ import { issueReportApi, userApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { collectAllRows } from '@/utils/export'
+import { useCategoriesStore } from '@/stores/categories'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -402,17 +403,9 @@ const respondForm = reactive({ status: '', resolution: '', assigned_to: '' })
 const privateAsk = reactive({ directed_to: '', body: '' })
 const askingPrivate = ref(false)
 
-// Report categories (filter bar and create form).
-const categoryOptions = [
-  { value: 'billing', label: t('issueReports.categoryBilling') },
-  { value: 'reservation', label: t('issueReports.categoryReservation') },
-  { value: 'housekeeping', label: t('issueReports.categoryHousekeeping') },
-  { value: 'food_beverage', label: t('issueReports.categoryFoodBeverage') },
-  { value: 'inventory', label: t('issueReports.categoryInventory') },
-  { value: 'facility', label: t('issueReports.categoryFacility') },
-  { value: 'it_system', label: t('issueReports.categoryItSystem') },
-  { value: 'other', label: t('issueReports.categoryOther') },
-]
+// Report categories (filter bar and create form) come from the shared catalog.
+const categoriesStore = useCategoriesStore()
+const categoryOptions = categoriesStore.issueCategoryOptions
 
 // Priority levels from low to urgent (filter bar and create form).
 const priorityOptions = [

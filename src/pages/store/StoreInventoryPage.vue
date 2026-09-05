@@ -282,7 +282,8 @@ import { inventoryApi, inventoryOpsApi, supplierApi, unitsApi } from '@/api'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
-import { INVENTORY_CATEGORIES, formatCategory } from '@/utils/format'
+import { formatCategory } from '@/utils/format'
+import { useCategoriesStore } from '@/stores/categories'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -323,9 +324,8 @@ function pickDepartment(id) {
   load(1)
 }
 
-const categoryOptions = computed(() =>
-  INVENTORY_CATEGORIES.map((c) => ({ value: c, label: formatCategory(c) })),
-)
+const categoriesStore = useCategoriesStore()
+const categoryOptions = categoriesStore.inventoryCategoryOptions
 
 // Unit registry: common SI-ish units always available, plus the shared
 // backend registry (and a per-device fallback). These feed the primary unit

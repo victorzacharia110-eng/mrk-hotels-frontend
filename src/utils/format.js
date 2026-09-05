@@ -2,9 +2,6 @@
  * Shared string/format helpers for the store manager panel.
  */
 
-/** Inventory categories as enforced by the backend validation. */
-export const INVENTORY_CATEGORIES = ['food', 'beverage', 'housekeeping', 'maintenance', 'procurement', 'other']
-
 /**
  * Formats a category code for display: snake/hyphen-separated words become a
  * Title Case label with a capital first letter ("food_beverage" => "Food

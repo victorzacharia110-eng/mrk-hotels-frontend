@@ -362,6 +362,7 @@ import { useAuthStore } from '@/stores/auth'
 import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
+import { useCategoriesStore } from '@/stores/categories'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -407,15 +408,9 @@ const form = reactive({
 })
 const adjustForm = reactive({ type: 'in', quantity: 0, reference_type: '', notes: '' })
 
-// Dropdown option lists for filters and forms.
-const categoryOptions = computed(() => [
-  { value: 'food', label: t('inventory.categoryFood') },
-  { value: 'beverage', label: t('inventory.categoryBeverage') },
-  { value: 'housekeeping', label: t('inventory.categoryHousekeeping') },
-  { value: 'maintenance', label: t('inventory.categoryMaintenance') },
-  { value: 'procurement', label: t('inventory.categoryProcurement') },
-  { value: 'other', label: t('inventory.categoryOther') },
-])
+// Dropdown option lists for filters and forms (shared category catalog).
+const categoriesStore = useCategoriesStore()
+const categoryOptions = categoriesStore.inventoryCategoryOptions
 
 const stockStatusOptions = computed(() => [
   { value: 'in_stock', label: t('inventory.statusInStock') },

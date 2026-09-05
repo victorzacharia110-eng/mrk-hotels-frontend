@@ -273,6 +273,7 @@ import PhoneInput from '@/components/PhoneInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
+import { useCategoriesStore } from '@/stores/categories'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 import { collectAllRows } from '@/utils/export'
 import { normalizePhoneNumber } from '@/utils/phone'
@@ -329,15 +330,8 @@ const supplierStatusOptions = computed(() => [
   { value: 'blocked', label: t('suppliers.statusBlocked') },
 ])
 
-const categoryOptions = computed(() => [
-  { value: 'food_beverage', label: t('suppliers.categoryFnb') },
-  { value: 'housekeeping', label: t('suppliers.categoryHousekeeping') },
-  { value: 'maintenance', label: t('suppliers.categoryMaintenance') },
-  { value: 'office_supplies', label: t('suppliers.categoryOffice') },
-  { value: 'furniture', label: t('suppliers.categoryFurniture') },
-  { value: 'technology', label: t('suppliers.categoryTechnology') },
-  { value: 'other', label: t('suppliers.categoryOther') },
-])
+const categoriesStore = useCategoriesStore()
+const categoryOptions = categoriesStore.supplierCategoryOptions
 
 /**
  * Maps a supplier status to the CSS class used for its badge colour.
