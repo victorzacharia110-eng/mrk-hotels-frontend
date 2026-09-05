@@ -619,6 +619,7 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import { PAYMENT_METHODS } from '@/utils/payments'
 import { restorePrinter } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
+import { useNotificationSettingsStore } from '@/stores/notificationSettings'
 import { displayLines } from '@/utils/receipts'
 import { toast } from '@/utils/toast'
 
@@ -744,6 +745,39 @@ function orderTypeLabel(order) {
   return t('orderTaker.orderTypeTakeAway')
 }
 
+const readySeen = new Set()
+let readyBaseline = false
+
+/** Rings when items transition to 'ready' between polls (offline fallback for
+ * waiters whose WebSocket dropped). */
+function detectReadyTransitions(orders) {
+  const next = new Set()
+  for (const order of orders) {
+    for (const item of order.items || []) {
+      if (item.status === 'ready') {
+        const itemId = item.order_item_id ?? item.id ?? item.item_id
+        next.add(`${order.order_id}:${itemId}`)
+      }
+    }
+  }
+  if (!readyBaseline) {
+    readyBaseline = true
+    readySeen.clear()
+    for (const k of next) readySeen.add(k)
+    return
+  }
+  let fresh = []
+  for (const k of next) {
+    if (!readySeen.has(k)) {
+      fresh.push(k)
+      break
+    }
+  }
+  readySeen.clear()
+  for (const k of next) readySeen.add(k)
+  if (fresh.length) useNotificationSettingsStore().ring(fresh[0])
+}
+
 /** Loads today's still-open orders for this department (the kitchen queue). */
 async function loadOpenOrders() {
   openLoading.value = true
@@ -751,9 +785,11 @@ async function loadOpenOrders() {
   try {
     const res = await orderApi.index({ department: department.value, per_page: 50 })
     const rows = Array.isArray(res.data) ? res.data : res.data?.data || []
-    openOrders.value = rows
+    const filtered = rows
       .filter((order) => !['completed', 'cancelled'].includes(order.status))
       .filter((order) => (isFloorStaff.value ? isMine(order) : true))
+    detectReadyTransitions(filtered)
+    openOrders.value = filtered
   } catch (err) {
     openError.value = err.response?.data?.message || t('orderTaker.loadOrdersError')
     openOrders.value = []

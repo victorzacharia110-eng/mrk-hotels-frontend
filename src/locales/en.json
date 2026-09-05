@@ -4209,5 +4209,15 @@
     "minutes": "minutes",
     "idleTimeoutHint": "Set how long a signed-in desk stays open before requiring the PIN again (1–120 minutes).",
     "saved": "Session settings saved. Sign-in returns after {minutes} minutes of inactivity."
+  },
+  "notificationSound": {
+    "soundSettings": "Alert sound & vibration",
+    "enabled": "Ring when an order is ready",
+    "ringtone": "Ringtone",
+    "vibration": "Vibrate",
+    "test": "Test ringtone",
+    "hotel-bell": "Hotel bell",
+    "triple-chime": "Triple chime",
+    "double-ping": "Double ping"
   }
 }

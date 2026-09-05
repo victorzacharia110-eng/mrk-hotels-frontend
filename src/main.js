@@ -19,6 +19,7 @@ import router from './router'
 import i18n from './locales/i18n'
 import { initA11y } from './utils/a11y'
 import './utils/toast'
+import { primeNotificationAudio } from './utils/notificationTone'
 
 // Root Vue application instance.
 const app = createApp(App)
@@ -37,3 +38,5 @@ app.mount('#app')
 // Global accessibility behaviours (modal focus trap, Escape-to-close, ARIA
 // dialog semantics). Runs after mount so the initial DOM exists.
 initA11y()
+// One-time audio unlock so in-app ringtones can play after the first tap.
+primeNotificationAudio()

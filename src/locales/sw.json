@@ -4209,5 +4209,15 @@
     "minutes": "dakika",
     "saved": "Mipangilio ya kikao imehifadhiwa. Kuingia kunarudi baada ya dakika {minutes} za kutofanya shughuli.",
     "title": "Kikao na Kuingia kwa PIN"
+  },
+  "notificationSound": {
+    "soundSettings": "Sauti na mtetemo wa tahadhari",
+    "enabled": "Liwe la sauti wakati oda iko tayari",
+    "ringtone": "Sauti ya simu",
+    "vibration": "Tetemeka",
+    "test": "Jaribu sauti",
+    "hotel-bell": "Kengele ya hoteli",
+    "triple-chime": "Kengele tatu",
+    "double-ping": "Pigo mbili"
   }
 }

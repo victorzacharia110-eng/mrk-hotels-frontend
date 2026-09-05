@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { notificationApi } from '@/api'
 import { getEcho } from '@/plugins/echo'
 import { useAuthStore } from '@/stores/auth'
+import { useNotificationSettingsStore } from '@/stores/notificationSettings'
 
 export const useNotificationStore = defineStore('notifications', () => {
   const notifications = ref([])
@@ -12,6 +13,14 @@ export const useNotificationStore = defineStore('notifications', () => {
   const loading = ref(false)
   let pollingTimer = null
   let echoListener = null
+  let echoUserListener = null
+
+  /** Rings the device when the kitchen flags an order item ready. */
+  function ringReadyTone(event) {
+    const d = event?.data || {}
+    const key = d.order_id && d.item_id ? `${d.order_id}:${d.item_id}` : null
+    useNotificationSettingsStore().ring(key)
+  }
 
   /** True when a staff/portal session token exists — public visitors never poll. */
   function hasSession() {
@@ -115,7 +124,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     const echo = getEcho()
     if (!echo) return
 
-    // Leave any previous listener.
+    // Leave any previous listeners.
     stopEchoListener()
 
     echoListener = echo.private(`tenant.${tenantId}`)
@@ -127,13 +136,31 @@ export const useNotificationStore = defineStore('notifications', () => {
           alertCount.value++
         }
       })
+
+    // Personal channel: ring only the targeted staff member's device when the
+    // kitchen flags an order item as ready (the tenant broadcast reaches the
+    // whole hotel, so ringing happens here to avoid the kitchen hearing every
+    // item it marks).
+    const userId = authStore.user?.user_id
+    if (userId) {
+      echoUserListener = echo.private(`user.${userId}`)
+        .listen('.notification.created', (event) => {
+          if (event.type === 'order_item_ready') {
+            ringReadyTone(event)
+          }
+        })
+    }
   }
 
-  /** Stop the Echo listener. */
+  /** Stop the Echo listeners. */
   function stopEchoListener() {
     if (echoListener) {
       echoListener.stopListening('.notification.created')
       echoListener = null
+    }
+    if (echoUserListener) {
+      echoUserListener.stopListening('.notification.created')
+      echoUserListener = null
     }
   }
 

@@ -320,6 +320,12 @@
         </div>
         <div class="notif-panel-foot">
           <button class="btn btn-sm btn-secondary" @click="showNotifDropdown = false">{{ $t('common.close') }}</button>
+          <button type="button" class="btn btn-sm btn-sound" @click="showNotifSound = !showNotifSound">
+            <i class="fas fa-music"></i> {{ $t('notificationSound.soundSettings') }}
+          </button>
+        </div>
+        <div v-if="showNotifSound" class="notif-sound-wrap">
+          <NotificationSoundSettings />
         </div>
       </div>
     </div>
@@ -425,6 +431,8 @@ import { initEcho, destroyEcho } from '@/plugins/echo'
 import { joinPresence, leavePresence } from '@/composables/usePresence'
 import { useDistribution } from '@/composables/useDistribution'
 import { useNotificationStore } from '@/stores/notifications'
+import { useNotificationSettingsStore } from '@/stores/notificationSettings'
+import NotificationSoundSettings from '@/components/notification/NotificationSoundSettings.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -440,11 +448,15 @@ const navOpen = ref(false)
 // Staff drawer (hamburger menu) open state — collapsed by default.
 const sideOpen = ref(false)
 const showNotifDropdown = ref(false)
+const showNotifSound = ref(false)
+const notifSettingsStore = useNotificationSettingsStore()
+notifSettingsStore.load()
 
 /** Open/close the notification dropdown, refreshing counts and the list. */
 function toggleNotifDropdown() {
   showNotifDropdown.value = !showNotifDropdown.value
   if (showNotifDropdown.value) {
+    showNotifSound.value = false
     notifStore.fetchCounts()
     notifStore.fetchAlerts()
     notifStore.fetchNotifications({ per_page: 20 })
@@ -2140,6 +2152,22 @@ function formatNotifTime(iso) {
   padding: 10px 16px;
   border-top: 1px solid #e2e8f0;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.btn-sound {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #eff6ff;
+  color: #2563eb;
+}
+.btn-sound:hover {
+  background: #dbeafe;
+}
+.notif-sound-wrap {
+  padding: 0 16px 14px;
+  border-top: 1px dashed #e2e8f0;
 }
 </style>

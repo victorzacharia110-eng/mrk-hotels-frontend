@@ -49,10 +49,20 @@
           <input v-model="autoRefresh" type="checkbox" />
           {{ $t('kitchen.autoRefresh') }}
         </label>
+        <button type="button" class="oh-manage kb-sound" :title="$t('notificationSound.soundSettings')" @click="showSound = !showSound">
+          <i class="fas fa-music" aria-hidden="true"></i>
+        </button>
         <button type="button" class="oh-manage" aria-label="$t('orderTaker.refresh')" @click="load">
           <i class="fas fa-rotate" aria-hidden="true"></i>
         </button>
       </div>
+    </div>
+
+    <div v-if="showSound" class="kb-sound-pop">
+      <button type="button" class="kb-sound-close" :aria-label="$t('common.close')" @click="showSound = false">
+        <i class="fas fa-xmark" aria-hidden="true"></i>
+      </button>
+      <NotificationSoundSettings />
     </div>
 
     <p v-if="error" class="send-error">{{ error }}</p>
@@ -124,6 +134,8 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { orderApi } from '@/api'
+import { useNotificationSettingsStore } from '@/stores/notificationSettings'
+import NotificationSoundSettings from '@/components/notification/NotificationSoundSettings.vue'
 
 const { t } = useI18n()
 
@@ -133,6 +145,9 @@ const error = ref('')
 const busy = ref(null)
 const autoRefresh = ref(true)
 const department = ref('all')
+const showSound = ref(false)
+const notifSettingsStore = useNotificationSettingsStore()
+notifSettingsStore.load()
 let timer = null
 
 // Statuses that still need kitchen/runner attention; everything else leaves the board.
@@ -322,6 +337,36 @@ onUnmounted(() => clearInterval(timer))
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.kb-sound-pop {
+  position: relative;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+  padding: 14px;
+  margin-bottom: 12px;
+  z-index: 20;
+}
+
+.kb-sound-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.kb-sound-close:hover {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .kb-controls {
