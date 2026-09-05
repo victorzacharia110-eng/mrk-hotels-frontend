@@ -129,6 +129,11 @@
           {{ saving ? $t('common.saving') : $t('superadmin.updateSubscription') }}
         </button>
       </form>
+      <div v-if="effectiveMonthlyPrice !== null" class="negotiated-price">
+        <span class="negotiated-price-label">{{ $t('superadmin.effectiveMonthlyPrice') }}:</span>
+        <strong>TZS {{ effectiveMonthlyPrice.toLocaleString() }}/mo</strong>
+        <span class="negotiated-price-note">{{ $t('superadmin.negotiationHint') }}</span>
+      </div>
     </div>
 
     <!-- Feature flags: check/uncheck individual features for this tenant -->
@@ -363,6 +368,7 @@ const creatingOwner = ref(false)
 const selectedFeatures = ref([])
 const planFeatures = ref({})
 const planFeatureLabels = ref({})
+const planFeaturePrices = ref({})
 const planFeatureLabelsLoading = ref(true)
 
 // Options for the subscription plan / status selects and the assign-owner select
@@ -373,9 +379,10 @@ const ownerOptions = computed(() => [
 
 const planOptions = computed(() => [
   { value: 'trial', label: t('superadmin.planTrial') },
-  { value: 'basic', label: t('superadmin.planBasic') },
-  { value: 'premium', label: t('superadmin.planPremium') },
-  { value: 'enterprise', label: t('superadmin.planEnterprise') },
+  ...Object.values(planFeatures.value).map((p) => ({
+    value: p.slug,
+    label: `${p.label} — TZS ${Number(p.price_monthly || 0).toLocaleString()}/mo`,
+  })),
 ])
 
 const subscriptionStatusOptions = computed(() => [
@@ -390,6 +397,32 @@ const paymentForm = ref({ methods: defaultPaymentMethods(), accounts: emptyAccou
 
 // Feature toggle logic.
 const allFeatureKeys = computed(() => Object.keys(planFeatureLabels.value))
+
+// The plan currently selected in the subscription form (falls back to the
+// tenant's stored plan while plans are still loading).
+const currentPlan = computed(() => {
+  return (
+    planFeatures.value[subForm.value.subscription_plan] ||
+    planFeatures.value[tenant.value?.subscription_plan] ||
+    null
+  )
+})
+
+// Negotiation price: the selected plan's monthly price minus a credit for
+// every plan feature that is toggled OFF. Internal to the superadmin panel —
+// never shown to the client.
+const effectiveMonthlyPrice = computed(() => {
+  const plan = currentPlan.value
+  if (!plan) return null
+  const base = Number(plan.price_monthly || 0)
+  const credits = (plan.features || []).reduce((sum, feat) => {
+    if (!selectedFeatures.value.includes(feat)) {
+      return sum + Number(planFeaturePrices.value[feat] || 0)
+    }
+    return sum
+  }, 0)
+  return Math.max(0, base - credits)
+})
 
 const featureGroups = computed(() => {
   const coreOps = t('superadmin.coreOperations')
@@ -431,18 +464,20 @@ async function loadPlanFeatures() {
   planFeatureLabelsLoading.value = true
   try {
     const { data } = await planApi.index()
-    planFeatures.value = data.plans
-    planFeatureLabels.value = data.feature_labels
+    planFeatures.value = Object.fromEntries((data.plans || []).map((p) => [p.slug, p]))
+    planFeatureLabels.value = data.feature_labels || {}
+    planFeaturePrices.value = data.feature_prices || {}
   } catch { /* ignore */ }
   planFeatureLabelsLoading.value = false
 }
 
 function seedFeaturesFromTenant() {
-  // If tenant has explicit features, use them; otherwise use all from the plan.
+  // If tenant has explicit features, use them; otherwise use the plan's set.
   if (tenant.value?.features && tenant.value.features.length) {
     selectedFeatures.value = [...tenant.value.features]
   } else {
-    const planKey = tenant.value?.subscription_plan || 'enterprise'
+    const stored = tenant.value?.subscription_plan
+    const planKey = planFeatures.value[stored] ? stored : (stored === 'trial' ? 'starter' : 'enterprise')
     const planFeat = planFeatures.value[planKey]?.features || allFeatureKeys.value
     selectedFeatures.value = [...planFeat]
   }
@@ -1002,5 +1037,29 @@ onMounted(async () => {
   margin-top: 16px;
   font-size: 13px;
   color: #64748b;
+}
+
+.negotiated-price {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  font-size: 14px;
+  color: #334155;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.negotiated-price-label {
+  font-weight: 600;
+}
+
+.negotiated-price-note {
+  font-size: 12px;
+  color: #94a3b8;
+  width: 100%;
 }
 </style>

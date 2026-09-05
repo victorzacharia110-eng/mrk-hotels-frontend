@@ -218,7 +218,7 @@ const error = ref('')
  * @param {Object} hotel - The hotel row from the dashboard comparison table.
  */
 function openPanel(hotel) {
-  setOwnerHotel(hotel.tenant_id, hotel.hotel_name)
+  setOwnerHotel(hotel.tenant_id, hotel.hotel_name, hotel.features ?? null)
   // The owner browses a hotel's panel with hotel_admin-level visibility, whose
   // landing is the operational overview. Navigating to bare /app would hit the
   // stay-view dashboard module gate (front-desk roles only) and bounce the

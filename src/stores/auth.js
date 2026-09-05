@@ -10,6 +10,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi } from '@/api'
+import { ownerHotelFeatures } from '@/utils/ownerView'
 
 // Numeric seniority per role; `can(level)` checks against these.
 const ROLE_LEVELS = {
@@ -55,6 +56,17 @@ export const useAuthStore = defineStore('auth', () => {
   const roleLevel = computed(() => user.value?.role_level ?? ROLE_LEVELS[user.value?.user_role] ?? 0)
   // False for management roles, who observe rather than operate the front desk.
   const canOperate = computed(() => !['hotel_admin', 'manager'].includes(user.value?.user_role))
+
+  /**
+   * The subscription features enabled for the panel the user is looking at.
+   * Null means every feature is enabled (a tenant with no explicit feature
+   * override). For owners browsing a hotel this is the viewed hotel's feature
+   * list; for staff it is their own tenant's list.
+   */
+  const enabledFeatures = computed(() => {
+    if (user.value?.user_role === 'owner') return ownerHotelFeatures()
+    return user.value?.tenant?.features ?? null
+  })
 
   /**
    * Stores the login payload and persists the token.
@@ -182,7 +194,8 @@ export const useAuthStore = defineStore('auth', () => {
   /**
    * Role-based module access. A module is reachable when the user's role is in
    * its allow-list (an empty list means everyone) and any required permission
-   * is held. Superadmin bypasses the lists.
+   * is held, and — when the tenant's negotiated feature list is set — the
+   * module's subscription feature is enabled. Superadmin bypasses the lists.
    * @param {object} module - Module config from @/config/modules.
    * @returns {boolean}
    */
@@ -193,6 +206,9 @@ export const useAuthStore = defineStore('auth', () => {
     if (role === 'superadmin') return true
     if (module.roles.length && !module.roles.includes(role)) return false
     if (module.permission && !hasPermission(module.permission)) return false
+    // A null feature list means "all features enabled" (backward compatible).
+    const features = enabledFeatures.value
+    if (features && module.feature && !features.includes(module.feature)) return false
     return true
   }
 
@@ -218,6 +234,7 @@ export const useAuthStore = defineStore('auth', () => {
     isHotelAdmin,
     roleLevel,
     canOperate,
+    enabledFeatures,
     login,
     loginPin,
     logout,

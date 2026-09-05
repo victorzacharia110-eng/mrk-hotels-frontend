@@ -2961,6 +2961,8 @@
     "of": "of",
     "featuresEnabled": "features enabled",
     "allFeaturesActive": "(all features active by default)",
+    "effectiveMonthlyPrice": "Effective monthly price",
+    "negotiationHint": "Internal negotiation price — the plan price minus a credit for each feature toggled off. Never shown to the client.",
     "coreOperations": "Core Operations",
     "foodAndBeverage": "Food & Beverage",
     "operations": "Operations",
