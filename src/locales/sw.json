@@ -4139,7 +4139,16 @@
       "printerNotConnected": "Printer ya kukokota haijaunganishwa. Unganisha kuprint risiti kimya kimya.",
       "connectPrinter": "Unganisha Printer",
       "printerConnected": "Printer imeunganishwa kikamilifu.",
-      "connectFailed": "Imeshindwa kuunganisha printer."
+      "connectFailed": "Imeshindwa kuunganisha printer.",
+      "settleModeLabel": "Aina ya malipo",
+      "settleModeCollect": "Chukua malipo",
+      "settleModeRoom": "Tuma kwenye chumba",
+      "roomSelectLabel": "Chumba kilichokaliwa",
+      "roomPlaceholder": "Chagua chumba kilichokaliwa",
+      "roomNone": "Hakuna chumba kilichokaliwa sasa hivi.",
+      "roomPostHint": "Kiasi hicho kitakatwa kwenye folio ya chumba na kulipwa akiwa anakuja malipo ya muda wote wa kukaa.",
+      "roomPostConfirm": "Tuma Kwenye Chumba",
+      "roomPosted": "Agizo limetumwa kwenye folio ya chumba."
     },
     "printSettings": {
       "title": "Mipangilio ya Uchapishaji",

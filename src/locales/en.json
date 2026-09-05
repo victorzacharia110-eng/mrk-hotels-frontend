@@ -4139,7 +4139,16 @@
       "printerNotConnected": "Till printer not connected. Connect one to print receipts silently.",
       "connectPrinter": "Connect Printer",
       "printerConnected": "Printer connected successfully.",
-      "connectFailed": "Could not connect to the printer."
+      "connectFailed": "Could not connect to the printer.",
+      "settleModeLabel": "Settlement type",
+      "settleModeCollect": "Collect payment",
+      "settleModeRoom": "Post to room",
+      "roomSelectLabel": "In-house room",
+      "roomPlaceholder": "Select an occupied room",
+      "roomNone": "No occupied in-house rooms right now.",
+      "roomPostHint": "The amount is charged to the guest's room folio and settled at checkout.",
+      "roomPostConfirm": "Post to Room",
+      "roomPosted": "Order posted to the room folio."
     },
     "printSettings": {
       "title": "Print Settings",

@@ -116,30 +116,61 @@
         <p class="pay-amount">{{ money(payingOrder?.total_amount ?? 0) }}</p>
 
         <form @submit.prevent="confirmPay">
-          <PaymentMethodSelect
-            v-model:method="payMethod"
-            v-model:provider="payProvider"
-            :methods="PAYMENT_METHODS"
-            :disabled="savingPay"
-          />
-          <div v-if="needsRef" class="pay-ref">
-            <label :for="payRefId">{{ $t('cashier.summary.refLabel') }}</label>
-            <input
-              :id="payRefId"
-              v-model.trim="payRef"
-              type="text"
-              :placeholder="$t('cashier.summary.refPlaceholder')"
-              :disabled="savingPay"
-              maxlength="50"
-            />
+          <!-- Collect cash/mobile/bank, or post the ticket to an in-house room. -->
+          <div class="settle-mode" role="tablist" :aria-label="$t('cashier.summary.settleModeLabel')">
+            <button type="button" class="mode-btn" :class="{ active: settleMode === 'collect' }"
+              :disabled="savingPay" @click="switchMode('collect')">
+              <i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('cashier.summary.settleModeCollect') }}
+            </button>
+            <button type="button" class="mode-btn" :class="{ active: settleMode === 'room' }"
+              :disabled="savingPay" @click="switchMode('room')">
+              <i class="fas fa-bed" aria-hidden="true"></i> {{ $t('cashier.summary.settleModeRoom') }}
+            </button>
           </div>
+
+          <template v-if="settleMode === 'room'">
+            <div class="pay-room">
+              <label :for="roomPickId">{{ $t('cashier.summary.roomSelectLabel') }}</label>
+              <SearchableSelect
+                :id="roomPickId"
+                v-model="postRoom"
+                :options="roomOptions"
+                :placeholder="$t('cashier.summary.roomPlaceholder')"
+                :empty-label="$t('cashier.summary.roomNone')"
+                :disabled="savingPay"
+                required
+              />
+              <p class="room-post-hint"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.summary.roomPostHint') }}</p>
+            </div>
+          </template>
+          <template v-else>
+            <PaymentMethodSelect
+              v-model:method="payMethod"
+              v-model:provider="payProvider"
+              :methods="PAYMENT_METHODS"
+              :disabled="savingPay"
+            />
+            <div v-if="needsRef" class="pay-ref">
+              <label :for="payRefId">{{ $t('cashier.summary.refLabel') }}</label>
+              <input
+                :id="payRefId"
+                v-model.trim="payRef"
+                type="text"
+                :placeholder="$t('cashier.summary.refPlaceholder')"
+                :disabled="savingPay"
+                maxlength="50"
+              />
+            </div>
+          </template>
+
           <div class="pay-modal-foot">
             <button type="button" class="btn btn-secondary" :disabled="savingPay" @click="closePay">
               {{ $t('common.cancel') }}
             </button>
-            <button type="submit" class="btn btn-primary" :disabled="savingPay || needsRef && !payRef">
+            <button type="submit" class="btn btn-primary"
+              :disabled="savingPay || (settleMode === 'collect' && needsRef && !payRef) || (settleMode === 'room' && !postRoom)">
               <i class="fas fa-check"></i>
-              {{ savingPay ? $t('common.saving') : $t('cashier.summary.settleConfirm') }}
+              {{ savingPay ? $t('common.saving') : settleMode === 'room' ? $t('cashier.summary.roomPostConfirm') : $t('cashier.summary.settleConfirm') }}
             </button>
           </div>
         </form>
@@ -157,6 +188,7 @@ import { useI18n } from 'vue-i18n'
 import { cashierApi, orderApi, hotelSettingsApi } from '@/api'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
+import SearchableSelect from '@/components/SearchableSelect.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useAuthStore } from '@/stores/auth'
 import { PAYMENT_METHODS } from '@/utils/payments'
@@ -198,6 +230,18 @@ const payRef = ref('')
 const payRefId = `pay-ref-${Date.now()}`
 const savingPay = ref(false)
 const payError = ref('')
+
+/** "collect" takes cash/mobile/bank; "room" posts the ticket to a folio. */
+const settleMode = ref('collect')
+const rooms = ref([])
+const postRoom = ref('')
+const roomPickId = `room-pick-${Date.now()}`
+const roomOptions = computed(() =>
+  rooms.value.map((room) => ({
+    value: room.room_number,
+    label: `${room.room_number} — ${room.guest_name || ''}`,
+  })),
+)
 
 /** A bank transfer needs the statement reference to be recorded on the till. */
 const needsRef = computed(() => payMethod.value === 'bank')
@@ -297,7 +341,28 @@ function settle(order) {
   payMethod.value = 'cash'
   payProvider.value = ''
   payRef.value = ''
+  settleMode.value = 'collect'
+  postRoom.value = ''
   payOpen.value = true
+}
+
+/**
+ * Switches between collecting cash/mobile/bank and posting to a room,
+ * lazy-loading the in-house rooms the first time the room mode is opened.
+ */
+function switchMode(mode) {
+  if (mode === 'room' && !rooms.value.length) loadRooms()
+  settleMode.value = mode
+}
+
+/** Loads the in-house rooms the Room Service list uses (occupied rooms). */
+async function loadRooms() {
+  try {
+    const { data } = await orderApi.formOptions()
+    rooms.value = data.in_house_guests || []
+  } catch {
+    rooms.value = []
+  }
 }
 
 function closePay() {
@@ -307,11 +372,13 @@ function closePay() {
 }
 
 /**
- * Settles the ticket with the chosen method (cash, mobile money, bank, ...),
- * then prints the paid bill so the guest walks away with a receipt.
+ * Settles the ticket: either posts it to an in-house room folio, or collects
+ * the payment with the chosen method (cash, mobile money, bank, ...), then
+ * prints the paid bill so the guest walks away with a receipt.
  */
 async function confirmPay() {
   if (!payingOrder.value) return
+  if (settleMode.value === 'room') return confirmRoomPost()
   payError.value = ''
   savingPay.value = true
   try {
@@ -330,6 +397,32 @@ async function confirmPay() {
     payingOrder.value = null
     if (printStore.printOnSettle) doPrint(settled, 'receipt')
     await load()
+  } catch (err) {
+    payError.value = err.response?.data?.message || t('common.actionFailed')
+  } finally {
+    savingPay.value = false
+  }
+}
+
+/** Posts the ticket to the chosen in-house room; the charge lands on the folio. */
+async function confirmRoomPost() {
+  payError.value = ''
+  savingPay.value = true
+  try {
+    const { data } = await orderApi.billToRoom(payingOrder.value.order_id, {
+      room_number: postRoom.value,
+    })
+    const billed = data.order
+    if (!billed.items?.length) {
+      const { data: detail } = await orderApi.show(billed.order_id)
+      billed.items = detail.order.items
+    }
+    payOpen.value = false
+    payingOrder.value = null
+    postRoom.value = ''
+    if (printStore.printOnSettle) doPrint(billed, 'receipt')
+    await load()
+    toast(t('cashier.summary.roomPosted'), 'success')
   } catch (err) {
     payError.value = err.response?.data?.message || t('common.actionFailed')
   } finally {
@@ -502,5 +595,65 @@ onMounted(() => {
   outline: none;
   border-color: #1e7e34;
   box-shadow: 0 0 0 3px rgba(30, 126, 52, 0.12);
+}
+
+.settle-mode {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #d4d4d4;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  color: #424242;
+  cursor: pointer;
+}
+
+.mode-btn:hover {
+  border-color: #1e7e34;
+}
+
+.mode-btn.active {
+  background: #eafaf1;
+  border-color: #1e7e34;
+  color: #1e7e34;
+}
+
+.mode-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pay-room {
+  margin-top: 14px;
+}
+
+.pay-room label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #424242;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+}
+
+.room-post-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #757575;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 </style>
