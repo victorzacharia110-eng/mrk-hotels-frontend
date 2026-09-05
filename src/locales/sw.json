@@ -1498,6 +1498,7 @@
     "bulkDeletePartial": "Imefutwa {failed} kati ya {tried} bidhaa zilizochaguliwa.",
     "adjustmentType": "Aina ya marekebisho",
     "noCategory": "Hakuna kitengo",
+    "totals": "Jumla",
     "searchItems": "Tafuta bidhaa zilizosajiliwa...",
     "selectItem": "Chagua bidhaa"
   },

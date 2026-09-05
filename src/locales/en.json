@@ -1499,7 +1499,8 @@
     "bulkDeleteSuccess": "{count} items deleted successfully.",
     "bulkDeletePartial": "Deleted {failed} of {tried} selected items.",
     "adjustmentType": "Adjustment type",
-    "noCategory": "No category"
+    "noCategory": "No category",
+    "totals": "Totals"
   },
   "departments": {
     "title": "Departments",
