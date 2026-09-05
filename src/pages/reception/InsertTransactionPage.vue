@@ -100,7 +100,8 @@
       <!-- Posted transactions for this date -->
       <div class="card" style="padding: 20px; align-self: start;">
         <h3 style="margin: 0 0 16px;"><i class="fas fa-list" style="color: var(--mrk-blue);"></i> {{ $t('nightAudit.postedTransactions') }}</h3>
-        <div v-if="!transactions.length" class="muted" style="text-align: center; padding: 20px;">
+        <SkeletonLoader v-if="loading" variant="table" :count="4" :cols="4" />
+        <div v-else-if="!transactions.length" class="muted" style="text-align: center; padding: 20px;">
           {{ $t('nightAudit.noTransactions') }}
         </div>
         <table v-else class="table">
@@ -146,6 +147,7 @@ import { ref, computed, onMounted } from 'vue'
 import { nightAuditApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const { t } = useI18n()
 

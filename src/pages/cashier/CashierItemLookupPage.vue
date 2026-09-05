@@ -20,7 +20,8 @@
         <div class="tree-body">
           <input v-model="search" type="search" class="sm-input full-width"
             :placeholder="$t('cashier.lookup.searchCategory')" />
-          <div class="cat-tree">
+          <SkeletonLoader v-if="loading" variant="tree" :count="9" />
+          <div v-else class="cat-tree">
             <div v-for="(itemsInCat, cat) in groupedItems" :key="cat" class="cat-group">
               <button class="cat-toggle" @click="toggleCat(cat)">
                 <i :class="collapsed.has(cat) ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" aria-hidden="true"></i>
@@ -44,7 +45,8 @@
           <span class="item-count">{{ items.length }} {{ $t('cashier.lookup.items') }}</span>
         </div>
         <div class="table-scroll">
-        <table class="sm-table">
+        <SkeletonLoader v-if="loading" variant="table" :count="7" :cols="8" />
+        <table class="sm-table" v-else>
           <thead>
             <tr>
               <th>{{ $t('cashier.lookup.name') }}</th>
@@ -84,10 +86,12 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { menuItemApi } from '@/api'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const { t } = useI18n()
 
 const items = ref([])
+const loading = ref(true)
 const department = ref('')
 const search = ref('')
 const collapsed = ref(new Set())
@@ -131,10 +135,15 @@ function money(value) {
 }
 
 async function load() {
-  const params = { per_page: 100 }
-  if (department.value) params.department = department.value
-  const { data } = await menuItemApi.index(params)
-  items.value = data.data || data
+  loading.value = true
+  try {
+    const params = { per_page: 100 }
+    if (department.value) params.department = department.value
+    const { data } = await menuItemApi.index(params)
+    items.value = data.data || data
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(load)

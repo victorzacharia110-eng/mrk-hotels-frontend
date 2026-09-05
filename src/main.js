@@ -12,6 +12,7 @@ import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 
 import '@fortawesome/fontawesome-free/css/all.min.css'
 import './assets/base.css'
+import './assets/skeleton.css'
 
 import App from './App.vue'
 import router from './router'

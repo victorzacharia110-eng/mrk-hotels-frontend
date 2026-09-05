@@ -15,7 +15,8 @@
         </button>
       </div>
       <div class="table-scroll">
-      <table class="sm-table">
+      <SkeletonLoader v-if="loading" variant="table" :count="5" :cols="5" />
+      <table class="sm-table" v-else>
         <thead>
           <tr>
             <th>{{ $t('cashier.summary.order') }}</th>
@@ -51,8 +52,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { orderApi } from '@/api'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const orders = ref([])
+const loading = ref(true)
 const showModal = ref(true) // auto-open: the nav click lands here to get the modal
 
 const knownAccounts = computed(() =>
@@ -64,8 +67,13 @@ function money(value) {
 }
 
 async function load() {
-  const { data } = await orderApi.index({ order_type: 'no_charge', per_page: 100 })
-  orders.value = data.data || []
+  loading.value = true
+  try {
+    const { data } = await orderApi.index({ order_type: 'no_charge', per_page: 100 })
+    orders.value = data.data || []
+  } finally {
+    loading.value = false
+  }
 }
 
 function onCreated() {

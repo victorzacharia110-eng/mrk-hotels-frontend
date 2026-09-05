@@ -10,14 +10,15 @@
     </header>
 
     <!-- Summary -->
-    <div class="summary-grid" v-if="summary">
+    <SkeletonLoader v-if="loading" variant="kpi" :count="3" class="sk-summary" />
+    <div class="summary-grid" v-else-if="summary">
       <div class="summary-card"><span class="label">Total Charges</span><span class="value">TZS {{ Number(summary.total_charges).toLocaleString() }}</span></div>
       <div class="summary-card"><span class="label">Total Paid</span><span class="value value--green">TZS {{ Number(summary.total_payments).toLocaleString() }}</span></div>
       <div class="summary-card summary-card--balance"><span class="label">Balance Due</span><span class="value" :class="{ 'value--red': summary.balance > 0 }">TZS {{ Number(summary.balance).toLocaleString() }}</span></div>
     </div>
 
     <!-- Line items -->
-    <section class="card">
+    <section v-if="!loading" class="card">
       <table v-if="folio.length" class="folio-table">
         <thead><tr><th>Date</th><th>Description</th><th>Type</th><th class="amount-col">Amount</th></tr></thead>
         <tbody>
@@ -33,6 +34,9 @@
       </table>
       <p v-else class="empty">No charges or payments yet.</p>
     </section>
+    <section v-else class="card">
+      <SkeletonLoader variant="table" :count="5" :cols="4" />
+    </section>
   </div>
 </template>
 
@@ -40,6 +44,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { guestPortalApi } from '@/api'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const router = useRouter()
 const loading = ref(true)
@@ -99,6 +104,8 @@ onMounted(async () => {
 .type-pill--payment { background: #d1fae5; color: #059669; }
 
 .empty { text-align: center; color: #9ca3af; padding: 40px; }
+
+.sk-summary { margin-bottom: 24px; }
 
 @media (max-width: 720px) {
   .summary-grid { grid-template-columns: 1fr; }

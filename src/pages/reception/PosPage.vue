@@ -25,7 +25,8 @@
         <form @submit.prevent="submitCharge">
           <div class="form-group">
             <label>{{ $t('receptionPanel.selectRoom') }} *</label>
-            <select v-model="form.reservation_id" class="input" required>
+            <SkeletonLoader v-if="loading" variant="list" :count="3" />
+            <select v-else v-model="form.reservation_id" class="input" required>
               <option :value="null" disabled>{{ $t('receptionPanel.chooseHouseGuest') }}</option>
               <option v-for="r in inHouse" :key="r.reservation_id" :value="r.reservation_id">
                 {{ r.guest_name }} · {{ r.room?.room_number || r.room_number || '' }} · TZS {{ r.balance_due }}
@@ -65,6 +66,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { reservationApi } from '@/api'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const { t } = useI18n()
 

@@ -22,7 +22,8 @@
 
     <section class="panel">
       <div class="table-scroll">
-      <table class="sm-table">
+      <SkeletonLoader v-if="loading" variant="table" :count="6" :cols="7" />
+      <table class="sm-table" v-else>
         <thead>
           <tr>
             <th>{{ $t('cashier.summary.order') }}</th>
@@ -62,10 +63,12 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { orderApi } from '@/api'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const { t, te } = useI18n()
 
 const orders = ref([])
+const loading = ref(true)
 const activeTab = ref('all')
 const showModal = ref(false)
 
@@ -108,8 +111,13 @@ function money(value) {
 }
 
 async function load() {
-  const { data } = await orderApi.index({ order_type: 'delivery', per_page: 100 })
-  orders.value = data.data || []
+  loading.value = true
+  try {
+    const { data } = await orderApi.index({ order_type: 'delivery', per_page: 100 })
+    orders.value = data.data || []
+  } finally {
+    loading.value = false
+  }
 }
 
 function onCreated() {

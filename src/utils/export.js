@@ -173,7 +173,6 @@ export function exportExcel(filename, rows, columns, sheetName = 'Data', options
   if (!cols.length) return
   const aoa = []
   let nameRow = -1
-  let headerRow = -1
   if (options.header?.name) {
     const lines = buildHeaderLines(options.header)
     lines.forEach((line, i) => {
@@ -185,7 +184,7 @@ export function exportExcel(filename, rows, columns, sheetName = 'Data', options
     aoa.push([])
   }
   aoa.push(cols.map((c) => c.label))
-  headerRow = aoa.length - 1
+  const headerRow = aoa.length - 1
   for (const row of rows) {
     aoa.push(cols.map((c) => cellValue(row, c.key)))
   }

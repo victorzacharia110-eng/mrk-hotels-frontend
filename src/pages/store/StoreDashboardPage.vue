@@ -7,26 +7,31 @@
   <div class="sm-page">
     <!-- KPI cards -->
     <section class="kpi-grid">
-      <div class="kpi-card">
-        <span class="kpi-icon blue"><i class="fas fa-boxes-stacked"></i></span>
-        <div><strong>{{ stats.totalItems }}</strong><small>{{ $t('storeManager.dashboard.totalItems') }}</small></div>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-icon red"><i class="fas fa-triangle-exclamation"></i></span>
-        <div><strong>{{ lowStock.length }}</strong><small>{{ $t('storeManager.dashboard.lowStock') }}</small></div>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-icon amber"><i class="fas fa-file-signature"></i></span>
-        <div><strong>{{ stats.pendingRequisitions }}</strong><small>{{ $t('storeManager.dashboard.pendingRequisitions') }}</small></div>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-icon green"><i class="fas fa-file-invoice"></i></span>
-        <div><strong>{{ stats.openOrders }}</strong><small>{{ $t('storeManager.dashboard.openPurchaseOrders') }}</small></div>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-icon navy"><i class="fas fa-coins"></i></span>
-        <div><strong>TZS {{ stats.stockValue.toLocaleString() }}</strong><small>{{ $t('storeManager.dashboard.stockValue') }}</small></div>
-      </div>
+      <template v-if="loading">
+        <div v-for="n in 5" :key="'kpi-' + n" class="sk sk-kpi" style="height: 62px"></div>
+      </template>
+      <template v-else>
+        <div class="kpi-card">
+          <span class="kpi-icon blue"><i class="fas fa-boxes-stacked"></i></span>
+          <div><strong>{{ stats.totalItems }}</strong><small>{{ $t('storeManager.dashboard.totalItems') }}</small></div>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-icon red"><i class="fas fa-triangle-exclamation"></i></span>
+          <div><strong>{{ lowStock.length }}</strong><small>{{ $t('storeManager.dashboard.lowStock') }}</small></div>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-icon amber"><i class="fas fa-file-signature"></i></span>
+          <div><strong>{{ stats.pendingRequisitions }}</strong><small>{{ $t('storeManager.dashboard.pendingRequisitions') }}</small></div>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-icon green"><i class="fas fa-file-invoice"></i></span>
+          <div><strong>{{ stats.openOrders }}</strong><small>{{ $t('storeManager.dashboard.openPurchaseOrders') }}</small></div>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-icon navy"><i class="fas fa-coins"></i></span>
+          <div><strong>TZS {{ stats.stockValue.toLocaleString() }}</strong><small>{{ $t('storeManager.dashboard.stockValue') }}</small></div>
+        </div>
+      </template>
     </section>
 
     <!-- Quick actions -->
@@ -45,7 +50,8 @@
           <router-link :to="{ name: 'store-inventory', query: { filter: 'low' } }" class="panel-link">{{ $t('common.viewAll') }}</router-link>
         </header>
         <div class="table-scroll">
-        <table class="sm-table" v-if="lowStock.length">
+        <SkeletonLoader v-if="loading" variant="table" :count="4" :cols="4" />
+        <table class="sm-table" v-else-if="lowStock.length">
           <thead><tr><th>{{ $t('inventory.itemName') }}</th><th>{{ $t('inventory.category') }}</th><th>{{ $t('inventory.inStock') }}</th><th>{{ $t('inventory.reorderLevel') }}</th></tr></thead>
           <tbody>
             <tr v-for="item in lowStock" :key="item.item_id">
@@ -67,7 +73,8 @@
           <router-link :to="{ name: 'store-requisitions', query: { status: 'pending' } }" class="panel-link">{{ $t('common.viewAll') }}</router-link>
         </header>
         <div class="table-scroll">
-        <table class="sm-table" v-if="pendingReqs.length">
+        <SkeletonLoader v-if="loading" variant="table" :count="4" :cols="4" />
+        <table class="sm-table" v-else-if="pendingReqs.length">
           <thead><tr><th>{{ $t('requisitions.number') }}</th><th>{{ $t('requisitions.department') }}</th><th>{{ $t('requisitions.items') }}</th><th>{{ $t('common.date') }}</th></tr></thead>
           <tbody>
             <tr v-for="req in pendingReqs" :key="req.requisition_id">
@@ -90,7 +97,8 @@
         <router-link :to="{ name: 'store-goods-received' }" class="panel-link">{{ $t('common.viewAll') }}</router-link>
       </header>
       <div class="table-scroll">
-        <table class="sm-table" v-if="recentGrns.length">
+        <SkeletonLoader v-if="loading" variant="table" :count="4" :cols="5" />
+        <table class="sm-table" v-else-if="recentGrns.length">
         <thead><tr><th>{{ $t('goodsReceived.number') }}</th><th>{{ $t('goodsReceived.purchaseOrder') }}</th><th>{{ $t('goodsReceived.supplier') }}</th><th>{{ $t('goodsReceived.receivedDate') }}</th><th>{{ $t('goodsReceived.inspection') }}</th></tr></thead>
         <tbody>
           <tr v-for="grn in recentGrns" :key="grn.grn_id">
@@ -111,7 +119,9 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { inventoryApi, purchaseRequisitionApi, purchaseOrderApi, goodsReceivedNoteApi } from '@/api'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
+const loading = ref(true)
 const items = ref([])
 const requisitions = ref([])
 const orders = ref([])
@@ -136,6 +146,7 @@ function formatDate(d) {
 }
 
 onMounted(async () => {
+  loading.value = true
   const [inv, req, po, grn] = await Promise.allSettled([
     inventoryApi.index({ per_page: 100 }),
     purchaseRequisitionApi.index({ per_page: 50 }),
@@ -146,5 +157,6 @@ onMounted(async () => {
   if (req.status === 'fulfilled') requisitions.value = req.value.data.data || req.value.data || []
   if (po.status === 'fulfilled') orders.value = po.value.data.data || po.value.data || []
   if (grn.status === 'fulfilled') grns.value = grn.value.data.data || grn.value.data || []
+  loading.value = false
 })
 </script>

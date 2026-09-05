@@ -35,7 +35,8 @@
 
     <section class="panel">
       <div class="table-scroll">
-      <table class="sm-table">
+      <SkeletonLoader v-if="loading" variant="table" :count="8" :cols="7" />
+      <table class="sm-table" v-else>
         <thead>
           <tr>
             <th>{{ $t('cashier.summary.order') }}</th>
@@ -156,6 +157,7 @@ import { useI18n } from 'vue-i18n'
 import { cashierApi, orderApi, hotelSettingsApi } from '@/api'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useAuthStore } from '@/stores/auth'
 import { PAYMENT_METHODS } from '@/utils/payments'
 import { restorePrinter, printerState, connectPrinter, printerSupported } from '@/utils/printer'
@@ -179,6 +181,7 @@ async function loadLogo() {
 }
 
 const orders = ref([])
+const loading = ref(true)
 const error = ref('')
 const date = ref(new Date().toISOString().slice(0, 10))
 const search = ref('')
@@ -261,8 +264,15 @@ function money(value) {
 }
 
 async function load() {
-  const { data } = await orderApi.index({ date: date.value, per_page: 100 })
-  orders.value = data.data || []
+  loading.value = true
+  try {
+    const { data } = await orderApi.index({ date: date.value, per_page: 100 })
+    orders.value = data.data || []
+  } catch (err) {
+    error.value = err.response?.data?.message || t('common.loadError')
+  } finally {
+    loading.value = false
+  }
 }
 
 async function freeze(order) {

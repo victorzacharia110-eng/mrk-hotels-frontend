@@ -46,7 +46,8 @@
     <!-- Existing requests -->
     <section class="card" style="margin-top:20px;">
       <h2>My Requests</h2>
-      <p v-if="!requests.length" class="empty">No requests yet. Submit one above.</p>
+      <SkeletonLoader v-if="listLoading" variant="cards" :count="3" :cols="2" />
+      <p v-else-if="!requests.length" class="empty">No requests yet. Submit one above.</p>
       <ul v-else class="requests-list">
         <li v-for="r in requests" :key="r.id" class="request-item">
           <div class="request-head">
@@ -65,9 +66,11 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { guestPortalApi } from '@/api'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const router = useRouter()
 const loading = ref(false)
+const listLoading = ref(true)
 const error = ref(null)
 const requests = ref([])
 
@@ -105,6 +108,8 @@ onMounted(async () => {
       sessionStorage.removeItem('guest_token')
       router.push({ name: 'guest-login' })
     }
+  } finally {
+    listLoading.value = false
   }
 })
 </script>

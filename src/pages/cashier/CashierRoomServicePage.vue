@@ -14,7 +14,8 @@
           <input v-model="search" type="search" :placeholder="$t('common.search')" />
         </div>
       </div>
-      <table class="sm-table">
+      <SkeletonLoader v-if="loading" variant="table" :count="6" :cols="4" />
+      <table class="sm-table" v-else>
         <thead>
           <tr>
             <th>{{ $t('cashier.roomService.room') }}</th>
@@ -53,10 +54,12 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { orderApi } from '@/api'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const { t } = useI18n()
 
 const guests = ref([])
+const loading = ref(true)
 const search = ref('')
 const activeGuest = ref(null)
 
@@ -76,8 +79,13 @@ function onCreated(order) {
 }
 
 onMounted(async () => {
-  const { data } = await orderApi.formOptions()
-  guests.value = (data.in_house_guests || []).map((g) => ({ ...g }))
+  loading.value = true
+  try {
+    const { data } = await orderApi.formOptions()
+    guests.value = (data.in_house_guests || []).map((g) => ({ ...g }))
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 

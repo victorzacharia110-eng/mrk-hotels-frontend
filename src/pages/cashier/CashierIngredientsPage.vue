@@ -21,7 +21,8 @@
         <div class="tree-body">
           <input v-model="menuSearch" type="search" class="sm-input full-width"
             :placeholder="$t('cashier.lookup.searchCategory')" />
-          <div class="cat-tree">
+          <SkeletonLoader v-if="loadingMenu" variant="tree" :count="9" />
+          <div v-else class="cat-tree">
             <div v-for="(itemsInCat, cat) in groupedMenuItems" :key="cat" class="cat-group">
               <button class="cat-toggle" @click="toggleCat(cat)">
                 <i :class="collapsed.has(cat) ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" aria-hidden="true"></i>
@@ -148,12 +149,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { menuItemApi, cashierApi, menuItemIngredientApi } from '@/api/index.js'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const { t } = useI18n()
 const money = (v) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'TZS' }).format(v || 0)
 
 /* ── Menu items ────────────────────────────────────────── */
 const menuItems = ref([])
+const loadingMenu = ref(true)
 const department = ref('')
 const menuSearch = ref('')
 const collapsed = ref(new Set())
@@ -179,16 +182,21 @@ function toggleCat(cat) {
 }
 
 async function loadMenuItems() {
-  const params = { per_page: 100 }
-  if (department.value) params.department = department.value
-  const { data } = await menuItemApi.index(params)
-  menuItems.value = (data.data || data).map(i => ({ ...i, _ingredientCount: 0 }))
-  // Load ingredient counts in batch
-  for (const item of menuItems.value) {
-    try {
-      const res = await menuItemIngredientApi.index(item.menu_item_id)
-      item._ingredientCount = (res.data.ingredients || []).length
-    } catch { /* skip */ }
+  loadingMenu.value = true
+  try {
+    const params = { per_page: 100 }
+    if (department.value) params.department = department.value
+    const { data } = await menuItemApi.index(params)
+    menuItems.value = (data.data || data).map(i => ({ ...i, _ingredientCount: 0 }))
+    // Load ingredient counts in batch
+    for (const item of menuItems.value) {
+      try {
+        const res = await menuItemIngredientApi.index(item.menu_item_id)
+        item._ingredientCount = (res.data.ingredients || []).length
+      } catch { /* skip */ }
+    }
+  } finally {
+    loadingMenu.value = false
   }
 }
 
