@@ -3541,6 +3541,7 @@
     "ledgerError": "Failed to build the report.",
     "resNo": "Res. No.",
     "balance": "Balance",
+    "searchRoom": "Search room...",
     "tabs": {
       "folio": "Folio Operations",
       "booking": "Booking Details",

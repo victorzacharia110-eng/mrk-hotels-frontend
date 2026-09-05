@@ -618,11 +618,12 @@
             <div class="sv-modal-body">
               <label class="sv-field">
                 <span>{{ $t('stayview.room') }}</span>
-                <select v-model="amendForm.room_id" class="input" required>
-                  <option v-for="room in rooms" :key="room.room_id" :value="room.room_id">
-                    {{ room.room_number }} · {{ roomTypeLabel(room.room_type) }} · TZS {{ formatPrice(room.price_per_night) }}
-                  </option>
-                </select>
+                <SearchableSelect
+                  v-model="amendForm.room_id"
+                  :options="roomMoveOptions"
+                  :search-placeholder="$t('stayview.searchRoom')"
+                  force-search
+                />
               </label>
               <div class="sv-field-row">
                 <label class="sv-field">
@@ -1783,6 +1784,15 @@ async function submitCharge() {
 const amendModal = ref(false)
 const amendIsRoomMove = ref(false)
 const amendForm = ref({})
+
+/** Rooms as searchable options for the amend/room-move picker. */
+const roomMoveOptions = computed(() =>
+  rooms.value.map((room) => ({
+    value: room.room_id,
+    label: `${room.room_number} · ${roomTypeLabel(room.room_type)} · TZS ${formatPrice(room.price_per_night)}`,
+  })),
+)
+
 function openAmendModal(roomMove = false) {
   moreOpen.value = false
   const res = folio.value?.reservation || activeBar.value || {}
