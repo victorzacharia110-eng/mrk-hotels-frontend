@@ -60,6 +60,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { hotelSettingsApi } from '@/api'
 import { exportCSV, exportExcel, exportPDF } from '@/utils/export'
 
 const props = defineProps({
@@ -80,6 +81,35 @@ const busy = ref(false)
 const busyLabel = ref('')
 const error = ref('')
 const trigger = ref(null)
+
+// Official hotel details printed above the exported table (fetched once).
+let officialHeader = null
+let headerPromise = null
+async function getOfficialHeader() {
+  if (officialHeader) return officialHeader
+  if (headerPromise) return headerPromise
+  headerPromise = hotelSettingsApi
+    .show()
+    .then((res) => {
+      const h = res.data?.hotel || res.data?.data || {}
+      officialHeader = {
+        name: h.hotel_name || '',
+        address: h.address || '',
+        city: h.city || '',
+        country: h.country || '',
+        phone: h.phone || '',
+        email: h.email || '',
+        tin: h.tin || '',
+        vrn: h.vrn || '',
+      }
+      return officialHeader
+    })
+    .catch(() => {
+      officialHeader = {}
+      return officialHeader
+    })
+  return headerPromise
+}
 
 /**
  * Toggles the menu and moves focus to the first item on open so keyboard
@@ -110,9 +140,9 @@ async function doExport(kind) {
       error.value = t('common.noData')
       return
     }
-    if (kind === 'csv') exportCSV(props.filename, data, props.columns)
-    else if (kind === 'xlsx') exportExcel(props.filename, data, props.columns)
-    else exportPDF(props.filename, data, props.columns, props.title)
+    if (kind === 'csv') exportCSV(props.filename, data, props.columns, { header: await getOfficialHeader(), title: props.title })
+    else if (kind === 'xlsx') exportExcel(props.filename, data, props.columns, 'Data', { header: await getOfficialHeader(), title: props.title })
+    else exportPDF(props.filename, data, props.columns, props.title, { header: await getOfficialHeader() })
     emit('exported', kind)
   } catch (err) {
     error.value = err.response?.data?.message || err.message || t('common.actionFailed')

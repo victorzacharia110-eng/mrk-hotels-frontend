@@ -198,4 +198,118 @@ describe('export functions', () => {
     expect(text).toContain('Room Number')
     expect(text).not.toContain('Tenant Id')
   })
+
+  it('humanizes snake_case statuses so no underscores reach the file', async () => {
+    const { exportCSV } = await import('@/utils/export')
+    const { saveBlob } = await import('@/utils/download')
+    vi.mocked(saveBlob).mockClear()
+    const rows = [{ payment_status: 'billed_to_room', service: 'dry_clean', room_status: 'checked_in' }]
+    exportCSV('orders', rows, [
+      { key: 'payment_status', label: 'Payment' },
+      { key: 'service', label: 'Service' },
+      { key: 'room_status', label: 'Room' },
+    ])
+    const [blob] = saveBlob.mock.calls[0]
+    const text = await blob.text()
+    expect(text).toContain('Billed To Room')
+    expect(text).toContain('Dry Clean')
+    expect(text).toContain('Checked In')
+    expect(text).not.toContain('_')
+  })
+
+  it('does not humanize ordinary text fields that merely contain underscores', async () => {
+    const { exportCSV } = await import('@/utils/export')
+    const { saveBlob } = await import('@/utils/download')
+    vi.mocked(saveBlob).mockClear()
+    const rows = [{ notes: 'shirt_washing urgent', guest_name: 'JANE_DOE' }]
+    exportCSV('orders', rows, [
+      { key: 'notes', label: 'Notes' },
+      { key: 'guest_name', label: 'Guest' },
+    ])
+    const [blob] = saveBlob.mock.calls[0]
+    const text = await blob.text()
+    expect(text).toContain('shirt_washing urgent')
+    expect(text).toContain('JANE_DOE')
+  })
+
+  it('prepends official hotel details above the CSV table', async () => {
+    const { exportCSV } = await import('@/utils/export')
+    const { saveBlob } = await import('@/utils/download')
+    vi.mocked(saveBlob).mockClear()
+    const header = {
+      name: 'MRK Grand Hotel',
+      address: 'Zanzibar Road',
+      city: 'Dodoma',
+      country: 'Tanzania',
+      phone: '+255 000 000 000',
+      email: 'info@mrk.tz',
+      tin: '123-456-789',
+      vrn: '40-012345-6',
+    }
+    const rows = [{ order_number: 'LND-001', payment_status: 'billed_to_room' }]
+    exportCSV('laundry', rows, [
+      { key: 'order_number', label: 'Order' },
+      { key: 'payment_status', label: 'Payment' },
+    ], { header, title: 'Laundry Orders' })
+    const [blob] = saveBlob.mock.calls[0]
+    const text = await blob.text()
+    expect(text).toContain('MRK GRAND HOTEL')
+    expect(text).toContain('Zanzibar Road, Dodoma, Tanzania')
+    expect(text).toContain('Tel: +255 000 000 000')
+    expect(text).toContain('TIN: 123-456-789 | VRN: 40-012345-6')
+    expect(text).toContain('Report: Laundry Orders')
+    expect(text).toContain('Generated:')
+    const orderLine = text.indexOf('LND-001')
+    const headerLine = text.indexOf('MRK GRAND HOTEL')
+    expect(headerLine).toBeGreaterThan(-1)
+    expect(orderLine).toBeGreaterThan(headerLine)
+    expect(text).not.toContain('_')
+  })
+
+  it('prepends official hotel details above the Excel sheet', async () => {
+    const { exportExcel } = await import('@/utils/export')
+    const { saveBlob } = await import('@/utils/download')
+    vi.mocked(saveBlob).mockClear()
+    const header = {
+      name: 'MRK Grand Hotel',
+      address: 'Zanzibar Road',
+      city: 'Dodoma',
+      tin: '123-456-789',
+      vrn: '40-012345-6',
+    }
+    const rows = [{ id: 1, payment_status: 'unpaid' }]
+    exportExcel('report', rows, [
+      { key: 'id', label: 'ID' },
+      { key: 'payment_status', label: 'Payment' },
+    ], 'Laundry', { header, title: 'Laundry Report' })
+    expect(saveBlob).toHaveBeenCalledTimes(1)
+
+    const { saveBlob: download } = await import('@/utils/download')
+    const [blob] = download.mock.calls[0]
+    const XLSX = await import('xlsx')
+    const buf = await blob.arrayBuffer()
+    const wb = XLSX.read(buf)
+    const ws = wb.Sheets[wb.SheetNames[0]]
+    const rowsOut = XLSX.utils.sheet_to_json(ws, { header: 1 })
+    expect(rowsOut[0][0]).toBe('MRK GRAND HOTEL')
+    expect(rowsOut[1][0]).toBe('Zanzibar Road, Dodoma')
+    expect(rowsOut[2][0]).toContain('TIN: 123-456-789')
+    expect(rowsOut[3][0]).toBe('Report: Laundry Report')
+    expect(rowsOut[4][0]).toContain('Generated:')
+    expect(rowsOut[6][0]).toBe('ID')
+    expect(rowsOut[7][0]).toBe('1')
+    expect(rowsOut[7][1]).toBe('Unpaid')
+  })
+
+  it('without a header block the export outputs only the table', async () => {
+    const { exportCSV } = await import('@/utils/export')
+    const { saveBlob } = await import('@/utils/download')
+    vi.mocked(saveBlob).mockClear()
+    const rows = [{ order_number: 'LND-001' }]
+    exportCSV('laundry', rows, [{ key: 'order_number', label: 'Order' }])
+    const [blob] = saveBlob.mock.calls[0]
+    const text = await blob.text()
+    expect(text.startsWith('"MRK GRAND HOTEL"')).toBe(false)
+    expect(text.startsWith('"Order"')).toBe(true)
+  })
 })

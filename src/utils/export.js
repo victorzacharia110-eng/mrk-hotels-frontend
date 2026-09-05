@@ -18,9 +18,40 @@ const NOISE_KEYS = new Set(['tenant_id', 'created_at', 'updated_at', 'deleted_at
 // Field names that carry a record's primary display label.
 const NAME_KEYS = ['item_name', 'name', 'full_name', 'label', 'title', 'room_number', 'order_number', 'first_name', 'last_name']
 
-/** True for technical identity/audit keys that should stay out of cells. */
+// True for technical identity/audit keys that should stay out of cells.
 function isNoiseKey(key) {
   return NOISE_KEYS.has(key) || key.startsWith('_')
+}
+
+// Columns whose values are state/enum codes and must be written as plain words
+// ("billed_to_room" should read "Billed To Room", never with underscores).
+const ENUM_KEY_PATTERN = /(^|_)(status|payment_status|service|type|source)(_|$)/
+
+/**
+ * Renders a snake_case enum/status code as readable words:
+ * "billed_to_room" -> "Billed To Room", "dry_clean" -> "Dry Clean".
+ */
+function humanizeEnum(key, value) {
+  if (!ENUM_KEY_PATTERN.test(key) || typeof value !== 'string') return readableCell(value)
+  return String(value)
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+/** Builds the official hotel header lines for the top of an export. */
+function buildHeaderLines(header) {
+  if (!header?.name) return []
+  const lines = [String(header.name).toUpperCase()]
+  const address = [header.address, header.city, header.country].filter(Boolean).join(', ')
+  if (address) lines.push(address)
+  const contacts = []
+  if (header.phone) contacts.push(`Tel: ${header.phone}`)
+  if (header.email) contacts.push(`Email: ${header.email}`)
+  if (header.tin) contacts.push(`TIN: ${header.tin}`)
+  if (header.vrn) contacts.push(`VRN: ${header.vrn}`)
+  if (contacts.length) lines.push(contacts.join(' | '))
+  return lines
 }
 
 /** Picks the primary displayable label from a record, or null. */
@@ -73,7 +104,7 @@ function recordText(record) {
 
 /** Reads a cell value out of a row as human-readable text. */
 function cellValue(row, key) {
-  return readableCell(row[key])
+  return humanizeEnum(key, row[key])
 }
 
 /** Turns a raw field key into a readable header ("subscription_plan" -> "Subscription Plan"). */
@@ -92,20 +123,35 @@ function columnsFor(rows, columns) {
     .map((key) => ({ key, label: humanizeKey(key) }))
 }
 
+/** Turns a filename ("laundry_orders") into a display title ("Laundry Orders"). */
+function defaultTitle(filename) {
+  return humanizeKey(String(filename || '').replace(/\.\w+$/, '')) || 'Report'
+}
+
 /**
  * Exports rows as a CSV file (UTF-8 with BOM so Excel renders accents).
+ * When `options.header` (official hotel details) is provided, the file starts
+ * with those details, the report title and the generated date above the table.
  * @param {string} filename - File name without extension.
  * @param {Array<Object>} rows - Row objects to export.
  * @param {Array<{key:string,label:string}>} [columns] - Column order + labels.
+ * @param {Object} [options] - { header, title } - optional official header + title.
  */
-export function exportCSV(filename, rows, columns) {
+export function exportCSV(filename, rows, columns, options = {}) {
   const cols = columnsFor(rows, columns)
   if (!cols.length) return
-  const head = cols.map((c) => `"${c.label.replace(/"/g, '""')}"`).join(',')
-  const body = rows.map((row) =>
-    cols.map((c) => `"${cellValue(row, c.key).replace(/"/g, '""')}"`).join(','),
-  )
-  const blob = new Blob(['\ufeff' + [head, ...body].join('\r\n')], {
+  const lines = []
+  if (options.header?.name) {
+    lines.push(...buildHeaderLines(options.header))
+    lines.push(`Report: ${options.title || defaultTitle(filename)}`)
+    lines.push(`Generated: ${new Date().toLocaleString()}`)
+    lines.push('')
+  }
+  lines.push(cols.map((c) => `"${c.label.replace(/"/g, '""')}"`).join(','))
+  for (const row of rows) {
+    lines.push(cols.map((c) => `"${cellValue(row, c.key).replace(/"/g, '""')}"`).join(','))
+  }
+  const blob = new Blob(['\ufeff' + lines.join('\r\n')], {
     type: 'text/csv;charset=utf-8;',
   })
   saveBlob(blob, `${filename}.csv`)
@@ -113,27 +159,98 @@ export function exportCSV(filename, rows, columns) {
 
 /**
  * Exports rows as an Excel workbook (single sheet named `sheetName`).
+ * When `options.header` (official hotel details) is provided, the sheet starts
+ * with those details, the report title and the generated date above the table.
  * @param {string} filename - File name without extension.
  * @param {Array<Object>} rows - Row objects to export.
  * @param {Array<{key:string,label:string}>} [columns] - Column order + headers.
  * @param {string} [sheetName] - Worksheet name (default "Data").
+ * @param {Object} [options] - { header, title } - optional official header + title.
  */
-export function exportExcel(filename, rows, columns, sheetName = 'Data') {
+export function exportExcel(filename, rows, columns, sheetName = 'Data', options = {}) {
   if (!rows.length) return
   const cols = columnsFor(rows, columns)
   if (!cols.length) return
-  const data = rows.map((row) => {
-    const rowObj = {}
-    for (const col of cols) rowObj[col.label] = cellValue(row, col.key)
-    return rowObj
-  })
-  const worksheet = XLSX.utils.json_to_sheet(data)
+  const aoa = []
+  let nameRow = -1
+  let headerRow = -1
+  if (options.header?.name) {
+    const lines = buildHeaderLines(options.header)
+    lines.forEach((line, i) => {
+      aoa.push([line])
+      if (i === 0) nameRow = aoa.length - 1
+    })
+    aoa.push([`Report: ${options.title || defaultTitle(filename)}`])
+    aoa.push([`Generated: ${new Date().toLocaleString()}`])
+    aoa.push([])
+  }
+  aoa.push(cols.map((c) => c.label))
+  headerRow = aoa.length - 1
+  for (const row of rows) {
+    aoa.push(cols.map((c) => cellValue(row, c.key)))
+  }
+  const worksheet = XLSX.utils.aoa_to_sheet(aoa)
+  worksheet['!cols'] = cols.map((c) => ({ wch: Math.min(42, Math.max(12, c.label.length + 6)) }))
+  if (nameRow >= 0) {
+    worksheet[sexyCell(nameRow, 0)].s = { font: { bold: true, sz: 14 } }
+  }
+  for (let i = 0; i < cols.length; i++) {
+    worksheet[sexyCell(headerRow, i)].s = { font: { bold: true, fill: { fgColor: { rgb: '005EB8' } }, color: { rgb: 'FFFFFF' } } }
+  }
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
-  const blob = new Blob([XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })], {
+  const blob = new Blob([XLSX.write(workbook, { bookType: 'xlsx', type: 'array', cellStyles: true })], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   })
   saveBlob(blob, `${filename}.xlsx`)
+}
+
+/** XLSX cell address for a 0-indexed (row, col), e.g. (0, 0) -> "A1". */
+function sexyCell(row, col) {
+  return XLSX.utils.encode_cell({ r: row, c: col })
+}
+
+/** Draws the official hotel header block + title at the top of the PDF page. */
+function pdfHeading(doc, header, title, filename) {
+  let y = 12
+  const margin = 14
+  if (header?.name) {
+    doc.setFontSize(16)
+    doc.setFont(undefined, 'bold')
+    doc.text(String(header.name).toUpperCase(), margin, y)
+    doc.setDrawColor(0, 94, 184)
+    doc.setLineWidth(0.7)
+    doc.line(margin, y + 2.5, doc.internal.pageSize.width - margin, y + 2.5)
+    y += 10
+  }
+  const details = []
+  if (header) {
+    const address = [header.address, header.city, header.country].filter(Boolean).join(', ')
+    if (address) details.push(address)
+    if (header.phone) details.push(`Tel: ${header.phone}`)
+    if (header.email) details.push(`Email: ${header.email}`)
+    if (header.tin) details.push(`TIN: ${header.tin}`)
+    if (header.vrn) details.push(`VRN: ${header.vrn}`)
+  }
+  doc.setFontSize(9)
+  doc.setFont(undefined, 'normal')
+  doc.setTextColor(85)
+  for (const line of details) {
+    doc.text(line, margin, y)
+    y += 4.4
+  }
+  doc.setTextColor(0)
+  y += 1
+  doc.setFontSize(12)
+  doc.setFont(undefined, 'bold')
+  doc.text(title || defaultTitle(filename), margin, y)
+  y += 5
+  doc.setFontSize(8.5)
+  doc.setFont(undefined, 'normal')
+  doc.setTextColor(120)
+  doc.text(`Generated: ${new Date().toLocaleString()}`, margin, y)
+  doc.setTextColor(0)
+  return y + 5
 }
 
 /**
@@ -144,18 +261,14 @@ export function exportExcel(filename, rows, columns, sheetName = 'Data') {
  * @param {Array<Object>} rows - Row objects to export.
  * @param {Array<{key:string,label:string}>} [columns] - Column order + labels.
  * @param {string} [title] - Optional heading printed above the table.
+ * @param {Object} [options] - { header, title } - optional official header.
  */
-export function exportPDF(filename, rows, columns, title) {
+export function exportPDF(filename, rows, columns, title, options = {}) {
   const cols = columnsFor(rows, columns)
   if (!cols.length) return
   const landscape = cols.length > 7
   const doc = new jsPDF({ orientation: landscape ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' })
-  let startY = 14
-  if (title) {
-    doc.setFontSize(12)
-    doc.text(title, 14, 12)
-    startY = 18
-  }
+  const startY = pdfHeading(doc, options.header, options.title || title, filename)
   doc.autoTable({
     head: [cols.map((c) => c.label)],
     body: rows.map((row) =>
