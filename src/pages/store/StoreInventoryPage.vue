@@ -127,11 +127,37 @@
                   :key="u"
                   type="button"
                   class="sm-chip"
-                  :class="{ active: form.si_units.includes(u) }"
+                  :class="{ active: isSiUnitOn(u) }"
                   @click="toggleSiUnit(u)"
                 >
                   {{ u }}
                 </button>
+              </div>
+              <div v-if="form.si_units.length" class="si-factor-list">
+                <div class="muted si-factor-hint">
+                  {{ $t('storeManager.inventory.siFactorHint') }}
+                </div>
+                <div v-for="s in form.si_units" :key="s.unit" class="si-factor-row">
+                  <span class="si-factor-name">1 {{ s.unit }}</span>
+                  <span class="si-factor-eq">=</span>
+                  <input
+                    v-model.number="s.factor"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    class="sm-input si-factor-input"
+                    :title="$t('storeManager.inventory.siFactorHint')"
+                  />
+                  <span class="si-factor-base">{{ form.unit || '…' }}</span>
+                  <button
+                    type="button"
+                    class="sm-btn sm ghost"
+                    :title="$t('common.delete')"
+                    @click="removeSiUnit(s.unit)"
+                  >
+                    <i class="fas fa-xmark"></i>
+                  </button>
+                </div>
               </div>
             </div>
             <div class="form-field">
@@ -410,9 +436,20 @@ function openCreate() {
 
 /** Toggles an SI unit in the item's multi-SI-unit list. */
 function toggleSiUnit(unit) {
-  const idx = form.si_units.indexOf(unit)
+  const idx = form.si_units.findIndex((s) => s.unit === unit)
   if (idx >= 0) form.si_units.splice(idx, 1)
-  else form.si_units.push(unit)
+  else form.si_units.push({ unit, factor: 1 })
+}
+
+/** Whether the given unit is currently part of the item's SI-unit list. */
+function isSiUnitOn(unit) {
+  return form.si_units.some((s) => s.unit === unit)
+}
+
+/** Removes an SI unit (and its conversion factor) from the item. */
+function removeSiUnit(unit) {
+  const idx = form.si_units.findIndex((s) => s.unit === unit)
+  if (idx >= 0) form.si_units.splice(idx, 1)
 }
 
 /** Toggles a department in the item's multi-department list. */
@@ -426,7 +463,13 @@ function openEdit(item) {
   editing.value = item
   Object.assign(form, {
     item_name: item.item_name, category: item.category, unit: item.unit || '',
-    si_units: Array.isArray(item.si_units) ? [...item.si_units] : (item.unit ? [item.unit] : []),
+    si_units: Array.isArray(item.si_units)
+      ? item.si_units.map((entry) =>
+          typeof entry === 'string'
+            ? { unit: entry, factor: 1 }
+            : { unit: entry?.unit, factor: Number(entry?.factor || 1) },
+        )
+      : (item.unit ? [{ unit: item.unit, factor: 1 }] : []),
     currency_type: item.currency_type || '',
     quantity_in_stock: item.quantity_in_stock, reorder_level: item.reorder_level,
     unit_cost: item.unit_cost, supplier: item.supplier || '', notes: item.notes || '',
@@ -445,6 +488,10 @@ async function save() {
     const payload = { ...form }
     // Backwards-compatible single scope: first selected department.
     payload.department_id = payload.department_ids[0] || ''
+    // Normalize SI units to backend { unit, factor } objects.
+    payload.si_units = (form.si_units || [])
+      .filter((s) => s && s.unit)
+      .map((s) => ({ unit: s.unit, factor: Number(s.factor || 1) }))
     if (editing.value) {
       delete payload.quantity_in_stock
       await inventoryApi.update(editing.value.item_id, payload)
@@ -548,6 +595,13 @@ onMounted(async () => {
 }
 .sm-chip:hover { border-color: #94a3b8; }
 .sm-chip.active { background: var(--sm-blue, #1f6ea8); color: #fff; border-color: var(--sm-blue, #1f6ea8); }
+.si-factor-list { margin-top: 10px; display: grid; gap: 6px; }
+.si-factor-hint { font-size: 12px; margin-bottom: 2px; }
+.si-factor-row { display: flex; align-items: center; gap: 8px; }
+.si-factor-name { font-size: 13px; font-weight: 600; min-width: 90px; }
+.si-factor-eq { color: #64748b; }
+.si-factor-input { width: 76px; text-align: center; }
+.si-factor-base { font-size: 13px; color: #334155; }
 .unit-manage-btn { margin-top: 6px; width: 100%; }
 .unit-add-row { display: flex; gap: 8px; }
 .unit-add-row .sm-input { flex: 1; }

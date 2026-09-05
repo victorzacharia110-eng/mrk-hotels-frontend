@@ -3608,7 +3608,8 @@
       "currencyType": "Aina ya sarafu",
       "noCurrency": "Hakuna sarafu",
       "noDepartments": "Hakuna idara zilizosajiliwa bado",
-      "siUnits": "Vitengo vya SI (vimiliki katika PO / GRN)"
+      "siUnits": "Vitengo vya SI (vimiliki katika PO / GRN)",
+      "siFactorHint": "1 ya kizio hiki ni sawa na idadi hii ya kizio cha msingi"
     },
     "pos": {
       "searchProduct": "Tafuta bidhaa...",

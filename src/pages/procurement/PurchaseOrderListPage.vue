@@ -421,7 +421,9 @@ function onPickItem(idx, value) {
   const found = inventoryItems.value.find((i) => String(i.item_id) === String(value))
   line.item_id = value
   line.item_name = found?.item_name || ''
-  line.si_units = found?.si_units?.length ? [...found.si_units] : []
+  line.si_units = (found?.si_units || [])
+    .map((u) => (typeof u === 'string' ? u : u?.unit))
+    .filter(Boolean)
   if (found?.unit) line.unit = found.unit
 }
 

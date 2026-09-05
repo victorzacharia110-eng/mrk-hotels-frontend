@@ -3606,6 +3606,7 @@
       "noCustomUnits": "No custom units yet. Register one to add it to the unit dropdown.",
       "noSupplier": "No supplier",
       "siUnits": "SI units (orderable in PO / GRN)",
+      "siFactorHint": "1 of this unit equals this many base units",
       "currencyType": "Currency type",
       "noCurrency": "No currency",
       "noDepartments": "No departments registered yet"
