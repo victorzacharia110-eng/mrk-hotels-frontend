@@ -173,7 +173,35 @@
     "updated": "Agizo la dobi limesahihishwa.",
     "tableService": "Huduma",
     "bulkDeleteSuccess": "Maagizo {count} ya dobi yamefutwa kwa mafanikio.",
-    "bulkDeletePartial": "Yamefutwa {failed} kati ya {tried} maagizo ya dobi yaliyochaguliwa."
+    "bulkDeletePartial": "Yamefutwa {failed} kati ya {tried} maagizo ya dobi yaliyochaguliwa.",
+    "clothTypes": "Aina za Nguo",
+    "selectClothType": "Aina ya nguo",
+    "priceAuto": "Bei ya kitengo inajazwa moja kwa moja kutoka kwa aina ya nguo.",
+    "settle": "Maliza Malipo",
+    "settleTitle": "Maliza Malipo ya Agizo la Dobi",
+    "settleChoice": "Chagua jinsi agizo litakavyolipwa.",
+    "settlePaid": "Weka kama imelipwa",
+    "settleRoom": "Beba kwenye chumba",
+    "settled": "Agizo limelipwa."
+  },
+  "clothTypes": {
+    "title": "Aina za Nguo",
+    "subtitle": "Nguo na shiti zilizosajiliwa kwa bei ya huduma moja.",
+    "new": "Aina Mpya ya Nguo",
+    "edit": "Hariri Aina ya Nguo",
+    "save": "Hifadhi Aina ya Nguo",
+    "name": "Aina ya nguo",
+    "washPrice": "Bei ya kuosha",
+    "ironPrice": "Bei ya kupiga pasi",
+    "dryCleanPrice": "Bei ya kusafisha kavu",
+    "active": "Inatumika",
+    "inactive": "Haifanyi kazi",
+    "empty": "Hakuna aina za nguo zilizosajiliwa.",
+    "searchPlaceholder": "Tafuta aina ya nguo",
+    "loadError": "Imeshindikana kupakia aina za nguo.",
+    "created": "Aina ya nguo imeundwa.",
+    "updated": "Aina ya nguo imesahihishwa.",
+    "deleted": "Aina ya nguo imefutwa."
   },
   "funGames": {
     "title": "Michezo & Burudani",
@@ -1145,7 +1173,13 @@
     "hideCategory": "Ficha",
     "showCategory": "Onyesha",
     "moveUp": "Sogeza juu",
-    "moveDown": "Sogeza chini"
+    "moveDown": "Sogeza chini",
+    "syncToStock": "Sawazisha na stoo",
+    "syncToStockHint": "Unganisha bidhaa hii na bidhaa iliyosajiliwa ili wataalamu waone upatikanaji wa muda halisi na bidhaa zilizokwisha zisiweze kuagizwa.",
+    "syncedTo": "Imeunganishwa na stoo:",
+    "outOfStock": "Imekwisha",
+    "searchItems": "Tafuta bidhaa zilizosajiliwa...",
+    "none": "Hakuna"
   },
   "outlets": {
     "title": "Sehemu za Kuuzia (POS)",
@@ -1443,7 +1477,8 @@
     "deleteConfirm": "Futa {name}?",
     "bulkDeleteSuccess": "Bidhaa {count} zimefutwa kwa mafanikio.",
     "bulkDeletePartial": "Imefutwa {failed} kati ya {tried} bidhaa zilizochaguliwa.",
-    "adjustmentType": "Aina ya marekebisho"
+    "adjustmentType": "Aina ya marekebisho",
+    "noCategory": "Hakuna kitengo"
   },
   "departments": {
     "title": "Idara",
@@ -1643,7 +1678,12 @@
     "number": "Oda #",
     "partiallyReceived": "Imepokelewa kiasi",
     "received": "Imepokelewa",
-    "requisition": "Ombi"
+    "requisition": "Ombi",
+    "statusRejected": "Imekataliwa",
+    "reject": "Kataa",
+    "rejectConfirm": "Kataa ombi la ununuzi {reference}? Hili haliwezi kurejeshwa.",
+    "rejectReason": "Sababu ya kukataa (si lazima):",
+    "rejected": "Imekataliwa"
   },
   "goodsReceived": {
     "title": "Rekodi za Vitu Vilivyopokelewa",
@@ -2293,7 +2333,8 @@
     "guestMessageHelp1": "Ripoti hii inaorodhesha ujumbe ulioachwa kwa wageni kwa kipindi kilichochaguliwa.",
     "pickupFrom": "Tarehe ya kuchukua Kuanzia",
     "pickupHelp1": "Ripoti hii inaorodhesha usafirishaji wa wageni (kuchukua/kupeleka) kwa kipindi kilichochaguliwa.",
-    "voidReservationHelp1": "Ripoti hii inaorodhesha mahali vilivyobatilishwa kwa kipindi kilichochaguliwa."
+    "voidReservationHelp1": "Ripoti hii inaorodhesha mahali vilivyobatilishwa kwa kipindi kilichochaguliwa.",
+    "openWindow": "Fungua kwenye dirisha jipya"
   },
   "reports": {
     "title": "Ripoti",
@@ -3460,7 +3501,10 @@
     "orderTypeDineIn": "DINE IN",
     "orderTypeTakeAway": "TAKE AWAY",
     "orderTypeRoom": "ODA ZA CHUMBINI",
-    "summaryViewAll": "Ona zote"
+    "summaryViewAll": "Ona zote",
+    "outOfStock": "IMEKWIISHA",
+    "outOfStockToast": "{name} imekwisha — hakuna stoo ya kuuza.",
+    "inStockQty": "Stoo {qty} {unit}"
   },
   "kitchen": {
     "title": "Ubao wa Jikoni",
@@ -3592,7 +3636,8 @@
       "printedBy": "Imechapishwa Na",
       "allOutlets": "Sehemu Zote",
       "stockAdjustment": "Urekebishaji wa Hifadhi",
-      "printMachine": "Chapisha kwa mashine"
+      "printMachine": "Chapisha kwa mashine",
+      "openWindow": "Fungua kwenye dirisha jipya"
     },
     "movements": {
       "allTypes": "Aina zote",

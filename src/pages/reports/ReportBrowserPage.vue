@@ -20,6 +20,7 @@
     :exporting="exporting"
     @select="selectReport"
     @print="printPaper"
+    @open-window="openReportWindow"
     @export="exportCsv"
     @search="onSearch"
   >
@@ -1071,6 +1072,49 @@ async function closeDay() {
 
 function printPaper() {
   window.print()
+}
+
+/** Opens the rendered report in a second window, Ezee-style.
+ *  The paper's markup (with Vue scoped attributes intact) and every live
+ *  stylesheet rule are copied into a blank window so it prints cleanly. */
+function openReportWindow() {
+  const el = document.querySelector('.rb-paper')
+  if (!el || !el.innerText.trim()) return
+  const css = collectAppCss()
+  const win = window.open('', '_blank')
+  if (!win) return
+  win.opener = null
+  win.document.open()
+  win.document.write(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${t('reportBrowser.title')}</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #111; margin: 0; background: #fff; }
+  .rpt-bar { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px; background: #eef1f6; }
+  .rpt-bar button { border: 1px solid #062a52; background: #062a52; color: #fff; border-radius: 5px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .rpt-bar button:hover { background: #005eb8; }
+  .rpt-title { text-align: center; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #062a52; margin: 4px 0 12px; }
+  .rb-paper { padding: 18px 22px; box-shadow: none; border-radius: 0; }
+</style>${css}</head><body>
+  <div class="rpt-bar"><button onclick="window.print()">${t('common.print')}</button></div>
+  <div class="rpt-title">${t('reportBrowser.title')}</div>
+  ${el.innerHTML}
+ <script>window.onload = function () { setTimeout(function () { window.print() }, 350) }</${'script'}>
+</body></html>`)
+  win.document.close()
+}
+
+/** Concatenates every same-origin stylesheet rule for the new report window. */
+function collectAppCss() {
+  let css = ''
+  for (const sheet of document.styleSheets) {
+    try {
+      for (const rule of sheet.cssRules) css += rule.cssText + '\n'
+    } catch {
+      // Cross-origin sheet (e.g. web fonts) — not readable, skip it.
+    }
+  }
+  return css
 }
 
 async function exportCsv() {

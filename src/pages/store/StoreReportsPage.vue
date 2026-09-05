@@ -21,6 +21,7 @@
         <option v-for="c in CATEGORIES" :key="c" :value="c">{{ categoryLabel(c) }}</option>
       </select>
       <button class="sm-btn" @click="generate"><i class="fas fa-chart-line"></i> {{ $t('storeManager.reports.generate') }}</button>
+      <button v-if="data" class="sm-btn ghost" @click="openReportWindow"><i class="fas fa-window-restore"></i> {{ $t('storeManager.reports.openWindow') }}</button>
       <button v-if="data" class="sm-btn ghost" @click="printReport"><i class="fas fa-print"></i> {{ $t('common.print') }}</button>
       <button v-if="data && isThermalReport" class="sm-btn ghost" @click="printToMachine" title="Print to the connected receipt/printer machine">
         <i class="fas fa-print"></i> {{ $t('storeManager.reports.printMachine') }}
@@ -273,6 +274,99 @@ async function generate() {
 }
 
 function printReport() { window.print() }
+
+/** Opens the current report in a second window, Ezee-style, ready to print. */
+function openReportWindow() {
+  if (!data.value) return
+  const win = window.open('', '_blank')
+  if (!win) return
+  win.document.open()
+  win.document.write(buildReportHtml())
+  win.document.close()
+}
+
+/** Escapes text so report data can't break the standalone HTML window. */
+function esc(v) {
+  return String(v ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/** Renders the loaded report as a standalone printable HTML page. */
+function buildReportHtml() {
+  const title = t(cfg.value.labelKey)
+  const period = type.value === 'closing-stock'
+    ? `${t('storeManager.reports.asOf')}: ${to.value || from.value}`
+    : `${from.value || '—'} → ${to.value || '—'}`
+  const stamp = new Date().toLocaleString()
+  const logo = logoUrl.value ? `<img class="rpt-logo" src="${esc(logoUrl.value)}" alt="" />` : ''
+
+  const thead = cols.value
+    .map((c) => `<th class="${c.num || c.money ? 'num' : ''}">${esc(c.label)}</th>`)
+    .join('')
+
+  const tbody = groupedRows.value
+    .map((group) => {
+      const rowsHtml = group.rows
+        .map(
+          (r) => `<tr>${cols.value
+            .map((c) => {
+              const cls = c.num || c.money ? ' class="num"' : ''
+              const val = c.num || c.money ? fmtNum(r[c.field]) : r[c.field] ?? '—'
+              return `<td${cls}>${esc(val)}</td>`
+            })
+            .join('')}</tr>`,
+        )
+        .join('')
+      const head = group.title
+        ? `<tr class="cat"><td colspan="${cols.value.length}">${esc(group.title.toUpperCase())}</td></tr>`
+        : ''
+      return head + rowsHtml
+    })
+    .join('')
+
+  const tfoot = totals.value.length
+    ? `<tr class="totals"><td colspan="${cols.value.length - totals.value.length}">${esc(t('inventory.totals'))}</td>${totals.value
+        .map((key) => `<td class="num">${esc(fmtNum(data.value.totals?.[key]))}</td>`)
+        .join('')}</tr>`
+    : ''
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${esc(title)}</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #111; margin: 0; }
+  .rpt-bar { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px; background: #eef1f6; }
+  .rpt-bar button { border: 1px solid #0b1f33; background: #0b1f33; color: #fff; border-radius: 5px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .rpt-bar button:hover { background: #00468c; }
+  .rpt-head { text-align: center; margin: 10px 0 2px; }
+  .rpt-brand { display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .rpt-logo { height: 42px; max-width: 160px; object-fit: contain; }
+  .rpt-hotel { font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+  .rpt-title { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #00468c; margin-top: 2px; }
+  .rpt-period { font-size: 11px; color: #444; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  th, td { border: 1px solid #999; padding: 5px 8px; text-align: left; }
+  th { background: #0b1f33; color: #fff; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+  td.num, th.num { text-align: right; }
+  tr.cat td { background: #e6eee6; font-weight: 700; letter-spacing: .05em; }
+  tr.totals td { font-weight: 700; background: #f0f0f0; }
+  .rpt-foot { margin-top: 12px; font-size: 11px; color: #444; }
+</style></head><body>
+  <div class="rpt-bar"><button onclick="window.print()">${esc(t('common.print'))}</button></div>
+  <div class="rpt-head">
+    <div class="rpt-brand">${logo}<span class="rpt-hotel">${esc(hotelName.value)}</span></div>
+    <div class="rpt-title">${esc(title)}</div>
+    <div class="rpt-period">${esc(period)}</div>
+  </div>
+  <table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody>${tfoot}</table>
+  <div class="rpt-foot">${esc(t('storeManager.reports.printedBy'))}: ${esc(userName.value)} · ${esc(stamp)}</div>
+ <script>window.onload = function () { setTimeout(function () { window.print() }, 350) }</${'script'}>
+</body></html>`
+}
 
 // Small reports that fit a 58/80mm thermal roll and print to the till machine.
 const THERMAL_TYPES = ['transfer-register', 'movement-detail', 'stock-adjustment-report', 'goods-return-register']

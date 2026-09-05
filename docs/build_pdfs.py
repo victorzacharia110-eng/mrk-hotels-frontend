@@ -157,4 +157,17 @@ def build(md_path, out_name, title, edition="Edition 1.0", date=DATE_EN, version
 build(HERE / "user-manual-en.md", "MRK_Hotels_User_Manual_EN.pdf", "User Manual", "Edition 1.0")
 build(HERE / "user-manual-sw.md", "MRK_Hotels_User_Manual_SW.pdf", "Mwongozo wa Mtumiaji", "Toleo la 1.0", date=DATE_SW)
 build(HERE / "developer-docs.md", "MRK_Hotels_Developer_Documentation.pdf", "Developer Documentation", "Edition 1.0")
+
+# Review batch: one PDF per problem & solution, plus an overview index.
+REVIEW_DIR = HERE / "review-batch"
+REVIEW_BOOKS = [
+    ("00-overview.md", "MRK_Hotels_Review_Batch_Overview.pdf", "Review Batch — Problems & Solutions"),
+    ("01-kitchen-ready-notification.md", "MRK_Hotels_Review_Batch_01_Kitchen_Ready_Notification.pdf", "Review 01 — Kitchen Ready Notification"),
+    ("02-housekeeping-sidebar.md", "MRK_Hotels_Review_Batch_02_Housekeeping_Sidebar.pdf", "Review 02 — Housekeeping Sidebar"),
+    ("03-housekeeping-export.md", "MRK_Hotels_Review_Batch_03_Housekeeping_Task_Export.pdf", "Review 03 — Housekeeping Task Export"),
+    ("04-laundry-cloth-type-registry.md", "MRK_Hotels_Review_Batch_04_Laundry_Cloth_Type_Registry.pdf", "Review 04 — Laundry Cloth-Type Registry"),
+    ("05-laundry-settlement.md", "MRK_Hotels_Review_Batch_05_Laundry_Settlement_Room_Billing.pdf", "Review 05 — Laundry Settlement & Room Billing"),
+]
+for src, out, title in REVIEW_BOOKS:
+    build(REVIEW_DIR / src, out, title)
 print("All PDFs generated.")

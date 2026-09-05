@@ -1,21 +1,21 @@
 /**
- * Session store: auto-logs-out an idle or departed user.
+ * Session store: auto-logs-out an idle user back to the PIN sign-in page.
  *
- * A five-minute countdown resets on any user activity, shows a warning during
- * the final minute and terminates the session at zero. Hiding the tab
- * (switching away or minimising) ends the session immediately; closing the
- * tab ends it because the token lives in sessionStorage. A refresh keeps the
- * session and restarts the idle countdown — browsers hand reloads a fresh
- * sessionStorage, so the idle deadline cannot be carried across them.
+ * The idle grace period comes from the persisted session settings store and
+ * defaults to 15 minutes (per the store-keeper review). The countdown resets
+ * on any user activity. Stepping away briefly (switching apps, minimising)
+ * no longer kills the session instantly — when the page becomes visible again
+ * the elapsed idle time is re-checked against the last-activity stamp, and the
+ * session only ends once that grace period has actually been exceeded. Closing
+ * the tab ends it because the token lives in sessionStorage.
  */
 
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
+import { useSessionSettingsStore } from "@/stores/sessionSettings";
 import router from "@/router";
 
-// Idle countdown before a session is auto-terminated (5 minutes).
-const IDLE_TIMEOUT_SECONDS = 5 * 60;
 // Seconds before the deadline at which the expiry warning appears.
 const WARNING_AT_SECONDS = 60;
 // sessionStorage key holding the timestamp of the last user activity. Kept
@@ -36,9 +36,13 @@ const ACTIVITY_EVENTS = [
 // Session store: auto-expires the login after inactivity or when the tab hides.
 export const useSessionStore = defineStore("session", () => {
   const authStore = useAuthStore();
+  const settingsStore = useSessionSettingsStore();
+
+  // Seconds of inactivity before the session terminates (defaults to 15 min).
+  const idleTimeoutSeconds = computed(() => settingsStore.idleTimeoutSeconds);
 
   // Seconds until the session expires.
-  const remaining = ref(IDLE_TIMEOUT_SECONDS);
+  const remaining = ref(idleTimeoutSeconds.value);
   // Whether the expiry warning is currently visible.
   const showWarning = ref(false);
   // Seconds left, capped to the warning window, for the countdown display.
@@ -70,7 +74,7 @@ export const useSessionStore = defineStore("session", () => {
   function handleActivity() {
     if (!running) return;
     persistActivity();
-    remaining.value = IDLE_TIMEOUT_SECONDS;
+    remaining.value = idleTimeoutSeconds.value;
     showWarning.value = false;
   }
 
@@ -89,16 +93,26 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   /**
-   * Ends the session immediately when the page is hidden.
+   * Re-checks the idle deadline when the page comes back into view.
+   *
+   * Switching apps, minimising or changing tabs no longer logs the user out
+   * on the spot. The last-activity stamp keeps the true deadline, so on return
+   * we only end the sitting if the grace period was really exceeded meanwhile.
    */
   function onVisibilityChange() {
     if (!running) return;
-    // Hiding the page (switching tab, minimising the window) ends the session
-    // immediately — returning requires a fresh sign-in. A refresh does not
-    // hide the page, and a closed tab loses the sessionStorage token anyway,
-    // so no pagehide handler is needed for those cases.
-    if (document.hidden) {
-      terminate();
+    if (!document.hidden) {
+      const lastRaw = sessionStorage.getItem(LAST_ACTIVE_KEY);
+      const last = lastRaw ? Number(lastRaw) : 0;
+      if (last) {
+        const elapsed = Math.floor((Date.now() - last) / 1000);
+        if (elapsed >= idleTimeoutSeconds.value) {
+          terminate();
+          return;
+        }
+        // The countdown ran while hidden; align it with the elapsed idle time.
+        remaining.value = idleTimeoutSeconds.value - elapsed;
+      }
     }
   }
 
@@ -128,7 +142,7 @@ export const useSessionStore = defineStore("session", () => {
     if (running) return;
     running = true;
     terminating = false;
-    remaining.value = IDLE_TIMEOUT_SECONDS;
+    remaining.value = idleTimeoutSeconds.value;
 
     lastWrite = Date.now();
     sessionStorage.setItem(LAST_ACTIVE_KEY, String(lastWrite));
@@ -153,6 +167,7 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   return {
+    idleTimeoutSeconds,
     remaining,
     showWarning,
     warningSeconds,

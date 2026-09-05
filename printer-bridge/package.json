@@ -1,0 +1,21 @@
+{
+  "name": "mrk-printer-bridge",
+  "version": "1.0.0",
+  "description": "Local bridge agent for MRK Hotels POS. Receives ESC/POS print jobs over the network and forwards them to the Windows default thermal printer.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "keywords": [
+    "mrk",
+    "pos",
+    "printer",
+    "escpos",
+    "bridge",
+    "thermal"
+  ],
+  "license": "UNLICENSED",
+  "bin": {
+    "mrk-printer-bridge": "src/server.js"
+  }
+}

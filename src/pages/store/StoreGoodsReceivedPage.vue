@@ -89,6 +89,7 @@
             <thead>
               <tr>
                 <th>{{ $t('inventory.itemName') }}</th>
+                <th>{{ $t('common.unit') }}</th>
                 <th>{{ $t('goodsReceived.ordered') }}</th>
                 <th>{{ $t('goodsReceived.received') }}</th>
                 <th>{{ $t('goodsReceived.rejected') }}</th>
@@ -97,6 +98,7 @@
             <tbody>
               <tr v-for="item in form.items" :key="item.po_item_id">
                 <td>{{ item.item_name }}</td>
+                <td>{{ item.unit || '-' }}</td>
                 <td>{{ item.quantity_ordered }}</td>
                 <td><input v-model.number="item.quantity_received" type="number" min="0" :max="item.quantity_ordered" class="sm-input" style="width:90px" /></td>
                 <td><input v-model.number="item.quantity_rejected" type="number" min="0" class="sm-input" style="width:90px" /></td>
@@ -129,10 +131,11 @@
           <p v-if="detail.notes"><strong>{{ $t('common.notes') }}:</strong> {{ detail.notes }}</p>
           <div class="table-scroll">
         <table class="sm-table">
-            <thead><tr><th>{{ $t('inventory.itemName') }}</th><th>{{ $t('goodsReceived.ordered') }}</th><th>{{ $t('goodsReceived.received') }}</th><th>{{ $t('goodsReceived.rejected') }}</th></tr></thead>
+            <thead><tr><th>{{ $t('inventory.itemName') }}</th><th>{{ $t('common.unit') }}</th><th>{{ $t('goodsReceived.ordered') }}</th><th>{{ $t('goodsReceived.received') }}</th><th>{{ $t('goodsReceived.rejected') }}</th></tr></thead>
             <tbody>
               <tr v-for="(item, i) in detail.items || []" :key="i">
                 <td>{{ item.item_name || item.purchase_order_item?.item_name || '-' }}</td>
+                <td>{{ item.unit || '-' }}</td>
                 <td>{{ item.quantity_ordered ?? '-' }}</td>
                 <td>{{ item.quantity_received }}</td>
                 <td>{{ item.quantity_rejected || 0 }}</td>
@@ -207,7 +210,9 @@ async function loadPoItems() {
   const po = res.data.purchase_order
   form.items = (po.items || []).map((item) => ({
     po_item_id: item.po_item_id,
+    item_id: item.item_id || undefined,
     item_name: item.item_name,
+    unit: item.unit,
     quantity_ordered: item.quantity,
     quantity_received: item.quantity,
     quantity_rejected: 0,
@@ -226,6 +231,7 @@ async function save() {
       notes: form.notes || undefined,
       items: form.items.map((item) => ({
         po_item_id: item.po_item_id,
+        item_id: item.item_id || undefined,
         quantity_received: item.quantity_received,
         quantity_rejected: item.quantity_rejected || undefined,
       })),

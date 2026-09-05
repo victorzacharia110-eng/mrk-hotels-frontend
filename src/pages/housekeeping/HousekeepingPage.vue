@@ -23,7 +23,7 @@
         <button v-if="canManage" class="btn btn-primary" @click="openCreate">
           <i class="fas fa-plus"></i> {{ $t('housekeeping.newTask') }}
         </button>
-        <TableExportButton filename="housekeeping" :load-all="loadAllTasks" />
+        <TableExportButton filename="housekeeping" :load-all="loadAllTasks" :columns="exportColumns" />
       </div>
     </div>
 
@@ -500,7 +500,34 @@ const loadAllTasks = () =>
       page,
       per_page: perPage,
     }),
+  ).then((rows) =>
+    rows.map((task) => ({
+      room: task.room?.room_number ?? '',
+      room_type: task.room?.room_type ?? '',
+      pax: task.pax ?? '',
+      house_status: task.house_status ?? '',
+      assigned_to: task.assigned_user?.full_name ?? '',
+      room_status: task.room_status ?? '',
+      arrival: task.arrival_at ? String(task.arrival_at).slice(0, 10) : '',
+      departure: task.departure_at ? String(task.departure_at).slice(0, 10) : '',
+      nights: task.nights ?? '',
+      status: task.status ?? '',
+    })),
   )
+
+/** Readable column map for the Excel/CSV/PDF exports (flat, presentable rows). */
+const exportColumns = [
+  { key: 'room', label: 'Room' },
+  { key: 'room_type', label: 'Room Type' },
+  { key: 'pax', label: 'Pax' },
+  { key: 'house_status', label: 'House Status' },
+  { key: 'assigned_to', label: 'Assigned To' },
+  { key: 'room_status', label: 'Room Status' },
+  { key: 'arrival', label: 'Arrival' },
+  { key: 'departure', label: 'Departure' },
+  { key: 'nights', label: 'Nights' },
+  { key: 'status', label: 'Status' },
+]
 
 /** Loads room and user option lists for the filter and form selects; failures are silently ignored. */
 async function loadOptions() {

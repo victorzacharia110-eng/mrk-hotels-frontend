@@ -669,6 +669,15 @@ export const reservationApi = {
     return api.get(`${v1}/reservations/${id}/deletion-preview`)
   },
   /**
+   * Fetches the full guest folio for a reservation: postings (payments,
+   * restaurant/bar orders, laundry), room charges and the audit trail.
+   * @param {string|number} id - Reservation identifier.
+   * @returns {Promise} Axios response with the folio payload.
+   */
+  folio(id) {
+    return api.get(`${v1}/reservations/${id}/folio`)
+  },
+  /**
    * Checks a guest into their reserved room.
    * @param {string|number} id - Reservation identifier.
    * @returns {Promise} Axios response confirming check-in.
@@ -692,6 +701,15 @@ export const reservationApi = {
    */
   noShow(id) {
     return api.post(`${v1}/reservations/${id}/no-show`)
+  },
+  /**
+   * Posts an incidental POS charge to an in-house room's folio.
+   * @param {string|number} id - Reservation identifier.
+   * @param {object} data - { description, amount }.
+   * @returns {Promise} Axios response with the updated reservation.
+   */
+  postRoomCharge(id, data) {
+    return api.post(`${v1}/reservations/${id}/post-room-charge`, data)
   },
   /**
    * Fetches dropdown options for the reservation forms.
@@ -778,6 +796,41 @@ export const paymentApi = {
    */
   options() {
     return api.get(`${v1}/payments/options`)
+  },
+}
+
+/** Exchange rates for foreign-currency cashiering conversions. */
+export const currencyRateApi = {
+  index() {
+    return api.get(`${v1}/currency-rates`)
+  },
+  store(data) {
+    return api.post(`${v1}/currency-rates`, data)
+  },
+  update(id, data) {
+    return api.put(`${v1}/currency-rates/${id}`, data)
+  },
+  destroy(id) {
+    return api.delete(`${v1}/currency-rates/${id}`)
+  },
+}
+
+/** Hotel distribution channel list (business sources). */
+export const distributionSourceApi = {
+  index() {
+    return api.get(`${v1}/distribution/sources`)
+  },
+  store(data) {
+    return api.post(`${v1}/distribution/sources`, data)
+  },
+  update(id, data) {
+    return api.put(`${v1}/distribution/sources/${id}`, data)
+  },
+  destroy(id) {
+    return api.delete(`${v1}/distribution/sources/${id}`)
+  },
+  reorder(order) {
+    return api.put(`${v1}/distribution/sources/reorder`, { order })
   },
 }
 
@@ -1045,6 +1098,38 @@ export const storeApi = {
   activityLog: (params) => api.get(`${v1}/store/activity-log`, { params }),
   settings: () => api.get(`${v1}/store/settings`),
   updateSettings: (data) => api.put(`${v1}/store/settings`, data),
+}
+
+/** Inventory departments/scope picker. */
+export const departmentApi = {
+  index(params) {
+    return api.get(`${v1}/departments`, { params })
+  },
+  store(data) {
+    return api.post(`${v1}/departments`, data)
+  },
+  update(id, data) {
+    return api.put(`${v1}/departments/${id}`, data)
+  },
+  destroy(id) {
+    return api.delete(`${v1}/departments/${id}`)
+  },
+}
+
+/** SI-unit registry shared by item, PO and GRN forms. */
+export const unitsApi = {
+  index(params) {
+    return api.get(`${v1}/units-of-measure`, { params })
+  },
+  store(data) {
+    return api.post(`${v1}/units-of-measure`, data)
+  },
+  update(id, data) {
+    return api.put(`${v1}/units-of-measure/${id}`, data)
+  },
+  destroy(id) {
+    return api.delete(`${v1}/units-of-measure/${id}`)
+  },
 }
 
 /** Supplier records for procurement. */
@@ -1509,6 +1594,43 @@ export const laundryApi = {
   },
 }
 
+/** Laundry cloth/linen types with their per-service prices. */
+export const clothTypeApi = {
+  /**
+   * Paginated list of cloth types.
+   * @param {object} params - Query params (search, pagination).
+   * @returns {Promise} Axios response with `cloth_types` list.
+   */
+  index(params) {
+    return api.get(`${v1}/laundry-cloth-types`, { params })
+  },
+  /**
+   * Creates a cloth type with per-service prices.
+   * @param {object} data - { name, wash_price, iron_price, dry_clean_price }.
+   * @returns {Promise} Axios response with the created cloth type.
+   */
+  store(data) {
+    return api.post(`${v1}/laundry-cloth-types`, data)
+  },
+  /**
+   * Updates a cloth type's name and/or prices.
+   * @param {string|number} id - Cloth type identifier.
+   * @param {object} data - Fields to change.
+   * @returns {Promise} Axios response with the updated cloth type.
+   */
+  update(id, data) {
+    return api.put(`${v1}/laundry-cloth-types/${id}`, data)
+  },
+  /**
+   * Deletes a cloth type.
+   * @param {string|number} id - Cloth type identifier.
+   * @returns {Promise} Axios response confirming deletion.
+   */
+  destroy(id) {
+    return api.delete(`${v1}/laundry-cloth-types/${id}`)
+  },
+}
+
 /** Staff attendance: clock-in/out, current status and per-user history. */
 export const attendanceApi = {
   /**
@@ -1820,6 +1942,15 @@ export const purchaseOrderApi = {
    */
   managerApprove(id) {
     return api.post(`${v1}/purchase-orders/${id}/manager-approve`)
+  },
+  /**
+   * Rejects a pending purchase order with an optional reason.
+   * @param {string|number} id - Purchase order identifier.
+   * @param {object} data - Rejection payload (reason).
+   * @returns {Promise} Axios response with the updated order.
+   */
+  reject(id, data) {
+    return api.post(`${v1}/purchase-orders/${id}/reject`, data)
   },
 }
 

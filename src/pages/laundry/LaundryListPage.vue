@@ -29,6 +29,9 @@
         <button v-if="canManage" class="btn btn-primary" @click="openCreate">
           <i class="fas fa-plus"></i> {{ $t('laundry.newOrder') }}
         </button>
+        <button v-if="canManage" class="btn btn-secondary" @click="$router.push('/app/laundry/cloth-types')">
+          <i class="fas fa-shirt"></i> {{ $t('laundry.clothTypes') }}
+        </button>
         <TableExportButton filename="laundry" :load-all="loadAllOrders" />
       </div>
     </div>
@@ -161,6 +164,13 @@
             <td>
               <div class="actions" v-if="canManage">
                 <button
+                  v-if="order.payment_status === 'unpaid'"
+                  class="btn btn-sm btn-primary"
+                  @click="openSettle(order)"
+                >
+                  <i class="fas fa-money-bill-wave"></i> {{ $t('laundry.settle') }}
+                </button>
+                <button
                   v-if="order.status === 'pending'"
                   class="btn btn-sm btn-secondary"
                   @click="setStatus(order, 'ready')"
@@ -284,7 +294,14 @@
             <div class="item-grid">
               <div class="form-group">
                 <label>{{ $t('laundry.itemName') }}</label>
-                <input v-model="item.item_name" type="text" class="input" required />
+                <SearchableSelect
+                  v-if="clothTypeOptions.length"
+                  v-model="item.cloth_type_id"
+                  :options="clothTypeOptions"
+                  :empty-label="$t('laundry.selectClothType')"
+                  @change="onClothTypeChange(item)"
+                />
+                <input v-else v-model="item.item_name" type="text" class="input" required />
               </div>
               <div class="form-group">
                 <label>{{ $t('orders.quantity') }}</label>
@@ -305,6 +322,7 @@
                   step="0.01"
                   class="input"
                   required
+                  :readonly="Boolean(item.cloth_type_id)"
                 />
               </div>
               <div class="form-group item-remove">
@@ -350,14 +368,71 @@
       :busy="deleting"
       @confirm="bulkDelete"
     />
+
+    <!-- Settlement modal: mark the order paid or post it to the guest's room -->
+    <div v-if="showSettleModal" class="modal-overlay" @click.self="closeSettle">
+      <div class="modal">
+        <div class="modal-head">
+          <h2>
+            <i class="fas fa-money-bill-wave"></i>
+            {{ $t('laundry.settleTitle') }}
+          </h2>
+          <button class="modal-close" @click="closeSettle"><i class="fas fa-xmark"></i></button>
+        </div>
+
+        <div v-if="settleError" class="alert alert-error">{{ settleError }}</div>
+
+        <p class="settle-order">
+          <strong>{{ settleOrder?.order_number }}</strong>
+          · {{ settleOrder?.guest_name || '-' }} ·
+          <span class="price">TZS {{ Number(settleOrder?.total_charge || 0).toLocaleString() }}</span>
+        </p>
+        <p class="muted">{{ $t('laundry.settleChoice') }}</p>
+
+        <label class="settle-option">
+          <input v-model="settleMode" type="radio" value="paid" />
+          <span>
+            <i class="fas fa-cash-register"></i> {{ $t('laundry.settlePaid') }}
+            <small class="muted">{{ $t('orders.paymentPaid') }}</small>
+          </span>
+        </label>
+        <label class="settle-option" :class="{ 'is-disabled': !settleOrder?.reservation_id && !settleOrder?.room_number }">
+          <input
+            v-model="settleMode"
+            type="radio"
+            value="billed_to_room"
+            :disabled="!settleOrder?.reservation_id && !settleOrder?.room_number"
+          />
+          <span>
+            <i class="fas fa-bed"></i> {{ $t('laundry.settleRoom') }}
+            <small class="muted">{{ $t('orders.paymentBilledToRoom') }}</small>
+          </span>
+        </label>
+
+        <div v-if="settleMode === 'billed_to_room' && !settleOrder?.reservation_id" class="form-group settle-room">
+          <label>{{ $t('laundry.room') }}</label>
+          <input v-model="settleRoomNumber" type="text" class="input" :placeholder="$t('laundry.roomNumberPlaceholder')" />
+        </div>
+
+        <div class="modal-foot">
+          <button type="button" class="btn btn-secondary" @click="closeSettle">
+            {{ $t('common.cancel') }}
+          </button>
+          <button type="button" class="btn btn-primary" :disabled="settling" @click="confirmSettle">
+            <i class="fas fa-check"></i>
+            {{ settling ? $t('common.saving') : $t('laundry.settle') }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { laundryApi, userApi } from '@/api'
+import { laundryApi, clothTypeApi, userApi } from '@/api'
 import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
@@ -372,6 +447,7 @@ const canManage = computed(() => authStore.can(40) && authStore.canOperate)
 // List/table state: order rows, user lookups, pagination, filters and UI flags.
 const orders = ref([])
 const users = ref([])
+const clothTypes = ref([])
 const page = ref(1)
 const meta = ref({
   total: 0,
@@ -436,6 +512,46 @@ const userOptions = computed(() =>
   users.value.map((user) => ({ value: user.user_id, label: user.full_name })),
 )
 
+// Registered cloth/linen types for the searchable item picker.
+const clothTypeOptions = computed(() =>
+  clothTypes.value
+    .filter((cloth) => cloth.is_active)
+    .map((cloth) => ({
+      value: cloth.cloth_type_id,
+      label: cloth.name,
+      wash_price: Number(cloth.wash_price),
+      iron_price: Number(cloth.iron_price),
+      dry_clean_price: Number(cloth.dry_clean_price),
+    })),
+)
+
+/** Price of a cloth type for the currently chosen service, or 0. */
+function priceFor(cloth, service) {
+  const map = { wash: 'wash_price', iron: 'iron_price', dry_clean: 'dry_clean_price' }
+  return cloth?.[map[service]] ?? 0
+}
+
+/** Fills a line item's name + unit price from the selected cloth type. */
+function onClothTypeChange(item) {
+  const cloth = clothTypes.value.find((c) => c.cloth_type_id === item.cloth_type_id)
+  if (!cloth) return
+  item.item_name = cloth.name
+  item.unit_price = priceFor(cloth, form.service)
+}
+
+// Switching the order's service re-prices every registry-derived line item,
+// keeping the estimate in step with the chosen laundry service.
+watch(
+  () => form.service,
+  (service) => {
+    for (const item of form.items) {
+      if (!item.cloth_type_id) continue
+      const cloth = clothTypes.value.find((c) => c.cloth_type_id === item.cloth_type_id)
+      if (cloth) item.unit_price = priceFor(cloth, service)
+    }
+  },
+)
+
 /** Maps an order status key to its translated display label. */
 function statusLabel(status) {
   const map = {
@@ -481,7 +597,7 @@ function formatDateTime(date) {
 
 /** Creates a blank line-item object for the items list. */
 function emptyItem() {
-  return { item_name: '', quantity: 1, unit_price: 0 }
+  return { cloth_type_id: '', item_name: '', quantity: 1, unit_price: 0 }
 }
 
 /** Appends a blank line item to the form. */
@@ -551,6 +667,16 @@ async function loadUsers() {
   }
 }
 
+/** Loads the registered cloth types feeding the item picker. */
+async function loadClothTypes() {
+  try {
+    const res = await clothTypeApi.index({ per_page: 100 })
+    clothTypes.value = res.data.cloth_types?.data || res.data.data?.data || []
+  } catch {
+    // ignore
+  }
+}
+
 /** Sets the page number and reloads the order list. */
 function goPage(page) {
   page.value = page
@@ -605,6 +731,7 @@ function openEdit(order) {
   form.service = order.service
   form.room_number = order.room_number || ''
   form.items = (order.items || []).map((item) => ({
+    cloth_type_id: item.cloth_type_id || '',
     item_name: item.item_name,
     quantity: item.quantity,
     unit_price: Number(item.unit_price),
@@ -634,6 +761,7 @@ function buildPayload() {
     items: form.items
       .filter((item) => item.item_name)
       .map((item) => ({
+        cloth_type_id: item.cloth_type_id || undefined,
         item_name: item.item_name,
         quantity: item.quantity,
         unit_price: item.unit_price,
@@ -693,6 +821,50 @@ async function remove(order) {
   }
 }
 
+// Settlement modal state.
+const showSettleModal = ref(false)
+const settleOrder = ref(null)
+const settleMode = ref('paid')
+const settleRoomNumber = ref('')
+const settleError = ref('')
+const settling = ref(false)
+
+/** Opens the settlement modal for an unpaid order. */
+function openSettle(order) {
+  settleOrder.value = order
+  settleMode.value = 'paid'
+  settleRoomNumber.value = order.room_number || ''
+  settleError.value = ''
+  showSettleModal.value = true
+}
+
+/** Closes the settlement modal. */
+function closeSettle() {
+  showSettleModal.value = false
+  settleOrder.value = null
+}
+
+/** Settles the order as paid or posts it to the guest's room folio. */
+async function confirmSettle() {
+  if (!settleOrder.value || settling.value) return
+  settleError.value = ''
+  settling.value = true
+  try {
+    const payload = { payment_status: settleMode.value }
+    if (settleMode.value === 'billed_to_room') {
+      if (settleRoomNumber.value) payload.room_number = settleRoomNumber.value
+    }
+    await laundryApi.update(settleOrder.value.laundry_order_id, payload)
+    success.value = t('laundry.settled')
+    closeSettle()
+    await load()
+  } catch (err) {
+    settleError.value = flattenError(err)
+  } finally {
+    settling.value = false
+  }
+}
+
 /**
  * Deletes every selected order; the typed-confirmation modal guards the action.
  */
@@ -731,6 +903,7 @@ function flattenError(err) {
 onMounted(() => {
   load()
   loadUsers()
+  loadClothTypes()
 })
 </script>
 
@@ -917,6 +1090,43 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 20px;
+}
+
+.settle-order {
+  margin: 8px 0 4px;
+  font-size: 15px;
+}
+
+.settle-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-top: 10px;
+  border: 1px solid #e2e2e2;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #fafafa;
+}
+
+.settle-option.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settle-option span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-weight: 600;
+}
+
+.settle-option small {
+  font-weight: 400;
+}
+
+.settle-room {
+  margin-top: 14px;
 }
 
 @media (max-width: 768px) {

@@ -17,6 +17,7 @@
         <option value="partially_received">{{ $t('purchaseOrders.partiallyReceived') }}</option>
         <option value="received">{{ $t('purchaseOrders.received') }}</option>
         <option value="cancelled">{{ $t('common.cancelled') }}</option>
+        <option value="rejected">{{ $t('purchaseOrders.rejected') }}</option>
       </select>
       <span class="spacer"></span>
       <button class="sm-btn" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('purchaseOrders.create') }}</button>
@@ -101,9 +102,23 @@
               <button type="button" class="sm-btn sm ghost" @click="form.items.push(emptyItem())"><i class="fas fa-plus"></i> {{ $t('requisitions.addItem') }}</button>
             </div>
             <div v-for="(item, idx) in form.items" :key="idx" class="item-grid">
-              <input v-model="item.item_name" class="sm-input" :placeholder="$t('inventory.itemName')" required />
+              <SearchableSelect
+                v-model="item.item_id"
+                :options="itemOptions"
+                :placeholder="$t('inventory.searchItems')"
+                :search-placeholder="$t('inventory.searchItems')"
+                :empty-label="$t('inventory.selectItem')"
+                required
+                @change="onPickItem(item, $event)"
+              >
+                <template #option="{ option }">
+                  <span>{{ option.label }} <small class="muted">{{ option.category }}</small></span>
+                </template>
+              </SearchableSelect>
               <input v-model.number="item.quantity" type="number" min="1" class="sm-input" :placeholder="$t('inventory.quantity')" required />
-              <input v-model="item.unit" class="sm-input" :placeholder="$t('inventory.unit')" />
+              <select v-model="item.unit" class="sm-input">
+                <option v-for="u in unitOptionsFor(item)" :key="u" :value="u">{{ u }}</option>
+              </select>
               <input v-model.number="item.unit_price" type="number" min="0" step="0.01" class="sm-input" :placeholder="$t('inventory.unitCost')" required />
               <button type="button" class="sm-btn sm danger" @click="form.items.splice(idx, 1)" :disabled="form.items.length === 1"><i class="fas fa-trash"></i></button>
             </div>
@@ -154,8 +169,9 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { purchaseOrderApi, purchaseRequisitionApi, supplierApi } from '@/api'
+import { purchaseOrderApi, purchaseRequisitionApi, supplierApi, inventoryApi } from '@/api'
 import PaginationBar from '@/components/store/PaginationBar.vue'
+import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
 
 const { t } = useI18n()
@@ -164,6 +180,7 @@ const orders = ref([])
 const { q, status, statuses, page, lastPage, paged } = useClientTable(orders, { pageSize: 15, searchFields: ['po_number', 'supplier_name', 'status'] })
 const suppliers = ref([])
 const approvedReqs = ref([])
+const inventoryItems = ref([])
 const meta = ref({ current_page: 1, last_page: 1 })
 const loading = ref(false)
 const saving = ref(false)
@@ -175,7 +192,39 @@ const formError = ref('')
 const form = reactive({ supplier_id: '', pr_id: '', delivery_date: '', payment_terms: '', delivery_address: '', notes: '', items: [emptyItem()] })
 
 function emptyItem() {
-  return { item_name: '', description: '', quantity: null, unit: '', unit_price: null }
+  return { item_id: '', item_name: '', description: '', quantity: null, unit: '', si_units: [], unit_price: null }
+}
+
+// Registered inventory items are the only orderable lines; picking one also
+// carries its registered unit so receiving stocks the right record.
+const itemOptions = computed(() =>
+  inventoryItems.value.map((item) => ({
+    value: item.item_id,
+    label: `${item.item_name}${item.unit ? ` (${item.unit})` : ''}`,
+    category: item.category,
+    stock: item.quantity_in_stock,
+  })),
+)
+
+const STANDARD_UNITS = [
+  'BTL', 'PCS', 'KG', 'L', 'GLN', 'BOX', 'CARTON', 'PKT', 'ROLL', 'DOZ', 'PAIR', 'SET', 'M', 'GM', 'ML', 'TIN', 'SACHET',
+]
+
+/** Unit choices for a line: the item's registered SI units, else common SI units. */
+function unitOptionsFor(item) {
+  const registered = (item.si_units || []).filter(Boolean)
+  if (registered.length) return registered
+  if (item.unit) return [item.unit]
+  return STANDARD_UNITS
+}
+
+/** Applies a picked registered item to a PO line (id, name, units + default). */
+function onPickItem(line, value) {
+  const found = inventoryItems.value.find((i) => String(i.item_id) === String(value))
+  line.item_id = value
+  line.item_name = found?.item_name || ''
+  line.si_units = found?.si_units?.length ? [...found.si_units] : []
+  if (found?.unit) line.unit = found.unit
 }
 
 const poTotal = computed(() =>
@@ -201,12 +250,14 @@ async function openCreate() {
   Object.assign(form, { supplier_id: '', pr_id: '', delivery_date: '', payment_terms: '', delivery_address: '', notes: '', items: [emptyItem()] })
   formError.value = ''
   showForm.value = true
-  const [sup, req] = await Promise.allSettled([
+  const [sup, req, inv] = await Promise.allSettled([
     supplierApi.index({ per_page: 100 }),
     purchaseRequisitionApi.index({ status: 'approved', per_page: 100 }),
+    inventoryApi.index({ per_page: 200 }),
   ])
   if (sup.status === 'fulfilled') suppliers.value = sup.value.data.data || sup.value.data || []
   if (req.status === 'fulfilled') approvedReqs.value = req.value.data.data || req.value.data || []
+  if (inv.status === 'fulfilled') inventoryItems.value = inv.value.data.data || inv.value.data || []
 }
 
 async function save() {

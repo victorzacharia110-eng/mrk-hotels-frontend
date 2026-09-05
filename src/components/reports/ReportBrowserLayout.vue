@@ -45,6 +45,9 @@
             <option v-for="r in cat.reports" :key="r.key" :value="r.key">{{ $t(r.label) }}</option>
           </optgroup>
         </select>
+        <button type="button" class="rb-tool-btn" :title="$t('reportBrowser.openWindow')" @click="$emit('open-window')">
+          <i class="fas fa-window-restore" aria-hidden="true"></i>
+        </button>
         <button type="button" class="rb-tool-btn" :title="$t('reportBrowser.print')" @click="$emit('print')">
           <i class="fas fa-print" aria-hidden="true"></i>
         </button>
@@ -113,7 +116,7 @@ const props = defineProps({
   showBack: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['select', 'print', 'export', 'search', 'back'])
+const emit = defineEmits(['select', 'print', 'open-window', 'export', 'search', 'back'])
 
 const searchTerm = ref('')
 const expanded = ref({})

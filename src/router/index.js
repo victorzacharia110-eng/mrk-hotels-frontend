@@ -32,6 +32,18 @@ const hotelChildren = [
   { path: 'guests', name: 'hotel-guests', component: () => import('@/pages/guests/GuestListPage.vue'), meta: { module: 'guests' } },
   // List and confirm payments.
   { path: 'payments', name: 'hotel-payments', component: () => import('@/pages/payments/PaymentListPage.vue'), meta: { module: 'payments' } },
+  // Receptionist Payments dropdown — cashiering center.
+  { path: 'payments/cashiering', name: 'hotel-payments-cashiering', component: () => import('@/pages/reception/CashieringCenterPage.vue'), meta: { module: 'payments' } },
+  // Receptionist Payments dropdown — cash drawer.
+  { path: 'payments/cash-drawer', name: 'hotel-payments-cash-drawer', component: () => import('@/pages/reception/CashDrawerPage.vue'), meta: { module: 'payments' } },
+  // Receptionist Payments dropdown — business sources.
+  { path: 'payments/business-source', name: 'hotel-payments-business-source', component: () => import('@/pages/reception/BusinessSourcePage.vue'), meta: { module: 'payments' } },
+  // Receptionist Payments dropdown — company data.
+  { path: 'payments/company-data', name: 'hotel-payments-company-data', component: () => import('@/pages/reception/CompanyDataPage.vue'), meta: { module: 'payments' } },
+  // Receptionist Payments dropdown — point of sale.
+  { path: 'payments/pos', name: 'hotel-payments-pos', component: () => import('@/pages/reception/PosPage.vue'), meta: { module: 'payments' } },
+  // Receptionist Payments dropdown — exchange rates.
+  { path: 'payments/exchange-rate', name: 'hotel-payments-exchange-rate', component: () => import('@/pages/reception/ExchangeRatePage.vue'), meta: { module: 'payments' } },
   // Respond to public booking requisitions.
   { path: 'booking-requisitions', name: 'hotel-booking-requisitions', component: () => import('@/pages/booking/BookingRequisitionListPage.vue'), meta: { module: 'booking-requisitions' } },
   // Night audit — day close for receptionists.
@@ -62,6 +74,8 @@ const hotelChildren = [
   { path: 'printer', name: 'hotel-printer', component: () => import('@/pages/printer/PrinterSettingsPage.vue'), meta: { module: 'printer' } },
   // Laundry order management.
   { path: 'laundry', name: 'hotel-laundry', component: () => import('@/pages/laundry/LaundryListPage.vue'), meta: { module: 'laundry' } },
+  // Laundry cloth/linen price registry.
+  { path: 'laundry/cloth-types', name: 'hotel-laundry-cloth-types', component: () => import('@/pages/laundry/ClothTypesPage.vue'), meta: { module: 'laundry' } },
   // Guest fun game activities.
   { path: 'fun-games', name: 'hotel-fun-games', component: () => import('@/pages/fungames/FunGameListPage.vue'), meta: { module: 'fun-games' } },
   // Inventory items and stock adjustments.

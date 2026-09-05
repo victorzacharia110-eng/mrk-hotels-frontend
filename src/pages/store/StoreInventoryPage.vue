@@ -95,10 +95,19 @@
             </div>
             <div class="form-field">
               <label>{{ $t('storeManager.inventory.department') }}</label>
-              <select v-model="form.department_id" class="sm-select" style="width:100%">
-                <option value="">{{ $t('storeManager.inventory.allDepartments') }}</option>
-                <option v-for="d in departments" :key="d.department_id" :value="d.department_id">{{ d.name }}</option>
-              </select>
+              <div class="dept-multi">
+                <button
+                  v-for="d in departments"
+                  :key="d.department_id"
+                  type="button"
+                  class="sm-chip"
+                  :class="{ active: form.department_ids.includes(d.department_id) }"
+                  @click="toggleDepartment(d.department_id)"
+                >
+                  {{ d.name }}
+                </button>
+                <span v-if="!departments.length" class="muted">{{ $t('storeManager.inventory.noDepartments') }}</span>
+              </div>
             </div>
             <div class="form-field">
               <label>{{ $t('inventory.unit') }}</label>
@@ -106,9 +115,31 @@
                 <option value="" disabled>{{ $t('storeManager.inventory.pickUnit') }}</option>
                 <option v-for="u in unitOptions" :key="u" :value="u">{{ u }}</option>
               </select>
-              <button type="button" class="sm-btn sm ghost unit-manage-btn" @click="showUnitsModal = true">
+              <button type="button" class="sm-btn sm ghost unit-manage-btn" @click="openUnitsModal">
                 <i class="fas fa-gear"></i> {{ $t('storeManager.inventory.manageUnits') }}
               </button>
+            </div>
+            <div class="form-field full">
+              <label>{{ $t('storeManager.inventory.siUnits') }}</label>
+              <div class="dept-multi">
+                <button
+                  v-for="u in unitOptions"
+                  :key="u"
+                  type="button"
+                  class="sm-chip"
+                  :class="{ active: form.si_units.includes(u) }"
+                  @click="toggleSiUnit(u)"
+                >
+                  {{ u }}
+                </button>
+              </div>
+            </div>
+            <div class="form-field">
+              <label>{{ $t('storeManager.inventory.currencyType') }}</label>
+              <select v-model="form.currency_type" class="sm-select" style="width:100%">
+                <option value="">{{ $t('storeManager.inventory.noCurrency') }}</option>
+                <option v-for="c in CURRENCY_OPTIONS" :key="c" :value="c">{{ c }}</option>
+              </select>
             </div>
             <div class="form-field" v-if="!editing"><label>{{ $t('inventory.openingStock') }}</label><input v-model.number="form.quantity_in_stock" type="number" min="0" class="sm-input" /></div>
             <div class="form-field"><label>{{ $t('inventory.reorderLevel') }}</label><input v-model.number="form.reorder_level" type="number" min="0" class="sm-input" /></div>
@@ -220,7 +251,7 @@
 import { onMounted, reactive, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { inventoryApi, inventoryOpsApi, supplierApi } from '@/api'
+import { inventoryApi, inventoryOpsApi, supplierApi, unitsApi } from '@/api'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 import { INVENTORY_CATEGORIES, formatCategory } from '@/utils/format'
@@ -266,11 +297,13 @@ function pickDepartment(id) {
 
 const categories = INVENTORY_CATEGORIES
 
-// Unit registry: common SI-ish units always available, plus user-registered
-// units persisted per device (later swappable for a shared backend registry).
+// Unit registry: common SI-ish units always available, plus the shared
+// backend registry (and a per-device fallback). These feed the primary unit
+// picker and the multi-SI-unit selector on each item.
 const DEFAULT_UNITS = ['kg', 'g', 'mg', 'L', 'mL', 'cm', 'm', 'ton', 'pcs', 'packet', 'box', 'carton', 'bottle', 'dozen', 'roll', 'pair']
 const CUSTOM_UNITS_KEY = 'store_custom_units'
 const customUnits = ref(loadCustomUnits())
+const registeredUnits = ref([])
 const newUnit = ref('')
 const showUnitsModal = ref(false)
 
@@ -280,23 +313,52 @@ function loadCustomUnits() {
 function persistCustomUnits() {
   localStorage.setItem(CUSTOM_UNITS_KEY, JSON.stringify(customUnits.value))
 }
-const customUnitsSorted = computed(() => [...customUnits.value].sort())
+
+/** Pulls the shared SI-unit registry so every device sees the same units. */
+async function refreshUnits() {
+  try {
+    const res = await unitsApi.index()
+    registeredUnits.value = res.data.units || []
+  } catch {
+    registeredUnits.value = []
+  }
+}
+
+const customUnitsSorted = computed(() =>
+  Array.from(new Set([...registeredUnits.value.map((r) => r.unit), ...customUnits.value])).sort(),
+)
 const unitOptions = computed(() => {
-  const all = [...DEFAULT_UNITS, ...customUnits.value]
-  if (form.unit && !all.includes(form.unit)) all.push(form.unit)
-  return all
+  const all = new Set([...DEFAULT_UNITS, ...registeredUnits.value.map((r) => r.unit), ...customUnits.value])
+  if (form.unit) all.add(form.unit)
+  return Array.from(all)
 })
-function addUnit() {
+async function addUnit() {
   const u = newUnit.value.trim()
   if (!u) return
-  if (!customUnits.value.includes(u)) customUnits.value.push(u)
+  customUnits.value = Array.from(new Set([...customUnits.value, u]))
   persistCustomUnits()
+  try {
+    await unitsApi.store({ unit: u })
+    await refreshUnits()
+  } catch {
+    // Local fallback already applied; the registry write needs level 70.
+  }
   newUnit.value = ''
 }
-function removeUnit(u) {
-  customUnits.value = customUnits.value.filter((x) => x !== u)
+async function removeUnit(u) {
+  customUnits.value = customUnits.value.filter((x) => String(x).toUpperCase() !== String(u).toUpperCase())
   persistCustomUnits()
+  const reg = registeredUnits.value.find((r) => String(r.unit).toUpperCase() === String(u).toUpperCase())
+  try {
+    if (reg) await unitsApi.destroy(reg.unit_id)
+  } catch {
+    // ignore
+  }
+  registeredUnits.value = registeredUnits.value.filter((r) => r.unit_id !== reg?.unit_id)
 }
+
+// Currency types offered on item master data (mirrors the finance registry).
+const CURRENCY_OPTIONS = ['TZS', 'USD', 'EUR', 'GBP', 'KES', 'UGX', 'RWF', 'ZAR', 'CNY']
 
 // Supplier directory feeds the supplier dropdown; legacy free-text suppliers
 // on existing items stay selectable.
@@ -307,7 +369,7 @@ const supplierOptions = computed(() => {
   return names
 })
 
-const form = reactive({ item_name: '', category: 'other', unit: '', quantity_in_stock: 0, reorder_level: 0, unit_cost: 0, supplier: '', notes: '', department_id: '' })
+const form = reactive({ item_name: '', category: 'other', unit: '', si_units: [], currency_type: '', quantity_in_stock: 0, reorder_level: 0, unit_cost: 0, supplier: '', notes: '', department_id: '', department_ids: [] })
 const adjustForm = reactive({ type: 'in', quantity: 1, reason: '' })
 
 let debounce
@@ -341,18 +403,36 @@ function go(page) { load(page) }
 
 function openCreate() {
   editing.value = null
-  Object.assign(form, { item_name: '', category: 'other', unit: '', quantity_in_stock: 0, reorder_level: 0, unit_cost: 0, supplier: '', notes: '', department_id: '' })
+  Object.assign(form, { item_name: '', category: 'other', unit: '', si_units: [], currency_type: '', quantity_in_stock: 0, reorder_level: 0, unit_cost: 0, supplier: '', notes: '', department_id: '', department_ids: [] })
   formError.value = ''
   showForm.value = true
+}
+
+/** Toggles an SI unit in the item's multi-SI-unit list. */
+function toggleSiUnit(unit) {
+  const idx = form.si_units.indexOf(unit)
+  if (idx >= 0) form.si_units.splice(idx, 1)
+  else form.si_units.push(unit)
+}
+
+/** Toggles a department in the item's multi-department list. */
+function toggleDepartment(id) {
+  const idx = form.department_ids.indexOf(id)
+  if (idx >= 0) form.department_ids.splice(idx, 1)
+  else form.department_ids.push(id)
 }
 
 function openEdit(item) {
   editing.value = item
   Object.assign(form, {
     item_name: item.item_name, category: item.category, unit: item.unit || '',
+    si_units: Array.isArray(item.si_units) ? [...item.si_units] : (item.unit ? [item.unit] : []),
+    currency_type: item.currency_type || '',
     quantity_in_stock: item.quantity_in_stock, reorder_level: item.reorder_level,
     unit_cost: item.unit_cost, supplier: item.supplier || '', notes: item.notes || '',
     department_id: item.department_id || '',
+    department_ids: (item.departments || []).map((d) => d.department_id)
+      || (item.department_id ? [item.department_id] : []),
   })
   formError.value = ''
   showForm.value = true
@@ -363,6 +443,8 @@ async function save() {
   formError.value = ''
   try {
     const payload = { ...form }
+    // Backwards-compatible single scope: first selected department.
+    payload.department_id = payload.department_ids[0] || ''
     if (editing.value) {
       delete payload.quantity_in_stock
       await inventoryApi.update(editing.value.item_id, payload)
@@ -426,9 +508,15 @@ async function bulkDelete() {
   }
 }
 
+async function openUnitsModal() {
+  await refreshUnits()
+  showUnitsModal.value = true
+}
+
 onMounted(async () => {
   inventoryOpsApi.departments().then((res) => { departments.value = res.data.departments || [] }).catch(() => {})
   supplierApi.index({ per_page: 100 }).then((res) => { suppliers.value = res.data.data || res.data || [] }).catch(() => {})
+  refreshUnits()
   await load(1)
   if (route.query.create === '1') openCreate()
 })
@@ -453,6 +541,13 @@ onMounted(async () => {
 }
 .dept-option:hover { background: #f1f5f9; }
 .dept-option.active { background: var(--sm-blue, #1f6ea8); color: #fff; border-color: var(--sm-blue, #1f6ea8); }
+.dept-multi { display: flex; flex-wrap: wrap; gap: 6px; }
+.sm-chip {
+  border: 1px solid #d5dde6; background: #fff; border-radius: 999px;
+  padding: 5px 12px; font-size: 13px; cursor: pointer; color: #334155;
+}
+.sm-chip:hover { border-color: #94a3b8; }
+.sm-chip.active { background: var(--sm-blue, #1f6ea8); color: #fff; border-color: var(--sm-blue, #1f6ea8); }
 .unit-manage-btn { margin-top: 6px; width: 100%; }
 .unit-add-row { display: flex; gap: 8px; }
 .unit-add-row .sm-input { flex: 1; }

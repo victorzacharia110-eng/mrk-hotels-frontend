@@ -189,6 +189,10 @@
                 <input :value="item.item_name" type="text" class="input" disabled />
               </div>
               <div class="form-group">
+                <label>{{ $t('common.unit') }}</label>
+                <input :value="item.unit || '-'" type="text" class="input" disabled />
+              </div>
+              <div class="form-group">
                 <label>{{ $t('goodsReceived.ordered') }}</label>
                 <input :value="item.quantity_ordered" type="text" class="input" disabled />
               </div>
@@ -254,6 +258,7 @@
             <thead>
               <tr>
                 <th scope="col">{{ $t('goodsReceived.item') }}</th>
+                <th scope="col">{{ $t('common.unit') }}</th>
                 <th scope="col">{{ $t('goodsReceived.ordered') }}</th>
                 <th scope="col">{{ $t('goodsReceived.statusReceived') }}</th>
                 <th scope="col">{{ $t('goodsReceived.rejected') }}</th>
@@ -265,6 +270,7 @@
                 <td>
                   <strong>{{ item.item_name }}</strong>
                 </td>
+                <td>{{ item.unit || '-' }}</td>
                 <td>{{ item.quantity_ordered }}</td>
                 <td>{{ item.quantity_received }}</td>
                 <td>{{ item.quantity_rejected || 0 }}</td>
@@ -448,7 +454,9 @@ async function onSelectPo() {
     const po = res.data.purchase_order
     form.items = (po.items || []).map((item) => ({
       po_item_id: item.po_item_id,
+      item_id: item.item_id || undefined,
       item_name: item.item_name,
+      unit: item.unit,
       quantity_ordered: item.quantity,
       quantity_received: 0,
       quantity_rejected: 0,
@@ -477,6 +485,7 @@ async function save() {
       notes: form.notes,
       items: form.items.map((item) => ({
         po_item_id: item.po_item_id,
+        item_id: item.item_id || undefined,
         quantity_received: item.quantity_received,
         quantity_rejected: item.quantity_rejected || undefined,
         rejection_reason: item.rejection_reason || undefined,
@@ -597,7 +606,7 @@ onMounted(() => {
 
 .item-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr 0.6fr 1fr 1fr 1fr 1fr;
   gap: 10px;
   align-items: end;
 }

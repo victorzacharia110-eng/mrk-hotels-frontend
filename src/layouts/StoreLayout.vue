@@ -526,6 +526,17 @@ function exitOwnerView() {
 /** Route that the dashboard link points to, based on the user's role. */
 const dashboardRoute = computed(() => (authStore.isSuperadmin ? '/superadmin' : '/app'))
 
+/** True when the signed-in staff member is the front-desk receptionist. */
+const isReceptionist = computed(() => authStore.user?.user_role === 'receptionist')
+
+/** True when the signed-in staff member is on the housekeeping team. */
+const isHousekeeping = computed(() => authStore.user?.user_role === 'housekeeping')
+
+/** Builds a collapsible accordion group for the staff drawer. */
+function accordionGroup(key, icon, labelKey, children) {
+  return { key, icon, labelKey, label: t(labelKey), to: undefined, children }
+}
+
 /** Navigation modules the current user is allowed to see, with localised labels. */
 const visibleModules = computed(() => {
   const allowed = MODULES.filter((item) => authStore.canAccess(item)).map((item) => ({
@@ -566,8 +577,82 @@ const visibleModules = computed(() => {
   const items = allowed.map(expand)
   const byKey = Object.fromEntries(items.map((i) => [i.key, i]))
 
-  // Fold related flat modules into collapsible accordion groups so the drawer
-  // stays short. Modules not listed here remain as standalone links.
+  // The receptionist panel is deliberately ordered and grouped per the panel
+  // review: Rooms, Reservations, Rates, Distribution, Guests, Payments
+  // (dropdown), Night Audit, Communication, Administration. Restaurant & Bar
+  // (take-order/orders) is not shown to the front desk.
+  if (isReceptionist.value) {
+    const pick = (keys) => keys.map((k) => byKey[k]).filter(Boolean)
+    const child = (item, label) => item && { to: item.to, label, icon: item.icon }
+    const out = []
+
+    if (byKey.dashboard) out.push(byKey.dashboard)
+    if (byKey.rooms) out.push(byKey.rooms)
+
+    // Reservations: manual booking, channel bookings and public booking requests.
+    if (byKey.reservations) {
+      out.push(
+        accordionGroup('reception-reservations', 'fas fa-calendar-check', 'nav.reservations', [
+          { to: byKey.reservations.to, label: t('receptionMenu.manualBooking'), icon: 'fas fa-hotel' },
+          { to: '/app/distribution/channel-logs', label: t('receptionMenu.channelBookings'), icon: 'fas fa-share-nodes' },
+          child(byKey['booking-requisitions'], t('receptionMenu.bookingRequests')),
+        ].filter(Boolean)),
+      )
+    }
+
+    // Rates: registering rooms and their nightly prices (room directory page).
+    out.push({ key: 'rates', to: '/app/rooms', icon: 'fas fa-tags', label: t('receptionMenu.rates') })
+
+    if (byKey.distribution) out.push(byKey.distribution)
+    if (byKey.guests) out.push(byKey.guests)
+
+    // Payments dropdown: cashiering, cash drawer, business sources, company
+    // data, POS and exchange rates.
+    out.push(
+      accordionGroup('reception-payments', 'fas fa-money-bill-wave', 'nav.payments', [
+        { to: '/app/payments/cashiering', label: t('receptionMenu.cashieringCenter'), icon: 'fas fa-credit-card' },
+        { to: '/app/payments/cash-drawer', label: t('receptionMenu.cashDrawer'), icon: 'fas fa-cash-register' },
+        { to: '/app/payments/business-source', label: t('receptionMenu.businessSource'), icon: 'fas fa-diagram-project' },
+        { to: '/app/payments/company-data', label: t('receptionMenu.companyData'), icon: 'fas fa-building' },
+        { to: '/app/payments/pos', label: t('receptionMenu.pos'), icon: 'fas fa-basket-shopping' },
+        { to: '/app/payments/exchange-rate', label: t('receptionMenu.exchangeRate'), icon: 'fas fa-right-left' },
+      ]),
+    )
+
+    if (byKey['night-audit']) out.push(byKey['night-audit'])
+
+    // Communication: messaging and staff statuses.
+    const comm = pick(['messages', 'statuses'])
+    if (comm.length) out.push(accordionGroup('reception-comms', 'fas fa-comments', 'accordion.communication', comm))
+
+    // Administration: reports, activity log and override approvals.
+    const admin = pick(['reports', 'activity-log-report', 'overrides'])
+    if (admin.length) out.push(accordionGroup('reception-admin', 'fas fa-user-tie', 'accordion.administration', admin))
+
+    if (byKey.profile) out.push(byKey.profile)
+
+    return out
+  }
+
+  // The housekeeping team works from a short, order-consistent panel,
+  // per the panel review: Dashboard, Housekeeping, Laundry, Issue Reports,
+  // then Communication. My Profile, Fun Games and the Restaurant & Bar
+  // groups stay off the housekeeping drawer.
+  if (isHousekeeping.value) {
+    const pick = (keys) => keys.map((k) => byKey[k]).filter(Boolean)
+    const out = []
+
+    if (byKey.dashboard) out.push(byKey.dashboard)
+    if (byKey.housekeeping) out.push(byKey.housekeeping)
+    if (byKey.laundry) out.push(byKey.laundry)
+    if (byKey['issue-reports']) out.push(byKey['issue-reports'])
+
+    const comm = pick(['messages', 'statuses'])
+    if (comm.length) out.push(accordionGroup('housekeeping-comms', 'fas fa-comments', 'accordion.communication', comm))
+
+    return out
+  }
+
   const GROUPING = [
     {
       key: 'group-front-desk', icon: 'fas fa-bed', labelKey: 'accordion.frontDesk',
@@ -643,9 +728,8 @@ function handleAccordionAction(moduleKey, action) {
 
 const { openStopsell } = useDistribution()
 
-// Auto-expand the Night Audit and Distribution accordions whenever the user
-// is on one of their child pages so the active item stays visible when the
-// drawer opens.
+// Auto-expand the Night Audit, Distribution and Payments accordions whenever
+// the user is on one of their child pages so the active item stays visible.
 watch(
   () => route.path,
   (path) => {
@@ -657,6 +741,11 @@ watch(
     if (path.startsWith('/app/distribution')) {
       const next = new Set(openAccordions.value)
       next.add('distribution')
+      openAccordions.value = next
+    }
+    if (path.startsWith('/app/payments')) {
+      const next = new Set(openAccordions.value)
+      next.add('reception-payments')
       openAccordions.value = next
     }
   },

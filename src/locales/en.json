@@ -1,6 +1,10 @@
 {
   "common": {
     "loading": "Loading...",
+    "loadError": "Failed to load.",
+    "createSuccess": "Created.",
+    "updateSuccess": "Updated.",
+    "deleteSuccess": "Deleted.",
     "noResults": "No results found.",
     "noData": "No data to export.",
     "image": "Image",
@@ -173,7 +177,35 @@
     "updated": "Laundry order updated.",
     "tableService": "Service",
     "bulkDeleteSuccess": "{count} laundry order(s) deleted successfully.",
-    "bulkDeletePartial": "Deleted {failed} of {tried} selected laundry order(s)."
+    "bulkDeletePartial": "Deleted {failed} of {tried} selected laundry order(s).",
+    "clothTypes": "Cloth Types",
+    "selectClothType": "Cloth type",
+    "priceAuto": "Unit price auto-filled from the selected cloth type.",
+    "settle": "Settle",
+    "settleTitle": "Settle Laundry Order",
+    "settleChoice": "Choose how this order is settled.",
+    "settlePaid": "Mark as paid",
+    "settleRoom": "Post to room",
+    "settled": "Order settled."
+  },
+  "clothTypes": {
+    "title": "Cloth Types",
+    "subtitle": "Registered garments & linens with a price per service.",
+    "new": "New Cloth Type",
+    "edit": "Edit Cloth Type",
+    "save": "Save Cloth Type",
+    "name": "Cloth type",
+    "washPrice": "Wash price",
+    "ironPrice": "Iron price",
+    "dryCleanPrice": "Dry clean price",
+    "active": "Active",
+    "inactive": "Inactive",
+    "empty": "No cloth types registered yet.",
+    "searchPlaceholder": "Search cloth type",
+    "loadError": "Failed to load cloth types.",
+    "created": "Cloth type created.",
+    "updated": "Cloth type updated.",
+    "deleted": "Cloth type deleted."
   },
   "funGames": {
     "title": "Fun & Games",
@@ -1145,7 +1177,13 @@
     "hideCategory": "Hide",
     "showCategory": "Show",
     "moveUp": "Move up",
-    "moveDown": "Move down"
+    "moveDown": "Move down",
+    "syncToStock": "Sync to stock",
+    "syncToStockHint": "Link this item to a registered inventory item so the waiter sees live availability and out-of-stock items can't be ordered.",
+    "syncedTo": "Synced to stock:",
+    "outOfStock": "Out of stock",
+    "searchItems": "Search registered items...",
+    "none": "None"
   },
   "outlets": {
     "title": "POS Outlets",
@@ -1402,6 +1440,8 @@
     "tableUnitCost": "Unit cost",
     "tableSupplier": "Supplier",
     "itemName": "Item name *",
+    "searchItems": "Search registered items...",
+    "selectItem": "Select item",
     "openingStock": "Opening stock",
     "unitCost": "Unit cost (TZS)",
     "adjustStock": "Adjust Stock",
@@ -1444,7 +1484,8 @@
     "deleteConfirm": "Delete {name}?",
     "bulkDeleteSuccess": "{count} items deleted successfully.",
     "bulkDeletePartial": "Deleted {failed} of {tried} selected items.",
-    "adjustmentType": "Adjustment type"
+    "adjustmentType": "Adjustment type",
+    "noCategory": "No category"
   },
   "departments": {
     "title": "Departments",
@@ -1644,7 +1685,12 @@
     "number": "PO #",
     "partiallyReceived": "Partially received",
     "received": "Received",
-    "requisition": "Requisition"
+    "requisition": "Requisition",
+    "statusRejected": "Rejected",
+    "reject": "Reject",
+    "rejectConfirm": "Reject purchase order {reference}? This cannot be undone.",
+    "rejectReason": "Reason for rejection (optional):",
+    "rejected": "Rejected"
   },
   "goodsReceived": {
     "title": "Goods Received Notes",
@@ -2294,7 +2340,8 @@
     "guestMessageHelp1": "This report lists the messages left for guests within the selected date range.",
     "pickupFrom": "Pickup Date From",
     "pickupHelp1": "This report lists the guest pickups and drop-offs within the selected date range.",
-    "voidReservationHelp1": "This report lists the reservations that were voided within the selected date range."
+    "voidReservationHelp1": "This report lists the reservations that were voided within the selected date range.",
+    "openWindow": "Open in new window"
   },
   "reports": {
     "title": "Reports",
@@ -3300,6 +3347,8 @@
     "source": "Source",
     "total": "Total",
     "advancePaid": "Advance paid",
+    "advanceAccount": "Advance source",
+    "advanceDate": "Advance date",
     "adults": "adults",
     "children": "children",
     "checkedInAt": "Checked in",
@@ -3463,7 +3512,10 @@
     "orderTypeDineIn": "DINE IN",
     "orderTypeTakeAway": "TAKE AWAY",
     "orderTypeRoom": "ROOM ORDERS",
-    "summaryViewAll": "View all"
+    "summaryViewAll": "View all",
+    "outOfStock": "OUT OF STOCK",
+    "outOfStockToast": "{name} is out of stock — no stock left to sell.",
+    "inStockQty": "Stock {qty} {unit}"
   },
   "kitchen": {
     "title": "Kitchen Board",
@@ -3534,7 +3586,11 @@
       "unitPlaceholder": "e.g. bottle, litre, box (SI: kg, mL, m)",
       "registeredUnits": "Your registered units",
       "noCustomUnits": "No custom units yet. Register one to add it to the unit dropdown.",
-      "noSupplier": "No supplier"
+      "noSupplier": "No supplier",
+      "siUnits": "SI units (orderable in PO / GRN)",
+      "currencyType": "Currency type",
+      "noCurrency": "No currency",
+      "noDepartments": "No departments registered yet"
     },
     "pos": {
       "searchProduct": "Search products...",
@@ -3595,7 +3651,8 @@
       "printedBy": "Printed By",
       "allOutlets": "All Outlets",
       "stockAdjustment": "Stock Adjustment",
-      "printMachine": "Print to machine"
+      "printMachine": "Print to machine",
+      "openWindow": "Open in new window"
     },
     "movements": {
       "allTypes": "All types",
@@ -4041,5 +4098,95 @@
     "inventoryProcurement": "Inventory & Procurement",
     "administration": "Administration",
     "communication": "Communication"
+  },
+  "receptionPanel": {
+    "cashieringCenter": "Cashiering Center",
+    "cashieringSubtitle": "Take and confirm payments against today's bookings.",
+    "collectionsForDate": "Collections for selected date",
+    "totalCollected": "Total collected",
+    "cashDrawer": "Cash Drawer",
+    "cashDrawerSubtitle": "Track today's cash intake in one place.",
+    "cashReceived": "Cash received",
+    "cashTransactions": "Cash transactions",
+    "netCashPosition": "Net cash position",
+    "todayCashPayments": "Cash payments today",
+    "nightAuditTransactions": "Night-audit transactions",
+    "amount": "Amount",
+    "postedAt": "Posted at",
+    "recorded": "Recorded",
+    "forReservation": "Reservation / guest",
+    "insertTransaction": "Insert transaction",
+    "businessSource": "Business Source",
+    "businessSourceSubtitle": "Distribution channels that bring in bookings.",
+    "addSource": "Add channel",
+    "editSource": "Edit channel",
+    "noSources": "No distribution channels configured yet.",
+    "confirmDeleteSource": "Delete channel \"{name}\"?",
+    "companyData": "Company Data",
+    "companyDataSubtitle": "Your hotel's legal and contact details for receipts.",
+    "companyName": "Hotel name",
+    "companyAddress": "Address",
+    "companyPhone": "Phone",
+    "companyEmail": "Email",
+    "companySaved": "Company details saved.",
+    "pos": "POS",
+    "posSubtitle": "Post restaurant, bar and laundry charges to a room folio.",
+    "postCharge": "Post a room charge",
+    "selectRoom": "In-house guest / room",
+    "chooseHouseGuest": "Choose an in-house guest",
+    "chargeDescription": "Description",
+    "chargeDescriptionPlaceholder": "e.g. Dinner, Laundry, Mini-bar",
+    "amountTzs": "Amount (TZS)",
+    "postToFolio": "Post to folio",
+    "chargePosted": "Charge posted to folio.",
+    "chargeTypes": "Common charge types",
+    "typeRestaurant": "Restaurant",
+    "typeBar": "Bar",
+    "typeLaundry": "Laundry",
+    "typeShop": "Shop",
+    "typeMiniBar": "Mini-bar",
+    "autoBalances": "Every posting updates the room's folio balance automatically for checkout.",
+    "exchangeRate": "Exchange Rate",
+    "exchangeRateSubtitle": "Foreign-currency to TZS rates for guest settlements.",
+    "addRate": "Add rate",
+    "editRate": "Edit rate",
+    "currency": "Currency",
+    "symbol": "Symbol",
+    "currencyCode": "Currency code",
+    "currencyName": "Currency name",
+    "ratePerTzs": "Rate to TZS",
+    "rateToTzs": "Rate to TZS",
+    "noRates": "No exchange rates configured yet.",
+    "confirmDeleteRate": "Delete rate for {code}?"
+  },
+  "folio": {
+    "title": "Folio",
+    "roomCharges": "Room charges",
+    "balance": "Balance due",
+    "payment": "Payment",
+    "order": "Order",
+    "laundry": "Laundry",
+    "auditTrail": "Audit trail",
+    "empty": "No folio postings yet."
+  },
+  "receptionMenu": {
+    "manualBooking": "Manual Booking",
+    "channelBookings": "Channel Bookings",
+    "bookingRequests": "Booking Requests",
+    "rates": "Rates",
+    "cashieringCenter": "Cashiering Center",
+    "cashDrawer": "Cash Drawer",
+    "businessSource": "Business Source",
+    "companyData": "Company Data",
+    "pos": "POS",
+    "exchangeRate": "Exchange Rate"
+  },
+  "sessionSettings": {
+    "title": "Session & PIN sign-in",
+    "hint": "The staff panel returns to the PIN sign-in page after this long without activity.",
+    "idleTimeoutLabel": "Idle timeout",
+    "minutes": "minutes",
+    "idleTimeoutHint": "Set how long a signed-in desk stays open before requiring the PIN again (1–120 minutes).",
+    "saved": "Session settings saved. Sign-in returns after {minutes} minutes of inactivity."
   }
 }

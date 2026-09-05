@@ -135,6 +135,9 @@
             <td>
               <strong>{{ item.item_name }}</strong>
               <div v-if="item.description" class="muted">{{ item.description }}</div>
+              <div v-if="item.linked_item_name" class="muted sync-note">
+                {{ $t('menu.syncedTo') }} {{ item.linked_item_name }}
+              </div>
             </td>
             <td>{{ item.category || '-' }}</td>
             <td class="capitalize">{{ item.department }}</td>
@@ -149,6 +152,12 @@
             <td>
               <span class="badge" :class="item.is_available ? 'badge-green' : 'badge-red'">
                 {{ item.is_available ? $t('menu.available') : $t('menu.unavailable') }}
+              </span>
+              <span
+                v-if="item.is_in_stock === false"
+                class="badge badge-red stock-out-badge"
+              >
+                {{ $t('menu.outOfStock') }}
               </span>
             </td>
             <td>
@@ -219,6 +228,25 @@
             <div class="form-group">
               <label>{{ $t('common.department') }} *</label>
               <SearchableSelect v-model="form.department" :options="departmentOptions" required />
+            </div>
+            <div class="form-group form-full">
+              <label>{{ $t('menu.syncToStock') }}</label>
+              <SearchableSelect
+                v-model="form.inventory_item_id"
+                :options="inventoryOptions"
+                :empty-label="$t('menu.none')"
+                :placeholder="$t('menu.searchItems')"
+                force-search
+              >
+                <template #option="{ option }">
+                  <span>{{ option.item_name }}</span>
+                  <span class="muted">
+                    · {{ option.category || $t('inventory.noCategory') }}
+                    <template v-if="option.unit"> ({{ option.unit }})</template>
+                  </span>
+                </template>
+              </SearchableSelect>
+              <p class="muted">{{ $t('menu.syncToStockHint') }}</p>
             </div>
             <div class="form-group">
               <label>{{ $t('menu.category') }}</label>
@@ -408,7 +436,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { menuItemApi, menuCategoryApi } from '@/api'
+import { menuItemApi, menuCategoryApi, inventoryApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
@@ -460,11 +488,34 @@ const form = reactive({
   item_name: '',
   category: '',
   department: 'restaurant',
+  inventory_item_id: '',
   price: null,
   cost: null,
   description: '',
   is_available: true,
 })
+
+// Registered inventory items offered in the "sync to stock" picker so a
+// beverage menu item's live quantity can gate waiter orders (best-effort).
+const inventoryItems = ref([])
+const inventoryOptions = computed(() =>
+  inventoryItems.value.map((item) => ({
+    value: item.item_id,
+    item_name: item.item_name,
+    label: item.item_name,
+    category: item.category || '',
+    unit: item.unit || '',
+  })),
+)
+
+async function loadInventoryOptions() {
+  try {
+    const res = await inventoryApi.index({ per_page: 200 })
+    inventoryItems.value = Array.isArray(res.data) ? res.data : res.data?.data || []
+  } catch {
+    inventoryItems.value = []
+  }
+}
 
 // Static dropdown options for department and availability filters.
 const departmentOptions = [
@@ -551,6 +602,7 @@ function resetForm() {
   form.item_name = ''
   form.category = ''
   form.department = 'restaurant'
+  form.inventory_item_id = ''
   form.price = null
   form.cost = null
   form.description = ''
@@ -563,6 +615,7 @@ function openCreate() {
   resetForm()
   showModal.value = true
   loadCategories(form.department)
+  loadInventoryOptions()
 }
 
 /** Opens the edit modal pre-filled with the selected item. */
@@ -573,12 +626,14 @@ function openEdit(item) {
   form.item_name = item.item_name
   form.category = item.category || ''
   form.department = item.department
+  form.inventory_item_id = item.inventory_item_id || ''
   form.price = item.price
   form.cost = item.cost
   form.description = item.description || ''
   form.is_available = !!item.is_available
   showModal.value = true
   loadCategories(form.department)
+  loadInventoryOptions()
 }
 
 /** Closes the create/edit modal. */
@@ -591,11 +646,12 @@ async function save() {
   modalError.value = ''
   saving.value = true
   try {
+    const payload = { ...form, inventory_item_id: form.inventory_item_id || null }
     if (editing.value) {
-      await menuItemApi.update(editingId.value, form)
+      await menuItemApi.update(editingId.value, payload)
       success.value = t('menu.updated')
     } else {
-      await menuItemApi.store(form)
+      await menuItemApi.store(payload)
       success.value = t('menu.created')
     }
     showModal.value = false
@@ -868,6 +924,14 @@ onMounted(load)
   color: #757575;
   font-size: 12px;
   margin-top: 2px;
+}
+
+.sync-note {
+  color: #005eb8;
+}
+
+.stock-out-badge {
+  margin-left: 6px;
 }
 
 .capitalize {

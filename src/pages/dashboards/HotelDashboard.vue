@@ -124,7 +124,12 @@
                   v-for="d in days"
                   :key="d.iso"
                   class="sv-cell-bg"
-                  :class="{ today: d.isToday, weekend: d.isWeekend }"
+                  :class="{ today: d.isToday, weekend: d.isWeekend, vacant: isVacantCell(room, d.iso) }"
+                  role="button"
+                  tabindex="0"
+                  :title="isVacantCell(room, d.iso) ? $t('stayview.vacant') : ''"
+                  @click="isVacantCell(room, d.iso) && bookVacantDay(room, d.iso)"
+                  @keyup.enter="isVacantCell(room, d.iso) && bookVacantDay(room, d.iso)"
                 ></div>
                 <div
                   v-for="bar in barsByRoom[room.room_id] || []"
@@ -287,6 +292,55 @@
                 </span>
               </div>
 
+              <!-- Folio: room charges, postings and audit trail -->
+              <div v-if="folio" class="sv-modal-section">
+                {{ $t('folio.title') }}
+              </div>
+              <div v-if="folioLoading" class="sv-modal-row muted">
+                <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+                <span>{{ $t('common.loading') }}</span>
+              </div>
+              <template v-else-if="folio">
+                <div class="sv-modal-row">
+                  <i class="fas fa-database" aria-hidden="true"></i>
+                  <span>
+                    {{ $t('folio.roomCharges') }}: <strong>TZS {{ fmtNum(folio.folio?.room_charges) }}</strong>
+                    <span class="sv-cap"> · {{ $t('folio.balance') }} TZS {{ fmtNum(folio.folio?.balance_due) }}</span>
+                  </span>
+                </div>
+                <div v-for="(p, i) in folio.payments" :key="i" class="sv-modal-row">
+                  <i class="fas fa-money-bill-wave" aria-hidden="true"></i>
+                  <span class="sv-cap">
+                    {{ $t('folio.payment') }} · {{ p.payment_method }} · TZS {{ fmtNum(p.amount) }}
+                  </span>
+                </div>
+                <div v-for="(o, i) in folio.orders" :key="'o' + i" class="sv-modal-row">
+                  <i class="fas fa-utensils" aria-hidden="true"></i>
+                  <span class="sv-cap">
+                    {{ $t('folio.order') }} {{ o.reference || o.order_number || '' }} · TZS {{ fmtNum(o.total_amount ?? o.total) }}
+                  </span>
+                </div>
+                <div v-for="(l, i) in folio.laundry" :key="'l' + i" class="sv-modal-row">
+                  <i class="fas fa-shirt" aria-hidden="true"></i>
+                  <span class="sv-cap">
+                    {{ $t('folio.laundry') }} · TZS {{ fmtNum(l.total_charge ?? l.total_amount ?? l.total) }}
+                  </span>
+                </div>
+                <div v-if="folio.audit_trail?.length" class="sv-modal-section">
+                  {{ $t('folio.auditTrail') }}
+                </div>
+                <div v-for="(a, i) in folio.audit_trail" :key="'a' + i" class="sv-modal-row">
+                  <i class="fas fa-magnifying-glass-chart" aria-hidden="true"></i>
+                  <span class="sv-cap">
+                    {{ a.action }} · {{ a.actor }} · {{ a.created_at ? new Date(a.created_at).toLocaleString() : '' }}
+                  </span>
+                </div>
+                <div v-if="!folio.payments?.length && !folio.orders?.length && !folio.laundry?.length && !folio.audit_trail?.length" class="sv-modal-row muted">
+                  <i class="fas fa-receipt" aria-hidden="true"></i>
+                  <span>{{ $t('folio.empty') }}</span>
+                </div>
+              </template>
+
               <!-- Requests & notes -->
               <template v-if="activeBar.specialRequests || activeBar.notes">
                 <div class="sv-modal-section">{{ $t('stayview.requestsNotes') }}</div>
@@ -361,22 +415,39 @@
               </button>
             </div>
             <div class="sv-modal-body">
+              <div class="sv-field-row">
+                <label class="sv-field">
+                  <span>{{ $t('reservations.firstName') }}</span>
+                  <input v-model="bookingForm.first_name" type="text" class="input" required />
+                </label>
+                <label class="sv-field">
+                  <span>{{ $t('reservations.lastName') }}</span>
+                  <input v-model="bookingForm.last_name" type="text" class="input" required />
+                </label>
+              </div>
               <label class="sv-field">
-                <span>{{ $t('stayview.guestName') }}</span>
-                <input v-model="bookingForm.guest_name" type="text" class="input" required />
+                <span>{{ $t('reservations.guestPhone') }}</span>
+                <input v-model="bookingForm.guest_phone" type="tel" class="input" required />
               </label>
-              <label class="sv-field">
-                <span>{{ $t('stayview.phone') }}</span>
-                <input v-model="bookingForm.guest_phone" type="tel" class="input" />
-              </label>
-              <label class="sv-field">
-                <span>{{ $t('stayview.room') }}</span>
-                <select v-model="bookingForm.room_id" class="input" required>
-                  <option v-for="room in rooms" :key="room.room_id" :value="room.room_id">
-                    {{ room.room_number }} · {{ roomTypeLabel(room.room_type) }} · TZS {{ formatPrice(room.price_per_night) }}
-                  </option>
-                </select>
-              </label>
+              <div class="sv-field-row">
+                <label class="sv-field">
+                  <span>{{ $t('reservations.bookingType') }}</span>
+                  <select v-model="bookingForm.booking_type" class="input" required>
+                    <option value="single">{{ $t('common.bookingTypes.single') }}</option>
+                    <option value="couple">{{ $t('common.bookingTypes.couple') }}</option>
+                    <option value="family">{{ $t('common.bookingTypes.family') }}</option>
+                    <option value="group">{{ $t('common.bookingTypes.group') }}</option>
+                  </select>
+                </label>
+                <label class="sv-field">
+                  <span>{{ $t('stayview.room') }}</span>
+                  <select v-model="bookingForm.room_id" class="input" required>
+                    <option v-for="room in rooms" :key="room.room_id" :value="room.room_id">
+                      {{ room.room_number }} · {{ roomTypeLabel(room.room_type) }} · TZS {{ formatPrice(room.price_per_night) }}
+                    </option>
+                  </select>
+                </label>
+              </div>
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.arrival') }}</span>
@@ -389,12 +460,31 @@
               </div>
               <div class="sv-field-row">
                 <label class="sv-field">
-                  <span>{{ $t('stayview.total') }}</span>
-                  <input v-model.number="bookingForm.total_amount" type="number" min="0" class="input" required />
+                  <span>{{ $t('stayview.total') }}<em class="sv-auto"> · {{ $t('reservations.autoTotal', { amount: bookingNights && bookingNights > 0 ? formatPrice(bookingNights * bookingRate) : 0 }) }}</em></span>
+                  <input
+                    :value="bookingTotal"
+                    @input="bookingForm.total_amount = Number($event.target.value) || 0"
+                    type="number" min="0" class="input" required />
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.advancePaid') }}</span>
                   <input v-model.number="bookingForm.advance_payment" type="number" min="0" class="input" />
+                </label>
+              </div>
+              <div class="sv-field-row">
+                <label class="sv-field">
+                  <span>{{ $t('stayview.advanceAccount') }}</span>
+                  <select v-model="bookingForm.advance_payment_method" class="input">
+                    <option value="">—</option>
+                    <option value="cash">{{ $t('paymentFields.methods.cash') }}</option>
+                    <option value="mobile_money">{{ $t('paymentFields.methods.mobile_money') }}</option>
+                    <option value="bank">{{ $t('common.paymentMethods.bankTransfer') }}</option>
+                    <option value="card">{{ $t('paymentFields.methods.card') }}</option>
+                  </select>
+                </label>
+                <label class="sv-field">
+                  <span>{{ $t('stayview.advanceDate') }}</span>
+                  <input v-model="bookingForm.advance_payment_date" type="date" class="input" />
                 </label>
               </div>
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
@@ -675,7 +765,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useNotificationStore } from '@/stores/notifications'
 import { roomApi, reservationApi, guestApi, housekeepingApi, invoiceApi, inventoryApi } from '@/api'
@@ -1057,15 +1147,48 @@ function hideBarTip() {
 // Bar currently shown in the click modal (null = closed).
 const activeBar = ref(null)
 
-/** Opens the reservation summary modal for the clicked bar. */
+// Folio loaded from reservationApi.folio() for the active bar.
+const folio = ref(null)
+const folioLoading = ref(false)
+
+/**
+ * Opens the reservation summary modal for the clicked bar and, when the stay
+ * has a reservation reference, fetches its full folio (postings + audit trail).
+ */
 function openBarModal(bar) {
   hideBarTip()
   activeBar.value = bar
+  folio.value = null
+  if (bar?.id) loadFolio(bar.id)
+  else folioLoading.value = false
 }
 
 /** Closes the reservation summary modal. */
 function closeBarModal() {
   activeBar.value = null
+  folio.value = null
+  folioLoading.value = false
+}
+
+/** Formats a numeric amount with thousands separators. */
+function fmtNum(n) {
+  return Number(n || 0).toLocaleString()
+}
+
+/**
+ * Loads the reservation folio (payments, restaurant/bar orders, laundry and
+ * audit trail) shown in the stay-view modal. Non-fatal on error.
+ */
+async function loadFolio(id) {
+  folioLoading.value = true
+  try {
+    const res = await reservationApi.folio(id)
+    folio.value = res.data
+  } catch (err) {
+    folio.value = null
+  } finally {
+    folioLoading.value = false
+  }
 }
 
 /* ---------------- In-place front-desk actions (no navigation) ---------------- */
@@ -1413,18 +1536,72 @@ ${head}
 const bookingModal = ref(false)
 const bookingForm = ref({})
 
+/** Nights between the selected arrival and departure dates. */
+const bookingNights = computed(() => {
+  const f = bookingForm.value
+  if (!f.check_in_date || !f.check_out_date) return 0
+  const days = diffDays(parseDate(f.check_in_date), parseDate(f.check_out_date))
+  return Number.isFinite(days) && days > 0 ? days : 0
+})
+
+/** Nightly rate of the selected room (0 when none selected). */
+const bookingRate = computed(() => {
+  const room = rooms.value.find((r) => r.room_id === bookingForm.value.room_id)
+  return Number(room?.price_per_night) || 0
+})
+
+/** Suggested total based on nights × rate. */
+const bookingTotal = computed(() => bookingNights.value * bookingRate.value)
+
+/** Keep the total in step with the dates and room, so it is automatic. */
+watch(
+  [() => bookingForm.value.room_id, () => bookingForm.value.check_in_date, () => bookingForm.value.check_out_date],
+  () => {
+    if (bookingModal.value) bookingForm.value.total_amount = bookingTotal.value
+  },
+)
+
+/** Whether a room has no booking bar covering the given day column. */
+function isVacantCell(room, iso) {
+  const idx = days.value.findIndex((d) => d.iso === iso)
+  if (idx < 0) return false
+  const col = idx + 1
+  const bars = barsByRoom.value[room.room_id] || []
+  return !bars.some((b) => col >= b.start && col < b.start + b.span)
+}
+
+/** Clicking a vacant day opens the booking form with that arrival date. */
+function bookVacantDay(room, iso) {
+  const arrival = parseDate(iso)
+  const today = startOfDay(new Date())
+  if (arrival < today) return
+  bookingForm.value = {
+    ...bookingForm.value,
+    room_id: room.room_id,
+    check_in_date: iso,
+    check_out_date: isoKey(addDays(arrival, 1)),
+    total_amount: null,
+  }
+  actionError.value = ''
+  bookingModal.value = true
+}
+
 /** Opens the booking form with sensible defaults (today → tomorrow). */
 function openNewBooking() {
   const today = isoKey(startOfDay(new Date()))
   const tomorrow = isoKey(addDays(startOfDay(new Date()), 1))
   bookingForm.value = {
-    guest_name: '',
+    first_name: '',
+    last_name: '',
     guest_phone: '',
+    booking_type: 'single',
     room_id: rooms.value[0]?.room_id || null,
     check_in_date: today,
     check_out_date: tomorrow,
     total_amount: null,
     advance_payment: 0,
+    advance_payment_method: '',
+    advance_payment_date: today,
   }
   actionError.value = ''
   bookingModal.value = true
@@ -1432,9 +1609,14 @@ function openNewBooking() {
 
 /** Creates the reservation and refreshes the chart. */
 async function submitBooking() {
-  if (!bookingForm.value.guest_name || !bookingForm.value.room_id) return
+  if (!bookingForm.value.first_name || !bookingForm.value.last_name || !bookingForm.value.room_id) return
   await runAction(async () => {
-    await reservationApi.store({ ...bookingForm.value, status: 'confirmed' })
+    const payload = { ...bookingForm.value }
+    if (!payload.advance_payment_method) {
+      delete payload.advance_payment_method
+      delete payload.advance_payment_date
+    }
+    await reservationApi.store({ ...payload, status: 'confirmed' })
   })
   if (!actionError.value) bookingModal.value = false
 }
@@ -1837,6 +2019,23 @@ onUnmounted(() => clearInterval(refreshTimer))
   height: 100%;
   border-right: 1px solid #f5f5f5;
   grid-row: 1;
+}
+
+.sv-cell-bg.vacant {
+  cursor: pointer;
+}
+
+.sv-cell-bg.vacant:hover {
+  background: #f2f8ff;
+  box-shadow: inset 0 0 0 1px #cfe2ff;
+  z-index: 1;
+}
+
+.sv-auto {
+  color: #1e7e34;
+  font-style: normal;
+  font-weight: 400;
+  opacity: 0.85;
 }
 
 /* Explicit placement so backgrounds and bars share row 1 of the track */

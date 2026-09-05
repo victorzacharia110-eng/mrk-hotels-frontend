@@ -108,6 +108,10 @@
                   @click="approve(po)">
                   <i class="fas fa-check"></i> {{ $t('purchaseOrders.financeApprove') }}
                 </button>
+                <button v-if="['pending', 'manager_approved'].includes(po.status) && canManagerApprove" class="btn btn-sm btn-danger"
+                  @click="rejectPo(po)">
+                  <i class="fas fa-xmark"></i> {{ $t('purchaseOrders.reject') }}
+                </button>
                 <button v-if="
                   ['pending', 'manager_approved', 'approved'].includes(po.status) && canOperate
                 " class="btn btn-sm btn-danger" @click="cancel(po)">
@@ -186,8 +190,20 @@
           <div v-for="(item, idx) in form.items" :key="idx" class="item-row">
             <div class="item-grid">
               <div class="form-group">
-                <label>{{ $t('purchaseOrders.itemName') }}</label>
-                <input v-model="item.item_name" type="text" class="input" required />
+                <label>{{ $t('purchaseOrders.itemName') }} *</label>
+                <SearchableSelect
+                  v-model="item.item_id"
+                  :options="itemOptions"
+                  :placeholder="$t('inventory.searchItems')"
+                  :search-placeholder="$t('inventory.searchItems')"
+                  :empty-label="$t('inventory.selectItem')"
+                  required
+                  @change="onPickItem(idx, $event)"
+                >
+                  <template #option="{ option }">
+                    <span>{{ option.label }} <small class="muted">{{ option.category }}</small></span>
+                  </template>
+                </SearchableSelect>
               </div>
               <div class="form-group">
                 <label>{{ $t('common.description') }}</label>
@@ -199,8 +215,12 @@
               </div>
               <div class="form-group">
                 <label>{{ $t('common.unit') }}</label>
-                <input v-model="item.unit" type="text" class="input"
-                  :placeholder="$t('purchaseOrders.unitPlaceholder')" />
+                <SearchableSelect
+                  v-model="item.unit"
+                  :options="unitOptionsFor(item)"
+                  :searchable="false"
+                  :placeholder="$t('purchaseOrders.unitPlaceholder')"
+                />
               </div>
               <div class="form-group">
                 <label>{{ $t('purchaseOrders.unitPrice') }}</label>
@@ -280,7 +300,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { purchaseOrderApi, purchaseRequisitionApi, supplierApi } from '@/api'
+import { purchaseOrderApi, purchaseRequisitionApi, supplierApi, inventoryApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
@@ -295,10 +315,11 @@ const canManagerApprove = computed(() => authStore.can(80))
 const canApprove = computed(() => authStore.can(70))
 const canOperate = computed(() => authStore.canOperate)
 
-// List state: POs, supplier/PR dropdown data, pagination, filters, and load flags/messages.
+// List state: POs, supplier/PR/inventory dropdown data, pagination, filters, and load flags/messages.
 const orders = ref([])
 const suppliers = ref([])
 const approvedPrs = ref([])
+const inventoryItems = ref([])
 const page = ref(1)
 const meta = ref({
   total: 0,
@@ -337,6 +358,7 @@ const statusOptions = computed(() => [
   { value: 'partially_received', label: t('purchaseOrders.statusPartiallyReceived') },
   { value: 'received', label: t('purchaseOrders.statusReceived') },
   { value: 'cancelled', label: t('purchaseOrders.statusCancelled') },
+  { value: 'rejected', label: t('purchaseOrders.statusRejected') },
 ])
 
 const supplierOptions = computed(() =>
@@ -350,9 +372,62 @@ const requisitionOptions = computed(() =>
   approvedPrs.value.map((pr) => ({ value: pr.pr_id, label: pr.pr_number })),
 )
 
+// Registered inventory items become the only selectable line items, so an
+// order can only raise registered goods (linkage fixes stock-in on receiving).
+const itemOptions = computed(() =>
+  inventoryItems.value.map((item) => ({
+    value: item.item_id,
+    label: `${item.item_name}${item.unit ? ` (${item.unit})` : ''}`,
+    category: item.category,
+    stock: item.quantity_in_stock,
+  })),
+)
+
+// Common SI units offered when the picked item registers no units.
+const STANDARD_UNITS = [
+  'BTL', 'PCS', 'KG', 'L', 'GLN', 'BOX', 'CARTON', 'PKT', 'ROLL', 'DOZ', 'PAIR', 'SET', 'M', 'GM', 'ML', 'TIN', 'SACHET',
+]
+
+/**
+ * Units shown for a line: the selected item's registered SI units (or its
+ * primary unit when it has none), else the common SI-unit list.
+ *
+ * @param {object} item - The PO line item.
+ * @returns {Array<{value: string, label: string}>} Unit dropdown options.
+ */
+function unitOptionsFor(item) {
+  const units = new Set()
+  const registered = (item.si_units || []).filter(Boolean)
+  if (registered.length) {
+    registered.forEach((u) => units.add(u))
+  } else if (item.unit) {
+    units.add(item.unit)
+  } else {
+    STANDARD_UNITS.forEach((u) => units.add(u))
+  }
+  return Array.from(units).map((u) => ({ value: u, label: u }))
+}
+
+/**
+ * Applies a picked registered inventory item to a PO line: captures its
+ * id, name, registered SI units and default unit so the backend can
+ * stock-in the right record.
+ *
+ * @param {number} idx - Index of the line item in the form.
+ * @param {string} value - The chosen inventory item id.
+ */
+function onPickItem(idx, value) {
+  const line = form.items[idx]
+  const found = inventoryItems.value.find((i) => String(i.item_id) === String(value))
+  line.item_id = value
+  line.item_name = found?.item_name || ''
+  line.si_units = found?.si_units?.length ? [...found.si_units] : []
+  if (found?.unit) line.unit = found.unit
+}
+
 /** Returns a fresh blank PO line item. */
 function emptyItem() {
-  return { item_name: '', description: '', quantity: null, unit: '', unit_price: null }
+  return { item_id: '', item_name: '', description: '', quantity: null, unit: '', si_units: [], unit_price: null }
 }
 
 /** Maps a PO status to its badge CSS class for the table. */
@@ -364,6 +439,7 @@ function statusBadge(status) {
     partially_received: 'badge-yellow',
     received: 'badge-green',
     cancelled: 'badge-red',
+    rejected: 'badge-red',
   }
   return map[status] || 'badge-gray'
 }
@@ -412,15 +488,17 @@ function triggerSearch() {
   }, 250)
 }
 
-/** Loads the suppliers and approved requisitions for the dropdowns. */
+/** Loads the suppliers, approved requisitions and inventory for the dropdowns. */
 async function loadOptions() {
   try {
-    const [s, pr] = await Promise.all([
+    const [s, pr, inv] = await Promise.all([
       supplierApi.index({ per_page: 100 }),
       purchaseRequisitionApi.index({ status: 'approved', per_page: 100 }),
+      inventoryApi.index({ per_page: 200 }),
     ])
     suppliers.value = s.data.data || []
     approvedPrs.value = pr.data.data || []
+    inventoryItems.value = inv.data.data || []
   } catch {
     // ignore
   }
@@ -517,6 +595,21 @@ async function approve(po) {
   try {
     const res = await purchaseOrderApi.approve(po.po_id)
     success.value = res.data.message || t('purchaseOrders.approved')
+    await load()
+  } catch (err) {
+    error.value = flattenError(err)
+  }
+}
+
+/** Rejects a pending PO (leader sign-off) with an optional reason. */
+async function rejectPo(po) {
+  const reason = window.prompt(t('purchaseOrders.rejectReason'), '')
+  if (reason === null) return
+  if (!window.confirm(t('purchaseOrders.rejectConfirm', { reference: po.po_number }))) return
+  error.value = ''
+  try {
+    const res = await purchaseOrderApi.reject(po.po_id, { reason })
+    success.value = res.data.message || t('purchaseOrders.rejected')
     await load()
   } catch (err) {
     error.value = flattenError(err)

@@ -293,6 +293,40 @@
       </form>
     </div>
 
+    <!-- Session / PIN inactivity — editable by managers and owners (level 80+) -->
+    <div v-if="canManageHotel" class="card">
+      <h2 class="card-title">
+        <i class="fas fa-lock"></i> {{ $t('sessionSettings.title') }}
+      </h2>
+      <p class="muted">{{ $t('sessionSettings.hint') }}</p>
+      <div v-if="sessionSettingsError" class="alert alert-error">{{ sessionSettingsError }}</div>
+      <div v-if="sessionSettingsSuccess" class="alert alert-success">{{ sessionSettingsSuccess }}</div>
+      <form @submit.prevent="saveSessionSettings">
+        <div class="profile-grid">
+          <div class="form-group">
+            <label>{{ $t('sessionSettings.idleTimeoutLabel') }}</label>
+            <div class="input-row" style="display:flex; align-items:center; gap:8px; max-width: 260px;">
+              <input
+                v-model.number="sessionSettingsDraft.idleTimeoutMinutes"
+                type="number"
+                min="1"
+                max="120"
+                class="input"
+              />
+              <span class="muted">{{ $t('sessionSettings.minutes') }}</span>
+            </div>
+            <small class="muted">{{ $t('sessionSettings.idleTimeoutHint') }}</small>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" :disabled="savingSessionSettings">
+            <i class="fas fa-save"></i>
+            {{ savingSessionSettings ? $t('common.saving') : $t('common.save') }}
+          </button>
+        </div>
+      </form>
+    </div>
+
     <!-- Hotel business details — editable by managers and owners (level 80+) -->
     <div v-if="canManageHotel" class="card">
       <h2 class="card-title">
@@ -521,6 +555,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import QRCode from 'qrcode'
 import { useAuthStore } from '@/stores/auth'
+import { useSessionSettingsStore } from '@/stores/sessionSettings'
 import { attendanceApi, authApi, hotelSettingsApi } from '@/api'
 import { PAYMENT_METHODS, METHOD_MOBILE_MONEY, METHOD_BANK, MOBILE_MONEY_PROVIDERS, ALL_PROVIDERS, normalizePaymentAccount } from '@/utils/payments'
 import ChangePasswordForm from '@/components/ChangePasswordForm.vue'
@@ -594,6 +629,30 @@ const settings = reactive({
 const savingSettings = ref(false)
 const settingsError = ref('')
 const settingsMessage = ref('')
+
+// Session / idle-timeout settings (defaults to 15 minutes per the review).
+const sessionSettingsStore = useSessionSettingsStore()
+const sessionSettingsDraft = ref({ idleTimeoutMinutes: sessionSettingsStore.idleTimeoutMinutes })
+const savingSessionSettings = ref(false)
+const sessionSettingsError = ref('')
+const sessionSettingsSuccess = ref('')
+
+function saveSessionSettings() {
+  savingSessionSettings.value = true
+  sessionSettingsError.value = ''
+  sessionSettingsSuccess.value = ''
+  try {
+    sessionSettingsStore.saveSettings({ idleTimeoutMinutes: sessionSettingsDraft.value.idleTimeoutMinutes })
+    sessionSettingsDraft.value.idleTimeoutMinutes = sessionSettingsStore.idleTimeoutMinutes
+    sessionSettingsSuccess.value = sessionSettingsDraft.idleTimeoutMinutes
+      ? $t('sessionSettings.saved', { minutes: sessionSettingsStore.idleTimeoutMinutes })
+      : $t('common.updateSuccess')
+  } catch {
+    sessionSettingsError.value = $t('common.error')
+  } finally {
+    savingSessionSettings.value = false
+  }
+}
 
 // Only managers and above mint the entrance QR; only hotel admins edit the fence.
 const canManageQr = computed(() => authStore.can(80))

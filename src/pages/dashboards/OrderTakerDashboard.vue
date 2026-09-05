@@ -107,11 +107,18 @@
               :key="item.menu_item_id"
               type="button"
               class="cat-item"
-              :class="{ 'on-order': lineFor(item) }"
+              :class="{ 'on-order': lineFor(item), 'out-of-stock': item.is_in_stock === false }"
+              :disabled="item.is_in_stock === false"
               @click="addItem(item)"
             >
               <span class="cat-item-name">{{ item.item_name }}</span>
               <span class="cat-item-price">TZS {{ money(item.price) }}</span>
+              <span v-if="item.is_in_stock === false" class="cat-item-oos">
+                {{ $t('orderTaker.outOfStock') }}
+              </span>
+              <span v-else-if="item.quantity_on_hand != null" class="cat-item-stock">
+                {{ $t('orderTaker.inStockQty', { qty: item.quantity_on_hand, unit: item.linked_item_unit || '' }) }}
+              </span>
               <span v-if="qtyFor(item)" class="cat-item-qty">×{{ qtyFor(item) }}</span>
             </button>
           </div>
@@ -205,7 +212,7 @@
                   <div class="qty-step">
                     <button type="button" :disabled="line.quantity <= 1" @click="stepQty(line, -1)">-</button>
                     <span>{{ line.quantity }}</span>
-                    <button type="button" @click="stepQty(line, 1)">+</button>
+                    <button type="button" :disabled="lineIsMaxed(line)" @click="stepQty(line, 1)">+</button>
                   </div>
                 </td>
                 <td>{{ line.item_name }}</td>
@@ -275,8 +282,15 @@
             · {{ order.waiter_name || '—' }}
           </p>
           <ul class="open-items">
-            <li v-for="item in order.items || []" :key="item.order_item_id">
+            <li
+              v-for="item in order.items || []"
+              :key="item.order_item_id"
+              :class="{ 'item-served': item.status === 'ready' || item.status === 'served' }"
+            >
               {{ item.quantity }}× {{ item.item_name }}<template v-if="item.accompaniment"> · {{ item.accompaniment }}</template>
+              <span v-if="item.status === 'ready' || item.status === 'served'" class="item-ready-pill">
+                {{ item.status === 'ready' ? $t('orders.statusReady') : $t('orders.statusServed') }}
+              </span>
             </li>
           </ul>
           <p class="open-total">{{ $t('orderTaker.orderTotal') }}: <strong>TZS {{ money(order.total_amount) }}</strong>
@@ -1271,13 +1285,40 @@ function accompanimentLabel(value) {
 /** Adds a menu item to the ticket (or bumps its quantity).
  * Grill-style mains in the restaurant first ask what they're served with
  * (wali, ugali, chips…) - one extra tap, then the item lands on the ticket.
+ * Synced items that are out of stock are refused here AND on the server.
  */
 function addItem(item) {
+  if (item.is_in_stock === false) {
+    toast(t('orderTaker.outOfStockToast', { name: item.item_name }), 'error')
+    return
+  }
+  if (syncedStockExhausted(item)) {
+    toast(t('orderTaker.outOfStockToast', { name: item.item_name }), 'error')
+    return
+  }
   if (department.value === 'restaurant' && isGrillItem(item)) {
     accompItem.value = item
     return
   }
   commitItem(item, '')
+}
+
+/** The menu item record behind an order line (for stock gating). */
+function menuItemFor(line) {
+  return availableMenu.value.find((m) => m.menu_item_id === line.menu_item_id)
+}
+
+/** True when a synced item has no sellable quantity left on the ticket. */
+function syncedStockExhausted(item) {
+  if (item.quantity_on_hand == null) return false
+  return qtyFor(item) >= Number(item.quantity_on_hand)
+}
+
+/** True when this line cannot take any more units (synced items only). */
+function lineIsMaxed(line) {
+  const item = menuItemFor(line)
+  if (!item || item.quantity_on_hand == null) return false
+  return qtyFor(item) >= Number(item.quantity_on_hand)
 }
 
 /** Actually places the item on the ticket with the chosen accompaniment. */
@@ -1374,6 +1415,8 @@ async function sendOrder() {
     }
     setTimeout(() => (sentToast.value = ''), 4000)
     loadOpenOrders()
+    // Refreshes live stock levels so newly depleted items grey out at once.
+    loadMenu()
   } catch (err) {
     sendError.value = err.response?.data?.message || t('orderTaker.sendError')
   } finally {
@@ -2159,16 +2202,54 @@ function onKey(e) {
   background: #fffbeb;
 }
 
+/* Out-of-stock cards: greyed out and not tappable */
+.cat-item.out-of-stock {
+  background: #f4f4f5;
+  border-color: #d4d4d8;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.cat-item.out-of-stock:hover {
+  transform: none;
+  border-color: #d4d4d8;
+}
+
 .cat-item-name {
   font-weight: 700;
   color: #27272a;
   font-size: 14px;
 }
 
+.cat-item.price-sold-out,
+.cat-item.out-of-stock .cat-item-price {
+  color: #a1a1aa;
+}
+
 .cat-item-price {
   color: #b8860b;
   font-weight: 700;
   font-size: 13px;
+}
+
+/* "OUT OF STOCK" pill on the card */
+.cat-item-oos {
+  align-self: flex-start;
+  background: #dc2626;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+/* Live stock hint on synced items */
+.cat-item-stock {
+  color: #15803d;
+  font-weight: 600;
+  font-size: 11px;
 }
 
 .cat-item-qty {
@@ -2438,6 +2519,24 @@ function onKey(e) {
   padding: 0 0 0 18px;
   font-size: 13px;
   color: #3f3f46;
+}
+
+.open-items li.item-served {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.item-ready-pill {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .open-total {
