@@ -1054,7 +1054,12 @@ export const inventoryOpsApi = {
   voidProductionRun: (id, reason) => api.post(`${v1}/inventory-production-runs/${id}/void`, { reason }),
 
   indents: (params) => api.get(`${v1}/inventory-indents`, { params }),
+  showIndent: (id) => api.get(`${v1}/inventory-indents/${id}`),
   storeIndent: (data) => api.post(`${v1}/inventory-indents`, data),
+  updateIndent: (id, data) => api.put(`${v1}/inventory-indents/${id}`, data),
+  sendIndent: (id) => api.post(`${v1}/inventory-indents/${id}/send`),
+  supplyIndent: (id, lines) => api.post(`${v1}/inventory-indents/${id}/supply`, { lines }),
+  acceptIndent: (id) => api.post(`${v1}/inventory-indents/${id}/accept`),
   approveIndent: (id) => api.post(`${v1}/inventory-indents/${id}/approve`),
   rejectIndent: (id, reason) => api.post(`${v1}/inventory-indents/${id}/reject`, { reason }),
   voidIndent: (id, reason) => api.post(`${v1}/inventory-indents/${id}/void`, { reason }),

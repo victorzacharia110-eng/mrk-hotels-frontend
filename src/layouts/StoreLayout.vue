@@ -676,7 +676,7 @@ const visibleModules = computed(() => {
     },
     {
       key: 'group-stock', icon: 'fas fa-boxes-stacked', labelKey: 'accordion.inventoryProcurement',
-      keys: ['inventory', 'departments', 'categories', 'suppliers', 'requisitions', 'purchase-orders', 'goods-received'],
+      keys: ['inventory', 'departments', 'categories', 'suppliers', 'requisitions', 'purchase-requisitions', 'purchase-orders', 'goods-received'],
     },
     {
       key: 'group-admin', icon: 'fas fa-user-tie', labelKey: 'accordion.administration',

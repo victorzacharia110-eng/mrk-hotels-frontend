@@ -86,8 +86,10 @@ const hotelChildren = [
   { path: 'categories', name: 'hotel-categories', component: () => import('@/pages/inventory/CategoryListPage.vue'), meta: { module: 'categories' } },
   // Supplier records.
   { path: 'suppliers', name: 'hotel-suppliers', component: () => import('@/pages/suppliers/SupplierListPage.vue'), meta: { module: 'suppliers' } },
-  // Purchase requisitions workflow.
-  { path: 'requisitions', name: 'hotel-requisitions', component: () => import('@/pages/procurement/RequisitionListPage.vue'), meta: { module: 'requisitions' } },
+  // Store requisitions — department-scoped workflow open to all staff.
+  { path: 'requisitions', name: 'hotel-requisitions', component: () => import('@/pages/requisitions/RequisitionPage.vue'), meta: { module: 'requisitions' } },
+  // Purchase requisitions submitted to procurement.
+  { path: 'purchase-requisitions', name: 'hotel-purchase-requisitions', component: () => import('@/pages/procurement/RequisitionListPage.vue'), meta: { module: 'purchase-requisitions' } },
   // Purchase orders workflow.
   { path: 'purchase-orders', name: 'hotel-purchase-orders', component: () => import('@/pages/procurement/PurchaseOrderListPage.vue'), meta: { module: 'purchase-orders' } },
   // Goods received notes.
@@ -337,6 +339,12 @@ const routes = [
         component: () => import('@/pages/cashier/CashierIngredientsPage.vue'),
         meta: { titleKey: 'cashier.nav.ingredients' },
       },
+      {
+        path: 'requisitions',
+        name: 'cashier-requisitions',
+        component: () => import('@/pages/requisitions/RequisitionPage.vue'),
+        meta: { titleKey: 'cashier.nav.requisitions' },
+      },
     ],
   },
   // Store manager panel: inventory, suppliers and procurement (role-guarded).
@@ -387,11 +395,11 @@ const routes = [
         component: () => import('@/pages/store/StoreGoodsReceivedPage.vue'),
         meta: { titleKey: 'storeManager.nav.goodsReceived' },
       },
-      // Department indents (item requests from departments).
+      // Department indents (item requests from departments) + own requisitions.
       {
         path: 'indents',
         name: 'store-indents',
-        component: () => import('@/pages/store/StoreIndentsPage.vue'),
+        component: () => import('@/pages/requisitions/RequisitionPage.vue'),
         meta: { titleKey: 'storeManager.nav.indents' },
       },
       // Market lists (buyer's shopping list).

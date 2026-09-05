@@ -30,6 +30,13 @@
           </router-link>
         </div>
 
+        <router-link :to="{ name: 'cashier-requisitions' }" class="pos-nav-link"
+          :class="{ active: isActive('/cashier/requisitions') }" @click="mobileOpen = false"
+          :title="$t('cashier.nav.requisitions')">
+          <i class="fas fa-file-signature" aria-hidden="true"></i>
+          <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.requisitions') }}</span>
+        </router-link>
+
         <router-link :to="{ name: 'cashier-order-summary' }" class="pos-nav-link"
           :class="{ active: isActive('/cashier/order-summary') }" @click="mobileOpen = false"
           :title="$t('cashier.nav.orderSummary')">
