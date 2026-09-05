@@ -139,7 +139,17 @@
             <td>{{ order.guest_name || '-' }}</td>
             <td>{{ order.room_number || '-' }}</td>
             <td class="capitalize">{{ serviceLabel(order.service) }}</td>
-            <td>{{ order.items_count || '-' }}</td>
+            <td>
+              {{ order.items_count || '-' }}
+              <div v-if="order.consumables?.length" class="muted consumables-summary">
+                <i class="fas fa-jug-detergent"></i>
+                {{
+                  order.consumables
+                    .map((l) => `${l.item_name} x${l.quantity}`)
+                    .join(', ')
+                }}
+              </div>
+            </td>
             <td>
               <span class="price">TZS {{ Number(order.total_charge).toLocaleString() }}</span>
             </td>
@@ -338,6 +348,54 @@
             }}
           </p>
 
+          <!-- Consumables: the registered stock issued to the wash -->
+          <div class="items-head">
+            <h3>{{ $t('laundry.consumables') }}</h3>
+            <button
+              v-if="!consumablesLocked"
+              type="button"
+              class="btn btn-sm btn-secondary"
+              @click="addConsumable"
+            >
+              <i class="fas fa-plus"></i> {{ $t('laundry.addConsumable') }}
+            </button>
+          </div>
+          <p v-if="consumablesLocked && !form.consumables.length" class="muted">
+            {{ $t('laundry.noConsumables') }}
+          </p>
+          <div v-for="(line, idx) in form.consumables" :key="`cons-${idx}`" class="item-row">
+            <div class="item-grid consumable-grid">
+              <div class="form-group">
+                <label>{{ $t('laundry.stockItem') }}</label>
+                <SearchableSelect
+                  v-model="line.item_id"
+                  :options="stockItemOptions"
+                  :empty-label="$t('laundry.selectStockItem')"
+                  :disabled="consumablesLocked"
+                />
+                <div v-if="stockHint(line.item_id)" class="muted">
+                  {{ stockHint(line.item_id) }}
+                </div>
+              </div>
+              <div class="form-group">
+                <label>{{ $t('orders.quantity') }}</label>
+                <input
+                  v-model.number="line.quantity"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  class="input"
+                  :disabled="consumablesLocked"
+                />
+              </div>
+              <div v-if="!consumablesLocked" class="form-group item-remove">
+                <button type="button" class="btn btn-sm btn-danger" @click="removeConsumable(idx)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div class="form-group form-full">
             <label>{{ $t('laundry.notes') }}</label>
             <textarea v-model="form.notes" rows="2" class="textarea"></textarea>
@@ -432,7 +490,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { laundryApi, clothTypeApi, userApi } from '@/api'
+import { inventoryApi, laundryApi, clothTypeApi, userApi } from '@/api'
 import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
@@ -448,6 +506,7 @@ const canManage = computed(() => authStore.can(40) && authStore.canOperate)
 const orders = ref([])
 const users = ref([])
 const clothTypes = ref([])
+const stockItems = ref([])
 const page = ref(1)
 const meta = ref({
   total: 0,
@@ -472,12 +531,17 @@ const editing = ref(false)
 const editingId = ref(null)
 const saving = ref(false)
 const modalError = ref('')
+// Consumables can no longer change once the wash is booked (order ready+).
+const consumablesLocked = computed(
+  () => editing.value && ['ready', 'delivered'].includes(form.status),
+)
 // Form model bound to the order modal, including dynamic line items.
 const form = reactive({
   guest_name: '',
   service: 'wash',
   room_number: '',
   items: [],
+  consumables: [],
   status: 'pending',
   payment_status: 'unpaid',
   order_date: '',
@@ -523,6 +587,16 @@ const clothTypeOptions = computed(() =>
       iron_price: Number(cloth.iron_price),
       dry_clean_price: Number(cloth.dry_clean_price),
     })),
+)
+
+/** Available registered stock items for the consumables picker. */
+const stockItemOptions = computed(() =>
+  stockItems.value.map((item) => ({
+    value: item.item_id,
+    label: `${item.item_name} (${item.unit})`,
+    unit: item.unit,
+    quantity_in_stock: Number(item.quantity_in_stock),
+  })),
 )
 
 /** Price of a cloth type for the currently chosen service, or 0. */
@@ -620,6 +694,27 @@ function removeItem(idx) {
   form.items.splice(idx, 1)
 }
 
+/** Creates a blank consumable supply line for the supplies list. */
+function emptyConsumable() {
+  return { item_id: '', quantity: 1 }
+}
+
+/** Appends a blank consumable supply line to the form. */
+function addConsumable() {
+  form.consumables.push(emptyConsumable())
+}
+
+/** Removes the consumable line at the given index from the form. */
+function removeConsumable(idx) {
+  form.consumables.splice(idx, 1)
+}
+
+/** Human-readable stock of a consumable item (e.g. "12 litres in stock"). */
+function stockHint(itemId) {
+  const item = stockItems.value.find((i) => i.item_id === itemId)
+  return item ? `${Number(item.quantity_in_stock)} ${item.unit} ${t('laundry.inStock')}` : ''
+}
+
 /** Computes the estimated total charge from the entered line items. */
 const estimatedCharge = computed(() =>
   form.items.reduce(
@@ -676,6 +771,7 @@ const exportColumns = [
   { key: 'service', label: 'Service' },
   { key: 'items', label: 'Items' },
   { key: 'items_count', label: 'Items Count' },
+  { key: 'consumables', label: 'Consumables' },
   { key: 'total_charge', label: 'Total Charge' },
   { key: 'status', label: 'Status' },
   { key: 'payment_status', label: 'Payment' },
@@ -698,6 +794,9 @@ function toExportRow(order) {
       .filter(Boolean)
       .join('; '),
     items_count: order.items_count,
+    consumables: (order.consumables || [])
+      .map((line) => `${line.item_name} x${line.quantity}`)
+      .join('; '),
     total_charge: Number(order.total_charge || 0).toFixed(2),
     status: statusLabel(order.status),
     payment_status: paymentLabel(order.payment_status),
@@ -726,6 +825,16 @@ async function loadClothTypes() {
   try {
     const res = await clothTypeApi.index({ per_page: 100 })
     clothTypes.value = res.data.cloth_types?.data || res.data.data?.data || []
+  } catch {
+    // ignore
+  }
+}
+
+/** Loads the registered stock items feeding the consumables picker. */
+async function loadStockItems() {
+  try {
+    const res = await inventoryApi.index({ per_page: 100 })
+    stockItems.value = res.data.data?.data || res.data.data || []
   } catch {
     // ignore
   }
@@ -760,6 +869,7 @@ function resetForm() {
   form.service = 'wash'
   form.room_number = ''
   form.items = [emptyItem()]
+  form.consumables = []
   form.status = 'pending'
   form.payment_status = 'unpaid'
   form.order_date = ''
@@ -789,6 +899,10 @@ function openEdit(order) {
     item_name: item.item_name,
     quantity: item.quantity,
     unit_price: Number(item.unit_price),
+  }))
+  form.consumables = (order.consumables || []).map((line) => ({
+    item_id: line.item_id,
+    quantity: Number(line.quantity),
   }))
   form.status = order.status
   form.payment_status = order.payment_status || 'unpaid'
@@ -820,6 +934,9 @@ function buildPayload() {
         quantity: item.quantity,
         unit_price: item.unit_price,
       })),
+    consumables: form.consumables
+      .filter((line) => line.item_id)
+      .map((line) => ({ item_id: line.item_id, quantity: line.quantity })),
     status: form.status,
     payment_status: form.payment_status,
     order_date: form.order_date,
@@ -958,6 +1075,7 @@ onMounted(() => {
   load()
   loadUsers()
   loadClothTypes()
+  loadStockItems()
 })
 </script>
 
@@ -1133,6 +1251,21 @@ onMounted(() => {
   grid-template-columns: 3fr 1fr 1fr auto;
   gap: 10px;
   align-items: end;
+}
+
+.consumable-grid {
+  grid-template-columns: 3fr 1fr auto;
+}
+
+.consumables-summary {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.consumables-summary i {
+  margin-right: 4px;
+  color: #005eb8;
 }
 
 .item-remove {

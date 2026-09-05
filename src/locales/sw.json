@@ -186,7 +186,13 @@
     "settleChoice": "Chagua jinsi agizo litakavyolipwa.",
     "settlePaid": "Weka kama imelipwa",
     "settleRoom": "Beba kwenye chumba",
-    "settled": "Agizo limelipwa."
+    "settled": "Agizo limelipwa.",
+    "consumables": "Bidhaa Zinazotumika",
+    "addConsumable": "Ongeza bidhaa",
+    "noConsumables": "Hakuna bidhaa zilizorekodiwa kwa kuosha huku.",
+    "stockItem": "Bidhaa ya ghala",
+    "selectStockItem": "Chagua bidhaa ya ghala",
+    "inStock": "ziko stoo"
   },
   "clothTypes": {
     "title": "Aina za Nguo",
@@ -1120,7 +1126,13 @@
     "assigned": "Kazi imekabidhiwa.",
     "confirmed": "Kazi imethibitishwa.",
     "completed": "Kazi imekamilika.",
-    "verified": "Kazi imehakikiwa."
+    "verified": "Kazi imehakikiwa.",
+    "supplies": "Vifaa Vinavyotumika",
+    "addSupply": "Ongeza kifaa",
+    "noSupplies": "Hakuna vifaa vilivyorekodiwa kwa usafi huu.",
+    "stockItem": "Bidhaa ya ghala",
+    "selectStockItem": "Chagua bidhaa ya ghala",
+    "inStock": "ziko stoo"
   },
   "menu": {
     "title": "Bidhaa za Menyu",

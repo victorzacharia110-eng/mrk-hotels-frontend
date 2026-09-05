@@ -119,6 +119,14 @@
                     : $t('housekeeping.houseClean')
                 }}
               </span>
+              <div v-if="task.consumables?.length" class="muted supplies-summary">
+                <i class="fas fa-boxes-stacked"></i>
+                {{
+                  task.consumables
+                    .map((l) => `${l.item_name} x${l.quantity}`)
+                    .join(', ')
+                }}
+              </div>
             </td>
             <td>{{ task.assigned_user?.full_name || $t('housekeeping.unassigned') }}</td>
             <td class="capitalize">{{ roomStatusLabel(task.room_status) }}</td>
@@ -271,9 +279,61 @@
               <label>{{ $t('housekeeping.remarks') }}</label>
               <textarea v-model="form.remarks" rows="2" class="textarea"></textarea>
             </div>
-            <div class="form-group form-full">
-              <label>{{ $t('common.notes') }}</label>
+<div class="form-group form-full">
+              <label>{{ $t('housekeeping.notes') }}</label>
               <textarea v-model="form.notes" rows="2" class="textarea"></textarea>
+            </div>
+
+            <!-- Supplies: the registered stock issued for this cleaning -->
+            <div class="items-head form-full">
+              <h3>{{ $t('housekeeping.supplies') }}</h3>
+              <button
+                v-if="!suppliesLocked"
+                type="button"
+                class="btn btn-sm btn-secondary"
+                @click="addSupply"
+              >
+                <i class="fas fa-plus"></i> {{ $t('housekeeping.addSupply') }}
+              </button>
+            </div>
+            <p v-if="suppliesLocked && !form.consumables.length" class="form-full muted">
+              {{ $t('housekeeping.noSupplies') }}
+            </p>
+            <div
+              v-for="(line, idx) in form.consumables"
+              :key="`sup-${idx}`"
+              class="item-row form-full"
+            >
+              <div class="item-grid">
+                <div class="form-group">
+                  <label>{{ $t('housekeeping.stockItem') }}</label>
+                  <SearchableSelect
+                    v-model="line.item_id"
+                    :options="stockItemOptions"
+                    :empty-label="$t('housekeeping.selectStockItem')"
+                    :disabled="suppliesLocked"
+                  />
+                  <div v-if="stockHint(line.item_id)" class="muted">
+                    {{ stockHint(line.item_id) }}
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>{{ $t('orders.quantity') }}</label>
+                  <input
+                    v-model.number="line.quantity"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    class="input"
+                    :disabled="suppliesLocked"
+                  />
+                </div>
+                <div v-if="!suppliesLocked" class="form-group item-remove">
+                  <button type="button" class="btn btn-sm btn-danger" @click="removeSupply(idx)">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
           <div class="modal-foot">
@@ -328,7 +388,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { housekeepingApi, roomApi, userApi } from '@/api'
+import { housekeepingApi, inventoryApi, roomApi, userApi } from '@/api'
 import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
@@ -344,6 +404,7 @@ const canConfirm = computed(() => authStore.can(40) && authStore.canOperate)
 const tasks = ref([])
 const rooms = ref([])
 const users = ref([])
+const stockItems = ref([])
 const page = ref(1)
 const meta = ref({
   total: 0,
@@ -364,6 +425,8 @@ const editing = ref(false)
 const editingId = ref(null)
 const saving = ref(false)
 const modalError = ref('')
+// Supplies lock once the room has been cleaned (task verified or closed).
+const suppliesLocked = computed(() => ['verified', 'completed'].includes(form.status))
 
 // Assign-to modal state.
 const showAssign = ref(false)
@@ -382,6 +445,7 @@ const form = reactive({
   assigned_to: '',
   remarks: '',
   notes: '',
+  consumables: [],
 })
 
 const statusOptions = [
@@ -417,6 +481,16 @@ const roomOptions = computed(() =>
 
 const userOptions = computed(() =>
   users.value.map((user) => ({ value: user.user_id, label: user.full_name })),
+)
+
+/** Available registered stock items for the supplies picker. */
+const stockItemOptions = computed(() =>
+  stockItems.value.map((item) => ({
+    value: item.item_id,
+    label: `${item.item_name} (${item.unit})`,
+    unit: item.unit,
+    quantity_in_stock: Number(item.quantity_in_stock),
+  })),
 )
 
 /** Maps a task status key to its translated display label. */
@@ -512,6 +586,9 @@ const loadAllTasks = () =>
       departure: task.departure_at ? String(task.departure_at).slice(0, 10) : '',
       nights: task.nights ?? '',
       status: task.status ?? '',
+      supplies: (task.consumables || [])
+        .map((line) => `${line.item_name} x${line.quantity}`)
+        .join('; '),
     })),
   )
 
@@ -527,6 +604,7 @@ const exportColumns = [
   { key: 'departure', label: 'Departure' },
   { key: 'nights', label: 'Nights' },
   { key: 'status', label: 'Status' },
+  { key: 'supplies', label: 'Supplies Used' },
 ]
 
 /** Loads room and user option lists for the filter and form selects; failures are silently ignored. */
@@ -538,6 +616,12 @@ async function loadOptions() {
   }
   try {
     users.value = (await userApi.index({ per_page: 100 })).data.data || []
+  } catch {
+    // ignore
+  }
+  try {
+    const res = await inventoryApi.index({ per_page: 100 })
+    stockItems.value = res.data.data?.data || res.data.data || []
   } catch {
     // ignore
   }
@@ -571,6 +655,28 @@ function resetForm() {
   form.assigned_to = ''
   form.remarks = ''
   form.notes = ''
+  form.consumables = []
+}
+
+/** Creates a blank consumable supply line for the supplies list. */
+function emptyConsumable() {
+  return { item_id: '', quantity: 1 }
+}
+
+/** Appends a blank consumable supply line to the form. */
+function addSupply() {
+  form.consumables.push(emptyConsumable())
+}
+
+/** Removes the consumable line at the given index from the form. */
+function removeSupply(idx) {
+  form.consumables.splice(idx, 1)
+}
+
+/** Readable stock of a supply item (e.g. "12 litres in stock"). */
+function stockHint(itemId) {
+  const item = stockItems.value.find((i) => i.item_id === itemId)
+  return item ? `${Number(item.quantity_in_stock)} ${item.unit} ${t('housekeeping.inStock')}` : ''
 }
 
 /** Prepares the modal for creating a brand-new task. */
@@ -598,6 +704,10 @@ function openEdit(task) {
   form.assigned_to = task.assigned_to || ''
   form.remarks = task.remarks || ''
   form.notes = task.notes || ''
+  form.consumables = (task.consumables || []).map((line) => ({
+    item_id: line.item_id,
+    quantity: Number(line.quantity),
+  }))
   showModal.value = true
 }
 
@@ -613,6 +723,9 @@ async function save() {
   try {
     const payload = { ...form }
     payload.departure_at = form.departure_at || form.arrival_at?.slice(0, 10)
+    payload.consumables = form.consumables
+      .filter((line) => line.item_id)
+      .map((line) => ({ item_id: line.item_id, quantity: line.quantity }))
     if (editing.value) {
       await housekeepingApi.update(editingId.value, payload)
       success.value = t('housekeeping.updateSuccess')
@@ -839,6 +952,50 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 20px;
+}
+
+.items-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 18px 0 12px;
+}
+
+.items-head h3 {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #005eb8;
+}
+
+.item-row {
+  border: 1px solid #f1f1f1;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.item-grid {
+  display: grid;
+  grid-template-columns: 3fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.item-remove {
+  padding-bottom: 1px;
+}
+
+.supplies-summary {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.supplies-summary i {
+  margin-right: 4px;
+  color: #005eb8;
 }
 
 @media (max-width: 768px) {

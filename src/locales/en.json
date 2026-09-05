@@ -186,7 +186,13 @@
     "settleChoice": "Choose how this order is settled.",
     "settlePaid": "Mark as paid",
     "settleRoom": "Post to room",
-    "settled": "Order settled."
+    "settled": "Order settled.",
+    "consumables": "Consumables Used",
+    "addConsumable": "Add consumable",
+    "noConsumables": "No consumables recorded for this wash.",
+    "stockItem": "Stock item",
+    "selectStockItem": "Select a stock item",
+    "inStock": "in stock"
   },
   "clothTypes": {
     "title": "Cloth Types",
@@ -1120,7 +1126,13 @@
     "assigned": "Task assigned.",
     "confirmed": "Task confirmed.",
     "completed": "Task completed.",
-    "verified": "Task verified."
+    "verified": "Task verified.",
+    "supplies": "Supplies Used",
+    "addSupply": "Add supply",
+    "noSupplies": "No supplies recorded for this cleaning.",
+    "stockItem": "Stock item",
+    "selectStockItem": "Select a stock item",
+    "inStock": "in stock"
   },
   "menu": {
     "title": "Menu Items",
