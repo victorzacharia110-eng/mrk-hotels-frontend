@@ -475,7 +475,8 @@
     "scheduledMessage": "Ujumbe ulioratibiwa",
     "moreTools": "Zana zaidi",
     "stopRecording": "Acha kurekodi",
-    "moreActions": "Vitendo zaidi"
+    "moreActions": "Vitendo zaidi",
+    "sosDragHint": "Kokota kusogeza kitufe hiki ili kisizuie"
   },
   "statuses": {
     "title": "Hali",

@@ -475,7 +475,8 @@
     "scheduledMessage": "Scheduled message",
     "moreTools": "More tools",
     "stopRecording": "Stop recording",
-    "moreActions": "More actions"
+    "moreActions": "More actions",
+    "sosDragHint": "Drag to move this button out of the way"
   },
   "statuses": {
     "title": "Status",

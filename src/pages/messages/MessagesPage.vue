@@ -1355,8 +1355,18 @@
       </div>
     </div>
 
-    <!-- SOS floating button -->
-    <button class="sos-floating" :class="{ active: activeSos }" @click="openSosPanel">
+    <!-- SOS floating button (draggable so it never blocks the composer) -->
+    <button
+      ref="sosBtn"
+      class="sos-floating"
+      :class="{ active: activeSos, dragging: sosDragging }"
+      :style="sosStyle"
+      :title="$t('messages.sosDragHint')"
+      @pointerdown="sosDragStart"
+      @pointerup="sosDragEnd"
+      @pointercancel="sosDragEnd"
+      @click="onSosClick"
+    >
       <i class="fas fa-shield-heart"></i>
     </button>
   </div>
@@ -1833,6 +1843,97 @@ const activeSos = ref(null)
 const myLocation = ref('')
 const myFloor = ref('')
 const showRoomLinkModal = ref(false)
+
+// Draggable SOS floating button — kept clear of the composer/send button.
+const SOS_STORAGE_KEY = 'mrk_sos_position'
+const SOS_DRAG_THRESHOLD = 6
+const sosBtn = ref(null)
+const sosPos = ref(null) // { x, y } in viewport px, or null to use CSS defaults.
+const sosPointerOffset = { x: 0, y: 0 }
+const sosDragging = ref(false)
+const sosMoved = ref(false)
+
+const sosStyle = computed(() =>
+  sosPos.value
+    ? {
+        position: 'fixed',
+        top: `${sosPos.value.y}px`,
+        left: `${sosPos.value.x}px`,
+        right: 'auto',
+        bottom: 'auto',
+      }
+    : null,
+)
+
+function loadSosPosition() {
+  try {
+    const raw = localStorage.getItem(SOS_STORAGE_KEY)
+    if (!raw) return
+    const parsed = JSON.parse(raw)
+    if (Number.isFinite(parsed?.x) && Number.isFinite(parsed?.y)) sosPos.value = parsed
+  } catch {
+    /* Ignore malformed persisted position. */
+  }
+}
+
+function persistSosPosition() {
+  try {
+    localStorage.setItem(SOS_STORAGE_KEY, JSON.stringify(sosPos.value))
+  } catch {
+    /* Ignore storage failures. */
+  }
+}
+
+function clampSos(x, y) {
+  const size = 54
+  const pad = 8
+  return {
+    x: Math.min(Math.max(x, pad), window.innerWidth - size - pad),
+    y: Math.min(Math.max(y, pad), window.innerHeight - size - pad),
+  }
+}
+
+function sosDragStart(e) {
+  if (e.pointerType === 'mouse' && e.button !== 0) return
+  sosDragging.value = true
+  sosMoved.value = false
+  const rect = sosBtn.value?.getBoundingClientRect()
+  sosPointerOffset.x = e.clientX - rect.left
+  sosPointerOffset.y = e.clientY - rect.top
+  e.target?.setPointerCapture?.(e.pointerId)
+  const move = (ev) => {
+    const { x, y } = clampSos(ev.clientX - sosPointerOffset.x, ev.clientY - sosPointerOffset.y)
+    if (!sosMoved.value && Math.abs(ev.clientX - e.clientX) + Math.abs(ev.clientY - e.clientY) > SOS_DRAG_THRESHOLD) {
+      sosMoved.value = true
+    }
+    sosPos.value = { x, y }
+  }
+  const up = () => {
+    sosDragging.value = false
+    persistSosPosition()
+    window.removeEventListener('pointermove', move)
+    window.removeEventListener('pointerup', up)
+  }
+  window.addEventListener('pointermove', move)
+  window.addEventListener('pointerup', up)
+}
+
+function sosDragEnd(e) {
+  if (sosDragging.value) {
+    try {
+      e.target?.releasePointerCapture?.(e.pointerId)
+    } catch {
+      /* Ignore. */
+    }
+    sosDragging.value = false
+    persistSosPosition()
+  }
+}
+
+function onSosClick() {
+  if (sosMoved.value) return
+  openSosPanel()
+}
 const roomLinkSearch = ref('')
 const roomLinkResults = ref([])
 const savingFeature = ref(false)
@@ -4390,6 +4491,7 @@ onMounted(() => {
   loadConversations(1)
   loadGroups(1)
   loadStatusMap()
+  loadSosPosition()
 })
 
 // Teardown: leave the thread channel, dispose the call manager and release
@@ -6453,9 +6555,20 @@ onUnmounted(() => {
   background: #e11d48;
   color: #fff;
   font-size: 22px;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
   box-shadow: 0 6px 18px rgba(225, 29, 72, 0.45);
   z-index: 90;
+}
+
+.sos-floating:active,
+.sos-floating.dragging {
+  cursor: grabbing;
+}
+
+.sos-floating.dragging {
+  box-shadow: 0 10px 28px rgba(225, 29, 72, 0.55);
+  user-select: none;
 }
 
 .sos-floating.active {
