@@ -283,6 +283,7 @@ onMounted(load)
 .actions-col { width: 120px; }
 .help { display: block; color: #9aa0a6; font-size: 11px; margin-top: 4px; }
 .checkbox-inline { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.checkbox-inline input[type='checkbox'] { width: auto; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
 .modal { background: #fff; border-radius: 8px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
 .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
