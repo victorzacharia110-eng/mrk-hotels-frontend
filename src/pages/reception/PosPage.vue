@@ -84,7 +84,7 @@ async function load() {
   error.value = ''
   success.value = ''
   try {
-    const res = await reservationApi.index({ per_page: 200 })
+    const res = await reservationApi.index({ per_page: 100 })
     reservations.value = res.data?.data || []
   } catch (err) {
     error.value = err.response?.data?.message || t('common.loadError')

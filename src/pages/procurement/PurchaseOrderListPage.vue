@@ -494,7 +494,7 @@ async function loadOptions() {
     const [s, pr, inv] = await Promise.all([
       supplierApi.index({ per_page: 100 }),
       purchaseRequisitionApi.index({ status: 'approved', per_page: 100 }),
-      inventoryApi.index({ per_page: 200 }),
+      inventoryApi.index({ per_page: 100 }),
     ])
     suppliers.value = s.data.data || []
     approvedPrs.value = pr.data.data || []

@@ -218,7 +218,7 @@ async function load() {
   success.value = ''
   try {
     const [payRes, resRes] = await Promise.all([
-      paymentApi.index({ from: selectedDate.value, to: selectedDate.value, per_page: 200 }),
+      paymentApi.index({ from: selectedDate.value, to: selectedDate.value, per_page: 100 }),
       reservationApi.index({ per_page: 100 }),
     ])
     payments.value = Array.isArray(payRes.data) ? payRes.data : payRes.data?.data || []

@@ -253,7 +253,7 @@ async function openCreate() {
   const [sup, req, inv] = await Promise.allSettled([
     supplierApi.index({ per_page: 100 }),
     purchaseRequisitionApi.index({ status: 'approved', per_page: 100 }),
-    inventoryApi.index({ per_page: 200 }),
+    inventoryApi.index({ per_page: 100 }),
   ])
   if (sup.status === 'fulfilled') suppliers.value = sup.value.data.data || sup.value.data || []
   if (req.status === 'fulfilled') approvedReqs.value = req.value.data.data || req.value.data || []

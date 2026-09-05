@@ -510,7 +510,7 @@ const inventoryOptions = computed(() =>
 
 async function loadInventoryOptions() {
   try {
-    const res = await inventoryApi.index({ per_page: 200 })
+    const res = await inventoryApi.index({ per_page: 100 })
     inventoryItems.value = Array.isArray(res.data) ? res.data : res.data?.data || []
   } catch {
     inventoryItems.value = []

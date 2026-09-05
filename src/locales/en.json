@@ -1994,6 +1994,8 @@
   "distribution": {
     "title": "Channel Logs",
     "subtitle": "Channel stop-sell changes and distribution activity.",
+    "active": "Active",
+    "inactive": "Inactive",
     "autoStopsell": "Auto Stopsell",
     "channelLogs": "Channel Logs",
     "source": "Source",
@@ -4114,6 +4116,8 @@
     "amount": "Amount",
     "postedAt": "Posted at",
     "recorded": "Recorded",
+    "noTransactions": "No transactions posted for this date.",
+    "paidBy": "Paid by",
     "forReservation": "Reservation / guest",
     "insertTransaction": "Insert transaction",
     "businessSource": "Business Source",

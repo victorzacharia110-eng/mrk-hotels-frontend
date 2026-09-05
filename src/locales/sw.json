@@ -1994,6 +1994,8 @@
   "distribution": {
     "title": "Kumbukumbu za Chaneli",
     "subtitle": "Mabadiliko ya kusitisha uuzaji kwa chaneli na shughuli za usambazaji.",
+    "active": "Inatumika",
+    "inactive": "Haifanyi kazi",
     "autoStopsell": "Sitisha Uuzaji Kiotomatiki",
     "channelLogs": "Kumbukumbu za Chaneli",
     "source": "Chanzo",
@@ -4152,6 +4154,8 @@
     "selectRoom": "Mgeni wa ndani / chumba",
     "symbol": "Alama",
     "todayCashPayments": "Malipo ya fedha taslimu leo",
+    "noTransactions": "Hakuna miamala iliyowekwa kwa tarehe hii.",
+    "paidBy": "Alilipwa na",
     "totalCollected": "Jumla iliyokusanywa",
     "typeBar": "Baa",
     "typeLaundry": "Dobi",
