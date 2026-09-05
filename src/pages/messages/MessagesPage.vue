@@ -1373,7 +1373,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -2249,6 +2249,28 @@ function canDeleteEveryone(msg) {
 function openMsgMenu(msg, event) {
   msgMenu.value = { open: true, x: event.clientX, y: event.clientY, msg }
   document.addEventListener('click', closeMsgMenu, { once: true })
+  // Keep the menu inside the viewport: on phones the menu is taller and wider
+  // than the tap spot near the screen edge, so nudge it back on-screen after
+  // it has laid out instead of letting the right/bottom edge get clipped.
+  nextTick(() => {
+    const el = document.querySelector('.msg-menu')
+    if (!el) {
+      return
+    }
+    const rect = el.getBoundingClientRect()
+    const pad = 8
+    const maxX = window.innerWidth - rect.width - pad
+    const maxY = window.innerHeight - rect.height - pad
+    if (maxX < pad) {
+      // Menu wider than the viewport: pin it to the left edge.
+      msgMenu.value = { ...msgMenu.value, x: pad }
+    } else if (rect.right > window.innerWidth - pad) {
+      msgMenu.value = { ...msgMenu.value, x: Math.max(pad, Math.min(msgMenu.value.x, maxX)) }
+    }
+    if (rect.bottom > window.innerHeight - pad) {
+      msgMenu.value = { ...msgMenu.value, y: Math.max(pad, Math.min(msgMenu.value.y, maxY)) }
+    }
+  })
 }
 
 /** Closes the message context menu and clears its target. */
@@ -5040,6 +5062,9 @@ onUnmounted(() => {
   position: fixed;
   z-index: 60;
   min-width: 180px;
+  max-width: min(300px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
   background: #fff;
   border: 1px solid #e2e2e2;
   border-radius: 12px;
