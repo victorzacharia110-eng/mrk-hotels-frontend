@@ -384,8 +384,32 @@
           <router-link to="/app/issue-reports" class="summary-link"><i class="fas fa-flag" aria-hidden="true"></i> {{ $t('orderTaker.summaryIssueReports') }}</router-link>
         </div>
 
+        <div class="summary-tools">
+          <input
+            v-model.trim="summarySearch"
+            type="search"
+            class="st-search"
+            :placeholder="$t('orderTaker.summarySearch')"
+          />
+          <select v-model="summaryStatus" class="st-select">
+            <option value="">{{ $t('orderTaker.summaryStatusFilter') }}</option>
+            <option v-for="s in summaryStatuses" :key="s" :value="s">{{ statusLabel(s) }}</option>
+          </select>
+          <select v-model="summarySort" class="st-select" :aria-label="$t('orderTaker.summarySort')">
+            <option value="time-desc">{{ $t('orderTaker.summarySortTimeDesc') }}</option>
+            <option value="time-asc">{{ $t('orderTaker.summarySortTimeAsc') }}</option>
+            <option value="amount-desc">{{ $t('orderTaker.summarySortAmountDesc') }}</option>
+            <option value="amount-asc">{{ $t('orderTaker.summarySortAmountAsc') }}</option>
+            <option value="number-desc">{{ $t('orderTaker.summarySortNumberDesc') }}</option>
+            <option value="number-asc">{{ $t('orderTaker.summarySortNumberAsc') }}</option>
+          </select>
+        </div>
+
         <div class="panel table-card">
           <p v-if="!myOrders.length" class="cat-empty">{{ $t('orderTaker.summaryNoOrders') }}</p>
+          <div v-else-if="!summaryPageRows.length" class="table-scroll">
+            <p class="cat-empty">{{ $t('orderTaker.summaryNoMatch') }}</p>
+          </div>
           <div v-else class="table-scroll">
             <table class="lines-table summary-table">
               <thead>
@@ -399,7 +423,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="order in myOrders" :key="order.order_id">
+                <tr v-for="order in summaryPageRows" :key="order.order_id">
                   <td><strong>{{ order.order_number }}</strong></td>
                   <td>{{ timeOf(order.created_at) }}</td>
                   <td>{{ order.waiter_name || '—' }}</td>
@@ -409,6 +433,7 @@
                 </tr>
               </tbody>
             </table>
+            <PaginationBar :page="summaryPage" :last-page="summaryLastPage" @change="summaryPage = $event" />
           </div>
         </div>
       </template>
@@ -611,11 +636,12 @@
   </div>
 </template>
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { orderApi, menuItemApi, tableApi, tableLocationApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import PaginationBar from '@/components/store/PaginationBar.vue'
 import { PAYMENT_METHODS } from '@/utils/payments'
 import { restorePrinter } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
@@ -707,6 +733,56 @@ const summaryVoided = computed(
 const summaryTotal = computed(() =>
   myOrders.value.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0),
 )
+
+// Order-summary browsing: instant search, status filter, column sorting by
+// time / amount / order number and pagination for faster navigation.
+const summarySearch = ref('')
+const summaryStatus = ref('')
+const summarySort = ref('time-desc')
+const summaryPage = ref(1)
+const SUMMARY_PAGE_SIZE = 12
+
+const summaryStatuses = computed(() =>
+  [...new Set(myOrders.value.map((o) => o.status).filter(Boolean))].sort(),
+)
+
+const summaryFiltered = computed(() => {
+  let rows = myOrders.value
+  if (summaryStatus.value) rows = rows.filter((o) => o.status === summaryStatus.value)
+  const term = summarySearch.value.trim().toLowerCase()
+  if (term) {
+    rows = rows.filter((o) =>
+      [o.order_number, o.waiter_name, orderTypeLabel(o), statusLabel(o.status)].some((v) =>
+        String(v ?? '').toLowerCase().includes(term),
+      ),
+    )
+  }
+  const sorted = [...rows]
+  const s = summarySort.value
+  const dir = s.endsWith('asc') ? 1 : -1
+  if (s.startsWith('time')) {
+    sorted.sort((a, b) => dir * (new Date(a.created_at || 0) - new Date(b.created_at || 0)))
+  } else if (s.startsWith('amount')) {
+    sorted.sort((a, b) => dir * (Number(a.total_amount || 0) - Number(b.total_amount || 0)))
+  } else {
+    sorted.sort((a, b) =>
+      dir * String(a.order_number || '').localeCompare(String(b.order_number || ''), undefined, { numeric: true }),
+    )
+  }
+  return sorted
+})
+
+const summaryLastPage = computed(() =>
+  Math.max(1, Math.ceil(summaryFiltered.value.length / SUMMARY_PAGE_SIZE)),
+)
+const summaryPageRows = computed(() => {
+  const p = Math.min(summaryPage.value, summaryLastPage.value)
+  return summaryFiltered.value.slice((p - 1) * SUMMARY_PAGE_SIZE, p * SUMMARY_PAGE_SIZE)
+})
+
+watch([summarySearch, summaryStatus, summarySort], () => {
+  summaryPage.value = 1
+})
 
 /** Switches to the order-summary tab and refreshes the waiter's tickets. */
 function switchToSummary() {
@@ -2524,6 +2600,38 @@ function onKey(e) {
 }
 .summary-link:hover { background: #e4e4e7; }
 .summary-table th, .summary-table td { padding: 10px 12px; }
+.summary-tools {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #d4d4d8;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.st-search {
+  flex: 1 1 180px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 14px;
+  background: #fafafa;
+  color: #27272a;
+}
+.st-search:focus { outline: none; border-color: #b8860b; background: #fff; }
+.st-select {
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 14px;
+  background: #fff;
+  color: #27272a;
+}
+@media (max-width: 768px) {
+  .st-search { flex-basis: 100%; }
+  .st-select { flex: 1 1 auto; }
+}
 
 @media (max-width: 768px) {
   .summary-kpis { grid-template-columns: repeat(2, 1fr); }
