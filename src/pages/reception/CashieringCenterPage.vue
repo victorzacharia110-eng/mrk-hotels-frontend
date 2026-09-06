@@ -148,11 +148,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { paymentApi, reservationApi } from '@/api'
-import { METHOD_CASH, PAYMENT_METHODS, requiresProvider, providersFor } from '@/utils/payments'
-import { useAuthStore } from '@/stores/auth'
+import { METHOD_CASH, requiresProvider, providersFor } from '@/utils/payments'
 
 const { t } = useI18n()
-const authStore = useAuthStore()
 
 const today = new Date().toISOString().slice(0, 10)
 const selectedDate = ref(today)

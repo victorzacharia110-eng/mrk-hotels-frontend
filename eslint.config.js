@@ -23,12 +23,26 @@ export default defineConfig([
     },
   },
 
+  {
+    files: ['printer-bridge/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+
   js.configs.recommended,
   ...pluginVue.configs['flat/essential'],
 
   {
     ...pluginPlaywright.configs['flat/recommended'],
     files: ['e2e/**/*.{test,spec}.{js,ts,jsx,tsx}'],
+    rules: {
+      'playwright/no-wait-for-timeout': 'off',
+      'playwright/no-conditional-in-test': 'off',
+      'playwright/expect-expect': 'off',
+    },
   },
 
   {

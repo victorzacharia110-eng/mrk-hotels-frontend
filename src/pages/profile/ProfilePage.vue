@@ -645,10 +645,10 @@ function saveSessionSettings() {
     sessionSettingsStore.saveSettings({ idleTimeoutMinutes: sessionSettingsDraft.value.idleTimeoutMinutes })
     sessionSettingsDraft.value.idleTimeoutMinutes = sessionSettingsStore.idleTimeoutMinutes
     sessionSettingsSuccess.value = sessionSettingsDraft.value.idleTimeoutMinutes
-      ? $t('sessionSettings.saved', { minutes: sessionSettingsStore.idleTimeoutMinutes })
-      : $t('common.updateSuccess')
+      ? t('sessionSettings.saved', { minutes: sessionSettingsStore.idleTimeoutMinutes })
+      : t('common.updateSuccess')
   } catch {
-    sessionSettingsError.value = $t('common.error')
+    sessionSettingsError.value = t('common.error')
   } finally {
     savingSessionSettings.value = false
   }
