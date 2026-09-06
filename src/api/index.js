@@ -1541,6 +1541,81 @@ export const cashierApi = {
   inventoryItems() {
     return api.get(`${v1}/cashier/inventory-items`)
   },
+  /**
+   * Lists every frozen (transaction-locked) order for the manager's screen.
+   * @param {object} params - Pagination params.
+   * @returns {Promise} Axios response with { orders, pagination }.
+   */
+  frozenOrders(params) {
+    return api.get(`${v1}/cashier/frozen-orders`, { params })
+  },
+}
+
+/** Cashier manager screens: shift, devices and account lookup. */
+export const posApi = {
+  /**
+   * Current register state (the open POS shift or "closed").
+   * @returns {Promise} Axios response with the shift state.
+   */
+  shiftCurrent() {
+    return api.get(`${v1}/pos/shift/current`)
+  },
+  /**
+   * Historical POS shifts, newest first.
+   * @param {object} params - Pagination params.
+   * @returns {Promise} Axios response with paginated shifts.
+   */
+  shifts(params) {
+    return api.get(`${v1}/pos/shifts`, { params })
+  },
+  /**
+   * Opens a POS cash-drawer shift.
+   * @param {object} data - { opening_float }.
+   * @returns {Promise} Axios response with the open shift.
+   */
+  shiftOpen(data) {
+    return api.post(`${v1}/pos/shift/open`, data)
+  },
+  /**
+   * Closes the open POS shift against counted cash.
+   * @param {object} data - { closing_float }.
+   * @returns {Promise} Axios response with the closed shift.
+   */
+  shiftClose(data) {
+    return api.post(`${v1}/pos/shift/close`, data)
+  },
+  /**
+   * Lists the hotel's POS devices, optionally filtered by status.
+   * @param {object} params - Query params ({ status, per_page }).
+   * @returns {Promise} Axios response with paginated devices.
+   */
+  devices(params) {
+    return api.get(`${v1}/pos/devices`, { params })
+  },
+  /**
+   * Takes a POS device out of service.
+   * @param {string} id - Device identifier.
+   * @returns {Promise} Axios response with the blocked device.
+   */
+  blockDevice(id) {
+    return api.post(`${v1}/pos/devices/${id}/block`)
+  },
+  /**
+   * Puts a blocked POS device back into service.
+   * @param {string} id - Device identifier.
+   * @returns {Promise} Axios response with the unblocked device.
+   */
+  unblockDevice(id) {
+    return api.post(`${v1}/pos/devices/${id}/unblock`)
+  },
+  /**
+   * Cashier account lookup over the guest book with running balances.
+   * @param {object} params - Query params ({ search, per_page, page }).
+   * @returns {Promise} Axios response with { accounts, pagination }.
+   */
+  accounts(params) {
+    return api.get(`${v1}/cashier/accounts`, { params })
+  },
 }
 
 /** Menu item ingredients — links sellable items to tracked inventory stock. */

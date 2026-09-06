@@ -285,7 +285,7 @@
                   <div v-for="(p, i) in folio.payments" :key="'p' + i" class="sv-modal-row">
                     <i class="fas fa-money-bill-wave" aria-hidden="true"></i>
                     <span class="sv-cap sv-row-line">
-                      {{ $t('folio.payment') }} · {{ p.payment_method }} · <strong>TZS {{ fmtNum(p.amount) }}</strong>
+                      {{ $t('folio.payment') }} · {{ paymentMethodLabel(p.payment_method) }} · <strong>TZS {{ fmtNum(p.amount) }}</strong>
                     </span>
                   </div>
                   <div v-for="(o, i) in folio.orders" :key="'o' + i" class="sv-modal-row">
@@ -1527,6 +1527,13 @@ function closeBarModal() {
 /** Formats a numeric amount with thousands separators. */
 function fmtNum(n) {
   return Number(n || 0).toLocaleString()
+}
+
+/** Human-readable label for a payment method (falls back to the raw value). */
+function paymentMethodLabel(method) {
+  if (!method) return '—'
+  const key = `paymentFields.methods.${method}`
+  return te(key) ? t(key) : String(method).replace(/_/g, ' ')
 }
 
 /**

@@ -61,6 +61,26 @@
             <i class="fas fa-flask" aria-hidden="true"></i>
             <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.ingredients') }}</span>
           </router-link>
+          <router-link :to="{ name: 'cashier-shift-manager' }" class="pos-nav-link"
+            :class="{ active: isActive('/cashier/shift-manager') }" @click="mobileOpen = false">
+            <i class="fas fa-cash-register" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.shiftManager') }}</span>
+          </router-link>
+          <router-link :to="{ name: 'cashier-blocked-devices' }" class="pos-nav-link"
+            :class="{ active: isActive('/cashier/blocked-devices') }" @click="mobileOpen = false">
+            <i class="fas fa-shield-halved" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.blockedDevices') }}</span>
+          </router-link>
+          <router-link :to="{ name: 'cashier-transaction-lock' }" class="pos-nav-link"
+            :class="{ active: isActive('/cashier/transaction-lock') }" @click="mobileOpen = false">
+            <i class="fas fa-lock" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.transactionLock') }}</span>
+          </router-link>
+          <router-link :to="{ name: 'cashier-account-lookup' }" class="pos-nav-link"
+            :class="{ active: isActive('/cashier/account-lookup') }" @click="mobileOpen = false">
+            <i class="fas fa-users" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.accountLookup') }}</span>
+          </router-link>
           <router-link :to="{ name: 'cashier-printer' }" class="pos-nav-link"
             :class="{ active: isActive('/cashier/printer') }" @click="mobileOpen = false">
             <i class="fas fa-print" aria-hidden="true"></i>
@@ -185,7 +205,10 @@ function toggleSidebar() {
 watch(() => route.path, () => {
   mobileOpen.value = false
   // Keep the parent group open so the active item stays visible.
-  if (route.path.startsWith('/cashier/item-lookup') || route.path.startsWith('/cashier/ingredients') || route.path.startsWith('/cashier/printer')) {
+  if (route.path.startsWith('/cashier/item-lookup') || route.path.startsWith('/cashier/ingredients')
+    || route.path.startsWith('/cashier/shift-manager') || route.path.startsWith('/cashier/blocked-devices')
+    || route.path.startsWith('/cashier/transaction-lock') || route.path.startsWith('/cashier/account-lookup')
+    || route.path.startsWith('/cashier/printer')) {
     const next = new Set(openGroups.value)
     next.add('manager')
     openGroups.value = next

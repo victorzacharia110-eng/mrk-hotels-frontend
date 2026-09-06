@@ -340,6 +340,30 @@ const routes = [
         meta: { titleKey: 'cashier.nav.ingredients' },
       },
       {
+        path: 'shift-manager',
+        name: 'cashier-shift-manager',
+        component: () => import('@/pages/cashier/CashierShiftManagerPage.vue'),
+        meta: { titleKey: 'cashier.nav.shiftManager' },
+      },
+      {
+        path: 'blocked-devices',
+        name: 'cashier-blocked-devices',
+        component: () => import('@/pages/cashier/CashierBlockedDevicesPage.vue'),
+        meta: { titleKey: 'cashier.nav.blockedDevices' },
+      },
+      {
+        path: 'transaction-lock',
+        name: 'cashier-transaction-lock',
+        component: () => import('@/pages/cashier/CashierTransactionLockPage.vue'),
+        meta: { titleKey: 'cashier.nav.transactionLock' },
+      },
+      {
+        path: 'account-lookup',
+        name: 'cashier-account-lookup',
+        component: () => import('@/pages/cashier/CashierAccountLookupPage.vue'),
+        meta: { titleKey: 'cashier.nav.accountLookup' },
+      },
+      {
         path: 'requisitions',
         name: 'cashier-requisitions',
         component: () => import('@/pages/requisitions/RequisitionPage.vue'),
