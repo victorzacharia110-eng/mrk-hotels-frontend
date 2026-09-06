@@ -22,7 +22,7 @@
           {{ $t('cashier.nav.ordering') }}
           <i class="fas fa-chevron-down pos-chevron" aria-hidden="true"></i>
         </button>
-        <div v-if="!sidebarCollapsed || isOpen('ordering')" class="pos-group-items">
+        <div v-if="isOpen('ordering')" class="pos-group-items">
           <router-link v-for="item in orderingNav" :key="item.to" :to="item.to" class="pos-nav-link"
             :class="{ active: isActive(item.to) }" :title="$t(item.labelKey)" @click="mobileOpen = false">
             <i :class="item.icon" aria-hidden="true"></i>
@@ -50,7 +50,7 @@
           {{ $t('cashier.nav.managerGroup') }}
           <i class="fas fa-chevron-down pos-chevron" aria-hidden="true"></i>
         </button>
-        <div v-if="!sidebarCollapsed || isOpen('manager')" class="pos-group-items">
+        <div v-if="isOpen('manager')" class="pos-group-items">
           <router-link :to="{ name: 'cashier-item-lookup' }" class="pos-nav-link"
             :class="{ active: isActive('/cashier/item-lookup') }" @click="mobileOpen = false">
             <i class="fas fa-book-open" aria-hidden="true"></i>
