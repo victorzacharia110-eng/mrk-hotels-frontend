@@ -1051,13 +1051,11 @@
     "balanceDue": "Salio la deni",
     "settleBeforeCheckout": "Salio la deni lazima lilipwe kabla ya kuondoka.",
     "settlementAmount": "Kiasi cha malipo (TZS)",
-    "unpaidWarning": "Hii hifadhi bado ina deni. Malipo lazima yakusanywe au kibali cha msimamizi kitumike kabla ya kuingia.",
     "outstanding": "Inabaki",
-    "managerOverride": "Ruka sharti la malipo (msimamizi)",
-    "managerOverrideRequired": "Msimamizi au mmiliki tu ndiye anayeweza kuruka sharti la malipo. Omba msimamizi akamilishe kuingia hii.",
-    "overrideReason": "Sababu ya kuruka",
-    "overrideReasonHint": "Eleza kwa nini malipo yanarukwa.",
-    "paymentRequired": "Malipo yanahitajika"
+    "checkinExplanation": "Hakuna malipo yanayohitajika kuingia. Deni la TZS {amount} litakusanywa wakati wa kuondoka.",
+    "collectPaymentNow": "Kusanya malipo sasa",
+    "payAndCheckIn": "Lipa & ingia",
+    "checkinWithoutPayment": "Ingia bila malipo"
   },
   "housekeeping": {
     "title": "Usafi",

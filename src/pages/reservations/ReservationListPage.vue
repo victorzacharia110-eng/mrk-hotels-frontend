@@ -670,7 +670,7 @@
       </div>
     </div>
 
-    <!-- Check-in modal: payment verification and optional override -->
+    <!-- Check-in modal: no upfront payment required; balance settles at check-out -->
     <div v-if="showCheckin" class="modal-overlay" @click.self="closeCheckin">
       <div class="modal modal-sm">
         <div class="modal-head">
@@ -682,19 +682,9 @@
           {{ checkinTarget?.room?.room_number || checkinTarget?.room_type }}
         </p>
 
-        <div v-if="checkinBalanceDue > 0" class="alert alert-warning" style="margin-bottom: 12px;">
-          <i class="fas fa-triangle-exclamation"></i>
-          {{ $t('reservations.unpaidWarning') }}
-        </div>
-
-        <!-- Active override badge -->
-        <div v-if="hasActiveOverride" class="alert alert-success" style="margin-bottom: 12px;">
-          <i class="fas fa-shield-halved"></i>
-          <span>
-            {{ $t('overrides.overrideFor', { name: activeOverride.guest_name }) }}
-            · {{ $t('overrides.remainingTime', { time: activeOverrideCountdown }) }}
-          </span>
-          <div v-if="activeOverride.notes" class="sub" style="margin-top: 4px;">{{ activeOverride.notes }}</div>
+        <div v-if="checkinBalanceDue > 0" class="alert alert-info" style="margin-bottom: 12px;">
+          <i class="fas fa-circle-info"></i>
+          {{ $t('reservations.checkinExplanation', { amount: checkinBalanceDue.toLocaleString() }) }}
         </div>
 
         <div class="balance-box">
@@ -712,43 +702,61 @@
           </div>
         </div>
 
-        <form @submit.prevent="confirmCheckin">
-          <!-- Manual override: only shown to managers when there is NO active override -->
-          <div v-if="checkinBalanceDue > 0 && authStore.roleLevel >= 80 && !hasActiveOverride" class="form-group">
-            <label class="toggle-label">
-              <input type="checkbox" v-model="checkinOverride" />
-              {{ $t('reservations.managerOverride') }}
-            </label>
-          </div>
-          <!-- Receptionist sees "manager required" only when there is NO active override -->
-          <div v-if="checkinBalanceDue > 0 && authStore.roleLevel < 80 && !hasActiveOverride" class="alert alert-warning" style="margin-bottom: 12px;">
-            <i class="fas fa-lock"></i>
-            {{ $t('reservations.managerOverrideRequired') }}
-          </div>
-          <div v-if="checkinOverride && checkinBalanceDue > 0 && !hasActiveOverride" class="form-group">
-            <label>{{ $t('reservations.overrideReason') }}<span class="req">*</span></label>
-            <input v-model="checkinOverrideReason" type="text" class="input" required />
-            <small class="hint">{{ $t('reservations.overrideReasonHint') }}</small>
-          </div>
+        <form @submit.prevent="showCheckinPayment ? payAndCheckin() : confirmCheckin()">
+          <!-- Optional: collect the outstanding balance right at check-in -->
+          <template v-if="showCheckinPayment">
+            <div class="form-group">
+              <label>{{ $t('reservations.settlementAmount') }}<span class="req">*</span></label>
+              <input
+                v-model.number="checkinPaymentAmount"
+                type="number"
+                min="0"
+                step="0.01"
+                class="input"
+                required
+              />
+            </div>
+            <PaymentMethodSelect v-model:method="checkinPaymentMethod" v-model:provider="checkinPaymentProvider" />
+            <div v-if="requiresProvider(checkinPaymentMethod)" class="form-group form-full">
+              <label>{{ $t('reservations.transactionReference') }}</label>
+              <input
+                v-model="checkinPaymentRef"
+                type="text"
+                class="input"
+                required
+                :placeholder="$t('reservations.transactionReferencePlaceholder')"
+              />
+            </div>
+            <button type="button" class="btn btn-outline" @click="showCheckinPayment = false">
+              <i class="fas fa-arrow-left"></i> {{ $t('reservations.checkinWithoutPayment') }}
+            </button>
+          </template>
+
           <div class="modal-foot">
             <button type="button" class="btn btn-secondary" @click="closeCheckin">
               {{ $t('common.cancel') }}
             </button>
-            <button
-              type="submit"
-              class="btn"
-              :class="checkinBalanceDue > 0 && !checkinOverride && !hasActiveOverride ? 'btn-danger' : 'btn-success'"
-              :disabled="checkingIn"
-            >
-              <i class="fas fa-check"></i>
-              {{
-                checkingIn
-                  ? $t('common.saving')
-                  : checkinBalanceDue > 0 && !checkinOverride && !hasActiveOverride
-                    ? $t('reservations.paymentRequired')
-                    : $t('reservations.checkIn')
-              }}
-            </button>
+            <template v-if="!showCheckinPayment">
+              <button
+                v-if="checkinBalanceDue > 0"
+                type="button"
+                class="btn btn-secondary"
+                @click="showCheckinPayment = true"
+              >
+                <i class="fas fa-coins"></i>
+                {{ $t('reservations.collectPaymentNow') }}
+              </button>
+              <button type="submit" class="btn btn-success" :disabled="checkingIn">
+                <i class="fas fa-right-to-bracket"></i>
+                {{ checkingIn ? $t('common.saving') : $t('reservations.checkIn') }}
+              </button>
+            </template>
+            <template v-else>
+              <button type="submit" class="btn btn-primary" :disabled="checkingIn || payingIn">
+                <i class="fas fa-coins"></i>
+                {{ checkingIn || payingIn ? $t('common.saving') : $t('reservations.payAndCheckIn') }}
+              </button>
+            </template>
           </div>
         </form>
       </div>
@@ -931,7 +939,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { guestApi, invoiceApi, paymentApi, publicApi, reservationApi, checkinOverrideApi } from '@/api'
+import { guestApi, invoiceApi, paymentApi, publicApi, reservationApi } from '@/api'
 import { saveBlob } from '@/utils/download'
 import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
@@ -1638,10 +1646,12 @@ async function downloadInvoice() {
 const showCheckin = ref(false)
 const checkinTarget = ref(null)
 const checkingIn = ref(false)
-const checkinOverride = ref(false)
-const checkinOverrideReason = ref('')
-const activeOverride = ref(null)
-const activeOverrideCountdown = ref('')
+const showCheckinPayment = ref(false)
+const checkinPaymentMethod = ref(METHOD_CASH)
+const checkinPaymentProvider = ref('')
+const checkinPaymentAmount = ref(0)
+const checkinPaymentRef = ref('')
+const payingIn = ref(false)
 
 /** Outstanding balance for the check-in target (total - advance_payment). */
 const checkinBalanceDue = computed(() => {
@@ -1650,98 +1660,36 @@ const checkinBalanceDue = computed(() => {
   return Math.max(0, Number(t.total_amount || 0) - Number(t.advance_payment || 0))
 })
 
-/** Whether the check-in target has an active manager override. */
-const hasActiveOverride = computed(() => {
-  if (!activeOverride.value) return false
-  return new Date(activeOverride.value.expires_at).getTime() > Date.now()
-})
-
-/** Opens the check-in modal, pre-filling payment info and fetching any active override. */
-async function openCheckin(reservation) {
+/** Opens the check-in modal, pre-filling the optional payment form. */
+function openCheckin(reservation) {
   checkinTarget.value = reservation
-  checkinOverride.value = false
-  checkinOverrideReason.value = ''
   checkingIn.value = false
-  activeOverride.value = null
-  activeOverrideCountdown.value = ''
+  showCheckinPayment.value = false
+  checkinPaymentMethod.value = METHOD_CASH
+  checkinPaymentProvider.value = ''
+  checkinPaymentAmount.value = 0
+  checkinPaymentRef.value = ''
+  payingIn.value = false
   showCheckin.value = true
-
-  // Fetch active overrides to check if one already exists for this reservation.
-  try {
-    const res = await checkinOverrideApi.active()
-    const overrides = res.data.data || []
-    activeOverride.value = overrides.find((o) => {
-      const matchId = o.reservation_id && o.reservation_id === reservation.reservation_id
-      const matchName = o.guest_name === reservation.guest_name
-      return (matchId || matchName) && new Date(o.expires_at).getTime() > Date.now()
-    }) || null
-    if (activeOverride.value) updateOverrideCountdown()
-  } catch {
-    // Non-critical; proceed without override data.
-  }
 }
-
-/** Updates the countdown string for the active override. */
-function updateOverrideCountdown() {
-  if (!activeOverride.value) return
-  const diff = Math.max(0, new Date(activeOverride.value.expires_at).getTime() - Date.now())
-  if (diff <= 0) {
-    activeOverrideCountdown.value = t('overrides.expiredLabel')
-    activeOverride.value = null
-    return
-  }
-  const hours = Math.floor(diff / 3600000)
-  const minutes = Math.floor((diff % 3600000) / 60000)
-  const seconds = Math.floor((diff % 60000) / 1000)
-  if (hours > 0) activeOverrideCountdown.value = `${hours}h ${minutes}m ${seconds}s`
-  else if (minutes > 0) activeOverrideCountdown.value = `${minutes}m ${seconds}s`
-  else activeOverrideCountdown.value = `${seconds}s`
-}
-
-let overrideCountdownInterval = null
-watch(showCheckin, (open) => {
-  if (open && activeOverride.value) {
-    overrideCountdownInterval = setInterval(updateOverrideCountdown, 1000)
-  } else if (overrideCountdownInterval) {
-    clearInterval(overrideCountdownInterval)
-    overrideCountdownInterval = null
-  }
-})
 
 /** Closes the check-in modal. */
 function closeCheckin() {
   showCheckin.value = false
   checkinTarget.value = null
-  checkinOverride.value = false
-  checkinOverrideReason.value = ''
-  activeOverride.value = null
-  activeOverrideCountdown.value = ''
-  if (overrideCountdownInterval) {
-    clearInterval(overrideCountdownInterval)
-    overrideCountdownInterval = null
-  }
+  checkingIn.value = false
+  showCheckinPayment.value = false
+  payingIn.value = false
 }
 
-/** Executes the check-in, passing override when the balance is unpaid. */
+/** Executes the check-in without requiring payment — the balance settles at check-out. */
 async function confirmCheckin() {
   const target = checkinTarget.value
   if (!target) return
   checkingIn.value = true
   error.value = ''
   try {
-    const payload = {}
-    // Send override when there is an active pre-approved override or the manager manually checks it.
-    const unpaid = checkinBalanceDue.value > 0
-    const activeOverrideValid = unpaid && hasActiveOverride.value
-    const manualOverride = unpaid && checkinOverride.value && authStore.roleLevel >= 80
-    if (activeOverrideValid || manualOverride) {
-      payload.override = true
-      payload.override_id = activeOverrideValid ? activeOverride.value.id : undefined
-      payload.override_reason = activeOverrideValid
-        ? activeOverride.value.notes
-        : checkinOverrideReason.value
-    }
-    const res = await reservationApi.checkIn(target.reservation_id, payload)
+    const res = await reservationApi.checkIn(target.reservation_id, {})
     success.value = res.data.message || t('reservations.checkedIn')
     closeCheckin()
     await load()
@@ -1749,6 +1697,32 @@ async function confirmCheckin() {
     error.value = flattenError(err)
   } finally {
     checkingIn.value = false
+  }
+}
+
+/** Records the outstanding payment now, then checks the guest in. */
+async function payAndCheckin() {
+  const target = checkinTarget.value
+  if (!target) return
+  if (requiresProvider(checkinPaymentMethod.value) && !checkinPaymentProvider.value) {
+    error.value = t('paymentFields.selectProvider')
+    return
+  }
+  error.value = ''
+  payingIn.value = true
+  try {
+    await paymentApi.store({
+      reservation_id: target.reservation_id,
+      amount: checkinPaymentAmount.value || checkinBalanceDue.value,
+      payment_method: checkinPaymentMethod.value,
+      ...(checkinPaymentProvider.value ? { payment_provider: checkinPaymentProvider.value } : {}),
+      ...(checkinPaymentRef.value ? { transaction_reference: checkinPaymentRef.value } : {}),
+    })
+    await confirmCheckin()
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    payingIn.value = false
   }
 }
 

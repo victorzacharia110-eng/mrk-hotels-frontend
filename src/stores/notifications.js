@@ -135,6 +135,12 @@ export const useNotificationStore = defineStore('notifications', () => {
           alerts.value.unshift(event)
           alertCount.value++
         }
+        // Ring the device when a guest's check-out time is up and they still
+        // owe money, so the front desk collects payment at check-out.
+        if (event.type === 'reservation_due_out') {
+          const d = event.data || {}
+          useNotificationSettingsStore().ring(`due_out:${d.reservation_id}`)
+        }
       })
 
     // Personal channel: ring only the targeted staff member's device when the

@@ -1051,13 +1051,11 @@
     "balanceDue": "Balance due",
     "settleBeforeCheckout": "The outstanding balance must be settled before check-out.",
     "settlementAmount": "Settlement amount (TZS)",
-    "unpaidWarning": "This reservation has an outstanding balance. Payment must be collected or a manager override applied before check-in.",
     "outstanding": "Outstanding",
-    "managerOverride": "Override payment requirement (manager)",
-    "managerOverrideRequired": "Only a manager or owner can override the payment requirement. Ask a manager to complete this check-in.",
-    "overrideReason": "Override reason",
-    "overrideReasonHint": "Explain why payment is being bypassed.",
-    "paymentRequired": "Payment required"
+    "checkinExplanation": "No payment is required to check in. The outstanding balance of TZS {amount} will be collected at check-out.",
+    "collectPaymentNow": "Collect payment now",
+    "payAndCheckIn": "Pay & check in",
+    "checkinWithoutPayment": "Check in without payment"
   },
   "housekeeping": {
     "title": "Housekeeping",
