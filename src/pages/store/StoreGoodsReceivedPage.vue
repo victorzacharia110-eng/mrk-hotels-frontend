@@ -272,7 +272,7 @@ const printData = ref(null)
 
 const form = reactive({ po_id: '', inspection_status: 'pending', received_date: todayStr(), delivery_note_number: '', notes: '', items: [], delivery_notes: [] })
 
-const todayStr = () => {
+function todayStr() {
   const d = new Date()
   const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
   return local.toISOString().slice(0, 10)
