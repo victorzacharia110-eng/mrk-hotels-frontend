@@ -282,6 +282,23 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.lookup-layout {
+  height: calc(100vh - 112px);
+  align-items: stretch;
+}
+.panel { display: flex; flex-direction: column; min-height: 0; }
+.tree-body {
+  flex: 1 1 auto; min-height: 0;
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 10px;
+  overflow-y: auto;
+}
+.table-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.cost-summary { flex-shrink: 0; }
+@media (max-width: 1000px) {
+  .lookup-layout { height: auto; }
+  .tree-body, .table-scroll { overflow-y: visible; }
+}
 .ing-badge {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 18px; height: 18px; border-radius: 999px;
