@@ -4031,6 +4031,8 @@
       "noItems": "No items match.",
       "uncategorized": "Uncategorized",
       "guestName": "Guest Name",
+      "assignRoom": "Assign to Room",
+      "assignRoomHint": "Post the order to an in-house guest's room folio.",
       "waiter": "Waiter",
       "covers": "Covers",
       "lines": "Order Lines",

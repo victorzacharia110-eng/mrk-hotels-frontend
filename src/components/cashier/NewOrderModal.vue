@@ -41,6 +41,20 @@
           </div>
 
           <div class="fld-col">
+            <label class="fld-label" for="no-room">{{ $t('cashier.order.assignRoom') }}</label>
+            <SearchableSelect
+              id="no-room"
+              v-model="form.room_number"
+              :options="roomOptions"
+              :placeholder="roomPlaceholder"
+              :empty-label="$t('common.none')"
+              :disabled="busy"
+              @change="onRoomPicked"
+            />
+            <p class="fld-hint"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.order.assignRoomHint') }}</p>
+          </div>
+
+          <div class="fld-col">
             <label class="fld-label" for="no-waiter">{{ $t('cashier.order.waiter') }}</label>
             <SearchableSelect
               v-model="form.waiter_name"
@@ -137,6 +151,7 @@ const printStore = usePrintSettingsStore()
 
 const menu = ref([])
 const waiters = ref([])
+const inHouseRooms = ref([])
 const search = ref('')
 const lines = ref([])
 const busy = ref(false)
@@ -144,6 +159,7 @@ const error = ref('')
 
 const form = reactive({
   guest_name: props.guestNamePrefill || '',
+  room_number: props.roomNumber || '',
   waiter_name: '',
   covers: null,
   no_charge_account: '',
@@ -155,6 +171,22 @@ const form = reactive({
 const waiterOptions = computed(() =>
   waiters.value.map(w => ({ value: w.full_name, label: w.full_name }))
 )
+
+/** In-house rooms as searchable "Room N — Guest" choices for room billing. */
+const roomOptions = computed(() =>
+  inHouseRooms.value.map((room) => ({
+    value: room.room_number,
+    label: `${room.room_number} — ${room.guest_name || ''}`,
+  })),
+)
+
+const roomPlaceholder = computed(() => t('cashier.order.assignRoom'))
+
+/** Fills in the guest auto-name when the cashier picks a room to bill. */
+function onRoomPicked(value) {
+  const room = inHouseRooms.value.find((r) => r.room_number === value)
+  if (room?.guest_name) form.guest_name = room.guest_name
+}
 
 // Order type + department derived from the modal's POS mode.
 const ORDER_TYPE = {
@@ -211,7 +243,7 @@ async function submit() {
       outlet_id: selectedOutlet.value?.outlet_id || null,
       order_type: ORDER_TYPE[props.mode],
       table_number: props.tableNumber,
-      room_number: props.roomNumber,
+      room_number: form.room_number || props.roomNumber || null,
       guest_name: form.guest_name || null,
       waiter_name: form.waiter_name || null,
       items: lines.value.map((l) => ({ menu_item_id: l.menu_item_id, quantity: l.quantity })),
@@ -270,6 +302,7 @@ onMounted(async () => {
     ])
     menu.value = menuRes.data.data || menuRes.data
     waiters.value = options.data.waiters || []
+    inHouseRooms.value = options.data.in_house_guests || []
   } catch (e) {
     error.value = e.message
   }
@@ -296,6 +329,7 @@ onMounted(async () => {
 .fld-col { display: flex; flex-direction: column; gap: 4px; }
 .fld-row2 { display: grid; grid-template-columns: 1fr 110px; gap: 10px; }
 .fld-label { font-size: 12px; font-weight: 600; color: #475569; }
+.fld-hint { margin: 2px 0 0; font-size: 11.5px; color: #94a3b8; display: flex; align-items: center; gap: 4px; }
 .sm-input.full { width: 100%; }
 .lines { border-top: 1px dashed #e2e8f0; padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .line-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }

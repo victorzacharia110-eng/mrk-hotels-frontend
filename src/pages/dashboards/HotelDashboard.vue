@@ -277,27 +277,27 @@
                 <template v-else-if="folio">
                   <div class="sv-modal-row">
                     <i class="fas fa-database" aria-hidden="true"></i>
-                    <span>
+                    <span class="sv-row-line">
                       {{ $t('folio.roomCharges') }}: <strong>TZS {{ fmtNum(folio.folio?.room_charges) }}</strong>
-                      <span class="sv-cap"> · {{ $t('folio.balance') }} TZS {{ fmtNum(folio.folio?.balance_due) }}</span>
+                      <span class="sv-cap"> · {{ $t('folio.balance') }} <strong>TZS {{ fmtNum(folio.folio?.balance_due) }}</strong></span>
                     </span>
                   </div>
                   <div v-for="(p, i) in folio.payments" :key="'p' + i" class="sv-modal-row">
                     <i class="fas fa-money-bill-wave" aria-hidden="true"></i>
-                    <span class="sv-cap">
-                      {{ $t('folio.payment') }} · {{ p.payment_method }} · TZS {{ fmtNum(p.amount) }}
+                    <span class="sv-cap sv-row-line">
+                      {{ $t('folio.payment') }} · {{ p.payment_method }} · <strong>TZS {{ fmtNum(p.amount) }}</strong>
                     </span>
                   </div>
                   <div v-for="(o, i) in folio.orders" :key="'o' + i" class="sv-modal-row">
                     <i class="fas fa-utensils" aria-hidden="true"></i>
-                    <span class="sv-cap">
-                      {{ $t('folio.order') }} {{ o.reference || o.order_number || '' }} · TZS {{ fmtNum(o.total_amount ?? o.total) }}
+                    <span class="sv-cap sv-row-line">
+                      {{ $t('folio.order') }} {{ o.reference || o.order_number || '' }} · <strong>TZS {{ fmtNum(o.total_amount ?? o.total) }}</strong>
                     </span>
                   </div>
                   <div v-for="(l, i) in folio.laundry" :key="'l' + i" class="sv-modal-row">
                     <i class="fas fa-shirt" aria-hidden="true"></i>
-                    <span class="sv-cap">
-                      {{ $t('folio.laundry') }} · TZS {{ fmtNum(l.total_charge ?? l.total_amount ?? l.total) }}
+                    <span class="sv-cap sv-row-line">
+                      {{ $t('folio.laundry') }} · <strong>TZS {{ fmtNum(l.total_charge ?? l.total_amount ?? l.total) }}</strong>
                     </span>
                   </div>
                   <div v-if="!folio.payments?.length && !folio.orders?.length && !folio.laundry?.length" class="sv-modal-row muted">
@@ -520,12 +520,12 @@
                         <i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('stayview.addPayment') }}
                       </button>
                     </li>
-                    <li v-if="['pending', 'confirmed'].includes(activeBar.rawStatus)">
+                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
                       <button type="button" @click="openAmendModal(false)">
                         <i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('stayview.amendStay') }}
                       </button>
                     </li>
-                    <li v-if="['pending', 'confirmed'].includes(activeBar.rawStatus)">
+                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
                       <button type="button" @click="openAmendModal(true)">
                         <i class="fas fa-arrows-left-right" aria-hidden="true"></i> {{ $t('stayview.roomMove') }}
                       </button>
@@ -3074,6 +3074,18 @@ onUnmounted(() => clearInterval(refreshTimer))
   border-bottom: none;
 }
 
+.sv-modal-row .sv-row-line {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sv-modal-row strong {
+  white-space: nowrap;
+}
+
 .sv-modal-row i {
   width: 18px;
   text-align: center;
@@ -3409,6 +3421,7 @@ onUnmounted(() => clearInterval(refreshTimer))
 .sv-panel-card strong {
   font-size: 15px;
   color: #1f2937;
+  white-space: nowrap;
 }
 
 .sv-panel-card.pay-pending strong { color: #c0392b; }
