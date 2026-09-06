@@ -4016,6 +4016,7 @@
       "blockedDevices": "Blocked Devices",
       "transactionLock": "Transaction Lock",
       "accountLookup": "Account Lookup",
+      "printerGroup": "Printer",
       "printer": "Printer",
       "printSettings": "Print Settings",
       "waiterAssignment": "Waiter Assignment",

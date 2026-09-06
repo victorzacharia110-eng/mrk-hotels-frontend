@@ -81,6 +81,15 @@
             <i class="fas fa-users" aria-hidden="true"></i>
             <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.accountLookup') }}</span>
           </router-link>
+        </div>
+
+        <button type="button" class="pos-nav-heading pos-group" :class="{ open: isOpen('printer') }"
+          @click="toggleGroup('printer')" v-show="!sidebarCollapsed"
+          :aria-expanded="isOpen('printer')">
+          {{ $t('cashier.nav.printerGroup') }}
+          <i class="fas fa-chevron-down pos-chevron" aria-hidden="true"></i>
+        </button>
+        <div v-if="isOpen('printer')" class="pos-group-items">
           <router-link :to="{ name: 'cashier-printer' }" class="pos-nav-link"
             :class="{ active: isActive('/cashier/printer') }" @click="mobileOpen = false">
             <i class="fas fa-print" aria-hidden="true"></i>
@@ -207,10 +216,14 @@ watch(() => route.path, () => {
   // Keep the parent group open so the active item stays visible.
   if (route.path.startsWith('/cashier/item-lookup') || route.path.startsWith('/cashier/ingredients')
     || route.path.startsWith('/cashier/shift-manager') || route.path.startsWith('/cashier/blocked-devices')
-    || route.path.startsWith('/cashier/transaction-lock') || route.path.startsWith('/cashier/account-lookup')
-    || route.path.startsWith('/cashier/printer')) {
+    || route.path.startsWith('/cashier/transaction-lock') || route.path.startsWith('/cashier/account-lookup')) {
     const next = new Set(openGroups.value)
     next.add('manager')
+    openGroups.value = next
+  }
+  if (route.path.startsWith('/cashier/printer') || route.path.startsWith('/cashier/print-settings')) {
+    const next = new Set(openGroups.value)
+    next.add('printer')
     openGroups.value = next
   }
   if (route.path.startsWith('/cashier/dine-in') || route.path.startsWith('/cashier/take-away') || route.path.startsWith('/cashier/room-service') || route.path.startsWith('/cashier/delivery') || route.path.startsWith('/cashier/no-charge')) {
