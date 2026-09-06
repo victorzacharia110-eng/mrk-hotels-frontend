@@ -114,12 +114,13 @@
             <span>{{ $t('requisitionPanel.items') }}</span>
             <p v-if="restricted && !availableItems.length" class="rq-hint">{{ $t('requisitionPanel.noDeptItems') }}</p>
             <div v-for="(line, idx) in form.lines" :key="idx" class="rq-line">
-              <select v-model="line.item_id" class="rq-select grow">
-                <option disabled :value="null">{{ $t('common.select') }}</option>
-                <option v-for="i in availableItems" :key="i.item_id" :value="i.item_id">
-                  {{ i.item_name }} — {{ $t('requisitionPanel.inStock') }}: {{ i.quantity_in_stock }}
-                </option>
-              </select>
+              <SearchableSelect
+                v-model="line.item_id"
+                :options="itemOptions"
+                :force-search="true"
+                :placeholder="$t('common.select')"
+                :empty-label="$t('requisitionPanel.noDeptItems')"
+              />
               <input v-model.number="line.quantity" type="number" min="0.01" step="any" class="rq-input slim" />
               <button class="rq-x" @click="form.lines.splice(idx, 1)">×</button>
             </div>
@@ -311,6 +312,14 @@ const availableItems = computed(() => {
   )
 })
 
+/** Registered stock items, searchable, showing the current stock level. */
+const itemOptions = computed(() =>
+  availableItems.value.map((i) => ({
+    value: i.item_id,
+    label: `${i.item_name} — ${t('requisitionPanel.inStock')}: ${Number(i.quantity_in_stock ?? 0)}`,
+  })),
+)
+
 const filtered = computed(() => {
   let list = indents.value
   if (tab.value === 'inbox') list = list.filter((i) => i.status !== 'draft')
@@ -362,9 +371,20 @@ function loadMessage(e, fallback) {
 
 async function loadItems() {
   try {
-    const res = await inventoryApi.index({ per_page: 500 })
-    items.value = res.data?.data || res.data || []
-  } catch { items.value = [] }
+    const all = []
+    let page = 1
+    let last = 1
+    do {
+      const res = await inventoryApi.index({ per_page: 100, page })
+      const pageItems = res.data?.data || res.data || []
+      if (Array.isArray(pageItems)) all.push(...pageItems)
+      last = res.data?.last_page ?? 1
+      page += 1
+    } while (page <= last && page <= 25)
+    items.value = all
+  } catch {
+    items.value = []
+  }
 }
 
 async function loadDepartments() {
@@ -655,6 +675,7 @@ onMounted(() => {
 .rq-modal-body { display: flex; flex-direction: column; gap: 14px; padding-top: 14px; }
 .rq-fld { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #334155; }
 .rq-line { display: flex; gap: 8px; align-items: center; }
+.rq-line .ss { flex: 1; min-width: 0; }
 .rq-modal-foot { display: flex; justify-content: flex-end; gap: 10px; padding-top: 18px; }
 .rq-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: #334155; margin-bottom: 12px; }
 .rq-meta strong { color: #0f172a; }
