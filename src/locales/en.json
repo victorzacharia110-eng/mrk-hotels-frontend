@@ -4073,14 +4073,24 @@
     },
     "accounts": {
       "title": "Account Lookup",
+      "tabAccounts": "Accounts",
+      "tabCreditors": "Creditors",
       "searchHint": "Search by name, phone, email or city...",
+      "searchCreditorsHint": "Search by company, contact, phone, email or category...",
       "name": "Name",
       "city": "City",
       "country": "Country",
       "mobile": "Mobile",
       "email": "Email",
       "balance": "Balance",
-      "noData": "No accounts found."
+      "noData": "No accounts found.",
+      "creditorName": "Company",
+      "contactPerson": "Contact Person",
+      "category": "Category",
+      "paymentTerms": "Payment Terms",
+      "creditLimit": "Credit Limit",
+      "currentBalance": "Current Balance",
+      "noCreditors": "No creditors found."
     },
     "topbar": {
       "switchOutlet": "Switch outlet"

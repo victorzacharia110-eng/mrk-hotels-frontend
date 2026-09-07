@@ -1616,6 +1616,15 @@ export const posApi = {
   accounts(params) {
     return api.get(`${v1}/cashier/accounts`, { params })
   },
+  /**
+   * Cashier creditor lookup over the supplier book: companies that extend
+   * the hotel credit, with payment terms, credit limit and amount owed.
+   * @param {object} params - Query params ({ search, per_page, page }).
+   * @returns {Promise} Axios response with { creditors, pagination }.
+   */
+  creditors(params) {
+    return api.get(`${v1}/cashier/creditors`, { params })
+  },
 }
 
 /** Menu item ingredients — links sellable items to tracked inventory stock. */

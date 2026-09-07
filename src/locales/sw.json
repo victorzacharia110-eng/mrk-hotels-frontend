@@ -4073,14 +4073,24 @@
     },
     "accounts": {
       "title": "Utafutaji wa Akaunti",
+      "tabAccounts": "Akaunti",
+      "tabCreditors": "Wadai",
       "searchHint": "Tafuta kwa jina, namba, barua pepe au mji...",
+      "searchCreditorsHint": "Tafuta kwa kampuni, mwasiliani, simu, barua pepe au kategoria...",
       "name": "Jina",
       "city": "Mji",
       "country": "Nchi",
       "mobile": "Simu",
       "email": "Barua Pepe",
       "balance": "Salio",
-      "noData": "Hakuna akaunti zilizopatikana."
+      "noData": "Hakuna akaunti zilizopatikana.",
+      "creditorName": "Kampuni",
+      "contactPerson": "Mwasiliani",
+      "category": "Kategoria",
+      "paymentTerms": "Masharti ya Malipo",
+      "creditLimit": "Kikomo cha Mkopo",
+      "currentBalance": "Salio la Sasa",
+      "noCreditors": "Hakuna wadai waliopatikana."
     },
     "topbar": {
       "switchOutlet": "Badili outlet"
