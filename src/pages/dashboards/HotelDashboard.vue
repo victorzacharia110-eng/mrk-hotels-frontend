@@ -203,10 +203,11 @@
         <i class="fas fa-bed" aria-hidden="true"></i>
         <span>{{ $t('stayview.room') }} {{ barTip.roomNumber }}</span>
       </div>
-      <div class="sv-popover-row" :class="barTip.paymentPending ? 'pay-pending' : 'pay-ok'">
+      <div class="sv-popover-row" :class="barTip.rawStatus === 'checked_in' ? 'pay-ok' : (barTip.paymentPending ? 'pay-pending' : 'pay-ok')">
         <i class="fas fa-dollar-sign" aria-hidden="true"></i>
         <span>
-          {{ barTip.paymentPending ? $t('stayview.paymentPending') : $t('stayview.paymentPaid') }}
+          <template v-if="barTip.rawStatus === 'checked_in'">{{ $t('stayview.balanceDue') }}</template>
+          <template v-else>{{ barTip.paymentPending ? $t('stayview.paymentPending') : $t('stayview.paymentPaid') }}</template>
           <strong v-if="barTip.paymentPending"> · TZS {{ barTip.balance }}</strong>
         </span>
       </div>
@@ -275,34 +276,48 @@
                   <span>{{ $t('common.loading') }}</span>
                 </div>
                 <template v-else-if="folio">
-                  <div class="sv-modal-row">
-                    <i class="fas fa-database" aria-hidden="true"></i>
-                    <span class="sv-row-line">
-                      {{ $t('folio.roomCharges') }}: <strong>TZS {{ fmtNum(folio.folio?.room_charges) }}</strong>
-                      <span class="sv-cap"> · {{ $t('folio.balance') }} <strong>TZS {{ fmtNum(folio.folio?.balance_due) }}</strong></span>
-                    </span>
-                  </div>
-                  <div v-for="(p, i) in folio.payments" :key="'p' + i" class="sv-modal-row">
-                    <i class="fas fa-money-bill-wave" aria-hidden="true"></i>
-                    <span class="sv-cap sv-row-line">
-                      {{ $t('folio.payment') }} · {{ paymentMethodLabel(p.payment_method) }} · <strong>TZS {{ fmtNum(p.amount) }}</strong>
-                    </span>
-                  </div>
-                  <div v-for="(o, i) in folio.orders" :key="'o' + i" class="sv-modal-row">
-                    <i class="fas fa-utensils" aria-hidden="true"></i>
-                    <span class="sv-cap sv-row-line">
-                      {{ $t('folio.order') }} {{ o.reference || o.order_number || '' }} · <strong>TZS {{ fmtNum(o.total_amount ?? o.total) }}</strong>
-                    </span>
-                  </div>
-                  <div v-for="(l, i) in folio.laundry" :key="'l' + i" class="sv-modal-row">
-                    <i class="fas fa-shirt" aria-hidden="true"></i>
-                    <span class="sv-cap sv-row-line">
-                      {{ $t('folio.laundry') }} · <strong>TZS {{ fmtNum(l.total_charge ?? l.total_amount ?? l.total) }}</strong>
-                    </span>
-                  </div>
-                  <div v-if="!folio.payments?.length && !folio.orders?.length && !folio.laundry?.length" class="sv-modal-row muted">
-                    <i class="fas fa-receipt" aria-hidden="true"></i>
-                    <span>{{ $t('folio.empty') }}</span>
+                  <div class="sv-table-wrap sv-folio-table">
+                    <table class="sv-table">
+                      <thead>
+                        <tr>
+                          <th>{{ $t('folio.date') }}</th>
+                          <th>{{ $t('folio.particular') }}</th>
+                          <th>{{ $t('folio.description') }}</th>
+                          <th>{{ $t('folio.user') }}</th>
+                          <th class="num">{{ $t('folio.amount') }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="e in folioEntries" :key="e.key" :class="e.credit ? 'row-credit' : 'row-charge'">
+                          <td>{{ formatDateDMY(e.date) }}</td>
+                          <td class="sv-particular">{{ e.particular }}</td>
+                          <td>
+                            {{ e.description }}<span v-if="e.detail" class="sv-cap"> · {{ e.detail }}</span>
+                          </td>
+                          <td>{{ e.user }}</td>
+                          <td class="num">{{ e.credit ? '−' : '' }}TZS {{ fmtNum(e.amount) }}</td>
+                        </tr>
+                        <tr v-if="!folioEntries.length">
+                          <td colspan="5" class="sv-muted-cell">{{ $t('folio.empty') }}</td>
+                        </tr>
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <td colspan="4">{{ $t('folio.totalCharges') }}</td>
+                          <td class="num">
+                            TZS {{ fmtNum((folio.folio?.total_amount ?? 0) + (folio.folio?.room_charges ?? 0)) }}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td colspan="4">{{ $t('folio.totalPaid') }}</td>
+                          <td class="num">TZS {{ fmtNum(folio.reservation?.advance_payment ?? 0) }}</td>
+                        </tr>
+                        <tr class="sv-folio-balance">
+                          <td colspan="4">{{ $t('folio.balance') }}</td>
+                          <td class="num"><strong>TZS {{ fmtNum(folio.folio?.balance_due ?? 0) }}</strong></td>
+                        </tr>
+                      </tfoot>
+                    </table>
                   </div>
                 </template>
 
@@ -536,11 +551,6 @@
                       </button>
                     </li>
                     <li>
-                      <button type="button" @click="openNewBooking">
-                        <i class="fas fa-calendar-plus" aria-hidden="true"></i> {{ $t('stayview.addNewBooking') }}
-                      </button>
-                    </li>
-                    <li>
                       <button type="button" class="danger" @click="openVoid">
                         <i class="fas fa-trash-can" aria-hidden="true"></i> {{ $t('stayview.voidReservation') }}
                       </button>
@@ -616,6 +626,28 @@
               </button>
             </div>
             <div class="sv-modal-body">
+              <div class="sv-tab-section">{{ $t('stayview.guestName') }}</div>
+              <div class="sv-field-row">
+                <label class="sv-field">
+                  <span>{{ $t('reservations.firstName') }}</span>
+                  <input v-model="amendForm.first_name" type="text" class="input" required />
+                </label>
+                <label class="sv-field">
+                  <span>{{ $t('reservations.lastName') }}</span>
+                  <input v-model="amendForm.last_name" type="text" class="input" required />
+                </label>
+              </div>
+              <div class="sv-field-row">
+                <label class="sv-field">
+                  <span>{{ $t('stayview.phone') }}</span>
+                  <input v-model="amendForm.guest_phone_display" type="tel" class="input" placeholder="255 6747 347 477" />
+                </label>
+                <label class="sv-field">
+                  <span>{{ $t('stayview.email') }}</span>
+                  <input v-model="amendForm.guest_email" type="email" class="input" />
+                </label>
+              </div>
+              <div class="sv-tab-section">{{ $t('stayview.room') }}</div>
               <label class="sv-field">
                 <span>{{ $t('stayview.room') }}</span>
                 <SearchableSelect
@@ -764,7 +796,7 @@
               </div>
               <label class="sv-field">
                 <span>{{ $t('reservations.guestPhone') }}</span>
-                <input v-model="bookingForm.guest_phone" type="tel" class="input" required />
+                <input v-model="bookingPhone" type="tel" class="input" required :placeholder="'255 6747 347 477'" />
               </label>
               <div class="sv-field-row">
                 <label class="sv-field">
@@ -1114,6 +1146,8 @@ import RoleBadge from '@/components/RoleBadge.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import { requiresProvider } from '@/utils/payments'
+import { formatDateDMY } from '@/utils/dates'
+import { formatPhoneGaps } from '@/utils/phone'
 import { useCategoriesStore } from '@/stores/categories'
 
 const { t, te } = useI18n()
@@ -1326,12 +1360,17 @@ const barsByRoom = computed(() => {
     const startIdx = Math.max(0, diffDays(windowStart.value, arrival))
     const endIdx = Math.min(DAYS, diffDays(windowStart.value, departure))
     if (endIdx <= startIdx) continue
-    // Bar colors: blue = checked out, red = payment pending, green = confirmed.
+    // Bar colors: blue = checked out, red = payment pending, green = in-house
+    // or fully paid. An in-house guest shows green even when a balance remains
+    // to be settled at check-out — the stay has started, so there is nothing
+    // to be "waiting for".
     const balance = Number(r.balance_due ?? r.balance ?? 0)
     const paymentPending = balance > 0
     const colorClass =
-      r.status === 'checked_out' ? 'bar-blue' : paymentPending ? 'bar-red' : 'bar-green'
-    const fmt = (d) => d.toLocaleDateString([], { day: 'numeric', month: 'short' })
+      r.status === 'checked_out' ? 'bar-blue'
+      : r.status === 'checked_in' ? 'bar-green'
+      : paymentPending ? 'bar-red' : 'bar-green'
+    const fmt = (d) => `${d.getDate()}/${d.getMonth() + 1}/${String(d.getFullYear()).slice(2)}`
     ;(map[roomId] ||= []).push({
       id: r.reservation_id,
       roomId,
@@ -1590,7 +1629,14 @@ const stayStrip = computed(() => {
 
 /** Formats an ISO date/time string for the audit trail and task rows. */
 function fmtDate(iso) {
-  return iso ? new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '—'
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const hh = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${dd}/${mm}/${d.getFullYear()} ${hh}:${min}`
 }
 
 /** Label/value rows for the Booking Details tab (folio-aware with bar fallback). */
@@ -1598,7 +1644,7 @@ const bookingGrid = computed(() => {
   const res = folio.value?.reservation || null
   const src = res || activeBar.value || {}
   const show = (v) => (v === undefined || v === null || v === '' ? '—' : String(v))
-  const fmtDay = (v) => (v ? new Date(v).toLocaleDateString() : '')
+  const fmtDay = (v) => (v ? formatDateDMY(v) : '')
   const roomName = res?.room
     ? `${res.room.room_number || ''}${res.room.room_type ? ' · ' + res.room.room_type : ''}`.trim()
     : ''
@@ -1612,11 +1658,11 @@ const bookingGrid = computed(() => {
     { label: t('stayview.room'), value: show(roomName || src.roomNumber) },
     {
       label: t('stayview.arrival'),
-      value: show(fmtDay(src.check_in_date || src.arrival_date) || (src.arrivalIso ? new Date(src.arrivalIso).toLocaleDateString() : '')),
+      value: show(fmtDay(src.check_in_date || src.arrival_date) || (src.arrivalIso ? formatDateDMY(src.arrivalIso) : '')),
     },
     {
       label: t('stayview.departure'),
-      value: show(fmtDay(src.check_out_date || src.departure_date) || (src.departureIso ? new Date(src.departureIso).toLocaleDateString() : '')),
+      value: show(fmtDay(src.check_out_date || src.departure_date) || (src.departureIso ? formatDateDMY(src.departureIso) : '')),
     },
     { label: t('reservations.nights'), value: show(src.nights ?? src.num_days ?? '') },
     { label: t('reservations.adultsLabel'), value: show(src.num_adults ?? '') },
@@ -1634,7 +1680,7 @@ const guestGrid = computed(() => {
   const show = (v) => (v === undefined || v === null || v === '' ? '—' : String(v))
   return [
     { label: t('stayview.guestName'), value: show(g.full_name || g.guest_name || g.label) },
-    { label: t('stayview.phone'), value: show(g.phone || g.guest_phone) },
+    { label: t('stayview.phone'), value: show(formatPhoneGaps(g.phone || g.guest_phone)) },
     { label: t('stayview.email'), value: show(g.email || g.guest_email) },
     { label: t('guests.nationality'), value: show(g.nationality || g.country) },
     { label: t('guests.idType'), value: show(g.id_type) },
@@ -1653,11 +1699,89 @@ const chargeNights = computed(() => {
   if (!(rate > 0)) return []
   const nights = []
   for (let d = parseDate(cIn); d < parseDate(cOut); d = addDays(d, 1)) {
-    nights.push({ date: d.toLocaleDateString(), day: d.toLocaleDateString([], { weekday: 'short' }), rate })
+    nights.push({ date: formatDateDMY(d), day: d.toLocaleDateString([], { weekday: 'short' }), rate })
   }
   return nights
 })
 const nightTotal = computed(() => chargeNights.value.reduce((s, n) => s + n.rate, 0))
+
+/**
+ * Flattened folio transactions for the DATE | PARTICULAR | DESCRIPTION |
+ * USER | AMOUNT ledger. Only room-billed orders/laundry count towards the
+ * balance; the manual extra-charge remainder and every payment make up the
+ * rest, so the column totals always add up to balance_due.
+ */
+const folioEntries = computed(() => {
+  const f = folio.value || null
+  if (!f) return []
+  const fol = f.folio || {}
+  const res = f.reservation || {}
+  const entries = []
+  const nights = res.num_days || (res.check_in_date && res.check_out_date ? diffDays(res.check_in_date, res.check_out_date) : 0)
+  entries.push({
+    key: 'room',
+    date: fol.room_charges_date,
+    particular: t('folio.roomCharge'),
+    description: [t('stayview.room'), String(res.room?.room_number || '')].filter(Boolean).join(' '),
+    detail: nights ? t('folio.nightsCount', { nights }) : '',
+    user: fol.room_charge_user || '—',
+    amount: Number(fol.total_amount ?? res.total_amount ?? 0),
+    credit: false,
+  })
+  for (const o of f.orders || []) {
+    if (o.payment_status !== 'billed_to_room') continue
+    entries.push({
+      key: `o${o.order_id ?? o.order_number}`,
+      date: o.date,
+      particular: t('folio.roomPosting'),
+      description: o.reference || o.order_number || t('folio.order'),
+      detail: o.order_type || '',
+      user: o.user || '—',
+      amount: Number(o.total_amount ?? o.total ?? 0),
+      credit: false,
+    })
+  }
+  for (const l of f.laundry || []) {
+    if (l.payment_status !== 'billed_to_room') continue
+    entries.push({
+      key: `l${l.laundry_order_id ?? l.order_number}`,
+      date: l.date,
+      particular: t('folio.laundry'),
+      description: l.order_number || t('folio.laundry'),
+      detail: l.service || '',
+      user: l.user || '—',
+      amount: Number(l.total_charge ?? l.total_amount ?? l.total ?? 0),
+      credit: false,
+    })
+  }
+  const extra = Number(fol.extra_charges ?? 0)
+  if (extra > 0) {
+    entries.push({
+      key: 'extra',
+      date: fol.room_charges_posted_at,
+      particular: t('folio.extraCharges'),
+      description: t('folio.manualCharge'),
+      detail: '',
+      user: fol.room_charge_user || '—',
+      amount: extra,
+      credit: false,
+    })
+  }
+  for (const p of f.payments || []) {
+    entries.push({
+      key: `p${p.payment_id ?? p.transaction_reference}`,
+      date: p.date,
+      particular: t('folio.payment'),
+      description: paymentMethodLabel(p.payment_method),
+      detail: p.transaction_reference || '',
+      user: p.user || '—',
+      amount: Number(p.amount ?? 0),
+      credit: true,
+    })
+  }
+  entries.sort((a, b) => String(a.date || a.key).localeCompare(String(b.date || b.key)))
+  return entries
+})
 
 // Housekeeping tasks for the active stay's room (Tasks tab).
 const roomTasks = ref([])
@@ -1810,6 +1934,11 @@ function openAmendModal(roomMove = false) {
     check_out_date: res.check_out_date || res.departureIso || '',
     num_adults: res.num_adults ?? 1,
     num_children: res.num_children ?? 0,
+    first_name: res.first_name || '',
+    last_name: res.last_name || '',
+    guest_phone: res.guest_phone || '',
+    guest_phone_display: formatPhoneGaps(res.guest_phone),
+    guest_email: res.guest_email || '',
   }
   actionError.value = ''
   amendModal.value = true
@@ -1817,16 +1946,23 @@ function openAmendModal(roomMove = false) {
 async function submitAmend() {
   const f = amendForm.value
   if (!activeBar.value?.id || !f.room_id || !f.check_in_date || !f.check_out_date || !(Number(f.num_adults) > 0)) return
+  // Only send a field when it actually changed, so a room move never wipes
+  // guest details (and vice versa).
+  const payload = {
+    room_id: f.room_id,
+    check_in_date: f.check_in_date,
+    check_out_date: f.check_out_date,
+    num_adults: Number(f.num_adults) || 1,
+    num_children: Number(f.num_children) || 0,
+  }
+  const res = folio.value?.reservation || {}
+  const digitPhone = String(f.guest_phone_display || f.guest_phone || '').replace(/\D/g, '')
+  if (f.first_name !== (res.first_name ?? '') && f.first_name) payload.first_name = f.first_name
+  if (f.last_name !== (res.last_name ?? '') && f.last_name) payload.last_name = f.last_name
+  if (digitPhone !== String(res.guest_phone || '').replace(/\D/g, '') && digitPhone) payload.guest_phone = digitPhone
+  if (f.guest_email !== (res.guest_email ?? '') && f.guest_email) payload.guest_email = f.guest_email
   amendModal.value = false
-  await runStayAction(() =>
-    reservationApi.update(activeBar.value.id, {
-      room_id: f.room_id,
-      check_in_date: f.check_in_date,
-      check_out_date: f.check_out_date,
-      num_adults: Number(f.num_adults) || 1,
-      num_children: Number(f.num_children) || 0,
-    }),
-  )
+  await runStayAction(() => reservationApi.update(activeBar.value.id, payload))
   if (actionError.value) amendModal.value = true
 }
 
@@ -2166,6 +2302,33 @@ ${head}
 const bookingModal = ref(false)
 const bookingForm = ref({})
 
+/** Guest phone displayed with the 255 6747 347 477 gap style; stores digits. */
+const bookingPhone = computed({
+  get: () => formatPhoneGaps(bookingForm.value.guest_phone),
+  set: (v) => {
+    bookingForm.value.guest_phone = String(v || '').replace(/\D/g, '')
+  },
+})
+
+/** Implements a fresh booking form with today → tomorrow defaults. */
+function resetBookingForm() {
+  const today = isoKey(startOfDay(new Date()))
+  const tomorrow = isoKey(addDays(startOfDay(new Date()), 1))
+  bookingForm.value = {
+    first_name: '',
+    last_name: '',
+    guest_phone: '',
+    booking_type: 'single',
+    room_id: rooms.value[0]?.room_id || null,
+    check_in_date: today,
+    check_out_date: tomorrow,
+    total_amount: null,
+    advance_payment: 0,
+    advance_payment_method: '',
+    advance_payment_date: today,
+  }
+}
+
 /** Nights between the selected arrival and departure dates. */
 const bookingNights = computed(() => {
   const f = bookingForm.value
@@ -2218,21 +2381,7 @@ function bookVacantDay(room, iso) {
 
 /** Opens the booking form with sensible defaults (today → tomorrow). */
 function openNewBooking() {
-  const today = isoKey(startOfDay(new Date()))
-  const tomorrow = isoKey(addDays(startOfDay(new Date()), 1))
-  bookingForm.value = {
-    first_name: '',
-    last_name: '',
-    guest_phone: '',
-    booking_type: 'single',
-    room_id: rooms.value[0]?.room_id || null,
-    check_in_date: today,
-    check_out_date: tomorrow,
-    total_amount: null,
-    advance_payment: 0,
-    advance_payment_method: '',
-    advance_payment_date: today,
-  }
+  resetBookingForm()
   actionError.value = ''
   bookingModal.value = true
 }
@@ -2248,7 +2397,12 @@ async function submitBooking() {
     }
     await reservationApi.store({ ...payload, status: 'confirmed' })
   })
-  if (!actionError.value) bookingModal.value = false
+  if (!actionError.value) {
+    bookingModal.value = false
+    // Start the next booking from a clean slate — the previous guest's name
+    // and phone must never leak into a fresh reservation.
+    resetBookingForm()
+  }
 }
 
 /* ---------------- Guest registration modal ---------------- */
@@ -3502,6 +3656,40 @@ onUnmounted(() => clearInterval(refreshTimer))
   border-bottom: none;
   font-weight: 600;
   background: #f8fafc;
+}
+
+/* Folio ledger: credit rows (payments) read as accepted money, charge rows as
+   amounts owed. The balance footer is emphasized as the settled figure. */
+.sv-folio-table .sv-particular {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sv-folio-table .row-charge td {
+  color: #1f2937;
+}
+
+.sv-folio-table .row-credit td {
+  color: #1e7e34;
+}
+
+.sv-folio-table .sv-muted-cell {
+  text-align: center;
+  color: #9ca3af;
+  padding: 14px 10px;
+}
+
+.sv-folio-table .sv-folio-balance td {
+  background: #f0fdf4;
+  color: #1e7e34;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Fits the folio ledger into the stay-view modal without a horizontal scroll. */
+@media (max-width: 720px) {
+  .sv-folio-table table {
+    min-width: 520px;
+  }
 }
 
 .sv-note {

@@ -56,3 +56,18 @@ export function daysBetween(from, to) {
 export function formatDateTime(value) {
   return value ? String(value).slice(0, 16).replace('T', ' ') : '—'
 }
+
+/**
+ * Formats a date as DD/MM/YYYY (the front-desk convention across panels).
+ * Accepts an ISO string or a Date and pads both date parts to two digits.
+ * @param {string|Date} value - Date value to format.
+ * @returns {string} The date as DD/MM/YYYY, or an em dash when empty/invalid.
+ */
+export function formatDateDMY(value) {
+  if (!value) return '—'
+  const d = value instanceof Date ? value : new Date(String(value).slice(0, 10) + 'T00:00:00')
+  if (Number.isNaN(d.getTime())) return '—'
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  return `${dd}/${mm}/${d.getFullYear()}`
+}

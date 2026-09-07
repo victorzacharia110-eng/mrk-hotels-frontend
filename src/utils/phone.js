@@ -67,3 +67,24 @@ export function normalizePhoneNumber(value, defaultCountry = DEFAULT_COUNTRY) {
   const parsed = parsePhoneNumberFromString(phone)
   return parsed?.isValid() ? parsed.number : phone
 }
+
+/**
+ * Formats a Tanzania phone with the gap style the front desk asked for:
+ * `255 6747 347 477` (country code, then 4-3-3). A local 0-prefixed number
+ * becomes `0674 734 747`. Numbers that do not match either plan are returned
+ * untouched so no input is ever mangled.
+ * @param {string} value - Phone number as typed or stored.
+ * @returns {string} The number with digit-group gaps, or the input unchanged.
+ */
+export function formatPhoneGaps(value) {
+  if (!value) return ''
+
+  const digits = String(value).replace(/\D/g, '')
+  if (digits.startsWith('255') && digits.length === 12) {
+    return `${digits.slice(0, 3)} ${digits.slice(3, 7)} ${digits.slice(7, 10)} ${digits.slice(10, 12)}`
+  }
+  if (digits.length === 10 && digits.startsWith('0')) {
+    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 10)}`
+  }
+  return String(value)
+}
