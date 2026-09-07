@@ -1399,8 +1399,8 @@ const barsByRoom = computed(() => {
       source: (r.booking_source || '—').replace('_', ' '),
       specialRequests: r.special_requests || '',
       notes: r.notes || '',
-      checkedInAt: r.checked_in_at ? new Date(r.checked_in_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '',
-      checkedOutAt: r.checked_out_at ? new Date(r.checked_out_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '',
+      checkedInAt: r.checked_in_at ? fmtDate(r.checked_in_at) : '',
+      checkedOutAt: r.checked_out_at ? fmtDate(r.checked_out_at) : '',
     })
   }
   return map

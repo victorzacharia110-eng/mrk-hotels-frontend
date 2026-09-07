@@ -134,7 +134,7 @@
           <tr v-for="r in reservations" :key="r.reservation_id">
             <td>
               <strong>{{ r.guest_name }}</strong>
-              <div class="sub">{{ r.guest_phone || r.guest_email || '—' }}</div>
+              <div class="sub">{{ formatPhoneGaps(r.guest_phone) || r.guest_email || '—' }}</div>
               <div v-if="r.city || r.country" class="sub">
                 <i class="fas fa-location-dot"></i>
                 {{ [r.city, r.country].filter(Boolean).join(', ') }}
@@ -950,7 +950,7 @@ import StayDates from '@/components/StayDates.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { useRoomBrowser } from '@/composables/useRoomBrowser'
 import { addDays, todayISO } from '@/utils/dates'
-import { normalizePhoneNumber } from '@/utils/phone'
+import { formatPhoneGaps, normalizePhoneNumber } from '@/utils/phone'
 import { METHOD_CASH, PAYMENT_METHODS, requiresProvider, providersFor } from '@/utils/payments'
 import { findCountryCode, getCountryName } from '@/utils/locations'
 
@@ -1154,14 +1154,19 @@ function statusBadge(status) {
 /**
  * Formats an ISO date string for display, keeping only the date part.
  * @param {string} value - The ISO date string.
- * @returns {string} The date part, or an em dash when absent.
+ * @returns {string} The date as DD/MM/YYYY, or an em dash when absent.
  */
 function formatDate(value) {
-  return value ? String(value).slice(0, 10) : '—'
+  if (!value) return '—'
+  const d = new Date(String(value).slice(0, 10) + 'T00:00:00')
+  if (Number.isNaN(d.getTime())) return String(value).slice(0, 10)
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  return `${dd}/${mm}/${d.getFullYear()}`
 }
 
 /**
- * Formats a timestamp as a short localized date-time string.
+ * Formats a timestamp as DD/MM/YYYY HH:MM (front-desk convention).
  * @param {string} value - The ISO date-time string.
  * @returns {string} The formatted value, or an em dash when absent.
  */
@@ -1169,13 +1174,11 @@ function formatDateTime(value) {
   if (!value) return '—'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return String(value)
-  return date.toLocaleString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  const dd = String(date.getDate()).padStart(2, '0')
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const hh = String(date.getHours()).padStart(2, '0')
+  const min = String(date.getMinutes()).padStart(2, '0')
+  return `${dd}/${mm}/${date.getFullYear()} ${hh}:${min}`
 }
 
 // Translation key suffix for each booking source code.
