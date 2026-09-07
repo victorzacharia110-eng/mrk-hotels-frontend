@@ -678,6 +678,67 @@ export const reservationApi = {
     return api.get(`${v1}/reservations/${id}/folio`)
   },
   /**
+   * Posts a manual folio charge (Add Folio). @param data - { description, amount }.
+   */
+  folioCharge(id, data) {
+    return api.post(`${v1}/reservations/${id}/folio/charge`, data)
+  },
+  /**
+   * Applies a discount against the outstanding balance. @param data - { amount, description }.
+   */
+  folioDiscount(id, data) {
+    return api.post(`${v1}/reservations/${id}/folio/discount`, data)
+  },
+  /**
+   * Posts a signed adjustment (extra charge or credit). @param data - { amount, description }.
+   */
+  folioAdjustment(id, data) {
+    return api.post(`${v1}/reservations/${id}/folio/adjustment`, data)
+  },
+  /**
+   * Records a complimentary inclusion. @param data - { description }.
+   */
+  folioInclusion(id, data) {
+    return api.post(`${v1}/reservations/${id}/folio/inclusion`, data)
+  },
+  /**
+   * Moves part of the folio balance to another reservation (transfer/split/cut).
+   * @param data - { mode, target_reservation_id, amount, description }.
+   */
+  folioTransfer(id, data) {
+    return api.post(`${v1}/reservations/${id}/folio/transfer`, data)
+  },
+  /**
+   * Uploads documents onto the folio (multipart files[]).
+   * @param files - Array of File objects.
+   */
+  folioAttachments(id, files) {
+    const form = new FormData()
+    files.forEach((file) => form.append('files[]', file))
+    return api.post(`${v1}/reservations/${id}/folio/attachments`, form)
+  },
+  /**
+   * Voids a folio ledger entry, reversing its effect on the balance.
+   * @param entryId - Folio entry identifier.
+   */
+  folioEntryVoid(entryId) {
+    return api.post(`${v1}/folio/entries/${entryId}/void`)
+  },
+  /**
+   * Removes an uploaded folio attachment.
+   * @param entryId - Folio entry identifier.
+   */
+  folioEntryDeleteAttachment(entryId) {
+    return api.delete(`${v1}/folio/entries/${entryId}/attachment`)
+  },
+  /**
+   * URL used to download an uploaded folio attachment.
+   * @param entryId - Folio entry identifier.
+   */
+  folioAttachmentUrl(entryId) {
+    return `${api.defaults.baseURL}${v1}/folio/entries/${entryId}/attachment`
+  },
+  /**
    * Checks a guest into their reserved room.
    * @param {string|number} id - Reservation identifier.
    * @returns {Promise} Axios response confirming check-in.

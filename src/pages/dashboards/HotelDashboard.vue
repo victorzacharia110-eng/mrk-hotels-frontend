@@ -285,10 +285,15 @@
                           <th>{{ $t('folio.description') }}</th>
                           <th>{{ $t('folio.user') }}</th>
                           <th class="num">{{ $t('folio.amount') }}</th>
+                          <th class="sv-cell-actions">{{ $t('folio.actions') }}</th>
                         </tr>
                       </thead>
                       <tbody>
-                        <tr v-for="e in folioEntries" :key="e.key" :class="e.credit ? 'row-credit' : 'row-charge'">
+                        <tr
+                          v-for="e in folioEntries"
+                          :key="e.key"
+                          :class="[e.credit ? 'row-credit' : 'row-charge', { 'row-muted': e.muted }]"
+                        >
                           <td>{{ formatDateDMY(e.date) }}</td>
                           <td class="sv-particular">{{ e.particular }}</td>
                           <td>
@@ -296,24 +301,47 @@
                           </td>
                           <td>{{ e.user }}</td>
                           <td class="num">{{ e.credit ? '−' : '' }}TZS {{ fmtNum(e.amount) }}</td>
+                          <td class="sv-cell-actions">
+                            <a
+                              v-if="e.entryUrl"
+                              :href="e.entryUrl"
+                              target="_blank"
+                              rel="noopener"
+                              class="sv-icon-link"
+                              :title="$t('folio.download')"
+                            >
+                              <i class="fas fa-download" aria-hidden="true"></i>
+                            </a>
+                            <button
+                              v-if="e.entryId"
+                              type="button"
+                              class="sv-icon-link"
+                              :title="e.entryUrl ? $t('folio.remove') : $t('folio.void')"
+                              :disabled="actionBusy"
+                              @click="e.entryUrl ? removeFolioAttachment(e) : voidFolioEntry(e)"
+                            >
+                              <i class="fas fa-trash-can" aria-hidden="true"></i>
+                            </button>
+                            <span v-else class="sv-muted-cell">—</span>
+                          </td>
                         </tr>
                         <tr v-if="!folioEntries.length">
-                          <td colspan="5" class="sv-muted-cell">{{ $t('folio.empty') }}</td>
+                          <td colspan="6" class="sv-muted-cell">{{ $t('folio.empty') }}</td>
                         </tr>
                       </tbody>
                       <tfoot>
                         <tr>
-                          <td colspan="4">{{ $t('folio.totalCharges') }}</td>
+                          <td colspan="5">{{ $t('folio.totalCharges') }}</td>
                           <td class="num">
                             TZS {{ fmtNum((folio.folio?.total_amount ?? 0) + (folio.folio?.room_charges ?? 0)) }}
                           </td>
                         </tr>
                         <tr>
-                          <td colspan="4">{{ $t('folio.totalPaid') }}</td>
+                          <td colspan="5">{{ $t('folio.totalPaid') }}</td>
                           <td class="num">TZS {{ fmtNum(folio.reservation?.advance_payment ?? 0) }}</td>
                         </tr>
                         <tr class="sv-folio-balance">
-                          <td colspan="4">{{ $t('folio.balance') }}</td>
+                          <td colspan="5">{{ $t('folio.balance') }}</td>
                           <td class="num"><strong>TZS {{ fmtNum(folio.folio?.balance_due ?? 0) }}</strong></td>
                         </tr>
                       </tfoot>
@@ -550,6 +578,41 @@
                         <i class="fas fa-receipt" aria-hidden="true"></i> {{ $t('stayview.addCharges') }}
                       </button>
                     </li>
+                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                      <button type="button" @click="openFolioOp('discount')">
+                        <i class="fas fa-percent" aria-hidden="true"></i> {{ $t('stayview.applyDiscount') }}
+                      </button>
+                    </li>
+                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                      <button type="button" @click="openFolioOp('adjustment')">
+                        <i class="fas fa-scale-balanced" aria-hidden="true"></i> {{ $t('stayview.folioAdjustment') }}
+                      </button>
+                    </li>
+                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                      <button type="button" @click="openFolioOp('inclusion')">
+                        <i class="fas fa-gift" aria-hidden="true"></i> {{ $t('stayview.folioInclusion') }}
+                      </button>
+                    </li>
+                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                      <button type="button" @click="openFolioOp('move')">
+                        <i class="fas fa-repeat" aria-hidden="true"></i> {{ $t('stayview.transferFolio') }}
+                      </button>
+                    </li>
+                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                      <button type="button" @click="openFolioOp('move', 'split')">
+                        <i class="fas fa-split" aria-hidden="true"></i> {{ $t('stayview.splitFolio') }}
+                      </button>
+                    </li>
+                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                      <button type="button" @click="openFolioOp('move', 'cut')">
+                        <i class="fas fa-scissors" aria-hidden="true"></i> {{ $t('stayview.cutFolio') }}
+                      </button>
+                    </li>
+                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                      <button type="button" @click="openFolioOp('upload')">
+                        <i class="fas fa-paperclip" aria-hidden="true"></i> {{ $t('stayview.uploadFiles') }}
+                      </button>
+                    </li>
                     <li>
                       <button type="button" class="danger" @click="openVoid">
                         <i class="fas fa-trash-can" aria-hidden="true"></i> {{ $t('stayview.voidReservation') }}
@@ -726,6 +789,117 @@
               <button type="button" class="btn btn-primary" :disabled="actionBusy || !chargeForm.description || !(chargeForm.amount > 0)" @click="submitCharge">
                 <i class="fas fa-check" aria-hidden="true"></i>
                 {{ actionBusy ? $t('common.loading') : $t('stayview.saveCharge') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Folio operations modal (discount / adjustment / inclusion / move / upload) -->
+    <Teleport to="body">
+      <Transition name="sv-modal">
+        <div v-if="folioOp" class="sv-modal-backdrop" @click.self="folioOp = null">
+          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="folioOpTitle">
+            <div class="sv-modal-head bar-blue">
+              <span class="sv-modal-head-icon"><i class="fas fa-folder-open" aria-hidden="true"></i></span>
+              <div class="sv-modal-head-text">
+                <h3>{{ folioOpTitle }}</h3>
+                <span class="sv-modal-status">{{ activeBar?.label }}</span>
+              </div>
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="folioOp = null">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="sv-modal-body">
+              <template v-if="folioOp === 'discount'">
+                <label class="sv-field">
+                  <span>{{ $t('stayview.discountAmount') }}</span>
+                  <input v-model.number="folioOpForm.amount" type="number" min="0" step="0.01" class="input" required />
+                </label>
+                <label class="sv-field">
+                  <span>{{ $t('stayview.folioNote') }}</span>
+                  <input v-model="folioOpForm.description" type="text" class="input" maxlength="255" />
+                </label>
+              </template>
+              <template v-else-if="folioOp === 'adjustment'">
+                <label class="sv-field">
+                  <span>{{ $t('stayview.adjustmentAmount') }}</span>
+                  <input v-model.number="folioOpForm.amount" type="number" step="0.01" class="input" placeholder="+… / −…" required />
+                </label>
+                <p class="sv-cap sv-note">{{ $t('stayview.adjustmentHint') }}</p>
+                <label class="sv-field">
+                  <span>{{ $t('stayview.folioNote') }}</span>
+                  <input v-model="folioOpForm.description" type="text" class="input" maxlength="255" />
+                </label>
+              </template>
+              <template v-else-if="folioOp === 'inclusion'">
+                <label class="sv-field">
+                  <span>{{ $t('stayview.chargeDescription') }}</span>
+                  <input v-model="folioOpForm.description" type="text" class="input" required maxlength="255" />
+                </label>
+              </template>
+              <template v-else-if="folioOp === 'move'">
+                <div class="sv-status-grid">
+                  <button
+                    v-for="m in moveModes"
+                    :key="m.key"
+                    type="button"
+                    class="sv-status-btn"
+                    :class="{ active: folioMoveMode === m.key }"
+                    :disabled="actionBusy"
+                    @click="folioMoveMode = m.key"
+                  >
+                    <span class="sv-cap">{{ m.label }}</span>
+                  </button>
+                </div>
+                <label class="sv-field">
+                  <span>{{ $t('stayview.moveAmount') }}</span>
+                  <input v-model.number="folioOpForm.amount" type="number" min="0" step="0.01" class="input" required />
+                </label>
+                <label class="sv-field">
+                  <span>{{ $t('stayview.targetFolio') }}</span>
+                  <select v-model="folioOpForm.target_reservation_id" class="input" required>
+                    <option value="" disabled>{{ $t('stayview.selectTarget') }}</option>
+                    <option v-for="opt in folioTargetOptions" :key="opt.value" :value="opt.value">
+                      {{ opt.label }}
+                    </option>
+                  </select>
+                </label>
+                <p class="sv-cap sv-note">{{ $t('stayview.moveHint') }}</p>
+                <label class="sv-field">
+                  <span>{{ $t('stayview.folioNote') }}</span>
+                  <input v-model="folioOpForm.description" type="text" class="input" maxlength="255" />
+                </label>
+              </template>
+              <template v-else>
+                <label class="sv-field">
+                  <span>{{ $t('stayview.chooseFiles') }}</span>
+                  <input
+                    type="file"
+                    class="input"
+                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                    multiple
+                    @change="onFolioFilesPick"
+                  />
+                </label>
+                <ul v-if="folioOpForm.files.length" class="sv-file-list">
+                  <li v-for="(f, i) in folioOpForm.files" :key="i">
+                    <span>{{ f.name }}</span>
+                    <span class="sv-muted-cell sv-cap">{{ (f.size / 1024).toFixed(0) }} KB</span>
+                  </li>
+                </ul>
+                <p v-else class="sv-cap sv-note">{{ $t('stayview.noFiles') }}</p>
+              </template>
+              <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
+            </div>
+            <div class="sv-modal-actions">
+              <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="folioOp = null">
+                {{ $t('common.close') }}
+              </button>
+              <button type="button" class="btn btn-primary" :disabled="actionBusy || !folioOpCanPost" @click="submitFolioOp">
+                <i class="fas fa-check" aria-hidden="true"></i>
+                {{ actionBusy ? $t('common.loading') : folioOpPostLabel }}
               </button>
             </div>
           </div>
@@ -1752,19 +1926,42 @@ const folioEntries = computed(() => {
       user: l.user || '—',
       amount: Number(l.total_charge ?? l.total_amount ?? l.total ?? 0),
       credit: false,
+      entryId: null,
     })
   }
-  const extra = Number(fol.extra_charges ?? 0)
-  if (extra > 0) {
+  // Persisted front-desk postings (add folio, discount, adjustment,
+  // inclusion, transfers/splits/cuts and attachments) render line by line
+  // with their own poster and date, and can be voided or downloaded.
+  for (const e of f.folio_entries || []) {
+    const amount = Number(e.amount ?? 0)
+    entries.push({
+      key: `e${e.folio_entry_id}`,
+      date: e.date,
+      particular: folioEntryLabel(e.type),
+      description: e.description || folioEntryLabel(e.type),
+      detail: e.reference || '',
+      user: e.user || '—',
+      amount: Math.abs(amount),
+      credit: amount <= 0 && e.type !== 'inclusion',
+      muted: e.type === 'attachment' || amount === 0,
+      entryId: e.folio_entry_id,
+      entryUrl: e.attachment_url ? reservationApi.folioAttachmentUrl(e.folio_entry_id) : '',
+    })
+  }
+  // Legacy manual extra charges (posted before the ledger existed) still show
+  // as one aggregate line only when nothing newer accounts for them.
+  const legacy = Number(fol.legacy_extra_charges ?? fol.extra_charges ?? 0)
+  if (legacy > 0) {
     entries.push({
       key: 'extra',
-      date: fol.room_charges_posted_at,
+      date: fol.room_charges_date,
       particular: t('folio.extraCharges'),
       description: t('folio.manualCharge'),
       detail: '',
       user: fol.room_charge_user || '—',
-      amount: extra,
+      amount: legacy,
       credit: false,
+      entryId: null,
     })
   }
   for (const p of f.payments || []) {
@@ -1909,6 +2106,118 @@ async function submitCharge() {
     reservationApi.postRoomCharge(activeBar.value.id, { description: f.description, amount: f.amount }),
   )
   if (actionError.value) chargeModal.value = true
+}
+
+/* ----- Folio operations (discount / adjustment / inclusion / move / upload) ----- */
+
+// Active folio-op modal (null = closed). move keeps transfer/split/cut in one
+// modal with a mode switch so the ledger pairs stay readable.
+const folioOp = ref(null)
+const folioOpForm = ref({})
+const folioMoveMode = ref('transfer')
+
+/** Human-readable ledger label for a persisted folio entry type. */
+function folioEntryLabel(type) {
+  const key = `folio.${type}`
+  return te(key) ? t(key) : String(type || '').replace(/_/g, ' ')
+}
+
+/** Transfer/split/cut mode buttons for the move modal. */
+const moveModes = computed(() => [
+  { key: 'transfer', label: t('stayview.modeTransfer') },
+  { key: 'split', label: t('stayview.modeSplit') },
+  { key: 'cut', label: t('stayview.modeCut') },
+])
+
+/** Other active folios to move money onto. */
+const folioTargetOptions = computed(() =>
+  reservations.value
+    .filter((r) => r.status === 'confirmed' || r.status === 'checked_in')
+    .map((r) => ({
+      value: r.reservation_id,
+      label: `${r.guest_name || '—'} · ${r.room?.room_number || '—'} (${r.status.replace('_', ' ')})`,
+    })),
+)
+
+const folioOpTitle = computed(() => {
+  if (folioOp.value === 'discount') return t('stayview.folioDiscountTitle')
+  if (folioOp.value === 'adjustment') return t('stayview.folioAdjustmentTitle')
+  if (folioOp.value === 'inclusion') return t('stayview.folioInclusionTitle')
+  if (folioOp.value === 'move') return t('stayview.folioMoveTitle')
+  return t('stayview.folioUploadTitle')
+})
+
+const folioOpPostLabel = computed(() => {
+  if (folioOp.value === 'discount') return t('stayview.postDiscount')
+  if (folioOp.value === 'adjustment') return t('stayview.postAdjustment')
+  if (folioOp.value === 'inclusion') return t('stayview.postInclusion')
+  if (folioOp.value === 'move') return t('stayview.postMove')
+  return t('stayview.postUpload')
+})
+
+const folioOpCanPost = computed(() => {
+  const f = folioOpForm.value
+  if (folioOp.value === 'discount') return Number(f.amount) > 0
+  if (folioOp.value === 'adjustment') return f.amount !== '' && Number(f.amount) !== 0
+  if (folioOp.value === 'inclusion') return !!(f.description && f.description.trim())
+  if (folioOp.value === 'move') return Number(f.amount) > 0 && !!f.target_reservation_id
+  return f.files && f.files.length > 0
+})
+
+function openFolioOp(op, mode = 'transfer') {
+  moreOpen.value = false
+  folioOp.value = op
+  folioMoveMode.value = mode
+  folioOpForm.value = { amount: null, description: '', target_reservation_id: '', files: [] }
+  actionError.value = ''
+}
+
+function onFolioFilesPick(event) {
+  folioOpForm.value.files = Array.from(event.target.files || [])
+}
+
+async function submitFolioOp() {
+  const bar = activeBar.value
+  const f = folioOpForm.value
+  if (!bar?.id || !folioOpCanPost.value) return
+  const op = folioOp.value
+  let payload = null
+  if (op === 'discount') {
+    payload = { amount: f.amount, description: f.description || null }
+  } else if (op === 'adjustment') {
+    payload = { amount: f.amount, description: f.description || null }
+  } else if (op === 'inclusion') {
+    payload = { description: f.description }
+  } else if (op === 'move') {
+    payload = {
+      mode: folioMoveMode.value,
+      target_reservation_id: f.target_reservation_id,
+      amount: f.amount,
+      description: f.description || null,
+    }
+  }
+  folioOp.value = null
+  await runStayAction(() => {
+    if (op === 'discount') return reservationApi.folioDiscount(bar.id, payload)
+    if (op === 'adjustment') return reservationApi.folioAdjustment(bar.id, payload)
+    if (op === 'inclusion') return reservationApi.folioInclusion(bar.id, payload)
+    if (op === 'move') return reservationApi.folioTransfer(bar.id, payload)
+    return reservationApi.folioAttachments(bar.id, f.files)
+  })
+  if (actionError.value) folioOp.value = op
+}
+
+/** Voids a persisted ledger entry (reverses its effect on the balance). */
+async function voidFolioEntry(e) {
+  if (!e?.entryId || actionBusy.value) return
+  if (!window.confirm(`${t('folio.void')} · ${e.description} — TZS ${fmtNum(e.amount)}?`)) return
+  await runStayAction(() => reservationApi.folioEntryVoid(e.entryId))
+}
+
+/** Removes an uploaded folio attachment (file + its ledger row). */
+async function removeFolioAttachment(e) {
+  if (!e?.entryId || actionBusy.value) return
+  await runStayAction(() => reservationApi.folioEntryDeleteAttachment(e.entryId))
 }
 
 /* ----- Amend stay / room move ----- */
@@ -3673,6 +3982,10 @@ onUnmounted(() => clearInterval(refreshTimer))
   color: #1e7e34;
 }
 
+.sv-folio-table .row-muted td {
+  color: #9ca3af;
+}
+
 .sv-folio-table .sv-muted-cell {
   text-align: center;
   color: #9ca3af;
@@ -3683,6 +3996,49 @@ onUnmounted(() => clearInterval(refreshTimer))
   background: #f0fdf4;
   color: #1e7e34;
   border-top: 1px solid #e5e7eb;
+}
+
+/* Ledger actions column: download / void / remove, always inline and quiet. */
+.sv-folio-table .sv-cell-actions {
+  width: 64px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.sv-folio-table .sv-icon-link {
+  display: inline-block;
+  padding: 2px 5px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.sv-folio-table .sv-icon-link:hover {
+  color: #b91c1c;
+}
+
+.sv-folio-table .sv-icon-link:disabled {
+  color: #d1d5db;
+  cursor: default;
+}
+
+/* Uploaded files list inside the folio-op modal. */
+.sv-file-list {
+  margin: 6px 2px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sv-file-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: #374151;
+  padding: 4px 0;
+  border-bottom: 1px dashed #e5e7eb;
 }
 
 /* Fits the folio ledger into the stay-view modal without a horizontal scroll. */
