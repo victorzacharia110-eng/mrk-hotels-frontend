@@ -92,7 +92,10 @@ describe('validatePhoneNumber', () => {
   it('flags an impossible start digit immediately (must be a real TZ prefix)', () => {
     expect(validatePhoneNumber('278', 'TZ').reason).toBe('invalid')
     expect(validatePhoneNumber('1', 'TZ').reason).toBe('invalid')
+    expect(validatePhoneNumber('5', 'TZ').reason).toBe('invalid')
+    expect(validatePhoneNumber('8', 'TZ').reason).toBe('invalid')
     expect(validatePhoneNumber('+2552', 'TZ').reason).toBe('invalid')
+    expect(validatePhoneNumber('+2555', 'TZ').reason).toBe('invalid')
   })
 
   it('says too_long only past the dialling-plan length', () => {

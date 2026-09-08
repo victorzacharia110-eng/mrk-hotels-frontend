@@ -299,7 +299,7 @@ export function validatePhoneNumber(value, defaultCountry = DEFAULT_COUNTRY) {
   // so it is flagged immediately instead of being waved through as "too
   // short, keep typing". An international prefix is only judged once its
   // country code is complete.
-  const allowedFirstDigits = { TZ: ['5', '6', '7', '8'] }
+  const allowedFirstDigits = { TZ: ['6', '7'] }
   const nationalDigits =
     intl && supported
       ? (digits.length >= callingLength ? digits.slice(callingLength) : '')
