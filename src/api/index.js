@@ -224,6 +224,16 @@ export const reportApi = {
     return api.get(`${v1}/reports/fnb`, { params })
   },
   /**
+   * Staff (bar/cashier) dashboard: the signed-in member's department at a
+   * glance — sales summary, fast-moving items, shelf stock + low stock and
+   * the pending/accepted requisition feeds. Scoped to their department.
+   * @param {object} params - Query params (from, to, department).
+   * @returns {Promise} Axios response with the department dashboard figures.
+   */
+  staffDashboard(params) {
+    return api.get(`${v1}/reports/staff-dashboard`, { params })
+  },
+  /**
    * Item-wise stock ledger with opening/running balances and valuation.
    * @param {object} params - Query params (from, to, category, ignore_zero).
    * @returns {Promise} Axios response with per-item ledger rows.

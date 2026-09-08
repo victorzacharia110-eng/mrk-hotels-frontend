@@ -10,8 +10,16 @@
 -->
 <template>
   <div class="taker-page">
-    <!-- One-place tabs: take a new order or work the open ones (single tap) -->
+    <!-- One-place tabs: dashboard, take a new order or work the open ones (single tap) -->
     <nav class="pos-tabs">
+      <button
+        type="button"
+        class="pos-tab"
+        :class="{ active: activeTab === 'dashboard' }"
+        @click="switchToDashboard"
+      >
+        <i class="fas fa-gauge-high" aria-hidden="true"></i> {{ $t('staffDashboard.title') }}
+      </button>
       <button
         type="button"
         class="pos-tab"
@@ -255,6 +263,157 @@
         </button>
       </div>
     </div>
+    </template>
+
+    <!-- Date-filtered department dashboard: stock, sales, requisitions -->
+    <template v-else-if="activeTab === 'dashboard'">
+      <div class="dash-panel">
+        <div class="open-head">
+          <h2><i class="fas fa-gauge-high" aria-hidden="true"></i> {{ $t('staffDashboard.title') }} · {{ $t(`orderTaker.${department}`) }}</h2>
+          <div class="dash-tools">
+            <input v-model="dashFrom" type="date" class="dash-date" :aria-label="$t('staffDashboard.from')" />
+            <input v-model="dashTo" type="date" class="dash-date" :aria-label="$t('staffDashboard.to')" />
+            <button type="button" class="oh-manage" @click="loadDashboard">
+              <i class="fas fa-rotate" aria-hidden="true"></i> {{ $t('staffDashboard.refresh') }}
+            </button>
+          </div>
+        </div>
+
+        <p v-if="dashboardError" class="send-error">{{ dashboardError }}</p>
+        <div v-if="dashboardLoading" class="cat-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></div>
+
+        <template v-else-if="dashboard">
+          <!-- Stock + sales KPIs (department-scoped) -->
+          <div class="summary-kpis dash-kpis">
+            <div class="summary-kpi kpi-stock-items">
+              <span class="sk-label"><i class="fas fa-boxes-stacked" aria-hidden="true"></i> {{ $t('staffDashboard.stockTitle') }}</span>
+              <strong>{{ dashboard.stock?.items ?? 0 }}</strong>
+              <span class="sk-sub">{{ $t('staffDashboard.stockOnHand') }}: {{ num(dashboard.stock?.on_hand) }} · {{ $t('staffDashboard.stockValue') }}: TZS {{ money(dashboard.stock?.value) }}</span>
+            </div>
+            <div class="summary-kpi kpi-low">
+              <span class="sk-label">{{ $t('staffDashboard.lowStock') }}</span>
+              <strong>{{ dashboard.stock?.low_stock_count ?? 0 }}</strong>
+              <span class="sk-sub">{{ $t('staffDashboard.lowStockTitle') }}</span>
+            </div>
+            <div class="summary-kpi kpi-sales">
+              <span class="sk-label">{{ $t('staffDashboard.salesOrders') }}</span>
+              <strong>{{ dashboard.sales?.orders ?? 0 }}</strong>
+              <span class="sk-sub">{{ $t('staffDashboard.salesCovers') }}: {{ dashboard.sales?.covers ?? 0 }}</span>
+            </div>
+            <div class="summary-kpi kpi-revenue">
+              <span class="sk-label">{{ $t('staffDashboard.salesRevenue') }}</span>
+              <strong>TZS {{ money(dashboard.sales?.revenue) }}</strong>
+              <span class="sk-sub">{{ $t('staffDashboard.salesAverage') }}: TZS {{ money(dashboard.sales?.average) }}</span>
+            </div>
+          </div>
+
+          <!-- Low stock + fast moving items side by side -->
+          <div class="dash-grid">
+            <section class="dash-card">
+              <header class="dash-card-head">
+                <strong><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> {{ $t('staffDashboard.lowStockTitle') }}</strong>
+              </header>
+              <p v-if="!(dashboard.stock?.low_stock || []).length" class="cat-empty">{{ $t('staffDashboard.lowStockEmpty') }}</p>
+              <div v-else class="table-scroll">
+                <table class="lines-table dash-table">
+                  <thead>
+                    <tr>
+                      <th>{{ $t('staffDashboard.item') }}</th>
+                      <th class="col-qty">{{ $t('staffDashboard.qty') }}</th>
+                      <th class="col-qty">{{ $t('staffDashboard.reorderLevel') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(row, i) in dashboard.stock.low_stock" :key="i">
+                      <td>{{ row.item_name }}</td>
+                      <td class="col-qty">{{ num(row.quantity) }} {{ row.unit || '' }}</td>
+                      <td class="col-qty">{{ num(row.reorder_level) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="dash-card">
+              <header class="dash-card-head">
+                <strong><i class="fas fa-arrow-trend-up" aria-hidden="true"></i> {{ $t('staffDashboard.fastMovingTitle') }}</strong>
+              </header>
+              <p v-if="!(dashboard.fast_moving || []).length" class="cat-empty">{{ $t('staffDashboard.fastMovingEmpty') }}</p>
+              <div v-else class="table-scroll">
+                <table class="lines-table dash-table">
+                  <thead>
+                    <tr>
+                      <th>{{ $t('staffDashboard.item') }}</th>
+                      <th class="col-qty">{{ $t('staffDashboard.qty') }}</th>
+                      <th class="col-amount">{{ $t('staffDashboard.amount') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(row, i) in dashboard.fast_moving" :key="i">
+                      <td>{{ row.item_name }}</td>
+                      <td class="col-qty">{{ row.qty }}</td>
+                      <td class="col-amount">TZS {{ money(row.revenue) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <!-- Pending + accepted requisitions -->
+          <section class="dash-card">
+            <header class="dash-card-head">
+              <strong><i class="fas fa-file-signature" aria-hidden="true"></i> {{ $t('staffDashboard.requisitionsTitle') }}</strong>
+              <router-link to="/app/requisitions" class="summary-link req-link">
+                <i class="fas fa-arrow-right" aria-hidden="true"></i> {{ $t('staffDashboard.viewRequisitions') }}
+              </router-link>
+            </header>
+            <div class="dash-reqs">
+              <div class="dash-req">
+                <span class="sk-label">{{ $t('staffDashboard.requisitionsPending') }}</span>
+                <strong>{{ dashboard.requisitions?.pending?.count ?? 0 }}</strong>
+                <ul v-if="(dashboard.requisitions?.pending?.list || []).length">
+                  <li v-for="req in dashboard.requisitions.pending.list" :key="req.indent_id">
+                    <span>{{ req.indent_number }}</span>
+                    <span class="dash-req-items">{{ req.items }}×</span>
+                  </li>
+                </ul>
+                <p v-else class="cat-empty">{{ $t('staffDashboard.requisitionsEmpty') }}</p>
+              </div>
+              <div class="dash-req">
+                <span class="sk-label">{{ $t('staffDashboard.requisitionsAccepted') }}</span>
+                <strong>{{ dashboard.requisitions?.accepted?.count ?? 0 }}</strong>
+                <ul v-if="(dashboard.requisitions?.accepted?.list || []).length">
+                  <li v-for="req in dashboard.requisitions.accepted.list" :key="req.indent_id">
+                    <span>{{ req.indent_number }}</span>
+                    <span class="dash-req-items">{{ req.items }}×</span>
+                  </li>
+                </ul>
+                <p v-else class="cat-empty">{{ $t('staffDashboard.requisitionsEmpty') }}</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- One-tap doors into the rest of the panel -->
+          <div class="summary-quick">
+            <button type="button" class="summary-link" @click="activeTab = 'new'">
+              <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('staffDashboard.linkTakeOrder') }}
+            </button>
+            <button type="button" class="summary-link" @click="switchToSummary">
+              <i class="fas fa-chart-simple" aria-hidden="true"></i> {{ $t('staffDashboard.linkOrderSummary') }}
+            </button>
+            <router-link to="/app/requisitions" class="summary-link">
+              <i class="fas fa-file-signature" aria-hidden="true"></i> {{ $t('staffDashboard.linkRequisitions') }}
+            </router-link>
+            <router-link to="/app/messages" class="summary-link">
+              <i class="fas fa-comments" aria-hidden="true"></i> {{ $t('staffDashboard.linkCommunication') }}
+            </router-link>
+            <router-link to="/app/issue-reports" class="summary-link">
+              <i class="fas fa-flag" aria-hidden="true"></i> {{ $t('staffDashboard.linkIssueReports') }}
+            </router-link>
+          </div>
+        </template>
+      </div>
     </template>
 
     <!-- Open orders: the whole service lifecycle on one screen, single taps -->
@@ -639,7 +798,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { orderApi, menuItemApi, tableApi, tableLocationApi } from '@/api'
+import { orderApi, menuItemApi, tableApi, tableLocationApi, reportApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import { PAYMENT_METHODS } from '@/utils/payments'
@@ -672,12 +831,15 @@ function switchDepartment(dept) {
   form.value = { table_number: '', covers: 0, order_type: defaultOrderType(), notes: '' }
   loadMenu()
   loadOpenOrders()
+  if (activeTab.value === 'dashboard') loadDashboard()
 }
 
 /* ---------------- One-place tabs: new order vs open orders ---------------- */
 
-// Which side of the POS is showing: 'new' (take order) or 'open' (work orders).
-const activeTab = ref('new')
+// Which side of the POS is showing: 'dashboard' (bar/cashier home), 'new'
+// (take order), 'open' (work orders) or 'summary' (waiter account).
+// Bartenders land on their date-filtered dashboard; waiters open the pad.
+const activeTab = ref(role.value === 'bartender' ? 'dashboard' : 'new')
 const openOrders = ref([])
 const openLoading = ref(false)
 const openError = ref('')
@@ -788,6 +950,52 @@ watch([summarySearch, summaryStatus, summarySort], () => {
 function switchToSummary() {
   activeTab.value = 'summary'
   loadOrderSummary()
+}
+
+/* ---------------- Bar/cashier dashboard (date + department) ---------------- */
+
+// Date-filtered department snapshot: stock, low stock, sales summary, fast
+// moving items and the pending/accepted requisition feeds (default today).
+const dashFrom = ref(nowDate())
+const dashTo = ref(nowDate())
+const dashboard = ref(null)
+const dashboardLoading = ref(false)
+const dashboardError = ref('')
+
+/** Today's date in YYYY-MM-DD (local), the dashboard's default window. */
+function nowDate() {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+/** Switches to the dashboard tab and loads it. */
+function switchToDashboard() {
+  activeTab.value = 'dashboard'
+  loadDashboard()
+}
+
+/** Loads the department dashboard for the selected date window. */
+async function loadDashboard() {
+  dashboardLoading.value = true
+  dashboardError.value = ''
+  try {
+    const res = await reportApi.staffDashboard({
+      department: department.value,
+      from: dashFrom.value || undefined,
+      to: dashTo.value || undefined,
+    })
+    const data = res.data
+    dashboard.value = data && typeof data === 'object' ? data : null
+    // Mirror the effective (server-defaulted) window back into the pickers.
+    if (data?.range?.from) dashFrom.value = data.range.from
+    if (data?.range?.to) dashTo.value = data.range.to
+  } catch (err) {
+    dashboardError.value = err.response?.data?.message || t('staffDashboard.loadError')
+    dashboard.value = null
+  } finally {
+    dashboardLoading.value = false
+  }
 }
 
 /** Loads today's orders and keeps only those attributed to this waiter. */
@@ -1331,6 +1539,13 @@ function money(value) {
   })
 }
 
+/** Formats a plain number (no currency) with thousands separators. */
+function num(value) {
+  return Number(value || 0).toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  })
+}
+
 /** Jumps to the first or last page of order lines. */
 function setPage(p) {
   page.value = Math.min(Math.max(1, p), pageCount.value)
@@ -1562,9 +1777,11 @@ onMounted(() => {
   loadMenu()
   loadTables()
   loadOpenOrders()
+  if (activeTab.value === 'dashboard') loadDashboard()
   // While the open-orders tab is showing, keep the board fresh every 30s.
   openPoll = setInterval(() => {
     if (activeTab.value === 'open') loadOpenOrders()
+    if (activeTab.value === 'dashboard') loadDashboard()
   }, 30000)
   document.addEventListener('keydown', onKey)
 })
@@ -2843,6 +3060,103 @@ function onKey(e) {
   gap: 8px;
   justify-content: center;
   margin-top: 14px;
+}
+
+/* ---- Staff (bar/cashier) dashboard ---- */
+.dash-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.dash-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dash-date {
+  padding: 8px 10px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 14px;
+  color: #27272a;
+}
+.dash-kpis { grid-template-columns: repeat(4, 1fr); }
+.kpi-stock-items { border-left-color: #6366f1; }
+.kpi-low { border-left-color: #ef4444; }
+.kpi-sales { border-left-color: #f59e0b; }
+.kpi-revenue { border-left-color: #16a34a; }
+.sk-sub { font-size: 12px; color: #a1a1aa; }
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.dash-card {
+  background: #fff;
+  border: 1px solid #d4d4d8;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.dash-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #27272a;
+}
+.dash-card-head strong {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 13px;
+}
+.dash-card-head .req-link {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.dash-table { width: 100%; }
+.dash-reqs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.dash-req {
+  background: #fafafa;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.dash-req strong { font-size: 22px; color: #18181b; }
+.dash-req ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dash-req li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #52525b;
+}
+.dash-req-items { color: #71717a; font-weight: 600; }
+
+@media (max-width: 900px) {
+  .dash-kpis { grid-template-columns: repeat(2, 1fr); }
+  .dash-grid,
+  .dash-reqs { grid-template-columns: 1fr; }
 }
 
 @media print {
