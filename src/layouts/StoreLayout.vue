@@ -805,10 +805,14 @@ function clearSearch() {
 }
 
 // Live search: re-run the directory query as the user types (or deletes), so
-// clearing the bar automatically restores the full list.
+// clearing the bar automatically restores the full list. The search field only
+// exists on the directory page, so never hijack navigation from any other page
+// (e.g. the hotel detail page) when the query is synced/cleared there — that
+// used to bounce the user back to the unfiltered home page.
 let searchTimer = null
 watch(searchQuery, (q) => {
   clearTimeout(searchTimer)
+  if (!isDirectory.value) return
   searchTimer = setTimeout(() => {
     const query = q.trim()
     router.push({ path: '/', query: query ? { search: query } : {} })
