@@ -8,7 +8,7 @@
 -->
 
 <template>
-  <div class="reports-page">
+  <div id="staff-reports" class="reports-page">
     <header class="rp-head">
       <div class="rp-head-row">
         <div>
@@ -519,14 +519,30 @@ onMounted(loadReport)
     display: none !important;
   }
 
-  .reports-page {
-    padding: 0;
-  }
-
   .rp-section {
     break-inside: avoid;
     border-color: transparent;
     padding: 8px 0;
+  }
+}
+</style>
+
+<style>
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  #staff-reports,
+  #staff-reports * {
+    visibility: visible !important;
+  }
+
+  #staff-reports {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    padding: 0;
   }
 }
 </style>

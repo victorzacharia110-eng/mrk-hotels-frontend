@@ -1798,6 +1798,15 @@ function formatNotifTime(iso) {
   }
 }
 
+/* Printers/print previews run at narrow widths, where the mobile welcome
+   card would otherwise be "visible" and leak into every printed page. */
+@media print {
+  .welcome-ad,
+  .powered-tip-bubble {
+    display: none !important;
+  }
+}
+
 .site-footer p i {
   color: var(--brand);
   width: 18px;
