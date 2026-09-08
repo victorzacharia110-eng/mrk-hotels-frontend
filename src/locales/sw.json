@@ -4563,6 +4563,14 @@
     "double-ping": "Pigo mbili"
   },
   "validations": {
+    "fieldRequired": "Shamba hili linahitajika.",
+    "invalidEmail": "Weka anwani sahihi ya barua pepe.",
+    "invalidNumber": "Weka namba sahihi.",
+    "datesOrDays": "Weka tarehe ya kuondoka au idadi ya siku za kukaa.",
+    "dateOrder": "Tarehe ya kuondoka lazima iwe baada ya tarehe ya kuwasili.",
+    "idPairRequired": "Aina ya kitambulisho na namba yake lazima zitolewe pamoja.",
+    "notNegative": "Kiasi hakiwezi kuwa hasi.",
+    "positiveAmount": "Kiasi lazima kiwe kikubwa kuliko sifuri.",
     "phoneInvalid": "Weka namba ya simu sahihi kwa nchi uliyochagua.",
     "phoneTooLong": "Namba hii ni ndefu kupita kiasi kwa nchi uliyochagua."
   }

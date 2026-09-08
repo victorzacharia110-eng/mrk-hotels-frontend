@@ -4563,6 +4563,14 @@
     "double-ping": "Double ping"
   },
   "validations": {
+    "fieldRequired": "This field is required.",
+    "invalidEmail": "Enter a valid email address.",
+    "invalidNumber": "Enter a valid number.",
+    "datesOrDays": "Enter a departure date or the number of days staying.",
+    "dateOrder": "Departure date must be after the arrival date.",
+    "idPairRequired": "ID type and ID number must be provided together.",
+    "notNegative": "The amount cannot be negative.",
+    "positiveAmount": "The amount must be greater than zero.",
     "phoneInvalid": "Enter a valid phone number for the selected country.",
     "phoneTooLong": "This number is too long for the selected country."
   }

@@ -297,23 +297,27 @@
               </div>
               <div class="form-group">
                 <label>{{ $t('reservations.firstName') }}<span class="req">*</span></label>
-                <input v-model="form.first_name" type="text" class="input" required />
+                <input v-model="form.first_name" type="text" class="input" :class="{ 'input-error': formErrors.first_name }" required />
+                <span v-if="formErrors.first_name" class="msg-error" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ formErrors.first_name }}</span>
               </div>
               <div class="form-group">
                 <label>{{ $t('reservations.lastName') }}<span class="req">*</span></label>
-                <input v-model="form.last_name" type="text" class="input" required />
+                <input v-model="form.last_name" type="text" class="input" :class="{ 'input-error': formErrors.last_name }" required />
+                <span v-if="formErrors.last_name" class="msg-error" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ formErrors.last_name }}</span>
               </div>
               <div class="form-group">
                 <label>{{ $t('guests.phone') }}<span class="req">*</span></label>
                 <PhoneInput
                   v-model="form.guest_phone"
                   v-model:countryCode="form.country_code"
+                  :error="formErrors.guest_phone"
                   :required="true"
                 />
               </div>
               <div class="form-group">
                 <label>{{ $t('guests.email') }}</label>
-                <input v-model="form.guest_email" type="email" class="input" />
+                <input v-model="form.guest_email" type="email" class="input" :class="{ 'input-error': formErrors.guest_email }" />
+                <span v-if="formErrors.guest_email" class="msg-error" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ formErrors.guest_email }}</span>
               </div>
 
               <CountryCitySelect
@@ -329,6 +333,7 @@
                   :options="idTypeOptions"
                   :empty-label="$t('common.none')"
                 />
+                <span v-if="formErrors.id_type" class="msg-error" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ formErrors.id_type }}</span>
               </div>
               <div class="form-group">
                 <label>{{ $t('reservations.idNumber') }}</label>
@@ -336,8 +341,10 @@
                   v-model="form.id_number"
                   type="text"
                   class="input"
+                  :class="{ 'input-error': formErrors.id_number }"
                   :required="!!form.id_type"
                 />
+                <span v-if="formErrors.id_number" class="msg-error" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ formErrors.id_number }}</span>
               </div>
             </div>
           </div>
@@ -354,6 +361,7 @@
                   :required="true"
                   @change="applyBookingType"
                 />
+                <span v-if="formErrors.booking_type" class="msg-error" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ formErrors.booking_type }}</span>
               </div>
               <div class="form-group">
                 <label>{{ $t('reservations.bookingDate') }}</label>
@@ -390,6 +398,14 @@
                 v-model:days="form.num_days"
                 allow-past
               />
+              <span
+                v-if="formErrors.check_in_date || formErrors.check_out_date || formErrors.num_days"
+                class="msg-error"
+                role="alert"
+              >
+                <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
+                {{ formErrors.check_in_date || formErrors.check_out_date || formErrors.num_days }}
+              </span>
 
               <div class="form-group">
                 <label>{{ $t('reservations.bookingSource') }}</label>
@@ -397,11 +413,13 @@
               </div>
               <div class="form-group">
                 <label>{{ $t('reservations.adultsLabel') }}</label>
-                <input v-model.number="form.num_adults" type="number" min="1" class="input" />
+                <input v-model.number="form.num_adults" type="number" min="1" class="input" :class="{ 'input-error': formErrors.num_adults }" />
+                <span v-if="formErrors.num_adults" class="msg-error" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ formErrors.num_adults }}</span>
               </div>
               <div class="form-group">
                 <label>{{ $t('reservations.childrenLabel') }}</label>
-                <input v-model.number="form.num_children" type="number" min="0" class="input" />
+                <input v-model.number="form.num_children" type="number" min="0" class="input" :class="{ 'input-error': formErrors.num_children }" />
+                <span v-if="formErrors.num_children" class="msg-error" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ formErrors.num_children }}</span>
               </div>
               <div class="form-group form-full">
                 <label>{{ $t('reservations.specialRequests') }}</label>
@@ -530,7 +548,8 @@
             <div class="form-grid">
               <div class="form-group">
                 <label>{{ $t('reservations.totalAmount') }}</label>
-                <input v-model.number="form.total_amount" type="number" min="0" class="input" />
+                <input v-model.number="form.total_amount" type="number" min="0" class="input" :class="{ 'input-error': formErrors.total_amount }" />
+                <span v-if="formErrors.total_amount" class="msg-error" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ formErrors.total_amount }}</span>
                 <small v-if="computedTotal" class="hint">
                   {{ $t('reservations.autoTotal', { amount: computedTotal.toLocaleString() }) }}
                 </small>
@@ -543,7 +562,9 @@
                   min="0"
                   step="0.01"
                   class="input"
+                  :class="{ 'input-error': formErrors.amount_paid }"
                 />
+                <span v-if="formErrors.amount_paid" class="msg-error" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ formErrors.amount_paid }}</span>
                 <small class="hint">{{ $t('reservations.amountPaidHint') }}</small>
               </div>
 
@@ -951,6 +972,7 @@ import TableExportButton from '@/components/TableExportButton.vue'
 import { useRoomBrowser } from '@/composables/useRoomBrowser'
 import { addDays, todayISO } from '@/utils/dates'
 import { formatPhoneGaps, normalizePhoneNumber } from '@/utils/phone'
+import { after, collectErrors, email, isBlank, minInteger, nonNegative, phone, required } from '@/utils/formValidation'
 import { METHOD_CASH, PAYMENT_METHODS, requiresProvider, providersFor } from '@/utils/payments'
 import { findCountryCode, getCountryName } from '@/utils/locations'
 
@@ -1021,6 +1043,7 @@ const success = ref('')
 const showModal = ref(false)
 const saving = ref(false)
 const modalError = ref('')
+const formErrors = ref({})
 const availability = ref(null)
 const checking = ref(false)
 
@@ -1422,6 +1445,7 @@ function clearFilters() {
 /** Opens the create modal with a blank form and refreshed guest options. */
 function openCreate() {
   modalError.value = ''
+  formErrors.value = {}
   computedTotal.value = null
   availability.value = null
   recognizedGuest.value = null
@@ -1527,6 +1551,41 @@ watch(
  */
 async function save() {
   modalError.value = ''
+  formErrors.value = {}
+
+  // Every field is judged client-side (and localized) before anything is sent,
+  // mirroring the backend rules so the receptionist sees the exact reason.
+  const errors = collectErrors(form, [
+    { field: 'first_name', check: required(t) },
+    { field: 'last_name', check: required(t) },
+    { field: 'guest_phone', check: required(t) },
+    { field: 'guest_phone', check: phone(t) },
+    { field: 'guest_email', check: email(t) },
+    { field: 'booking_type', check: required(t) },
+    { field: 'check_in_date', check: required(t) },
+    {
+      field: 'check_out_date',
+      check: (v, f) => (v || !isBlank(f.num_days) ? '' : t('validations.datesOrDays')),
+    },
+    { field: 'check_out_date', check: after(t, 'check_in_date') },
+    {
+      field: 'num_days',
+      check: (v) => {
+        if (v == null || v === '') return ''
+        return Number.isInteger(Number(v)) && Number(v) >= 1 ? '' : t('validations.invalidNumber')
+      },
+    },
+    { field: 'num_adults', check: minInteger(t, 1) },
+    { field: 'num_children', check: minInteger(t, 0) },
+    { field: 'id_type', check: (v, f) => (isBlank(v) && !isBlank(f.id_number) ? t('validations.idPairRequired') : '') },
+    { field: 'id_number', check: (v, f) => (isBlank(v) && !isBlank(f.id_type) ? t('validations.idPairRequired') : '') },
+    { field: 'total_amount', check: nonNegative(t) },
+    { field: 'amount_paid', check: nonNegative(t) },
+  ])
+  if (Object.keys(errors).length) {
+    formErrors.value = errors
+    return
+  }
 
   if (requiresProvider(form.payment_method) && form.amount_paid > 0 && !form.payment_provider) {
     modalError.value = t('paymentFields.selectProvider')
@@ -2067,6 +2126,21 @@ onMounted(() => {
 .req {
   color: var(--danger);
   margin-left: 2px;
+}
+
+/* Per-field client-side validation: red border + inline message. */
+.input-error {
+  border-color: var(--danger) !important;
+}
+
+.msg-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--danger);
 }
 
 .hint {

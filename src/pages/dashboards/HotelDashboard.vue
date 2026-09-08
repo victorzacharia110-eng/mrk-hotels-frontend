@@ -600,7 +600,7 @@
                     </li>
                     <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
                       <button type="button" @click="openFolioOp('move', 'split')">
-                        <i class="fas fa-split" aria-hidden="true"></i> {{ $t('stayview.splitFolio') }}
+                        <i class="fas fa-code-branch" aria-hidden="true"></i> {{ $t('stayview.splitFolio') }}
                       </button>
                     </li>
                     <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
@@ -645,13 +645,15 @@
             <div class="sv-modal-body">
               <label class="sv-field">
                 <span>{{ $t('stayview.paymentAmount') }}</span>
-                <input v-model.number="paymentForm.amount" type="number" min="0" step="0.01" class="input" required />
+                <input v-model.number="paymentForm.amount" type="number" min="0" step="0.01" class="input" :class="{ 'sv-input-error': paymentErrors.amount }" required />
+                <span v-if="paymentErrors.amount" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentErrors.amount }}</span>
               </label>
               <div class="sv-field">
                 <PaymentMethodSelect
                   v-model:method="paymentForm.payment_method"
                   v-model:provider="paymentForm.payment_provider"
                 />
+                <span v-if="paymentErrors.payment_method || paymentErrors.payment_provider" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentErrors.payment_method || paymentErrors.payment_provider }}</span>
               </div>
               <label class="sv-field">
                 <span>{{ $t('stayview.paymentRef') }}</span>
@@ -693,21 +695,24 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('reservations.firstName') }}</span>
-                  <input v-model="amendForm.first_name" type="text" class="input" required />
+                  <input v-model="amendForm.first_name" type="text" class="input" :class="{ 'sv-input-error': amendErrors.first_name }" required />
+                  <span v-if="amendErrors.first_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.first_name }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('reservations.lastName') }}</span>
-                  <input v-model="amendForm.last_name" type="text" class="input" required />
+                  <input v-model="amendForm.last_name" type="text" class="input" :class="{ 'sv-input-error': amendErrors.last_name }" required />
+                  <span v-if="amendErrors.last_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.last_name }}</span>
                 </label>
               </div>
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.phone') }}</span>
-                  <PhoneInput v-model="amendForm.guest_phone" v-model:countryCode="amendForm.country_code" />
+                  <PhoneInput v-model="amendForm.guest_phone" v-model:countryCode="amendForm.country_code" :error="amendErrors.guest_phone" />
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.email') }}</span>
-                  <input v-model="amendForm.guest_email" type="email" class="input" />
+                  <input v-model="amendForm.guest_email" type="email" class="input" :class="{ 'sv-input-error': amendErrors.guest_email }" />
+                  <span v-if="amendErrors.guest_email" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.guest_email }}</span>
                 </label>
               </div>
               <div class="sv-tab-section">{{ $t('stayview.room') }}</div>
@@ -719,25 +724,30 @@
                   :search-placeholder="$t('stayview.searchRoom')"
                   force-search
                 />
+                <span v-if="amendErrors.room_id" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.room_id }}</span>
               </label>
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.arrival') }}</span>
-                  <input v-model="amendForm.check_in_date" type="date" class="input" required />
+                  <input v-model="amendForm.check_in_date" type="date" class="input" :class="{ 'sv-input-error': amendErrors.check_in_date }" required />
+                  <span v-if="amendErrors.check_in_date" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.check_in_date }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.departure') }}</span>
-                  <input v-model="amendForm.check_out_date" type="date" class="input" required />
+                  <input v-model="amendForm.check_out_date" type="date" class="input" :class="{ 'sv-input-error': amendErrors.check_out_date }" required />
+                  <span v-if="amendErrors.check_out_date" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.check_out_date }}</span>
                 </label>
               </div>
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('reservations.adultsLabel') }}</span>
-                  <input v-model.number="amendForm.num_adults" type="number" min="1" class="input" required />
+                  <input v-model.number="amendForm.num_adults" type="number" min="1" class="input" :class="{ 'sv-input-error': amendErrors.num_adults }" required />
+                  <span v-if="amendErrors.num_adults" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.num_adults }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('reservations.childrenLabel') }}</span>
-                  <input v-model.number="amendForm.num_children" type="number" min="0" class="input" />
+                  <input v-model.number="amendForm.num_children" type="number" min="0" class="input" :class="{ 'sv-input-error': amendErrors.num_children }" />
+                  <span v-if="amendErrors.num_children" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.num_children }}</span>
                 </label>
               </div>
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
@@ -774,11 +784,13 @@
             <div class="sv-modal-body">
               <label class="sv-field">
                 <span>{{ $t('stayview.chargeDescription') }}</span>
-                <input v-model="chargeForm.description" type="text" class="input" required maxlength="255" />
+                <input v-model="chargeForm.description" type="text" class="input" :class="{ 'sv-input-error': chargeErrors.description }" required maxlength="255" />
+                <span v-if="chargeErrors.description" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ chargeErrors.description }}</span>
               </label>
               <label class="sv-field">
                 <span>{{ $t('stayview.paymentAmount') }}</span>
-                <input v-model.number="chargeForm.amount" type="number" min="0" step="0.01" class="input" required />
+                <input v-model.number="chargeForm.amount" type="number" min="0" step="0.01" class="input" :class="{ 'sv-input-error': chargeErrors.amount }" required />
+                <span v-if="chargeErrors.amount" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ chargeErrors.amount }}</span>
               </label>
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
             </div>
@@ -961,44 +973,50 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('reservations.firstName') }}</span>
-                  <input v-model="bookingForm.first_name" type="text" class="input" required />
+                  <input v-model="bookingForm.first_name" type="text" class="input" :class="{ 'sv-input-error': bookingErrors.first_name }" required />
+                  <span v-if="bookingErrors.first_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.first_name }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('reservations.lastName') }}</span>
-                  <input v-model="bookingForm.last_name" type="text" class="input" required />
+                  <input v-model="bookingForm.last_name" type="text" class="input" :class="{ 'sv-input-error': bookingErrors.last_name }" required />
+                  <span v-if="bookingErrors.last_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.last_name }}</span>
                 </label>
               </div>
               <label class="sv-field">
                 <span>{{ $t('reservations.guestPhone') }}</span>
-                <PhoneInput v-model="bookingForm.guest_phone" v-model:countryCode="bookingForm.country_code" required />
+                <PhoneInput v-model="bookingForm.guest_phone" v-model:countryCode="bookingForm.country_code" :error="bookingErrors.guest_phone" required />
               </label>
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('reservations.bookingType') }}</span>
-                  <select v-model="bookingForm.booking_type" class="input" required>
+                  <select v-model="bookingForm.booking_type" class="input" :class="{ 'sv-input-error': bookingErrors.booking_type }" required>
                     <option value="single">{{ $t('common.bookingTypes.single') }}</option>
                     <option value="couple">{{ $t('common.bookingTypes.couple') }}</option>
                     <option value="family">{{ $t('common.bookingTypes.family') }}</option>
                     <option value="group">{{ $t('common.bookingTypes.group') }}</option>
                   </select>
+                  <span v-if="bookingErrors.booking_type" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.booking_type }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.room') }}</span>
-                  <select v-model="bookingForm.room_id" class="input" required>
+                  <select v-model="bookingForm.room_id" class="input" :class="{ 'sv-input-error': bookingErrors.room_id }" required>
                     <option v-for="room in rooms" :key="room.room_id" :value="room.room_id">
                       {{ room.room_number }} · {{ roomTypeLabel(room.room_type) }} · TZS {{ formatPrice(room.price_per_night) }}
                     </option>
                   </select>
+                  <span v-if="bookingErrors.room_id" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.room_id }}</span>
                 </label>
               </div>
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.arrival') }}</span>
-                  <input v-model="bookingForm.check_in_date" type="date" class="input" required />
+                  <input v-model="bookingForm.check_in_date" type="date" class="input" :class="{ 'sv-input-error': bookingErrors.check_in_date }" required />
+                  <span v-if="bookingErrors.check_in_date" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.check_in_date }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.departure') }}</span>
-                  <input v-model="bookingForm.check_out_date" type="date" class="input" required />
+                  <input v-model="bookingForm.check_out_date" type="date" class="input" :class="{ 'sv-input-error': bookingErrors.check_out_date }" required />
+                  <span v-if="bookingErrors.check_out_date" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.check_out_date }}</span>
                 </label>
               </div>
               <div class="sv-field-row">
@@ -1011,7 +1029,8 @@
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.advancePaid') }}</span>
-                  <input v-model.number="bookingForm.advance_payment" type="number" min="0" class="input" />
+                  <input v-model.number="bookingForm.advance_payment" type="number" min="0" class="input" :class="{ 'sv-input-error': bookingErrors.advance_payment }" />
+                  <span v-if="bookingErrors.advance_payment" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.advance_payment }}</span>
                 </label>
               </div>
               <div class="sv-field-row">
@@ -1061,20 +1080,23 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.firstName') }}</span>
-                  <input v-model="guestForm.first_name" type="text" class="input" required />
+                  <input v-model="guestForm.first_name" type="text" class="input" :class="{ 'sv-input-error': guestErrors.first_name }" required />
+                  <span v-if="guestErrors.first_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ guestErrors.first_name }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.lastName') }}</span>
-                  <input v-model="guestForm.last_name" type="text" class="input" required />
+                  <input v-model="guestForm.last_name" type="text" class="input" :class="{ 'sv-input-error': guestErrors.last_name }" required />
+                  <span v-if="guestErrors.last_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ guestErrors.last_name }}</span>
                 </label>
               </div>
               <label class="sv-field">
                 <span>{{ $t('stayview.phone') }}</span>
-                <PhoneInput v-model="guestForm.phone" v-model:countryCode="guestForm.country_code" required />
+                <PhoneInput v-model="guestForm.phone" v-model:countryCode="guestForm.country_code" :error="guestErrors.phone" required />
               </label>
               <label class="sv-field">
                 <span>{{ $t('stayview.email') }}</span>
-                <input v-model="guestForm.email" type="email" class="input" />
+                <input v-model="guestForm.email" type="email" class="input" :class="{ 'sv-input-error': guestErrors.email }" />
+                <span v-if="guestErrors.email" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ guestErrors.email }}</span>
               </label>
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
             </div>
@@ -1323,6 +1345,7 @@ import PhoneInput from '@/components/PhoneInput.vue'
 import { requiresProvider } from '@/utils/payments'
 import { formatDateDMY } from '@/utils/dates'
 import { formatPhoneGaps, validatePhoneNumber } from '@/utils/phone'
+import { after, collectErrors, email, minInteger, nonNegative, phone, positive, required } from '@/utils/formValidation'
 import { useCategoriesStore } from '@/stores/categories'
 
 const { t, te } = useI18n()
@@ -2018,13 +2041,7 @@ function setStayTab(key) {
 const actionBusy = ref(false)
 const actionError = ref('')
 
-/** Localized reason text behind a failed phone check (validations block). */
-function phoneErrorMsg(check) {
-  return check.reason === 'too_long' ? t('validations.phoneTooLong') : t('validations.phoneInvalid')
-}
-
-/**
- * Reads the most specific error a backend call returned: the first field
+/** Reads the most specific error a backend call returned: the first field
  * validation error, then the API message, then a locale fallback — so the
  * reception desk sees the real reason instead of a generic sentence.
  */
@@ -2084,16 +2101,28 @@ async function runStayAction(fn) {
 /* ----- Add Payment ----- */
 const paymentModal = ref(false)
 const paymentForm = ref({})
+const paymentErrors = ref({})
 function openPaymentModal() {
   moreOpen.value = false
   paymentForm.value = { amount: null, payment_method: 'cash', payment_provider: '', transaction_reference: '' }
+  paymentErrors.value = {}
   actionError.value = ''
   paymentModal.value = true
 }
 async function submitPayment() {
   const f = paymentForm.value
-  if (!activeBar.value?.id || !(Number(f.amount) > 0)) return
-  if (requiresProvider(f.payment_method) && !f.payment_provider) return
+  const errors = collectErrors(f, [
+    { field: 'amount', check: positive(t) },
+    { field: 'payment_method', check: required(t) },
+  ])
+  if (requiresProvider(f.payment_method) && !f.payment_provider) {
+    errors.payment_provider = t('validations.fieldRequired')
+  }
+  if (Object.keys(errors).length) {
+    paymentErrors.value = errors
+    return
+  }
+  if (!activeBar.value?.id) return
   const payload = {
     reservation_id: activeBar.value.id,
     amount: f.amount,
@@ -2109,15 +2138,25 @@ async function submitPayment() {
 /* ----- Add Charges ----- */
 const chargeModal = ref(false)
 const chargeForm = ref({})
+const chargeErrors = ref({})
 function openChargeModal() {
   moreOpen.value = false
   chargeForm.value = { description: '', amount: null }
+  chargeErrors.value = {}
   actionError.value = ''
   chargeModal.value = true
 }
 async function submitCharge() {
   const f = chargeForm.value
-  if (!activeBar.value?.id || !f.description || !(Number(f.amount) > 0)) return
+  const errors = collectErrors(f, [
+    { field: 'description', check: required(t) },
+    { field: 'amount', check: positive(t) },
+  ])
+  if (Object.keys(errors).length) {
+    chargeErrors.value = errors
+    return
+  }
+  if (!activeBar.value?.id) return
   chargeModal.value = false
   await runStayAction(() =>
     reservationApi.postRoomCharge(activeBar.value.id, { description: f.description, amount: f.amount }),
@@ -2241,6 +2280,7 @@ async function removeFolioAttachment(e) {
 const amendModal = ref(false)
 const amendIsRoomMove = ref(false)
 const amendForm = ref({})
+const amendErrors = ref({})
 
 /** Rooms as searchable options for the amend/room-move picker. */
 const roomMoveOptions = computed(() =>
@@ -2266,12 +2306,28 @@ function openAmendModal(roomMove = false) {
     country_code: res.country_code || 'TZ',
     guest_email: res.guest_email || '',
   }
+  amendErrors.value = {}
   actionError.value = ''
   amendModal.value = true
 }
 async function submitAmend() {
   const f = amendForm.value
-  if (!activeBar.value?.id || !f.room_id || !f.check_in_date || !f.check_out_date || !(Number(f.num_adults) > 0)) return
+  const errors = collectErrors(f, [
+    { field: 'first_name', check: required(t) },
+    { field: 'last_name', check: required(t) },
+    { field: 'guest_email', check: email(t) },
+    { field: 'guest_phone', check: phone(t) },
+    { field: 'check_in_date', check: required(t) },
+    { field: 'check_out_date', check: required(t) },
+    { field: 'check_out_date', check: after(t, 'check_in_date') },
+    { field: 'num_adults', check: minInteger(t, 1) },
+    { field: 'num_children', check: minInteger(t, 0) },
+  ])
+  if (Object.keys(errors).length) {
+    amendErrors.value = errors
+    return
+  }
+  if (!activeBar.value?.id) return
   // Only send a field when it actually changed, so a room move never wipes
   // guest details (and vice versa).
   const payload = {
@@ -2286,10 +2342,6 @@ async function submitAmend() {
   if (f.last_name !== (res.last_name ?? '') && f.last_name) payload.last_name = f.last_name
   if (f.guest_phone) {
     const phoneCheck = validatePhoneNumber(f.guest_phone, f.country_code || 'TZ')
-    if (!phoneCheck.valid) {
-      actionError.value = phoneErrorMsg(phoneCheck)
-      return
-    }
     if (String(phoneCheck.number || '').replace(/\D/g, '') !== String(res.guest_phone || '').replace(/\D/g, '')) {
       payload.guest_phone = phoneCheck.number
       if (f.country_code && f.country_code !== (res.country_code || '')) payload.country_code = f.country_code
@@ -2636,6 +2688,7 @@ ${head}
 
 const bookingModal = ref(false)
 const bookingForm = ref({})
+const bookingErrors = ref({})
 
 /** Guest phone displayed with the 255 6747 347 477 gap style; stores digits. */
 /** Implements a fresh booking form with today → tomorrow defaults. */
@@ -2656,6 +2709,7 @@ function resetBookingForm() {
     advance_payment_method: '',
     advance_payment_date: today,
   }
+  bookingErrors.value = {}
 }
 
 /** Nights between the selected arrival and departure dates. */
@@ -2704,6 +2758,7 @@ function bookVacantDay(room, iso) {
     check_out_date: isoKey(addDays(arrival, 1)),
     total_amount: null,
   }
+  bookingErrors.value = {}
   actionError.value = ''
   bookingModal.value = true
 }
@@ -2717,14 +2772,26 @@ function openNewBooking() {
 
 /** Creates the reservation and refreshes the chart. */
 async function submitBooking() {
-  if (!bookingForm.value.first_name || !bookingForm.value.last_name || !bookingForm.value.room_id) return
-  const phoneCheck = validatePhoneNumber(bookingForm.value.guest_phone, bookingForm.value.country_code || 'TZ')
-  if (!phoneCheck.valid) {
-    actionError.value = phoneErrorMsg(phoneCheck)
+  const f = bookingForm.value
+  const errors = collectErrors(f, [
+    { field: 'first_name', check: required(t) },
+    { field: 'last_name', check: required(t) },
+    { field: 'guest_phone', check: required(t) },
+    { field: 'guest_phone', check: phone(t) },
+    { field: 'booking_type', check: required(t) },
+    { field: 'room_id', check: required(t) },
+    { field: 'check_in_date', check: required(t) },
+    { field: 'check_out_date', check: required(t) },
+    { field: 'check_out_date', check: after(t, 'check_in_date') },
+    { field: 'advance_payment', check: nonNegative(t) },
+  ])
+  if (Object.keys(errors).length) {
+    bookingErrors.value = errors
     return
   }
+  const phoneCheck = validatePhoneNumber(f.guest_phone, f.country_code || 'TZ')
   await runAction(async () => {
-    const payload = { ...bookingForm.value }
+    const payload = { ...f }
     if (!payload.advance_payment_method) {
       delete payload.advance_payment_method
       delete payload.advance_payment_date
@@ -2744,22 +2811,30 @@ async function submitBooking() {
 
 const guestModal = ref(false)
 const guestForm = ref({})
+const guestErrors = ref({})
 
 /** Opens the guest registration form. */
 function openGuestModal() {
   guestForm.value = { first_name: '', last_name: '', phone: '', country_code: 'TZ', email: '' }
+  guestErrors.value = {}
   actionError.value = ''
   guestModal.value = true
 }
 
 /** Saves the guest record. */
 async function submitGuest() {
-  if (!guestForm.value.first_name) return
-  const phoneCheck = validatePhoneNumber(guestForm.value.phone, guestForm.value.country_code || 'TZ')
-  if (!phoneCheck.valid) {
-    actionError.value = phoneErrorMsg(phoneCheck)
+  const errors = collectErrors(guestForm.value, [
+    { field: 'first_name', check: required(t) },
+    { field: 'last_name', check: required(t) },
+    { field: 'phone', check: required(t) },
+    { field: 'phone', check: phone(t) },
+    { field: 'email', check: email(t) },
+  ])
+  if (Object.keys(errors).length) {
+    guestErrors.value = errors
     return
   }
+  const phoneCheck = validatePhoneNumber(guestForm.value.phone, guestForm.value.country_code || 'TZ')
   await runAction(() =>
     guestApi.store({ ...guestForm.value, phone: phoneCheck.number, country_code: guestForm.value.country_code }),
   )
@@ -3601,7 +3676,15 @@ onUnmounted(() => clearInterval(refreshTimer))
 .sv-modal-row.pay-ok i { color: #1e7e34; }
 
 .sv-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
   padding: 0 16px 16px;
+}
+
+.sv-modal-actions .sv-modal-manage {
+  margin-left: auto;
 }
 
 .sv-modal-manage {
@@ -3656,6 +3739,20 @@ onUnmounted(() => clearInterval(refreshTimer))
   margin: 0 0 8px;
   font-size: 13px;
   color: #c0392b;
+}
+
+/* Per-field client-side validation: red border + inline message. */
+.sv-input-error {
+  border-color: #dc2626 !important;
+}
+
+.sv-field-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: #dc2626;
 }
 
 /* Form fields used by the booking/guest/task modals */

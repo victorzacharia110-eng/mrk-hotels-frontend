@@ -175,21 +175,25 @@
           <div class="form-grid">
             <div class="form-group">
               <label>{{ $t('guests.firstName') }}<span class="req">*</span></label>
-              <input v-model="form.first_name" type="text" class="input" required />
+              <input v-model="form.first_name" type="text" class="input" :class="{ 'input-error': formErrors.first_name }" required />
+              <span v-if="formErrors.first_name" class="msg-error" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ formErrors.first_name }}</span>
             </div>
             <div class="form-group">
               <label>{{ $t('guests.lastName') }}<span class="req">*</span></label>
-              <input v-model="form.last_name" type="text" class="input" required />
+              <input v-model="form.last_name" type="text" class="input" :class="{ 'input-error': formErrors.last_name }" required />
+              <span v-if="formErrors.last_name" class="msg-error" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ formErrors.last_name }}</span>
             </div>
             <div class="form-group">
               <label>{{ $t('guests.email') }}</label>
-              <input v-model="form.email" type="email" class="input" />
+              <input v-model="form.email" type="email" class="input" :class="{ 'input-error': formErrors.email }" />
+              <span v-if="formErrors.email" class="msg-error" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ formErrors.email }}</span>
             </div>
             <div class="form-group">
               <label>{{ $t('guests.phone') }}<span class="req">*</span></label>
               <PhoneInput
                 v-model="form.phone"
                 v-model:countryCode="form.country_code"
+                :error="formErrors.phone"
                 :required="true"
               />
             </div>
@@ -208,6 +212,7 @@
                 :options="idTypeOptions"
                 :empty-label="$t('common.none')"
               />
+              <span v-if="formErrors.id_type" class="msg-error" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ formErrors.id_type }}</span>
             </div>
             <div class="form-group">
               <label>{{ $t('guests.idNumber') }}</label>
@@ -321,6 +326,7 @@ import { todayISO } from '@/utils/dates'
 import { collectAllRows } from '@/utils/export'
 import { findCountryCode } from '@/utils/locations'
 import { normalizePhoneNumber } from '@/utils/phone'
+import { collectErrors, email, isBlank, phone, required } from '@/utils/formValidation'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -368,6 +374,7 @@ const editing = ref(false)
 const editingId = ref(null)
 const saving = ref(false)
 const modalError = ref('')
+const formErrors = ref({})
 
 // Delete confirmation modal state.
 const showDelete = ref(false)
@@ -476,6 +483,7 @@ function resetForm() {
 /** Opens the create-guest modal with a fresh form. */
 function openCreate() {
   modalError.value = ''
+  formErrors.value = {}
   resetForm()
   showModal.value = true
 }
@@ -486,6 +494,7 @@ function openCreate() {
  */
 function openEdit(guest) {
   modalError.value = ''
+  formErrors.value = {}
   editing.value = true
   editingId.value = guest.guest_id
   form.first_name = guest.first_name || ''
@@ -518,6 +527,22 @@ function closeModal() {
  */
 async function save() {
   modalError.value = ''
+  formErrors.value = {}
+
+  // Localized, per-field checks before a single byte leaves the browser.
+  const errors = collectErrors(form, [
+    { field: 'first_name', check: required(t) },
+    { field: 'last_name', check: required(t) },
+    { field: 'phone', check: required(t) },
+    { field: 'phone', check: phone(t) },
+    { field: 'email', check: email(t) },
+    { field: 'id_type', check: (v, f) => (isBlank(v) && !isBlank(f.id_number) ? t('validations.idPairRequired') : '') },
+  ])
+  if (Object.keys(errors).length) {
+    formErrors.value = errors
+    return
+  }
+
   saving.value = true
   try {
     if (editing.value) {
@@ -603,6 +628,21 @@ onMounted(load)
 </script>
 
 <style scoped>
+/* Per-field client-side validation: red border + inline message. */
+.input-error {
+  border-color: var(--danger) !important;
+}
+
+.msg-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--danger);
+}
+
 .dashboard-page {
   padding: 32px 20px;
 }

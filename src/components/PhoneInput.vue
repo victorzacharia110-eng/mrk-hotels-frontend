@@ -22,7 +22,7 @@
     <!-- Number field, formatted live as the user types. -->
     <input
       class="input number-input"
-      :class="{ 'number-invalid': invalidMsg }"
+      :class="{ 'number-invalid': invalidMsg || error }"
       type="tel"
       :value="modelValue"
       :placeholder="placeholder"
@@ -31,8 +31,8 @@
       @input="onPhoneInput($event.target.value)"
       @blur="onBlur"
     />
-    <span v-if="invalidMsg" class="phone-invalid" role="alert">
-      <i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ invalidMsg }}
+    <span v-if="invalidMsg || error" class="phone-invalid" role="alert">
+      <i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ invalidMsg || error }}
     </span>
   </div>
 </template>
@@ -59,6 +59,7 @@ const props = defineProps({
   placeholder: { type: String, default: '' },
   required: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
+  error: { type: String, default: '' },
 })
 
 // v-model updates for the formatted phone number and the selected country code.
