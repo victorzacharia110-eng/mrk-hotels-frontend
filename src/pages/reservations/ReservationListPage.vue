@@ -971,7 +971,7 @@ import StayDates from '@/components/StayDates.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { useRoomBrowser } from '@/composables/useRoomBrowser'
 import { addDays, todayISO } from '@/utils/dates'
-import { formatPhoneGaps, normalizePhoneNumber } from '@/utils/phone'
+import { formatPhoneGaps, formatPhoneNational, normalizePhoneNumber } from '@/utils/phone'
 import {
   after,
   bindLiveValidation,
@@ -1513,7 +1513,7 @@ function fillGuest() {
   recognizedGuest.value = null
   form.first_name = guest.first_name || ''
   form.last_name = guest.last_name || ''
-  form.guest_phone = guest.phone || ''
+  form.guest_phone = guest.phone ? formatPhoneNational(guest.phone) : ''
   form.guest_email = guest.email || ''
   form.country = guest.country || ''
   form.country_code = guest.country_code || findCountryCode(guest.country)

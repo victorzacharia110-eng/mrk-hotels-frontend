@@ -4,9 +4,10 @@
   the country re-formats the typed digits under the new dialling conventions.
 
   Strict by design: letters and special characters are never accepted (only a
-  leading '+' and digits survive), and the field refuses to grow beyond the
-  selected country's maximum length. An invalid-but-possible number surfaces a
-  message on blur; over-length input is truncated at the cap.
+  leading '+' and digits survive), the country is preselected so a national
+  number cannot start with a trunk '0', and the field refuses to grow beyond
+  the selected country's maximum length. An invalid-but-possible number
+  surfaces a message on blur; over-length input is truncated at the cap.
 -->
 
 <template>

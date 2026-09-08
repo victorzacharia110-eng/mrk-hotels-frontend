@@ -60,9 +60,9 @@ export function maxPhoneLength(countryCode = DEFAULT_COUNTRY) {
 }
 
 /**
- * Strips every character that no dialling plan accepts: only an optional
- * leading '+' followed by digits survives. Letters and special characters are
- * simply never allowed into the field.
+ * Strips what no dialling plan accepts: only an optional leading '+' followed
+ * by digits survives. Letters and special characters are never allowed into
+ * the field.
  * @param {string} value - Raw input from the phone field.
  * @returns {string} The sanitized value ('+', digits, or empty).
  */
@@ -80,10 +80,31 @@ export function sanitizePhoneInput(value) {
 }
 
 /**
+ * Reduces raw national-digit input to the subscriber number the field is for.
+ * The country is preselected on the field, so a national number can neither
+ * start with a trunk '0' (TZ staff must not be able to type 0789…) nor repeat
+ * the country's calling code. A pasted full international form sheds that
+ * code and keeps only the subscriber digits.
+ * @param {string} digits - Digits entered on a country-preselected field.
+ * @param {string} countryCode - The preselected ISO country.
+ * @returns {string} The subscriber number's digits.
+ */
+function subscriberDigits(digits, countryCode) {
+  let out = digits.replace(/^0+/, '')
+  if (isSupportedCountry(countryCode)) {
+    const callingCode = String(getCountryCallingCode(countryCode))
+    if (out.startsWith(callingCode) && out.length > maxNationalLength(countryCode)) {
+      out = out.slice(callingCode.length)
+    }
+  }
+  return out
+}
+
+/**
  * Caps a partially typed number at the length the selected country supports.
- * A local number never exceeds the national length (plus one digit for a trunk
- * prefix); an international one never exceeds the E.164 ceiling. Anything past
- * the cap is truncated, so extra digits "must not exist".
+ * An international one never exceeds the E.164 ceiling; a national one is
+ * stripped of its trunk '0' and capped at the country's national length, so
+ * extra digits "must not exist".
  * @param {string} value - Raw input from the phone field.
  * @param {string} [countryCode] - ISO country used to size the field.
  * @returns {string} The sanitized, length-capped value.
@@ -98,16 +119,15 @@ export function capPhoneInput(value, countryCode = DEFAULT_COUNTRY) {
   const nationalMax = maxNationalLength(countryCode)
   const callingCode = isSupportedCountry(countryCode) ? String(getCountryCallingCode(countryCode)) : ''
 
-  // The user may be typing a full international number without the '+'
-  // (e.g. "255674734747" on a TZ field) — size the cap for that too.
-  if (callingCode && phone.startsWith(callingCode)) {
-    const maxIntl = Math.min(MAX_E164_DIGITS, callingCode.length + nationalMax)
-    return phone.length > maxIntl ? phone.slice(0, maxIntl) : phone
+  // A pasted international number without the '+' (e.g. "255674734747" on a
+  // TZ field) — size the cap for the E.164 ceiling.
+  if (callingCode && phone.startsWith(callingCode) && phone.length > nationalMax) {
+    return phone.slice(0, Math.min(MAX_E164_DIGITS, callingCode.length + nationalMax))
   }
 
-  // Plain national number: national length plus one digit for a trunk prefix.
-  const maxLocal = nationalMax + 1
-  return phone.length > maxLocal ? phone.slice(0, maxLocal) : phone
+  // Preselected country: only the subscriber number is wanted.
+  const national = subscriberDigits(phone, countryCode)
+  return national.length > nationalMax ? national.slice(0, nationalMax) : national
 }
 
 /**
@@ -148,6 +168,9 @@ function groupDigits(digits, sizes) {
     parts.push(digits.slice(index, index + size))
     index += size
   }
+  // Never drop typed digits: anything past the arranged groups stays as its
+  // own final chunk (the length cap keeps overflow out of the field anyway).
+  if (index < digits.length) parts.push(digits.slice(index))
   return parts.join(' ')
 }
 
@@ -155,11 +178,13 @@ function groupDigits(digits, sizes) {
  * Formats a partially typed phone number for display, applying the spacing of
  * the given country's dialling conventions without demanding a valid number.
  *
- * Tanzanian numbers follow the gap style the front desk asked for, applied
- * digit by digit as they are typed: a local 0-prefixed number becomes
- * `0674 734 747` (4-3-3) and an international one `255 6747 347 47`
- * (3-4-3-2). Every other country falls back to libphonenumber's own partial
- * formatting.
+ * The country is preselected on the field, so a national number never starts
+ * with a trunk '0' (only the subscriber number is held) and a pasted full
+ * international form keeps just its subscriber digits. Tanzanian numbers use
+ * the gap style the front desk asked for, digit by digit as typed: a national
+ * number becomes `6747 347 47` and an international one `255 6747 347 47`
+ * (same 4-3-2 national grouping, with the 255 prefix kept on '+' input).
+ * Every other country falls back to libphonenumber's own partial formatting.
  * @param {string} value - Sanitized (or raw) input from the phone field.
  * @param {string} [defaultCountry] - ISO country used when no + prefix is typed.
  * @returns {string} The formatted partial number.
@@ -181,17 +206,33 @@ export function formatPhoneInput(value, defaultCountry = DEFAULT_COUNTRY) {
   }
 
   const intl = phone.startsWith('+')
-  const digits = intl ? phone.slice(1) : phone
+  const digits = intl ? phone.slice(1) : subscriberDigits(phone, defaultCountry)
+
   if (defaultCountry === 'TZ') {
     if (intl && digits.startsWith('255')) {
       return `+${groupDigits(digits, [3, 4, 3, 2])}`
     }
-    if (!intl && digits.startsWith('0')) {
-      return groupDigits(digits, [4, 3, 3])
-    }
+    return digits ? groupDigits(digits, [4, 3, 2]) : ''
   }
 
-  return formatIncompletePhoneNumber(phone, defaultCountry)
+  return formatIncompletePhoneNumber(intl ? `+${digits}` : digits, defaultCountry)
+}
+
+/**
+ * Formats a stored E.164 number as the subscriber number shown in a
+ * country-preselected field (e.g. `+255674734747` → `6747 347 47`). Keeps the
+ * same 4-3-2 national grouping as formatPhoneInput() so a prefilled field and
+ * a freshly typed one always look alike.
+ * @param {string} value - Phone number as stored (usually E.164).
+ * @returns {string} The national number with gaps, or '' when nothing is there.
+ */
+export function formatPhoneNational(value) {
+  if (!value) return ''
+  const digits = String(value).replace(/\D/g, '')
+  if (digits.startsWith('255')) {
+    return groupDigits(digits.slice(3), [4, 3, 2])
+  }
+  return groupDigits(subscriberDigits(digits, DEFAULT_COUNTRY), [4, 3, 2])
 }
 
 /**

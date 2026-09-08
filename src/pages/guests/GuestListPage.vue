@@ -325,7 +325,7 @@ import TableExportButton from '@/components/TableExportButton.vue'
 import { todayISO } from '@/utils/dates'
 import { collectAllRows } from '@/utils/export'
 import { findCountryCode } from '@/utils/locations'
-import { normalizePhoneNumber } from '@/utils/phone'
+import { formatPhoneNational, normalizePhoneNumber } from '@/utils/phone'
 import { bindLiveValidation, collectErrors, email, isBlank, phone, required } from '@/utils/formValidation'
 
 const { t } = useI18n()
@@ -504,7 +504,7 @@ function openEdit(guest) {
   form.first_name = guest.first_name || ''
   form.last_name = guest.last_name || ''
   form.email = guest.email || ''
-  form.phone = guest.phone || ''
+  form.phone = guest.phone ? formatPhoneNational(guest.phone) : ''
   form.country = guest.country || ''
   // Older records may only carry the country name, so resolve the ISO code.
   form.country_code = guest.country_code || findCountryCode(guest.country)

@@ -1344,7 +1344,7 @@ import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
 import { requiresProvider } from '@/utils/payments'
 import { formatDateDMY } from '@/utils/dates'
-import { formatPhoneGaps, validatePhoneNumber } from '@/utils/phone'
+import { formatPhoneGaps, formatPhoneNational, validatePhoneNumber } from '@/utils/phone'
 import {
   after,
   bindLiveValidation,
@@ -2333,7 +2333,7 @@ function openAmendModal(roomMove = false) {
     num_children: res.num_children ?? 0,
     first_name: res.first_name || '',
     last_name: res.last_name || '',
-    guest_phone: formatPhoneGaps(res.guest_phone),
+    guest_phone: formatPhoneNational(res.guest_phone),
     country_code: res.country_code || 'TZ',
     guest_email: res.guest_email || '',
   }
