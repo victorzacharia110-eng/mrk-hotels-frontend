@@ -309,7 +309,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cashierApi, orderApi, hotelSettingsApi } from '@/api'
 import PaginationBar from '@/components/store/PaginationBar.vue'
@@ -341,7 +341,9 @@ async function loadLogo() {
 const orders = ref([])
 const loading = ref(true)
 const error = ref('')
-const date = ref(new Date().toISOString().slice(0, 10))
+/** Working date in the hotel's local timezone (not UTC, so night-shift tickets
+ *  created just after midnight still land on "today"). */
+const date = ref(localToday())
 const search = ref('')
 const activeTab = ref('running')
 const printArea = ref(null)
@@ -451,6 +453,14 @@ function timeOf(iso) {
 
 function money(value) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value ?? 0)
+}
+
+/** Today's date in the local timezone as YYYY-MM-DD. */
+function localToday() {
+  const d = new Date()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
 }
 
 async function load() {
@@ -762,10 +772,21 @@ async function reprintKot(order) {
   doPrint(order, 'kot')
 }
 
+// Live refresh: tickets from the floor (waiters/bartenders) appear without the
+// cashier having to reload the page every time.
+let orderListPoll = null
+
 onMounted(() => {
   load()
   loadLogo()
   restorePrinter()
+  orderListPoll = setInterval(() => {
+    if (activeTab.value === 'running' && !loading.value) load()
+  }, 25000)
+})
+
+onUnmounted(() => {
+  if (orderListPoll) clearInterval(orderListPoll)
 })
 </script>
 
