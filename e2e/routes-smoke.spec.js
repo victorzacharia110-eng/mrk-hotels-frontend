@@ -25,7 +25,7 @@ const STORE_ROUTES = [
   'discounts', 'transfers', 'stock-counts', 'low-stock', 'settings', 'activity-log',
   'stock-adjust', 'profile',
 ]
-const CASHIER_ROUTES = ['dine-in', 'waiter-assignment', 'take-away', 'room-service', 'delivery', 'no-charge', 'order-summary', 'item-lookup', 'ingredients']
+const CASHIER_ROUTES = ['dine-in', 'waiter-assignment', 'take-away', 'room-service', 'delivery', 'no-charge', 'order-summary', 'item-lookup', 'ingredients', 'reports']
 const SUPERADMIN_ROUTES = ['', 'tenants', 'tenants/@id', 'reports', 'plans', 'integrations', 'profile']
 const OWNER_ROUTES = ['', 'profile', 'hotels/@id']
 const PUBLIC_ROUTES = ['/', '/booking', '/hotels/@id', '/login', '/register', '/portal/pricing', '/portal/login', '/portal/register', '/portal/forgot-password', '/portal/reset-password', '/guest/login']

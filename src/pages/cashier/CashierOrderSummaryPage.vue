@@ -343,7 +343,7 @@ const loading = ref(true)
 const error = ref('')
 /** Working date in the hotel's local timezone (not UTC, so night-shift tickets
  *  created just after midnight still land on "today"). */
-const date = ref(localToday())
+const date = ref(utcToday())
 const search = ref('')
 const activeTab = ref('running')
 const printArea = ref(null)
@@ -455,12 +455,9 @@ function money(value) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value ?? 0)
 }
 
-/** Today's date in the local timezone as YYYY-MM-DD. */
-function localToday() {
-  const d = new Date()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${m}-${day}`
+/** Today's date as the BACKEND sees it (UTC, matching whereDate on created_at). */
+function utcToday() {
+  return new Date().toISOString().slice(0, 10)
 }
 
 async function load() {
