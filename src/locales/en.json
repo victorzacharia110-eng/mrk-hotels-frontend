@@ -4561,5 +4561,9 @@
     "hotel-bell": "Hotel bell",
     "triple-chime": "Triple chime",
     "double-ping": "Double ping"
+  },
+  "validations": {
+    "phoneInvalid": "Enter a valid phone number for the selected country.",
+    "phoneTooLong": "This number is too long for the selected country."
   }
 }

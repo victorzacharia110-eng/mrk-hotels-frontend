@@ -4561,5 +4561,9 @@
     "hotel-bell": "Kengele ya hoteli",
     "triple-chime": "Kengele tatu",
     "double-ping": "Pigo mbili"
+  },
+  "validations": {
+    "phoneInvalid": "Weka namba ya simu sahihi kwa nchi uliyochagua.",
+    "phoneTooLong": "Namba hii ni ndefu kupita kiasi kwa nchi uliyochagua."
   }
 }

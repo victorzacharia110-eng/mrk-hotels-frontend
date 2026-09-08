@@ -39,6 +39,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { formatIncompletePhoneNumber } from 'libphonenumber-js'
 import { getCountries, loadLocationData } from '@/utils/locations'
 import { capPhoneInput, formatPhoneInput, validatePhoneNumber } from '@/utils/phone'
@@ -62,6 +63,8 @@ const props = defineProps({
 
 // v-model updates for the formatted phone number and the selected country code.
 const emit = defineEmits(['update:modelValue', 'update:countryCode'])
+
+const { t } = useI18n()
 
 // Country dropdown options built from the shared locations list, combining
 // the flag, name and dialling code in each label.
@@ -119,7 +122,12 @@ function onCountryChange(code) {
  */
 function onBlur() {
   const res = validatePhoneNumber(props.modelValue, props.countryCode)
-  invalidMsg.value = res.valid || res.possible ? '' : res.message
+  if (res.valid || res.possible) {
+    invalidMsg.value = ''
+  } else {
+    invalidMsg.value =
+      res.reason === 'too_long' ? t('validations.phoneTooLong') : t('validations.phoneInvalid')
+  }
 }
 
 /** Loads the country list once the component mounts (dataset fetched lazily). */

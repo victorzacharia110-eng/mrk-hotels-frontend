@@ -2018,6 +2018,22 @@ function setStayTab(key) {
 const actionBusy = ref(false)
 const actionError = ref('')
 
+/** Localized reason text behind a failed phone check (validations block). */
+function phoneErrorMsg(check) {
+  return check.reason === 'too_long' ? t('validations.phoneTooLong') : t('validations.phoneInvalid')
+}
+
+/**
+ * Reads the most specific error a backend call returned: the first field
+ * validation error, then the API message, then a locale fallback — so the
+ * reception desk sees the real reason instead of a generic sentence.
+ */
+function apiErrorMsg(err, fallback) {
+  const data = err.response?.data
+  const first = data?.errors ? Object.values(data.errors)[0] : null
+  return (Array.isArray(first) ? first[0] : first) || data?.message || fallback
+}
+
 /** Runs a reservation lifecycle action then silently refreshes the chart. */
 async function runAction(fn) {
   actionBusy.value = true
@@ -2027,7 +2043,7 @@ async function runAction(fn) {
     closeBarModal()
     await load(true)
   } catch (err) {
-    actionError.value = err.response?.data?.message || t('stayview.actionError')
+    actionError.value = apiErrorMsg(err, t('stayview.actionError'))
   } finally {
     actionBusy.value = false
   }
@@ -2059,7 +2075,7 @@ async function runStayAction(fn) {
     if (activeBar.value?.id) await loadFolio(activeBar.value.id)
     await load(true)
   } catch (err) {
-    actionError.value = err.response?.data?.message || t('stayview.actionError')
+    actionError.value = apiErrorMsg(err, t('stayview.actionError'))
   } finally {
     actionBusy.value = false
   }
@@ -2271,7 +2287,7 @@ async function submitAmend() {
   if (f.guest_phone) {
     const phoneCheck = validatePhoneNumber(f.guest_phone, f.country_code || 'TZ')
     if (!phoneCheck.valid) {
-      actionError.value = phoneCheck.message
+      actionError.value = phoneErrorMsg(phoneCheck)
       return
     }
     if (String(phoneCheck.number || '').replace(/\D/g, '') !== String(res.guest_phone || '').replace(/\D/g, '')) {
@@ -2704,7 +2720,7 @@ async function submitBooking() {
   if (!bookingForm.value.first_name || !bookingForm.value.last_name || !bookingForm.value.room_id) return
   const phoneCheck = validatePhoneNumber(bookingForm.value.guest_phone, bookingForm.value.country_code || 'TZ')
   if (!phoneCheck.valid) {
-    actionError.value = phoneCheck.message
+    actionError.value = phoneErrorMsg(phoneCheck)
     return
   }
   await runAction(async () => {
@@ -2741,7 +2757,7 @@ async function submitGuest() {
   if (!guestForm.value.first_name) return
   const phoneCheck = validatePhoneNumber(guestForm.value.phone, guestForm.value.country_code || 'TZ')
   if (!phoneCheck.valid) {
-    actionError.value = phoneCheck.message
+    actionError.value = phoneErrorMsg(phoneCheck)
     return
   }
   await runAction(() =>

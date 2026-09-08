@@ -22,9 +22,6 @@ const DEFAULT_COUNTRY = 'TZ'
 // ITU-T E.164 sets a hard ceiling of 15 significant digits for any number.
 const MAX_E164_DIGITS = 15
 
-const INVALID_NUMBER_MSG = 'Enter a valid phone number for the selected country.'
-const TOO_LONG_MSG = 'This number is too long for the selected country.'
-
 const nationalLengthCache = {}
 
 /**
@@ -164,14 +161,17 @@ export function formatPhoneInput(value, defaultCountry = DEFAULT_COUNTRY) {
  * Strictly validates a phone number against the given country's dialling plan.
  * @param {string} value - Phone number as entered.
  * @param {string} [defaultCountry] - ISO country used when no + prefix is given.
- * @returns {{ valid: boolean, possible: boolean, number: string, message: string }}
+ * @returns {{ valid: boolean, possible: boolean, number: string, reason: 'valid'|'too_long'|'invalid' }}
  *   - valid: the number is fully valid for its country.
  *   - possible: it has a plausible length (but may be an unassigned number).
  *   - number: the E.164 form when valid, otherwise the cleaned input.
- *   - message: a user-facing reason when invalid ('' when valid).
+ *   - reason: why the number is not valid ('too_long' vs 'invalid'), or 'valid'.
+ *
+ * This helper is intentionally message-free — callers translate the reason
+ * into the user's language (en/sw), so validation text never leaks English.
  */
 export function validatePhoneNumber(value, defaultCountry = DEFAULT_COUNTRY) {
-  const empty = { valid: false, possible: false, number: '', message: INVALID_NUMBER_MSG }
+  const empty = { valid: false, possible: false, number: '', reason: 'invalid' }
   if (!value) return empty
 
   let phone = String(value).trim()
@@ -184,14 +184,14 @@ export function validatePhoneNumber(value, defaultCountry = DEFAULT_COUNTRY) {
     ? parsePhoneNumberFromString(phone)
     : parsePhoneNumberFromString(phone, country)
 
-  if (!parsed) return { ...empty, number: phone, message: INVALID_NUMBER_MSG }
+  if (!parsed) return { ...empty, number: phone }
 
-  if (parsed.isValid()) return { valid: true, possible: true, number: parsed.number, message: '' }
+  if (parsed.isValid()) return { valid: true, possible: true, number: parsed.number, reason: 'valid' }
   return {
     valid: false,
     possible: parsed.isPossible(),
     number: phone,
-    message: parsed.isPossible() ? INVALID_NUMBER_MSG : TOO_LONG_MSG,
+    reason: parsed.isPossible() ? 'invalid' : 'too_long',
   }
 }
 
