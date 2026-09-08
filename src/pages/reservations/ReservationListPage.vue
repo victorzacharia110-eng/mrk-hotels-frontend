@@ -972,7 +972,17 @@ import TableExportButton from '@/components/TableExportButton.vue'
 import { useRoomBrowser } from '@/composables/useRoomBrowser'
 import { addDays, todayISO } from '@/utils/dates'
 import { formatPhoneGaps, normalizePhoneNumber } from '@/utils/phone'
-import { after, collectErrors, email, isBlank, minInteger, nonNegative, phone, required } from '@/utils/formValidation'
+import {
+  after,
+  bindLiveValidation,
+  collectErrors,
+  email,
+  isBlank,
+  minInteger,
+  nonNegative,
+  phone,
+  required,
+} from '@/utils/formValidation'
 import { METHOD_CASH, PAYMENT_METHODS, requiresProvider, providersFor } from '@/utils/payments'
 import { findCountryCode, getCountryName } from '@/utils/locations'
 
@@ -1082,6 +1092,39 @@ function blankForm() {
 
 const form = reactive(blankForm())
 const computedTotal = ref(null)
+
+// Live-validation bookkeeping: the form starts quiet and only starts flagging
+// fields once it differs from the snapshot it opened with (first keystroke,
+// date change, room pick). The auto-suggested total is excluded from the
+// comparison so it never marks an untouched form as "dirty".
+const reservationTouched = ref(false)
+const reservationSnapshot = ref({})
+const reservationComparable = [
+  'guest_id',
+  'first_name',
+  'last_name',
+  'guest_phone',
+  'guest_email',
+  'country',
+  'country_code',
+  'city',
+  'id_type',
+  'id_number',
+  'booking_type',
+  'booking_date',
+  'room_type',
+  'selected_rooms',
+  'booking_source',
+  'check_in_date',
+  'check_out_date',
+  'num_days',
+  'num_adults',
+  'num_children',
+  'amount_paid',
+  'payment_method',
+  'payment_provider',
+  'special_requests',
+]
 
 const selectedRooms = computed(() => form.selected_rooms)
 
@@ -1451,6 +1494,8 @@ function openCreate() {
   recognizedGuest.value = null
   loadOptions()
   Object.assign(form, blankForm())
+  reservationTouched.value = false
+  reservationSnapshot.value = { ...form }
   showModal.value = true
 }
 
@@ -1545,17 +1590,10 @@ watch(
   },
 )
 
-/**
- * Creates one reservation per selected room, spreading any deposit paid at the
- * desk evenly across them (the remainder lands on the last room).
- */
-async function save() {
-  modalError.value = ''
-  formErrors.value = {}
-
-  // Every field is judged client-side (and localized) before anything is sent,
-  // mirroring the backend rules so the receptionist sees the exact reason.
-  const errors = collectErrors(form, [
+/** Every field is judged client-side (and localized) before anything is sent,
+ * mirroring the backend rules so the receptionist sees the exact reason. */
+function reservationRules() {
+  return [
     { field: 'first_name', check: required(t) },
     { field: 'last_name', check: required(t) },
     { field: 'guest_phone', check: required(t) },
@@ -1581,7 +1619,19 @@ async function save() {
     { field: 'id_number', check: (v, f) => (isBlank(v) && !isBlank(f.id_type) ? t('validations.idPairRequired') : '') },
     { field: 'total_amount', check: nonNegative(t) },
     { field: 'amount_paid', check: nonNegative(t) },
-  ])
+  ]
+}
+
+/**
+ * Creates one reservation per selected room, spreading any deposit paid at the
+ * desk evenly across them (the remainder lands on the last room).
+ */
+async function save() {
+  modalError.value = ''
+  formErrors.value = {}
+  reservationTouched.value = true
+
+  const errors = collectErrors(form, reservationRules())
   if (Object.keys(errors).length) {
     formErrors.value = errors
     return
@@ -1659,6 +1709,15 @@ async function save() {
     saving.value = false
   }
 }
+bindLiveValidation(
+  watch,
+  () => form,
+  reservationSnapshot,
+  reservationTouched,
+  formErrors,
+  reservationRules,
+  reservationComparable,
+)
 
 /**
  * Records the deposit taken with the booking. A failure here must not hide the

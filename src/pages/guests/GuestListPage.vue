@@ -314,7 +314,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { guestApi } from '@/api'
@@ -326,7 +326,7 @@ import { todayISO } from '@/utils/dates'
 import { collectAllRows } from '@/utils/export'
 import { findCountryCode } from '@/utils/locations'
 import { normalizePhoneNumber } from '@/utils/phone'
-import { collectErrors, email, isBlank, phone, required } from '@/utils/formValidation'
+import { bindLiveValidation, collectErrors, email, isBlank, phone, required } from '@/utils/formValidation'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -375,6 +375,8 @@ const editingId = ref(null)
 const saving = ref(false)
 const modalError = ref('')
 const formErrors = ref({})
+const guestTouched = ref(false)
+const guestSnapshot = ref({})
 
 // Delete confirmation modal state.
 const showDelete = ref(false)
@@ -485,6 +487,8 @@ function openCreate() {
   modalError.value = ''
   formErrors.value = {}
   resetForm()
+  guestTouched.value = false
+  guestSnapshot.value = { ...form }
   showModal.value = true
 }
 
@@ -512,12 +516,26 @@ function openEdit(guest) {
   form.date_of_birth = guest.date_of_birth || ''
   form.vip_status = !!guest.vip_status
   form.notes = guest.notes || ''
+  guestTouched.value = false
+  guestSnapshot.value = { ...form }
   showModal.value = true
 }
 
 /** Closes the create/edit modal. */
 function closeModal() {
   showModal.value = false
+}
+
+/** Localized, per-field checks before a single byte leaves the browser. */
+function guestRules() {
+  return [
+    { field: 'first_name', check: required(t) },
+    { field: 'last_name', check: required(t) },
+    { field: 'phone', check: required(t) },
+    { field: 'phone', check: phone(t) },
+    { field: 'email', check: email(t) },
+    { field: 'id_type', check: (v, f) => (isBlank(v) && !isBlank(f.id_number) ? t('validations.idPairRequired') : '') },
+  ]
 }
 
 /**
@@ -528,16 +546,9 @@ function closeModal() {
 async function save() {
   modalError.value = ''
   formErrors.value = {}
+  guestTouched.value = true
 
-  // Localized, per-field checks before a single byte leaves the browser.
-  const errors = collectErrors(form, [
-    { field: 'first_name', check: required(t) },
-    { field: 'last_name', check: required(t) },
-    { field: 'phone', check: required(t) },
-    { field: 'phone', check: phone(t) },
-    { field: 'email', check: email(t) },
-    { field: 'id_type', check: (v, f) => (isBlank(v) && !isBlank(f.id_number) ? t('validations.idPairRequired') : '') },
-  ])
+  const errors = collectErrors(form, guestRules())
   if (Object.keys(errors).length) {
     formErrors.value = errors
     return
@@ -566,6 +577,7 @@ async function save() {
     saving.value = false
   }
 }
+bindLiveValidation(watch, () => form, guestSnapshot, guestTouched, formErrors, guestRules)
 
 /**
  * Opens the delete confirmation modal and fetches the impact preview.

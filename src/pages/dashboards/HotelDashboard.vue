@@ -1345,7 +1345,17 @@ import PhoneInput from '@/components/PhoneInput.vue'
 import { requiresProvider } from '@/utils/payments'
 import { formatDateDMY } from '@/utils/dates'
 import { formatPhoneGaps, validatePhoneNumber } from '@/utils/phone'
-import { after, collectErrors, email, minInteger, nonNegative, phone, positive, required } from '@/utils/formValidation'
+import {
+  after,
+  bindLiveValidation,
+  collectErrors,
+  email,
+  minInteger,
+  nonNegative,
+  phone,
+  positive,
+  required,
+} from '@/utils/formValidation'
 import { useCategoriesStore } from '@/stores/categories'
 
 const { t, te } = useI18n()
@@ -2102,22 +2112,31 @@ async function runStayAction(fn) {
 const paymentModal = ref(false)
 const paymentForm = ref({})
 const paymentErrors = ref({})
+const paymentTouched = ref(false)
+const paymentSnapshot = ref({})
 function openPaymentModal() {
   moreOpen.value = false
   paymentForm.value = { amount: null, payment_method: 'cash', payment_provider: '', transaction_reference: '' }
   paymentErrors.value = {}
+  paymentTouched.value = false
+  paymentSnapshot.value = { ...paymentForm.value }
   actionError.value = ''
   paymentModal.value = true
 }
-async function submitPayment() {
-  const f = paymentForm.value
-  const errors = collectErrors(f, [
+function paymentRules() {
+  return [
     { field: 'amount', check: positive(t) },
     { field: 'payment_method', check: required(t) },
-  ])
-  if (requiresProvider(f.payment_method) && !f.payment_provider) {
-    errors.payment_provider = t('validations.fieldRequired')
-  }
+    {
+      field: 'payment_provider',
+      check: (v, f) => (requiresProvider(f.payment_method) && !v ? t('validations.fieldRequired') : ''),
+    },
+  ]
+}
+async function submitPayment() {
+  const f = paymentForm.value
+  paymentTouched.value = true
+  const errors = collectErrors(f, paymentRules())
   if (Object.keys(errors).length) {
     paymentErrors.value = errors
     return
@@ -2134,24 +2153,33 @@ async function submitPayment() {
   await runStayAction(() => paymentApi.store(payload))
   if (actionError.value) paymentModal.value = true
 }
+bindLiveValidation(watch, () => paymentForm.value, paymentSnapshot, paymentTouched, paymentErrors, paymentRules)
 
 /* ----- Add Charges ----- */
 const chargeModal = ref(false)
 const chargeForm = ref({})
 const chargeErrors = ref({})
+const chargeTouched = ref(false)
+const chargeSnapshot = ref({})
 function openChargeModal() {
   moreOpen.value = false
   chargeForm.value = { description: '', amount: null }
   chargeErrors.value = {}
+  chargeTouched.value = false
+  chargeSnapshot.value = { ...chargeForm.value }
   actionError.value = ''
   chargeModal.value = true
 }
-async function submitCharge() {
-  const f = chargeForm.value
-  const errors = collectErrors(f, [
+function chargeRules() {
+  return [
     { field: 'description', check: required(t) },
     { field: 'amount', check: positive(t) },
-  ])
+  ]
+}
+async function submitCharge() {
+  const f = chargeForm.value
+  chargeTouched.value = true
+  const errors = collectErrors(f, chargeRules())
   if (Object.keys(errors).length) {
     chargeErrors.value = errors
     return
@@ -2163,6 +2191,7 @@ async function submitCharge() {
   )
   if (actionError.value) chargeModal.value = true
 }
+bindLiveValidation(watch, () => chargeForm.value, chargeSnapshot, chargeTouched, chargeErrors, chargeRules)
 
 /* ----- Folio operations (discount / adjustment / inclusion / move / upload) ----- */
 
@@ -2281,6 +2310,8 @@ const amendModal = ref(false)
 const amendIsRoomMove = ref(false)
 const amendForm = ref({})
 const amendErrors = ref({})
+const amendTouched = ref(false)
+const amendSnapshot = ref({})
 
 /** Rooms as searchable options for the amend/room-move picker. */
 const roomMoveOptions = computed(() =>
@@ -2307,12 +2338,13 @@ function openAmendModal(roomMove = false) {
     guest_email: res.guest_email || '',
   }
   amendErrors.value = {}
+  amendTouched.value = false
+  amendSnapshot.value = { ...amendForm.value }
   actionError.value = ''
   amendModal.value = true
 }
-async function submitAmend() {
-  const f = amendForm.value
-  const errors = collectErrors(f, [
+function amendRules() {
+  return [
     { field: 'first_name', check: required(t) },
     { field: 'last_name', check: required(t) },
     { field: 'guest_email', check: email(t) },
@@ -2322,7 +2354,12 @@ async function submitAmend() {
     { field: 'check_out_date', check: after(t, 'check_in_date') },
     { field: 'num_adults', check: minInteger(t, 1) },
     { field: 'num_children', check: minInteger(t, 0) },
-  ])
+  ]
+}
+async function submitAmend() {
+  const f = amendForm.value
+  amendTouched.value = true
+  const errors = collectErrors(f, amendRules())
   if (Object.keys(errors).length) {
     amendErrors.value = errors
     return
@@ -2352,6 +2389,7 @@ async function submitAmend() {
   await runStayAction(() => reservationApi.update(activeBar.value.id, payload))
   if (actionError.value) amendModal.value = true
 }
+bindLiveValidation(watch, () => amendForm.value, amendSnapshot, amendTouched, amendErrors, amendRules)
 
 /* ----- Void reservation ----- */
 const voidOpen = ref(false)
@@ -2689,8 +2727,16 @@ ${head}
 const bookingModal = ref(false)
 const bookingForm = ref({})
 const bookingErrors = ref({})
+const bookingTouched = ref(false)
+const bookingSnapshot = ref({})
 
-/** Guest phone displayed with the 255 6747 347 477 gap style; stores digits. */
+/** User-edited booking fields (the suggested total auto-updates separately). */
+function bookingSnapshotKeys(form) {
+  return ['first_name', 'last_name', 'guest_phone', 'country_code', 'booking_type', 'room_id', 'check_in_date', 'check_out_date', 'advance_payment', 'advance_payment_method'].map(
+    (key) => form[key],
+  )
+}
+
 /** Implements a fresh booking form with today → tomorrow defaults. */
 function resetBookingForm() {
   const today = isoKey(startOfDay(new Date()))
@@ -2710,6 +2756,8 @@ function resetBookingForm() {
     advance_payment_date: today,
   }
   bookingErrors.value = {}
+  bookingTouched.value = false
+  bookingSnapshot.value = { ...bookingForm.value }
 }
 
 /** Nights between the selected arrival and departure dates. */
@@ -2759,6 +2807,8 @@ function bookVacantDay(room, iso) {
     total_amount: null,
   }
   bookingErrors.value = {}
+  bookingTouched.value = false
+  bookingSnapshot.value = { ...bookingForm.value }
   actionError.value = ''
   bookingModal.value = true
 }
@@ -2771,9 +2821,8 @@ function openNewBooking() {
 }
 
 /** Creates the reservation and refreshes the chart. */
-async function submitBooking() {
-  const f = bookingForm.value
-  const errors = collectErrors(f, [
+function bookingRules() {
+  return [
     { field: 'first_name', check: required(t) },
     { field: 'last_name', check: required(t) },
     { field: 'guest_phone', check: required(t) },
@@ -2784,7 +2833,12 @@ async function submitBooking() {
     { field: 'check_out_date', check: required(t) },
     { field: 'check_out_date', check: after(t, 'check_in_date') },
     { field: 'advance_payment', check: nonNegative(t) },
-  ])
+  ]
+}
+async function submitBooking() {
+  const f = bookingForm.value
+  bookingTouched.value = true
+  const errors = collectErrors(f, bookingRules())
   if (Object.keys(errors).length) {
     bookingErrors.value = errors
     return
@@ -2806,30 +2860,46 @@ async function submitBooking() {
     resetBookingForm()
   }
 }
+bindLiveValidation(
+  watch,
+  () => bookingForm.value,
+  bookingSnapshot,
+  bookingTouched,
+  bookingErrors,
+  bookingRules,
+  bookingSnapshotKeys,
+)
 
 /* ---------------- Guest registration modal ---------------- */
 
 const guestModal = ref(false)
 const guestForm = ref({})
 const guestErrors = ref({})
+const guestTouched = ref(false)
+const guestSnapshot = ref({})
 
 /** Opens the guest registration form. */
 function openGuestModal() {
   guestForm.value = { first_name: '', last_name: '', phone: '', country_code: 'TZ', email: '' }
   guestErrors.value = {}
+  guestTouched.value = false
+  guestSnapshot.value = { ...guestForm.value }
   actionError.value = ''
   guestModal.value = true
 }
-
-/** Saves the guest record. */
-async function submitGuest() {
-  const errors = collectErrors(guestForm.value, [
+function guestRules() {
+  return [
     { field: 'first_name', check: required(t) },
     { field: 'last_name', check: required(t) },
     { field: 'phone', check: required(t) },
     { field: 'phone', check: phone(t) },
     { field: 'email', check: email(t) },
-  ])
+  ]
+}
+/** Saves the guest record. */
+async function submitGuest() {
+  guestTouched.value = true
+  const errors = collectErrors(guestForm.value, guestRules())
   if (Object.keys(errors).length) {
     guestErrors.value = errors
     return
@@ -2840,6 +2910,7 @@ async function submitGuest() {
   )
   if (!actionError.value) guestModal.value = false
 }
+bindLiveValidation(watch, () => guestForm.value, guestSnapshot, guestTouched, guestErrors, guestRules)
 
 /* ---------------- Housekeeping modal ---------------- */
 

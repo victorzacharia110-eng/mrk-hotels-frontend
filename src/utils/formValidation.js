@@ -83,3 +83,38 @@ export function positive(t) {
     return Number.isNaN(Number(v)) || Number(v) <= 0 ? t('validations.positiveAmount') : ''
   }
 }
+
+/**
+ * Wires a deep watcher so a form validates live: the moment its values differ
+ * from the opening snapshot (first keystroke, date pick, room selection) the
+ * per-field errors start updating on every change and keep clearing as the
+ * user fixes each field. Pristine forms stay quiet until the user interacts.
+ *
+ * @param {Function} watchFn - Vue's watch.
+ * @param {() => object} getForm - Getter returning the current form object.
+ * @param {import('vue').Ref} snapshot - Opening-state snapshot ref (object).
+ * @param {import('vue').Ref} touched - Dirty flag ref (false when opened).
+ * @param {import('vue').Ref} errors - Per-field errors ref.
+ * @param {() => Array} rules - Function returning the rules (fresh each run).
+ * @param {string[] | ((form: object) => Array)} [comparable] - Optional field
+ *   subset (or adjuster fn) to compare; pass for forms where computed values
+ *   (e.g. an auto-suggested total) update on their own.
+ */
+export function bindLiveValidation(watchFn, getForm, snapshot, touched, errors, rules, comparable) {
+  const snapshotOf = (value) => {
+    const obj = value || {}
+    if (!comparable) return obj
+    return typeof comparable === 'function' ? comparable(obj) : comparable.map((key) => obj[key])
+  }
+  watchFn(
+    getForm,
+    () => {
+      if (!touched.value) {
+        if (JSON.stringify(snapshotOf(getForm())) === JSON.stringify(snapshotOf(snapshot.value))) return
+        touched.value = true
+      }
+      errors.value = collectErrors(getForm(), rules())
+    },
+    { deep: true },
+  )
+}
