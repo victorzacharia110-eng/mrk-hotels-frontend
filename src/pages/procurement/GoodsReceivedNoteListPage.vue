@@ -262,6 +262,7 @@
                 <th scope="col">{{ $t('goodsReceived.ordered') }}</th>
                 <th scope="col">{{ $t('goodsReceived.statusReceived') }}</th>
                 <th scope="col">{{ $t('goodsReceived.rejected') }}</th>
+                <th scope="col">{{ $t('goodsReceived.priceDiff') }}</th>
                 <th scope="col">{{ $t('goodsReceived.reason') }}</th>
               </tr>
             </thead>
@@ -274,6 +275,12 @@
                 <td>{{ item.quantity_ordered }}</td>
                 <td>{{ item.quantity_received }}</td>
                 <td>{{ item.quantity_rejected || 0 }}</td>
+                <td>
+                  <span v-if="item.price_difference != null && item.price_difference !== ''" class="pd" :class="item.price_difference > 0 ? 'pd-up' : item.price_difference < 0 ? 'pd-down' : ''">
+                    {{ item.price_difference > 0 ? '+' : '' }}{{ formatMoney(item.price_difference) }}
+                  </span>
+                  <span v-else>-</span>
+                </td>
                 <td>{{ item.rejection_reason || '-' }}</td>
               </tr>
             </tbody>
@@ -515,6 +522,10 @@ function flattenError(err) {
     : err.response?.data?.message || t('common.actionFailed')
 }
 
+function formatMoney(n) {
+  return Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })
+}
+
 onMounted(() => {
   load()
   loadOptions()
@@ -704,4 +715,8 @@ onMounted(() => {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+.pd { font-weight: 700; font-size: 12px; }
+.pd-up { color: #dc2626; }
+.pd-down { color: #16a34a; }
 </style>

@@ -198,6 +198,7 @@
                 <th>{{ $t('goodsReceived.rejected') }}</th>
                 <th>{{ $t('goodsReceived.poUnitPrice') }}</th>
                 <th>{{ $t('goodsReceived.newCost') }}</th>
+                <th>{{ $t('goodsReceived.priceDiff') }}</th>
                 <th>{{ $t('goodsReceived.rejectionReason') }}</th>
               </tr>
             </thead>
@@ -210,6 +211,12 @@
                 <td>{{ item.quantity_rejected || 0 }}</td>
                 <td>TZS {{ formatMoney(item.unit_price) }}</td>
                 <td>TZS {{ formatMoney(item.unit_cost) }}</td>
+                <td>
+                  <span v-if="item.price_difference != null && item.price_difference !== ''" class="price-diff" :class="diffClass(item.price_difference)">
+                    {{ item.price_difference > 0 ? '+' : '' }}{{ formatMoney(item.price_difference) }}
+                  </span>
+                  <span v-else>-</span>
+                </td>
                 <td>{{ item.rejection_reason || '-' }}</td>
               </tr>
             </tbody>
@@ -232,13 +239,13 @@
       </table>
       <table class="print-table">
         <thead>
-          <tr><th>{{ $t('inventory.itemName') }}</th><th>{{ $t('common.unit') }}</th><th>{{ $t('goodsReceived.ordered') }}</th><th>{{ $t('goodsReceived.received') }}</th><th>{{ $t('goodsReceived.rejected') }}</th><th>{{ $t('goodsReceived.poUnitPrice') }}</th><th>{{ $t('goodsReceived.newCost') }}</th></tr>
+          <tr><th>{{ $t('inventory.itemName') }}</th><th>{{ $t('common.unit') }}</th><th>{{ $t('goodsReceived.ordered') }}</th><th>{{ $t('goodsReceived.received') }}</th><th>{{ $t('goodsReceived.rejected') }}</th><th>{{ $t('goodsReceived.poUnitPrice') }}</th><th>{{ $t('goodsReceived.newCost') }}</th><th>{{ $t('goodsReceived.priceDiff') }}</th></tr>
         </thead>
         <tbody>
           <tr v-for="(item, i) in printData.items || []" :key="i">
             <td>{{ item.item_name }}</td><td>{{ item.unit || '-' }}</td><td>{{ item.quantity_ordered ?? '-' }}</td>
             <td>{{ item.quantity_received }}</td><td>{{ item.quantity_rejected || 0 }}</td>
-            <td>{{ formatMoney(item.unit_price) }}</td><td>{{ formatMoney(item.unit_cost) }}</td>
+            <td>{{ formatMoney(item.unit_price) }}</td><td>{{ formatMoney(item.unit_cost) }}</td><td>{{ item.price_difference != null ? formatMoney(item.price_difference) : '-' }}</td>
           </tr>
         </tbody>
       </table>
@@ -313,6 +320,12 @@ function priceDiff(item) {
   const base = Number(item.unit_price || 0)
   const cost = item.unit_cost == null || item.unit_cost === '' ? base : Number(item.unit_cost)
   return Math.round((cost - base) * 100) / 100
+}
+
+function diffClass(value) {
+  const n = Number(value || 0)
+  if (!n) return ''
+  return n > 0 ? 'up' : 'down'
 }
 
 async function load(page = meta.value.current_page) {
