@@ -44,6 +44,13 @@
           <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.orderSummary') }}</span>
         </router-link>
 
+        <router-link :to="{ name: 'cashier-reports' }" class="pos-nav-link"
+          :class="{ active: isActive('/cashier/reports') }" @click="mobileOpen = false"
+          :title="$t('cashier.nav.reports')">
+          <i class="fas fa-chart-line" aria-hidden="true"></i>
+          <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.reports') }}</span>
+        </router-link>
+
         <button type="button" class="pos-nav-heading pos-group" :class="{ open: isOpen('manager') }"
           @click="toggleGroup('manager')" v-show="!sidebarCollapsed"
           :aria-expanded="isOpen('manager')">

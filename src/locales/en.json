@@ -754,6 +754,7 @@
     "messages": "Messages",
     "statuses": "Status",
     "reports": "Reports",
+    "staffReports": "Staff Reports",
     "bookingCom": "Booking.com",
     "quickbooks": "QuickBooks",
     "xero": "Xero",
@@ -3796,7 +3797,13 @@
     "linkOrderSummary": "Order summary",
     "linkRequisitions": "Requisitions",
     "linkCommunication": "Communication",
-    "linkIssueReports": "Issue reports"
+    "linkIssueReports": "Issue reports",
+    "linkStaffReports": "Reports",
+    "reportsTitle": "Reports",
+    "reportsSubtitle": "Department sales, fast-movers, shelf stock and requisitions",
+    "print": "Print",
+    "date": "Date",
+    "lowStockCount": "Low stock items"
   },
   "kitchen": {
     "title": "Kitchen Board",
@@ -4119,7 +4126,8 @@
       "printer": "Printer",
       "printSettings": "Print Settings",
       "waiterAssignment": "Waiter Assignment",
-      "requisitions": "Requisitions"
+      "requisitions": "Requisitions",
+      "reports": "Reports"
     },
     "shift": {
       "title": "Shift Manager",

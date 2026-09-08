@@ -76,6 +76,7 @@ export const MODULES = [
   { key: 'staff', to: '/app/staff', icon: 'fas fa-user-tie', labelKey: 'nav.staff', roles: ['hotel_admin', 'manager'], feature: 'staff' },
   // Business reporting.
   { key: 'reports', to: '/app/reports', icon: 'fas fa-chart-line', labelKey: 'nav.reports', roles: ['hotel_admin', 'manager', 'receptionist'], feature: 'reports' },
+  { key: 'staff-reports', to: '/app/staff-reports', icon: 'fas fa-chart-simple', labelKey: 'nav.staffReports', roles: ['hotel_admin', 'manager', 'waiter', 'bartender', 'staff'] },
   // Accounting reports.
   { key: 'accounting', to: '/app/accounting', icon: 'fas fa-scale-balanced', labelKey: 'accounting.title', roles: ['hotel_admin', 'manager', 'accountant'], feature: 'accounting' },
   // Personal profile, visible to all staff.

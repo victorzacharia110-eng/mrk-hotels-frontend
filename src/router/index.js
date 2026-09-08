@@ -98,6 +98,7 @@ const hotelChildren = [
   { path: 'staff', name: 'hotel-staff', component: () => import('@/pages/staff/StaffListPage.vue'), meta: { module: 'staff' } },
   // Business reports.
   { path: 'reports', name: 'hotel-reports', component: () => import('@/pages/reports/ReportBrowserPage.vue'), meta: { module: 'reports' } },
+  { path: 'staff-reports', name: 'hotel-staff-reports', component: () => import('@/pages/reports/StaffReportsPage.vue'), meta: { module: 'staff-reports' } },
   // Accounting reports.
   { path: 'accounting', name: 'hotel-accounting', component: () => import('@/pages/accounting/AccountingPage.vue'), meta: { module: 'accounting' } },
   // Current user's own profile.
@@ -368,6 +369,12 @@ const routes = [
         name: 'cashier-requisitions',
         component: () => import('@/pages/requisitions/RequisitionPage.vue'),
         meta: { titleKey: 'cashier.nav.requisitions' },
+      },
+      {
+        path: 'reports',
+        name: 'cashier-reports',
+        component: () => import('@/pages/reports/StaffReportsPage.vue'),
+        meta: { titleKey: 'cashier.nav.reports' },
       },
     ],
   },

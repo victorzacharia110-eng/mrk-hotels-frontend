@@ -754,6 +754,7 @@
     "messages": "Jumbe",
     "statuses": "Hali",
     "reports": "Ripoti",
+    "staffReports": "Ripoti za Wafanyakazi",
     "bookingCom": "Booking.com",
     "quickbooks": "QuickBooks",
     "xero": "Xero",
@@ -3796,7 +3797,13 @@
     "linkOrderSummary": "Muhtasari wa oda",
     "linkRequisitions": "Maombi",
     "linkCommunication": "Mawasiliano",
-    "linkIssueReports": "Ripoti za matatizo"
+    "linkIssueReports": "Ripoti za matatizo",
+    "linkStaffReports": "Ripoti",
+    "reportsTitle": "Ripoti",
+    "reportsSubtitle": "Mauzo ya idara, bidhaa zinazouzwa haraka, stoo na maombi",
+    "print": "Chapisha",
+    "date": "Tarehe",
+    "lowStockCount": "Bidhaa za stoo ya chini"
   },
   "kitchen": {
     "title": "Ubao wa Jikoni",
@@ -4119,7 +4126,8 @@
       "printer": "Printa",
       "printSettings": "Mipangilio ya Uchapishaji",
       "waiterAssignment": "Mgawanyo wa Waiters",
-      "requisitions": "Maombi ya Bidhaa"
+      "requisitions": "Maombi ya Bidhaa",
+      "reports": "Ripoti"
     },
     "shift": {
       "title": "Meneja wa Zamu",
