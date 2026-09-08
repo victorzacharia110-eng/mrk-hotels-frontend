@@ -232,10 +232,8 @@ export function formatPhoneInput(value, defaultCountry = DEFAULT_COUNTRY) {
   const digits = intl ? phone.slice(1) : subscriberDigits(phone, defaultCountry)
 
   if (defaultCountry === 'TZ') {
-    if (intl && digits.startsWith('255')) {
-      return `+${groupDigits(digits, [3, 4, 3, 2])}`
-    }
-    return digits ? groupDigits(digits, [4, 3, 2]) : ''
+    const groups = intl && digits.startsWith('255') ? [3, 4, 3, 2] : [4, 3, 2]
+    return intl ? `+${groupDigits(digits, groups)}` : groupDigits(digits, groups)
   }
 
   return formatIncompletePhoneNumber(intl ? `+${digits}` : digits, defaultCountry)
@@ -295,8 +293,23 @@ export function validatePhoneNumber(value, defaultCountry = DEFAULT_COUNTRY) {
     ? Math.min(MAX_E164_DIGITS, callingLength + maxNationalLength(country))
     : (supported ? maxNationalLength(country) : MAX_E164_DIGITS)
 
+  // First national digits that can legitimately start a number for this
+  // country. A partial outside the set can never become a real number (e.g.
+  // on TZ a national number never opens with 2 when only mobiles are used),
+  // so it is flagged immediately instead of being waved through as "too
+  // short, keep typing". An international prefix is only judged once its
+  // country code is complete.
+  const allowedFirstDigits = { TZ: ['5', '6', '7', '8'] }
+  const nationalDigits =
+    intl && supported
+      ? (digits.length >= callingLength ? digits.slice(callingLength) : '')
+      : digits.replace(/^0+/, '')
+  const impossiblePartial = Boolean(
+    nationalDigits && allowedFirstDigits[country] && !allowedFirstDigits[country].includes(nationalDigits[0]),
+  )
+
   if (digits.length < minDigits) {
-    return { valid: false, possible: false, number: phone, reason: 'too_short' }
+    return { valid: false, possible: false, number: phone, reason: impossiblePartial ? 'invalid' : 'too_short' }
   }
   if (digits.length > maxDigits) {
     return { valid: false, possible: false, number: phone, reason: 'too_long' }

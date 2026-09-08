@@ -83,8 +83,16 @@ describe('validatePhoneNumber', () => {
   })
 
   it('says too_short while the number is still being typed', () => {
-    expect(validatePhoneNumber('278', 'TZ').reason).toBe('too_short')
+    expect(validatePhoneNumber('674', 'TZ').reason).toBe('too_short')
     expect(validatePhoneNumber('6747', 'TZ').reason).toBe('too_short')
+    expect(validatePhoneNumber('+2556', 'TZ').reason).toBe('too_short')
+    expect(validatePhoneNumber('+2', 'TZ').reason).toBe('too_short')
+  })
+
+  it('flags an impossible start digit immediately (must be a real TZ prefix)', () => {
+    expect(validatePhoneNumber('278', 'TZ').reason).toBe('invalid')
+    expect(validatePhoneNumber('1', 'TZ').reason).toBe('invalid')
+    expect(validatePhoneNumber('+2552', 'TZ').reason).toBe('invalid')
   })
 
   it('says too_long only past the dialling-plan length', () => {
