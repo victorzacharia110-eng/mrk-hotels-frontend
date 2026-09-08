@@ -1070,7 +1070,7 @@
               </div>
               <label class="sv-field">
                 <span>{{ $t('stayview.phone') }}</span>
-                <input v-model="guestForm.phone" type="tel" class="input" required />
+                <PhoneInput v-model="guestForm.phone" v-model:countryCode="guestForm.country_code" required />
               </label>
               <label class="sv-field">
                 <span>{{ $t('stayview.email') }}</span>
@@ -1322,7 +1322,7 @@ import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
 import { requiresProvider } from '@/utils/payments'
 import { formatDateDMY } from '@/utils/dates'
-import { formatPhoneGaps, normalizePhoneNumber } from '@/utils/phone'
+import { formatPhoneGaps, validatePhoneNumber } from '@/utils/phone'
 import { useCategoriesStore } from '@/stores/categories'
 
 const { t, te } = useI18n()
@@ -2266,12 +2266,18 @@ async function submitAmend() {
     num_children: Number(f.num_children) || 0,
   }
   const res = folio.value?.reservation || {}
-  const newPhone = normalizePhoneNumber(f.guest_phone, f.country_code || 'TZ')
   if (f.first_name !== (res.first_name ?? '') && f.first_name) payload.first_name = f.first_name
   if (f.last_name !== (res.last_name ?? '') && f.last_name) payload.last_name = f.last_name
-  if (String(newPhone || '').replace(/\D/g, '') !== String(res.guest_phone || '').replace(/\D/g, '') && newPhone) {
-    payload.guest_phone = newPhone
-    if (f.country_code && f.country_code !== (res.country_code || '')) payload.country_code = f.country_code
+  if (f.guest_phone) {
+    const phoneCheck = validatePhoneNumber(f.guest_phone, f.country_code || 'TZ')
+    if (!phoneCheck.valid) {
+      actionError.value = phoneCheck.message
+      return
+    }
+    if (String(phoneCheck.number || '').replace(/\D/g, '') !== String(res.guest_phone || '').replace(/\D/g, '')) {
+      payload.guest_phone = phoneCheck.number
+      if (f.country_code && f.country_code !== (res.country_code || '')) payload.country_code = f.country_code
+    }
   }
   if (f.guest_email !== (res.guest_email ?? '') && f.guest_email) payload.guest_email = f.guest_email
   amendModal.value = false
@@ -2696,13 +2702,18 @@ function openNewBooking() {
 /** Creates the reservation and refreshes the chart. */
 async function submitBooking() {
   if (!bookingForm.value.first_name || !bookingForm.value.last_name || !bookingForm.value.room_id) return
+  const phoneCheck = validatePhoneNumber(bookingForm.value.guest_phone, bookingForm.value.country_code || 'TZ')
+  if (!phoneCheck.valid) {
+    actionError.value = phoneCheck.message
+    return
+  }
   await runAction(async () => {
     const payload = { ...bookingForm.value }
     if (!payload.advance_payment_method) {
       delete payload.advance_payment_method
       delete payload.advance_payment_date
     }
-    payload.guest_phone = normalizePhoneNumber(payload.guest_phone, payload.country_code || 'TZ')
+    payload.guest_phone = phoneCheck.number
     await reservationApi.store({ ...payload, status: 'confirmed' })
   })
   if (!actionError.value) {
@@ -2720,15 +2731,22 @@ const guestForm = ref({})
 
 /** Opens the guest registration form. */
 function openGuestModal() {
-  guestForm.value = { first_name: '', last_name: '', phone: '', email: '' }
+  guestForm.value = { first_name: '', last_name: '', phone: '', country_code: 'TZ', email: '' }
   actionError.value = ''
   guestModal.value = true
 }
 
 /** Saves the guest record. */
 async function submitGuest() {
-  if (!guestForm.value.first_name || !guestForm.value.phone) return
-  await runAction(() => guestApi.store({ ...guestForm.value }))
+  if (!guestForm.value.first_name) return
+  const phoneCheck = validatePhoneNumber(guestForm.value.phone, guestForm.value.country_code || 'TZ')
+  if (!phoneCheck.valid) {
+    actionError.value = phoneCheck.message
+    return
+  }
+  await runAction(() =>
+    guestApi.store({ ...guestForm.value, phone: phoneCheck.number, country_code: guestForm.value.country_code }),
+  )
   if (!actionError.value) guestModal.value = false
 }
 

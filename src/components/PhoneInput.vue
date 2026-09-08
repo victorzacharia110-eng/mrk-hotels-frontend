@@ -2,6 +2,11 @@
   PhoneInput — phone number field with a searchable country picker.
   Emits the live-formatted number and the selected ISO country code; changing
   the country re-formats the typed digits under the new dialling conventions.
+
+  Strict by design: letters and special characters are never accepted (only a
+  leading '+' and digits survive), and the field refuses to grow beyond the
+  selected country's maximum length. An invalid-but-possible number surfaces a
+  message on blur; over-length input is truncated at the cap.
 -->
 
 <template>
@@ -17,13 +22,18 @@
     <!-- Number field, formatted live as the user types. -->
     <input
       class="input number-input"
+      :class="{ 'number-invalid': invalidMsg }"
       type="tel"
       :value="modelValue"
       :placeholder="placeholder"
       :required="required"
       :disabled="disabled"
       @input="onPhoneInput($event.target.value)"
+      @blur="onBlur"
     />
+    <span v-if="invalidMsg" class="phone-invalid" role="alert">
+      <i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ invalidMsg }}
+    </span>
   </div>
 </template>
 
@@ -31,12 +41,13 @@
 import { computed, onMounted, ref } from 'vue'
 import { formatIncompletePhoneNumber } from 'libphonenumber-js'
 import { getCountries, loadLocationData } from '@/utils/locations'
-import { formatPhoneInput } from '@/utils/phone'
+import { capPhoneInput, formatPhoneInput, validatePhoneNumber } from '@/utils/phone'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 
 /**
- * Phone field with a searchable country/country-code dropdown and space
- * formatting that follows the selected country's dialling conventions.
+ * Phone field with a searchable country/country-code dropdown, space
+ * formatting that follows the selected country's dialling conventions, and
+ * strict length/character gating per that country.
  *
  * The parent owns two values: the ISO code (sent to the API as country_code)
  * and the formatted number itself.
@@ -56,6 +67,8 @@ const emit = defineEmits(['update:modelValue', 'update:countryCode'])
 // the flag, name and dialling code in each label.
 const countries = ref([])
 
+const invalidMsg = ref('')
+
 const countryOptions = computed(() =>
   countries.value.map((c) => ({ value: c.code, label: `${c.flag} ${c.name} (+${c.phoneCode})` })),
 )
@@ -71,13 +84,16 @@ function countryDial(code) {
 }
 
 /**
- * Reacts to typing in the number field, emitting a value formatted for the
- * currently selected country's dialling conventions.
+ * Reacts to typing in the number field: sanitizes to '+' and digits, hard-caps
+ * the length the selected country's dialling plan allows, then emits the value
+ * formatted for that country.
  *
  * @param {string} value - Raw input from the phone field.
  */
 function onPhoneInput(value) {
-  emit('update:modelValue', formatPhoneInput(value, props.countryCode))
+  invalidMsg.value = ''
+  const capped = capPhoneInput(value, props.countryCode)
+  emit('update:modelValue', formatPhoneInput(capped, props.countryCode))
 }
 
 /**
@@ -94,6 +110,16 @@ function onCountryChange(code) {
 
   emit('update:countryCode', code)
   emit('update:modelValue', withoutDial ? formatIncompletePhoneNumber(withoutDial, code) : '')
+}
+
+/**
+ * Validates the entered number against the selected country's dialling plan
+ * when the field loses focus, surfacing a message for impossible or
+ * over-length input.
+ */
+function onBlur() {
+  const res = validatePhoneNumber(props.modelValue, props.countryCode)
+  invalidMsg.value = res.valid || res.possible ? '' : res.message
 }
 
 /** Loads the country list once the component mounts (dataset fetched lazily). */
@@ -116,5 +142,22 @@ onMounted(async () => {
 
 .number-input {
   width: 100%;
+}
+
+.number-invalid {
+  border-color: #dc2626;
+}
+
+.phone-invalid {
+  color: #dc2626;
+  font-size: 11.5px;
+  line-height: 1.3;
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.phone-invalid i {
+  margin-top: 1px;
 }
 </style>
