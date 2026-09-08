@@ -98,6 +98,13 @@ describe('validatePhoneNumber', () => {
     expect(validatePhoneNumber('+2555', 'TZ').reason).toBe('invalid')
   })
 
+  it('rejects full-length numbers that merely open with a bad digit, even if libphonenumber would call them valid', () => {
+    expect(validatePhoneNumber('511111111', 'TZ').reason).toBe('invalid')
+    expect(validatePhoneNumber('811111111', 'TZ').reason).toBe('invalid')
+    expect(validatePhoneNumber('+255911111111', 'TZ').reason).toBe('invalid')
+    expect(normalizePhoneNumber('511111111', 'TZ')).toBe('')
+  })
+
   it('says too_long only past the dialling-plan length', () => {
     expect(validatePhoneNumber('67473474712', 'TZ').reason).toBe('too_long')
     expect(validatePhoneNumber('+2556747347470', 'TZ').reason).toBe('too_long')

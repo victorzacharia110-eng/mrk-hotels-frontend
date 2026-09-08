@@ -293,23 +293,26 @@ export function validatePhoneNumber(value, defaultCountry = DEFAULT_COUNTRY) {
     ? Math.min(MAX_E164_DIGITS, callingLength + maxNationalLength(country))
     : (supported ? maxNationalLength(country) : MAX_E164_DIGITS)
 
-  // First national digits that can legitimately start a number for this
-  // country. A partial outside the set can never become a real number (e.g.
-  // on TZ a national number never opens with 2 when only mobiles are used),
-  // so it is flagged immediately instead of being waved through as "too
-  // short, keep typing". An international prefix is only judged once its
-  // country code is complete.
+// First national digits that can legitimately start a number for this
+  // country. For TZ only mobile prefixes open with 6 or 7 — a number that
+  // starts 2, 3, 4, 5, 8, 9 or 0 can never be saved, at ANY length. A partial
+  // is flagged the moment the bad digit lands (instead of being waved through
+  // as "too short, keep typing"); a full-length number with a bad first digit
+  // still fails even when libphonenumber's metadata would call it valid.
   const allowedFirstDigits = { TZ: ['6', '7'] }
   const nationalDigits =
     intl && supported
       ? (digits.length >= callingLength ? digits.slice(callingLength) : '')
       : digits.replace(/^0+/, '')
-  const impossiblePartial = Boolean(
+  const invalidPrefix = Boolean(
     nationalDigits && allowedFirstDigits[country] && !allowedFirstDigits[country].includes(nationalDigits[0]),
   )
 
+  if (invalidPrefix) {
+    return { valid: false, possible: false, number: phone, reason: 'invalid' }
+  }
   if (digits.length < minDigits) {
-    return { valid: false, possible: false, number: phone, reason: impossiblePartial ? 'invalid' : 'too_short' }
+    return { valid: false, possible: false, number: phone, reason: 'too_short' }
   }
   if (digits.length > maxDigits) {
     return { valid: false, possible: false, number: phone, reason: 'too_long' }
