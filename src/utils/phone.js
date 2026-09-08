@@ -132,8 +132,34 @@ export function formatPhoneGaps(value) {
 }
 
 /**
+ * Splits a digit string into chunks of the given sizes (left to right),
+ * joining them with the gap style used on the front desk. Stops when the
+ * digits run out, so a partial number is grouped progressively as typing
+ * moves along.
+ * @param {string} digits - The digits to group.
+ * @param {number[]} sizes - Chunk sizes from the left.
+ * @returns {string} Digits joined with single spaces, e.g. '0674 734 747'.
+ */
+function groupDigits(digits, sizes) {
+  const parts = []
+  let index = 0
+  for (const size of sizes) {
+    if (index >= digits.length) break
+    parts.push(digits.slice(index, index + size))
+    index += size
+  }
+  return parts.join(' ')
+}
+
+/**
  * Formats a partially typed phone number for display, applying the spacing of
  * the given country's dialling conventions without demanding a valid number.
+ *
+ * Tanzanian numbers follow the gap style the front desk asked for, applied
+ * digit by digit as they are typed: a local 0-prefixed number becomes
+ * `0674 734 747` (4-3-3) and an international one `255 6747 347 47`
+ * (3-4-3-2). Every other country falls back to libphonenumber's own partial
+ * formatting.
  * @param {string} value - Sanitized (or raw) input from the phone field.
  * @param {string} [defaultCountry] - ISO country used when no + prefix is typed.
  * @returns {string} The formatted partial number.
@@ -152,6 +178,17 @@ export function formatPhoneInput(value, defaultCountry = DEFAULT_COUNTRY) {
   // libphonenumber cannot format a bare plus sign; keep it as typed.
   if (phone === '+') {
     return '+'
+  }
+
+  const intl = phone.startsWith('+')
+  const digits = intl ? phone.slice(1) : phone
+  if (defaultCountry === 'TZ') {
+    if (intl && digits.startsWith('255')) {
+      return `+${groupDigits(digits, [3, 4, 3, 2])}`
+    }
+    if (!intl && digits.startsWith('0')) {
+      return groupDigits(digits, [4, 3, 3])
+    }
   }
 
   return formatIncompletePhoneNumber(phone, defaultCountry)

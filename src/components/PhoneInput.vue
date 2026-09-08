@@ -28,7 +28,7 @@
       :placeholder="placeholder"
       :required="required"
       :disabled="disabled"
-      @input="onPhoneInput($event.target.value)"
+      @input="onPhoneInput($event.target.value, $event)"
       @blur="onBlur"
     />
     <span v-if="invalidMsg || error" class="phone-invalid" role="alert">
@@ -40,7 +40,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { formatIncompletePhoneNumber } from 'libphonenumber-js'
 import { getCountries, loadLocationData } from '@/utils/locations'
 import { capPhoneInput, formatPhoneInput, validatePhoneNumber } from '@/utils/phone'
 import SearchableSelect from '@/components/SearchableSelect.vue'
@@ -90,14 +89,23 @@ function countryDial(code) {
 /**
  * Reacts to typing in the number field: sanitizes to '+' and digits, hard-caps
  * the length the selected country's dialling plan allows, then emits the value
- * formatted for that country.
+ * formatted for that country. Because Vue skips patching the input when the
+ * emitted value is identical to the current modelValue, a stray letter would
+ * otherwise linger on screen — so the DOM is corrected immediately in that
+ * case.
  *
  * @param {string} value - Raw input from the phone field.
+ * @param {Event} event - The originating input event (for a direct DOM fix).
  */
-function onPhoneInput(value) {
+function onPhoneInput(value, event) {
   invalidMsg.value = ''
   const capped = capPhoneInput(value, props.countryCode)
-  emit('update:modelValue', formatPhoneInput(capped, props.countryCode))
+  const formatted = formatPhoneInput(capped, props.countryCode)
+  if (formatted !== props.modelValue) {
+    emit('update:modelValue', formatted)
+  } else if (event?.target && event.target.value !== formatted) {
+    event.target.value = formatted
+  }
 }
 
 /**
@@ -113,7 +121,7 @@ function onCountryChange(code) {
   const withoutDial = oldDial && digits.startsWith(oldDial) ? digits.slice(String(oldDial).length) : digits
 
   emit('update:countryCode', code)
-  emit('update:modelValue', withoutDial ? formatIncompletePhoneNumber(withoutDial, code) : '')
+  emit('update:modelValue', formatPhoneInput(withoutDial, code))
 }
 
 /**
