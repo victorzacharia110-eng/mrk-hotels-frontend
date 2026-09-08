@@ -41,12 +41,15 @@ export function email(t) {
       : t('validations.invalidEmail')
 }
 
-/** Blank is left to required(); anything typed is judged by the dialling plan. */
+/** Blank is left to required(); anything typed is judged by the dialling plan.
+ * A still-too-short number says nothing ("keep typing") — it must never
+ * scream "too long" while the receptionist is in the middle of it. */
 export function phone(t) {
   return (v, form) => {
     if (isBlank(v)) return ''
     const res = validatePhoneNumber(v, form.country_code || 'TZ')
     if (res.valid) return ''
+    if (res.reason === 'too_short') return ''
     return res.reason === 'too_long' ? t('validations.phoneTooLong') : t('validations.phoneInvalid')
   }
 }

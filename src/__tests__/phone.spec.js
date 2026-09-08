@@ -73,11 +73,32 @@ describe('validatePhoneNumber', () => {
   it('accepts a valid TZ national number (no leading 0 typed)', () => {
     const res = validatePhoneNumber('674734747', 'TZ')
     expect(res.valid).toBe(true)
+    expect(res.reason).toBe('valid')
     expect(res.number).toBe('+255674734747')
+  })
+
+  it('accepts a valid international TZ number', () => {
+    const res = validatePhoneNumber('+255674734747', 'TZ')
+    expect(res.valid).toBe(true)
+  })
+
+  it('says too_short while the number is still being typed', () => {
+    expect(validatePhoneNumber('278', 'TZ').reason).toBe('too_short')
+    expect(validatePhoneNumber('6747', 'TZ').reason).toBe('too_short')
+  })
+
+  it('says too_long only past the dialling-plan length', () => {
+    expect(validatePhoneNumber('67473474712', 'TZ').reason).toBe('too_long')
+    expect(validatePhoneNumber('+2556747347470', 'TZ').reason).toBe('too_long')
+  })
+
+  it('labels a full-length but wrong number invalid', () => {
+    expect(validatePhoneNumber('111111111', 'TZ').reason).toBe('invalid')
   })
 
   it('normalizes a valid TZ number to E.164', () => {
     expect(normalizePhoneNumber('6747 347 47', 'TZ')).toBe('+255674734747')
+    expect(normalizePhoneNumber('278', 'TZ')).toBe('')
   })
 
   it('rejects nonsense input with a reason', () => {

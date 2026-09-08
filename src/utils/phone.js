@@ -46,6 +46,29 @@ function maxNationalLength(countryCode) {
   return max
 }
 
+const nationalMinCache = {}
+
+/**
+ * Shortest national number (without the country code) the given country's
+ * metadata accepts. Anything below this is still being typed, not invalid.
+ * @param {string} countryCode - ISO country code.
+ * @returns {number} Minimum national-number length in digits.
+ */
+function minNationalLength(countryCode) {
+  if (nationalMinCache[countryCode] != null) return nationalMinCache[countryCode]
+  let min = 0
+  try {
+    const metadata = new Metadata()
+    metadata.country(countryCode)
+    const lengths = metadata.possibleLengths ? metadata.possibleLengths() : []
+    if (lengths.length) min = Math.min(...lengths)
+  } catch {
+    // Unknown country — treat any input as (still) typable.
+  }
+  nationalMinCache[countryCode] = min
+  return min
+}
+
 /**
  * Longest number (in digits, excluding the '+' sign) the selected country can
  * ever represent: country code + longest national number, never more than the
@@ -239,14 +262,19 @@ export function formatPhoneNational(value) {
  * Strictly validates a phone number against the given country's dialling plan.
  * @param {string} value - Phone number as entered.
  * @param {string} [defaultCountry] - ISO country used when no + prefix is given.
- * @returns {{ valid: boolean, possible: boolean, number: string, reason: 'valid'|'too_long'|'invalid' }}
+ * @returns {{ valid: boolean, possible: boolean, number: string, reason: 'valid'|'too_short'|'too_long'|'invalid' }}
  *   - valid: the number is fully valid for its country.
  *   - possible: it has a plausible length (but may be an unassigned number).
  *   - number: the E.164 form when valid, otherwise the cleaned input.
- *   - reason: why the number is not valid ('too_long' vs 'invalid'), or 'valid'.
+ *   - reason: why the number is not valid:
+ *       'too_short' — not enough digits yet, still being typed;
+ *       'too_long'  — more digits than the dialling plan allows;
+ *       'invalid'   — wrong number for its country.
  *
  * This helper is intentionally message-free — callers translate the reason
  * into the user's language (en/sw), so validation text never leaks English.
+ * Callers that validate live should treat 'too_short' as "keep typing" and
+ * show nothing, so a half-typed number never cries "too long".
  */
 export function validatePhoneNumber(value, defaultCountry = DEFAULT_COUNTRY) {
   const empty = { valid: false, possible: false, number: '', reason: 'invalid' }
@@ -258,7 +286,23 @@ export function validatePhoneNumber(value, defaultCountry = DEFAULT_COUNTRY) {
   if (!phone) return empty
 
   const country = /^[A-Za-z]{2}$/.test(defaultCountry) ? defaultCountry : DEFAULT_COUNTRY
-  const parsed = phone.startsWith('+')
+  const supported = isSupportedCountry(country)
+  const intl = phone.startsWith('+')
+  const digits = phone.replace(/\D/g, '')
+  const callingLength = supported ? String(getCountryCallingCode(country)).length : 0
+  const minDigits = (intl ? callingLength : 0) + (supported ? minNationalLength(country) : 0)
+  const maxDigits = intl
+    ? Math.min(MAX_E164_DIGITS, callingLength + maxNationalLength(country))
+    : (supported ? maxNationalLength(country) : MAX_E164_DIGITS)
+
+  if (digits.length < minDigits) {
+    return { valid: false, possible: false, number: phone, reason: 'too_short' }
+  }
+  if (digits.length > maxDigits) {
+    return { valid: false, possible: false, number: phone, reason: 'too_long' }
+  }
+
+  const parsed = intl
     ? parsePhoneNumberFromString(phone)
     : parsePhoneNumberFromString(phone, country)
 
@@ -269,7 +313,7 @@ export function validatePhoneNumber(value, defaultCountry = DEFAULT_COUNTRY) {
     valid: false,
     possible: parsed.isPossible(),
     number: phone,
-    reason: parsed.isPossible() ? 'invalid' : 'too_long',
+    reason: 'invalid',
   }
 }
 
