@@ -145,12 +145,12 @@
               :key="tbl.table_id"
               type="button"
               class="table-chip"
-              :class="tableOccupiedByOther(tbl.table_name) ? 'occupied' : 'free'"
+              :class="tableHasLiveOrder(tbl.table_name) ? 'occupied' : 'free'"
               :disabled="tableOccupiedByOther(tbl.table_name)"
               @click="selectTable(tbl)"
             >
               <span class="table-chip-name">{{ tbl.table_name }}</span>
-              <span v-if="tableOccupiedByOther(tbl.table_name)" class="table-chip-occ">
+              <span v-if="tableHasLiveOrder(tbl.table_name)" class="table-chip-occ">
                 {{ $t('orderTaker.occupiedBy', { waiter: occupiedTables.get(String(tbl.table_name)) }) }}
               </span>
               <span v-else class="table-chip-free">{{ $t('orderTaker.tableFree') }}</span>
@@ -410,6 +410,9 @@
             </router-link>
             <router-link to="/app/issue-reports" class="summary-link">
               <i class="fas fa-flag" aria-hidden="true"></i> {{ $t('staffDashboard.linkIssueReports') }}
+            </router-link>
+            <router-link to="/app/staff-reports" class="summary-link">
+              <i class="fas fa-chart-line" aria-hidden="true"></i> {{ $t('staffDashboard.linkStaffReports') }}
             </router-link>
           </div>
         </template>
@@ -831,6 +834,7 @@ function switchDepartment(dept) {
   form.value = { table_number: '', covers: 0, order_type: defaultOrderType(), notes: '' }
   loadMenu()
   loadOpenOrders()
+  loadDeptOrders()
   if (activeTab.value === 'dashboard') loadDashboard()
 }
 
@@ -866,6 +870,7 @@ const paymentMethodOptions = PAYMENT_METHODS.map((method) => ({
 function switchToOpen() {
   activeTab.value = 'open'
   loadOpenOrders()
+  loadDeptOrders()
 }
 
 /* ---------------- Waiter account: order summary + quick links ---------------- */
@@ -1120,6 +1125,7 @@ async function advanceOrder(order, status) {
     sentToast.value = t('orderTaker.orderUpdated', { number: order.order_number })
     setTimeout(() => (sentToast.value = ''), 3000)
     await loadOpenOrders()
+    loadDeptOrders()
     // Cloud Print Settings: print a void receipt when an order is cancelled.
     if (status === 'cancelled' && printStore.printOnVoid && order) {
       const hotel = authStore.user?.tenant?.hotel_name || 'MRK Hotels'
@@ -1251,15 +1257,32 @@ const tables = ref([])
 const tableLocations = ref([])
 const DEFAULT_LOCATIONS = ['restaurant', 'bar', 'lounge', 'terrace']
 
-// Tables currently held by an open, unpaid order (occupied until the bill is
-// settled) — map of table name -> waiter who occupies it. Shared from the
-// open-orders board so a waiter can never double-book a live table.
+// Department-wide live tickets (EVERY staff member's open, unpaid orders) used
+// to flag taken tables. The board above is scoped to the signed-in waiter, so
+// occupancy must come from its own query or another waiter's table would stay
+// green and get double-booked.
+const deptOrders = ref([])
+
+async function loadDeptOrders() {
+  try {
+    const res = await orderApi.index({ department: department.value, per_page: 100 })
+    const rows = Array.isArray(res.data) ? res.data : res.data?.data || []
+    deptOrders.value = rows.filter(
+      (order) => !['completed', 'cancelled'].includes(order.status) && order.payment_status !== 'paid',
+    )
+  } catch {
+    deptOrders.value = []
+  }
+}
+
+// Tables currently held by an open, unpaid order in this department (occupied
+// until the bill is settled) — map of table name -> waiter who occupies it.
+// Department-wide on purpose: a waiter/bartender can never see a taken table
+// as green, nor open a live ticket on a table someone else already holds.
 const occupiedTables = computed(() => {
   const map = new Map()
-  for (const order of openOrders.value) {
+  for (const order of deptOrders.value) {
     if (!order.table_number) continue
-    if (['completed', 'cancelled'].includes(order.status)) continue
-    if (order.payment_status === 'paid') continue
     const key = String(order.table_number)
     if (!map.has(key)) map.set(key, order.waiter_name || t('orderTaker.otherWaiter'))
   }
@@ -1293,6 +1316,11 @@ function ownLiveOrderForTable(name) {
  *  other table starts a fresh order. */
 function selectTable(tbl) {
   const name = tbl.table_name
+  // Another staff member's live ticket: do not even start a fresh order here.
+  if (tableOccupiedByOther(name)) {
+    sendError.value = t('orderTaker.tableOccupied')
+    return
+  }
   const continueTarget = ownLiveOrderForTable(name)
 
   if (continueTarget) {
@@ -1742,6 +1770,7 @@ async function sendOrder() {
     }
     setTimeout(() => (sentToast.value = ''), 4000)
     loadOpenOrders()
+    loadDeptOrders()
     // Refreshes live stock levels so newly depleted items grey out at once.
     loadMenu()
   } catch (err) {
@@ -1777,9 +1806,12 @@ onMounted(() => {
   loadMenu()
   loadTables()
   loadOpenOrders()
+  loadDeptOrders()
   if (activeTab.value === 'dashboard') loadDashboard()
-  // While the open-orders tab is showing, keep the board fresh every 30s.
+  // Keep the floor fresh: the personal board and the department occupancy map
+  // refresh on a timer so taken tables and new orders always turn up.
   openPoll = setInterval(() => {
+    loadDeptOrders()
     if (activeTab.value === 'open') loadOpenOrders()
     if (activeTab.value === 'dashboard') loadDashboard()
   }, 30000)
