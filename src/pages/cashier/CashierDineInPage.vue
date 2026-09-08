@@ -44,7 +44,7 @@
         <p v-else-if="!filteredTables.length && !busy" class="empty">{{ $t('cashier.dineIn.noTables') }}</p>
         <div class="pos-tables">
           <div v-for="table in filteredTables" :key="table.table_id" class="pos-table"
-            :class="[table.status, { frozen: frozenTableIds.has(table.table_name), 'has-orders': (table._waitersCount || 0) > 0 }]">
+            :class="[effectiveStatus(table), { frozen: frozenTableIds.has(table.table_name), 'has-orders': (table._waitersCount || 0) > 0 }]">
 
             <!-- Clickable card body → ticket actions or take order -->
             <button class="pos-table-body" @click="openTable(table)">
@@ -269,8 +269,17 @@ const activeTable = ref(null)
 const ticketTable = ref(null)
 let timerHandle = null
 
-const occupiedCount = computed(() => tables.value.filter((x) => x.status === 'occupied').length)
-const vacantCount = computed(() => tables.value.filter((x) => x.status === 'available').length)
+const occupiedCount = computed(() => tables.value.filter((x) => effectiveStatus(x) === 'occupied').length)
+const vacantCount = computed(() => tables.value.filter((x) => effectiveStatus(x) === 'available').length)
+
+/** Real occupancy: a table is occupied the moment any running ticket sits on
+ * it, even if its status column was never updated (e.g. after a void or a
+ * manual flag). A frozen ticket still keeps the guest seated until settlement. */
+function effectiveStatus(table) {
+  const hasAnyTicket = (runningByTable.value[table.table_name] || []).length > 0
+  if (hasAnyTicket) return 'occupied'
+  return table.status === 'occupied' ? 'occupied' : table.status || 'available'
+}
 
 const runningByTable = computed(() => {
   const map = {}
@@ -395,11 +404,10 @@ const transferTargets = computed(() => {
   const waiterName = tables.value.find((x) => x.table_name === src)?.waiter?.full_name || ''
   return tables.value
     .filter((x) => x.table_name !== src && x.is_active !== false && !frozenTableIds.value.has(x.table_name))
-    .filter((x) =>
-      x.status === 'available'
+    .filter((x) => effectiveStatus(x) === 'available'
       || ((runningByTable.value[x.table_name] || []).length && (x.waiter?.full_name || '') === waiterName),
     )
-    .map((x) => ({ value: x.table_name, label: `${x.table_name} — ${x.status === 'available' ? t('cashier.dineIn.vacant') : t('cashier.dineIn.occupied')}` }))
+    .map((x) => ({ value: x.table_name, label: `${x.table_name} — ${effectiveStatus(x) === 'available' ? t('cashier.dineIn.vacant') : t('cashier.dineIn.occupied')}` }))
 })
 
 function openTransfer(table) {
