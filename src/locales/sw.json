@@ -3928,6 +3928,7 @@
     "register": {
       "status": "Hali ya kasha",
       "open": "Fungua kasha",
+      "closed": "Kasha limefungwa",
       "close": "Funga kasha",
       "openingFloat": "Fedha za mwanzo",
       "currentCash": "Fedha za sasa",

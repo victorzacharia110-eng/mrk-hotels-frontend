@@ -3928,6 +3928,7 @@
     "register": {
       "status": "Register status",
       "open": "Open register",
+      "closed": "Register closed",
       "close": "Close register",
       "openingFloat": "Opening float",
       "currentCash": "Current cash",
