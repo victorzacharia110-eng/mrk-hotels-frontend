@@ -255,6 +255,175 @@
           </div>
         </div>
       </template>
+
+      <template v-else-if="report && activeReport === 'arrival-list'">
+        <div class="rb-report-card">
+          <div class="rb-report-head">
+            <h2>{{ activeLabel }}</h2>
+            <span class="rb-date">{{ prettyDate(filterValues.from) }} → {{ prettyDate(filterValues.to) }}</span>
+          </div>
+
+          <div class="rb-numcols">
+            <div class="rb-report-row">
+              <span class="rb-report-row-label">{{ $t('reportBrowser.bookingsBooked') }}</span>
+              <strong>{{ report.booked_in_period }}</strong>
+            </div>
+            <div class="rb-report-row">
+              <span class="rb-report-row-label">{{ $t('reportBrowser.arrivals') }}</span>
+              <strong>{{ report.arrivals }}</strong>
+            </div>
+            <div class="rb-report-row">
+              <span class="rb-report-row-label">{{ $t('reportBrowser.departures') }}</span>
+              <strong>{{ report.departures }}</strong>
+            </div>
+            <div class="rb-report-row">
+              <span class="rb-report-row-label">{{ $t('reportBrowser.inHouseNow') }}</span>
+              <strong>{{ report.in_house_now }}</strong>
+            </div>
+            <div class="rb-report-row">
+              <span class="rb-report-row-label">{{ $t('reportBrowser.upcomingNow') }}</span>
+              <strong>{{ report.upcoming_now }}</strong>
+            </div>
+          </div>
+
+          <h3 class="rb-section-title">
+            <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('reportBrowser.bookingBehaviour') }}
+          </h3>
+          <div class="table-scroll">
+          <table class="rb-table">
+            <thead>
+              <tr>
+                <th>{{ $t('reportBrowser.metric') }}</th>
+                <th class="num">{{ $t('reportBrowser.value') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{{ $t('reportBrowser.cancellations') }}</td>
+                <td class="num">{{ report.cancellations }} <span class="rb-pct">({{ report.cancellation_rate }}%)</span></td>
+              </tr>
+              <tr>
+                <td>{{ $t('reportBrowser.noShows') }}</td>
+                <td class="num">{{ report.no_shows }} <span class="rb-pct">({{ report.no_show_rate }}%)</span></td>
+              </tr>
+              <tr>
+                <td>{{ $t('reportBrowser.avgLeadTime') }}</td>
+                <td class="num">{{ report.avg_lead_time_days }} {{ $t('reportBrowser.days') }}</td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+
+          <h3 v-if="Object.keys(report.by_source || {}).length" class="rb-section-title">
+            <i class="fas fa-globe" aria-hidden="true"></i> {{ $t('reportBrowser.bySource') }}
+          </h3>
+          <div v-if="Object.keys(report.by_source || {}).length" class="table-scroll">
+          <table class="rb-table">
+            <thead>
+              <tr>
+                <th>{{ $t('reportBrowser.source') }}</th>
+                <th class="num">{{ $t('reportBrowser.countRooms') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(count, src) in report.by_source" :key="src">
+                <td class="capitalize">{{ src.replace('_', ' ') || '—' }}</td>
+                <td class="num">{{ count }}</td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+        </div>
+      </template>
+
+      <template v-else-if="report && activeReport === 'room-status'">
+        <div class="rb-report-card">
+          <div class="rb-report-head">
+            <h2>{{ activeLabel }}</h2>
+          </div>
+
+          <p class="rb-count">{{ $t('reportBrowser.totalRooms', { count: report.total || 0 }) }}</p>
+
+          <h3 class="rb-section-title">
+            <i class="fas fa-door-open" aria-hidden="true"></i> {{ $t('reportBrowser.byStatus') }}
+          </h3>
+          <div class="table-scroll">
+          <table class="rb-table rb-table-wide">
+            <thead>
+              <tr>
+                <th>{{ $t('reportBrowser.status') }}</th>
+                <th class="num">{{ $t('reportBrowser.countRooms') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(count, statusKey) in report.by_status" :key="statusKey">
+                <td class="capitalize">{{ statusLabel(statusKey) }}</td>
+                <td class="num">{{ count }}</td>
+              </tr>
+              <tr v-if="!Object.keys(report.by_status || {}).length">
+                <td colspan="2" class="rb-empty">{{ $t('reportBrowser.noRows') }}</td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+
+          <h3 class="rb-section-title">
+            <i class="fas fa-bed" aria-hidden="true"></i> {{ $t('reportBrowser.byRoomType') }}
+          </h3>
+          <div class="table-scroll">
+          <table class="rb-table rb-table-wide">
+            <thead>
+              <tr>
+                <th>{{ $t('reportBrowser.roomType') }}</th>
+                <th class="num">{{ $t('reportBrowser.countRooms') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(count, type) in report.by_type" :key="type">
+                <td>{{ type }}</td>
+                <td class="num">{{ count }}</td>
+              </tr>
+              <tr v-if="!Object.keys(report.by_type || {}).length">
+                <td colspan="2" class="rb-empty">{{ $t('reportBrowser.noRows') }}</td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+        </div>
+      </template>
+
+      <template v-else-if="report && activeReport === 'occupancy'">
+        <div class="rb-report-card">
+          <div class="rb-report-head">
+            <h2>{{ activeLabel }}</h2>
+            <span class="rb-date">{{ prettyDate(filterValues.from) }} → {{ prettyDate(filterValues.to) }}</span>
+          </div>
+
+          <p class="rb-count">{{ $t('reportBrowser.totalDays', { count: report.occupancy.length || 0 }) }}</p>
+
+          <div class="table-scroll">
+          <table class="rb-table rb-table-wide">
+            <thead>
+              <tr>
+                <th>{{ $t('reportBrowser.date') }}</th>
+                <th class="num">{{ $t('reportBrowser.occupiedRooms') }}</th>
+                <th class="num">{{ $t('reportBrowser.occupancyRate') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(day, i) in report.occupancy" :key="i">
+                <td>{{ prettyDate(day.date) }}</td>
+                <td class="num">{{ day.occupied_rooms }}</td>
+                <td class="num">{{ day.occupancy_rate }}%</td>
+              </tr>
+              <tr v-if="!report.occupancy.length">
+                <td colspan="3" class="rb-empty">{{ $t('reportBrowser.noRows') }}</td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+        </div>
+      </template>
     </template>
 
     <!-- ══ Placeholder for reports not yet wired to data ══ -->
@@ -300,10 +469,10 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
-import { nightAuditApi, guestReportApi } from '@/api'
+import { nightAuditApi, guestReportApi, reportApi } from '@/api'
 import { exportCSV } from '@/utils/export'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 
 /* ── Report catalogue (matches the reference screenshot tree) ── */
 const categories = [
@@ -405,6 +574,7 @@ const categories = [
       { key: 'contribution-analysis', label: 'reportBrowser.rContributionAnalysis' },
       { key: 'monthly-country-pax', label: 'reportBrowser.rMonthlyCountryPax' },
       { key: 'monthly-revenue-stream', label: 'reportBrowser.rMonthlyRevenueStream' },
+      { key: 'occupancy', label: 'reportBrowser.rOccupancy' },
       { key: 'monthly-room-tax', label: 'reportBrowser.rMonthlyRoomTax' },
       { key: 'monthly-statistics', label: 'reportBrowser.rMonthlyStatistics' },
       { key: 'monthly-summary', label: 'reportBrowser.rMonthlySummary' },
@@ -592,6 +762,7 @@ const REPORTS = {
 
   /* ── Reservation reports ── */
   'arrival-list': {
+    wired: true,
     dateKey: 'from',
     fields: [
       { key: 'from', label: t('reportBrowser.arrival'), type: 'date' },
@@ -683,6 +854,7 @@ const REPORTS = {
     helpIntro: t('reportBrowser.roomAvailabilityHelp1'),
   },
   'room-status': {
+    wired: true,
     dateKey: 'businessDate',
     fields: [{ key: 'businessDate', label: t('reportBrowser.asOnDate'), type: 'date' }],
     helpIntro: t('reportBrowser.roomStatusHelp1'),
@@ -857,6 +1029,21 @@ const REPORTS = {
     ],
     helpIntro: t('reportBrowser.roomsOnBooksHelp1'),
   },
+  'occupancy': {
+    wired: true,
+    dateKey: 'from',
+    fields: [
+      { key: 'from', label: t('reportBrowser.from'), type: 'date' },
+      { key: 'to', label: t('reportBrowser.to'), type: 'date' },
+    ],
+    helpIntro: t('reportBrowser.occupancyHelp1'),
+    compare: [t('reportBrowser.occupancyHelp2')],
+    columns: [
+      { column: t('reportBrowser.date'), desc: t('reportBrowser.colDate') },
+      { column: t('reportBrowser.occupiedRooms'), desc: t('reportBrowser.colOccupied') },
+      { column: t('reportBrowser.occupancyRate'), desc: t('reportBrowser.colOccupancyRate') },
+    ],
+  },
   'room-statistics': {
     dateKey: 'from',
     fields: [
@@ -1021,6 +1208,12 @@ async function runReport() {
     loadNightAudit()
   } else if (activeReport.value === 'guest-list') {
     loadGuestList()
+  } else if (activeReport.value === 'arrival-list') {
+    loadArrivalReport()
+  } else if (activeReport.value === 'room-status') {
+    loadRoomStatus()
+  } else if (activeReport.value === 'occupancy') {
+    loadOccupancy()
   } else {
     report.value = null
   }
@@ -1054,6 +1247,64 @@ async function loadNightAudit() {
   } finally {
     loading.value = false
   }
+}
+
+async function loadArrivalReport() {
+  loading.value = true
+  error.value = ''
+  try {
+    const res = await reportApi.bookings({
+      from: filterValues.from || todayIso(),
+      to: filterValues.to || todayIso(),
+    })
+    report.value = res.data
+  } catch (err) {
+    error.value = err.response?.data?.message || t('common.loadError')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadRoomStatus() {
+  loading.value = true
+  error.value = ''
+  try {
+    const res = await reportApi.roomStatus()
+    report.value = res.data
+  } catch (err) {
+    error.value = err.response?.data?.message || t('common.loadError')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadOccupancy() {
+  loading.value = true
+  error.value = ''
+  try {
+    const res = await reportApi.occupancy({
+      from: filterValues.from || todayIso(),
+      to: filterValues.to || todayIso(),
+    })
+    report.value = res.data
+  } catch (err) {
+    error.value = err.response?.data?.message || t('common.loadError')
+  } finally {
+    loading.value = false
+  }
+}
+
+/** Human label for a room status key, reusing the analytics status labels. */
+function statusLabel(status) {
+  const keys = {
+    available: 'reports.statusAvailable',
+    occupied: 'reports.statusOccupied',
+    cleaning: 'reports.statusCleaning',
+    maintenance: 'reports.statusMaintenance',
+    dirty: 'reports.statusDirty',
+  }
+  const key = keys[status]
+  return key && te(key) ? t(key) : status.replace('_', ' ')
 }
 
 async function closeDay() {
@@ -1150,6 +1401,40 @@ async function exportCsv() {
         { key: 'balance', label: t('reportBrowser.balance') },
       ]
       exportCSV('guest-list', report.value.rows || [], cols)
+    } else if (activeReport.value === 'arrival-list' && report.value) {
+      const rows = [
+        { section: t('reportBrowser.bookingsBooked'), value: report.value.booked_in_period },
+        { section: t('reportBrowser.arrivals'), value: report.value.arrivals },
+        { section: t('reportBrowser.departures'), value: report.value.departures },
+        { section: t('reportBrowser.inHouseNow'), value: report.value.in_house_now },
+        { section: t('reportBrowser.upcomingNow'), value: report.value.upcoming_now },
+        { section: t('reportBrowser.cancellations'), value: report.value.cancellations },
+        { section: t('reportBrowser.noShows'), value: report.value.no_shows },
+        { section: t('reportBrowser.avgLeadTime'), value: report.value.avg_lead_time_days },
+        ...Object.entries(report.value.by_source || {}).map(([src, count]) => ({
+          section: t('reportBrowser.bySource'),
+          value: [`${src || '—'}`, count].join(': '),
+        })),
+      ]
+      exportCSV('arrival-list', rows, [
+        { key: 'section', label: t('reportBrowser.metric') },
+        { key: 'value', label: t('reportBrowser.value') },
+      ])
+    } else if (activeReport.value === 'room-status' && report.value) {
+      const rows = Object.entries(report.value.by_status || {}).map(([statusKey, count]) => ({
+        status: statusLabel(statusKey),
+        count,
+      }))
+      exportCSV('room-status', rows, [
+        { key: 'status', label: t('reportBrowser.status') },
+        { key: 'count', label: t('reportBrowser.countRooms') },
+      ])
+    } else if (activeReport.value === 'occupancy' && report.value) {
+      exportCSV('occupancy', report.value.occupancy || [], [
+        { key: 'date', label: t('reportBrowser.date') },
+        { key: 'occupied_rooms', label: t('reportBrowser.occupiedRooms') },
+        { key: 'occupancy_rate', label: t('reportBrowser.occupancyRate') },
+      ])
     }
   } finally {
     exporting.value = false
@@ -1261,6 +1546,10 @@ onMounted(() => {
   color: #64748b;
   font-size: 12px;
   margin: 0 0 10px;
+}
+.rb-pct {
+  color: #64748b;
+  font-size: 12px;
 }
 .rb-empty {
   text-align: center;

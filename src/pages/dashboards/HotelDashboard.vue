@@ -703,7 +703,7 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.phone') }}</span>
-                  <input v-model="amendForm.guest_phone_display" type="tel" class="input" placeholder="255 6747 347 477" />
+                  <PhoneInput v-model="amendForm.guest_phone" v-model:countryCode="amendForm.country_code" />
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.email') }}</span>
@@ -970,7 +970,7 @@
               </div>
               <label class="sv-field">
                 <span>{{ $t('reservations.guestPhone') }}</span>
-                <input v-model="bookingPhone" type="tel" class="input" required :placeholder="'255 6747 347 477'" />
+                <PhoneInput v-model="bookingForm.guest_phone" v-model:countryCode="bookingForm.country_code" required />
               </label>
               <div class="sv-field-row">
                 <label class="sv-field">
@@ -1319,9 +1319,10 @@ import AlertModal from '@/components/AlertModal.vue'
 import RoleBadge from '@/components/RoleBadge.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
+import PhoneInput from '@/components/PhoneInput.vue'
 import { requiresProvider } from '@/utils/payments'
 import { formatDateDMY } from '@/utils/dates'
-import { formatPhoneGaps } from '@/utils/phone'
+import { formatPhoneGaps, normalizePhoneNumber } from '@/utils/phone'
 import { useCategoriesStore } from '@/stores/categories'
 
 const { t, te } = useI18n()
@@ -2245,8 +2246,8 @@ function openAmendModal(roomMove = false) {
     num_children: res.num_children ?? 0,
     first_name: res.first_name || '',
     last_name: res.last_name || '',
-    guest_phone: res.guest_phone || '',
-    guest_phone_display: formatPhoneGaps(res.guest_phone),
+    guest_phone: formatPhoneGaps(res.guest_phone),
+    country_code: res.country_code || 'TZ',
     guest_email: res.guest_email || '',
   }
   actionError.value = ''
@@ -2265,10 +2266,13 @@ async function submitAmend() {
     num_children: Number(f.num_children) || 0,
   }
   const res = folio.value?.reservation || {}
-  const digitPhone = String(f.guest_phone_display || f.guest_phone || '').replace(/\D/g, '')
+  const newPhone = normalizePhoneNumber(f.guest_phone, f.country_code || 'TZ')
   if (f.first_name !== (res.first_name ?? '') && f.first_name) payload.first_name = f.first_name
   if (f.last_name !== (res.last_name ?? '') && f.last_name) payload.last_name = f.last_name
-  if (digitPhone !== String(res.guest_phone || '').replace(/\D/g, '') && digitPhone) payload.guest_phone = digitPhone
+  if (String(newPhone || '').replace(/\D/g, '') !== String(res.guest_phone || '').replace(/\D/g, '') && newPhone) {
+    payload.guest_phone = newPhone
+    if (f.country_code && f.country_code !== (res.country_code || '')) payload.country_code = f.country_code
+  }
   if (f.guest_email !== (res.guest_email ?? '') && f.guest_email) payload.guest_email = f.guest_email
   amendModal.value = false
   await runStayAction(() => reservationApi.update(activeBar.value.id, payload))
@@ -2612,13 +2616,6 @@ const bookingModal = ref(false)
 const bookingForm = ref({})
 
 /** Guest phone displayed with the 255 6747 347 477 gap style; stores digits. */
-const bookingPhone = computed({
-  get: () => formatPhoneGaps(bookingForm.value.guest_phone),
-  set: (v) => {
-    bookingForm.value.guest_phone = String(v || '').replace(/\D/g, '')
-  },
-})
-
 /** Implements a fresh booking form with today → tomorrow defaults. */
 function resetBookingForm() {
   const today = isoKey(startOfDay(new Date()))
@@ -2627,6 +2624,7 @@ function resetBookingForm() {
     first_name: '',
     last_name: '',
     guest_phone: '',
+    country_code: 'TZ',
     booking_type: 'single',
     room_id: rooms.value[0]?.room_id || null,
     check_in_date: today,
@@ -2704,6 +2702,7 @@ async function submitBooking() {
       delete payload.advance_payment_method
       delete payload.advance_payment_date
     }
+    payload.guest_phone = normalizePhoneNumber(payload.guest_phone, payload.country_code || 'TZ')
     await reservationApi.store({ ...payload, status: 'confirmed' })
   })
   if (!actionError.value) {
