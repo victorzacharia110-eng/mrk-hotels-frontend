@@ -40,6 +40,7 @@
         <thead>
           <tr>
             <th>{{ $t('cashier.summary.order') }}</th>
+            <th>{{ $t('cashier.summary.waiter') }}</th>
             <th>{{ $t('cashier.summary.time') }}</th>
             <th>{{ $t('cashier.summary.table') }}</th>
             <th>{{ $t('cashier.summary.type') }}</th>
@@ -51,10 +52,16 @@
         <tbody>
           <tr v-for="order in pagedOrders" :key="order.order_id"
             :class="{ 'row-frozen': order.is_frozen }">
-            <td><strong>{{ order.order_number }}</strong>
+            <td>
+              <button type="button" class="order-link" @click="openDrawer(order)"
+                :title="$t('cashier.summary.viewOrder')">
+                <strong>{{ order.order_number }}</strong>
+                <i class="fas fa-book-open" aria-hidden="true"></i>
+              </button>
               <span v-if="order.is_frozen" class="frozen-tag"><i class="fas fa-snowflake" aria-hidden="true"></i> {{ $t('storeManager.common.frozen') }}</span>
               <span v-if="order.is_no_charge" class="nc-tag">{{ $t('cashier.noCharge.tag') }}</span>
             </td>
+            <td>{{ order.waiter_name || '—' }}</td>
             <td>{{ timeOf(order.created_at) }}</td>
             <td>{{ order.table_number || order.room_number || '—' }}</td>
             <td>{{ typeLabel(order.order_type) }}</td>
@@ -88,13 +95,94 @@
             </td>
           </tr>
           <tr v-if="!filteredOrders.length">
-            <td colspan="7" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.summary.none') }}</td>
+            <td colspan="8" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.summary.none') }}</td>
           </tr>
         </tbody>
       </table>
       </div>
       <PaginationBar :page="page" :last-page="lastPage" @change="page = $event" />
     </section>
+
+    <!-- Order detail drawer: items, total, and settle/edit/void actions -->
+    <div v-if="drawerOpen" class="drawer-overlay" @click.self="closeDrawer">
+      <aside class="drawer" role="dialog" aria-modal="true" :aria-label="$t('cashier.summary.drawerTitle')">
+        <div v-if="drawerOrder" class="drawer-head">
+          <div>
+            <h2>{{ drawerOrder.order_number }}</h2>
+            <p class="drawer-meta">
+              <span v-if="drawerOrder.table_number || drawerOrder.room_number"><i class="fas fa-table" aria-hidden="true"></i> {{ drawerOrder.table_number || drawerOrder.room_number }}</span>
+              <span v-if="drawerOrder.waiter_name"><i class="fas fa-user" aria-hidden="true"></i> {{ drawerOrder.waiter_name }}</span>
+              <span v-if="drawerOrder.guest_name"><i class="fas fa-users" aria-hidden="true"></i> {{ drawerOrder.guest_name }}</span>
+              <span v-if="drawerOrder.created_at"><i class="fas fa-clock" aria-hidden="true"></i> {{ timeOf(drawerOrder.created_at) }}</span>
+            </p>
+          </div>
+          <button type="button" class="drawer-close" aria-label="Close" @click="closeDrawer">
+            <i class="fas fa-xmark"></i>
+          </button>
+        </div>
+
+        <p v-if="drawerError" class="alert alert-error">{{ drawerError }}</p>
+
+        <div class="drawer-items">
+          <div class="drawer-items-head">
+            <h3>{{ $t('cashier.summary.itemsTitle') }}</h3>
+            <button v-if="isRunning(drawerOrder)" type="button" class="sm-btn sm ghost" @click="editing = !editing">
+              <i class="fas" :class="editing ? 'fa-check' : 'fa-pen'" aria-hidden="true"></i>
+              {{ editing ? $t('cashier.summary.doneEditing') : $t('cashier.summary.editItems') }}
+            </button>
+          </div>
+
+          <ul v-if="drawerOrder.items?.length" class="drawer-item-list">
+            <li v-for="line in drawerOrder.items" :key="line.order_item_id" class="drawer-item">
+              <div class="drawer-item-main">
+                <span class="drawer-item-name">{{ line.item_name }}</span>
+                <span class="drawer-item-price">{{ money(line.unit_price) }} × {{ line.quantity }}</span>
+              </div>
+              <div class="drawer-item-right">
+                <template v-if="editing">
+                  <div class="qty-stepper">
+                    <button type="button" class="qty-btn" @click="changeQty(line, -1)" :disabled="savingItem">−</button>
+                    <span class="qty-val">{{ line.quantity }}</span>
+                    <button type="button" class="qty-btn" @click="changeQty(line, 1)" :disabled="savingItem">+</button>
+                  </div>
+                  <button type="button" class="sm-btn sm danger-ghost" @click="removeLine(line)" :disabled="savingItem">
+                    <i class="fas fa-trash" aria-hidden="true"></i>
+                  </button>
+                </template>
+                <span v-else class="drawer-item-total">{{ money(line.subtotal ?? line.unit_price * line.quantity) }}</span>
+              </div>
+            </li>
+          </ul>
+          <p v-else class="drawer-empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.summary.none') }}</p>
+        </div>
+
+        <div class="drawer-total">
+          <span>{{ $t('cashier.summary.total') }}</span>
+          <strong>{{ money(drawerOrder?.total_amount ?? 0) }}</strong>
+        </div>
+
+        <div v-if="isRunning(drawerOrder) && voidConfirming" class="drawer-void">
+          <label :for="voidReasonId">{{ $t('storeManager.common.reason') }}</label>
+          <input :id="voidReasonId" v-model.trim="voidReason" type="text" maxlength="255" :disabled="savingVoid"
+            :placeholder="$t('storeManager.common.reasonTitle')" />
+          <div class="drawer-void-actions">
+            <button type="button" class="sm-btn sm ghost" :disabled="savingVoid" @click="voidConfirming = false">{{ $t('common.cancel') }}</button>
+            <button type="button" class="sm-btn sm danger" :disabled="savingVoid || !voidReason" @click="confirmVoid">
+              <i class="fas fa-ban" aria-hidden="true"></i> {{ savingVoid ? $t('common.saving') : $t('cashier.summary.voidOrder') }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="isRunning(drawerOrder)" class="drawer-actions">
+          <button v-if="!voidConfirming" type="button" class="sm-btn sm danger-ghost" @click="promptVoid">
+            <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.summary.voidOrder') }}
+          </button>
+          <button type="button" class="sm-btn sm primary" @click="settleFromDrawer">
+            <i class="fas fa-money-bill" aria-hidden="true"></i> {{ $t('cashier.summary.settle') }}
+          </button>
+        </div>
+      </aside>
+    </div>
 
     <!-- Settle payment modal: pick cash, a mobile-money wallet or a bank. -->
     <div v-if="payOpen" class="pay-modal-overlay" @click.self="closePay">
@@ -231,6 +319,17 @@ const payRefId = `pay-ref-${Date.now()}`
 const savingPay = ref(false)
 const payError = ref('')
 
+/** Order detail drawer: items list with edit-in-place qty/void/settle actions. */
+const drawerOpen = ref(false)
+const drawerOrder = ref(null)
+const editing = ref(false)
+const drawerError = ref('')
+const savingItem = ref(false)
+const voidConfirming = ref(false)
+const voidReason = ref('')
+const voidReasonId = `void-reason-${Date.now()}`
+const savingVoid = ref(false)
+
 /** "collect" takes cash/mobile/bank; "room" posts the ticket to a folio. */
 const settleMode = ref('collect')
 const rooms = ref([])
@@ -344,6 +443,104 @@ function settle(order) {
   settleMode.value = 'collect'
   postRoom.value = ''
   payOpen.value = true
+}
+
+/**
+ * Drawer: lazy-loads the ticket's items the first time it is opened so the
+ * list view stays light while the drawer always shows live lines.
+ */
+async function openDrawer(order) {
+  drawerError.value = ''
+  editing.value = false
+  voidConfirming.value = false
+  voidReason.value = ''
+  drawerOrder.value = order
+  if (!order.items?.length) {
+    try {
+      const { data } = await orderApi.show(order.order_id)
+      drawerOrder.value = data.order
+    } catch (err) {
+      drawerError.value = err.response?.data?.message || t('common.loadError')
+    }
+  }
+  drawerOpen.value = true
+}
+
+function closeDrawer() {
+  if (savingItem.value || savingVoid.value) return
+  drawerOpen.value = false
+  drawerOrder.value = null
+}
+
+/** Settling from the drawer reuses the existing payment modal. */
+function settleFromDrawer() {
+  const order = drawerOrder.value
+  closeDrawer()
+  settle(order)
+}
+
+/** Steps a line's quantity up/down (minimum 1); stock adjusts live. */
+async function changeQty(line, delta) {
+  const next = (line.quantity || 1) + delta
+  if (next < 1 || !drawerOrder.value || savingItem.value) return
+  savingItem.value = true
+  drawerError.value = ''
+  try {
+    const { data } = await orderApi.updateOrderItem(drawerOrder.value.order_id, line.order_item_id, { qty: next })
+    mergeIntoDrawer(data.order)
+    toast(t('cashier.summary.itemUpdated'), 'success')
+  } catch (err) {
+    drawerError.value = err.response?.data?.message || t('common.actionFailed')
+  } finally {
+    savingItem.value = false
+  }
+}
+
+/** Removes a line; the item's stock is refunded automatically. */
+async function removeLine(line) {
+  if (!drawerOrder.value || savingItem.value) return
+  savingItem.value = true
+  drawerError.value = ''
+  try {
+    const { data } = await orderApi.removeOrderItem(drawerOrder.value.order_id, line.order_item_id)
+    mergeIntoDrawer(data.order)
+    toast(t('cashier.summary.itemRemoved'), 'success')
+  } catch (err) {
+    drawerError.value = err.response?.data?.message || t('common.actionFailed')
+  } finally {
+    savingItem.value = false
+  }
+}
+
+/** Replaces the drawer ticket with the fresh response and refreshes the list. */
+async function mergeIntoDrawer(order) {
+  drawerOrder.value = order
+  await load()
+}
+
+function promptVoid() {
+  voidConfirming.value = true
+  voidReason.value = ''
+}
+
+/** Voids the ticket with the entered reason; stock is returned. */
+async function confirmVoid() {
+  if (!drawerOrder.value || !voidReason.value.trim()) {
+    drawerError.value = t('cashier.summary.voidReasonRequired')
+    return
+  }
+  savingVoid.value = true
+  drawerError.value = ''
+  try {
+    await orderApi.voidOrder(drawerOrder.value.order_id, { reason: voidReason.value.trim() })
+    closeDrawer()
+    await load()
+    toast(t('cashier.summary.voided'), 'success')
+  } catch (err) {
+    drawerError.value = err.response?.data?.message || t('common.actionFailed')
+  } finally {
+    savingVoid.value = false
+  }
 }
 
 /**
@@ -473,9 +670,149 @@ onMounted(() => {
 
 <style scoped>
 .row-frozen td { background: #f8fafc; }
+.order-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #00468c;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 14px;
+}
+.order-link:hover { color: #00264f; text-decoration: underline; }
+.order-link i { font-size: 12px; opacity: 0.7; }
 .frozen-tag { margin-left: 8px; font-size: 11px; color: #00468c; background: #e8f1fa; border-radius: 999px; padding: 2px 8px; font-weight: 700; }
 .nc-tag { margin-left: 6px; font-size: 11px; color: #333333; background: #ececec; border-radius: 999px; padding: 2px 8px; font-weight: 700; }
 .sm-inline-label { font-size: 13px; color: #475569; font-weight: 600; }
+
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+}
+.drawer {
+  width: 100%;
+  max-width: 420px;
+  height: 100%;
+  background: #fff;
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 22px;
+  gap: 14px;
+  overflow-y: auto;
+}
+.drawer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+.drawer-head h2 { margin: 0; font-size: 22px; font-weight: 800; color: #0f172a; }
+.drawer-meta {
+  margin: 6px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+  color: #475569;
+}
+.drawer-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.drawer-meta i { color: #94a3b8; }
+.drawer-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+}
+.drawer-items { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.drawer-items-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.drawer-items-head h3 { margin: 0; font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; }
+.drawer-item-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.drawer-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef2f7;
+}
+.drawer-item:last-child { border-bottom: none; }
+.drawer-item-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.drawer-item-name { font-size: 14px; font-weight: 600; color: #1e293b; }
+.drawer-item-price { font-size: 12px; color: #94a3b8; }
+.drawer-item-right { display: flex; align-items: center; gap: 10px; }
+.drawer-item-total { font-size: 14px; font-weight: 700; color: #0f172a; }
+.qty-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.qty-btn {
+  width: 28px;
+  height: 28px;
+  background: #f8fafc;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  color: #334155;
+}
+.qty-btn:hover:not(:disabled) { background: #e2e8f0; }
+.qty-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.qty-val { min-width: 34px; text-align: center; font-weight: 700; font-size: 14px; }
+.drawer-empty {
+  padding: 14px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+}
+.drawer-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-top: 2px solid #0f172a;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.drawer-total strong { font-size: 20px; }
+.drawer-void { display: flex; flex-direction: column; gap: 8px; }
+.drawer-void label { font-size: 12px; font-weight: 700; color: #b91c1c; text-transform: uppercase; letter-spacing: 0.4px; }
+.drawer-void input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.drawer-void-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.drawer-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
 .printer-banner {
   display: flex;

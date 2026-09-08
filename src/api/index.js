@@ -1498,6 +1498,61 @@ export const orderApi = {
   markItemStatus(id, itemId, status) {
     return api.patch(`${v1}/orders/${id}/items/${itemId}/status`, { status })
   },
+  /**
+   * Edits a running ticket's line quantity; stock adjusts live.
+   * @param {string|number} id - Order identifier.
+   * @param {string|number} itemId - Order item identifier.
+   * @param {object} data - { qty }.
+   * @returns {Promise} Axios response with the updated order.
+   */
+  updateOrderItem(id, itemId, data) {
+    return api.put(`${v1}/orders/${id}/items/${itemId}`, data)
+  },
+  /**
+   * Removes a line from a running ticket; stock is refunded.
+   * @param {string|number} id - Order identifier.
+   * @param {string|number} itemId - Order item identifier.
+   * @returns {Promise} Axios response with the updated order.
+   */
+  removeOrderItem(id, itemId) {
+    return api.delete(`${v1}/orders/${id}/items/${itemId}`)
+  },
+  /**
+   * Explicitly voids a running ticket, returning its stock.
+   * @param {string|number} id - Order identifier.
+   * @param {object} data - { reason }.
+   * @returns {Promise} Axios response with the voided order.
+   */
+  voidOrder(id, data = {}) {
+    return api.post(`${v1}/orders/${id}/void`, data)
+  },
+  /**
+   * Moves a whole ticket onto another free or same-waiter table.
+   * @param {string|number} id - Order identifier.
+   * @param {object} data - { table_number }.
+   * @returns {Promise} Axios response with the transferred order.
+   */
+  transferOrder(id, data) {
+    return api.post(`${v1}/orders/${id}/transfer`, data)
+  },
+  /**
+   * Moves/splits selected lines onto another table's ticket.
+   * @param {string|number} id - Order identifier.
+   * @param {object} data - { target_table_number, lines: [{ order_item_id, quantity }] }.
+   * @returns {Promise} Axios response with both orders.
+   */
+  transferOrderItems(id, data) {
+    return api.post(`${v1}/orders/${id}/items/transfer`, data)
+  },
+  /**
+   * Splits a bill onto a fresh same-table ticket.
+   * @param {string|number} id - Order identifier.
+   * @param {object} data - { order_item_ids: [...] }.
+   * @returns {Promise} Axios response with the new split order.
+   */
+  splitOrder(id, data) {
+    return api.post(`${v1}/orders/${id}/split`, data)
+  },
 }
 
 /** POS outlets: the service points (restaurant/bar) a cashier works from. */
