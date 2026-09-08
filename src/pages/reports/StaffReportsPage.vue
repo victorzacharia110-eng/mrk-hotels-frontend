@@ -15,6 +15,11 @@
           <h1><i class="fas fa-chart-line" aria-hidden="true"></i> {{ $t('staffDashboard.reportsTitle') }} · {{ $t(`orderTaker.${department}`) }}</h1>
           <p class="rp-subtitle">{{ $t('staffDashboard.reportsSubtitle') }}</p>
         </div>
+        <ul class="rp-meta">
+          <li><i class="fas fa-calendar-days" aria-hidden="true"></i> {{ periodText }}</li>
+          <li><i class="fas fa-clock" aria-hidden="true"></i> {{ $t('staffDashboard.printedOn', { at: printedAt }) }}</li>
+          <li><i class="fas fa-user" aria-hidden="true"></i> {{ $t('staffDashboard.printedBy', { name: userName }) }}</li>
+        </ul>
         <button type="button" class="rp-print-btn" :disabled="!dashboard" @click="printReport">
           <i class="fas fa-print" aria-hidden="true"></i> {{ $t('staffDashboard.print') }}
         </button>
@@ -192,11 +197,13 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { reportApi } from '@/api'
 
 const authStore = useAuthStore()
+const { d, t } = useI18n()
 
 function nowDate() {
   const d = new Date()
@@ -211,6 +218,22 @@ const to = ref(nowDate())
 const dashboard = ref(null)
 const loading = ref(false)
 const error = ref('')
+
+const userName = computed(() => authStore.user?.full_name || '—')
+const periodText = computed(() => {
+  const fromLabel = d(new Date(`${from.value}T00:00:00`), 'long')
+  if (!to.value || to.value === from.value) {
+    return t('staffDashboard.reportPeriodSingle', { from: fromLabel })
+  }
+  return t('staffDashboard.reportPeriod', { from: fromLabel, to: d(new Date(`${to.value}T00:00:00`), 'long') })
+})
+const printedAt = computed(() => d(new Date(), {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+}))
 
 function switchDepartment(dept) {
   if (department.value === dept) return
@@ -288,6 +311,29 @@ onMounted(loadReport)
   margin: 4px 0 0;
   color: #64748b;
   font-size: 13px;
+}
+
+.rp-meta {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  color: #475569;
+}
+
+.rp-meta li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rp-meta i {
+  width: 16px;
+  text-align: center;
+  color: #0f766e;
 }
 
 .rp-print-btn,

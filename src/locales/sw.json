@@ -3803,7 +3803,11 @@
     "reportsSubtitle": "Mauzo ya idara, bidhaa zinazouzwa haraka, stoo na maombi",
     "print": "Chapisha",
     "date": "Tarehe",
-    "lowStockCount": "Bidhaa za stoo ya chini"
+    "lowStockCount": "Bidhaa za stoo ya chini",
+    "reportPeriod": "Kipindi: {from} \u2013 {to}",
+    "reportPeriodSingle": "Kipindi: {from}",
+    "printedOn": "Imechapishwa tarehe {at}",
+    "printedBy": "Imechapishwa na {name}"
   },
   "kitchen": {
     "title": "Ubao wa Jikoni",

@@ -3803,7 +3803,11 @@
     "reportsSubtitle": "Department sales, fast-movers, shelf stock and requisitions",
     "print": "Print",
     "date": "Date",
-    "lowStockCount": "Low stock items"
+    "lowStockCount": "Low stock items",
+    "reportPeriod": "Period: {from} \u2013 {to}",
+    "reportPeriodSingle": "Period: {from}",
+    "printedOn": "Printed on {at}",
+    "printedBy": "Printed by {name}"
   },
   "kitchen": {
     "title": "Kitchen Board",
