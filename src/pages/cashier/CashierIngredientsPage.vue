@@ -187,14 +187,9 @@ async function loadMenuItems() {
     const params = { per_page: 100 }
     if (department.value) params.department = department.value
     const { data } = await menuItemApi.index(params)
-    menuItems.value = (data.data || data).map(i => ({ ...i, _ingredientCount: 0 }))
-    // Load ingredient counts in batch
-    for (const item of menuItems.value) {
-      try {
-        const res = await menuItemIngredientApi.index(item.menu_item_id)
-        item._ingredientCount = (res.data.ingredients || []).length
-      } catch { /* skip */ }
-    }
+    // Backend ships the ingredient line count per item, so the tree renders
+    // badges without one extra request per menu item.
+    menuItems.value = (data.data || data).map(i => ({ ...i, _ingredientCount: i.ingredient_count ?? 0 }))
   } finally {
     loadingMenu.value = false
   }
