@@ -999,11 +999,12 @@
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.room') }}</span>
-                  <select v-model="bookingForm.room_id" class="input" :class="{ 'sv-input-error': bookingErrors.room_id }" required>
-                    <option v-for="room in rooms" :key="room.room_id" :value="room.room_id">
-                      {{ room.room_number }} · {{ roomTypeLabel(room.room_type) }} · TZS {{ formatPrice(room.price_per_night) }}
-                    </option>
-                  </select>
+                  <SearchableSelect
+                    v-model="bookingForm.room_id"
+                    :options="roomMoveOptions"
+                    :search-placeholder="$t('stayview.searchRoom')"
+                    force-search
+                  />
                   <span v-if="bookingErrors.room_id" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.room_id }}</span>
                 </label>
               </div>
