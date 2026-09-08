@@ -133,7 +133,11 @@
           </div>
 
           <ul v-if="drawerOrder.items?.length" class="drawer-item-list">
-            <li v-for="line in drawerOrder.items" :key="line.order_item_id" class="drawer-item">
+            <li v-for="line in drawerOrder.items" :key="line.order_item_id"
+              class="drawer-item" :class="{ 'split-selected': splitting && splitLines.includes(line.order_item_id) }">
+              <label class="drawer-item-check" v-if="splitting">
+                <input type="checkbox" :value="line.order_item_id" v-model="splitLines" :disabled="savingSplit" />
+              </label>
               <div class="drawer-item-main">
                 <span class="drawer-item-name">{{ line.item_name }}</span>
                 <span class="drawer-item-price">{{ money(line.unit_price) }} × {{ line.quantity }}</span>
@@ -156,6 +160,32 @@
           <p v-else class="drawer-empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.summary.none') }}</p>
         </div>
 
+        <div v-if="splitting" class="drawer-split">
+          <p class="drawer-split-hint"><i class="fas fa-scissors" aria-hidden="true"></i> {{ $t('cashier.summary.splitHint') }}</p>
+          <div class="drawer-void-actions">
+            <button type="button" class="sm-btn sm ghost" :disabled="savingSplit" @click="splitting = false">{{ $t('common.cancel') }}</button>
+            <button type="button" class="sm-btn sm primary" :disabled="savingSplit || !splitLines.length" @click="confirmSplit">
+              <i class="fas fa-scissors" aria-hidden="true"></i> {{ savingSplit ? $t('common.saving') : $t('cashier.summary.splitToNewTicket') }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="transferring" class="drawer-transfer">
+          <label :for="transferTableId">{{ $t('cashier.summary.transferPlaceholder') }}</label>
+          <input :id="transferTableId" v-model.trim="transferTable" type="text" :disabled="savingTransfer"
+            :placeholder="$t('cashier.summary.transferPlaceholder')" />
+          <p class="drawer-split-hint"><i class="fas fa-right-left" aria-hidden="true"></i> {{ $t('cashier.summary.transferHint') }}</p>
+          <div class="drawer-void-actions">
+            <button type="button" class="sm-btn sm ghost" :disabled="savingTransfer" @click="transferring = false">
+              {{ $t('common.cancel') }}
+            </button>
+            <button type="button" class="sm-btn sm primary" :disabled="savingTransfer || !transferTable"
+              @click="confirmTransfer">
+              <i class="fas fa-right-left" aria-hidden="true"></i> {{ savingTransfer ? $t('common.saving') : $t('cashier.summary.moveTicket') }}
+            </button>
+          </div>
+        </div>
+
         <div class="drawer-total">
           <span>{{ $t('cashier.summary.total') }}</span>
           <strong>{{ money(drawerOrder?.total_amount ?? 0) }}</strong>
@@ -174,10 +204,18 @@
         </div>
 
         <div v-if="isRunning(drawerOrder)" class="drawer-actions">
-          <button v-if="!voidConfirming" type="button" class="sm-btn sm danger-ghost" @click="promptVoid">
-            <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.summary.voidOrder') }}
-          </button>
-          <button type="button" class="sm-btn sm primary" @click="settleFromDrawer">
+          <template v-if="!splitting && !transferring && !voidConfirming">
+            <button type="button" class="sm-btn sm ghost" @click="promptVoid">
+              <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.summary.voidOrder') }}
+            </button>
+            <button type="button" class="sm-btn sm ghost" @click="promptTransfer">
+              <i class="fas fa-right-left" aria-hidden="true"></i> {{ $t('cashier.summary.transfer') }}
+            </button>
+            <button type="button" class="sm-btn sm ghost" @click="promptSplit">
+              <i class="fas fa-scissors" aria-hidden="true"></i> {{ $t('cashier.summary.split') }}
+            </button>
+          </template>
+          <button type="button" class="sm-btn sm primary" :disabled="splitting || transferring || voidConfirming" @click="settleFromDrawer">
             <i class="fas fa-money-bill" aria-hidden="true"></i> {{ $t('cashier.summary.settle') }}
           </button>
         </div>
@@ -330,6 +368,15 @@ const voidReason = ref('')
 const voidReasonId = `void-reason-${Date.now()}`
 const savingVoid = ref(false)
 
+/** Bill split / transfer of a ticket to another table. */
+const splitting = ref(false)
+const splitLines = ref([])
+const savingSplit = ref(false)
+const transferring = ref(false)
+const transferTable = ref('')
+const transferTableId = `transfer-table-${Date.now()}`
+const savingTransfer = ref(false)
+
 /** "collect" takes cash/mobile/bank; "room" posts the ticket to a folio. */
 const settleMode = ref('collect')
 const rooms = ref([])
@@ -454,6 +501,10 @@ async function openDrawer(order) {
   editing.value = false
   voidConfirming.value = false
   voidReason.value = ''
+  splitting.value = false
+  splitLines.value = []
+  transferring.value = false
+  transferTable.value = ''
   drawerOrder.value = order
   if (!order.items?.length) {
     try {
@@ -520,6 +571,8 @@ async function mergeIntoDrawer(order) {
 
 function promptVoid() {
   voidConfirming.value = true
+  splitting.value = false
+  transferring.value = false
   voidReason.value = ''
 }
 
@@ -540,6 +593,55 @@ async function confirmVoid() {
     drawerError.value = err.response?.data?.message || t('common.actionFailed')
   } finally {
     savingVoid.value = false
+  }
+}
+
+/** Asks for the target table and moves the whole ticket onto it. */
+function promptTransfer() {
+  transferring.value = true
+  voidConfirming.value = false
+  splitting.value = false
+  transferTable.value = ''
+}
+
+async function confirmTransfer() {
+  if (!drawerOrder.value || !transferTable.value.trim()) return
+  savingTransfer.value = true
+  drawerError.value = ''
+  try {
+    await orderApi.transferOrder(drawerOrder.value.order_id, { table_number: transferTable.value.trim() })
+    closeDrawer()
+    await load()
+    toast(t('cashier.summary.transferred'), 'success')
+  } catch (err) {
+    drawerError.value = err.response?.data?.message || t('common.actionFailed')
+  } finally {
+    savingTransfer.value = false
+  }
+}
+
+/** Arms split mode: line checkboxes + a confirmation bar. */
+function promptSplit() {
+  splitting.value = true
+  voidConfirming.value = false
+  transferring.value = false
+  splitLines.value = []
+}
+
+/** Splits the ticked lines onto a fresh ticket on the same table. */
+async function confirmSplit() {
+  if (!drawerOrder.value || !splitLines.value.length) return
+  savingSplit.value = true
+  drawerError.value = ''
+  try {
+    await orderApi.splitOrder(drawerOrder.value.order_id, { order_item_ids: splitLines.value })
+    closeDrawer()
+    await load()
+    toast(t('cashier.summary.splitDone'), 'success')
+  } catch (err) {
+    drawerError.value = err.response?.data?.message || t('common.actionFailed')
+  } finally {
+    savingSplit.value = false
   }
 }
 
@@ -813,6 +915,33 @@ onMounted(() => {
 }
 .drawer-void-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .drawer-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.drawer-split, .drawer-transfer { display: flex; flex-direction: column; gap: 8px; }
+.drawer-split-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.drawer-transfer label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #00468c;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.drawer-transfer input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #93c5fd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.drawer-item { transition: background 0.15s ease; }
+.drawer-item.split-selected { background: #eef2ff; }
+.drawer-item-check { display: inline-flex; }
+.drawer-item-check input { width: 16px; height: 16px; accent-color: #00468c; }
 
 .printer-banner {
   display: flex;

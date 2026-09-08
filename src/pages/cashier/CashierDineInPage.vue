@@ -82,6 +82,12 @@
                 @click.stop="openTakeOrder(table)">
                 <i class="fas fa-clipboard-list"></i>
               </button>
+              <button v-if="(runningByTable[table.table_name] || []).length && !frozenTableIds.has(table.table_name)"
+                class="icon-btn move-icon"
+                :title="$t('cashier.dineIn.transfer')"
+                @click.stop="openTransfer(table)">
+                <i class="fas fa-right-left"></i>
+              </button>
             </span>
           </div>
         </div>
@@ -199,6 +205,41 @@
         </div>
       </div>
     </div>
+
+    <!-- ═══ MODAL 4: Move a ticket to another table (right-left icon) ═══ -->
+    <teleport to="body">
+      <transition name="din-pop">
+        <div v-if="transferModal.open" class="din-backdrop" @click="transferModal.open = false"></div>
+      </transition>
+      <transition name="din-pop">
+        <div v-if="transferModal.open" class="din-modal transfer-modal">
+          <div class="din-modal-head">
+            <h3><i class="fas fa-right-left"></i> {{ $t('cashier.dineIn.transferTitle', { table: transferModal.tableName }) }}</h3>
+            <button class="sm-btn ghost sm" @click="transferModal.open = false"><i class="fas fa-xmark"></i></button>
+          </div>
+          <p v-if="transferError" class="alert alert-error">{{ transferError }}</p>
+          <p class="din-hint">{{ $t('cashier.dineIn.transferHint') }}</p>
+          <div class="din-modal-body">
+            <p v-if="!transferTargets.length" class="empty">{{ $t('cashier.dineIn.noTransferTargets') }}</p>
+            <label class="din-label">{{ $t('cashier.dineIn.transferTarget') }}</label>
+            <SearchableSelect
+              v-model="transferTarget"
+              :options="transferTargets"
+              :placeholder="$t('cashier.dineIn.transferPlaceholder')"
+              :disabled="savingTransfer"
+            />
+          </div>
+          <div class="din-modal-foot">
+            <button class="sm-btn ghost sm" :disabled="savingTransfer" @click="transferModal.open = false">
+              {{ $t('common.cancel') }}
+            </button>
+            <button class="sm-btn" :disabled="savingTransfer || !transferTarget" @click="confirmTransfer">
+              <i class="fas fa-right-left"></i> {{ savingTransfer ? $t('common.saving') : $t('cashier.dineIn.moveTicket') }}
+            </button>
+          </div>
+        </div>
+      </transition>
+    </teleport>
   </div>
 </template>
 
@@ -207,6 +248,8 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cashierApi, orderApi, tableApi } from '@/api'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
+import SearchableSelect from '@/components/SearchableSelect.vue'
+import { toast } from '@/utils/toast'
 
 const { t } = useI18n()
 
@@ -337,6 +380,52 @@ function openTable(table) {
     ticketTable.value = table
   } else {
     showOrderModal.value = true
+  }
+}
+
+/* ── MODAL 4: Move a ticket to another table ─────────────────── */
+const transferModal = reactive({ open: false, tableName: '', orderId: null })
+const transferTarget = ref('')
+const transferError = ref('')
+const savingTransfer = ref(false)
+
+/** The moving ticket is the first running (unfrozen) ticket on the table. */
+const transferTargets = computed(() => {
+  const src = transferModal.tableName
+  const waiterName = tables.value.find((x) => x.table_name === src)?.waiter?.full_name || ''
+  return tables.value
+    .filter((x) => x.table_name !== src && x.is_active !== false && !frozenTableIds.value.has(x.table_name))
+    .filter((x) =>
+      x.status === 'available'
+      || ((runningByTable.value[x.table_name] || []).length && (x.waiter?.full_name || '') === waiterName),
+    )
+    .map((x) => ({ value: x.table_name, label: `${x.table_name} — ${x.status === 'available' ? t('cashier.dineIn.vacant') : t('cashier.dineIn.occupied')}` }))
+})
+
+function openTransfer(table) {
+  const order = (runningByTable.value[table.table_name] || []).find((o) => !o.is_frozen)
+  if (!order) return
+  transferModal.tableName = table.table_name
+  transferModal.orderId = order.order_id
+  transferTarget.value = ''
+  transferError.value = ''
+  transferModal.open = true
+}
+
+async function confirmTransfer() {
+  if (!transferModal.orderId || !transferTarget.value || busy.value) return
+  busy.value = true
+  transferError.value = ''
+  try {
+    await orderApi.transferOrder(transferModal.orderId, { table_number: transferTarget.value })
+    const target = transferTarget.value
+    transferModal.open = false
+    await load()
+    toast(t('cashier.dineIn.transferred', { table: target }))
+  } catch (err) {
+    transferError.value = err.response?.data?.message || t('common.actionFailed')
+  } finally {
+    busy.value = false
   }
 }
 
@@ -546,6 +635,26 @@ onBeforeUnmount(() => clearInterval(timerHandle))
   transition: border-color 0.12s, background 0.12s;
 }
 .picker-row:hover { border-color: var(--mrk-blue); background: #f0f6ff; }
+
+/* ── Transfer modal ──────────────────────────────────────────── */
+.transfer-modal .din-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin: 0 0 6px;
+}
+.din-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 18px 18px;
+}
+.din-modal-foot .sm-btn { font-size: 13px; }
+.move-icon { color: #7c3aed; border-color: #ddd6fe; }
+.move-icon:hover { border-color: #7c3aed; color: #7c3aed; background: #f5f3ff; }
 .picker-row .meta-chip { margin-left: auto; }
 .meta-chip {
   display: inline-flex;
