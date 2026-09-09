@@ -680,7 +680,15 @@
                   :empty-label="$t('orderTaker.selectTable')"
                   :disabled="billSaving"
                   force-search
-                />
+                >
+                  <template #option="{ option }">
+                    <span class="bill-transfer-opt" :class="{ 'is-mine': option.mine, 'is-taken': option.disabled }">
+                      {{ option.label }}
+                      <em v-if="option.mine">{{ $t('orderTaker.yourTable') }}</em>
+                      <em v-else-if="option.disabled">{{ $t('orderTaker.occupiedBy', { waiter: option.occupant }) }}</em>
+                    </span>
+                  </template>
+                </SearchableSelect>
               </div>
               <div class="bill-actions">
                 <span class="bill-summary">{{ transferTable ? $t('orderTaker.transferTo', { table: transferTable }) : ' ' }}</span>
@@ -1506,13 +1514,10 @@ const transferTableOptions = computed(() =>
     .map((tbl) => {
       const name = String(tbl.table_name)
       const occupant = occupiedTables.value.get(name)
-      const isSelf = occupant && String(occupant).toLowerCase() === String(waiterName.value).toLowerCase()
-      const disabled = Boolean(occupant) && !isSelf
-      const base = tbl.section ? `${tbl.table_name} · ${tbl.section}` : tbl.table_name
-      let label = base
-      if (isSelf) label = `${base} — ${t('orderTaker.yourTable')}`
-      else if (disabled) label = `${base} — ${t('orderTaker.occupiedBy', { waiter: occupant })}`
-      return { value: tbl.table_name, label, disabled }
+      const mine = occupant && String(occupant).toLowerCase() === String(waiterName.value).toLowerCase()
+      const disabled = Boolean(occupant) && !mine
+      const label = tbl.section ? `${tbl.table_name} · ${tbl.section}` : tbl.table_name
+      return { value: tbl.table_name, label, disabled, mine: Boolean(mine), occupant: occupant || '' }
     }),
 )
 
@@ -3185,6 +3190,26 @@ function onKey(e) {
   letter-spacing: 0.04em;
   color: #52525b;
 }
+.bill-transfer-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: -8px -10px;
+  padding: 8px 10px;
+  border-radius: 4px;
+}
+.bill-transfer-opt em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.bill-transfer-opt.is-mine { color: #005eb8; font-weight: 600; background: #eff6ff; }
+.bill-transfer-opt.is-mine em { background: #dbebfb; color: #005eb8; }
+.bill-transfer-opt.is-taken em { background: #ffe4e6; color: #b91c1c; }
 .taker-fld input {
   width: 100%;
   border: 1px solid #d4d4d8;
