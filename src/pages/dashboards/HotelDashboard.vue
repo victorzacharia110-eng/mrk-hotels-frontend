@@ -133,6 +133,21 @@
                   <i class="fas fa-broom" aria-hidden="true"></i>
                   <b>{{ hkByRoom[room.room_id].length }}</b>
                 </button>
+                <button
+                  v-if="(laundryByRoom[room.room_number] || []).length && !(hkByRoom[room.room_id] || []).length"
+                  type="button"
+                  class="sv-hk-badge sv-hk-badge-laundry"
+                  :class="{ active: hkTip && hkTip.room.room_id === room.room_id }"
+                  :aria-label="(laundryByRoom[room.room_number] || []).length + ' ' + $t('laundry.title').toLowerCase()"
+                  title=""
+                  @click.stop="toggleHkTip($event, room)"
+                  @mouseenter="showHkTip($event, room)"
+                  @mousemove="moveHkTip"
+                  @mouseleave="hideHkTip"
+                >
+                  <i class="fas fa-jug-detergent" aria-hidden="true"></i>
+                  <b>{{ (laundryByRoom[room.room_number] || []).length }}</b>
+                </button>
               </div>
               <div class="sv-room-track">
                 <div
@@ -306,6 +321,45 @@
         </li>
       </ul>
       <p v-else class="sv-hk-empty">{{ $t('stayview.noTasks') }}</p>
+
+      <!-- Laundry is housekeeping work too: open orders run on the same bars -->
+      <template v-if="hkTip.laundry.length">
+        <div class="sv-hk-section">
+          <span class="sv-hk-section-title"><i class="fas fa-jug-detergent" aria-hidden="true"></i> {{ $t('laundry.title') }}</span>
+          <span v-if="hkTip.laundry.length" class="sv-hk-section-count">{{ hkTip.laundry.length }}</span>
+        </div>
+        <ul class="sv-hk-list">
+          <li v-for="order in hkTip.laundry" :key="order.laundry_order_id" class="sv-hk-item" :class="order.status">
+            <div class="sv-hk-item-top">
+              <span class="sv-hk-task-type"><i class="fas fa-shirt" aria-hidden="true"></i> {{ hkLaundryLabel(order, 'service') }}</span>
+              <span class="sv-hk-status" :class="order.status">{{ hkLaundryLabel(order, 'status') }}</span>
+            </div>
+            <div class="sv-hk-item-meta">
+              <span>{{ $t('laundry.orderNumber') }} {{ order.order_number }}</span>
+              <span><i class="fas fa-user" aria-hidden="true"></i> {{ order.guest_name || '—' }}</span>
+            </div>
+            <div class="sv-hk-item-meta">
+              <span><i class="fas fa-layer-group" aria-hidden="true"></i> {{ order.items_count ?? 0 }} {{ $t('laundry.items') }}</span>
+              <span><i class="fas fa-coins" aria-hidden="true"></i> TZS {{ fmtNum(order.total_charge) }}</span>
+              <span v-if="order.attendant?.full_name"><i class="fas fa-user-gear" aria-hidden="true"></i> {{ order.attendant.full_name }}</span>
+            </div>
+            <div v-if="isHousekeepingStaff && hkLaundryNext(order).length" class="sv-hk-actions">
+              <button
+                v-for="next in hkLaundryNext(order)"
+                :key="next"
+                type="button"
+                class="sv-hk-btn"
+                :class="{ 'sv-hk-btn-success': next === 'delivered' || next === 'ready', 'sv-hk-btn-danger': next === 'cancelled' }"
+                :disabled="actionBusy"
+                @click.stop="hkLaundryAction(order, next)"
+              >
+                <i :class="next === 'delivered' ? 'fas fa-truck' : next === 'cancelled' ? 'fas fa-ban' : 'fas fa-check-double'" aria-hidden="true"></i>
+                {{ hkLaundryLabel({ status: next }, 'status') }}
+              </button>
+            </div>
+          </li>
+        </ul>
+      </template>
     </div>
 
     <!-- Click modal: full reservation summary for the selected bar -->
@@ -1431,7 +1485,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useNotificationStore } from '@/stores/notifications'
-import { roomApi, reservationApi, guestApi, housekeepingApi, invoiceApi, inventoryApi, paymentApi } from '@/api'
+import { roomApi, reservationApi, guestApi, housekeepingApi, laundryApi, invoiceApi, inventoryApi, paymentApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import AlertModal from '@/components/AlertModal.vue'
 import RoleBadge from '@/components/RoleBadge.vue'
@@ -1589,6 +1643,7 @@ async function load(silent = false) {
         roomRows = board.rooms ?? []
         reservationRows = board.stays ?? []
         hkTasks.value = board.tasks ?? []
+        hkLaundry.value = board.laundry_orders ?? []
       }
     } else {
       const [rooms, stays] = await Promise.all([
@@ -2671,6 +2726,21 @@ const hkByRoom = computed(() => {
   return map
 })
 
+// Laundry is housekeeping work too: open laundry orders loaded with the board.
+const hkLaundry = ref([])
+
+// Open laundry orders grouped by room number, shown on the same room bars.
+const laundryByRoom = computed(() => {
+  const map = {}
+  for (const order of hkLaundry.value) {
+    const key = String(order.room_number || '')
+    if (!key) continue
+    if (!(key in map)) map[key] = []
+    map[key].push(order)
+  }
+  return map
+})
+
 // Floating card state: pinned (tap/click) or hovered (mouse) over the bar.
 const hkTip = ref(null)
 
@@ -2716,8 +2786,9 @@ function hkTipPos(event) {
 
 function showHkTip(event, room, force = false) {
   const tasks = (hkByRoom.value[room.room_id] || []).slice()
-  if (!force && !tasks.length) return
-  hkTip.value = { room, tasks, pinned: force, ...hkTipPos(event) }
+  const laundry = hkLaundryFor(room)
+  if (!force && !tasks.length && !laundry.length) return
+  hkTip.value = { room, tasks, laundry, pinned: force, ...hkTipPos(event) }
 }
 
 function moveHkTip(event) {
@@ -2731,14 +2802,15 @@ function hideHkTip() {
 
 function toggleHkTip(event, room) {
   const tasks = (hkByRoom.value[room.room_id] || []).slice()
-  if (!tasks.length && !isHousekeepingStaff.value) return
+  const laundry = hkLaundryFor(room)
+  if (!tasks.length && !laundry.length && !isHousekeepingStaff.value) return
   const open = hkTip.value?.room?.room_id === room.room_id
   // A tap on an already-pinned card closes it; a tap on a hover-open card pins it.
   if (open && hkTip.value?.pinned) {
     hkTip.value = null
     return
   }
-  hkTip.value = { room, tasks, pinned: true, ...hkTipPos(event) }
+  hkTip.value = { room, tasks, laundry, pinned: true, ...hkTipPos(event) }
 }
 
 /** Guest name of the current stay in a room (from the visible window stays). */
@@ -2752,6 +2824,63 @@ function hkRoomGuest(roomId) {
   return stay?.guest_name || ''
 }
 
+const LAUNDRY_SERVICE_LABELS = {
+  wash: 'laundry.serviceWash',
+  iron: 'laundry.serviceIron',
+  dry_clean: 'laundry.serviceDryClean',
+}
+
+const LAUNDRY_STATUS_LABELS = {
+  pending: 'laundry.statusPending',
+  ready: 'laundry.statusReady',
+  delivered: 'laundry.statusDelivered',
+  cancelled: 'laundry.statusCancelled',
+}
+
+/** Localized laundry service/status label with a raw fallback. */
+function hkLaundryLabel(order, field) {
+  const source = field === 'service' ? LAUNDRY_SERVICE_LABELS : LAUNDRY_STATUS_LABELS
+  const key = source[order?.[field]]
+  return key && te(key) ? t(key) : String(order?.[field] ?? '—')
+}
+
+/** Open laundry orders for a room (matched by the room's number). */
+function hkLaundryFor(room) {
+  return (laundryByRoom.value[String(room?.room_number || '')] || []).slice()
+}
+
+/** Laundry workflow steps allowed from a room bar, by current status. */
+function hkLaundryNext(order) {
+  if (order.status === 'pending') return ['ready', 'cancelled']
+  if (order.status === 'ready') return ['delivered']
+  return []
+}
+
+/** Runs a laundry workflow step from the room card, then refreshes the tape. */
+async function hkLaundryAction(order, status) {
+  actionBusy.value = true
+  actionError.value = ''
+  try {
+    await laundryApi.update(order.laundry_order_id, { status })
+    await load(true)
+    const room = rooms.value.find((r) => String(r.room_number) === String(order.room_number))
+    if (room) {
+      hkTip.value = {
+        room,
+        tasks: (hkByRoom.value[room.room_id] || []).slice(),
+        laundry: hkLaundryFor(room),
+        pinned: true,
+        left: 12,
+        top: 12,
+      }
+    }
+  } catch (err) {
+    actionError.value = apiErrorMsg(err, t('stayview.actionError'))
+  } finally {
+    actionBusy.value = false
+  }
+}
+
 /** Runs a housekeeping workflow step from the room card, then refreshes the tape. */
 async function hkTaskAction(task, verb) {
   actionBusy.value = true
@@ -2761,7 +2890,14 @@ async function hkTaskAction(task, verb) {
     await load(true)
     const room = rooms.value.find((r) => r.room_id === task.room_id)
     if (room) {
-      hkTip.value = { room, tasks: (hkByRoom.value[room.room_id] || []).slice(), pinned: true, left: 12, top: 12 }
+      hkTip.value = {
+        room,
+        tasks: (hkByRoom.value[room.room_id] || []).slice(),
+        laundry: hkLaundryFor(room),
+        pinned: true,
+        left: 12,
+        top: 12,
+      }
     }
   } catch (err) {
     actionError.value = apiErrorMsg(err, t('stayview.actionError'))
@@ -3236,7 +3372,16 @@ const roomStatuses = ['available', 'occupied', 'dirty', 'cleaning', 'maintenance
 function openRoomModal(room, event = null) {
   if (isHousekeepingStaff.value) {
     if (event) showHkTip(event, room, true)
-    else hkTip.value = { room, tasks: (hkByRoom.value[room.room_id] || []).slice(), pinned: true, left: 12, top: 12 }
+    else {
+      hkTip.value = {
+        room,
+        tasks: (hkByRoom.value[room.room_id] || []).slice(),
+        laundry: hkLaundryFor(room),
+        pinned: true,
+        left: 12,
+        top: 12,
+      }
+    }
     return
   }
   actionError.value = ''
@@ -3577,6 +3722,13 @@ onUnmounted(() => clearInterval(refreshTimer))
 .sv-hk-badge:hover { background: #004d97; transform: translateY(-1px); }
 .sv-hk-badge.active { background: #dc3545; }
 
+/* Laundry orders get their own badge color so laundry-only rooms stand out. */
+.sv-hk-badge-laundry {
+  background: #0e9434;
+}
+.sv-hk-badge-laundry:hover { background: #0b7a2b; }
+.sv-hk-badge-laundry.active { background: #dc3545; }
+
 /* Floating housekeeping task card (pinned or hover) near the room bar. */
 .sv-hk-card {
   position: fixed;
@@ -3697,6 +3849,35 @@ onUnmounted(() => clearInterval(refreshTimer))
 .sv-hk-btn-primary:hover { background: #004d97; }
 .sv-hk-btn-success { border-color: #198754; background: #198754; color: #fff; }
 .sv-hk-btn-success:hover { background: #157347; }
+.sv-hk-btn-danger { border-color: #b02a37; background: #b02a37; color: #fff; }
+.sv-hk-btn-danger:hover { background: #981f2c; }
+.sv-hk-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+}
+.sv-hk-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0b1f33;
+  letter-spacing: 0.02em;
+}
+.sv-hk-section-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #005eb8;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
 .sv-hk-empty {
   margin: 4px 0 2px;
   padding: 14px 10px;
