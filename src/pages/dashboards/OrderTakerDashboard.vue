@@ -672,10 +672,16 @@
             </template>
             <template v-else>
               <p class="accomp-hint">{{ $t('orderTaker.transferHint') }}</p>
-              <label class="taker-fld">
+              <div class="taker-fld">
                 <span>{{ $t('orderTaker.transferPrompt') }}</span>
-                <input v-model.trim="transferTable" type="text" :disabled="billSaving" @keyup.enter="confirmTransfer" />
-              </label>
+                <SearchableSelect
+                  v-model="transferTable"
+                  :options="transferTableOptions"
+                  :empty-label="$t('orderTaker.selectTable')"
+                  :disabled="billSaving"
+                  force-search
+                />
+              </div>
               <div class="bill-actions">
                 <span class="bill-summary">{{ transferTable ? $t('orderTaker.transferTo', { table: transferTable }) : ' ' }}</span>
                 <button type="button" class="send-btn" :disabled="billSaving || !transferTable" @click="confirmTransfer">
@@ -1253,13 +1259,13 @@ async function confirmSplit() {
   }
 }
 
-/** Moves the whole ticket onto the typed table. */
+/** Moves the whole ticket onto the chosen table. */
 async function confirmTransfer() {
-  if (!transferTable.value.trim() || billSaving.value) return
+  if (!String(transferTable.value || '').trim() || billSaving.value) return
   billSaving.value = true
   billError.value = ''
   try {
-    const { data } = await orderApi.transferOrder(billModeOrder.value.order_id, { table_number: transferTable.value.trim() })
+    const { data } = await orderApi.transferOrder(billModeOrder.value.order_id, { table_number: String(transferTable.value).trim() })
     sentToast.value = data.message || t('orderTaker.transferred')
     setTimeout(() => (sentToast.value = ''), 3000)
     closeBill()
@@ -1491,6 +1497,24 @@ const tableOptions = computed(() =>
   }),
 )
 const canManageTables = computed(() => ['hotel_admin', 'manager'].includes(role.value))
+
+/** Transfer targets: the ticket may move onto a free table or a table the
+ *  waiter already holds — another staff member's table is listed disabled. */
+const transferTableOptions = computed(() =>
+  tables.value
+    .filter((tbl) => String(tbl.table_name) !== String(billModeOrder.value?.table_number || ''))
+    .map((tbl) => {
+      const name = String(tbl.table_name)
+      const occupant = occupiedTables.value.get(name)
+      const isSelf = occupant && String(occupant).toLowerCase() === String(waiterName.value).toLowerCase()
+      const disabled = Boolean(occupant) && !isSelf
+      const base = tbl.section ? `${tbl.table_name} · ${tbl.section}` : tbl.table_name
+      let label = base
+      if (isSelf) label = `${base} — ${t('orderTaker.yourTable')}`
+      else if (disabled) label = `${base} — ${t('orderTaker.occupiedBy', { waiter: occupant })}`
+      return { value: tbl.table_name, label, disabled }
+    }),
+)
 
 /** Loads the active tables for the table picker (all staff can read them). */
 async function loadTables() {
