@@ -1021,7 +1021,7 @@ onMounted(() => {
   color: #475569;
 }
 .db-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.db-track { height: 8px; background: #eef2f7; border-radius: 999px; overflow: hidden; }
+.db-track { height: 8px; background: #dbe2ea; border-radius: 999px; overflow: hidden; }
 .db-fill { display: block; height: 100%; border-radius: 999px; }
 .db-count { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 .bar-red { background: #ef4444; }
