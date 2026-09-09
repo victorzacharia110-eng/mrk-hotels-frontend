@@ -145,13 +145,13 @@
               :key="tbl.table_id"
               type="button"
               class="table-chip"
-              :class="tableHasLiveOrder(tbl.table_name) ? 'occupied' : 'free'"
+              :class="tableHasLiveOrder(tbl.table_name) ? (tableOccupiedBySelf(tbl.table_name) ? 'mine' : 'taken') : 'free'"
               :disabled="tableOccupiedByOther(tbl.table_name)"
               @click="selectTable(tbl)"
             >
               <span class="table-chip-name">{{ tbl.table_name }}</span>
-              <span v-if="tableHasLiveOrder(tbl.table_name)" class="table-chip-occ">
-                {{ $t('orderTaker.occupiedBy', { waiter: occupiedTables.get(String(tbl.table_name)) }) }}
+              <span v-if="tableHasLiveOrder(tbl.table_name)" class="table-chip-occ" :class="{ 'is-mine': tableOccupiedBySelf(tbl.table_name) }">
+                {{ tableOccupiedBySelf(tbl.table_name) ? $t('orderTaker.occupiedByYou') : $t('orderTaker.occupiedBy', { waiter: occupiedTables.get(String(tbl.table_name)) }) }}
               </span>
               <span v-else class="table-chip-free">{{ $t('orderTaker.tableFree') }}</span>
             </button>
@@ -1444,6 +1444,13 @@ function tableOccupiedByOther(name) {
   return String(occupant).toLowerCase() !== String(waiterName.value).toLowerCase()
 }
 
+/** True when the named table is held by this waiter's own open ticket. */
+function tableOccupiedBySelf(name) {
+  const occupant = occupiedTables.value.get(String(name))
+  if (!occupant) return false
+  return String(occupant).toLowerCase() === String(waiterName.value).toLowerCase()
+}
+
 /** The waiter's own running order sitting on the named table, if any. */
 function ownLiveOrderForTable(name) {
   return openOrders.value.find(
@@ -2093,9 +2100,17 @@ function onKey(e) {
   transform: translateY(-2px);
   border-color: #16a34a;
 }
-.table-chip.occupied {
+.table-chip.taken {
   background: #fef2f2;
   border-color: #fecaca;
+}
+.table-chip.mine {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+.table-chip.mine:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: #005eb8;
 }
 .table-chip-name {
   font-weight: 700;
@@ -2105,6 +2120,10 @@ function onKey(e) {
 .table-chip-occ {
   font-size: 11px;
   color: #b91c1c;
+}
+.table-chip-occ.is-mine {
+  color: #005eb8;
+  font-weight: 600;
 }
 .table-chip-free {
   font-size: 11px;

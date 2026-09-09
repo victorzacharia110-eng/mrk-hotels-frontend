@@ -3754,6 +3754,7 @@
     "searchPlaceholder": "Search item or category",
     "searchTitle": "Search results",
     "occupiedBy": "Occupied by {waiter}",
+    "occupiedByYou": "Occupied by you",
     "tableOccupied": "That table is occupied. Pick a free table.",
     "otherWaiter": "another waiter",
     "tableFree": "Free",
