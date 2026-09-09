@@ -101,8 +101,8 @@
                 role="button"
                 tabindex="0"
                 :title="$t('stayview.roomDetails')"
-                @click="openRoomModal(room)"
-                @keyup.enter="openRoomModal(room)"
+                @click="openRoomModal(room, $event)"
+                @keyup.enter="openRoomModal(room, $event)"
               >
                 <span class="sv-room-dot" :class="room.status" :title="room.status"></span>
                 <span class="sv-room-number">{{ room.room_number }}</span>
@@ -118,6 +118,21 @@
                   :title="room.status"
                   aria-hidden="true"
                 ></i>
+                <button
+                  v-if="(hkByRoom[room.room_id] || []).length"
+                  type="button"
+                  class="sv-hk-badge"
+                  :class="{ active: hkTip && hkTip.room.room_id === room.room_id }"
+                  :aria-label="hkByRoom[room.room_id].length + ' ' + $t('housekeeping.title').toLowerCase()"
+                  title=""
+                  @click.stop="toggleHkTip($event, room)"
+                  @mouseenter="showHkTip($event, room)"
+                  @mousemove="moveHkTip"
+                  @mouseleave="hideHkTip"
+                >
+                  <i class="fas fa-broom" aria-hidden="true"></i>
+                  <b>{{ hkByRoom[room.room_id].length }}</b>
+                </button>
               </div>
               <div class="sv-room-track">
                 <div
@@ -128,8 +143,8 @@
                   role="button"
                   tabindex="0"
                   :title="isVacantCell(room, d.iso) ? $t('stayview.vacant') : ''"
-                  @click="isVacantCell(room, d.iso) && bookVacantDay(room, d.iso)"
-                  @keyup.enter="isVacantCell(room, d.iso) && bookVacantDay(room, d.iso)"
+                  @click="onCellTap($event, room, d.iso)"
+                  @keyup.enter="onCellTap($event, room, d.iso)"
                 ></div>
                 <div
                   v-for="bar in barsByRoom[room.room_id] || []"
@@ -139,8 +154,8 @@
                   :style="{ gridColumn: `${bar.start} / span ${bar.span}`, animationDelay: `${bar.start * 30}ms` }"
                   role="button"
                   tabindex="0"
-                  @click="openBarModal(bar)"
-                  @keyup.enter="openBarModal(bar)"
+                  @click="onBarTap($event, bar)"
+                  @keyup.enter="onBarTap($event, bar)"
                   @mouseenter="showBarTip($event, bar)"
                   @mousemove="moveBarTip"
                   @mouseleave="hideBarTip"
@@ -211,6 +226,86 @@
           <strong v-if="barTip.paymentPending"> · TZS {{ barTip.balance }}</strong>
         </span>
       </div>
+    </div>
+
+    <!-- Floating housekeeping card: the assigned work on a room (tap/pin or hover) -->
+    <div
+      v-if="hkTip"
+      class="sv-hk-card"
+      :class="{ pinned: hkTip.pinned }"
+      :style="{ left: hkTip.left + 'px', top: hkTip.top + 'px' }"
+      role="dialog"
+      :aria-label="$t('housekeeping.title')"
+      @mouseenter="hkTip.pinned = true"
+      @mouseleave="hideHkTip"
+    >
+      <header class="sv-hk-card-head">
+        <div class="sv-hk-card-room">
+          <span class="sv-room-dot" :class="hkTip.room.status" aria-hidden="true"></span>
+          <strong>{{ hkTip.room.room_number }}</strong>
+          <span class="sv-hk-card-guest">
+            {{ hkRoomGuest(hkTip.room.room_id) || roomTypeLabel(hkTip.room.room_type) }}
+          </span>
+        </div>
+        <button type="button" class="sv-hk-card-close" :aria-label="$t('common.close')" @click="hkTip = null">
+          <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
+      </header>
+      <ul v-if="hkTip.tasks.length" class="sv-hk-list">
+        <li v-for="task in hkTip.tasks" :key="task.task_id" class="sv-hk-item" :class="task.priority">
+          <div class="sv-hk-item-top">
+            <span class="sv-hk-task-type"><i class="fas fa-broom" aria-hidden="true"></i> {{ hkLabel(task, 'task_type') }}</span>
+            <span class="sv-hk-status" :class="task.status">{{ hkLabel(task, 'status') }}</span>
+          </div>
+          <div class="sv-hk-item-meta">
+            <span><i class="fas fa-flag" aria-hidden="true"></i> {{ hkLabel(task, 'priority') }}</span>
+            <span>
+              <i class="fas fa-user" aria-hidden="true"></i>
+              {{ task.assigned_user?.full_name || $t('housekeeping.unassigned') }}
+            </span>
+          </div>
+          <p v-if="task.notes" class="sv-hk-notes">{{ task.notes }}</p>
+          <div v-if="isHousekeepingStaff" class="sv-hk-actions">
+            <button
+              v-if="task.status === 'dirty'"
+              type="button"
+              class="sv-hk-btn sv-hk-btn-primary"
+              :disabled="actionBusy"
+              @click.stop="hkTaskAction(task, 'start')"
+            >
+              <i class="fas fa-play" aria-hidden="true"></i> {{ $t('housekeeping.start') }}
+            </button>
+            <button
+              v-if="task.status === 'in_progress' && hkCanConfirm"
+              type="button"
+              class="sv-hk-btn"
+              :disabled="actionBusy"
+              @click.stop="hkTaskAction(task, 'confirm')"
+            >
+              <i class="fas fa-check-double" aria-hidden="true"></i> {{ $t('housekeeping.confirm') }}
+            </button>
+            <button
+              v-if="task.status === 'confirmed' && hkCanVerify"
+              type="button"
+              class="sv-hk-btn"
+              :disabled="actionBusy"
+              @click.stop="hkTaskAction(task, 'verify')"
+            >
+              <i class="fas fa-clipboard-check" aria-hidden="true"></i> {{ $t('housekeeping.verify') }}
+            </button>
+            <button
+              v-if="task.status === 'verified'"
+              type="button"
+              class="sv-hk-btn sv-hk-btn-success"
+              :disabled="actionBusy"
+              @click.stop="hkTaskAction(task, 'complete')"
+            >
+              <i class="fas fa-check" aria-hidden="true"></i> {{ $t('housekeeping.complete') }}
+            </button>
+          </div>
+        </li>
+      </ul>
+      <p v-else class="sv-hk-empty">{{ $t('stayview.noTasks') }}</p>
     </div>
 
     <!-- Click modal: full reservation summary for the selected bar -->
@@ -1476,19 +1571,41 @@ async function load(silent = false) {
   if (!silent) loading.value = true
   error.value = ''
   try {
-    const [roomRows, reservationRows] = await Promise.all([
-      // Low-level staff (e.g. kitchen, waiter if they land here) cannot read
-      // rooms (level 40) or reservations (level 60): render an empty chart
-      // instead of flashing the backend's 403 message.
-      fetchAll(roomApi.index).catch(() => []),
-      // Only the stays overlapping the visible 14-day window — with real
-      // booking volume, pulling every reservation ever made would crawl.
-      fetchAll(reservationApi.index, {
-        exclude_status: ['cancelled', 'no_show'],
-        window_start: isoKey(windowStart.value),
-        window_end: isoKey(addDays(windowStart.value, DAYS)),
-      }).catch(() => []),
-    ])
+    // Housekeeping staff (and admins/managers viewing the HK landing) get the
+    // whole tape from the board: rooms, guest stays and open tasks through a
+    // level:40 endpoint the housekeeping role is allowed to read. Everyone
+    // else keeps the front-office feed (reservations are level:60).
+    const windowParams = {
+      window_start: isoKey(windowStart.value),
+      window_end: isoKey(addDays(windowStart.value, DAYS)),
+      search: search.value.trim() || undefined,
+    }
+
+    let roomRows = []
+    let reservationRows = []
+    if (canSeeHousekeeping.value) {
+      const board = await housekeepingApi.board(windowParams).then((res) => res.data).catch(() => null)
+      if (board) {
+        roomRows = board.rooms ?? []
+        reservationRows = board.stays ?? []
+        hkTasks.value = board.tasks ?? []
+      }
+    } else {
+      const [rooms, stays] = await Promise.all([
+        // Low-level staff (e.g. kitchen, waiter if they land here) cannot read
+        // rooms (level 40) or reservations (level 60): render an empty chart
+        // instead of flashing the backend's 403 message.
+        fetchAll(roomApi.index).catch(() => []),
+        // Only the stays overlapping the visible 14-day window — with real
+        // booking volume, pulling every reservation ever made would crawl.
+        fetchAll(reservationApi.index, {
+          exclude_status: ['cancelled', 'no_show'],
+          ...windowParams,
+        }).catch(() => []),
+      ])
+      roomRows = rooms
+      reservationRows = stays
+    }
     rooms.value = roomRows
     reservations.value = reservationRows
     loaded.value = true
@@ -1723,17 +1840,24 @@ function tipPosition(event) {
 
 /** Shows the popover for the hovered booking bar. */
 function showBarTip(event, bar) {
+  if (isHousekeepingStaff.value) {
+    const room = rooms.value.find((r) => r.room_id === bar.roomId)
+    if (room) showHkTip(event, room)
+    return
+  }
   barTip.value = { ...bar, ...tipPosition(event) }
 }
 
 /** Keeps the popover glued to the cursor while moving within a bar. */
 function moveBarTip(event) {
   if (barTip.value) Object.assign(barTip.value, tipPosition(event))
+  if (isHousekeepingStaff.value) moveHkTip(event)
 }
 
 /** Hides the popover when the cursor leaves the bar. */
 function hideBarTip() {
   barTip.value = null
+  hideHkTip()
 }
 
 /* ---------------- Booking-bar click modal ---------------- */
@@ -1759,6 +1883,38 @@ function openBarModal(bar) {
   roomTasksLoaded.value = false
   if (bar?.id) loadFolio(bar.id)
   else folioLoading.value = false
+}
+
+/**
+ * Entry point for every bar click on the tape.
+ *
+ * Housekeeping staff get the stay-view layout but only housekeeping activities:
+ * tapping a bar pins the assigned-work card for that room — never the front-desk
+ * folio, payments or room charges. Front-desk roles keep the full reservation
+ * modal.
+ */
+function onBarTap(event, bar) {
+  if (isHousekeepingStaff.value) {
+    const room = rooms.value.find((r) => r.room_id === bar.roomId)
+    if (room) showHkTip(event, room, true)
+    return
+  }
+  openBarModal(bar)
+}
+
+/**
+ * Entry point for clicks on the empty day cells of a room row.
+ *
+ * Housekeeping staff cannot book rooms: a vacant cell tap just shows the room
+ * details (housekeeping status panel). Front-desk roles keep the booking flow.
+ */
+function onCellTap(event, room, iso) {
+  if (!isVacantCell(room, iso)) return
+  if (isHousekeepingStaff.value) {
+    openRoomModal(room, event)
+    return
+  }
+  bookVacantDay(room, iso)
 }
 
 /** Closes the reservation summary modal. */
@@ -2488,6 +2644,132 @@ const canSeeHousekeeping = computed(() =>
   ['hotel_admin', 'manager', 'housekeeping'].includes(authStore.user?.user_role),
 )
 
+// Pure housekeeping staff: the tape is their whole surface, and they may only
+// perform housekeeping work on it — never book, open folios, take payment or
+// touch room charges. Front-desk roles (admin/manager/receptionist) keep the
+// full stay-view tools.
+const isHousekeepingStaff = computed(() => authStore.user?.user_role === 'housekeeping')
+
+// Housekeeping workflow rights for the room-level floating card: attendants can
+// start their work; confirming and verifying are supervisory steps.
+const hkCanConfirm = computed(() => authStore.can(40) && authStore.canOperate)
+const hkCanVerify = computed(() => authStore.can(40) && authStore.canOperate)
+
+/* ---- Housekeeping task chips & floating cards on the room bars ---- */
+
+// Open tasks shown on the tape (only loaded for housekeeping-visible roles).
+const hkTasks = ref([])
+
+// Open tasks grouped by room id, so a room bar can show its work at a glance.
+const hkByRoom = computed(() => {
+  const map = {}
+  for (const task of hkTasks.value) {
+    const roomId = task.room_id
+    if (!(roomId in map)) map[roomId] = []
+    map[roomId].push(task)
+  }
+  return map
+})
+
+// Floating card state: pinned (tap/click) or hovered (mouse) over the bar.
+const hkTip = ref(null)
+
+const HK_TASK_TYPE_LABELS = {
+  cleaning: 'housekeeping.typeCleaning',
+  maintenance: 'housekeeping.typeMaintenance',
+  inspection: 'housekeeping.typeInspection',
+  turndown: 'housekeeping.typeTurndown',
+  deep_clean: 'housekeeping.typeDeepClean',
+}
+
+const HK_PRIORITY_LABELS = {
+  urgent: 'housekeeping.priorityUrgent',
+  high: 'housekeeping.priorityHigh',
+  normal: 'housekeeping.priorityNormal',
+  low: 'housekeeping.priorityLow',
+}
+
+const HK_STATUS_LABELS = {
+  dirty: 'housekeeping.statusDirty',
+  in_progress: 'housekeeping.statusInProgress',
+  confirmed: 'housekeeping.statusConfirmed',
+  verified: 'housekeeping.statusVerified',
+  completed: 'housekeeping.statusCompleted',
+}
+
+/** Localized label for a task field (type/priority/status) with a raw fallback. */
+function hkLabel(task, field) {
+  const source = field === 'task_type' ? HK_TASK_TYPE_LABELS : field === 'priority' ? HK_PRIORITY_LABELS : HK_STATUS_LABELS
+  const key = source[task?.[field]]
+  return key && te(key) ? t(key) : String(task?.[field] ?? '—')
+}
+
+/** Clamps a floating-card anchor inside the viewport (keeps the card tappable while walking). */
+function hkTipPos(event) {
+  const width = 300
+  const height = 260
+  const pad = 10
+  const left = Math.min(Math.max(pad, event.clientX - width / 2), window.innerWidth - width - pad)
+  const top = Math.min(Math.max(pad, event.clientY + 14), window.innerHeight - height - pad)
+  return { left, top }
+}
+
+function showHkTip(event, room, force = false) {
+  const tasks = (hkByRoom.value[room.room_id] || []).slice()
+  if (!force && !tasks.length) return
+  hkTip.value = { room, tasks, pinned: force, ...hkTipPos(event) }
+}
+
+function moveHkTip(event) {
+  if (!hkTip.value || hkTip.value.pinned) return
+  Object.assign(hkTip.value, hkTipPos(event))
+}
+
+function hideHkTip() {
+  if (hkTip.value && !hkTip.value.pinned) hkTip.value = null
+}
+
+function toggleHkTip(event, room) {
+  const tasks = (hkByRoom.value[room.room_id] || []).slice()
+  if (!tasks.length && !isHousekeepingStaff.value) return
+  const open = hkTip.value?.room?.room_id === room.room_id
+  // A tap on an already-pinned card closes it; a tap on a hover-open card pins it.
+  if (open && hkTip.value?.pinned) {
+    hkTip.value = null
+    return
+  }
+  hkTip.value = { room, tasks, pinned: true, ...hkTipPos(event) }
+}
+
+/** Guest name of the current stay in a room (from the visible window stays). */
+function hkRoomGuest(roomId) {
+  const today = startOfDay(new Date())
+  const stay = (reservations.value || []).find((r) => {
+    if (reservationRoomId(r) !== roomId) return false
+    const { arrival, departure } = reservationDates(r)
+    return arrival && departure && arrival <= today && departure > today
+  })
+  return stay?.guest_name || ''
+}
+
+/** Runs a housekeeping workflow step from the room card, then refreshes the tape. */
+async function hkTaskAction(task, verb) {
+  actionBusy.value = true
+  actionError.value = ''
+  try {
+    await housekeepingApi[verb](task.task_id)
+    await load(true)
+    const room = rooms.value.find((r) => r.room_id === task.room_id)
+    if (room) {
+      hkTip.value = { room, tasks: (hkByRoom.value[room.room_id] || []).slice(), pinned: true, left: 12, top: 12 }
+    }
+  } catch (err) {
+    actionError.value = apiErrorMsg(err, t('stayview.actionError'))
+  } finally {
+    actionBusy.value = false
+  }
+}
+
 const ledgerModal = ref(false)
 const ledgerForm = ref({ from: '', to: '', category: '', ignoreZero: false })
 const ledgerBusy = ref(false)
@@ -2925,9 +3207,12 @@ async function openTasksModal(roomId = null) {
   actionError.value = ''
   tasksModal.value = true
   try {
-    const res = await housekeepingApi.index({ status: 'pending', per_page: 50 })
+    const res = await housekeepingApi.index({
+      per_page: 50,
+      ...(roomId ? { room_id: roomId } : {}),
+    })
     const p = res.data
-    tasks.value = Array.isArray(p) ? p : p?.data || []
+    tasks.value = (Array.isArray(p) ? p : p?.data || []).filter((task) => task.status !== 'completed')
   } catch {
     tasks.value = []
   }
@@ -2948,7 +3233,12 @@ const roomModal = ref(null)
 const roomStatuses = ['available', 'occupied', 'dirty', 'cleaning', 'maintenance']
 
 /** Opens the room details / status panel for the clicked room cell. */
-function openRoomModal(room) {
+function openRoomModal(room, event = null) {
+  if (isHousekeepingStaff.value) {
+    if (event) showHkTip(event, room, true)
+    else hkTip.value = { room, tasks: (hkByRoom.value[room.room_id] || []).slice(), pinned: true, left: 12, top: 12 }
+    return
+  }
   actionError.value = ''
   roomModal.value = room
 }
@@ -3263,6 +3553,169 @@ onUnmounted(() => clearInterval(refreshTimer))
 .sv-room-flag {
   color: #9e9e9e;
   font-size: 12px;
+}
+
+/* Housekeeping task badge on the room cell (opens the floating card). */
+.sv-hk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  padding: 1px 7px;
+  border: none;
+  border-radius: 999px;
+  background: #005eb8;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 18px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+.sv-hk-badge i { font-size: 10px; }
+.sv-hk-badge:hover { background: #004d97; transform: translateY(-1px); }
+.sv-hk-badge.active { background: #dc3545; }
+
+/* Floating housekeeping task card (pinned or hover) near the room bar. */
+.sv-hk-card {
+  position: fixed;
+  z-index: 1001;
+  width: 300px;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #dbe2ea;
+  border-top: 3px solid #005eb8;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  padding: 12px;
+}
+.sv-hk-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.sv-hk-card-room {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.sv-hk-card-room strong { font-size: 16px; color: #0b1f33; }
+.sv-hk-card-guest {
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sv-hk-card-close {
+  flex: none;
+  border: none;
+  background: none;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.sv-hk-card-close:hover { color: #dc3545; }
+.sv-hk-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.sv-hk-item {
+  border: 1px solid #e8edf3;
+  border-left: 3px solid #94a3b8;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fbfdff;
+}
+.sv-hk-item.urgent { border-left-color: #dc3545; }
+.sv-hk-item.high { border-left-color: #fd7e14; }
+.sv-hk-item.normal { border-left-color: #0d6efd; }
+.sv-hk-item.low { border-left-color: #adb5bd; }
+.sv-hk-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.sv-hk-task-type { font-size: 12px; font-weight: 800; color: #0b1f33; }
+.sv-hk-status {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: #e2e8f0;
+  color: #334155;
+  white-space: nowrap;
+}
+.sv-hk-status.dirty, .sv-hk-status.confirmed { background: #fde2e2; color: #b91c1c; }
+.sv-hk-status.in_progress { background: #fff3cd; color: #92400e; }
+.sv-hk-status.verified, .sv-hk-status.completed { background: #dcfce7; color: #166534; }
+.sv-hk-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 11px;
+  color: #64748b;
+}
+.sv-hk-notes { margin: 6px 0 0; font-size: 11px; color: #475569; font-style: italic; }
+.sv-hk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #e2e8f0;
+}
+.sv-hk-btn {
+  flex: 1;
+  min-width: 96px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border: 1px solid #dbe2ea;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #0b1f33;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.12s ease;
+}
+.sv-hk-btn:hover { background: #eef2f7; transform: translateY(-1px); }
+.sv-hk-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.sv-hk-btn svg,
+.sv-hk-btn i { font-size: 12px; }
+.sv-hk-btn-primary { border-color: #005eb8; background: #005eb8; color: #fff; }
+.sv-hk-btn-primary:hover { background: #004d97; }
+.sv-hk-btn-success { border-color: #198754; background: #198754; color: #fff; }
+.sv-hk-btn-success:hover { background: #157347; }
+.sv-hk-empty {
+  margin: 4px 0 2px;
+  padding: 14px 10px;
+  border: 1px dashed #dbe2ea;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+@media (max-width: 640px) {
+  .sv-hk-card {
+    left: 10px !important;
+    right: 10px;
+    width: auto;
+    max-height: 46vh;
+    top: auto !important;
+    bottom: 10px;
+  }
 }
 
 .sv-room-dot {

@@ -963,6 +963,16 @@ export const housekeepingApi = {
     return api.get(`${v1}/housekeeping/dashboard`, { params })
   },
   /**
+   * Stay-view board for housekeeping staff: rooms, guest stays in the visible
+   * window and open tasks (with assignees) in one level:40 call — so the room
+   * tape still shows the guests inside and assigned work floating on the bars.
+   * @param {object} params - Query params ({ window_start, window_end, search }).
+   * @returns {Promise} Axios response with { rooms, stays, tasks }.
+   */
+  board(params) {
+    return api.get(`${v1}/housekeeping/board`, { params })
+  },
+  /**
    * Creates a new housekeeping task.
    * @param {object} data - Task payload (room, type, priority, ...).
    * @returns {Promise} Axios response with the created task.
