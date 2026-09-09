@@ -4201,7 +4201,34 @@
       "paymentTerms": "Masharti ya Malipo",
       "creditLimit": "Kikomo cha Mkopo",
       "currentBalance": "Salio la Sasa",
-      "noCreditors": "Hakuna wadai waliopatikana."
+      "noCreditors": "Hakuna wadai waliopatikana.",
+      "type": "Aina",
+      "account": "Namba ya Akaunti",
+      "actions": "Vitendo",
+      "newCreditor": "Mdai mpya",
+      "editCreditor": "Hariri mdai",
+      "saved": "Mdai amehifadhiwa.",
+      "organizationName": "Jina la taasisi",
+      "creditorType": "Aina ya mdai",
+      "accountNumber": "Namba ya akaunti",
+      "address": "Anwani",
+      "status": "Hali",
+      "deleteConfirm": "Futa akaunti hii ya mdai?",
+      "creditorTypes": {
+        "supplier": "Msambazaji",
+        "bank": "Benki",
+        "lending": "Ukopeshaji",
+        "leasing": "Kukodisha",
+        "landlord": "Mmiliki wa Nyumba",
+        "contractor": "Kandarasi",
+        "utility": "Huduma",
+        "other": "Nyingine"
+      },
+      "statuses": {
+        "active": "Inayotumika",
+        "inactive": "Haifanyi Kazi",
+        "blocked": "Imefungwa"
+      }
     },
     "topbar": {
       "switchOutlet": "Badili outlet"

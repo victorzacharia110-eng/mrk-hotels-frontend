@@ -4201,7 +4201,34 @@
       "paymentTerms": "Payment Terms",
       "creditLimit": "Credit Limit",
       "currentBalance": "Current Balance",
-      "noCreditors": "No creditors found."
+      "noCreditors": "No creditors found.",
+      "type": "Type",
+      "account": "Account No.",
+      "actions": "Actions",
+      "newCreditor": "New creditor",
+      "editCreditor": "Edit creditor",
+      "saved": "Creditor saved.",
+      "organizationName": "Organization name",
+      "creditorType": "Creditor type",
+      "accountNumber": "Account number",
+      "address": "Address",
+      "status": "Status",
+      "deleteConfirm": "Delete this creditor account?",
+      "creditorTypes": {
+        "supplier": "Supplier",
+        "bank": "Bank",
+        "lending": "Lending",
+        "leasing": "Leasing",
+        "landlord": "Landlord",
+        "contractor": "Contractor",
+        "utility": "Utility",
+        "other": "Other"
+      },
+      "statuses": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "blocked": "Blocked"
+      }
     },
     "topbar": {
       "switchOutlet": "Switch outlet"

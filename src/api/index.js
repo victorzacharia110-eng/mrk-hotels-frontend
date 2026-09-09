@@ -1743,13 +1743,27 @@ export const posApi = {
     return api.get(`${v1}/cashier/accounts`, { params })
   },
   /**
-   * Cashier creditor lookup over the supplier book: companies that extend
-   * the hotel credit, with payment terms, credit limit and amount owed.
+   * Cashier creditor lookup across the whole credit book: suppliers plus any
+   * organization that extends the hotel credit (banks, lenders, leasing
+   * firms, landlords, contractors, utilities), with payment terms, credit
+   * limit and the amount currently owed.
    * @param {object} params - Query params ({ search, per_page, page }).
    * @returns {Promise} Axios response with { creditors, pagination }.
    */
   creditors(params) {
     return api.get(`${v1}/cashier/creditors`, { params })
+  },
+  /** Registers an organization that can extend the hotel credit. */
+  saveCreditor(payload) {
+    return api.post(`${v1}/cashier/creditors`, payload)
+  },
+  /** Updates a general creditor account. */
+  updateCreditor(id, payload) {
+    return api.put(`${v1}/cashier/creditors/${id}`, payload)
+  },
+  /** Removes a general creditor account. */
+  deleteCreditor(id) {
+    return api.delete(`${v1}/cashier/creditors/${id}`)
   },
 }
 
