@@ -2985,9 +2985,13 @@ function onKey(e) {
     gap: 10px;
   }
 
-  /* Tabs stack: department switch takes the full top row */
+  /* Tabs stack vertically: department switch takes the full top row */
   .pos-tabs {
-    flex-wrap: wrap;
+    display: block;
+  }
+
+  .pos-tab {
+    width: 100%;
   }
 
   .dept-toggle {
