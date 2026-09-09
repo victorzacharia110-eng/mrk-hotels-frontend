@@ -163,7 +163,7 @@
             </div>
             <div class="form-group">
               <label>{{ $t('purchaseOrders.deliveryDate') }}</label>
-              <input v-model="form.delivery_date" type="date" class="input" />
+              <CalendarInput v-model="form.delivery_date" />
             </div>
             <div class="form-group">
               <label>{{ $t('purchaseOrders.paymentTerms') }}</label>
@@ -302,6 +302,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { purchaseOrderApi, purchaseRequisitionApi, supplierApi, inventoryApi } from '@/api'
 import { useI18n } from 'vue-i18n'
+import CalendarInput from '@/components/CalendarInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { collectAllRows } from '@/utils/export'

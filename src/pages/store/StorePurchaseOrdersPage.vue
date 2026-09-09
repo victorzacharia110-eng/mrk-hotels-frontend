@@ -10,7 +10,7 @@
     <div class="sm-toolbar">
       <div class="sm-search"><i class="fas fa-magnifying-glass"></i><input v-model="q" type="text" :placeholder="$t('common.search')" /></div>
       <select v-if="statuses.length" v-model="status" class="sm-select"><option value="">{{ $t('common.status') }}</option><option v-for="s in statuses" :key="s" :value="s">{{ s }}</option></select>
-      <input v-model="dateFilter" type="date" class="sm-input" style="max-width: 150px" @change="load(1)" />
+      <CalendarInput v-model="dateFilter" style="max-width: 150px" @change="load(1)" />
       <select v-model="statusFilter" class="sm-select" @change="load(1)">
         <option value="">{{ $t('common.allStatuses') }}</option>
         <option value="pending">{{ $t('common.pending') }}</option>
@@ -93,7 +93,7 @@
                 <option v-for="r in approvedReqs" :key="r.requisition_id" :value="r.requisition_id">{{ r.requisition_number }}</option>
               </select>
             </div>
-            <div class="form-field"><label>{{ $t('purchaseOrders.deliveryDate') }}</label><input v-model="form.delivery_date" type="date" class="sm-input" :min="todayStr" /></div>
+            <div class="form-field"><label>{{ $t('purchaseOrders.deliveryDate') }}</label><CalendarInput v-model="form.delivery_date" :min="todayStr" /></div>
             <div class="form-field"><label>{{ $t('suppliers.paymentTerms') }}</label><input v-model="form.payment_terms" class="sm-input" placeholder="Net 30" /></div>
             <div class="form-field full"><label>{{ $t('purchaseOrders.deliveryAddress') }}</label><input v-model="form.delivery_address" class="sm-input" /></div>
             <div class="form-field full"><label>{{ $t('common.notes') }}</label><textarea v-model="form.notes" rows="2" class="sm-textarea"></textarea></div>
@@ -207,8 +207,10 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { purchaseOrderApi, purchaseRequisitionApi, supplierApi, inventoryApi } from '@/api'
+import CalendarInput from '@/components/CalendarInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
+import { saveBlob } from '@/utils/download'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -419,25 +421,29 @@ async function openDetail(po) {
   detail.value = res.data.purchase_order || res.data.data || res.data
 }
 
-function printDetail() {
-  printData.value = detail.value
-  setTimeout(() => window.print(), 60)
+async function printDetail() {
+  const po = detail.value
+  try {
+    const res = await purchaseOrderApi.printPdf(po.po_id)
+    const match = (res.headers['content-disposition'] || '').match(/filename="?([^"]+)/)
+    saveBlob(res.data, match ? match[1] : `PurchaseOrder-${po.po_number}.pdf`)
+  } catch {
+    window.alert(t('purchaseOrders.printError'))
+  }
 }
 
 function receiveGoods() {
   router.push({ name: 'store-goods-received', query: { po_id: detail.value.po_id, create: '1' } })
 }
 
-function emailSupplier() {
+async function emailSupplier() {
   const po = detail.value
-  const email = po.supplier?.email
-  if (!email) {
-    window.alert(t('purchaseOrders.noSupplierEmail'))
-    return
+  try {
+    const res = await purchaseOrderApi.email(po.po_id)
+    window.alert(t('purchaseOrders.emailSuccess', { recipient: res.data?.message || '' }))
+  } catch (e) {
+    window.alert(t('purchaseOrders.emailError', { message: e.response?.data?.message || '' }))
   }
-  const items = (po.items || []).map((i) => `- ${i.item_name} x ${i.quantity} ${i.unit || ''} @ TZS ${Number(i.unit_price || 0).toLocaleString()}`).join('\n')
-  const body = `${t('goodsReceived.purchaseOrder')}: ${po.po_number}\n${t('purchaseOrders.deliveryDate')}: ${po.delivery_date || '-'}\n\n${items}\n\n${t('purchaseOrders.total')}: TZS ${Number(po.total_amount || 0).toLocaleString()}`
-  window.location.href = `mailto:${email}?subject=${encodeURIComponent(`PO ${po.po_number}`)}&body=${encodeURIComponent(body)}`
 }
 
 async function voidPo() {

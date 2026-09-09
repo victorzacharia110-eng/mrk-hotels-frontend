@@ -39,11 +39,11 @@
 
         <label class="rp-field">
           <span>{{ $t('staffDashboard.from') }}</span>
-          <input v-model="from" type="date" :max="to || undefined" @change="loadReport" />
+          <CalendarInput v-model="from" :max="to || ''" @change="loadReport" />
         </label>
         <label class="rp-field">
           <span>{{ $t('staffDashboard.to') }}</span>
-          <input v-model="to" type="date" :min="from || undefined" @change="loadReport" />
+          <CalendarInput v-model="to" :min="from || ''" @change="loadReport" />
         </label>
 
         <button type="button" class="rp-refresh" :disabled="loading" @click="loadReport">
@@ -201,6 +201,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { reportApi } from '@/api'
+import CalendarInput from '@/components/CalendarInput.vue'
 
 const authStore = useAuthStore()
 const { d, t } = useI18n()

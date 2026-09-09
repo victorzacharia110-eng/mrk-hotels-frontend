@@ -3,8 +3,8 @@
   <div class="sm-page">
     <div class="sm-toolbar">
       <div class="sm-search"><i class="fas fa-magnifying-glass"></i><input v-model="q" type="text" :placeholder="$t('common.search')" @input="debouncedLoad" /></div>
-    <input v-model="fromDate" type="date" class="sm-input" @change="load(1)" />
-    <input v-model="toDate" type="date" class="sm-input" @change="load(1)" />
+    <CalendarInput v-model="fromDate" @change="load(1)" />
+    <CalendarInput v-model="toDate" @change="load(1)" />
     <SearchableSelect
         v-model="catFilter"
         :options="expenseCategoryOptions"
@@ -75,6 +75,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeApi } from '../../api'
+import CalendarInput from '@/components/CalendarInput.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'

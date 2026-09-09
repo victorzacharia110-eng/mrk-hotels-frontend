@@ -1148,11 +1148,14 @@ export const inventoryOpsApi = {
   storeIndent: (data) => api.post(`${v1}/inventory-indents`, data),
   updateIndent: (id, data) => api.put(`${v1}/inventory-indents/${id}`, data),
   sendIndent: (id) => api.post(`${v1}/inventory-indents/${id}/send`),
+  recallIndent: (id) => api.post(`${v1}/inventory-indents/${id}/recall`),
   supplyIndent: (id, lines) => api.post(`${v1}/inventory-indents/${id}/supply`, { lines }),
   acceptIndent: (id) => api.post(`${v1}/inventory-indents/${id}/accept`),
   approveIndent: (id) => api.post(`${v1}/inventory-indents/${id}/approve`),
   rejectIndent: (id, reason) => api.post(`${v1}/inventory-indents/${id}/reject`, { reason }),
   voidIndent: (id, reason) => api.post(`${v1}/inventory-indents/${id}/void`, { reason }),
+  printIndentPdf: (id) => api.get(`${v1}/inventory-indents/${id}/pdf`, { responseType: 'blob' }),
+  emailIndent: (id, to) => api.post(`${v1}/inventory-indents/${id}/email`, to ? { to } : {}),
 
   marketLists: (params) => api.get(`${v1}/inventory-market-lists`, { params }),
   storeMarketList: (data) => api.post(`${v1}/inventory-market-lists`, data),
@@ -2223,6 +2226,22 @@ export const purchaseOrderApi = {
   void(id, data) {
     return api.post(`${v1}/purchase-orders/${id}/void`, data)
   },
+  /**
+   * Opens the purchase order as a printable PDF.
+   * @param {string|number} id - Purchase order identifier.
+   */
+  printPdf(id) {
+    return api.get(`${v1}/purchase-orders/${id}/pdf`, { responseType: 'blob' })
+  },
+  /**
+   * E-mails the purchase order PDF to the supplier (or a custom `to`).
+   * @param {string|number} id - Purchase order identifier.
+   * @param {string} [to] - Optional recipient override.
+   * @returns {Promise} Axios response confirming the send.
+   */
+  email(id, to) {
+    return api.post(`${v1}/purchase-orders/${id}/email`, to ? { to } : {})
+  },
 }
 
 /** Goods received notes recorded against purchase orders. */
@@ -2268,6 +2287,22 @@ export const goodsReceivedNoteApi = {
    */
   void(id, data) {
     return api.post(`${v1}/goods-received-notes/${id}/void`, data)
+  },
+  /**
+   * Opens the goods received note as a printable PDF.
+   * @param {string|number} id - GRN identifier.
+   */
+  printPdf(id) {
+    return api.get(`${v1}/goods-received-notes/${id}/pdf`, { responseType: 'blob' })
+  },
+  /**
+   * E-mails the goods received note PDF to the hotel contact (or a custom `to`).
+   * @param {string|number} id - GRN identifier.
+   * @param {string} [to] - Optional recipient override.
+   * @returns {Promise} Axios response confirming the send.
+   */
+  email(id, to) {
+    return api.post(`${v1}/goods-received-notes/${id}/email`, to ? { to } : {})
   },
 }
 

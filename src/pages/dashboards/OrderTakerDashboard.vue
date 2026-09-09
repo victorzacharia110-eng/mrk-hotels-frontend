@@ -497,6 +497,14 @@
                 <i class="fas fa-bed" aria-hidden="true"></i> {{ $t('orderTaker.billToRoom') }}
               </button>
             </template>
+            <template v-if="!['completed', 'cancelled'].includes(order.status) && (order.items || []).length > 1">
+              <button type="button" class="open-btn ghost" @click="openSplit(order)">
+                <i class="fas fa-scissors" aria-hidden="true"></i> {{ $t('orderTaker.split') }}
+              </button>
+              <button type="button" class="open-btn ghost" @click="openTransfer(order)">
+                <i class="fas fa-right-left" aria-hidden="true"></i> {{ $t('orderTaker.transfer') }}
+              </button>
+            </template>
             <button
               v-if="order.status === 'served' && order.payment_status !== 'unpaid'"
               type="button"
@@ -626,6 +634,49 @@
                 {{ method.label }}
               </button>
             </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Bill split / transfer: move lines to a fresh bill or the whole ticket to another table -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="billMode" class="cat-pop" role="dialog" :aria-label="billMode === 'split' ? $t('orderTaker.splitTitle') : $t('orderTaker.transferTitle')">
+          <div class="cat-pop-backdrop" @click="closeBill"></div>
+          <div class="cat-pop-panel accomp-panel">
+            <header class="cat-pop-head">
+              <strong>{{ billMode === 'split' ? $t('orderTaker.splitTitle') : $t('orderTaker.transferTitle') }} · {{ billModeOrder?.order_number }}</strong>
+              <button type="button" class="cat-pop-close" :aria-label="$t('orderTaker.close')" @click="closeBill">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </header>
+            <p v-if="billError" class="send-error">{{ billError }}</p>
+            <template v-if="billMode === 'split'">
+              <p class="accomp-hint">{{ $t('orderTaker.splitHint') }}</p>
+              <ul class="open-items split-pick">
+                <li v-for="line in billModeOrder?.items || []" :key="line.order_item_id">
+                  <label class="split-line">
+                    <input type="checkbox" :value="line.order_item_id" v-model="splitSelected" :disabled="billSaving" />
+                    {{ line.quantity }}× {{ line.item_name }}<template v-if="line.accompaniment"> · {{ line.accompaniment }}</template>
+                    <span class="split-amt">TZS {{ money(line.subtotal ?? line.unit_price * line.quantity) }}</span>
+                  </label>
+                </li>
+              </ul>
+              <button type="button" class="send-btn" :disabled="billSaving || !splitSelected.length" @click="confirmSplit">
+                <i class="fas fa-scissors" aria-hidden="true"></i> {{ $t('orderTaker.split') }}
+              </button>
+            </template>
+            <template v-else>
+              <p class="accomp-hint">{{ $t('orderTaker.transferHint') }}</p>
+              <label class="taker-fld">
+                <span>{{ $t('orderTaker.transferPrompt') }}</span>
+                <input v-model.trim="transferTable" type="text" :disabled="billSaving" @keyup.enter="confirmTransfer" />
+              </label>
+              <button type="button" class="send-btn" :disabled="billSaving || !transferTable" @click="confirmTransfer">
+                <i class="fas fa-right-left" aria-hidden="true"></i> {{ $t('orderTaker.transfer') }}
+              </button>
+            </template>
           </div>
         </div>
       </Transition>
@@ -1140,6 +1191,71 @@ async function advanceOrder(order, status) {
 
 // Collect-payment popup state.
 const payOrder = ref(null)
+
+// Bill split / transfer state: 'split' or 'transfer' when open.
+const billMode = ref(null)
+const billModeOrder = ref(null)
+const splitSelected = ref([])
+const transferTable = ref('')
+const billSaving = ref(false)
+const billError = ref('')
+
+function openSplit(order) {
+  billModeOrder.value = order
+  billMode.value = 'split'
+  splitSelected.value = []
+  billError.value = ''
+}
+
+function openTransfer(order) {
+  billModeOrder.value = order
+  billMode.value = 'transfer'
+  transferTable.value = ''
+  billError.value = ''
+}
+
+function closeBill() {
+  billMode.value = null
+  billModeOrder.value = null
+  splitSelected.value = []
+  transferTable.value = ''
+  billSaving.value = false
+  billError.value = ''
+}
+
+/** Splits the ticked lines onto a fresh ticket on the same table. */
+async function confirmSplit() {
+  if (!splitSelected.value.length || billSaving.value) return
+  billSaving.value = true
+  billError.value = ''
+  try {
+    const { data } = await orderApi.splitOrder(billModeOrder.value.order_id, { order_item_ids: splitSelected.value })
+    sentToast.value = data.message || t('orderTaker.splitDone')
+    setTimeout(() => (sentToast.value = ''), 3000)
+    closeBill()
+    await loadOpenOrders()
+  } catch (err) {
+    billError.value = err.response?.data?.message || t('common.actionFailed')
+    billSaving.value = false
+  }
+}
+
+/** Moves the whole ticket onto the typed table. */
+async function confirmTransfer() {
+  if (!transferTable.value.trim() || billSaving.value) return
+  billSaving.value = true
+  billError.value = ''
+  try {
+    const { data } = await orderApi.transferOrder(billModeOrder.value.order_id, { table_number: transferTable.value.trim() })
+    sentToast.value = data.message || t('orderTaker.transferred')
+    setTimeout(() => (sentToast.value = ''), 3000)
+    closeBill()
+    await loadOpenOrders()
+  } catch (err) {
+    billError.value = err.response?.data?.message || t('common.actionFailed')
+    billSaving.value = false
+  }
+}
 
 // Proof of payment shown after collecting (also printable).
 const receipt = ref(null)
@@ -2977,6 +3093,31 @@ function onKey(e) {
 .open-btn.pay { background: #0f766e; }
 .open-btn.room { background: #7c3aed; }
 .open-btn.done { background: #3f3f46; }
+.open-btn.ghost {
+  background: transparent;
+  color: #3f3f46;
+  border: 1px solid #d4d4d8;
+}
+.open-btn.ghost:hover { background: #f4f4f5; }
+
+.split-pick {
+  margin: 10px 0 0;
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+.split-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 2px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.split-amt { color: #52525b; white-space: nowrap; }
 
 /* ---- Responsive: phones / small tablets ---- */
 @media (max-width: 768px) {

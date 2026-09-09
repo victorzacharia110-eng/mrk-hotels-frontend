@@ -10,7 +10,7 @@
     <div class="sm-toolbar">
       <div class="sm-search"><i class="fas fa-magnifying-glass"></i><input v-model="q" type="text" :placeholder="$t('common.search')" /></div>
       <select v-if="statuses.length" v-model="status" class="sm-select"><option value="">{{ $t('common.status') }}</option><option v-for="s in statuses" :key="s" :value="s">{{ s }}</option></select>
-      <input v-model="dateFilter" type="date" class="sm-input" style="max-width: 150px" @change="load(1)" />
+      <CalendarInput v-model="dateFilter" style="max-width: 150px" @change="load(1)" />
       <span class="spacer"></span>
       <button class="sm-btn" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('storeManager.dashboard.recordGrn') }}</button>
     </div>
@@ -89,7 +89,7 @@
                 <option value="failed">{{ $t('goodsReceived.failed') }}</option>
               </select>
             </div>
-            <div class="form-field"><label>{{ $t('goodsReceived.receivedDate') }}</label><input v-model="form.received_date" type="date" class="sm-input" /></div>
+            <div class="form-field"><label>{{ $t('goodsReceived.receivedDate') }}</label><CalendarInput v-model="form.received_date" /></div>
             <div class="form-field"><label>{{ $t('goodsReceived.deliveryNote') }}</label><input v-model="form.delivery_note_number" class="sm-input" /></div>
             <div class="form-field full"><label>{{ $t('common.notes') }}</label><textarea v-model="form.notes" rows="2" class="sm-textarea"></textarea></div>
           </div>
@@ -258,7 +258,9 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { goodsReceivedNoteApi, purchaseOrderApi } from '@/api'
+import CalendarInput from '@/components/CalendarInput.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
+import { saveBlob } from '@/utils/download'
 
 const route = useRoute()
 const router = useRouter()
@@ -505,18 +507,25 @@ async function refreshDetail(id) {
   detail.value = res.data.grn
 }
 
-function printDetail() {
-  printData.value = detail.value
-  setTimeout(() => window.print(), 60)
+async function printDetail() {
+  const grn = detail.value
+  try {
+    const res = await goodsReceivedNoteApi.printPdf(grn.grn_id)
+    const match = (res.headers['content-disposition'] || '').match(/filename="?([^"]+)/)
+    saveBlob(res.data, match ? match[1] : `GoodsReceivedNote-${grn.grn_number}.pdf`)
+  } catch {
+    window.alert(t('goodsReceived.printError'))
+  }
 }
 
-function emailSupplier() {
+async function emailSupplier() {
   const grn = detail.value
-  const email = grn.supplier?.email
-  if (!email) return
-  const items = (grn.items || []).map((i) => `- ${i.item_name} x ${i.quantity_received} ${i.unit || ''}`).join('\n')
-  const body = `${t('goodsReceived.purchaseOrder')}: ${grn.purchase_order?.po_number || ''}\n\n${items}`
-  window.location.href = `mailto:${email}?subject=${encodeURIComponent(`GRN ${grn.grn_number}`)}&body=${encodeURIComponent(body)}`
+  try {
+    const res = await goodsReceivedNoteApi.email(grn.grn_id)
+    window.alert(t('goodsReceived.emailSuccess', { recipient: res.data?.message || '' }))
+  } catch (e) {
+    window.alert(t('goodsReceived.emailError', { message: e.response?.data?.message || '' }))
+  }
 }
 
 async function voidGrn() {

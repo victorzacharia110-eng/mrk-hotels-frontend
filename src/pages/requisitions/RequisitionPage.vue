@@ -76,6 +76,9 @@
                   <button class="rq-btn sm ghost" @click="openEdit(indent)"><i class="fas fa-pen"></i> {{ $t('requisitionPanel.edit') }}</button>
                   <button class="rq-btn sm ok" @click="send(indent)"><i class="fas fa-paper-plane"></i> {{ $t('requisitionPanel.send') }}</button>
                 </template>
+                <template v-if="canRecall(indent)">
+                  <button class="rq-btn sm ghost" @click="recall(indent)"><i class="fas fa-rotate-left"></i> {{ $t('requisitionPanel.recall') }}</button>
+                </template>
                 <template v-if="canSupply(indent)">
                   <button class="rq-btn sm warning" @click="openSupply(indent)"><i class="fas fa-truck-ramp-box"></i> {{ $t('requisitionPanel.supply') }}</button>
                 </template>
@@ -243,6 +246,7 @@
         </div>
         <div class="rq-modal-foot">
           <button class="rq-btn ghost" @click="modal = null">{{ $t('common.cancel') }}</button>
+          <button class="rq-btn ghost" @click="emailDetail"><i class="fas fa-envelope"></i> {{ $t('common.email') }}</button>
           <button class="rq-btn primary" @click="printDetail"><i class="fas fa-print"></i> {{ $t('requisitionPanel.print') }}</button>
         </div>
       </div>
@@ -256,6 +260,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { inventoryApi, inventoryOpsApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import { saveBlob } from '@/utils/download'
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -355,6 +360,7 @@ function isRequester(indent) {
 }
 
 function canEdit(i) { return isRequester(i) && ['draft', 'pending'].includes(i.status) }
+function canRecall(i) { return isRequester(i) && i.status === 'pending' }
 function canAccept(i) { return isRequester(i) && i.status === 'forwarded' }
 function canSupply(i) { return isKeeper.value && !isRequester(i) && i.status === 'pending' }
 function canApprove(i) { return isKeeper.value && i.status === 'pending' }
@@ -481,6 +487,17 @@ async function send(indent) {
   } catch (e) { err.value = loadMessage(e) } finally { saving.value = false }
 }
 
+async function recall(indent) {
+  if (!window.confirm(t('requisitionPanel.confirmRecall', { ref: indent.indent_number }))) return
+  saving.value = true
+  err.value = ''
+  try {
+    await inventoryOpsApi.recallIndent(indent.indent_id)
+    notice.value = t('requisitionPanel.recalledMsg')
+    await load()
+  } catch (e) { err.value = loadMessage(e) } finally { saving.value = false }
+}
+
 function openSupply(indent) {
   err.value = ''
   editing.value = indent
@@ -585,8 +602,25 @@ function openDetail(indent) {
   modal.value = 'detail'
 }
 
-function printDetail() {
-  window.print()
+async function printDetail() {
+  const indent = editing.value
+  try {
+    const res = await inventoryOpsApi.printIndentPdf(indent.indent_id)
+    const match = (res.headers['content-disposition'] || '').match(/filename="?([^"]+)/)
+    saveBlob(res.data, match ? match[1] : `Requisition-${indent.indent_number}.pdf`)
+  } catch {
+    window.alert(t('requisitionPanel.printError'))
+  }
+}
+
+async function emailDetail() {
+  const indent = editing.value
+  try {
+    const res = await inventoryOpsApi.emailIndent(indent.indent_id)
+    window.alert(t('requisitionPanel.emailSuccess', { recipient: res.data?.message || '' }))
+  } catch (e) {
+    window.alert(t('requisitionPanel.emailError', { message: e.response?.data?.message || '' }))
+  }
 }
 
 onMounted(() => {

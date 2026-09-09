@@ -48,11 +48,11 @@
         <div class="filter-grid">
           <div class="form-group">
             <label>{{ $t('common.from') }}</label>
-            <input v-model="stockFrom" type="date" class="input" @change="loadStockLedger" />
+            <CalendarInput v-model="stockFrom" @change="loadStockLedger" />
           </div>
           <div class="form-group">
             <label>{{ $t('common.to') }}</label>
-            <input v-model="stockTo" type="date" class="input" @change="loadStockLedger" />
+            <CalendarInput v-model="stockTo" @change="loadStockLedger" />
           </div>
           <div class="form-group">
             <label>{{ $t('reports.stockCategory') }}</label>
@@ -166,11 +166,11 @@
           </div>
           <div class="form-group">
             <label>{{ $t('common.from') }}</label>
-            <input v-model="stockFrom" type="date" class="input" @change="loadInventoryReport" />
+            <CalendarInput v-model="stockFrom" @change="loadInventoryReport" />
           </div>
           <div class="form-group">
             <label>{{ $t('common.to') }}</label>
-            <input v-model="stockTo" type="date" class="input" @change="loadInventoryReport" />
+            <CalendarInput v-model="stockTo" @change="loadInventoryReport" />
           </div>
           <div v-if="invUsesCategory" class="form-group">
             <label>{{ $t('reports.stockCategory') }}</label>
@@ -238,11 +238,11 @@
         <div class="filter-grid">
           <div class="form-group">
             <label>{{ $t('common.from') }}</label>
-            <input v-model="stockFrom" type="date" class="input" />
+            <CalendarInput v-model="stockFrom" />
           </div>
           <div class="form-group">
             <label>{{ $t('common.to') }}</label>
-            <input v-model="stockTo" type="date" class="input" />
+            <CalendarInput v-model="stockTo" />
           </div>
           <div class="form-group">
             <label>&nbsp;</label>
@@ -292,11 +292,11 @@
         <div class="filter-grid">
           <div class="form-group">
             <label>{{ $t('common.from') }}</label>
-            <input v-model="stockFrom" type="date" class="input" @change="loadFnb" />
+            <CalendarInput v-model="stockFrom" @change="loadFnb" />
           </div>
           <div class="form-group">
             <label>{{ $t('common.to') }}</label>
-            <input v-model="stockTo" type="date" class="input" @change="loadFnb" />
+            <CalendarInput v-model="stockTo" @change="loadFnb" />
           </div>
           <div class="form-group">
             <label>&nbsp;</label>
@@ -373,11 +373,11 @@
         <div class="filter-grid">
           <div class="form-group">
             <label>{{ $t('common.from') }}</label>
-            <input v-model="from" type="date" class="input" @change="loadReports" />
+            <CalendarInput v-model="from" @change="loadReports" />
           </div>
           <div class="form-group">
             <label>{{ $t('common.to') }}</label>
-            <input v-model="to" type="date" class="input" @change="loadReports" />
+            <CalendarInput v-model="to" @change="loadReports" />
           </div>
           <div class="form-group">
             <label>&nbsp;</label>
@@ -495,11 +495,11 @@
           </div>
           <div class="form-group">
             <label>{{ $t('common.from') }}</label>
-            <input v-model="auditFilters.from" type="date" class="input" @change="loadAuditLogs()" />
+            <CalendarInput v-model="auditFilters.from" @change="loadAuditLogs" />
           </div>
           <div class="form-group">
             <label>{{ $t('common.to') }}</label>
-            <input v-model="auditFilters.to" type="date" class="input" @change="loadAuditLogs()" />
+            <CalendarInput v-model="auditFilters.to" @change="loadAuditLogs" />
           </div>
           <div class="form-group">
             <label>{{ $t('common.search') }}</label>
@@ -576,6 +576,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { reportApi, hotelSettingsApi } from '@/api'
+import CalendarInput from '@/components/CalendarInput.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { collectAllRows, exportCSV } from '@/utils/export'
 import { useAuthStore } from '@/stores/auth'

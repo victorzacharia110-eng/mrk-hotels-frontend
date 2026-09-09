@@ -1719,6 +1719,7 @@
     "reasonPlaceholder": "Kwa nini hili linaghairiwa?",
     "reasonRequired": "Sababu inahitajika.",
     "confirmSend": "Tuma ombi {ref} kwa mtunza ghala?",
+    "confirmRecall": "Rudisha ombi {ref} kuwa rasimu ili ulihariri?",
     "confirmAccept": "Kubali ombi {ref}? Bidhaa zitazotolewa kwenye ghala.",
     "confirmApprove": "Idhinisha ombi {ref}?",
     "statusDraft": "Rasimu",
@@ -1733,6 +1734,7 @@
     "update": "Sasisha",
     "updated": "Ombi limehaririwa.",
     "sent": "Ombi limetumwa kwa mtunza ghala.",
+    "recalledMsg": "Ombi limerudishwa kuwa rasimu.",
     "suppliedMsg": "Ombi limerejeshwa kwa mwombaji.",
     "acceptedMsg": "Ombi limekubaliwa na bidhaa zimetolewa kwenye ghala.",
     "approvedMsg": "Ombi limeidhinishwa.",
@@ -1742,7 +1744,10 @@
     "availableExceeds": "Kiasi kilichopo hakipaswi kuzidi bidhaa zilizopo kwenye ghala.",
     "failed": "Hitilafu imetokea. Tafadhali jaribu tena.",
     "emptyMine": "Hujatuma maombi yoyote bado.",
-    "emptyInbox": "Hakuna maombi yanayokusubiri sasa hivi."
+    "emptyInbox": "Hakuna maombi yanayokusubiri sasa hivi.",
+    "printError": "Imeshindikana kuunda PDF ya ombi.",
+    "emailSuccess": "Ombi limetumwa kwa barua pepe kwa {recipient}.",
+    "emailError": "Imeshindikana kutuma ombi kwa barua pepe. {message}"
   },
   "purchaseOrders": {
     "title": "Oda za Ununuzi",
@@ -1823,7 +1828,10 @@
     "onlyPendingEditable": "Oda zinazosubiri au zilizokubaliwa na meneja pekee zinaweza kuhaririwa.",
     "today": "Leo",
     "noPurchaseToday": "Hakuna oda za ununuzi za leo.",
-    "noPurchaseForDate": "Hakuna oda za ununuzi kwa tarehe hii."
+    "noPurchaseForDate": "Hakuna oda za ununuzi kwa tarehe hii.",
+    "printError": "Imeshindikana kuunda PDF ya oda ya ununuzi.",
+    "emailSuccess": "Oda ya ununuzi imetumwa kwa barua pepe kwa {recipient}.",
+    "emailError": "Imeshindikana kutuma oda ya ununuzi kwa barua pepe. {message}"
   },
   "goodsReceived": {
     "title": "Rekodi za Vitu Vilivyopokelewa",
@@ -1898,7 +1906,10 @@
     "noAttachments": "Hakuna viambatisho.",
     "deliveryNoteFiles": "Faili za hati ya usambazaji",
     "selectFiles": "Chagua faili",
-    "businessDayNote": "Baada ya siku ya kupokea, wajibu wa meneja pekee kurejesha au kutenga ingizo hili."
+    "businessDayNote": "Baada ya siku ya kupokea, wajibu wa meneja pekee kurejesha au kutenga ingizo hili.",
+    "printError": "Imeshindikana kuunda PDF ya rekodi ya kupokea bidhaa.",
+    "emailSuccess": "Rekodi ya kupokea bidhaa imetumwa kwa barua pepe kwa {recipient}.",
+    "emailError": "Imeshindikana kutuma rekodi ya kupokea bidhaa kwa barua pepe. {message}"
   },
   "staff": {
     "title": "Usimamizi wa Wafanyakazi",
@@ -3782,6 +3793,17 @@
     "outOfStock": "IMEKWIISHA",
     "outOfStockToast": "{name} imekwisha — hakuna stoo ya kuuza.",
     "inStockQty": "Stoo {qty} {unit}",
+    "split": "Gawanya bili",
+    "transfer": "Hamisha meza",
+    "splitTitle": "Gawanya bili",
+    "transferTitle": "Hamisha kwenye meza",
+    "splitHint": "Chagua bidhaa zitakazohamishwa kwenye bili mpya ya meza hiyo hiyo.",
+    "transferHint": "Hamisha tiketi hii nzima kwenye meza nyingine huru au meza ambayo mhudumu huyu huyu anashikilia.",
+    "splitDone": "Bili imegawanywa — tiketi mpya imefunguliwa kwenye meza ile ile.",
+    "transferred": "Tiketi imehamishwa kwenye meza mpya.",
+    "transferPrompt": "Namba ya meza lengwa",
+    "noLinesSelected": "Chagua angalau bidhaa moja kugawanya.",
+    "cancel": "Ghairi",
     "noPrinter": "Hakuna printer ya till imeunganishwa. Unganisha moja kwenye Mipangilio ya Printer ili kuchapisha risiti kimya."
   },
   "staffDashboard": {

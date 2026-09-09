@@ -1719,6 +1719,7 @@
     "reasonPlaceholder": "Why is this being cancelled?",
     "reasonRequired": "A reason is required.",
     "confirmSend": "Send requisition {ref} to the store keeper?",
+    "confirmRecall": "Recall requisition {ref} back to draft so you can edit it?",
     "confirmAccept": "Accept requisition {ref}? Store stock will be issued for the supplied quantities.",
     "confirmApprove": "Approve requisition {ref}?",
     "statusDraft": "Draft",
@@ -1733,6 +1734,7 @@
     "update": "Update",
     "updated": "Requisition updated.",
     "sent": "Requisition sent to the store keeper.",
+    "recalledMsg": "Requisition recalled back to draft.",
     "suppliedMsg": "Requisition forwarded back to the requester.",
     "acceptedMsg": "Requisition accepted and store stock issued.",
     "approvedMsg": "Requisition approved.",
@@ -1742,7 +1744,10 @@
     "availableExceeds": "Quantity available cannot exceed the stock on hand.",
     "failed": "Something went wrong. Please try again.",
     "emptyMine": "You have not raised any requisitions yet.",
-    "emptyInbox": "No requisitions are waiting for you right now."
+    "emptyInbox": "No requisitions are waiting for you right now.",
+    "printError": "Could not generate the requisition PDF.",
+    "emailSuccess": "Requisition e-mailed to {recipient}.",
+    "emailError": "Could not e-mail the requisition. {message}"
   },
   "purchaseOrders": {
     "title": "Purchase Orders",
@@ -1823,7 +1828,10 @@
     "onlyPendingEditable": "Only pending or manager-approved orders can be edited.",
     "today": "Today",
     "noPurchaseToday": "No purchase orders for today.",
-    "noPurchaseForDate": "No purchase orders for this date."
+    "noPurchaseForDate": "No purchase orders for this date.",
+    "printError": "Could not generate the purchase order PDF.",
+    "emailSuccess": "Purchase order e-mailed to {recipient}.",
+    "emailError": "Could not e-mail the purchase order. {message}"
   },
   "goodsReceived": {
     "title": "Goods Received Notes",
@@ -1898,7 +1906,10 @@
     "noAttachments": "No delivery-note attachments.",
     "deliveryNoteFiles": "Delivery-note file(s)",
     "selectFiles": "Select file(s)",
-    "businessDayNote": "After the receiving day, only managers can recall or void this entry."
+    "businessDayNote": "After the receiving day, only managers can recall or void this entry.",
+    "printError": "Could not generate the goods received note PDF.",
+    "emailSuccess": "Goods received note e-mailed to {recipient}.",
+    "emailError": "Could not e-mail the goods received note. {message}"
   },
   "staff": {
     "title": "Staff Management",
@@ -3782,7 +3793,18 @@
     "summaryNoMatch": "No orders match your search.",
     "outOfStock": "OUT OF STOCK",
     "outOfStockToast": "{name} is out of stock — no stock left to sell.",
-    "inStockQty": "Stock {qty} {unit}"
+    "inStockQty": "Stock {qty} {unit}",
+    "split": "Bill split",
+    "transfer": "Transfer table",
+    "splitTitle": "Bill split",
+    "transferTitle": "Transfer to table",
+    "splitHint": "Tick the lines to move onto a fresh bill on the same table.",
+    "transferHint": "Move this whole ticket onto another free table or a table already held by the same waiter.",
+    "splitDone": "Bill split — new ticket opened on the same table.",
+    "transferred": "Ticket transferred to the new table.",
+    "transferPrompt": "Target table number",
+    "noLinesSelected": "Select at least one line to split.",
+    "cancel": "Cancel"
   },
   "staffDashboard": {
     "title": "Dashboard",

@@ -56,11 +56,11 @@
         </div>
         <div class="form-group">
           <label>{{ $t('common.from') }}</label>
-          <input v-model="filters.from" type="date" class="input" @change="load" />
+          <CalendarInput v-model="filters.from" @change="load" />
         </div>
         <div class="form-group">
           <label>{{ $t('common.to') }}</label>
-          <input v-model="filters.to" type="date" class="input" @change="load" />
+          <CalendarInput v-model="filters.to" @change="load" />
         </div>
         <div class="filter-actions">
           <button class="btn btn-secondary btn-sm" @click="clearFilters">
@@ -166,7 +166,7 @@
             </div>
             <div class="form-group">
               <label>{{ $t('goodsReceived.receivedDate') }}</label>
-              <input v-model="form.received_date" type="date" class="input" />
+              <CalendarInput v-model="form.received_date" />
             </div>
             <div class="form-group">
               <label>{{ $t('goodsReceived.deliveryNoteNumber') }}</label>
@@ -296,6 +296,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { goodsReceivedNoteApi, purchaseOrderApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import CalendarInput from '@/components/CalendarInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { collectAllRows } from '@/utils/export'
