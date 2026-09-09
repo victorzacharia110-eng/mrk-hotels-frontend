@@ -333,7 +333,7 @@ onMounted(loadReport)
 .rp-meta i {
   width: 16px;
   text-align: center;
-  color: #0f766e;
+  color: var(--brand);
 }
 
 .rp-print-btn,
@@ -346,7 +346,7 @@ onMounted(loadReport)
   padding: 9px 14px;
   font-size: 13px;
   font-weight: 600;
-  background: #0f766e;
+  background: var(--brand);
   color: #fff;
   cursor: pointer;
 }
@@ -385,7 +385,7 @@ onMounted(loadReport)
 }
 
 .dept-toggle button.active {
-  background: #0f766e;
+  background: var(--brand);
   color: #fff;
 }
 
