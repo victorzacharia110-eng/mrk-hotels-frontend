@@ -954,6 +954,15 @@ export const housekeepingApi = {
     return api.get(`${v1}/housekeeping-tasks`, { params })
   },
   /**
+   * Housekeeping board dashboard: open-work buckets, room status counts with
+   * occupancy, today's arrivals/departures and last-7-days cleaning output.
+   * @param {object} params - Query params ({ from, to }).
+   * @returns {Promise} Axios response with KPI statistics.
+   */
+  dashboard(params) {
+    return api.get(`${v1}/housekeeping/dashboard`, { params })
+  },
+  /**
    * Creates a new housekeeping task.
    * @param {object} data - Task payload (room, type, priority, ...).
    * @returns {Promise} Axios response with the created task.

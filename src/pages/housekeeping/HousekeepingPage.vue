@@ -31,6 +31,94 @@
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+    <!-- Housekeeping dashboard: always-visible KPI strip + operational board -->
+    <section class="hk-dash" :class="{ 'is-loading': dashLoading }">
+      <div class="summary-kpis hk-kpis">
+        <div class="summary-kpi kpi-to-clean">
+          <span class="sk-label"><i class="fas fa-hand-sparkles" aria-hidden="true"></i> {{ $t('housekeeping.dashToClean') }}</span>
+          <strong>{{ dash?.tasks?.dirty ?? 0 }}</strong>
+          <span class="sk-sub">{{ $t('housekeeping.dashHouseDirty', { n: dash?.tasks?.house_dirty ?? 0 }) }}</span>
+        </div>
+        <div class="summary-kpi kpi-in-progress">
+          <span class="sk-label"><i class="fas fa-spinner" aria-hidden="true"></i> {{ $t('housekeeping.dashInProgress') }}</span>
+          <strong>{{ dash?.tasks?.in_progress ?? 0 }}</strong>
+          <span class="sk-sub">{{ $t('housekeeping.dashUnassigned', { n: dash?.tasks?.unassigned ?? 0 }) }}</span>
+        </div>
+        <div class="summary-kpi kpi-clean">
+          <span class="sk-label"><i class="fas fa-user-check" aria-hidden="true"></i> {{ $t('housekeeping.dashCleanVerified') }}</span>
+          <strong>{{ dash?.tasks?.verified ?? 0 }}</strong>
+          <span class="sk-sub">{{ $t('housekeeping.dashConfirmed', { n: dash?.tasks?.confirmed ?? 0 }) }}</span>
+        </div>
+        <div class="summary-kpi kpi-arrivals">
+          <span class="sk-label"><i class="fas fa-user-plus" aria-hidden="true"></i> {{ $t('housekeeping.dashArrivalsToday') }}</span>
+          <strong>{{ dash?.arrivals_today ?? 0 }}</strong>
+          <span class="sk-sub" :class="{ 'kpi-warn': (dash?.tasks?.arriving_not_clean ?? 0) > 0 }">
+            {{ $t('housekeeping.dashNotYetClean', { n: dash?.tasks?.arriving_not_clean ?? 0 }) }}
+          </span>
+        </div>
+        <div class="summary-kpi kpi-unassigned">
+          <span class="sk-label"><i class="fas fa-user-clock" aria-hidden="true"></i> {{ $t('housekeeping.dashUnassignedTitle') }}</span>
+          <strong>{{ dash?.tasks?.unassigned ?? 0 }}</strong>
+          <span class="sk-sub">{{ $t('housekeeping.dashDeparturesToday') }}: {{ dash?.departures_today ?? 0 }}</span>
+        </div>
+        <div class="summary-kpi kpi-completed">
+          <span class="sk-label"><i class="fas fa-check-double" aria-hidden="true"></i> {{ $t('housekeeping.dashCompletedToday') }}</span>
+          <strong>{{ dash?.tasks?.completed_today ?? 0 }}</strong>
+          <span class="sk-sub">{{ $t('housekeeping.dashOutput') }}</span>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <section class="dash-card">
+          <header class="dash-card-head">
+            <strong><i class="fas fa-list-check" aria-hidden="true"></i> {{ $t('housekeeping.dashProgressTitle') }}</strong>
+          </header>
+          <ul class="dash-bars">
+            <li v-for="row in progressRows" :key="row.key" class="dash-bar">
+              <span class="db-label">{{ row.label }}</span>
+              <div class="db-track"><i :class="`db-fill ${row.css}`" :style="{ width: row.pct + '%' }"></i></div>
+              <span class="db-count">{{ row.value }}</span>
+            </li>
+          </ul>
+        </section>
+        <section class="dash-card">
+          <header class="dash-card-head">
+            <strong><i class="fas fa-bed" aria-hidden="true"></i> {{ $t('housekeeping.dashRoomsTitle') }}</strong>
+            <span class="dash-head-note">{{ $t('housekeeping.dashOccupancy', { rate: dash?.rooms?.occupancy_rate ?? 0 }) }}</span>
+          </header>
+          <ul class="dash-bars">
+            <li v-for="row in roomRows" :key="row.key" class="dash-bar">
+              <span class="db-label">{{ row.label }}</span>
+              <div class="db-track"><i :class="`db-fill ${row.css}`" :style="{ width: row.pct + '%' }"></i></div>
+              <span class="db-count">{{ row.value }}</span>
+            </li>
+          </ul>
+        </section>
+        <section class="dash-card dash-card--wide">
+          <header class="dash-card-head">
+            <strong><i class="fas fa-chart-simple" aria-hidden="true"></i> {{ $t('housekeeping.dashOutputTitle') }}</strong>
+          </header>
+          <p v-if="!(dash?.completions || []).length" class="cat-empty">{{ $t('housekeeping.dashOutputEmpty') }}</p>
+          <div v-else class="table-scroll">
+            <table class="lines-table dash-table">
+              <thead>
+                <tr>
+                  <th>{{ $t('housekeeping.dashDate') }}</th>
+                  <th class="col-qty">{{ $t('housekeeping.dashTasksDone') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in dash.completions" :key="row.date">
+                  <td>{{ row.date }}</td>
+                  <td class="col-qty">{{ row.count }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </section>
+
     <!-- Filter bar: narrows the task list by status, house/room status and room -->
     <div class="card filter-bar">
       <div class="filter-grid">
@@ -419,6 +507,10 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 
+/* Housekeeping dashboard — the always-visible KPI strip above the task board. */
+const dash = ref(null)
+const dashLoading = ref(false)
+
 // Create/edit modal state.
 const showModal = ref(false)
 const editing = ref(false)
@@ -561,7 +653,62 @@ async function load() {
   } finally {
     loading.value = false
   }
+  loadDashboard()
 }
+
+/** Loads the housekeeping board statistics that drive the KPI strip. */
+async function loadDashboard() {
+  dashLoading.value = true
+  try {
+    const { data } = await housekeepingApi.dashboard()
+    dash.value = data
+  } catch {
+    dash.value = null
+  } finally {
+    dashLoading.value = false
+  }
+}
+
+function capKey(key) {
+  return key.replace(/_([a-z])/g, (_, c) => c.toUpperCase()).replace(/^./, (c) => c.toUpperCase())
+}
+
+/** Task progress bars from the open-work buckets. */
+const progressRows = computed(() => {
+  const tasks = dash.value?.tasks ?? {}
+  const total = (tasks.dirty ?? 0) + (tasks.in_progress ?? 0) + (tasks.confirmed ?? 0) + (tasks.verified ?? 0)
+  const defs = [
+    { key: 'dirty', css: 'bar-red' },
+    { key: 'in_progress', css: 'bar-amber' },
+    { key: 'confirmed', css: 'bar-blue' },
+    { key: 'verified', css: 'bar-green' },
+  ]
+  return defs.map((def) => ({
+    ...def,
+    value: tasks[def.key] ?? 0,
+    pct: total ? Math.round(((tasks[def.key] ?? 0) / total) * 100) : 0,
+    label: t(`housekeeping.status${capKey(def.key)}`),
+  }))
+})
+
+/** Room status bars from the room buckets. */
+const roomRows = computed(() => {
+  const rooms = dash.value?.rooms ?? {}
+  const total = Math.max(rooms.total ?? 0, 1)
+  const defs = [
+    { key: 'occupied', css: 'bar-indigo' },
+    { key: 'available', css: 'bar-green' },
+    { key: 'cleaning', css: 'bar-blue' },
+    { key: 'dirty', css: 'bar-red' },
+    { key: 'maintenance', css: 'bar-amber' },
+  ]
+  return defs.map((def) => ({
+    ...def,
+    value: rooms[def.key] ?? 0,
+    pct: Math.round(((rooms[def.key] ?? 0) / total) * 100),
+    label: t(`housekeeping.dashRoom${capKey(def.key)}`),
+  }))
+})
 
 /** Fetches every housekeeping task page for export, honouring the active filters. */
 const loadAllTasks = () =>
@@ -809,6 +956,92 @@ onMounted(() => {
 .dashboard-page {
   padding: 32px 20px;
 }
+
+/* ---- Always-visible housekeeping dashboard (KPI strip + board cards) ---- */
+.hk-dash { margin-bottom: 18px; transition: opacity 0.15s; }
+.hk-dash.is-loading { opacity: 0.55; pointer-events: none; }
+.summary-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+.hk-kpis { margin-bottom: 14px; }
+.summary-kpi {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #94a3b8;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.summary-kpi strong {
+  display: block;
+  font-size: 26px;
+  line-height: 1.1;
+  margin: 2px 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+.sk-label { font-size: 12px; color: #64748b; }
+.sk-sub { font-size: 12px; color: #94a3b8; }
+.kpi-warn { color: #b91c1c; font-weight: 700; }
+.kpi-to-clean { border-left-color: #ef4444; }
+.kpi-in-progress { border-left-color: #f59e0b; }
+.kpi-clean { border-left-color: #22c55e; }
+.kpi-arrivals { border-left-color: #6366f1; }
+.kpi-unassigned { border-left-color: #3b82f6; }
+.kpi-completed { border-left-color: #64748b; }
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.dash-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+}
+.dash-card--wide { grid-column: 1 / -1; }
+.dash-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #334155;
+}
+.dash-head-note { font-size: 12px; color: #64748b; }
+.dash-bars { display: flex; flex-direction: column; gap: 9px; }
+.dash-bar {
+  display: grid;
+  grid-template-columns: 110px 1fr 44px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #475569;
+}
+.db-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.db-track { height: 8px; background: #eef2f7; border-radius: 999px; overflow: hidden; }
+.db-fill { display: block; height: 100%; border-radius: 999px; }
+.db-count { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bar-red { background: #ef4444; }
+.bar-amber { background: #f59e0b; }
+.bar-blue { background: #3b82f6; }
+.bar-green { background: #22c55e; }
+.bar-indigo { background: #6366f1; }
+
+.cat-empty { color: #64748b; font-size: 13px; padding: 6px 0; margin: 0; }
+.lines-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.lines-table th {
+  text-align: left;
+  padding: 6px 8px;
+  color: #64748b;
+  font-size: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.lines-table td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; }
+.col-qty { text-align: right; font-variant-numeric: tabular-nums; }
+.table-scroll { overflow-x: auto; }
 
 .page-head {
   display: flex;
