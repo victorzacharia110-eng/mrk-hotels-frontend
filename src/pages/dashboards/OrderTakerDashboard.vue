@@ -654,18 +654,21 @@
             <p v-if="billError" class="send-error">{{ billError }}</p>
             <template v-if="billMode === 'split'">
               <p class="accomp-hint">{{ $t('orderTaker.splitHint') }}</p>
-              <ul class="open-items split-pick">
+              <ul class="split-pick">
                 <li v-for="line in billModeOrder?.items || []" :key="line.order_item_id">
                   <label class="split-line">
                     <input type="checkbox" :value="line.order_item_id" v-model="splitSelected" :disabled="billSaving" />
-                    {{ line.quantity }}× {{ line.item_name }}<template v-if="line.accompaniment"> · {{ line.accompaniment }}</template>
+                    <span class="split-desc">{{ line.quantity }}× {{ line.item_name }}<template v-if="line.accompaniment"> · {{ line.accompaniment }}</template></span>
                     <span class="split-amt">TZS {{ money(line.subtotal ?? line.unit_price * line.quantity) }}</span>
                   </label>
                 </li>
               </ul>
-              <button type="button" class="send-btn" :disabled="billSaving || !splitSelected.length" @click="confirmSplit">
-                <i class="fas fa-scissors" aria-hidden="true"></i> {{ $t('orderTaker.split') }}
-              </button>
+              <div class="bill-actions">
+                <span class="bill-summary">{{ $t('orderTaker.splitSummary', { count: splitSelected.length, total: money(splitTotal) }) }}</span>
+                <button type="button" class="send-btn" :disabled="billSaving || !splitSelected.length" @click="confirmSplit">
+                  <i class="fas fa-scissors" aria-hidden="true"></i> {{ $t('orderTaker.split') }}
+                </button>
+              </div>
             </template>
             <template v-else>
               <p class="accomp-hint">{{ $t('orderTaker.transferHint') }}</p>
@@ -673,9 +676,12 @@
                 <span>{{ $t('orderTaker.transferPrompt') }}</span>
                 <input v-model.trim="transferTable" type="text" :disabled="billSaving" @keyup.enter="confirmTransfer" />
               </label>
-              <button type="button" class="send-btn" :disabled="billSaving || !transferTable" @click="confirmTransfer">
-                <i class="fas fa-right-left" aria-hidden="true"></i> {{ $t('orderTaker.transfer') }}
-              </button>
+              <div class="bill-actions">
+                <span class="bill-summary">{{ transferTable ? $t('orderTaker.transferTo', { table: transferTable }) : ' ' }}</span>
+                <button type="button" class="send-btn" :disabled="billSaving || !transferTable" @click="confirmTransfer">
+                  <i class="fas fa-right-left" aria-hidden="true"></i> {{ $t('orderTaker.transfer') }}
+                </button>
+              </div>
             </template>
           </div>
         </div>
@@ -1199,6 +1205,13 @@ const splitSelected = ref([])
 const transferTable = ref('')
 const billSaving = ref(false)
 const billError = ref('')
+
+/** Total of the lines ticked for the split ticket. */
+const splitTotal = computed(() =>
+  (billModeOrder.value?.items || [])
+    .filter((l) => splitSelected.value.includes(l.order_item_id))
+    .reduce((sum, l) => sum + Number(l.subtotal ?? (l.unit_price * l.quantity || 0)), 0),
+)
 
 function openSplit(order) {
   billModeOrder.value = order
@@ -3101,23 +3114,94 @@ function onKey(e) {
 .open-btn.ghost:hover { background: #f4f4f5; }
 
 .split-pick {
-  margin: 10px 0 0;
-  max-height: 260px;
+  margin: 12px 18px 0;
+  max-height: 240px;
   overflow: auto;
+  list-style: none;
   border: 1px solid #e4e4e7;
   border-radius: 8px;
-  padding: 4px 8px;
+  padding: 6px;
+  scrollbar-width: thin;
 }
 .split-line {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+  border-bottom: 1px solid #f4f4f5;
+  cursor: pointer;
+  font-size: 13px;
+  color: #3f3f46;
+}
+.split-line:hover { background: #fafafa; }
+.split-line:last-child { border-bottom: none; }
+.split-desc { overflow-wrap: anywhere; }
+.split-amt {
+  color: #27272a;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: right;
+  min-width: 96px;
+  font-variant-numeric: tabular-nums;
+  justify-self: end;
+}
+
+/* ---- Bill split / transfer modal scaffolding ---- */
+.taker-fld {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 18px 0;
+}
+.taker-fld > span {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #52525b;
+}
+.taker-fld input {
+  width: 100%;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  padding: 11px 12px;
+  font: inherit;
+  font-size: 14px;
+  color: #1a1a2e;
+  background: #fff;
+}
+.taker-fld input:focus {
+  outline: none;
+  border-color: #005eb8;
+  box-shadow: 0 0 0 2px rgba(0, 94, 184, 0.15);
+}
+
+.bill-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 6px 2px;
-  cursor: pointer;
-  font-size: 13px;
+  gap: 12px;
+  margin-top: auto;
+  padding: 14px 18px 18px;
+  border-top: 1px solid #f4f4f5;
 }
-.split-amt { color: #52525b; white-space: nowrap; }
+.bill-summary {
+  font-size: 13px;
+  font-weight: 600;
+  color: #52525b;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bill-actions .send-btn {
+  width: auto;
+  min-width: 190px;
+  padding: 12px 22px;
+  font-size: 15px;
+  border-radius: 10px;
+}
 
 /* ---- Responsive: phones / small tablets ---- */
 @media (max-width: 768px) {

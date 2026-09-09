@@ -3803,6 +3803,8 @@
     "splitDone": "Bill split — new ticket opened on the same table.",
     "transferred": "Ticket transferred to the new table.",
     "transferPrompt": "Target table number",
+    "splitSummary": "{count} item(s) · TZS {total}",
+    "transferTo": "To table {table}",
     "noLinesSelected": "Select at least one line to split.",
     "cancel": "Cancel"
   },

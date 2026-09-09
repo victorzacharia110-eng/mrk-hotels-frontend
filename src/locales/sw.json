@@ -3802,6 +3802,8 @@
     "splitDone": "Bili imegawanywa — tiketi mpya imefunguliwa kwenye meza ile ile.",
     "transferred": "Tiketi imehamishwa kwenye meza mpya.",
     "transferPrompt": "Namba ya meza lengwa",
+    "splitSummary": "Bidhaa {count} · TZS {total}",
+    "transferTo": "Kwa meza {table}",
     "noLinesSelected": "Chagua angalau bidhaa moja kugawanya.",
     "cancel": "Ghairi",
     "noPrinter": "Hakuna printer ya till imeunganishwa. Unganisha moja kwenye Mipangilio ya Printer ili kuchapisha risiti kimya."
