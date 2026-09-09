@@ -56,6 +56,45 @@
       <!-- Inline error banner for failed loads/refreshes -->
       <div v-if="error" class="alert alert-error">{{ error }}</div>
 
+      <!-- Compact housekeeping strip: KPI cards + bars for housekeeping-visible roles -->
+      <section v-if="canSeeHousekeeping" class="hk-strip" :class="{ 'is-loading': hkLoading }">
+        <header class="hk-strip-head">
+          <strong><i class="fas fa-broom" aria-hidden="true"></i> {{ $t('stayview.housekeeping') }}</strong>
+          <button type="button" class="sv-tool-btn" :aria-label="$t('housekeeping.refresh')" @click="loadHousekeepingDash">
+            <i class="fas fa-rotate" aria-hidden="true"></i>
+          </button>
+        </header>
+        <div class="hk-strip-body">
+          <div class="hk-mini-kpis">
+            <div v-for="kpi in hkMiniKpis" :key="kpi.label" class="hk-mini-kpi" :class="`edge-${kpi.edge}`">
+              <span class="hk-mini-label">{{ kpi.label }}</span>
+              <strong>{{ kpi.value }}</strong>
+              <span class="hk-mini-sub" :class="{ 'kpi-warn': kpi.warn }">{{ kpi.sub }}</span>
+            </div>
+          </div>
+          <div class="hk-bars-col">
+            <h4 class="hk-bars-title">{{ $t('housekeeping.dashProgressTitle') }}</h4>
+            <ul class="hk-bars">
+              <li v-for="row in hkProgressBars" :key="row.key" class="hk-bar">
+                <span class="hk-bar-label">{{ row.label }}</span>
+                <div class="hk-bar-track"><i :class="`hk-bar-fill ${row.css}`" :style="{ width: row.pct + '%' }"></i></div>
+                <span class="hk-bar-count">{{ row.value }}</span>
+              </li>
+            </ul>
+          </div>
+          <div class="hk-bars-col">
+            <h4 class="hk-bars-title">{{ $t('housekeeping.dashRoomsTitle') }}</h4>
+            <ul class="hk-bars">
+              <li v-for="row in hkRoomBars" :key="row.key" class="hk-bar">
+                <span class="hk-bar-label">{{ row.label }}</span>
+                <div class="hk-bar-track"><i :class="`hk-bar-fill ${row.css}`" :style="{ width: row.pct + '%' }"></i></div>
+                <span class="hk-bar-count">{{ row.value }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
       <!-- Tape chart -->
       <div v-if="groups.length" class="sv-chart">
         <div class="sv-grid" :style="gridStyle">
@@ -1384,6 +1423,9 @@ const search = ref('')
 const loading = ref(true)
 const loaded = ref(false)
 const error = ref('')
+/* Compact housekeeping strip on the landing dashboard (housekeeping-visible roles). */
+const housekeepingDash = ref(null)
+const hkLoading = ref(false)
 
 // Operational alerts modal state (urgent notifications from the store).
 const currentAlert = computed(() => notifStore.alerts[0] || null)
@@ -1498,7 +1540,79 @@ async function load(silent = false) {
   } finally {
     loading.value = false
   }
+  loadHousekeepingDash()
 }
+
+/** Refreshes the compact housekeeping strip (no-op for non-housekeeping roles). */
+async function loadHousekeepingDash() {
+  if (!canSeeHousekeeping.value) return
+  hkLoading.value = true
+  try {
+    const { data } = await housekeepingApi.dashboard()
+    housekeepingDash.value = data
+  } catch {
+    housekeepingDash.value = null
+  } finally {
+    hkLoading.value = false
+  }
+}
+
+/** Small KPI cards for the housekeeping strip. */
+const hkMiniKpis = computed(() => {
+  const tasks = housekeepingDash.value?.tasks ?? {}
+  return [
+    {
+      label: t('housekeeping.dashToClean'),
+      value: tasks.dirty ?? 0,
+      sub: t('housekeeping.dashHouseDirty', { n: tasks.house_dirty ?? 0 }),
+      edge: 'red',
+    },
+    {
+      label: t('housekeeping.dashInProgress'),
+      value: tasks.in_progress ?? 0,
+      sub: t('housekeeping.dashUnassigned', { n: tasks.unassigned ?? 0 }),
+      edge: 'amber',
+    },
+    {
+      label: t('housekeeping.dashCleanVerified'),
+      value: tasks.verified ?? 0,
+      sub: t('housekeeping.dashConfirmed', { n: tasks.confirmed ?? 0 }),
+      edge: 'green',
+    },
+    {
+      label: t('housekeeping.dashArrivalsToday'),
+      value: housekeepingDash.value?.arrivals_today ?? 0,
+      sub: t('housekeeping.dashNotYetClean', { n: tasks.arriving_not_clean ?? 0 }),
+      edge: 'indigo',
+      warn: (tasks.arriving_not_clean ?? 0) > 0,
+    },
+  ]
+})
+
+/** Task-progress bars for the housekeeping strip. */
+const hkProgressBars = computed(() => {
+  const tasks = housekeepingDash.value?.tasks ?? {}
+  const total = (tasks.dirty ?? 0) + (tasks.in_progress ?? 0) + (tasks.confirmed ?? 0) + (tasks.verified ?? 0)
+  return [
+    { key: 'dirty', label: t('housekeeping.statusDirty'), value: tasks.dirty ?? 0, css: 'hk-bar-red' },
+    { key: 'in_progress', label: t('housekeeping.statusInProgress'), value: tasks.in_progress ?? 0, css: 'hk-bar-amber' },
+    { key: 'confirmed', label: t('housekeeping.statusConfirmed'), value: tasks.confirmed ?? 0, css: 'hk-bar-blue' },
+    { key: 'verified', label: t('housekeeping.statusVerified'), value: tasks.verified ?? 0, css: 'hk-bar-green' },
+  ].map((row) => ({ ...row, pct: total ? Math.round((row.value / total) * 100) : 0 }))
+})
+
+/** Room-status bars for the housekeeping strip. */
+const hkRoomBars = computed(() => {
+  const rooms = housekeepingDash.value?.rooms ?? {}
+  const total = Math.max(rooms.total ?? 0, 1)
+  return [
+    { key: 'occupied', label: t('housekeeping.dashRoomOccupied'), value: rooms.occupied ?? 0, css: 'hk-bar-indigo' },
+    { key: 'available', label: t('housekeeping.dashRoomAvailable'), value: rooms.available ?? 0, css: 'hk-bar-green' },
+    { key: 'cleaning', label: t('housekeeping.dashRoomCleaning'), value: rooms.cleaning ?? 0, css: 'hk-bar-blue' },
+    { key: 'dirty', label: t('housekeeping.dashRoomDirty'), value: rooms.dirty ?? 0, css: 'hk-bar-red' },
+    { key: 'maintenance', label: t('housekeeping.dashRoomMaintenance'), value: rooms.maintenance ?? 0, css: 'hk-bar-amber' },
+  ].map((row) => ({ ...row, pct: Math.round((row.value / total) * 100) }))
+})
 
 
 /* ---------------- Chart computations ---------------- */
@@ -2990,6 +3104,95 @@ onUnmounted(() => clearInterval(refreshTimer))
 .stayview-page {
   padding: 16px 20px 32px;
   max-width: 100%;
+}
+
+/* ---- Compact housekeeping strip (landing dashboard) ---- */
+.hk-strip {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  transition: opacity 0.15s;
+}
+.hk-strip.is-loading { opacity: 0.55; pointer-events: none; }
+.hk-strip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #334155;
+}
+.hk-strip-head .sv-tool-btn { padding: 4px 9px; font-size: 12px; }
+.hk-strip-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.1fr) 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.hk-mini-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.hk-mini-kpi {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #94a3b8;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.hk-mini-kpi strong {
+  display: block;
+  font-size: 22px;
+  line-height: 1.1;
+  margin: 2px 0 3px;
+  font-variant-numeric: tabular-nums;
+}
+.hk-mini-label { font-size: 12px; color: #64748b; }
+.hk-mini-sub { font-size: 12px; color: #94a3b8; }
+.edge-red { border-left-color: #ef4444; }
+.edge-amber { border-left-color: #f59e0b; }
+.edge-green { border-left-color: #22c55e; }
+.edge-indigo { border-left-color: #6366f1; }
+.kpi-warn { color: #b91c1c; font-weight: 700; }
+
+.hk-bars-title {
+  margin: 0 0 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+.hk-bars { display: flex; flex-direction: column; gap: 9px; list-style: none; padding: 0; margin: 0; }
+.hk-bar {
+  display: grid;
+  grid-template-columns: 96px 1fr 40px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #475569;
+}
+.hk-bar-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hk-bar-track { height: 8px; background: #dbe2ea; border-radius: 999px; overflow: hidden; }
+.hk-bar-fill { display: block; height: 100%; border-radius: 999px; }
+.hk-bar-count { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hk-bar-red { background: #ef4444; }
+.hk-bar-amber { background: #f59e0b; }
+.hk-bar-blue { background: #3b82f6; }
+.hk-bar-green { background: #22c55e; }
+.hk-bar-indigo { background: #6366f1; }
+
+@media (max-width: 820px) {
+  .hk-strip-body { grid-template-columns: 1fr; }
+  .hk-bars-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hk-bars-col .hk-bars-title { grid-column: 1 / -1; }
+}
+@media (max-width: 480px) {
+  .hk-mini-kpis { grid-template-columns: 1fr; }
+  .hk-bars-col { display: block; }
+  .hk-bars-col + .hk-bars-col { margin-top: 12px; }
 }
 
 /* Toolbar: status pills + search + assign-room */
