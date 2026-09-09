@@ -456,7 +456,7 @@
             </li>
           </ul>
           <p class="open-total">{{ $t('orderTaker.orderTotal') }}: <strong>TZS {{ money(order.total_amount) }}</strong>
-            · <span :class="order.payment_status === 'unpaid' ? 'pay-unpaid' : 'pay-ok'">{{ order.payment_status }}</span>
+            · <span :class="order.payment_status === 'unpaid' ? 'pay-unpaid' : 'pay-ok'">{{ paymentLabel(order.payment_status) }}</span>
           </p>
           <!-- Single-tap lifecycle: next status, payment, bill to room -->
           <div class="open-actions">
@@ -1558,6 +1558,16 @@ const pagedLines = computed(() => {
 const grandTotal = computed(() =>
   orderLines.value.reduce((sum, l) => sum + l.subtotal, 0),
 )
+
+/** Human-readable label for an order's payment status. */
+function paymentLabel(status) {
+  const labels = {
+    unpaid: t('orders.paymentUnpaid'),
+    paid: t('orders.paymentPaid'),
+    billed_to_room: t('orders.paymentBilledToRoom'),
+  }
+  return labels[status] || status
+}
 
 /** Formats a money value with thousands separators. */
 function money(value) {
