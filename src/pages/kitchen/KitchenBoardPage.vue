@@ -606,5 +606,22 @@ onUnmounted(() => clearInterval(timer))
     padding: 12px 8px;
     font-size: 14px;
   }
+
+  /* Header stacks: board title on top, controls on their own full-width row */
+  .open-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .open-head h2 {
+    font-size: 16px;
+    flex-wrap: wrap;
+  }
+
+  .kb-controls {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 </style>
