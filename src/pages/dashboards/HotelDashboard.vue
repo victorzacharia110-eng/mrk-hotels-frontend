@@ -251,7 +251,7 @@
       :style="{ left: hkTip.left + 'px', top: hkTip.top + 'px' }"
       role="dialog"
       :aria-label="$t('housekeeping.title')"
-      @mouseenter="hkTip.pinned = true"
+      @mouseenter="pinHkTip"
       @mouseleave="hideHkTip"
     >
       <header class="sv-hk-card-head">
@@ -1909,10 +1909,12 @@ function moveBarTip(event) {
   if (isHousekeepingStaff.value) moveHkTip(event)
 }
 
-/** Hides the popover when the cursor leaves the bar. */
+/** Hides the popover when the cursor leaves the bar. Housekeeping keeps the
+ * floating card open a beat longer so the cursor can hop onto it and pin it. */
 function hideBarTip() {
   barTip.value = null
-  hideHkTip()
+  if (isHousekeepingStaff.value) scheduleHideHkTip()
+  else hideHkTip()
 }
 
 /* ---------------- Booking-bar click modal ---------------- */
@@ -2785,10 +2787,39 @@ function hkTipPos(event) {
 }
 
 function showHkTip(event, room, force = false) {
+  clearHkHideTimer()
   const tasks = (hkByRoom.value[room.room_id] || []).slice()
   const laundry = hkLaundryFor(room)
   if (!force && !tasks.length && !laundry.length) return
   hkTip.value = { room, tasks, laundry, pinned: force, ...hkTipPos(event) }
+}
+
+// The card may disappear in the same tick the user's cursor is moving onto it:
+// leaving a bar fires mouseleave (which nulls the tip) before the card fires
+// mouseenter. Never null-pin a vanished card — guard it.
+function pinHkTip() {
+  if (hkTip.value) hkTip.value.pinned = true
+}
+
+const hkHideTimer = { id: 0 }
+function clearHkHideTimer() {
+  if (hkHideTimer.id) {
+    clearTimeout(hkHideTimer.id)
+    hkHideTimer.id = 0
+  }
+}
+
+/**
+ * Hides the floating card shortly after the cursor leaves its source bar. The
+ * short delay lets the cursor land on the card: when it does, the card pins
+ * itself before the timer runs and stays open (a pinned card is never hidden).
+ */
+function scheduleHideHkTip() {
+  clearHkHideTimer()
+  hkHideTimer.id = setTimeout(() => {
+    hkHideTimer.id = 0
+    if (hkTip.value && !hkTip.value.pinned) hkTip.value = null
+  }, 110)
 }
 
 function moveHkTip(event) {
@@ -2797,10 +2828,12 @@ function moveHkTip(event) {
 }
 
 function hideHkTip() {
+  clearHkHideTimer()
   if (hkTip.value && !hkTip.value.pinned) hkTip.value = null
 }
 
 function toggleHkTip(event, room) {
+  clearHkHideTimer()
   const tasks = (hkByRoom.value[room.room_id] || []).slice()
   const laundry = hkLaundryFor(room)
   if (!tasks.length && !laundry.length && !isHousekeepingStaff.value) return
@@ -2861,6 +2894,7 @@ async function hkLaundryAction(order, status) {
   actionBusy.value = true
   actionError.value = ''
   try {
+    clearHkHideTimer()
     await laundryApi.update(order.laundry_order_id, { status })
     await load(true)
     const room = rooms.value.find((r) => String(r.room_number) === String(order.room_number))
@@ -2886,6 +2920,7 @@ async function hkTaskAction(task, verb) {
   actionBusy.value = true
   actionError.value = ''
   try {
+    clearHkHideTimer()
     await housekeepingApi[verb](task.task_id)
     await load(true)
     const room = rooms.value.find((r) => r.room_id === task.room_id)
@@ -3373,6 +3408,7 @@ function openRoomModal(room, event = null) {
   if (isHousekeepingStaff.value) {
     if (event) showHkTip(event, room, true)
     else {
+      clearHkHideTimer()
       hkTip.value = {
         room,
         tasks: (hkByRoom.value[room.room_id] || []).slice(),
