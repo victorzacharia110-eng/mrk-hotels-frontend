@@ -544,6 +544,9 @@ const isReceptionist = computed(() => authStore.user?.user_role === 'receptionis
 /** True when the signed-in staff member is on the housekeeping team. */
 const isHousekeeping = computed(() => authStore.user?.user_role === 'housekeeping')
 
+/** True when the signed-in staff member is on the kitchen team. */
+const isKitchen = computed(() => authStore.user?.user_role === 'kitchen')
+
 /** Builds a collapsible accordion group for the staff drawer. */
 function accordionGroup(key, icon, labelKey, children) {
   return { key, icon, labelKey, label: t(labelKey), to: undefined, children }
@@ -633,6 +636,10 @@ const visibleModules = computed(() => {
 
     if (byKey['night-audit']) out.push(byKey['night-audit'])
 
+    // Requisitions: store requisitions inbox (per the panel review, the
+    // receptionist panel carries its own Requisitions entry).
+    if (byKey['requisitions']) out.push(byKey['requisitions'])
+
     // Communication: messaging and staff statuses.
     const comm = pick(['messages', 'statuses'])
     if (comm.length) out.push(accordionGroup('reception-comms', 'fas fa-comments', 'accordion.communication', comm))
@@ -661,6 +668,24 @@ const visibleModules = computed(() => {
 
     const comm = pick(['messages', 'statuses'])
     if (comm.length) out.push(accordionGroup('housekeeping-comms', 'fas fa-comments', 'accordion.communication', comm))
+
+    return out
+  }
+
+  // The kitchen team works from a short panel per the panel review: Kitchen
+  // Board, Requisitions, then Communication. The Restaurant & Bar group
+  // (take-order/orders/menu) stays off the kitchen drawer.
+  if (isKitchen.value) {
+    const pick = (keys) => keys.map((k) => byKey[k]).filter(Boolean)
+    const out = []
+
+    if (byKey['kitchen-board']) out.push(byKey['kitchen-board'])
+
+    const requisitions = pick(['requisitions'])
+    if (requisitions.length) out.push(accordionGroup('kitchen-requisitions', 'fas fa-file-signature', 'nav.requisitions', requisitions))
+
+    const comm = pick(['messages', 'statuses'])
+    if (comm.length) out.push(accordionGroup('kitchen-comms', 'fas fa-comments', 'accordion.communication', comm))
 
     return out
   }

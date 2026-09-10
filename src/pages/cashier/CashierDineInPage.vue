@@ -50,6 +50,9 @@
             <button class="pos-table-body" @click="openTable(table)">
               <span class="pos-table-name">{{ table.table_name }}</span>
               <span class="pos-table-meta">
+                <span v-if="guestByTable[table.table_name]" class="guest-chip" :title="$t('cashier.dineIn.guest')">
+                  <i class="fas fa-user" aria-hidden="true"></i> {{ guestByTable[table.table_name] }}
+                </span>
                 <span v-if="table.waiter" class="waiter-chip">
                   <span class="avatar">{{ initials(table.waiter.full_name) }}</span>
                   {{ table.waiter.full_name.split(' ')[0] }}
@@ -165,7 +168,10 @@
     <div v-if="ticketTable" class="sm-modal-backdrop" @click.self="ticketTable = null">
       <div class="sm-modal" role="dialog" aria-modal="true">
         <div class="sm-modal-head">
-          <h3><i class="fas fa-receipt" aria-hidden="true"></i> {{ ticketTable.table_name }}</h3>
+          <h3>
+            <i class="fas fa-receipt" aria-hidden="true"></i> {{ ticketTable.table_name }}
+            <span v-if="guestByTable[ticketTable.table_name]" class="guest-chip">{{ guestByTable[ticketTable.table_name] }}</span>
+          </h3>
           <button class="sm-btn ghost sm" @click="ticketTable = null">{{ $t('common.close') }}</button>
         </div>
         <div class="table-scroll">
@@ -256,11 +262,13 @@ const { t } = useI18n()
 const tables = ref([])
 const allWaiters = ref([])
 const tableQ = ref('')
+function tableSearchText(row) {
+  return `${row.table_name} ${row.waiter?.full_name || ''} ${guestByTable.value[row.table_name] || ''}`.toLowerCase()
+}
 const filteredTables = computed(() => {
   const term = tableQ.value.trim().toLowerCase()
   if (!term) return tables.value
-  return tables.value.filter((row) =>
-    `${row.table_name} ${row.waiter?.full_name || ''}`.toLowerCase().includes(term))
+  return tables.value.filter((row) => tableSearchText(row).includes(term))
 })
 const runningOrders = ref([])
 const busy = ref(false)
@@ -296,6 +304,17 @@ const frozenTableIds = computed(() => {
     if (order.is_frozen && order.table_number) set.add(order.table_number)
   }
   return set
+})
+
+/** First captured guest name sitting on each table (from running tickets). */
+const guestByTable = computed(() => {
+  const map = {}
+  for (const order of runningOrders.value) {
+    if (!order.table_number) continue
+    const name = order.guest_name || ''
+    if (name && !map[order.table_number]) map[order.table_number] = name
+  }
+  return map
 })
 
 const tableTimers = computed(() => {

@@ -376,6 +376,12 @@ const routes = [
         component: () => import('@/pages/reports/StaffReportsPage.vue'),
         meta: { titleKey: 'cashier.nav.reports' },
       },
+      {
+        path: 'report-browser',
+        name: 'cashier-report-browser',
+        component: () => import('@/pages/reports/ReportBrowserPage.vue'),
+        meta: { titleKey: 'cashier.nav.reportBrowser' },
+      },
     ],
   },
   // Store manager panel: inventory, suppliers and procurement (role-guarded).

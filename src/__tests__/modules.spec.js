@@ -52,11 +52,25 @@ describe('module config', () => {
       expect(mod.roles).not.toContain('receptionist')
     })
 
-    it('orders module includes kitchen, waiter, bartender', () => {
+    it('orders module stays off the waiter and kitchen panels', () => {
+      // Panel review: waiters use Take Order + Issue Reports, the kitchen
+      // works from its Kitchen Board. Orders remains for cashiers/bartenders.
       const mod = moduleByKey('orders')
-      expect(mod.roles).toContain('kitchen')
-      expect(mod.roles).toContain('waiter')
+      expect(mod.roles).not.toContain('kitchen')
+      expect(mod.roles).not.toContain('waiter')
       expect(mod.roles).toContain('bartender')
+    })
+
+    it('take-order stays off the kitchen panel', () => {
+      const mod = moduleByKey('take-order')
+      expect(mod.roles).not.toContain('kitchen')
+      expect(mod.roles).toContain('waiter')
+    })
+
+    it('menu stays off the kitchen panel', () => {
+      const mod = moduleByKey('menu')
+      expect(mod.roles).not.toContain('kitchen')
+      expect(mod.roles).toContain('manager')
     })
 
     it('laundry requires manage_laundry permission', () => {

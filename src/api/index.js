@@ -266,6 +266,15 @@ export const reportApi = {
   arrivals(params) {
     return api.get(`${v1}/reports/arrivals`, { params })
   },
+  /**
+   * Generic wired report engine: serves any Report Browser catalogue key.
+   * @param {string} report - Report catalogue key (e.g. guest-ledger).
+   * @param {object} params - Query params (from, to, businessDate and filters).
+   * @returns {Promise} Axios response with { data: { wired, legend, summary, columns, rows, totals } }.
+   */
+  wired(report, params) {
+    return api.get(`${v1}/reports/wired/${report}`, { params })
+  },
 }
 
 /** Accounting reports: general ledger, trial balance, balance sheet and night audit / day close. */

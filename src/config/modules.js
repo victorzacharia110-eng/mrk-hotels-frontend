@@ -34,11 +34,14 @@ export const MODULES = [
   { key: 'activity-log-report', to: '/app/activity-log-report', icon: 'fas fa-clock-rotate-left', labelKey: 'nav.activityLogReport', roles: ['hotel_admin', 'manager', 'receptionist'] },
   // Housekeeping task board.
   { key: 'housekeeping', to: '/app/housekeeping', icon: 'fas fa-broom', labelKey: 'nav.housekeeping', roles: ['hotel_admin', 'manager', 'housekeeping'], feature: 'housekeeping' },
-  // Food & beverage orders for the service teams.
-  { key: 'orders', to: '/app/orders', icon: 'fas fa-utensils', labelKey: 'nav.orders', roles: ['hotel_admin', 'manager', 'kitchen', 'waiter', 'bartender', 'staff'], feature: 'orders' },
+  // Food & beverage order queue for the service teams. The kitchen works from
+  // its Kitchen Board instead, and the waiter's Restaurant & Bar section is
+  // Take Order + Issue Reports only (see the panel review).
+  { key: 'orders', to: '/app/orders', icon: 'fas fa-utensils', labelKey: 'nav.orders', roles: ['hotel_admin', 'manager', 'bartender', 'staff'], feature: 'orders' },
   // Single-click kitchen board for the cooks.
   { key: 'kitchen-board', to: '/app/kitchen', icon: 'fas fa-fire-burner', labelKey: 'nav.kitchenBoard', roles: ['kitchen'], feature: 'orders' },
-  // Touch-POS order pad (restaurant/bar toggle) for the service teams.
+  // Touch-POS order pad (restaurant/bar toggle) for the service teams. Not part
+  // of the kitchen panel (see the panel review).
   { key: 'take-order', to: '/app/take-order', icon: 'fas fa-cash-register', labelKey: 'nav.takeOrder', roles: ['hotel_admin', 'manager', 'waiter', 'bartender', 'staff'], feature: 'orders' },
   // Staff issue reporting, open to everyone.
   { key: 'issue-reports', to: '/app/issue-reports', icon: 'fas fa-flag', labelKey: 'nav.issueReports', roles: [], feature: 'issue_reports' },
@@ -46,8 +49,8 @@ export const MODULES = [
   { key: 'messages', to: '/app/messages', icon: 'fas fa-comments', labelKey: 'nav.messages', roles: [], feature: 'messages' },
   // Ephemeral staff statuses, open to everyone.
   { key: 'statuses', to: '/app/statuses', icon: 'fas fa-circle-dot', labelKey: 'nav.statuses', roles: [], feature: 'statuses' },
-  // Menu item management.
-  { key: 'menu', to: '/app/menu', icon: 'fas fa-book-open', labelKey: 'nav.menu', roles: ['hotel_admin', 'manager', 'kitchen'], feature: 'menu' },
+  // Menu item management. Not part of the kitchen panel (see the panel review).
+  { key: 'menu', to: '/app/menu', icon: 'fas fa-book-open', labelKey: 'nav.menu', roles: ['hotel_admin', 'manager'], feature: 'menu' },
   // POS outlets (restaurant/bar) cashiers work from.
   { key: 'outlets', to: '/app/outlets', icon: 'fas fa-store', labelKey: 'nav.outlets', roles: ['hotel_admin', 'manager'] },
   // Till printer connection for direct thermal printing.

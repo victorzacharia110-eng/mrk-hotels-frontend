@@ -44,12 +44,26 @@
           <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.orderSummary') }}</span>
         </router-link>
 
-        <router-link :to="{ name: 'cashier-reports' }" class="pos-nav-link"
-          :class="{ active: isActive('/cashier/reports') }" @click="mobileOpen = false"
-          :title="$t('cashier.nav.reports')">
-          <i class="fas fa-chart-line" aria-hidden="true"></i>
-          <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.reports') }}</span>
-        </router-link>
+        <button type="button" class="pos-nav-heading pos-group" :class="{ open: isOpen('reports') }"
+          @click="toggleGroup('reports')" v-show="!sidebarCollapsed"
+          :aria-expanded="isOpen('reports')">
+          {{ $t('cashier.nav.reports') }}
+          <i class="fas fa-chevron-down pos-chevron" aria-hidden="true"></i>
+        </button>
+        <div v-if="isOpen('reports')" class="pos-group-items">
+          <router-link :to="{ name: 'cashier-report-browser' }" class="pos-nav-link"
+            :class="{ active: isActive('/cashier/report-browser') }" @click="mobileOpen = false"
+            :title="$t('cashier.nav.reportBrowser')">
+            <i class="fas fa-chart-pie" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.reportBrowser') }}</span>
+          </router-link>
+          <router-link :to="{ name: 'cashier-reports' }" class="pos-nav-link"
+            :class="{ active: isActive('/cashier/reports') }" @click="mobileOpen = false"
+            :title="$t('cashier.nav.staffReports')">
+            <i class="fas fa-chart-simple" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.staffReports') }}</span>
+          </router-link>
+        </div>
 
         <button type="button" class="pos-nav-heading pos-group" :class="{ open: isOpen('manager') }"
           @click="toggleGroup('manager')" v-show="!sidebarCollapsed"
@@ -106,6 +120,27 @@
             :class="{ active: isActive('/cashier/print-settings') }" @click="mobileOpen = false">
             <i class="fas fa-cloud-arrow-up" aria-hidden="true"></i>
             <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.printSettings') }}</span>
+          </router-link>
+        </div>
+
+        <button type="button" class="pos-nav-heading pos-group" :class="{ open: isOpen('comm') }"
+          @click="toggleGroup('comm')" v-show="!sidebarCollapsed"
+          :aria-expanded="isOpen('comm')">
+          {{ $t('cashier.nav.communication') }}
+          <i class="fas fa-chevron-down pos-chevron" aria-hidden="true"></i>
+        </button>
+        <div v-if="isOpen('comm')" class="pos-group-items">
+          <router-link :to="{ name: 'hotel-messages' }" class="pos-nav-link"
+            :class="{ active: isActive('/app/messages') }" @click="mobileOpen = false"
+            :title="$t('cashier.nav.messages')">
+            <i class="fas fa-comments" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.messages') }}</span>
+          </router-link>
+          <router-link :to="{ name: 'hotel-statuses' }" class="pos-nav-link"
+            :class="{ active: isActive('/app/statuses') }" @click="mobileOpen = false"
+            :title="$t('cashier.nav.statuses')">
+            <i class="fas fa-circle-dot" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.statuses') }}</span>
           </router-link>
         </div>
       </nav>
@@ -198,7 +233,8 @@ const gateOpen = ref(false)
 const sidebarCollapsed = ref(false)
 const mobileOpen = ref(false)
 // Accordion groups in the sidebar; expanded groups are held in a Set.
-const openGroups = ref(new Set(['ordering']))
+// Ordering and Reports start expanded so both core sections are visible.
+const openGroups = ref(new Set(['ordering', 'reports']))
 
 /** Whether the given accordion group is currently expanded. */
 function isOpen(key) {
@@ -231,6 +267,11 @@ watch(() => route.path, () => {
   if (route.path.startsWith('/cashier/printer') || route.path.startsWith('/cashier/print-settings')) {
     const next = new Set(openGroups.value)
     next.add('printer')
+    openGroups.value = next
+  }
+  if (route.path.startsWith('/cashier/reports') || route.path.startsWith('/cashier/report-browser')) {
+    const next = new Set(openGroups.value)
+    next.add('reports')
     openGroups.value = next
   }
   if (route.path.startsWith('/cashier/dine-in') || route.path.startsWith('/cashier/take-away') || route.path.startsWith('/cashier/room-service') || route.path.startsWith('/cashier/delivery') || route.path.startsWith('/cashier/no-charge')) {

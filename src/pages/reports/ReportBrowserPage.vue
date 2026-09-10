@@ -438,6 +438,67 @@
       </template>
     </template>
 
+    <!-- ══ Generic wired engine report (served by GET /reports/wired/{key}) ══ -->
+    <template v-else-if="engine">
+      <div v-if="loading" class="rb-loading">
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> {{ $t('reportBrowser.loading') }}
+      </div>
+      <div v-else-if="error" class="rb-error">{{ error }}</div>
+
+      <template v-else>
+        <div class="rb-report-card">
+          <div class="rb-report-head">
+            <h2>{{ activeLabel }}</h2>
+          </div>
+
+          <p v-if="engine.legend" class="rb-legend">
+            <i class="fas fa-circle-info" aria-hidden="true"></i> {{ engine.legend }}
+          </p>
+
+          <div v-if="engine.summary?.length" class="rb-kpi-grid">
+            <div v-for="(kpi, i) in engine.summary" :key="i" class="rb-kpi">
+              <span class="rb-kpi-value">{{ engineSummaryValue(kpi.value) }}</span>
+              <span class="rb-kpi-label">{{ kpi.label }}</span>
+            </div>
+          </div>
+
+          <div v-if="engine.columns?.length" class="table-scroll">
+            <table class="rb-table">
+              <thead>
+                <tr>
+                  <th v-for="col in engine.columns" :key="col.key">{{ engineColumnLabel(col.key, col.label) }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(row, i) in engine.rows" :key="i">
+                  <td
+                    v-for="col in engine.columns"
+                    :key="col.key"
+                    :class="{ num: col.format === 'money' || col.format === 'pct' }"
+                  >
+                    {{ formatEngineCell(row[col.key], col.format) }}
+                  </td>
+                </tr>
+                <tr v-if="!engine.rows.length">
+                  <td :colspan="engine.columns.length" class="rb-empty">{{ $t('reportBrowser.noRows') }}</td>
+                </tr>
+              </tbody>
+              <tfoot v-if="engine.totals?.length">
+                <tr>
+                  <td v-for="col in engine.columns" :key="col.key">
+                    <template v-if="engineTotalFor(col.key, col.format) && engineTotalFor(col.key, col.format).value !== null">
+                      <span v-if="engineTotalFor(col.key, col.format).label" class="rb-total-label">{{ engineTotalFor(col.key, col.format).label }}: </span>
+                      <strong>{{ engineTotalFor(col.key, col.format).value }}</strong>
+                    </template>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </template>
+    </template>
+
     <!-- ══ Placeholder for reports not yet wired to data ══ -->
     <template v-else>
       <div class="rb-placeholder">
@@ -1167,6 +1228,7 @@ function reportHasConfig(key) {
 const businessDate = ref(new Date().toISOString().slice(0, 10))
 const currency = ref('TZS')
 const report = ref(null)
+const engine = ref(null)
 const loading = ref(false)
 const saving = ref(false)
 const exporting = ref(false)
@@ -1227,8 +1289,48 @@ async function runReport() {
   } else if (activeReport.value === 'occupancy') {
     loadOccupancy()
   } else {
-    report.value = null
+    loadEngine()
   }
+}
+
+async function loadEngine() {
+  loading.value = true
+  error.value = ''
+  engine.value = null
+  try {
+    const params = { ...filterValues, date: filterValues.businessDate || undefined }
+    const res = await reportApi.wired(activeReport.value, params)
+    engine.value = res.data.data
+  } catch (err) {
+    error.value = err.response?.data?.message || t('common.loadError')
+  } finally {
+    loading.value = false
+  }
+}
+
+function engineColumnLabel(key, fallback) {
+  if (te(`reportColumns.${key}`)) return t(`reportColumns.${key}`)
+  return fallback || String(key).replace(/_/g, ' ')
+}
+
+function formatEngineCell(value, format) {
+  if (value === null || value === undefined || value === '') return '—'
+  if (format === 'money' && typeof value === 'number') return money(value)
+  if (format === 'pct') return `${value}%`
+  if (typeof value === 'number') return String(value)
+  if (Array.isArray(value)) return value.join(', ') || '—'
+  return String(value)
+}
+
+function engineTotalFor(key, format) {
+  const total = (engine.value?.totals || []).find((t) => t.key === key)
+  if (!total) return null
+  return { label: total.label || null, value: formatEngineCell(total.value, format) }
+}
+
+function engineSummaryValue(value) {
+  if (typeof value === 'number' && !Number.isInteger(value)) return money(value)
+  return value === null || value === undefined ? '—' : String(value)
 }
 
 async function loadGuestList() {
@@ -1440,6 +1542,8 @@ async function exportCsv() {
         { key: 'occupied_rooms', label: t('reportBrowser.occupiedRooms') },
         { key: 'occupancy_rate', label: t('reportBrowser.occupancyRate') },
       ])
+    } else if (engine.value) {
+      exportCSV(activeReport.value, engine.value.rows || [], engine.value.columns || [])
     }
   } finally {
     exporting.value = false
@@ -1564,6 +1668,49 @@ onMounted(() => {
 .rb-date {
   color: #64748b;
   font-size: 13px;
+}
+.rb-legend {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #f7fafd;
+  border: 1px solid #e6ebf2;
+  border-left: 3px solid var(--mrk-blue, #005eb8);
+  color: #475569;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin: 0 0 16px;
+}
+.rb-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.rb-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #f7fafd;
+  border: 1px solid #e6ebf2;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+.rb-kpi-value {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--mrk-dark, #062a52);
+}
+.rb-kpi-label {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.rb-total-label {
+  font-weight: 600;
+  color: #64748b;
 }
 .rb-closed {
   background: #dcfce7;
