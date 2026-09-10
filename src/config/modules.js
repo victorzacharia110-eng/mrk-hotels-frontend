@@ -83,6 +83,10 @@ export const MODULES = [
   { key: 'reports', to: '/app/reports', icon: 'fas fa-chart-pie', labelKey: 'nav.reportBrowser', roles: ['hotel_admin', 'manager', 'receptionist', 'bartender'], feature: 'reports' },
   // Department-scoped F&B report for floor staff, cashiers and bartenders.
   { key: 'staff-reports', to: '/app/staff-reports', icon: 'fas fa-chart-simple', labelKey: 'nav.staffReports', roles: ['hotel_admin', 'manager', 'waiter', 'bartender', 'staff'] },
+  // Food & beverage POS report browser (iPOS-style catalogue: menu item sales,
+  // back office, inventory, audit...) — the reporting audience from the Reports
+  // module, minus the front desk.
+  { key: 'pos-reports', to: '/app/pos-report-browser', icon: 'fas fa-utensils', labelKey: 'nav.posReports', roles: ['hotel_admin', 'manager', 'bartender', 'staff'], feature: 'reports' },
   // Accounting reports.
   { key: 'accounting', to: '/app/accounting', icon: 'fas fa-scale-balanced', labelKey: 'accounting.title', roles: ['hotel_admin', 'manager', 'accountant'], feature: 'accounting' },
   // Personal profile, visible to all staff.

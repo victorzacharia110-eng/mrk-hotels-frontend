@@ -99,6 +99,7 @@ const hotelChildren = [
   // Business reports.
   { path: 'reports', name: 'hotel-reports', component: () => import('@/pages/reports/ReportBrowserPage.vue'), meta: { module: 'reports' } },
   { path: 'staff-reports', name: 'hotel-staff-reports', component: () => import('@/pages/reports/StaffReportsPage.vue'), meta: { module: 'staff-reports' } },
+  { path: 'pos-report-browser', name: 'hotel-pos-reports', component: () => import('@/pages/reports/PosReportBrowserPage.vue'), meta: { module: 'pos-reports' } },
   // Accounting reports.
   { path: 'accounting', name: 'hotel-accounting', component: () => import('@/pages/accounting/AccountingPage.vue'), meta: { module: 'accounting' } },
   // Current user's own profile.

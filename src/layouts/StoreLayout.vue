@@ -709,7 +709,7 @@ const visibleModules = computed(() => {
     },
     {
       key: 'group-reports', icon: 'fas fa-chart-line', labelKey: 'accordion.reports',
-      keys: ['reports', 'staff-reports'],
+      keys: ['reports', 'staff-reports', 'pos-reports'],
     },
     {
       key: 'group-comms', icon: 'fas fa-comments', labelKey: 'accordion.communication',
@@ -789,7 +789,7 @@ watch(
       next.add('reception-payments')
       openAccordions.value = next
     }
-    if (path.startsWith('/app/reports') || path.startsWith('/app/staff-reports')) {
+    if (path.startsWith('/app/reports') || path.startsWith('/app/staff-reports') || path.startsWith('/app/pos-report-browser')) {
       const next = new Set(openAccordions.value)
       next.add('group-reports')
       openAccordions.value = next
