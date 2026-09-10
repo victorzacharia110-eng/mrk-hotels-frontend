@@ -258,7 +258,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { inventoryApi, inventoryOpsApi } from '@/api'
+import { inventoryOpsApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { saveBlob } from '@/utils/download'
 
@@ -384,7 +384,7 @@ async function loadItems() {
     let page = 1
     let last = 1
     do {
-      const res = await inventoryApi.index({ per_page: 100, page })
+      const res = await inventoryOpsApi.requisitionItems({ per_page: 100, page })
       const pageItems = res.data?.data || res.data || []
       if (Array.isArray(pageItems)) all.push(...pageItems)
       last = res.data?.last_page ?? 1

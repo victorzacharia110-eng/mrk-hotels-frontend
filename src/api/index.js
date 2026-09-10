@@ -1181,6 +1181,7 @@ export const inventoryOpsApi = {
   voidIndent: (id, reason) => api.post(`${v1}/inventory-indents/${id}/void`, { reason }),
   printIndentPdf: (id) => api.get(`${v1}/inventory-indents/${id}/pdf`, { responseType: 'blob' }),
   emailIndent: (id, to) => api.post(`${v1}/inventory-indents/${id}/email`, to ? { to } : {}),
+  requisitionItems: (params) => api.get(`${v1}/inventory-requisition-items`, { params }),
 
   marketLists: (params) => api.get(`${v1}/inventory-market-lists`, { params }),
   storeMarketList: (data) => api.post(`${v1}/inventory-market-lists`, data),
