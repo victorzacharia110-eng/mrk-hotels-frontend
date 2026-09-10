@@ -775,7 +775,7 @@ const visibleModules = computed(() => {
     // workbench (day close report) and the store expense (voucher) ledger.
     if (byKey.accounting) manager.push({ key: 'day-close', to: byKey.accounting.to, icon: 'fas fa-person-running', label: t('nav.dayClose') })
     if (byKey['store-expenses']) manager.push({ key: 'expense-voucher', to: byKey['store-expenses'].to, icon: 'fas fa-file-invoice-dollar', label: t('nav.expenseVoucher') })
-    if (byKey.accounting) manager.push({ key: 'income-voucher', to: byKey.accounting.to, icon: 'fas fa-circle-dollar', label: t('nav.incomeVoucher') })
+    if (byKey.accounting) manager.push({ key: 'income-voucher', to: byKey.accounting.to, icon: 'fas fa-sack-dollar', label: t('nav.incomeVoucher') })
     if (manager.length) restaurantBar.push(subGroup('fnb-manager', 'fas fa-user-gear', t('accordion.manager'), manager))
     const rbInventory = pick(['requisitions', 'stock-counts', 'stock-adjust'])
     if (rbInventory.length) restaurantBar.push(subGroup('fnb-inventory', 'fas fa-boxes-stacked', t('accordion.inventory'), rbInventory))
