@@ -680,7 +680,11 @@ const visibleModules = computed(() => {
     },
     {
       key: 'group-admin', icon: 'fas fa-user-tie', labelKey: 'accordion.administration',
-      keys: ['staff', 'reports', 'accounting', 'printer', 'imports', 'integrations/booking-com', 'integrations/quickbooks', 'integrations/xero'],
+      keys: ['staff', 'accounting', 'printer', 'imports', 'integrations/booking-com', 'integrations/quickbooks', 'integrations/xero'],
+    },
+    {
+      key: 'group-reports', icon: 'fas fa-chart-line', labelKey: 'accordion.reports',
+      keys: ['reports', 'staff-reports'],
     },
     {
       key: 'group-comms', icon: 'fas fa-comments', labelKey: 'accordion.communication',
@@ -758,6 +762,11 @@ watch(
     if (path.startsWith('/app/payments')) {
       const next = new Set(openAccordions.value)
       next.add('reception-payments')
+      openAccordions.value = next
+    }
+    if (path.startsWith('/app/reports') || path.startsWith('/app/staff-reports')) {
+      const next = new Set(openAccordions.value)
+      next.add('group-reports')
       openAccordions.value = next
     }
   },

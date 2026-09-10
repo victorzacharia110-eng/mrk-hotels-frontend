@@ -755,6 +755,7 @@
     "statuses": "Hali",
     "reports": "Ripoti",
     "staffReports": "Ripoti za Wafanyakazi",
+    "reportBrowser": "Kivinjari cha Ripoti",
     "bookingCom": "Booking.com",
     "quickbooks": "QuickBooks",
     "xero": "Xero",
@@ -4615,7 +4616,8 @@
     "foodBeverage": "Mgahawa na Baa",
     "inventoryProcurement": "Hifadhi na Ugavi",
     "administration": "Usimamizi",
-    "communication": "Mawasiliano"
+    "communication": "Mawasiliano",
+    "reports": "Ripoti"
   },
   "receptionPanel": {
     "addRate": "Ongeza kiwango",

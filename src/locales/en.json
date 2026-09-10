@@ -755,6 +755,7 @@
     "statuses": "Status",
     "reports": "Reports",
     "staffReports": "Staff Reports",
+    "reportBrowser": "Report Browser",
     "bookingCom": "Booking.com",
     "quickbooks": "QuickBooks",
     "xero": "Xero",
@@ -4615,7 +4616,8 @@
     "foodBeverage": "Restaurant & Bar",
     "inventoryProcurement": "Inventory & Procurement",
     "administration": "Administration",
-    "communication": "Communication"
+    "communication": "Communication",
+    "reports": "Reports"
   },
   "receptionPanel": {
     "cashieringCenter": "Cashiering Center",

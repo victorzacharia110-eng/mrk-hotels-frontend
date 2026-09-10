@@ -76,8 +76,9 @@ export const MODULES = [
   { key: 'goods-received', to: '/app/goods-received', icon: 'fas fa-clipboard-check', labelKey: 'nav.goodsReceived', roles: ['hotel_admin', 'manager', 'procurement_officer'], feature: 'goods_received' },
   // Staff/user management.
   { key: 'staff', to: '/app/staff', icon: 'fas fa-user-tie', labelKey: 'nav.staff', roles: ['hotel_admin', 'manager'], feature: 'staff' },
-  // Business reporting.
-  { key: 'reports', to: '/app/reports', icon: 'fas fa-chart-line', labelKey: 'nav.reports', roles: ['hotel_admin', 'manager', 'receptionist'], feature: 'reports' },
+  // Business reporting (the classic PMS report browser).
+  { key: 'reports', to: '/app/reports', icon: 'fas fa-chart-pie', labelKey: 'nav.reportBrowser', roles: ['hotel_admin', 'manager', 'receptionist', 'bartender'], feature: 'reports' },
+  // Department-scoped F&B report for floor staff, cashiers and bartenders.
   { key: 'staff-reports', to: '/app/staff-reports', icon: 'fas fa-chart-simple', labelKey: 'nav.staffReports', roles: ['hotel_admin', 'manager', 'waiter', 'bartender', 'staff'] },
   // Accounting reports.
   { key: 'accounting', to: '/app/accounting', icon: 'fas fa-scale-balanced', labelKey: 'accounting.title', roles: ['hotel_admin', 'manager', 'accountant'], feature: 'accounting' },
