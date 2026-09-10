@@ -732,6 +732,7 @@
     "fastBooking": "Uthibitisho wa haraka",
     "reservations": "Uhifadhi",
     "rooms": "Vyumba",
+    "rates": "Viwango",
     "guests": "Wageni",
     "payments": "Malipo",
     "housekeeping": "Usafi",
@@ -764,7 +765,20 @@
     "nightAudit": "Ukaguzi wa Usiku",
     "distribution": "Usambazaji",
     "activityLogReport": "Ripoti ya Shughuli",
-    "importData": "Ingiza Data"
+    "importData": "Ingiza Data",
+    "itemLookup": "Tafuta Bidhaa",
+    "shiftManager": "Meneja wa Shift",
+    "blockedDevices": "Vifaa Vilivyofungwa",
+    "storeDashboard": "Dashibodi ya Hesabu",
+    "storeReports": "Ripoti za Hifadhi",
+    "expenses": "Gharama",
+    "cashRegister": "Rejesta ya Pesa",
+    "physicalStock": "Hesabu Halisi",
+    "stockAdjust": "Marekebisho ya Hesabu",
+    "backOffice": "Ofisi ya Nyuma",
+    "dayClose": "Funga Siku",
+    "expenseVoucher": "Voja ya Gharama",
+    "incomeVoucher": "Voja ya Mapato"
   },
   "import": {
     "title": "Ingiza Data",
@@ -4755,7 +4769,10 @@
     "inventoryProcurement": "Hifadhi na Ugavi",
     "administration": "Usimamizi",
     "communication": "Mawasiliano",
-    "reports": "Ripoti"
+    "reports": "Ripoti",
+    "ordering": "Kuagiza",
+    "manager": "Meneja",
+    "inventory": "Hesabu"
   },
   "receptionPanel": {
     "addRate": "Ongeza kiwango",

@@ -127,6 +127,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { posApi } from '@/api'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import '@/pages/store/store-shared.css'
 
 const { t } = useI18n()
 const authStore = useAuthStore()

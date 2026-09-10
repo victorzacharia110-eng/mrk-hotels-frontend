@@ -81,6 +81,7 @@ import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useCategoriesStore } from '@/stores/categories'
 import { useBulkSelection } from '@/composables/useBulkSelection'
+import '@/pages/store/store-shared.css'
 
 const { t } = useI18n()
 const expenses = ref([])

@@ -60,6 +60,7 @@ import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { posApi } from '@/api'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import '@/pages/store/store-shared.css'
 
 const { t } = useI18n()
 

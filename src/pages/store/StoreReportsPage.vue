@@ -93,6 +93,7 @@ import { useAuthStore } from '@/stores/auth'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useCategoriesStore } from '@/stores/categories'
 import { printToPrinter, restorePrinter, buildReportLines } from '@/utils/printer'
+import '@/pages/store/store-shared.css'
 
 const { t } = useI18n()
 const route = useRoute()

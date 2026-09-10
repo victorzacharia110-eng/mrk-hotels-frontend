@@ -116,7 +116,7 @@
             </div>
 
             <template v-if="isAppMode">
-              <router-link v-for="item in allModulesFlat" :key="item.to || item.key" :to="item.to" class="mobile-link"
+              <router-link v-for="item in allModulesFlat" :key="item.key || item.to" :to="item.to" class="mobile-link"
                 @click="navOpen = false">
                 <i :class="item.icon" aria-hidden="true"></i> {{ item.label }}
               </router-link>
@@ -230,24 +230,36 @@
                 <i class="fas fa-chevron-down drawer-acc-caret" :class="{ open: openAccordions.has(item.key) }" aria-hidden="true"></i>
               </button>
               <div v-if="openAccordions.has(item.key)" class="drawer-acc-children">
-                <button
-                  v-for="child in item.children.filter((c) => c.action)"
-                  :key="child.action"
-                  type="button"
-                  class="drawer-link drawer-acc-child"
-                  @click="handleAccordionAction(item.key, child.action)"
-                >
-                  <i :class="child.icon" aria-hidden="true"></i> {{ child.label }}
-                </button>
-                <router-link
-                  v-for="child in item.children.filter((c) => c.to)"
-                  :key="child.to"
-                  :to="child.to"
-                  class="drawer-link drawer-acc-child"
-                  @click="sideOpen = false"
-                >
-                  <i :class="child.icon" aria-hidden="true"></i> {{ child.label }}
-                </router-link>
+                <template v-for="child in item.children" :key="child.key || child.to">
+                  <template v-if="child.children">
+                    <button type="button" class="drawer-link drawer-acc-subhead"
+                      @click="toggleAccordion(subAccordionKey(item.key, child.key))">
+                      <i :class="child.icon" aria-hidden="true"></i> {{ child.label }}
+                      <i class="fas fa-chevron-down drawer-acc-caret"
+                        :class="{ open: openAccordions.has(subAccordionKey(item.key, child.key)) }" aria-hidden="true"></i>
+                    </button>
+                    <div v-if="openAccordions.has(subAccordionKey(item.key, child.key))" class="drawer-acc-subchildren">
+                      <button v-for="gchild in child.children.filter((c) => c.action)" :key="gchild.action" type="button"
+                        class="drawer-link drawer-acc-subchild" @click="handleAccordionAction(child.key, gchild.action)">
+                        <i :class="gchild.icon" aria-hidden="true"></i> {{ gchild.label }}
+                      </button>
+                      <router-link v-for="gchild in child.children.filter((c) => c.to)" :key="gchild.to" :to="gchild.to"
+                        class="drawer-link drawer-acc-subchild" @click="sideOpen = false">
+                        <i :class="gchild.icon" aria-hidden="true"></i> {{ gchild.label }}
+                      </router-link>
+                    </div>
+                  </template>
+                  <template v-else>
+                    <button v-if="child.action" :key="child.action" type="button" class="drawer-link drawer-acc-child"
+                      @click="handleAccordionAction(item.key, child.action)">
+                      <i :class="child.icon" aria-hidden="true"></i> {{ child.label }}
+                    </button>
+                    <router-link v-else :key="child.to" :to="child.to" class="drawer-link drawer-acc-child"
+                      @click="sideOpen = false">
+                      <i :class="child.icon" aria-hidden="true"></i> {{ child.label }}
+                    </router-link>
+                  </template>
+                </template>
               </div>
             </template>
             <router-link v-else :key="item.to" :to="item.to" class="drawer-link" @click="sideOpen = false">
@@ -547,6 +559,16 @@ const isHousekeeping = computed(() => authStore.user?.user_role === 'housekeepin
 /** True when the signed-in staff member is on the kitchen team. */
 const isKitchen = computed(() => authStore.user?.user_role === 'kitchen')
 
+/** True when the signed-in staff member is a waiter (order taker). */
+const isWaiter = computed(() => authStore.user?.user_role === 'waiter')
+
+/** True when the signed-in staff member is on the management panel (manager,
+ * hotel admin or accountant), whose drawer follows the client's panel menu
+ * design document. */
+const isManagement = computed(() =>
+  ['hotel_admin', 'manager', 'accountant'].includes(authStore.user?.user_role)
+)
+
 /** Builds a collapsible accordion group for the staff drawer. */
 function accordionGroup(key, icon, labelKey, children) {
   return { key, icon, labelKey, label: t(labelKey), to: undefined, children }
@@ -690,6 +712,97 @@ const visibleModules = computed(() => {
     return out
   }
 
+  // The waiter panel follows the panel menu design: Dashboard, Restaurant &
+  // Bar (Take Order and Issue Reports), then Communication — no Reports
+  // accordion.
+  if (isWaiter.value) {
+    const pick = (keys) => keys.map((k) => byKey[k]).filter(Boolean)
+    const out = []
+
+    if (byKey.dashboard) out.push(byKey.dashboard)
+
+    const restaurantBar = pick(['take-order', 'issue-reports'])
+    if (restaurantBar.length) out.push(accordionGroup('waiter-restaurant-bar', 'fas fa-utensils', 'accordion.foodBeverage', restaurantBar))
+
+    const comm = pick(['messages', 'statuses'])
+    if (comm.length) out.push(accordionGroup('waiter-comms', 'fas fa-comments', 'accordion.communication', comm))
+
+    return out
+  }
+
+  // The management panel (hotel_admin / manager / accountant) follows the
+  // client's "Panel Menu Design" drawing: DASHBOARD sits alone at the top as
+  // a single menu item (not an accordion), then the Front Desk, Restaurant &
+  // Bar, Inventory & Procurement and Communication accordions. Restaurant &
+  // Bar nests the Ordering, Manager and Inventory sub accordions plus the
+  // Printer link, and deliberately carries no Communication sub — communication
+  // is its own top-level accordion.
+  if (isManagement.value) {
+    const pick = (keys) => keys.map((k) => byKey[k]).filter(Boolean)
+    const link = (k, label) => {
+      const m = byKey[k]
+      return m && { key: k, to: m.to, icon: m.icon, label }
+    }
+    const subGroup = (key, icon, label, children) => ({ key, icon, label, to: undefined, children })
+    const out = []
+
+    // 1. DASHBOARD — a single menu item, not an accordion.
+    if (byKey.overview) out.push({ ...byKey.overview, label: t('nav.dashboard') })
+
+    // 2. FRONT DESK.
+    const frontDesk = []
+    if (byKey.reservations) frontDesk.push(link('reservations', t('nav.reservations')))
+    if (byKey.rooms) frontDesk.push(link('rooms', t('nav.rooms')))
+    if (byKey.rooms) frontDesk.push({ key: 'rates', to: '/app/rooms', icon: 'fas fa-tags', label: t('nav.rates') })
+    if (byKey.distribution) frontDesk.push(byKey.distribution)
+    if (byKey.guests) frontDesk.push(link('guests', t('nav.guests')))
+    if (byKey.payments) frontDesk.push(link('payments', t('nav.payments')))
+    if (byKey['night-audit']) frontDesk.push(byKey['night-audit'])
+    const administration = pick(['staff', 'activity-log-report', 'overrides', 'imports', 'integrations/booking-com', 'integrations/quickbooks', 'integrations/xero'])
+    if (administration.length) frontDesk.push(subGroup('front-administration', 'fas fa-user-tie', t('accordion.administration'), administration))
+    if (byKey['requisitions']) frontDesk.push(link('requisitions', t('nav.requisitions')))
+    if (byKey.messages) frontDesk.push(link('messages', t('nav.messages')))
+    if (frontDesk.length) out.push(accordionGroup('front-desk', 'fas fa-bed', 'accordion.frontDesk', frontDesk))
+
+    // 3. RESTAURANT & BAR — Ordering / Manager / Inventory / Printer sub
+    // accordions, no Communication sub. Laundry / housekeeping / fun-games /
+    // issue reports keep living under this group as before.
+    const restaurantBar = []
+    const ordering = pick(['take-order', 'orders'])
+    if (ordering.length) restaurantBar.push(subGroup('fnb-ordering', 'fas fa-cash-register', t('accordion.ordering'), ordering))
+    const manager = pick(['menu', 'outlets', 'reports', 'staff-reports', 'pos-reports', 'item-lookup', 'shift', 'devices'])
+    // Day Close / Expense Voucher / Income Voucher are the accounting
+    // workbench (day close report) and the store expense (voucher) ledger.
+    if (byKey.accounting) manager.push({ key: 'day-close', to: byKey.accounting.to, icon: 'fas fa-person-running', label: t('nav.dayClose') })
+    if (byKey['store-expenses']) manager.push({ key: 'expense-voucher', to: byKey['store-expenses'].to, icon: 'fas fa-file-invoice-dollar', label: t('nav.expenseVoucher') })
+    if (byKey.accounting) manager.push({ key: 'income-voucher', to: byKey.accounting.to, icon: 'fas fa-circle-dollar', label: t('nav.incomeVoucher') })
+    if (manager.length) restaurantBar.push(subGroup('fnb-manager', 'fas fa-user-gear', t('accordion.manager'), manager))
+    const rbInventory = pick(['requisitions', 'stock-counts', 'stock-adjust'])
+    if (rbInventory.length) restaurantBar.push(subGroup('fnb-inventory', 'fas fa-boxes-stacked', t('accordion.inventory'), rbInventory))
+    if (byKey.printer) restaurantBar.push(byKey.printer)
+    for (const extra of ['housekeeping', 'laundry', 'fun-games', 'issue-reports']) {
+      if (byKey[extra]) restaurantBar.push(byKey[extra])
+    }
+    if (restaurantBar.length) out.push(accordionGroup('restaurant-bar', 'fas fa-utensils', 'accordion.foodBeverage', restaurantBar))
+
+    // 4. INVENTORY & PROCUREMENT — Dashboard, Purchase Orders, Goods Received,
+    // Expenses, Cash Register, Reports, Department Indents, Inventory, Back
+    // Office and Communications, then the dedicated management extras
+    // (departments, categories, suppliers, accounting) stay reachable.
+    const inventoryProcurement = [
+      ...pick(['store-dashboard', 'purchase-orders', 'goods-received', 'store-expenses', 'store-cash-register', 'store-reports', 'requisitions', 'inventory', 'store-settings']),
+    ]
+    if (byKey.messages) inventoryProcurement.push(link('messages', t('nav.messages')))
+    inventoryProcurement.push(...pick(['departments', 'categories', 'suppliers', 'accounting']))
+    if (inventoryProcurement.length) out.push(accordionGroup('inventory-procurement', 'fas fa-boxes-stacked', 'accordion.inventoryProcurement', inventoryProcurement))
+
+    // 5. COMMUNICATION — top-level accordion for the whole panel.
+    const communication = pick(['messages', 'statuses'])
+    if (communication.length) out.push(accordionGroup('communication', 'fas fa-comments', 'accordion.communication', communication))
+
+    return out
+  }
+
   const GROUPING = [
     {
       key: 'group-front-desk', icon: 'fas fa-bed', labelKey: 'accordion.frontDesk',
@@ -743,9 +856,12 @@ const visibleModules = computed(() => {
 
 /** Flat list of every module (used by the mobile menu so nothing is hidden). */
 const allModulesFlat = computed(() =>
-  visibleModules.value.flatMap((item) =>
-    item.children ? item.children.filter((c) => c.to) : [item],
-  ),
+  visibleModules.value.flatMap((item) => {
+    if (!item.children) return [item]
+    return item.children.flatMap((child) =>
+      child.children ? child.children.filter((c) => c.to) : [child],
+    )
+  }),
 )
 
 /** Toggle an accordion group open/closed in the staff drawer. */
@@ -754,6 +870,11 @@ function toggleAccordion(key) {
   if (next.has(key)) next.delete(key)
   else next.add(key)
   openAccordions.value = next
+}
+
+/** Composite key for a sub accordion nested inside a main accordion. */
+function subAccordionKey(mainKey, subKey) {
+  return `${mainKey}::${subKey}`
 }
 
 /** Runs a non-route accordion action (e.g. opening the Auto Stopsell drawer). */
@@ -777,11 +898,15 @@ watch(
     if (path.startsWith('/app/night-audit')) {
       const next = new Set(openAccordions.value)
       next.add('night-audit')
+      next.add('front-desk')
+      next.add('front-desk::night-audit')
       openAccordions.value = next
     }
     if (path.startsWith('/app/distribution')) {
       const next = new Set(openAccordions.value)
       next.add('distribution')
+      next.add('front-desk')
+      next.add('front-desk::distribution')
       openAccordions.value = next
     }
     if (path.startsWith('/app/payments')) {
@@ -792,6 +917,8 @@ watch(
     if (path.startsWith('/app/reports') || path.startsWith('/app/staff-reports') || path.startsWith('/app/pos-report-browser')) {
       const next = new Set(openAccordions.value)
       next.add('group-reports')
+      next.add('restaurant-bar')
+      next.add('restaurant-bar::fnb-manager')
       openAccordions.value = next
     }
   },
@@ -1274,6 +1401,27 @@ function formatNotifTime(iso) {
 
 .drawer-acc-child {
   padding-left: 34px;
+  font-size: 13px;
+}
+
+/* Sub accordion level (Ordering / Manager / Inventory inside Restaurant & Bar). */
+.drawer-acc-subhead {
+  padding-left: 30px;
+  font-size: 13px;
+  color: #b9dcf7;
+}
+
+.drawer-acc-subhead i {
+  color: #7fb6df;
+}
+
+.drawer-acc-subchildren {
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer-acc-subchild {
+  padding-left: 54px;
   font-size: 13px;
 }
 

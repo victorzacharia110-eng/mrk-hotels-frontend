@@ -95,6 +95,7 @@ import { inventoryApi } from '@/api'
 import { formatCategory } from '@/utils/format'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useCategoriesStore } from '@/stores/categories'
+import '@/pages/store/store-shared.css'
 
 const { t } = useI18n()
 

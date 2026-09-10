@@ -44,6 +44,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeApi } from '../../api'
+import '@/pages/store/store-shared.css'
 
 const { t } = useI18n()
 const tabs = ['store', 'receipt', 'printer', 'tax']

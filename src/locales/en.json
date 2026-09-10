@@ -732,6 +732,7 @@
     "fastBooking": "Instant booking confirmation",
     "reservations": "Reservations",
     "rooms": "Rooms",
+    "rates": "Rates",
     "guests": "Guests",
     "payments": "Payments",
     "housekeeping": "Housekeeping",
@@ -764,7 +765,20 @@
     "nightAudit": "Night Audit",
     "distribution": "Distribution",
     "activityLogReport": "Activity Log",
-    "importData": "Import Data"
+    "importData": "Import Data",
+    "itemLookup": "Item Lookup",
+    "shiftManager": "Shift Manager",
+    "blockedDevices": "Blocked Devices",
+    "storeDashboard": "Inventory Dashboard",
+    "storeReports": "Store Reports",
+    "expenses": "Expenses",
+    "cashRegister": "Cash Register",
+    "physicalStock": "Physical Stock",
+    "stockAdjust": "Stock Adjustment",
+    "backOffice": "Back Office",
+    "dayClose": "Day Close",
+    "expenseVoucher": "Expense Voucher",
+    "incomeVoucher": "Income Voucher"
   },
   "import": {
     "title": "Import Data",
@@ -4755,7 +4769,10 @@
     "inventoryProcurement": "Inventory & Procurement",
     "administration": "Administration",
     "communication": "Communication",
-    "reports": "Reports"
+    "reports": "Reports",
+    "ordering": "Ordering",
+    "manager": "Manager",
+    "inventory": "Inventory"
   },
   "receptionPanel": {
     "cashieringCenter": "Cashiering Center",

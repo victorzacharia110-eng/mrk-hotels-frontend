@@ -120,6 +120,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { inventoryApi, purchaseRequisitionApi, purchaseOrderApi, goodsReceivedNoteApi } from '@/api'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import '@/pages/store/store-shared.css'
 
 const loading = ref(true)
 const items = ref([])

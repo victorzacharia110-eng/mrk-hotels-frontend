@@ -79,6 +79,7 @@ import { useI18n } from 'vue-i18n'
 import { storeApi } from '../../api'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
+import '@/pages/store/store-shared.css'
 
 const { t } = useI18n()
 const register = ref(null)

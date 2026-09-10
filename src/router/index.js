@@ -19,9 +19,9 @@ const hotelChildren = [
   // Staff landing page; the component picked depends on the role.
   { path: '', name: 'hotel-dashboard', component: () => import('@/pages/dashboards/HotelDashboard.vue'), meta: { module: 'dashboard' } },
   // Order-taking landing page for waiters and bartenders.
-  { path: 'take-order', name: 'hotel-take-order', component: () => import('@/pages/dashboards/OrderTakerDashboard.vue'), meta: { module: 'orders' } },
+  { path: 'take-order', name: 'hotel-take-order', component: () => import('@/pages/dashboards/OrderTakerDashboard.vue'), meta: { module: 'take-order' } },
   // Single-click kitchen board (one tap per dish to mark it ready/served).
-  { path: 'kitchen', name: 'hotel-kitchen', component: () => import('@/pages/kitchen/KitchenBoardPage.vue'), meta: { module: 'orders' } },
+  { path: 'kitchen', name: 'hotel-kitchen', component: () => import('@/pages/kitchen/KitchenBoardPage.vue'), meta: { module: 'kitchen-board' } },
   // Operational overview read-only for management.
   { path: 'overview', name: 'hotel-overview', component: () => import('@/pages/overview/AdminOverviewPage.vue'), meta: { module: 'overview' } },
   // Manage guest reservations.
@@ -102,6 +102,19 @@ const hotelChildren = [
   { path: 'pos-report-browser', name: 'hotel-pos-reports', component: () => import('@/pages/reports/PosReportBrowserPage.vue'), meta: { module: 'pos-reports' } },
   // Accounting reports.
   { path: 'accounting', name: 'hotel-accounting', component: () => import('@/pages/accounting/AccountingPage.vue'), meta: { module: 'accounting' } },
+  // POS manager screens shared with the cashier panel (Restaurant & Bar > Manager).
+  { path: 'pos/item-lookup', name: 'hotel-pos-item-lookup', component: () => import('@/pages/cashier/CashierItemLookupPage.vue'), meta: { module: 'item-lookup' } },
+  { path: 'pos/shift', name: 'hotel-pos-shift', component: () => import('@/pages/cashier/CashierShiftManagerPage.vue'), meta: { module: 'shift' } },
+  { path: 'pos/devices', name: 'hotel-pos-devices', component: () => import('@/pages/cashier/CashierBlockedDevicesPage.vue'), meta: { module: 'devices' } },
+  // Store management screens shared with the store-manager panel
+  // (Inventory & Procurement accordion).
+  { path: 'store/dashboard', name: 'hotel-store-dashboard', component: () => import('@/pages/store/StoreDashboardPage.vue'), meta: { module: 'store-dashboard' } },
+  { path: 'store/reports', name: 'hotel-store-reports', component: () => import('@/pages/store/StoreReportsPage.vue'), meta: { module: 'store-reports' } },
+  { path: 'store/expenses', name: 'hotel-store-expenses', component: () => import('@/pages/store/StoreExpensesPage.vue'), meta: { module: 'store-expenses' } },
+  { path: 'store/cash-register', name: 'hotel-store-cash-register', component: () => import('@/pages/store/StoreCashRegisterPage.vue'), meta: { module: 'store-cash-register' } },
+  { path: 'store/stock-counts', name: 'hotel-store-stock-counts', component: () => import('@/pages/store/StoreStockCountsPage.vue'), meta: { module: 'stock-counts' } },
+  { path: 'store/stock-adjust', name: 'hotel-store-stock-adjust', component: () => import('@/pages/store/StoreStockAdjustPage.vue'), meta: { module: 'stock-adjust' } },
+  { path: 'store/settings', name: 'hotel-store-settings', component: () => import('@/pages/store/StoreSettingsPage.vue'), meta: { module: 'store-settings' } },
   // Current user's own profile.
   { path: 'profile', name: 'hotel-profile', component: () => import('@/pages/profile/ProfilePage.vue'), meta: { module: 'profile' } },
   // Booking.com channel manager integration.

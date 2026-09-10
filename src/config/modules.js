@@ -101,6 +101,21 @@ export const MODULES = [
   { key: 'overrides', to: '/app/overrides', icon: 'fas fa-user-shield', labelKey: 'nav.overrideApprovals', roles: ['hotel_admin', 'manager', 'receptionist'] },
   // Bulk data import (CSV) — administrators only, since commits write records.
   { key: 'imports', to: '/app/import', icon: 'fas fa-file-import', labelKey: 'nav.importData', roles: ['hotel_admin'] },
+  // POS manager screens shared with the cashier panel (Item Lookup, Shift
+  // Manager and Blocked Devices) surfaced in the Restaurant & Bar Manager sub.
+  { key: 'item-lookup', to: '/app/pos/item-lookup', icon: 'fas fa-magnifying-glass', labelKey: 'nav.itemLookup', roles: ['hotel_admin', 'manager'] },
+  { key: 'shift', to: '/app/pos/shift', icon: 'fas fa-user-clock', labelKey: 'nav.shiftManager', roles: ['hotel_admin', 'manager'] },
+  { key: 'devices', to: '/app/pos/devices', icon: 'fas fa-tablet-screen-button', labelKey: 'nav.blockedDevices', roles: ['hotel_admin', 'manager'] },
+  // Store management screens shared with the store-manager panel, surfaced in
+  // the Inventory & Procurement accordion (Dashboard, Expenses, Cash Register,
+  // Reports, Physical Stock, Stock Adjustment, Back Office).
+  { key: 'store-dashboard', to: '/app/store/dashboard', icon: 'fas fa-chart-simple', labelKey: 'nav.storeDashboard', roles: ['hotel_admin', 'manager', 'accountant'] },
+  { key: 'store-reports', to: '/app/store/reports', icon: 'fas fa-chart-pie', labelKey: 'nav.storeReports', roles: ['hotel_admin', 'manager', 'accountant'] },
+  { key: 'store-expenses', to: '/app/store/expenses', icon: 'fas fa-money-bill-wave', labelKey: 'nav.expenses', roles: ['hotel_admin', 'manager', 'accountant'] },
+  { key: 'store-cash-register', to: '/app/store/cash-register', icon: 'fas fa-vault', labelKey: 'nav.cashRegister', roles: ['hotel_admin', 'manager', 'accountant'] },
+  { key: 'stock-counts', to: '/app/store/stock-counts', icon: 'fas fa-clipboard-list', labelKey: 'nav.physicalStock', roles: ['hotel_admin', 'manager'] },
+  { key: 'stock-adjust', to: '/app/store/stock-adjust', icon: 'fas fa-sliders', labelKey: 'nav.stockAdjust', roles: ['hotel_admin', 'manager'] },
+  { key: 'store-settings', to: '/app/store/settings', icon: 'fas fa-briefcase', labelKey: 'nav.backOffice', roles: ['hotel_admin', 'manager'] },
 ]
 
 /**
