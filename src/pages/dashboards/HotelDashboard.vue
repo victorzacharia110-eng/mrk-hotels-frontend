@@ -407,16 +407,16 @@
               <div v-if="stayTab === 'folio'" class="sv-tab-panel" role="tabpanel">
                 <div class="sv-panel-cards">
                   <div class="sv-panel-card">
-                    <span>{{ $t('stayview.total') }}</span>
-                    <strong>TZS {{ fmtNum(folio?.reservation?.total_amount ?? activeBar.total) }}</strong>
+                    <span>{{ $t('stayview.totalRoomCharges') }}</span>
+                    <strong>TZS {{ fmtNum((folio?.folio?.total_amount ?? 0) + (folio?.folio?.room_charges ?? 0), 2) }}</strong>
                   </div>
                   <div class="sv-panel-card">
-                    <span>{{ $t('stayview.advancePaid') }}</span>
-                    <strong>TZS {{ fmtNum(folio?.reservation?.advance_payment ?? activeBar.advance) }}</strong>
+                    <span>{{ $t('stayview.totalPaid') }}</span>
+                    <strong>TZS {{ fmtNum(folio?.reservation?.advance_payment ?? activeBar.advance ?? 0, 2) }}</strong>
                   </div>
                   <div class="sv-panel-card" :class="activeBar.paymentPending ? 'pay-pending' : 'pay-ok'">
                     <span>{{ $t('stayview.balance') }}</span>
-                    <strong>TZS {{ fmtNum(folio?.folio?.balance_due ?? activeBar.balance) }}</strong>
+                    <strong>TZS {{ fmtNum(folio?.folio?.balance_due ?? activeBar.balance ?? 0, 2) }}</strong>
                   </div>
                 </div>
 
@@ -449,8 +449,18 @@
                             {{ e.description }}<span v-if="e.detail" class="sv-cap"> · {{ e.detail }}</span>
                           </td>
                           <td>{{ e.user }}</td>
-                          <td class="num">{{ e.credit ? '−' : '' }}TZS {{ fmtNum(e.amount) }}</td>
+                          <td class="num">{{ e.credit ? '−' : '' }}TZS {{ fmtNum(e.amount, 2) }}</td>
                           <td class="sv-cell-actions">
+                            <button
+                              v-if="e.editable"
+                              type="button"
+                              class="sv-icon-link"
+                              :title="$t('folio.edit')"
+                              :disabled="actionBusy"
+                              @click="openEditEntry(e)"
+                            >
+                              <i class="fas fa-pen" aria-hidden="true"></i>
+                            </button>
                             <a
                               v-if="e.entryUrl"
                               :href="e.entryUrl"
@@ -471,29 +481,13 @@
                             >
                               <i class="fas fa-trash-can" aria-hidden="true"></i>
                             </button>
-                            <span v-else class="sv-muted-cell">—</span>
+                            <span v-if="!e.entryId && !e.editable" class="sv-muted-cell">—</span>
                           </td>
                         </tr>
                         <tr v-if="!folioEntries.length">
                           <td colspan="6" class="sv-muted-cell">{{ $t('folio.empty') }}</td>
                         </tr>
                       </tbody>
-                      <tfoot>
-                        <tr>
-                          <td colspan="5">{{ $t('folio.totalCharges') }}</td>
-                          <td class="num">
-                            TZS {{ fmtNum((folio.folio?.total_amount ?? 0) + (folio.folio?.room_charges ?? 0)) }}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td colspan="5">{{ $t('folio.totalPaid') }}</td>
-                          <td class="num">TZS {{ fmtNum(folio.reservation?.advance_payment ?? 0) }}</td>
-                        </tr>
-                        <tr class="sv-folio-balance">
-                          <td colspan="5">{{ $t('folio.balance') }}</td>
-                          <td class="num"><strong>TZS {{ fmtNum(folio.folio?.balance_due ?? 0) }}</strong></td>
-                        </tr>
-                      </tfoot>
                     </table>
                   </div>
                 </template>
@@ -546,16 +540,16 @@
               <div v-else-if="stayTab === 'charges'" class="sv-tab-panel" role="tabpanel">
                 <div class="sv-panel-cards">
                   <div class="sv-panel-card">
-                    <span>{{ $t('folio.roomCharges') }}</span>
-                    <strong>TZS {{ fmtNum(folio?.folio?.room_charges) }}</strong>
+                    <span>{{ $t('stayview.totalRoomCharges') }}</span>
+                    <strong>TZS {{ fmtNum((folio?.folio?.total_amount ?? 0) + (folio?.folio?.room_charges ?? 0), 2) }}</strong>
                   </div>
                   <div class="sv-panel-card">
-                    <span>{{ $t('stayview.total') }}</span>
-                    <strong>TZS {{ fmtNum(folio?.reservation?.total_amount ?? activeBar.total) }}</strong>
+                    <span>{{ $t('stayview.totalPaid') }}</span>
+                    <strong>TZS {{ fmtNum(folio?.reservation?.advance_payment ?? 0, 2) }}</strong>
                   </div>
                   <div class="sv-panel-card">
                     <span>{{ $t('folio.balance') }}</span>
-                    <strong>TZS {{ fmtNum(folio?.folio?.balance_due ?? activeBar.balance) }}</strong>
+                    <strong>TZS {{ fmtNum(folio?.folio?.balance_due ?? activeBar.balance ?? 0, 2) }}</strong>
                   </div>
                 </div>
                 <div v-if="chargeNights.length" class="sv-table-wrap">
@@ -572,14 +566,14 @@
                       <tr v-for="(n, i) in chargeNights" :key="i">
                         <td>{{ n.date }}</td>
                         <td>{{ n.day }}</td>
-                        <td class="num">TZS {{ fmtNum(n.rate) }}</td>
-                        <td class="num">TZS {{ fmtNum(n.rate) }}</td>
+                        <td class="num">TZS {{ fmtNum(n.rate, 2) }}</td>
+                        <td class="num">TZS {{ fmtNum(n.rate, 2) }}</td>
                       </tr>
                     </tbody>
                     <tfoot>
                       <tr>
                         <td colspan="3">{{ $t('stayview.nightTotal') }}</td>
-                        <td class="num"><strong>TZS {{ fmtNum(nightTotal) }}</strong></td>
+                        <td class="num"><strong>TZS {{ fmtNum(nightTotal, 2) }}</strong></td>
                       </tr>
                     </tfoot>
                   </table>
@@ -762,7 +756,7 @@
                         <i class="fas fa-paperclip" aria-hidden="true"></i> {{ $t('stayview.uploadFiles') }}
                       </button>
                     </li>
-                    <li>
+                    <li v-if="canVoidReservation">
                       <button type="button" class="danger" @click="openVoid">
                         <i class="fas fa-trash-can" aria-hidden="true"></i> {{ $t('stayview.voidReservation') }}
                       </button>
@@ -794,7 +788,7 @@
             <div class="sv-modal-body">
               <label class="sv-field">
                 <span>{{ $t('stayview.paymentAmount') }}</span>
-                <input v-model.number="paymentForm.amount" type="number" min="0" step="0.01" class="input" :class="{ 'sv-input-error': paymentErrors.amount }" required />
+                <input v-model.number="paymentForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" :class="{ 'sv-input-error': paymentErrors.amount }" required />
                 <span v-if="paymentErrors.amount" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentErrors.amount }}</span>
               </label>
               <div class="sv-field">
@@ -844,12 +838,12 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('reservations.firstName') }}</span>
-                  <input v-model="amendForm.first_name" type="text" class="input" :class="{ 'sv-input-error': amendErrors.first_name }" required />
+                  <input v-model="amendForm.first_name" type="text" class="input" data-field="first_name" :class="{ 'sv-input-error': amendErrors.first_name }" required />
                   <span v-if="amendErrors.first_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.first_name }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('reservations.lastName') }}</span>
-                  <input v-model="amendForm.last_name" type="text" class="input" :class="{ 'sv-input-error': amendErrors.last_name }" required />
+                  <input v-model="amendForm.last_name" type="text" class="input" data-field="last_name" :class="{ 'sv-input-error': amendErrors.last_name }" required />
                   <span v-if="amendErrors.last_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.last_name }}</span>
                 </label>
               </div>
@@ -860,7 +854,7 @@
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.email') }}</span>
-                  <input v-model="amendForm.guest_email" type="email" class="input" :class="{ 'sv-input-error': amendErrors.guest_email }" />
+                  <input v-model="amendForm.guest_email" type="email" class="input" data-field="guest_email" :class="{ 'sv-input-error': amendErrors.guest_email }" />
                   <span v-if="amendErrors.guest_email" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.guest_email }}</span>
                 </label>
               </div>
@@ -878,24 +872,24 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.arrival') }}</span>
-                  <input v-model="amendForm.check_in_date" type="date" class="input" :class="{ 'sv-input-error': amendErrors.check_in_date }" required />
+                  <input v-model="amendForm.check_in_date" type="date" class="input" data-field="check_in_date" :class="{ 'sv-input-error': amendErrors.check_in_date }" required />
                   <span v-if="amendErrors.check_in_date" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.check_in_date }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.departure') }}</span>
-                  <input v-model="amendForm.check_out_date" type="date" class="input" :class="{ 'sv-input-error': amendErrors.check_out_date }" required />
+                  <input v-model="amendForm.check_out_date" type="date" class="input" data-field="check_out_date" :class="{ 'sv-input-error': amendErrors.check_out_date }" required />
                   <span v-if="amendErrors.check_out_date" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.check_out_date }}</span>
                 </label>
               </div>
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('reservations.adultsLabel') }}</span>
-                  <input v-model.number="amendForm.num_adults" type="number" min="1" class="input" :class="{ 'sv-input-error': amendErrors.num_adults }" required />
+                  <input v-model.number="amendForm.num_adults" type="number" min="1" class="input" data-field="num_adults" :class="{ 'sv-input-error': amendErrors.num_adults }" required />
                   <span v-if="amendErrors.num_adults" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.num_adults }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('reservations.childrenLabel') }}</span>
-                  <input v-model.number="amendForm.num_children" type="number" min="0" class="input" :class="{ 'sv-input-error': amendErrors.num_children }" />
+                  <input v-model.number="amendForm.num_children" type="number" min="0" class="input" data-field="num_children" :class="{ 'sv-input-error': amendErrors.num_children }" />
                   <span v-if="amendErrors.num_children" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.num_children }}</span>
                 </label>
               </div>
@@ -933,12 +927,12 @@
             <div class="sv-modal-body">
               <label class="sv-field">
                 <span>{{ $t('stayview.chargeDescription') }}</span>
-                <input v-model="chargeForm.description" type="text" class="input" :class="{ 'sv-input-error': chargeErrors.description }" required maxlength="255" />
+                <input v-model="chargeForm.description" type="text" class="input" data-field="description" :class="{ 'sv-input-error': chargeErrors.description }" required maxlength="255" />
                 <span v-if="chargeErrors.description" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ chargeErrors.description }}</span>
               </label>
               <label class="sv-field">
                 <span>{{ $t('stayview.paymentAmount') }}</span>
-                <input v-model.number="chargeForm.amount" type="number" min="0" step="0.01" class="input" :class="{ 'sv-input-error': chargeErrors.amount }" required />
+                <input v-model.number="chargeForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" :class="{ 'sv-input-error': chargeErrors.amount }" required />
                 <span v-if="chargeErrors.amount" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ chargeErrors.amount }}</span>
               </label>
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
@@ -976,29 +970,34 @@
               <template v-if="folioOp === 'discount'">
                 <label class="sv-field">
                   <span>{{ $t('stayview.discountAmount') }}</span>
-                  <input v-model.number="folioOpForm.amount" type="number" min="0" step="0.01" class="input" required />
+                  <input v-model.number="folioOpForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" required />
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.folioNote') }}</span>
-                  <input v-model="folioOpForm.description" type="text" class="input" maxlength="255" />
+                  <input v-model="folioOpForm.description" type="text" class="input" data-field="description" maxlength="255" />
                 </label>
               </template>
               <template v-else-if="folioOp === 'adjustment'">
                 <label class="sv-field">
                   <span>{{ $t('stayview.adjustmentAmount') }}</span>
-                  <input v-model.number="folioOpForm.amount" type="number" step="0.01" class="input" placeholder="+… / −…" required />
+                  <input v-model.number="folioOpForm.amount" type="number" step="0.01" class="input" data-field="amount" placeholder="+… / −…" required />
                 </label>
                 <p class="sv-cap sv-note">{{ $t('stayview.adjustmentHint') }}</p>
                 <label class="sv-field">
                   <span>{{ $t('stayview.folioNote') }}</span>
-                  <input v-model="folioOpForm.description" type="text" class="input" maxlength="255" />
+                  <input v-model="folioOpForm.description" type="text" class="input" data-field="description" maxlength="255" />
                 </label>
               </template>
               <template v-else-if="folioOp === 'inclusion'">
                 <label class="sv-field">
                   <span>{{ $t('stayview.chargeDescription') }}</span>
-                  <input v-model="folioOpForm.description" type="text" class="input" required maxlength="255" />
+                  <input v-model="folioOpForm.description" type="text" class="input" data-field="description" required maxlength="255" />
                 </label>
+                <label class="sv-field">
+                  <span>{{ $t('stayview.adjustmentAmount') }}</span>
+                  <input v-model.number="folioOpForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" :placeholder="$t('stayview.inclusionAmountHint')" />
+                </label>
+                <p class="sv-cap sv-note">{{ $t('stayview.inclusionHint') }}</p>
               </template>
               <template v-else-if="folioOp === 'move'">
                 <div class="sv-status-grid">
@@ -1016,21 +1015,32 @@
                 </div>
                 <label class="sv-field">
                   <span>{{ $t('stayview.moveAmount') }}</span>
-                  <input v-model.number="folioOpForm.amount" type="number" min="0" step="0.01" class="input" required />
+                  <input v-model.number="folioOpForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" required />
                 </label>
-                <label class="sv-field">
+                <label v-if="folioMoveMode !== 'newfolio'" class="sv-field">
                   <span>{{ $t('stayview.targetFolio') }}</span>
-                  <select v-model="folioOpForm.target_reservation_id" class="input" required>
+                  <select v-model="folioOpForm.target_reservation_id" class="input" data-field="target_reservation_id" required>
                     <option value="" disabled>{{ $t('stayview.selectTarget') }}</option>
                     <option v-for="opt in folioTargetOptions" :key="opt.value" :value="opt.value">
                       {{ opt.label }}
                     </option>
                   </select>
                 </label>
-                <p class="sv-cap sv-note">{{ $t('stayview.moveHint') }}</p>
+                <label v-else class="sv-field">
+                  <span>{{ $t('stayview.newFolioRoom') }}<em class="sv-auto"> · {{ $t('stayview.optional') }}</em></span>
+                  <SearchableSelect
+                    v-model="folioOpForm.new_room_id"
+                    :options="roomMoveOptions"
+                    :search-placeholder="$t('stayview.searchRoom')"
+                    force-search
+                  />
+                </label>
+                <p class="sv-cap sv-note">
+                  {{ folioMoveMode === 'newfolio' ? $t('stayview.newFolioHint') : $t('stayview.moveHint') }}
+                </p>
                 <label class="sv-field">
                   <span>{{ $t('stayview.folioNote') }}</span>
-                  <input v-model="folioOpForm.description" type="text" class="input" maxlength="255" />
+                  <input v-model="folioOpForm.description" type="text" class="input" data-field="description" maxlength="255" />
                 </label>
               </template>
               <template v-else>
@@ -1061,6 +1071,53 @@
               <button type="button" class="btn btn-primary" :disabled="actionBusy || !folioOpCanPost" @click="submitFolioOp">
                 <i class="fas fa-check" aria-hidden="true"></i>
                 {{ actionBusy ? $t('common.loading') : folioOpPostLabel }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Edit folio entry modal: reword the note or fix the posted amount -->
+    <Teleport to="body">
+      <Transition name="sv-modal">
+        <div v-if="folioEdit" class="sv-modal-backdrop" @click.self="folioEdit = null">
+          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="$t('folio.edit')">
+            <div class="sv-modal-head bar-blue">
+              <span class="sv-modal-head-icon"><i class="fas fa-pen" aria-hidden="true"></i></span>
+              <div class="sv-modal-head-text">
+                <h3>{{ $t('folio.editTitle') }}</h3>
+                <span class="sv-modal-status">{{ activeBar?.label }}</span>
+              </div>
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="folioEdit = null">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="sv-modal-body">
+              <label class="sv-field">
+                <span>{{ $t('folio.description') }}</span>
+                <input v-model="folioEditForm.description" type="text" class="input" data-field="description" :class="{ 'sv-input-error': folioEditErrors.description }" required maxlength="255" />
+                <span v-if="folioEditErrors.description" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ folioEditErrors.description }}</span>
+              </label>
+              <label class="sv-field">
+                <span>{{ $t('folio.amount') }}</span>
+                <input v-model.number="folioEditForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" :class="{ 'sv-input-error': folioEditErrors.amount }" required />
+                <span v-if="folioEditErrors.amount" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ folioEditErrors.amount }}</span>
+              </label>
+              <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
+            </div>
+            <div class="sv-modal-actions">
+              <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="folioEdit = null">
+                {{ $t('common.close') }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                :disabled="actionBusy || !folioEditForm.description?.trim() || !(folioEditForm.amount > 0)"
+                @click="submitEditEntry"
+              >
+                <i class="fas fa-check" aria-hidden="true"></i>
+                {{ actionBusy ? $t('common.loading') : $t('folio.save') }}
               </button>
             </div>
           </div>
@@ -1122,12 +1179,12 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('reservations.firstName') }}</span>
-                  <input v-model="bookingForm.first_name" type="text" class="input" :class="{ 'sv-input-error': bookingErrors.first_name }" required />
+                  <input v-model="bookingForm.first_name" type="text" class="input" data-field="first_name" :class="{ 'sv-input-error': bookingErrors.first_name }" required />
                   <span v-if="bookingErrors.first_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.first_name }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('reservations.lastName') }}</span>
-                  <input v-model="bookingForm.last_name" type="text" class="input" :class="{ 'sv-input-error': bookingErrors.last_name }" required />
+                  <input v-model="bookingForm.last_name" type="text" class="input" data-field="last_name" :class="{ 'sv-input-error': bookingErrors.last_name }" required />
                   <span v-if="bookingErrors.last_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.last_name }}</span>
                 </label>
               </div>
@@ -1137,8 +1194,21 @@
               </label>
               <div class="sv-field-row">
                 <label class="sv-field">
+                  <span>{{ $t('stayview.company') }}</span>
+                  <input v-model="bookingForm.company_name" type="text" class="input" data-field="company_name" maxlength="191" :placeholder="$t('stayview.optional')" />
+                </label>
+                <label class="sv-field">
+                  <span>{{ $t('reservations.businessSource') }}</span>
+                  <select v-model="bookingForm.business_source" class="input">
+                    <option value=""></option>
+                    <option v-for="src in bookingSourceOptions" :key="src.value" :value="src.value">{{ src.label }}</option>
+                  </select>
+                </label>
+              </div>
+              <div class="sv-field-row">
+                <label class="sv-field">
                   <span>{{ $t('reservations.bookingType') }}</span>
-                  <select v-model="bookingForm.booking_type" class="input" :class="{ 'sv-input-error': bookingErrors.booking_type }" required>
+                  <select v-model="bookingForm.booking_type" class="input" data-field="booking_type" :class="{ 'sv-input-error': bookingErrors.booking_type }" required>
                     <option value="single">{{ $t('common.bookingTypes.single') }}</option>
                     <option value="couple">{{ $t('common.bookingTypes.couple') }}</option>
                     <option value="family">{{ $t('common.bookingTypes.family') }}</option>
@@ -1160,12 +1230,12 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.arrival') }}</span>
-                  <input v-model="bookingForm.check_in_date" type="date" class="input" :class="{ 'sv-input-error': bookingErrors.check_in_date }" required />
+                  <input v-model="bookingForm.check_in_date" type="date" class="input" data-field="check_in_date" :class="{ 'sv-input-error': bookingErrors.check_in_date }" required />
                   <span v-if="bookingErrors.check_in_date" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.check_in_date }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.departure') }}</span>
-                  <input v-model="bookingForm.check_out_date" type="date" class="input" :class="{ 'sv-input-error': bookingErrors.check_out_date }" required />
+                  <input v-model="bookingForm.check_out_date" type="date" class="input" data-field="check_out_date" :class="{ 'sv-input-error': bookingErrors.check_out_date }" required />
                   <span v-if="bookingErrors.check_out_date" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.check_out_date }}</span>
                 </label>
               </div>
@@ -1179,7 +1249,7 @@
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.advancePaid') }}</span>
-                  <input v-model.number="bookingForm.advance_payment" type="number" min="0" class="input" :class="{ 'sv-input-error': bookingErrors.advance_payment }" />
+                  <input v-model.number="bookingForm.advance_payment" type="number" min="0" class="input" data-field="advance_payment" :class="{ 'sv-input-error': bookingErrors.advance_payment }" />
                   <span v-if="bookingErrors.advance_payment" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.advance_payment }}</span>
                 </label>
               </div>
@@ -1230,12 +1300,12 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.firstName') }}</span>
-                  <input v-model="guestForm.first_name" type="text" class="input" :class="{ 'sv-input-error': guestErrors.first_name }" required />
+                  <input v-model="guestForm.first_name" type="text" class="input" data-field="first_name" :class="{ 'sv-input-error': guestErrors.first_name }" required />
                   <span v-if="guestErrors.first_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ guestErrors.first_name }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.lastName') }}</span>
-                  <input v-model="guestForm.last_name" type="text" class="input" :class="{ 'sv-input-error': guestErrors.last_name }" required />
+                  <input v-model="guestForm.last_name" type="text" class="input" data-field="last_name" :class="{ 'sv-input-error': guestErrors.last_name }" required />
                   <span v-if="guestErrors.last_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ guestErrors.last_name }}</span>
                 </label>
               </div>
@@ -1245,7 +1315,7 @@
               </label>
               <label class="sv-field">
                 <span>{{ $t('stayview.email') }}</span>
-                <input v-model="guestForm.email" type="email" class="input" :class="{ 'sv-input-error': guestErrors.email }" />
+                <input v-model="guestForm.email" type="email" class="input" data-field="email" :class="{ 'sv-input-error': guestErrors.email }" />
                 <span v-if="guestErrors.email" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ guestErrors.email }}</span>
               </label>
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
@@ -1497,7 +1567,7 @@ import { formatDateDMY } from '@/utils/dates'
 import { formatPhoneGaps, formatPhoneNational, validatePhoneNumber } from '@/utils/phone'
 import {
   after,
-  bindLiveValidation,
+  bindBlurValidation,
   collectErrors,
   email,
   minInteger,
@@ -1985,9 +2055,13 @@ function closeBarModal() {
   roomTasksLoaded.value = false
 }
 
-/** Formats a numeric amount with thousands separators. */
-function fmtNum(n) {
-  return Number(n || 0).toLocaleString()
+/**
+ * Formats a numeric amount with thousands separators. Pass decimals > 0 for
+ * money that must read like a till slip (e.g. TZS 540,000.00).
+ */
+function fmtNum(n, decimals = 0) {
+  const value = Number(n || 0)
+  return decimals > 0 ? value.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) : value.toLocaleString()
 }
 
 /** Human-readable label for a payment method (falls back to the raw value). */
@@ -2046,6 +2120,12 @@ const stayStrip = computed(() => {
       value: [bar.roomNumber, bar.roomType].filter((v) => v && v !== '—').join(' · ') || '—',
     },
     { key: 'resno', label: t('stayview.resNo'), value: bar.reference || '—' },
+    {
+      key: 'balance',
+      label: t('stayview.balance'),
+      value: folio.value?.folio ? `TZS ${fmtNum(folio.value.folio.balance_due ?? 0, 2)}` : '—',
+      fresh: true,
+    },
   ]
 })
 
@@ -2077,6 +2157,9 @@ const bookingGrid = computed(() => {
     { label: t('reservations.bookingSource'), value: show(String(src.booking_source || src.source || '').replace('_', ' ')) },
     { label: t('reservations.bookingDate'), value: show(fmtDay(src.booking_date)) },
     { label: t('stayview.reference'), value: show(src.booking_reference || src.reference) },
+    { label: t('stayview.company'), value: show(src.company_name) },
+    { label: t('reservations.businessSource'), value: show(String(src.business_source || '').replace('_', ' ')) },
+    { label: t('stayview.rate'), value: `TZS ${fmtNum(src.rate ?? src.room?.price_per_night ?? 0, 2)}` },
     { label: t('stayview.room'), value: show(roomName || src.roomNumber) },
     {
       label: t('stayview.arrival'),
@@ -2089,9 +2172,9 @@ const bookingGrid = computed(() => {
     { label: t('reservations.nights'), value: show(src.nights ?? src.num_days ?? '') },
     { label: t('reservations.adultsLabel'), value: show(src.num_adults ?? '') },
     { label: t('reservations.childrenLabel'), value: show(src.num_children ?? '') },
-    { label: t('stayview.total'), value: `TZS ${fmtNum(src.total_amount ?? src.total)}` },
-    { label: t('stayview.advancePaid'), value: `TZS ${fmtNum(src.advance_payment ?? src.advance ?? 0)}` },
-    { label: t('stayview.balance'), value: `TZS ${fmtNum(src.balance_due ?? src.balance ?? 0)}` },
+    { label: t('stayview.total'), value: `TZS ${fmtNum(src.total_amount ?? src.total ?? 0, 2)}` },
+    { label: t('stayview.advancePaid'), value: `TZS ${fmtNum(src.advance_payment ?? src.advance ?? 0, 2)}` },
+    { label: t('stayview.balance'), value: `TZS ${fmtNum(src.balance_due ?? src.balance ?? 0, 2)}` },
   ]
 })
 
@@ -2137,19 +2220,7 @@ const folioEntries = computed(() => {
   const f = folio.value || null
   if (!f) return []
   const fol = f.folio || {}
-  const res = f.reservation || {}
   const entries = []
-  const nights = res.num_days || (res.check_in_date && res.check_out_date ? diffDays(res.check_in_date, res.check_out_date) : 0)
-  entries.push({
-    key: 'room',
-    date: fol.room_charges_date,
-    particular: t('folio.roomCharge'),
-    description: [t('stayview.room'), String(res.room?.room_number || '')].filter(Boolean).join(' '),
-    detail: nights ? t('folio.nightsCount', { nights }) : '',
-    user: fol.room_charge_user || '—',
-    amount: Number(fol.total_amount ?? res.total_amount ?? 0),
-    credit: false,
-  })
   for (const o of f.orders || []) {
     if (o.payment_status !== 'billed_to_room') continue
     entries.push({
@@ -2185,6 +2256,8 @@ const folioEntries = computed(() => {
     entries.push({
       key: `e${e.folio_entry_id}`,
       date: e.date,
+      time: e.posted_at || e.date || '',
+      type: e.type,
       particular: folioEntryLabel(e.type),
       description: e.description || folioEntryLabel(e.type),
       detail: e.reference || '',
@@ -2194,6 +2267,7 @@ const folioEntries = computed(() => {
       muted: e.type === 'attachment' || amount === 0,
       entryId: e.folio_entry_id,
       entryUrl: e.attachment_url ? reservationApi.folioAttachmentUrl(e.folio_entry_id) : '',
+      editable: ['room_charge', 'extra_charge', 'adjustment', 'discount', 'inclusion'].includes(e.type) && e.folio_entry_id != null,
     })
   }
   // Legacy manual extra charges (posted before the ledger existed) still show
@@ -2224,7 +2298,7 @@ const folioEntries = computed(() => {
       credit: true,
     })
   }
-  entries.sort((a, b) => String(a.date || a.key).localeCompare(String(b.date || b.key)))
+  entries.sort((a, b) => `${a.time || a.date || ''}|${a.key}`.localeCompare(`${b.time || b.date || ''}|${b.key}`))
   return entries
 })
 
@@ -2367,7 +2441,7 @@ async function submitPayment() {
   await runStayAction(() => paymentApi.store(payload))
   if (actionError.value) paymentModal.value = true
 }
-bindLiveValidation(watch, () => paymentForm.value, paymentSnapshot, paymentTouched, paymentErrors, paymentRules)
+bindBlurValidation(watch, () => paymentForm.value, paymentSnapshot, paymentTouched, paymentErrors, paymentRules)
 
 /* ----- Add Charges ----- */
 const chargeModal = ref(false)
@@ -2405,7 +2479,7 @@ async function submitCharge() {
   )
   if (actionError.value) chargeModal.value = true
 }
-bindLiveValidation(watch, () => chargeForm.value, chargeSnapshot, chargeTouched, chargeErrors, chargeRules)
+bindBlurValidation(watch, () => chargeForm.value, chargeSnapshot, chargeTouched, chargeErrors, chargeRules)
 
 /* ----- Folio operations (discount / adjustment / inclusion / move / upload) ----- */
 
@@ -2417,15 +2491,20 @@ const folioMoveMode = ref('transfer')
 
 /** Human-readable ledger label for a persisted folio entry type. */
 function folioEntryLabel(type) {
-  const key = `folio.${type}`
-  return te(key) ? t(key) : String(type || '').replace(/_/g, ' ')
+  const raw = String(type || '')
+  const snake = `folio.${raw}`
+  if (te(snake)) return t(snake)
+  const camel = `folio.${raw.replace(/_([a-z])/g, (_, c) => c.toUpperCase())}`
+  if (te(camel)) return t(camel)
+  return raw.replace(/_/g, ' ')
 }
 
-/** Transfer/split/cut mode buttons for the move modal. */
+/** Transfer/split/cut/new-folio mode buttons for the move modal. */
 const moveModes = computed(() => [
   { key: 'transfer', label: t('stayview.modeTransfer') },
   { key: 'split', label: t('stayview.modeSplit') },
   { key: 'cut', label: t('stayview.modeCut') },
+  { key: 'newfolio', label: t('stayview.modeNewFolio') },
 ])
 
 /** Other active folios to move money onto. */
@@ -2458,8 +2537,11 @@ const folioOpCanPost = computed(() => {
   const f = folioOpForm.value
   if (folioOp.value === 'discount') return Number(f.amount) > 0
   if (folioOp.value === 'adjustment') return f.amount !== '' && Number(f.amount) !== 0
-  if (folioOp.value === 'inclusion') return !!(f.description && f.description.trim())
-  if (folioOp.value === 'move') return Number(f.amount) > 0 && !!f.target_reservation_id
+  if (folioOp.value === 'inclusion') return !!(f.description && f.description.trim()) && Number(f.amount) >= 0
+  if (folioOp.value === 'move') {
+    if (Number(f.amount) <= 0) return false
+    return folioMoveMode.value === 'newfolio' ? true : !!f.target_reservation_id
+  }
   return f.files && f.files.length > 0
 })
 
@@ -2467,7 +2549,7 @@ function openFolioOp(op, mode = 'transfer') {
   moreOpen.value = false
   folioOp.value = op
   folioMoveMode.value = mode
-  folioOpForm.value = { amount: null, description: '', target_reservation_id: '', files: [] }
+  folioOpForm.value = { amount: null, description: '', target_reservation_id: '', new_room_id: '', files: [] }
   actionError.value = ''
 }
 
@@ -2486,11 +2568,16 @@ async function submitFolioOp() {
   } else if (op === 'adjustment') {
     payload = { amount: f.amount, description: f.description || null }
   } else if (op === 'inclusion') {
-    payload = { description: f.description }
+    payload = {
+      description: f.description,
+      amount: Number.isFinite(Number(f.amount)) && Number(f.amount) > 0 ? Number(f.amount) : 0,
+    }
   } else if (op === 'move') {
     payload = {
       mode: folioMoveMode.value,
-      target_reservation_id: f.target_reservation_id,
+      target_reservation_id: folioMoveMode.value === 'newfolio' ? undefined : f.target_reservation_id,
+      new_folio: folioMoveMode.value === 'newfolio',
+      new_room_id: folioMoveMode.value === 'newfolio' && f.new_room_id ? f.new_room_id : undefined,
       amount: f.amount,
       description: f.description || null,
     }
@@ -2517,6 +2604,36 @@ async function voidFolioEntry(e) {
 async function removeFolioAttachment(e) {
   if (!e?.entryId || actionBusy.value) return
   await runStayAction(() => reservationApi.folioEntryDeleteAttachment(e.entryId))
+}
+
+/* ----- Edit folio entry (reword the note or fix the posted amount) ----- */
+const folioEdit = ref(null)
+const folioEditForm = ref({})
+const folioEditErrors = ref({})
+
+/** Opens the edit form pre-filled from an editable ledger row. */
+function openEditEntry(e) {
+  if (!e?.entryId) return
+  moreOpen.value = false
+  folioEdit.value = e
+  folioEditForm.value = { description: e.description || '', amount: Math.abs(e.amount || 0) }
+  folioEditErrors.value = {}
+  actionError.value = ''
+}
+
+/** Persists the edited row via PUT folio/entries/{id}, then reloads the folio. */
+async function submitEditEntry() {
+  const f = folioEditForm.value
+  const errs = {}
+  if (!f.description?.trim()) errs.description = t('validations.fieldRequired')
+  if (!(Number(f.amount) > 0)) errs.amount = t('validations.positiveAmount')
+  folioEditErrors.value = errs
+  if (Object.keys(errs).length || !folioEdit.value?.entryId) return
+  const entryId = folioEdit.value.entryId
+  folioEdit.value = null
+  await runStayAction(() =>
+    reservationApi.folioEntryUpdate(entryId, { description: f.description.trim(), amount: Math.abs(Number(f.amount)) }),
+  )
 }
 
 /* ----- Amend stay / room move ----- */
@@ -2603,7 +2720,7 @@ async function submitAmend() {
   await runStayAction(() => reservationApi.update(activeBar.value.id, payload))
   if (actionError.value) amendModal.value = true
 }
-bindLiveValidation(watch, () => amendForm.value, amendSnapshot, amendTouched, amendErrors, amendRules)
+bindBlurValidation(watch, () => amendForm.value, amendSnapshot, amendTouched, amendErrors, amendRules)
 
 /* ----- Void reservation ----- */
 const voidOpen = ref(false)
@@ -2695,6 +2812,15 @@ const canSeeLedger = computed(() =>
 const canSeeFrontDesk = computed(() =>
   ['hotel_admin', 'manager', 'receptionist'].includes(authStore.user?.user_role),
 )
+
+// Voiding a booking is open to any front-desk staff before the guest checks
+// in; an in-house stay additionally requires a manager or accountant (the
+// backend enforces the same rule inside ReservationService::destroy).
+const canVoidReservation = computed(() => {
+  const mgmtOnly = ['manager', 'accountant', 'hotel_admin', 'owner', 'superadmin']
+  if (activeBar.value?.rawStatus !== 'checked_in') return true
+  return mgmtOnly.includes(authStore.user?.user_role)
+})
 
 // Housekeeping tasks follow the housekeeping module matrix.
 const canSeeHousekeeping = computed(() =>
@@ -3186,10 +3312,20 @@ const bookingSnapshot = ref({})
 
 /** User-edited booking fields (the suggested total auto-updates separately). */
 function bookingSnapshotKeys(form) {
-  return ['first_name', 'last_name', 'guest_phone', 'country_code', 'booking_type', 'room_id', 'check_in_date', 'check_out_date', 'advance_payment', 'advance_payment_method'].map(
+  return ['first_name', 'last_name', 'guest_phone', 'country_code', 'booking_type', 'room_id', 'check_in_date', 'check_out_date', 'advance_payment', 'advance_payment_method', 'company_name', 'business_source'].map(
     (key) => form[key],
   )
 }
+
+/** Booking-source dropdown mirroring the backend enum (walk_in … ota). */
+const bookingSourceOptions = computed(() => [
+  { value: 'walk_in', label: t('reservations.sourceWalkIn') },
+  { value: 'phone', label: t('reservations.sourcePhone') },
+  { value: 'email', label: t('reservations.sourceEmail') },
+  { value: 'website', label: t('reservations.sourceWebsite') },
+  { value: 'agent', label: t('reservations.sourceAgent') },
+  { value: 'ota', label: t('reservations.sourceOta') },
+])
 
 /** Implements a fresh booking form with today → tomorrow defaults. */
 function resetBookingForm() {
@@ -3208,6 +3344,8 @@ function resetBookingForm() {
     advance_payment: 0,
     advance_payment_method: '',
     advance_payment_date: today,
+    company_name: '',
+    business_source: 'walk_in',
   }
   bookingErrors.value = {}
   bookingTouched.value = false
@@ -3314,7 +3452,7 @@ async function submitBooking() {
     resetBookingForm()
   }
 }
-bindLiveValidation(
+bindBlurValidation(
   watch,
   () => bookingForm.value,
   bookingSnapshot,
@@ -3364,7 +3502,7 @@ async function submitGuest() {
   )
   if (!actionError.value) guestModal.value = false
 }
-bindLiveValidation(watch, () => guestForm.value, guestSnapshot, guestTouched, guestErrors, guestRules)
+bindBlurValidation(watch, () => guestForm.value, guestSnapshot, guestTouched, guestErrors, guestRules)
 
 /* ---------------- Housekeeping modal ---------------- */
 

@@ -121,3 +121,55 @@ export function bindLiveValidation(watchFn, getForm, snapshot, touched, errors, 
     { deep: true },
   )
 }
+
+/**
+ * Validates a single field the moment it loses focus, instead of screaming on
+ * the first keystroke. Blurred fields get their own message; a field being
+ * typed is left alone until the user moves away. The submit handler still runs
+ * the full rules set, so an untouched empty field is finally caught on submit.
+ *
+ * Wiring: give each validated input a `data-field` matching its form key, then
+ * call bindBlurValidation with the same form/snapshot/touched/errors/rules the
+ * form already uses.
+ *
+ * @param {Function} watchFn - Vue's watch (used only to mark the form dirty).
+ * @param {() => object} getForm - Getter returning the current form object.
+ * @param {import('vue').Ref} snapshot - Opening-state snapshot ref (object).
+ * @param {import('vue').Ref} touched - Dirty flag ref (false when opened).
+ * @param {import('vue').Ref} errors - Per-field errors ref.
+ * @param {() => Array} rules - Function returning the rules (fresh each run).
+ * @param {string[] | ((form: object) => Array)} [comparable] - Same optional
+ *   subset semantics as bindLiveValidation.
+ */
+export function bindBlurValidation(watchFn, getForm, snapshot, touched, errors, rules, comparable) {
+  const snapshotOf = (value) => {
+    const obj = value || {}
+    if (!comparable) return obj
+    return typeof comparable === 'function' ? comparable(obj) : comparable.map((key) => obj[key])
+  }
+  watchFn(
+    getForm,
+    () => {
+      if (!touched.value) {
+        if (JSON.stringify(snapshotOf(getForm())) === JSON.stringify(snapshotOf(snapshot.value))) return
+        touched.value = true
+      }
+    },
+    { deep: true },
+  )
+  document.addEventListener('focusout', (event) => {
+    const target = event.target
+    if (!target || typeof target.closest !== 'function') return
+    const fieldEl = target.closest('[data-field]')
+    const field = fieldEl?.getAttribute?.('data-field')
+    if (!field) return
+    const form = getForm()
+    const rule = rules().find((r) => r.field === field)
+    if (!rule) return
+    const message = rule.check(form[field], form) || ''
+    const next = { ...errors.value }
+    if (message) next[field] = message
+    else delete next[field]
+    errors.value = next
+  })
+}

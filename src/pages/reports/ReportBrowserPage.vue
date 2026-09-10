@@ -265,70 +265,82 @@
 
           <div class="rb-numcols">
             <div class="rb-report-row">
-              <span class="rb-report-row-label">{{ $t('reportBrowser.bookingsBooked') }}</span>
-              <strong>{{ report.booked_in_period }}</strong>
+              <span class="rb-report-row-label">{{ $t('reportBrowser.totalExpected') }}</span>
+              <strong>{{ report.total }}</strong>
             </div>
             <div class="rb-report-row">
               <span class="rb-report-row-label">{{ $t('reportBrowser.arrivals') }}</span>
-              <strong>{{ report.arrivals }}</strong>
+              <strong :class="{ 'text-green': report.arrived > 0 }">{{ report.arrived }}</strong>
             </div>
             <div class="rb-report-row">
-              <span class="rb-report-row-label">{{ $t('reportBrowser.departures') }}</span>
-              <strong>{{ report.departures }}</strong>
-            </div>
-            <div class="rb-report-row">
-              <span class="rb-report-row-label">{{ $t('reportBrowser.inHouseNow') }}</span>
-              <strong>{{ report.in_house_now }}</strong>
-            </div>
-            <div class="rb-report-row">
-              <span class="rb-report-row-label">{{ $t('reportBrowser.upcomingNow') }}</span>
-              <strong>{{ report.upcoming_now }}</strong>
+              <span class="rb-report-row-label">{{ $t('reportBrowser.overdueArrivals') }}</span>
+              <strong :class="{ 'text-red': report.overdue > 0 }">{{ report.overdue }}</strong>
             </div>
           </div>
 
           <h3 class="rb-section-title">
-            <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('reportBrowser.bookingBehaviour') }}
+            <i class="fas fa-calendar-day" aria-hidden="true"></i> {{ $t('reportBrowser.byArrivalDay') }}
           </h3>
           <div class="table-scroll">
           <table class="rb-table">
             <thead>
               <tr>
-                <th>{{ $t('reportBrowser.metric') }}</th>
-                <th class="num">{{ $t('reportBrowser.value') }}</th>
+                <th>{{ $t('reportBrowser.date') }}</th>
+                <th class="num">{{ $t('reportBrowser.expected') }}</th>
+                <th class="num">{{ $t('reportBrowser.arrivals') }}</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>{{ $t('reportBrowser.cancellations') }}</td>
-                <td class="num">{{ report.cancellations }} <span class="rb-pct">({{ report.cancellation_rate }}%)</span></td>
+              <tr v-for="(day, i) in report.by_date" :key="'d' + i">
+                <td>{{ prettyDate(day.date) }}</td>
+                <td class="num">{{ day.expected }}</td>
+                <td class="num">{{ day.rows.filter((r) => r.arrived).length }}</td>
               </tr>
-              <tr>
-                <td>{{ $t('reportBrowser.noShows') }}</td>
-                <td class="num">{{ report.no_shows }} <span class="rb-pct">({{ report.no_show_rate }}%)</span></td>
-              </tr>
-              <tr>
-                <td>{{ $t('reportBrowser.avgLeadTime') }}</td>
-                <td class="num">{{ report.avg_lead_time_days }} {{ $t('reportBrowser.days') }}</td>
+              <tr v-if="!report.by_date?.length">
+                <td colspan="3" class="rb-empty">{{ $t('reportBrowser.noRows') }}</td>
               </tr>
             </tbody>
           </table>
           </div>
 
-          <h3 v-if="Object.keys(report.by_source || {}).length" class="rb-section-title">
-            <i class="fas fa-globe" aria-hidden="true"></i> {{ $t('reportBrowser.bySource') }}
+          <h3 class="rb-section-title">
+            <i class="fas fa-door-open" aria-hidden="true"></i> {{ $t('reportBrowser.arrivalDetails') }}
           </h3>
-          <div v-if="Object.keys(report.by_source || {}).length" class="table-scroll">
-          <table class="rb-table">
+          <div class="table-scroll">
+          <table class="rb-table rb-table-wide">
             <thead>
               <tr>
-                <th>{{ $t('reportBrowser.source') }}</th>
-                <th class="num">{{ $t('reportBrowser.countRooms') }}</th>
+                <th>{{ $t('reportBrowser.arrival') }}</th>
+                <th>{{ $t('reportBrowser.departure') }}</th>
+                <th>{{ $t('reportBrowser.guestName') }}</th>
+                <th>{{ $t('reportBrowser.room') }}</th>
+                <th class="num">{{ $t('reportBrowser.pax') }}</th>
+                <th>{{ $t('reportBrowser.resNo') }}</th>
+                <th>{{ $t('reportBrowser.status') }}</th>
+                <th class="num">{{ $t('reportBrowser.balance') }}</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(count, src) in report.by_source" :key="src">
-                <td class="capitalize">{{ src.replace('_', ' ') || '—' }}</td>
-                <td class="num">{{ count }}</td>
+              <tr
+                v-for="(r, i) in report.rows"
+                :key="'r' + i"
+                :class="{ 'row-overdue': r.overdue, 'row-arrived': r.arrived }"
+              >
+                <td>{{ prettyDate(r.check_in_date) }}</td>
+                <td>{{ prettyDate(r.check_out_date) }}</td>
+                <td>{{ r.guest_name }}<span v-if="r.company_name" class="cap"> · {{ r.company_name }}</span></td>
+                <td>{{ r.room }}<span v-if="r.room_type" class="cap"> · {{ r.room_type }}</span></td>
+                <td class="num">{{ r.pax }}</td>
+                <td>{{ r.booking_reference }}</td>
+                <td>
+                  <span v-if="r.overdue" class="rb-badge rb-badge-red">{{ $t('reportBrowser.overdue') }}</span>
+                  <span v-else-if="r.arrived" class="rb-badge rb-badge-green">{{ $t('reportBrowser.arrived') }}</span>
+                  <span v-else class="rb-badge">{{ $t('reportBrowser.expected') }}</span>
+                </td>
+                <td class="num">{{ money(r.balance) }}</td>
+              </tr>
+              <tr v-if="!report.rows?.length">
+                <td colspan="8" class="rb-empty">{{ $t('reportBrowser.noRows') }}</td>
               </tr>
             </tbody>
           </table>
@@ -1253,7 +1265,7 @@ async function loadArrivalReport() {
   loading.value = true
   error.value = ''
   try {
-    const res = await reportApi.bookings({
+    const res = await reportApi.arrivals({
       from: filterValues.from || todayIso(),
       to: filterValues.to || todayIso(),
     })
@@ -1402,23 +1414,16 @@ async function exportCsv() {
       ]
       exportCSV('guest-list', report.value.rows || [], cols)
     } else if (activeReport.value === 'arrival-list' && report.value) {
-      const rows = [
-        { section: t('reportBrowser.bookingsBooked'), value: report.value.booked_in_period },
-        { section: t('reportBrowser.arrivals'), value: report.value.arrivals },
-        { section: t('reportBrowser.departures'), value: report.value.departures },
-        { section: t('reportBrowser.inHouseNow'), value: report.value.in_house_now },
-        { section: t('reportBrowser.upcomingNow'), value: report.value.upcoming_now },
-        { section: t('reportBrowser.cancellations'), value: report.value.cancellations },
-        { section: t('reportBrowser.noShows'), value: report.value.no_shows },
-        { section: t('reportBrowser.avgLeadTime'), value: report.value.avg_lead_time_days },
-        ...Object.entries(report.value.by_source || {}).map(([src, count]) => ({
-          section: t('reportBrowser.bySource'),
-          value: [`${src || '—'}`, count].join(': '),
-        })),
-      ]
-      exportCSV('arrival-list', rows, [
-        { key: 'section', label: t('reportBrowser.metric') },
-        { key: 'value', label: t('reportBrowser.value') },
+      exportCSV('arrival-list', report.value.rows || [], [
+        { key: 'check_in_date', label: t('reportBrowser.arrival') },
+        { key: 'check_out_date', label: t('reportBrowser.departure') },
+        { key: 'guest_name', label: t('reportBrowser.guestName') },
+        { key: 'room', label: t('reportBrowser.room') },
+        { key: 'pax', label: t('reportBrowser.pax') },
+        { key: 'booking_reference', label: t('reportBrowser.resNo') },
+        { key: 'booking_source', label: t('reportBrowser.businessSource') },
+        { key: 'status', label: t('reportBrowser.status') },
+        { key: 'balance', label: t('reportBrowser.balance') },
       ])
     } else if (activeReport.value === 'room-status' && report.value) {
       const rows = Object.entries(report.value.by_status || {}).map(([statusKey, count]) => ({
@@ -1567,6 +1572,39 @@ onMounted(() => {
   font-size: 12px;
   padding: 3px 10px;
   border-radius: 999px;
+}
+.rb-badge {
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.rb-badge-green {
+  background: #dcfce7;
+  color: #166534;
+}
+.rb-badge-red {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.rb-table .row-overdue td {
+  background: #fef2f2;
+}
+.rb-table .row-arrived td {
+  color: #166534;
+}
+.cap {
+  font-size: 12px;
+  color: #64748b;
+}
+.text-green {
+  color: #16a34a;
+}
+.text-red {
+  color: #dc2626;
 }
 .rb-numcols {
   display: flex;

@@ -258,6 +258,14 @@ export const reportApi = {
   auditLogs(params) {
     return api.get(`${v1}/reports/audit-logs`, { params })
   },
+  /**
+   * Expected/arrived/overdue arrivals within a date range, grouped by day.
+   * @param {object} params - Query params (from, to, status filters).
+   * @returns {Promise} Axios response with { total, expected, arrived, overdue, by_date, rows }.
+   */
+  arrivals(params) {
+    return api.get(`${v1}/reports/arrivals`, { params })
+  },
 }
 
 /** Accounting reports: general ledger, trial balance, balance sheet and night audit / day close. */
@@ -733,6 +741,14 @@ export const reservationApi = {
    */
   folioEntryVoid(entryId) {
     return api.post(`${v1}/folio/entries/${entryId}/void`)
+  },
+  /**
+   * Edits an editable folio ledger entry (description and/or amount).
+   * @param entryId - Folio entry identifier.
+   * @param data - { description, amount }.
+   */
+  folioEntryUpdate(entryId, data) {
+    return api.put(`${v1}/folio/entries/${entryId}`, data)
   },
   /**
    * Removes an uploaded folio attachment.
