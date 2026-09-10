@@ -3723,7 +3723,7 @@
     "totalPaid": "Jumla ya Malipo",
     "company": "Kampuni",
     "optional": "(hiari)",
-    "rate": "Kiwango",
+    "rate": "Kiwango (kwa usiku)",
     "modeNewFolio": "Folio Mpya",
     "newFolioRoom": "Chumba",
     "newFolioHint": "Fungua folio mpya kabisa kwa mgeni huyo, kiasi kinahamishiwa kwenye uhifadhi wake mwenyewe.",
@@ -3756,7 +3756,6 @@
     "saveCharge": "Hifadhi gharama",
     "saveAmend": "Hifadhi mabadiliko",
     "day": "Siku",
-    "rate": "Kiwango (kwa usiku)",
     "nightTotal": "Jumla ya Usiku",
     "rateHint": "Kiwango cha usiku kinatokana na gharama ya chumba na kinaonyeshwa kwa marejeo.",
     "noCharges": "Hakuna gharama za chumba kwa kukaa huku.",
@@ -3935,7 +3934,14 @@
     "transferTo": "Kwa meza {table}",
     "noLinesSelected": "Chagua angalau bidhaa moja kugawanya.",
     "cancel": "Ghairi",
-    "noPrinter": "Hakuna printer ya till imeunganishwa. Unganisha moja kwenye Mipangilio ya Printer ili kuchapisha risiti kimya."
+    "noPrinter": "Hakuna printer ya till imeunganishwa. Unganisha moja kwenye Mipangilio ya Printer ili kuchapisha risiti kimya.",
+    "bartenderLocked": "Oda za mgahawa huchukuliwa na wahudumu",
+    "counterOrder": "Oda kwenye kaunta (hakuna meza)",
+    "barCounterHint": "Huduma ya baa ni kaunta — chukua oda bila meza.",
+    "cashierLocked": "Oda za baa huchukuliwa na wabartenda",
+    "barTableLocked": "Unaweza kusimamia meza za baa pekee hapa.",
+    "restaurantTableLocked": "Unaweza kusimamia meza za mgahawa pekee hapa.",
+    "pinnedDept": "Idara yako imewekwa kwenye hii."
   },
   "staffDashboard": {
     "title": "Dashibodi",
@@ -3981,7 +3987,7 @@
     "print": "Chapisha",
     "date": "Tarehe",
     "lowStockCount": "Bidhaa za stoo ya chini",
-    "reportPeriod": "Kipindi: {from} \u2013 {to}",
+    "reportPeriod": "Kipindi: {from} – {to}",
     "reportPeriodSingle": "Kipindi: {from}",
     "printedOn": "Imechapishwa tarehe {at}",
     "printedBy": "Imechapishwa na {name}"
@@ -4480,7 +4486,7 @@
       "expectedMinutes": "Dakika zinazotarajiwa",
       "deliveryAddress": "Anwani ya Usafirishaji"
     },
-"dineIn": {
+    "dineIn": {
       "title": "Kula Ndani",
       "occupied": "Inatumika",
       "vacant": "Huru",

@@ -299,8 +299,16 @@ const orderingNav = [
 
 const pageTitle = computed(() => (route.meta.titleKey ? t(route.meta.titleKey) : t('cashier.panelTitle')))
 const userInitials = computed(() => {
-  const name = authStore.user?.name || ''
-  return name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || 'CS'
+  const full =
+    authStore.user?.name ||
+    authStore.user?.full_name ||
+    [authStore.user?.first_name, authStore.user?.last_name].filter(Boolean).join(' ') ||
+    (authStore.user?.email || '').split('@')[0] ||
+    ''
+  const parts = full.split(' ').filter(Boolean)
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (authStore.user?.user_role || 'CS').slice(0, 2).toUpperCase()
 })
 const hotelName = computed(() => authStore.tenant?.hotel_name || '')
 const workingDate = d(new Date(), 'long')

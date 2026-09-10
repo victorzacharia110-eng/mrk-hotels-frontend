@@ -50,16 +50,20 @@
       <div class="dept-toggle" role="group" :aria-label="$t('orderTaker.department')">
         <button
           type="button"
-          :class="{ active: department === 'restaurant' }"
+          :class="{ active: department === 'restaurant', locked: fixedDept === 'bar' }"
+          :disabled="fixedDept === 'bar'"
           :aria-pressed="department === 'restaurant'"
+          :title="fixedDept === 'bar' ? $t('orderTaker.bartenderLocked') : ''"
           @click="switchDepartment('restaurant')"
         >
           <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('orderTaker.restaurant') }}
         </button>
         <button
           type="button"
-          :class="{ active: department === 'bar' }"
+          :class="{ active: department === 'bar', locked: fixedDept === 'restaurant' }"
+          :disabled="fixedDept === 'restaurant'"
           :aria-pressed="department === 'bar'"
+          :title="fixedDept === 'restaurant' ? $t('orderTaker.cashierLocked') : ''"
           @click="switchDepartment('bar')"
         >
           <i class="fas fa-martini-glass" aria-hidden="true"></i> {{ $t('orderTaker.bar') }}
@@ -134,14 +138,14 @@
         </div>
 
         <!-- Dine-in table map: which tables are free vs occupied (and by whom) -->
-        <div class="table-map" v-if="tables.length">
+        <div class="table-map" v-if="servingTables.length">
           <div class="cat-panel-head">
             <i class="fas fa-chair" aria-hidden="true"></i> {{ $t('orderTaker.tablesLabel') }}
             <span class="cat-dept"></span>
           </div>
           <div class="table-map-grid">
             <button
-              v-for="tbl in tables"
+              v-for="tbl in servingTables"
               :key="tbl.table_id"
               type="button"
               class="table-chip"
@@ -156,6 +160,9 @@
               <span v-else class="table-chip-free">{{ $t('orderTaker.tableFree') }}</span>
             </button>
           </div>
+          <p v-if="!servingTables.length" class="map-empty">
+            {{ isBartender ? $t('orderTaker.barCounterHint') : $t('orderTaker.noTables') }}
+          </p>
         </div>
       </div>
 
@@ -184,7 +191,7 @@
             <SearchableSelect
               v-model="form.table_number"
               :options="tableOptions"
-              :empty-label="$t('orderTaker.selectTable')"
+              :empty-label="isBartender ? $t('orderTaker.counterOrder') : $t('orderTaker.selectTable')"
               force-search
             />
           </div>
@@ -273,6 +280,9 @@
           <div class="dash-tools">
             <input v-model="dashFrom" type="date" class="dash-date" :aria-label="$t('staffDashboard.from')" />
             <input v-model="dashTo" type="date" class="dash-date" :aria-label="$t('staffDashboard.to')" />
+            <button v-if="canManageTables" type="button" class="oh-manage" @click="openTableManager">
+              <i class="fas fa-chair" aria-hidden="true"></i> {{ $t('orderTaker.manageTables') }}
+            </button>
             <button type="button" class="oh-manage" @click="loadDashboard">
               <i class="fas fa-rotate" aria-hidden="true"></i> {{ $t('staffDashboard.refresh') }}
             </button>
@@ -783,7 +793,7 @@
                 :placeholder="$t('orderTaker.tableName')"
                 required
               />
-              <select v-model="tableForm.section" class="tm-input">
+              <select v-model="tableForm.section" class="tm-input" :disabled="!!fixedDept" :title="fixedDept ? $t('orderTaker.pinnedDept') : ''">
                 <option v-for="sec in sectionOptions" :key="sec" :value="sec">
                   {{ $t('orderTaker.' + sec, sec) }}
                 </option>
@@ -811,20 +821,20 @@
             </form>
             <p v-if="tableError" class="tm-error">{{ tableError }}</p>
             <ul class="tm-list">
-              <li v-for="tbl in tables" :key="tbl.table_id" class="tm-row">
+              <li v-for="tbl in managerTables" :key="tbl.table_id" class="tm-row">
                 <span class="tm-name">{{ tbl.table_name }}</span>
                 <span class="tm-meta">{{ $t('orderTaker.' + tbl.section, tbl.section) }} · {{ tbl.capacity }}</span>
-                <button type="button" class="tm-btn" @click="editTable(tbl)">
+                <button type="button" class="tm-btn" :disabled="!canTouchTable(tbl)" @click="editTable(tbl)">
                   <i class="fas fa-pen" aria-hidden="true"></i>
                 </button>
-                <button type="button" class="tm-btn danger" @click="deleteTable(tbl)">
+                <button type="button" class="tm-btn danger" :disabled="!canTouchTable(tbl)" @click="deleteTable(tbl)">
                   <i class="fas fa-trash" aria-hidden="true"></i>
                 </button>
               </li>
-              <li v-if="!tables.length" class="tm-empty">{{ $t('orderTaker.noTables') }}</li>
+              <li v-if="!managerTables.length" class="tm-empty">{{ $t('orderTaker.noTables') }}</li>
             </ul>
 
-            <div v-if="canManageTables" class="tm-locs">
+            <div v-if="canManageLocations" class="tm-locs">
               <div class="tm-locs-head">
                 <strong>{{ $t('orderTaker.tableLocations') }}</strong>
                 <span class="tm-locs-hint">{{ $t('orderTaker.tableLocationsHint') }}</span>
@@ -891,6 +901,15 @@ const printStore = usePrintSettingsStore()
 // but can be switched at any time with the Restaurant / Bar toggle.
 const role = computed(() => authStore.user?.user_role || '')
 const department = ref(role.value === 'bartender' ? 'bar' : 'restaurant')
+// Bartenders run the bar, cashiers run the restaurant: each role is locked to
+// its own department so one side never bleeds into the other. Waiters (who
+// cover tables on both sides) keep the switch.
+const isBartender = computed(() => role.value === 'bartender')
+const fixedDept = computed(() => {
+  if (role.value === 'bartender') return 'bar'
+  if (role.value === 'cashier') return 'restaurant'
+  return '' // waiters may cover either department
+})
 
 /** The order type the API accepts for the current department (dine_in / at_bar). */
 function defaultOrderType() {
@@ -900,6 +919,9 @@ function defaultOrderType() {
 /** Flips between restaurant and bar: clears the ticket, resets category and reloads. */
 function switchDepartment(dept) {
   if (department.value === dept) return
+  // Bartenders run the bar and cashiers the restaurant — neither may leave
+  // their own side (the other half belongs to the other role).
+  if (fixedDept.value && dept !== fixedDept.value) return
   department.value = dept
   activeCategory.value = ''
   orderLines.value = []
@@ -1396,6 +1418,32 @@ const continueOrderId = ref(null)
 // Physical tables managed by the manager; the waiter only picks one.
 const tables = ref([])
 
+/** Tables this order-taker may seat. Bartenders only ever seat the bar,
+ *  cashiers only the restaurant — the other side's tables stay out of sight.
+ *  Waiters see the venue's full set. The bar keeps a baseline of placeholder
+ *  slots (Bar 1–8) so every order has a label to assign to; real bar tables
+ *  created by the bartender count towards and gradually replace those slots. */
+const BAR_FALLBACK_COUNT = 8
+const BAR_FALLBACK_TABLES = Array.from({ length: BAR_FALLBACK_COUNT }, (_, i) => ({
+  table_id: `bar-fallback-${i + 1}`,
+  table_name: `Bar ${i + 1}`,
+  section: 'bar',
+  capacity: 0,
+}))
+// Becomes true after the bar's placeholder slots are written to the backend as
+// real table records; from then on only the real records are shown/served.
+const barSeeded = ref(false)
+const servingTables = computed(() => {
+  if (!fixedDept.value) return tables.value
+  const matched = tables.value.filter((t) => String(t.section || '').trim().toLowerCase() === fixedDept.value)
+  if (fixedDept.value !== 'bar' || barSeeded.value) return matched
+  const taken = new Set(matched.map((t) => String(t.table_name).trim().toLowerCase()))
+  const placeholders = BAR_FALLBACK_TABLES
+    .filter((f) => !taken.has(String(f.table_name).trim().toLowerCase()))
+    .slice(0, Math.max(0, BAR_FALLBACK_COUNT - matched.length))
+  return [...matched, ...placeholders]
+})
+
 // Registrable table locations backing the "second dropdown" in the table
 // manager. Defaults (restaurant/bar/lounge/terrace) are seeded server-side.
 const tableLocations = ref([])
@@ -1498,7 +1546,7 @@ function selectTable(tbl) {
 /** Active tables as searchable options (name + section for context). Occupied
  *  tables are listed (with the occupant's name) but disabled for other waiters. */
 const tableOptions = computed(() =>
-  tables.value.map((tbl) => {
+  servingTables.value.map((tbl) => {
     const name = String(tbl.table_name)
     const occupant = occupiedTables.value.get(name)
     const isSelf = occupant && String(occupant).toLowerCase() === String(waiterName.value).toLowerCase()
@@ -1512,12 +1560,28 @@ const tableOptions = computed(() =>
     }
   }),
 )
-const canManageTables = computed(() => ['hotel_admin', 'manager'].includes(role.value))
+// Hotel staff own the full table plan; bartenders manage the bar only (the
+// restaurant side stays with the manager). Locations remain hotel staff work.
+const canManageTables = computed(() => ['hotel_admin', 'manager', 'bartender'].includes(role.value))
+const canManageLocations = computed(() => ['hotel_admin', 'manager'].includes(role.value))
+
+/** Tables shown in the manager popup: bartenders only ever see their bar rows. */
+const managerTables = computed(() => {
+  if (!fixedDept.value) return tables.value
+  return tables.value.filter((t) => String(t.section || '').trim().toLowerCase() === fixedDept.value)
+})
+
+/** True when the signed-in role is allowed to edit/delete the given table:
+ *  bartenders and cashiers are confined to their own section. */
+function canTouchTable(tbl) {
+  if (!fixedDept.value) return true
+  return String(tbl.section || '').trim().toLowerCase() === fixedDept.value
+}
 
 /** Transfer targets: the ticket may move onto a free table or a table the
  *  waiter already holds — another staff member's table is listed disabled. */
 const transferTableOptions = computed(() =>
-  tables.value
+  servingTables.value
     .filter((tbl) => String(tbl.table_name) !== String(billModeOrder.value?.table_number || ''))
     .map((tbl) => {
       const name = String(tbl.table_name)
@@ -1540,6 +1604,29 @@ async function loadTables() {
   }
 }
 
+/** Writes the bar's placeholder slots (Bar 1–8) as real, editable table
+ *  records the first time a bartender opens the table manager, so they can
+ *  rename, renumber, delete or add to them like any other table. Missing
+ *  slots are created only; existing bar tables are left untouched. */
+async function ensureBarTables() {
+  if (barSeeded.value) return
+  const existing = tables.value.filter((t) => String(t.section || '').trim().toLowerCase() === 'bar')
+  const taken = new Set(existing.map((t) => String(t.table_name).trim().toLowerCase()))
+  const missing = BAR_FALLBACK_TABLES
+    .map((f) => f.table_name)
+    .filter((name) => !taken.has(String(name).trim().toLowerCase()))
+  tableError.value = ''
+  try {
+    for (const table_name of missing) {
+      await tableApi.store({ table_name, section: 'bar', capacity: 4 })
+    }
+    barSeeded.value = true
+    await loadTables()
+  } catch (err) {
+    tableError.value = err.response?.data?.message || t('orderTaker.tableSaveError')
+  }
+}
+
 /* ---------------- Manager: table CRUD ---------------- */
 
 const tableManagerOpen = ref(false)
@@ -1553,6 +1640,7 @@ function openTableManager() {
   tableManagerOpen.value = true
   loadTables()
   loadTableLocations()
+  if (fixedDept.value === 'bar') ensureBarTables()
 }
 
 /** Loads the registrable locations for the section dropdown (all staff can read). */
@@ -1567,21 +1655,29 @@ async function loadTableLocations() {
 }
 
 /** Order-preserving fallback so a bare select never renders empty: registered
- *  locations first, then the built-in defaults for anything missing. */
+ *  locations first, then the built-in defaults for anything missing. Bartenders
+ *  and cashiers only ever see — and are pinned to — their own department. */
 const sectionOptions = computed(() => {
+  if (fixedDept.value) return [fixedDept.value]
   const names = tableLocations.value.map((l) => String(l.name))
   const extras = DEFAULT_LOCATIONS.filter((n) => !names.includes(n))
   return [...tableLocations.value.map((l) => l.name), ...extras]
 })
 
-/** Clears the table form back to "add" mode. */
+/** Clears the table form back to "add" mode. Floor roles default (and stay)
+ *  on their own department so a bartender's new tables are always bar tables. */
 function resetTableForm() {
-  tableForm.value = { table_id: null, table_name: '', section: 'restaurant', capacity: 4 }
+  tableForm.value = { table_id: null, table_name: '', section: fixedDept.value || 'restaurant', capacity: 4 }
   tableError.value = ''
 }
 
-/** Loads an existing table into the form for editing. */
+/** Loads an existing table into the form for editing. Cross-department tables
+ *  are off-limits to bartenders and cashiers. */
 function editTable(tbl) {
+  if (!canTouchTable(tbl)) {
+    tableError.value = t(fixedDept.value === 'bar' ? 'orderTaker.barTableLocked' : 'orderTaker.restaurantTableLocked')
+    return
+  }
   tableForm.value = {
     table_id: tbl.table_id,
     table_name: tbl.table_name,
@@ -1592,12 +1688,16 @@ function editTable(tbl) {
 
 /** Creates or updates a table, then refreshes the picker list. */
 async function saveTable() {
+  if (fixedDept.value && tableForm.value.section !== fixedDept.value) {
+    tableError.value = t(fixedDept.value === 'bar' ? 'orderTaker.barTableLocked' : 'orderTaker.restaurantTableLocked')
+    return
+  }
   tableSaving.value = true
   tableError.value = ''
   try {
     const payload = {
       table_name: tableForm.value.table_name,
-      section: tableForm.value.section,
+      section: fixedDept.value || tableForm.value.section,
       capacity: tableForm.value.capacity,
     }
     if (tableForm.value.table_id) {
@@ -1616,6 +1716,10 @@ async function saveTable() {
 
 /** Deletes a table and refreshes the picker list. */
 async function deleteTable(tbl) {
+  if (!canTouchTable(tbl)) {
+    tableError.value = t(fixedDept.value === 'bar' ? 'orderTaker.barTableLocked' : 'orderTaker.restaurantTableLocked')
+    return
+  }
   tableError.value = ''
   try {
     await tableApi.destroy(tbl.table_id)
@@ -2918,6 +3022,14 @@ function onKey(e) {
 .dept-toggle button.active {
   background: #b8860b;
   color: #fff;
+}
+
+.dept-toggle button.locked,
+.dept-toggle button.locked.active {
+  background: linear-gradient(180deg, #fafafa, #f0f0f2);
+  color: #a1a1aa;
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 

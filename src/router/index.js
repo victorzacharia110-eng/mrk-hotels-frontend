@@ -281,7 +281,7 @@ const routes = [
   {
     path: '/cashier',
     component: () => import('@/layouts/CashierLayout.vue'),
-    meta: { requiresAuth: true, role: 'cashier' },
+    meta: { requiresAuth: true, role: ['cashier', 'bartender'] },
     children: [
       // Dine In floor map with running-order timers.
       {
@@ -291,7 +291,7 @@ const routes = [
       {
         path: 'dine-in',
         name: 'cashier-dine-in',
-        component: () => import('@/pages/cashier/CashierDineInPage.vue'),
+        component: () => import('@/pages/dashboards/OrderTakerDashboard.vue'),
         meta: { titleKey: 'cashier.nav.dineIn' },
       },
       {
@@ -653,7 +653,7 @@ export const dashboardMap = {
   housekeeping: '/app',
   kitchen: '/app/kitchen',
   waiter: '/app/take-order',
-  bartender: '/app/take-order',
+  bartender: '/cashier',
   cashier: '/cashier',
   staff: '/app',
 }
@@ -717,8 +717,11 @@ router.beforeEach(async (to) => {
     }
 
     // Role-guarded pages reject the wrong role back to that role's dashboard.
-    if (to.meta.role && to.meta.role !== authStore.user?.user_role) {
-      return dashboardMap[authStore.user?.user_role] || '/'
+    if (to.meta.role) {
+      const allowed = Array.isArray(to.meta.role) ? to.meta.role : [to.meta.role]
+      if (!allowed.includes(authStore.user?.user_role)) {
+        return dashboardMap[authStore.user?.user_role] || '/'
+      }
     }
 
     // Owners must pick a hotel from their dashboard before opening a panel.
@@ -733,10 +736,10 @@ router.beforeEach(async (to) => {
       return authStore.isSuperadmin ? '/superadmin' : (dashboardMap[authStore.user?.user_role] || '/app')
     }
 
-    // Order takers (waiter/bartender) have no business on the stay-view
-    // dashboard — their landing page is the order pad; bounce them there.
+    // Order takers (waiter/bartender) have no business on the stay-view dashboard —
+    // waiters land on the order pad, bartenders on the cashier panel.
     if (to.path === '/app' && ['waiter', 'bartender'].includes(authStore.user?.user_role)) {
-      return '/app/take-order'
+      return authStore.user?.user_role === 'bartender' ? '/cashier' : '/app/take-order'
     }
 
     // Kitchen staff get bounced to their single-click cooking board.
