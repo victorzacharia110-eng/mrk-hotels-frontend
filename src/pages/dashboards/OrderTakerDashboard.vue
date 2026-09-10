@@ -2679,7 +2679,7 @@ function onKey(e) {
 
 .send-btn {
   border: none;
-  background: #16a34a;
+  background: var(--pad-accent);
   color: #fff;
   border-radius: 10px;
   padding: 16px;
@@ -2695,7 +2695,7 @@ function onKey(e) {
 }
 
 .send-btn:hover:not(:disabled) {
-  background: #15803d;
+  background: var(--pad-accent-deep);
 }
 
 .send-btn:disabled {
