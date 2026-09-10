@@ -9,7 +9,7 @@
   or settling - those stay with the manager on the orders module.
 -->
 <template>
-  <div class="taker-page">
+  <div class="taker-page" :class="{ 'pos-theme': isPosRole }">
     <!-- One-place tabs: dashboard, take a new order or work the open ones (single tap) -->
     <nav class="pos-tabs">
       <button
@@ -910,6 +910,9 @@ const fixedDept = computed(() => {
   if (role.value === 'cashier') return 'restaurant'
   return '' // waiters may cover either department
 })
+// Cashier/bartender dine-in uses the hotel's logo palette: swapping the pad's
+// amber accent for the brand blue. Waiters keep the classic gold theme.
+const isPosRole = computed(() => ['cashier', 'bartender'].includes(role.value))
 
 /** The order type the API accepts for the current department (dine_in / at_bar). */
 function defaultOrderType() {
@@ -2117,12 +2120,19 @@ function onKey(e) {
 <style scoped>
 /* Classic touch-POS surface: light neutral background, big tappable buttons */
 .taker-page {
+  --pad-accent: #b8860b;
   min-height: 100vh;
   background: #e9e9ec;
   padding: 12px 16px 24px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* Logo-brand palette for the cashier/bartender dine-in (matches the POS
+   layout's blue); waiters keep the classic gold accent above. */
+.taker-page.pos-theme {
+  --pad-accent: #005eb8;
 }
 
 /* Ezee-style split: left = category/item picker, right = the selected order. */
@@ -2166,9 +2176,9 @@ function onKey(e) {
 .inline-grid { max-height: none; }
 
 .cat-btn.active {
-  background: #b8860b;
+  background: var(--pad-accent);
   color: #fff;
-  border-color: #b8860b;
+  border-color: var(--pad-accent);
 }
 
 /* ---- Dine-in table map ---- */
@@ -2482,7 +2492,7 @@ function onKey(e) {
 
 .oh-input:focus {
   outline: none;
-  border-color: #b8860b;
+  border-color: var(--pad-accent);
 }
 
 .oh-check {
@@ -2511,7 +2521,7 @@ function onKey(e) {
 }
 
 .type-toggle button.active {
-  background: #b8860b;
+  background: var(--pad-accent);
   color: #fff;
 }
 
@@ -2645,7 +2655,7 @@ function onKey(e) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #b8860b;
+  background: var(--pad-accent);
   color: #fff;
   border-radius: 8px;
   padding: 10px 18px;
@@ -2735,7 +2745,7 @@ function onKey(e) {
 }
 .cat-search:focus {
   outline: none;
-  border-color: #b8860b;
+  border-color: var(--pad-accent);
   background: #fff;
 }
 
@@ -2759,14 +2769,14 @@ function onKey(e) {
 
 .cat-btn:hover {
   transform: translateY(-2px);
-  border-color: #b8860b;
+  border-color: var(--pad-accent);
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
 }
 
 .cat-loading {
   text-align: center;
   padding: 26px;
-  color: #b8860b;
+  color: var(--pad-accent);
   font-size: 20px;
 }
 
@@ -2848,11 +2858,11 @@ function onKey(e) {
 
 .cat-item:hover {
   transform: translateY(-2px);
-  border-color: #b8860b;
+  border-color: var(--pad-accent);
 }
 
 .cat-item.on-order {
-  border-color: #b8860b;
+  border-color: var(--pad-accent);
   background: #fffbeb;
 }
 
@@ -2881,7 +2891,7 @@ function onKey(e) {
 }
 
 .cat-item-price {
-  color: #b8860b;
+  color: var(--pad-accent);
   font-weight: 700;
   font-size: 13px;
 }
@@ -2910,7 +2920,7 @@ function onKey(e) {
   position: absolute;
   top: 8px;
   right: 8px;
-  background: #b8860b;
+  background: var(--pad-accent);
   color: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -2980,7 +2990,7 @@ function onKey(e) {
 
 .accomp-option:hover {
   transform: translateY(-2px);
-  border-color: #b8860b;
+  border-color: var(--pad-accent);
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
 }
 
@@ -3020,7 +3030,7 @@ function onKey(e) {
 }
 
 .dept-toggle button.active {
-  background: #b8860b;
+  background: var(--pad-accent);
   color: #fff;
 }
 
@@ -3057,7 +3067,7 @@ function onKey(e) {
 }
 
 .pos-tab-badge {
-  background: #b8860b;
+  background: var(--pad-accent);
   color: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -3169,7 +3179,7 @@ function onKey(e) {
   background: #fafafa;
   color: #27272a;
 }
-.st-search:focus { outline: none; border-color: #b8860b; background: #fff; }
+.st-search:focus { outline: none; border-color: var(--pad-accent); background: #fff; }
 .st-select {
   border: 1px solid #d4d4d8;
   border-radius: 8px;
