@@ -4270,6 +4270,43 @@
       "empty": "No returns yet."
     }
   },
+  "posReports": {
+    "title": "POS Reports",
+    "recommendedGroup": "Recommended Reports",
+    "custom": "Custom Report",
+    "menuItemSales": "Menu Item Sales Report",
+    "sales": "Sales Report",
+    "noCharge": "No Charge Report",
+    "backOffice": "Back Office Report",
+    "statistical": "Statistical Report",
+    "inventory": "Inventory Report",
+    "stock": "Stock Report",
+    "audit": "Audit Report",
+    "userTerminal": "User Terminal",
+    "mandatoryFields": "Mandatory Fields",
+    "filterOptions": "Filter Options",
+    "fromDate": "From Date",
+    "toDate": "To Date",
+    "outlet": "Outlet",
+    "businessSource": "Business Source",
+    "subCategory": "Sub Category",
+    "all": "All",
+    "run": "Run Report",
+    "columns": "Columns",
+    "customBuilder": "Custom Report Builder",
+    "dataSource": "Data Source",
+    "chooseSource": "Choose a source report…",
+    "noDataYet": "No data yet for this period — try widening the date range.",
+    "orderTypes": {
+      "dine_in": "Dine In",
+      "at_bar": "At Bar",
+      "hotel_menu": "Hotel Menu",
+      "takeaway": "Takeaway",
+      "room_service": "Room Service",
+      "delivery": "Delivery",
+      "no_charge": "No Charge"
+    }
+  },
   "cashier": {
     "panelTitle": "POS",
     "nav": {
@@ -4296,6 +4333,7 @@
       "reports": "Reports",
       "reportBrowser": "Report Browser",
       "staffReports": "Staff Reports",
+      "posReports": "POS Reports",
       "communication": "Communication",
       "messages": "Messages",
       "statuses": "Status"

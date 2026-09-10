@@ -1238,6 +1238,12 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10)
 }
 
+function daysAgoIso(days) {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  return d.toISOString().slice(0, 10)
+}
+
 const money = (v) => {
   const num = Number(v || 0)
   const symbol = currency.value === 'USD' ? '$' : currency.value === 'EUR' ? '€' : 'TSh '
@@ -1264,7 +1270,7 @@ function initFilters(key) {
   const cfg = REPORTS[key] || { fields: [defaultField] }
   for (const f of cfg.fields) {
     if (!(f.key in filterValues)) {
-      if (f.type === 'date') filterValues[f.key] = todayIso()
+      if (f.type === 'date') filterValues[f.key] = f.key === 'from' ? daysAgoIso(30) : todayIso()
       else filterValues[f.key] = ''
     }
   }

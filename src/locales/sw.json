@@ -4270,6 +4270,43 @@
       "empty": "Hakuna marejesho bado."
     }
   },
+  "posReports": {
+    "title": "Ripoti za Mhasibu",
+    "recommendedGroup": "Ripoti Zilizopendekezwa",
+    "custom": "Ripoti Maalum",
+    "menuItemSales": "Ripoti ya Mauzo ya Bidhaa",
+    "sales": "Ripoti ya Mauzo",
+    "noCharge": "Ripoti ya Hakuna Malipo",
+    "backOffice": "Ripoti ya Ofisi ya Nyuma",
+    "statistical": "Ripoti ya Takwimu",
+    "inventory": "Ripoti ya Nyakati",
+    "stock": "Ripoti ya Hifadhi",
+    "audit": "Ripoti ya Ukaguzi",
+    "userTerminal": "Kituo cha Mtumiaji",
+    "mandatoryFields": "Sehemu za Lazima",
+    "filterOptions": "Chaguo za Kuchuja",
+    "fromDate": "Tarehe ya Kuanza",
+    "toDate": "Tarehe ya Kuishia",
+    "outlet": "Duka",
+    "businessSource": "Chanzo cha Biashara",
+    "subCategory": "Kategoria ndogo",
+    "all": "Zote",
+    "run": "Endesha Ripoti",
+    "columns": "Safu",
+    "customBuilder": "Kijengeaji cha Ripoti Maalum",
+    "dataSource": "Chanzo cha Takwimu",
+    "chooseSource": "Chagua ripoti chanzo…",
+    "noDataYet": "Hakuna data kwa kipindi hiki — jaribu kupanua vipindi vya tarehe.",
+    "orderTypes": {
+      "dine_in": "Kula Mahali",
+      "at_bar": "Kwenye Baa",
+      "hotel_menu": "Menyu ya Hoteli",
+      "takeaway": "Chukua Nje",
+      "room_service": "Huduma ya Chumbani",
+      "delivery": "Usafirishaji",
+      "no_charge": "Hakuna Malipo"
+    }
+  },
   "cashier": {
     "panelTitle": "KARO",
     "nav": {
@@ -4296,6 +4333,7 @@
       "reports": "Ripoti",
       "reportBrowser": "Kivinjari cha Ripoti",
       "staffReports": "Ripoti za Wafanyakazi",
+      "posReports": "Ripoti za Mhasibu",
       "communication": "Mawasiliano",
       "messages": "Jumbe",
       "statuses": "Hali"
