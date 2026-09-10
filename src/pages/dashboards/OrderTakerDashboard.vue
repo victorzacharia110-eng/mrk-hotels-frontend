@@ -2121,6 +2121,7 @@ function onKey(e) {
 /* Classic touch-POS surface: light neutral background, big tappable buttons */
 .taker-page {
   --pad-accent: #b8860b;
+  --pad-accent-deep: #a8871e;
   min-height: 100vh;
   background: #e9e9ec;
   padding: 12px 16px 24px;
@@ -2133,6 +2134,7 @@ function onKey(e) {
    layout's blue); waiters keep the classic gold accent above. */
 .taker-page.pos-theme {
   --pad-accent: #005eb8;
+  --pad-accent-deep: #00468c;
 }
 
 /* Ezee-style split: left = category/item picker, right = the selected order. */
@@ -2326,7 +2328,7 @@ function onKey(e) {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #c9a227;
+  background: var(--pad-accent);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -2337,7 +2339,7 @@ function onKey(e) {
   white-space: nowrap;
 }
 
-.oh-manage:hover { background: #a8871e; }
+.oh-manage:hover { background: var(--pad-accent-deep); }
 
 /* Manager table modal */
 .tm-pop {
