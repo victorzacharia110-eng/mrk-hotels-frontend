@@ -64,8 +64,10 @@ export const MODULES = [
   { key: 'categories', to: '/app/categories', icon: 'fas fa-tags', labelKey: 'nav.categories', roles: ['hotel_admin', 'manager', 'procurement_officer'], feature: 'inventory' },
   // Supplier records.
   { key: 'suppliers', to: '/app/suppliers', icon: 'fas fa-truck', labelKey: 'nav.suppliers', roles: ['hotel_admin', 'manager', 'procurement_officer'], feature: 'suppliers' },
-  // Store requisitions — department-scoped, open to every staff member.
-  { key: 'requisitions', to: '/app/requisitions', icon: 'fas fa-file-signature', labelKey: 'nav.requisitions', roles: [] },
+  // Store requisitions — department-scoped. Visible to every staff panel
+  // except waiters: a waiter's requests are ordered through the cashier or
+  // bartender, so the order-taker panel does not need its own requisitions.
+  { key: 'requisitions', to: '/app/requisitions', icon: 'fas fa-file-signature', labelKey: 'nav.requisitions', roles: ['hotel_admin', 'manager', 'accountant', 'receptionist', 'procurement_officer', 'housekeeping', 'kitchen', 'bartender', 'staff'] },
   // Purchase requisitions submitted to procurement.
   { key: 'purchase-requisitions', to: '/app/purchase-requisitions', icon: 'fas fa-file-signature', labelKey: 'nav.purchaseRequisitions', roles: ['hotel_admin', 'manager', 'procurement_officer'], feature: 'requisitions' },
   // Purchase orders (accountant can view/approve payments side).

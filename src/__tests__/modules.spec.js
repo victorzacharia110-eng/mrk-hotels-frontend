@@ -78,6 +78,22 @@ describe('module config', () => {
       const mod = moduleByKey('purchase-orders')
       expect(mod.roles).toContain('accountant')
     })
+
+    it('requisitions is on every panel except the waiter panel', () => {
+      const mod = moduleByKey('requisitions')
+      // The cashier/bartender order the items on a waiter's behalf.
+      expect(mod.roles).not.toContain('waiter')
+      expect(mod.roles).toContain('bartender')
+      // ...and every other /app staff role still sees it.
+      expect(mod.roles).toContain('hotel_admin')
+      expect(mod.roles).toContain('manager')
+      expect(mod.roles).toContain('accountant')
+      expect(mod.roles).toContain('receptionist')
+      expect(mod.roles).toContain('housekeeping')
+      expect(mod.roles).toContain('kitchen')
+      expect(mod.roles).toContain('procurement_officer')
+      expect(mod.roles).toContain('staff')
+    })
   })
 
   describe('MODULES integrity', () => {

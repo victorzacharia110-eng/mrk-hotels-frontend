@@ -360,8 +360,8 @@
             </section>
           </div>
 
-          <!-- Pending + accepted requisitions -->
-          <section class="dash-card">
+          <!-- Pending + accepted requisitions (waiters order through the cashier/bartender) -->
+          <section v-if="role !== 'waiter'" class="dash-card">
             <header class="dash-card-head">
               <strong><i class="fas fa-file-signature" aria-hidden="true"></i> {{ $t('staffDashboard.requisitionsTitle') }}</strong>
               <router-link to="/app/requisitions" class="summary-link req-link">
@@ -402,7 +402,7 @@
             <button type="button" class="summary-link" @click="switchToSummary">
               <i class="fas fa-chart-simple" aria-hidden="true"></i> {{ $t('staffDashboard.linkOrderSummary') }}
             </button>
-            <router-link to="/app/requisitions" class="summary-link">
+            <router-link v-if="role !== 'waiter'" to="/app/requisitions" class="summary-link">
               <i class="fas fa-file-signature" aria-hidden="true"></i> {{ $t('staffDashboard.linkRequisitions') }}
             </router-link>
             <router-link to="/app/messages" class="summary-link">

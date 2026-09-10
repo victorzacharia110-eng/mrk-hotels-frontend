@@ -268,8 +268,11 @@ const auth = useAuthStore()
 const KEEPER_ROLES = ['store_manager', 'hotel_admin', 'manager', 'owner', 'superadmin']
 
 const role = computed(() => auth.user?.user_role)
-const isKeeper = computed(() => KEEPER_ROLES.includes(role.value))
-const restricted = computed(() => !KEEPER_ROLES.includes(role.value) && !!auth.user?.department_id)
+// Every panel except the waiter carries the full requisition page exactly as
+// management sees it (tabs, inbox, supply/approve, any department).
+const isKeeper = computed(() => role.value !== 'waiter')
+const isManagement = computed(() => KEEPER_ROLES.includes(role.value))
+const restricted = computed(() => false)
 const deptName = computed(() => auth.user?.department || '')
 
 const tab = ref('mine')
@@ -367,7 +370,7 @@ function canApprove(i) { return isKeeper.value && i.status === 'pending' }
 function canVoid(i) {
   return (
     (isRequester(i) && ['draft', 'pending', 'forwarded'].includes(i.status)) ||
-    (isKeeper.value && ['pending', 'approved', 'forwarded'].includes(i.status))
+    (isManagement.value && ['pending', 'approved', 'forwarded', 'fulfilled'].includes(i.status))
   )
 }
 
