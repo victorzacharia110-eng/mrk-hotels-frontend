@@ -2122,6 +2122,8 @@ function onKey(e) {
 .taker-page {
   --pad-accent: #b8860b;
   --pad-accent-deep: #a8871e;
+  --pad-accent-soft: #fffbeb;
+  --pad-accent-soft-text: #92400e;
   min-height: 100vh;
   background: #e9e9ec;
   padding: 12px 16px 24px;
@@ -2135,6 +2137,8 @@ function onKey(e) {
 .taker-page.pos-theme {
   --pad-accent: #005eb8;
   --pad-accent-deep: #00468c;
+  --pad-accent-soft: #e8f1fa;
+  --pad-accent-soft-text: #00468c;
 }
 
 /* Ezee-style split: left = category/item picker, right = the selected order. */
@@ -2623,7 +2627,7 @@ function onKey(e) {
 
 .notes-line:focus {
   outline: none;
-  background: #fffbeb;
+  background: var(--pad-accent-soft);
 }
 
 /* ---- Pager + total ---- */
@@ -2726,8 +2730,8 @@ function onKey(e) {
 
 .cat-dept {
   margin-left: auto;
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--pad-accent-soft);
+  color: var(--pad-accent-soft-text);
   padding: 3px 12px;
   border-radius: 999px;
 }
@@ -2865,7 +2869,7 @@ function onKey(e) {
 
 .cat-item.on-order {
   border-color: var(--pad-accent);
-  background: #fffbeb;
+  background: var(--pad-accent-soft);
 }
 
 /* Out-of-stock cards: greyed out and not tappable */
