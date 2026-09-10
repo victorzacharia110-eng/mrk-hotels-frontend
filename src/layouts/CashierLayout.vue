@@ -165,11 +165,20 @@
 
     <div class="pos-main">
       <header class="pos-topbar">
-        <button class="pos-collapse" @click="toggleSidebar" :aria-label="$t('nav.menuToggle')">
-          <i class="fas fa-bars" aria-hidden="true"></i>
-        </button>
-        <h1 class="pos-page-title">{{ pageTitle }}</h1>
-        <div class="pos-topbar-right">
+        <div class="pos-topbar-main">
+          <button class="pos-collapse" @click="toggleSidebar" :aria-label="$t('nav.menuToggle')">
+            <i class="fas fa-bars" aria-hidden="true"></i>
+          </button>
+          <h1 class="pos-page-title">{{ pageTitle }}</h1>
+          <div class="sm-user">
+            <span class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
+            <span class="sm-user-meta">
+              <strong>{{ authStore.user?.name }}</strong>
+              <RoleBadge />
+            </span>
+          </div>
+        </div>
+        <div class="pos-topbar-sub">
           <span class="pos-working-date"><i class="fas fa-calendar-day" aria-hidden="true"></i> {{ workingDate }}</span>
           <button v-if="selectedOutlet" class="pos-outlet-select" @click="switchOutlet"
             :title="$t('cashier.topbar.switchOutlet')">
@@ -179,13 +188,6 @@
           <router-link :to="{ name: 'cashier-waiter-assignment' }" class="pos-waiter-btn">
             <i class="fas fa-user-group" aria-hidden="true"></i> {{ $t('cashier.nav.waiterAssignment') }}
           </router-link>
-          <div class="sm-user">
-            <span class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
-            <span class="sm-user-meta">
-              <strong>{{ authStore.user?.name }}</strong>
-              <RoleBadge />
-            </span>
-          </div>
         </div>
       </header>
 
@@ -468,8 +470,20 @@ onMounted(() => {
   box-shadow: inset 0 -3px 0 var(--mrk-blue);
   z-index: 20;
 }
+.pos-topbar-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+.pos-topbar-sub {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 .pos-page-title { font-size: 18px; font-weight: 700; margin: 0; flex: 1; color: var(--mrk-charcoal); }
-.pos-topbar-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .pos-working-date { font-size: 13px; color: #64748b; display: inline-flex; align-items: center; gap: 7px; }
 .pos-outlet-select {
   display: inline-flex; align-items: center; gap: 9px;
@@ -521,5 +535,49 @@ onMounted(() => {
   }
   .sm-user-meta { display: none; }
   .pos-page-title { font-size: 16px; }
+
+  /* Header collapses into two tidy rows: title/identity above, then the
+     working controls (date · outlet · waiter assignment) below. */
+  .pos-topbar {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: 12px 16px;
+  }
+  .pos-topbar-main {
+    flex: 1 1 100%;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed #dbe4ef;
+  }
+  .pos-topbar-main .pos-page-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pos-topbar-sub {
+    flex: 1 1 100%;
+    gap: 10px;
+  }
+  .pos-working-date { font-size: 12px; }
+  .pos-outlet-select {
+    padding: 6px 12px;
+    font-size: 12px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pos-waiter-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+@media (max-width: 480px) {
+  .pos-topbar { padding: 10px 12px; }
+  .pos-collapse { width: 32px; height: 32px; }
+  .pos-working-date {
+    flex: 1 1 100%;
+    font-size: 12px;
+  }
+  .pos-topbar-sub > * { flex: 1 1 auto; justify-content: center; }
 }
 </style>
