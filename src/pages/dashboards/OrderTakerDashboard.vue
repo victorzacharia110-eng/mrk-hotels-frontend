@@ -872,6 +872,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useOrderRealtime } from '@/composables/useOrderRealtime'
 import { orderApi, menuItemApi, tableApi, tableLocationApi, reportApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
@@ -1365,7 +1366,7 @@ async function billToRoom(order) {
 }
 
 // Keep the open-orders board fresh while that tab is showing.
-let openPoll = null
+let orderRealtime = null
 
 // The waiter name is auto-stamped from the logged-in staff member — the
 // order belongs to them; they cannot impersonate another waiter.
@@ -1983,18 +1984,19 @@ onMounted(() => {
   loadOpenOrders()
   loadDeptOrders()
   if (activeTab.value === 'dashboard') loadDashboard()
-  // Keep the floor fresh: the personal board and the department occupancy map
-  // refresh on a timer so taken tables and new orders always turn up.
-  openPoll = setInterval(() => {
+  // The floor, personal board and department occupancy map refresh instantly
+  // on the order.updated push instead of a timer, so taken tables and new
+  // tickets always turn up without anyone reloading.
+  orderRealtime = useOrderRealtime(() => {
     loadDeptOrders()
     if (activeTab.value === 'open') loadOpenOrders()
     if (activeTab.value === 'dashboard') loadDashboard()
-  }, 30000)
+  })
   document.addEventListener('keydown', onKey)
 })
 
 onUnmounted(() => {
-  clearInterval(openPoll)
+  if (orderRealtime) orderRealtime.stop()
   document.removeEventListener('keydown', onKey)
 })
 

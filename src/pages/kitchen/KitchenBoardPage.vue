@@ -134,6 +134,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { orderApi } from '@/api'
+import { useOrderRealtime } from '@/composables/useOrderRealtime'
 import { useNotificationSettingsStore } from '@/stores/notificationSettings'
 import NotificationSoundSettings from '@/components/notification/NotificationSoundSettings.vue'
 
@@ -148,7 +149,6 @@ const department = ref('all')
 const showSound = ref(false)
 const notifSettingsStore = useNotificationSettingsStore()
 notifSettingsStore.load()
-let timer = null
 
 // Statuses that still need kitchen/runner attention; everything else leaves the board.
 const OPEN_STATUSES = ['pending', 'in_progress', 'processing', 'preparing', 'ready', 'served']
@@ -266,12 +266,17 @@ function money(value) {
 
 onMounted(() => {
   load()
-  timer = setInterval(() => {
-    if (autoRefresh.value) load()
-  }, 15000)
 })
 
-onUnmounted(() => clearInterval(timer))
+// Dishes arrive on the board the moment any order changes elsewhere (the
+// kitchen no longer waits on a timer); the auto-refresh toggle still governs
+// whether the board follows those pushes.
+const { stop: stopOrderUpdates } = useOrderRealtime(() => {
+  if (autoRefresh.value) load()
+})
+onUnmounted(() => {
+  stopOrderUpdates()
+})
 </script>
 
 <style scoped>

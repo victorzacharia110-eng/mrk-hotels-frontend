@@ -317,6 +317,7 @@ import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useOrderRealtime } from '@/composables/useOrderRealtime'
 import { PAYMENT_METHODS } from '@/utils/payments'
 import { restorePrinter, printerState, connectPrinter, printerSupported } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
@@ -769,21 +770,20 @@ async function reprintKot(order) {
   doPrint(order, 'kot')
 }
 
-// Live refresh: tickets from the floor (waiters/bartenders) appear without the
-// cashier having to reload the page every time.
-let orderListPoll = null
+// Real-time refresh: tickets pushed from the floor (new orders, item
+// readiness, settlements...) reload the list instantly over the WebSocket.
+const { stop: stopOrderUpdates } = useOrderRealtime(() => {
+  if (!loading.value && !drawerOpen.value && !payOpen.value) load()
+})
 
 onMounted(() => {
   load()
   loadLogo()
   restorePrinter()
-  orderListPoll = setInterval(() => {
-    if (activeTab.value === 'running' && !loading.value) load()
-  }, 25000)
 })
 
 onUnmounted(() => {
-  if (orderListPoll) clearInterval(orderListPoll)
+  stopOrderUpdates()
 })
 </script>
 

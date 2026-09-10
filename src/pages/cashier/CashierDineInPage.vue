@@ -255,6 +255,7 @@ import { useI18n } from 'vue-i18n'
 import { cashierApi, orderApi, tableApi } from '@/api'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import { useOrderRealtime } from '@/composables/useOrderRealtime'
 import { toast } from '@/utils/toast'
 
 const { t } = useI18n()
@@ -275,7 +276,6 @@ const busy = ref(false)
 const showOrderModal = ref(false)
 const activeTable = ref(null)
 const ticketTable = ref(null)
-let timerHandle = null
 
 const occupiedCount = computed(() => tables.value.filter((x) => effectiveStatus(x) === 'occupied').length)
 const vacantCount = computed(() => tables.value.filter((x) => effectiveStatus(x) === 'available').length)
@@ -507,9 +507,14 @@ function onCreated() {
 
 onMounted(() => {
   load()
-  timerHandle = setInterval(load, 60000)
 })
-onBeforeUnmount(() => clearInterval(timerHandle))
+
+// Refresh instantly when any F&B order changes elsewhere on the floor (new
+// ticket, item ready/served, settlement...) instead of polling the map.
+const { stop: stopOrderUpdates } = useOrderRealtime(() => {
+  if (!busy.value && !showOrderModal.value) load()
+})
+onBeforeUnmount(() => stopOrderUpdates())
 </script>
 
 <style scoped>
