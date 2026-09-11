@@ -166,6 +166,7 @@ import { useI18n } from 'vue-i18n'
 import { hotelSettingsApi, companyApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import PhoneInput from '@/components/PhoneInput.vue'
+import { normalizePhoneNumber } from '@/utils/phone'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -212,7 +213,7 @@ async function saveProfile() {
     await hotelSettingsApi.update({
       hotel_name: form.value.hotel_name,
       address: form.value.address,
-      phone: form.value.phone,
+      phone: normalizePhoneNumber(form.value.phone, form.value.country_code || 'TZ'),
       email: form.value.email,
     })
     success.value = t('receptionPanel.companySaved')
@@ -304,7 +305,7 @@ async function saveCompany() {
     tin_number: companyForm.value.tin_number,
     address: companyForm.value.address,
     city: companyForm.value.city,
-    phone: companyForm.value.phone,
+    phone: normalizePhoneNumber(companyForm.value.phone, companyForm.value.country_code || 'TZ'),
     email: companyForm.value.email,
     contact_person: companyForm.value.contact_person,
     notes: companyForm.value.notes,
