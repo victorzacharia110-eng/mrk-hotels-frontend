@@ -480,7 +480,7 @@
                               type="button"
                               class="sv-icon-link"
                               :title="$t('stayview.sendInvoice')"
-                              :disabled="invoiceBusy"
+                              :disabled="sendBusy"
                               @click="sendInvoice(activeBar)"
                             >
                               <i class="fas fa-paper-plane" aria-hidden="true"></i>
@@ -742,21 +742,21 @@
               <button
                 type="button"
                 class="btn btn-secondary sv-modal-manage"
-                :disabled="invoiceBusy"
+                :disabled="printBusy"
                 @click="printInvoice(activeBar)"
               >
                 <i class="fas fa-print" aria-hidden="true"></i>
-                {{ invoiceBusy ? $t('invoices.preparing') : $t('stayview.printInvoice') }}
+                {{ printBusy ? $t('invoices.preparing') : $t('stayview.printInvoice') }}
               </button>
               <button
                 type="button"
                 class="btn btn-secondary sv-modal-manage"
-                :disabled="invoiceBusy || !activeBar.guestEmail"
+                :disabled="sendBusy || !activeBar.guestEmail"
                 :title="activeBar.guestEmail ? activeBar.guestEmail : $t('stayview.noGuestEmail')"
                 @click="sendInvoice(activeBar)"
               >
                 <i class="fas fa-paper-plane" aria-hidden="true"></i>
-                {{ invoiceBusy ? $t('invoices.preparing') : $t('stayview.sendInvoice') }}
+                {{ sendBusy ? $t('invoices.preparing') : $t('stayview.sendInvoice') }}
               </button>
               <div class="sv-dropdown">
                 <button
@@ -3108,7 +3108,8 @@ async function confirmVoid() {
 
 /* ---------------- Invoice printing ---------------- */
 
-const invoiceBusy = ref(false)
+const printBusy = ref(false)
+const sendBusy = ref(false)
 
 /**
  * Generates (or refreshes) the folio invoice for the booking and opens the
@@ -3116,7 +3117,7 @@ const invoiceBusy = ref(false)
  * to a direct download when the popup is blocked.
  */
 async function printInvoice(bar) {
-  invoiceBusy.value = true
+  printBusy.value = true
   actionError.value = ''
   try {
     const gen = await invoiceApi.generate(bar.id)
@@ -3137,12 +3138,12 @@ async function printInvoice(bar) {
   } catch (err) {
     actionError.value = err.response?.data?.message || t('stayview.invoiceError')
   } finally {
-    invoiceBusy.value = false
+    printBusy.value = false
   }
 }
 
 async function sendInvoice(bar) {
-  invoiceBusy.value = true
+  sendBusy.value = true
   actionError.value = ''
   try {
     const res = await invoiceApi.send(bar.id)
@@ -3150,7 +3151,7 @@ async function sendInvoice(bar) {
   } catch (err) {
     actionError.value = err.response?.data?.message || t('stayview.invoiceError')
   } finally {
-    invoiceBusy.value = false
+    sendBusy.value = false
   }
 }
 
