@@ -756,7 +756,17 @@ const visibleModules = computed(() => {
     if (byKey.rooms) frontDesk.push({ key: 'rates', to: '/app/rooms', icon: 'fas fa-tags', label: t('nav.rates') })
     if (byKey.distribution) frontDesk.push(byKey.distribution)
     if (byKey.guests) frontDesk.push(link('guests', t('nav.guests')))
-    if (byKey.payments) frontDesk.push(link('payments', t('nav.payments')))
+    if (byKey.payments) {
+      frontDesk.push(subGroup('front-payments', 'fas fa-money-bill-wave', t('nav.payments'), [
+        { to: '/app/payments', label: t('nav.payments'), icon: 'fas fa-list' },
+        { to: '/app/payments/cashiering', label: t('receptionMenu.cashieringCenter'), icon: 'fas fa-credit-card' },
+        { to: '/app/payments/cash-drawer', label: t('receptionMenu.cashDrawer'), icon: 'fas fa-cash-register' },
+        { to: '/app/payments/business-source', label: t('receptionMenu.businessSource'), icon: 'fas fa-diagram-project' },
+        { to: '/app/payments/company-data', label: t('receptionMenu.companyData'), icon: 'fas fa-building' },
+        { to: '/app/payments/pos', label: t('receptionMenu.pos'), icon: 'fas fa-basket-shopping' },
+        { to: '/app/payments/exchange-rate', label: t('receptionMenu.exchangeRate'), icon: 'fas fa-right-left' },
+      ]))
+    }
     if (byKey['night-audit']) frontDesk.push(byKey['night-audit'])
     const administration = pick(['staff', 'activity-log-report', 'overrides', 'imports', 'integrations/booking-com', 'integrations/quickbooks', 'integrations/xero'])
     if (administration.length) frontDesk.push(subGroup('front-administration', 'fas fa-user-tie', t('accordion.administration'), administration))
@@ -912,6 +922,8 @@ watch(
     if (path.startsWith('/app/payments')) {
       const next = new Set(openAccordions.value)
       next.add('reception-payments')
+      next.add('front-desk')
+      next.add('front-desk::front-payments')
       openAccordions.value = next
     }
     if (path.startsWith('/app/reports') || path.startsWith('/app/staff-reports') || path.startsWith('/app/pos-report-browser')) {
