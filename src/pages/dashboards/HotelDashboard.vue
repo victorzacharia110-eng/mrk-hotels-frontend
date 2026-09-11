@@ -488,6 +488,18 @@
                           <td colspan="6" class="sv-muted-cell">{{ $t('folio.empty') }}</td>
                         </tr>
                       </tbody>
+                      <tfoot v-if="folioEntries.length">
+                        <tr class="sv-folio-total">
+                          <td colspan="4">{{ $t('folio.totalCharges') }}</td>
+                          <td class="num"><strong>TZS {{ fmtNum(folioTotals.charges, 2) }}</strong></td>
+                          <td></td>
+                        </tr>
+                        <tr class="sv-folio-total">
+                          <td colspan="4">{{ $t('folio.totalPaid') }}</td>
+                          <td class="num"><strong>TZS {{ fmtNum(folioTotals.credits, 2) }}</strong></td>
+                          <td></td>
+                        </tr>
+                      </tfoot>
                     </table>
                   </div>
                 </template>
@@ -613,6 +625,27 @@
                       <span class="sv-cap">{{ tk.priority }} · {{ fmtDate(tk.created_at) }}</span>
                     </div>
                     <span class="sv-task-status">{{ tk.status }}</span>
+                    <span v-if="canSeeFrontDesk" class="sv-task-actions">
+                      <button
+                        v-if="tk.status === 'verified'"
+                        type="button"
+                        class="sv-icon-link"
+                        :title="$t('stayview.taskComplete')"
+                        :disabled="actionBusy"
+                        @click="runRoomTask(tk, 'complete')"
+                      >
+                        <i class="fas fa-check" aria-hidden="true"></i>
+                      </button>
+                      <button
+                        type="button"
+                        class="sv-icon-link"
+                        :title="$t('stayview.taskDelete')"
+                        :disabled="actionBusy"
+                        @click="runRoomTask(tk, 'destroy')"
+                      >
+                        <i class="fas fa-trash-can" aria-hidden="true"></i>
+                      </button>
+                    </span>
                   </div>
                   <div v-if="!roomTasks.length" class="sv-modal-row muted">
                     <i class="fas fa-circle-check" aria-hidden="true"></i>
@@ -1194,6 +1227,34 @@
               </label>
               <div class="sv-field-row">
                 <label class="sv-field">
+                  <span>{{ $t('guests.nationality') }}</span>
+                  <input v-model="bookingForm.nationality" type="text" class="input" data-field="nationality" :placeholder="$t('stayview.optional')" />
+                </label>
+                <label class="sv-field">
+                  <span>{{ $t('guests.idTypeOptional') }}</span>
+                  <select v-model="bookingForm.id_type" class="input" data-field="id_type">
+                    <option value=""></option>
+                    <option value="national_id">{{ $t('guests.typeNationalId') }}</option>
+                    <option value="passport">{{ $t('guests.typePassport') }}</option>
+                    <option value="driving_license">{{ $t('guests.typeDriverLicense') }}</option>
+                  </select>
+                </label>
+              </div>
+              <div class="sv-field-row">
+                <label class="sv-field">
+                  <span>{{ $t('guests.idNumber') }}</span>
+                  <input v-model="bookingForm.id_number" type="text" class="input" data-field="id_number" :placeholder="$t('stayview.optional')" />
+                </label>
+                <label class="sv-field">
+                  <span>{{ $t('guests.vipStatus') }}</span>
+                  <label class="sv-checkbox">
+                    <input v-model="bookingForm.vip_status" type="checkbox" data-field="vip_status" />
+                    <span>{{ $t('guests.typeVip') }}</span>
+                  </label>
+                </label>
+              </div>
+              <div class="sv-field-row">
+                <label class="sv-field">
                   <span>{{ $t('stayview.company') }}</span>
                   <input v-model="bookingForm.company_name" type="text" class="input" data-field="company_name" maxlength="191" :placeholder="$t('stayview.optional')" />
                 </label>
@@ -1318,6 +1379,34 @@
                 <input v-model="guestForm.email" type="email" class="input" data-field="email" :class="{ 'sv-input-error': guestErrors.email }" />
                 <span v-if="guestErrors.email" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ guestErrors.email }}</span>
               </label>
+              <div class="sv-field-row">
+                <label class="sv-field">
+                  <span>{{ $t('guests.nationality') }}</span>
+                  <input v-model="guestForm.nationality" type="text" class="input" data-field="nationality" :placeholder="$t('stayview.optional')" />
+                </label>
+                <label class="sv-field">
+                  <span>{{ $t('guests.idTypeOptional') }}</span>
+                  <select v-model="guestForm.id_type" class="input" data-field="id_type">
+                    <option value=""></option>
+                    <option value="national_id">{{ $t('guests.typeNationalId') }}</option>
+                    <option value="passport">{{ $t('guests.typePassport') }}</option>
+                    <option value="driving_license">{{ $t('guests.typeDriverLicense') }}</option>
+                  </select>
+                </label>
+              </div>
+              <div class="sv-field-row">
+                <label class="sv-field">
+                  <span>{{ $t('guests.idNumber') }}</span>
+                  <input v-model="guestForm.id_number" type="text" class="input" data-field="id_number" :placeholder="$t('stayview.optional')" />
+                </label>
+                <label class="sv-field">
+                  <span>{{ $t('guests.vipStatus') }}</span>
+                  <label class="sv-checkbox">
+                    <input v-model="guestForm.vip_status" type="checkbox" data-field="vip_status" />
+                    <span>{{ $t('guests.typeVip') }}</span>
+                  </label>
+                </label>
+              </div>
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
             </div>
             <div class="sv-modal-actions">
@@ -2226,6 +2315,7 @@ const folioEntries = computed(() => {
     entries.push({
       key: `o${o.order_id ?? o.order_number}`,
       date: o.date,
+      time: o.posted_at || o.date || '',
       particular: t('folio.roomPosting'),
       description: o.reference || o.order_number || t('folio.order'),
       detail: o.order_type || '',
@@ -2239,6 +2329,7 @@ const folioEntries = computed(() => {
     entries.push({
       key: `l${l.laundry_order_id ?? l.order_number}`,
       date: l.date,
+      time: l.posted_at || l.date || '',
       particular: t('folio.laundry'),
       description: l.order_number || t('folio.laundry'),
       detail: l.service || '',
@@ -2290,6 +2381,7 @@ const folioEntries = computed(() => {
     entries.push({
       key: `p${p.payment_id ?? p.transaction_reference}`,
       date: p.date,
+      time: p.posted_at || p.date || '',
       particular: t('folio.payment'),
       description: paymentMethodLabel(p.payment_method),
       detail: p.transaction_reference || '',
@@ -2298,8 +2390,30 @@ const folioEntries = computed(() => {
       credit: true,
     })
   }
-  entries.sort((a, b) => `${a.time || a.date || ''}|${a.key}`.localeCompare(`${b.time || b.date || ''}|${b.key}`))
+  // FIFO: sort by the actual posting timestamp, not by a stringified key — a
+  // string-sorted key made same-day postings (orders, laundry, payments) fall
+  // out of chronological order and appear "random". Timestamps that are missing
+  // sort first by their insertion order.
+  entries.forEach((e, i) => {
+    e.seq = i
+  })
+  entries.sort(
+    (a, b) =>
+      (Date.parse(a.time || a.date) || 0) - (Date.parse(b.time || b.date) || 0) || a.seq - b.seq,
+  )
   return entries
+})
+
+// Column totals for the folio ledger: charges that move the balance up and
+// credits (payments, discounts, adjustments) that move it down.
+const folioTotals = computed(() => {
+  let charges = 0
+  let credits = 0
+  for (const e of folioEntries.value) {
+    if (e.credit) credits += e.amount
+    else charges += e.amount
+  }
+  return { charges, credits }
 })
 
 // Housekeeping tasks for the active stay's room (Tasks tab).
@@ -2323,6 +2437,22 @@ async function loadRoomTasks() {
   } finally {
     roomTasksLoading.value = false
     roomTasksLoaded.value = true
+  }
+}
+
+/** Runs a task workflow step (complete / delete) from the stay's Tasks tab. */
+async function runRoomTask(task, verb) {
+  actionBusy.value = true
+  actionError.value = ''
+  try {
+    if (verb === 'destroy' && !window.confirm(t('stayview.taskConfirm'))) return
+    await housekeepingApi[verb](task.task_id)
+    await loadRoomTasks()
+    actionError.value = verb === 'complete' ? t('stayview.taskCompleted') : t('stayview.taskDeleted')
+  } catch (err) {
+    actionError.value = apiErrorMsg(err, t('stayview.actionError'))
+  } finally {
+    actionBusy.value = false
   }
 }
 
@@ -3346,6 +3476,10 @@ function resetBookingForm() {
     advance_payment_date: today,
     company_name: '',
     business_source: 'walk_in',
+    nationality: '',
+    id_type: '',
+    id_number: '',
+    vip_status: false,
   }
   bookingErrors.value = {}
   bookingTouched.value = false
@@ -3472,7 +3606,17 @@ const guestSnapshot = ref({})
 
 /** Opens the guest registration form. */
 function openGuestModal() {
-  guestForm.value = { first_name: '', last_name: '', phone: '', country_code: 'TZ', email: '' }
+  guestForm.value = {
+    first_name: '',
+    last_name: '',
+    phone: '',
+    country_code: 'TZ',
+    email: '',
+    nationality: '',
+    id_type: '',
+    id_number: '',
+    vip_status: false,
+  }
   guestErrors.value = {}
   guestTouched.value = false
   guestSnapshot.value = { ...guestForm.value }
@@ -4681,6 +4825,13 @@ onUnmounted(() => clearInterval(refreshTimer))
   background: #fff3cd;
   padding: 2px 10px;
   border-radius: 999px;
+  white-space: nowrap;
+}
+
+.sv-task-actions {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 8px;
 }
 
 .sv-muted {
@@ -4975,6 +5126,11 @@ onUnmounted(() => clearInterval(refreshTimer))
   border-bottom: none;
   font-weight: 600;
   background: #f8fafc;
+}
+
+.sv-folio-table .sv-folio-total td {
+  border-top: 1px solid #1f2937;
+  color: #1f2937;
 }
 
 /* Folio ledger: credit rows (payments) read as accepted money, charge rows as

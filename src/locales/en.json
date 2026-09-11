@@ -946,7 +946,10 @@
     "idType": "ID type *",
     "idNumber": "ID number *",
     "dateOfBirth": "Date of birth",
-    "vipStatus": "VIP status"
+    "vipStatus": "VIP status",
+    "typeNationalId": "National ID",
+    "typePassport": "Passport",
+    "typeDriverLicense": "Driving license"
   },
   "reservations": {
     "title": "Reservations",
@@ -3763,6 +3766,11 @@
     "tasksForRoom": "Tasks for this room",
     "taskAdd": "Add Task",
     "tasksEmpty": "No housekeeping tasks for this room.",
+    "taskComplete": "Mark complete",
+    "taskCompleted": "Task marked complete.",
+    "taskDelete": "Delete task",
+    "taskDeleted": "Task deleted.",
+    "taskConfirm": "Confirm task deleted?",
     "auditEmpty": "No audit records yet.",
     "user": "User",
     "action": "Action",
@@ -4882,7 +4890,8 @@
     "cutIn": "Cut In",
     "void": "Void",
     "download": "Download",
-    "remove": "Remove"
+    "remove": "Remove",
+    "refund": "Refund"
   },
   "receptionMenu": {
     "manualBooking": "Manual Booking",
