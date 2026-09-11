@@ -99,7 +99,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 // Props: the bound value, options, and a set of presentation/label
@@ -301,8 +301,11 @@ function pick(value) {
   const target = props.options.find((option) => String(option.value) === String(value))
   if (target?.disabled) return
   emit('update:modelValue', value)
-  emit('change', value)
+  emit('change', target || { value })
   close()
+  nextTick(() => {
+    if (open.value) close()
+  })
 }
 
 /**

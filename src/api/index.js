@@ -958,6 +958,14 @@ export const invoiceApi = {
     return api.post(`${v1}/reservations/${reservationId}/invoice`)
   },
   /**
+   * Refreshes the folio invoice and e-mails the PDF to the guest's address.
+   * @param {string|number} reservationId - Reservation identifier.
+   * @returns {Promise} Axios response confirming the dispatch.
+   */
+  send(reservationId) {
+    return api.post(`${v1}/reservations/${reservationId}/invoice/send`)
+  },
+  /**
    * Streams the PDF; the caller turns the blob into a browser download.
    * @param {string|number} id - Invoice identifier.
    * @returns {Promise} Axios response with the PDF blob.

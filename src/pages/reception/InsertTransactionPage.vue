@@ -24,7 +24,7 @@
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
     <div class="two-col">
-      <!-- Transaction details / rate -->
+      <!-- Transaction details -->
       <div class="card" style="padding: 20px;">
         <h3 style="margin: 0 0 16px;"><i class="fas fa-file-invoice" style="color: var(--mrk-blue);"></i> {{ $t('nightAudit.transactionDetails') }}</h3>
         <div class="form-grid">
@@ -33,18 +33,30 @@
             <input v-model="form.audit_date" type="date" class="input" :max="todayStr" />
           </div>
           <div class="form-group">
-            <label>{{ $t('nightAudit.chargeType') }} *</label>
-            <select v-model="form.charge_type" class="input">
-              <option v-for="(label, key) in chargeTypeLabels" :key="key" :value="key">{{ label }}</option>
-            </select>
+            <label>{{ $t('nightAudit.guestSearch') }} *</label>
+            <SearchableSelect
+              :model-value="selectedReservationId"
+              :options="reservationOptions"
+              :search-placeholder="$t('nightAudit.guestSearchPlaceholder')"
+              :searching="reservationSearching"
+              :empty-label="$t('nightAudit.noGuestsFound')"
+              force-search
+              @search="searchReservations"
+              @change="onReservationSelect"
+            />
           </div>
-          <div class="form-group">
-            <label>{{ $t('nightAudit.reservationNo') }}</label>
-            <input v-model="form.reservation_id" type="text" class="input" :placeholder="t('nightAudit.reservationNoPlaceholder')" />
-          </div>
-          <div class="form-group">
-            <label>{{ $t('nightAudit.roomNo') }}</label>
-            <input v-model="form.room_number" type="text" class="input" />
+        </div>
+
+        <div v-if="selectedGuest" class="guest-info-card">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>{{ $t('nightAudit.guestName') }}</label>
+              <input :value="selectedGuest.guest_name" class="input" readonly />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('nightAudit.roomNo') }}</label>
+              <input :value="selectedGuest.room_number" class="input" readonly />
+            </div>
           </div>
         </div>
 
@@ -71,25 +83,18 @@
         <!-- Billing summary -->
         <div class="billing-summary">
           <h4>{{ $t('nightAudit.billingSummary') }}</h4>
-          <div class="billing-row"><span>{{ $t('nightAudit.roomCharges') }}</span><span>{{ fmtMoney(amount) }}</span></div>
+          <div class="billing-row"><span>{{ $t('nightAudit.amount') }}</span><span>{{ fmtMoney(amount) }}</span></div>
           <div class="billing-row"><span>{{ $t('nightAudit.taxes') }}</span><span>{{ fmtMoney(taxAmount) }}</span></div>
-          <div class="billing-row total"><span>{{ $t('nightAudit.dueAmount') }}</span><span>{{ fmtMoney(totalAmount) }}</span></div>
+          <div class="billing-row total"><span>{{ $t('nightAudit.totalAmount') }}</span><span>{{ fmtMoney(totalAmount) }}</span></div>
         </div>
 
-        <h3 style="margin: 20px 0 16px;"><i class="fas fa-user" style="color: var(--mrk-blue);"></i> {{ $t('nightAudit.guestInfo') }}</h3>
-        <div class="form-grid">
-          <div class="form-group">
-            <label>{{ $t('nightAudit.guestName') }}</label>
-            <input v-model="form.guest_name" type="text" class="input" />
-          </div>
-          <div class="form-group">
-            <label>{{ $t('nightAudit.description') }}</label>
-            <input v-model="form.description" type="text" class="input" :placeholder="t('nightAudit.descriptionPlaceholder')" />
-          </div>
+        <h3 style="margin: 20px 0 16px;"><i class="fas fa-user" style="color: var(--mrk-blue);"></i> {{ $t('nightAudit.description') }}</h3>
+        <div class="form-group">
+          <input v-model="form.description" type="text" class="input" :placeholder="t('nightAudit.descriptionPlaceholder')" />
         </div>
 
         <div class="form-actions">
-          <button class="btn btn-primary" :disabled="submitting || closed" @click="submit">
+          <button class="btn btn-primary" :disabled="submitting || closed || !selectedReservationId" @click="submit">
             <i class="fas fa-circle-plus"></i>
             {{ submitting ? $t('common.saving') : $t('nightAudit.insert') }}
           </button>
@@ -107,7 +112,7 @@
         <table v-else class="table">
           <thead>
             <tr>
-              <th>{{ $t('nightAudit.chargeType') }}</th>
+              <th>{{ $t('nightAudit.guestName') }}</th>
               <th>{{ $t('nightAudit.description') }}</th>
               <th>{{ $t('nightAudit.totalAmount') }}</th>
               <th></th>
@@ -115,7 +120,7 @@
           </thead>
           <tbody>
             <tr v-for="txn in transactions" :key="txn.adjustment_id">
-              <td class="capitalize">{{ chargeTypeLabels[txn.charge_type] || txn.charge_type }}</td>
+              <td>{{ txn.guest_name || '—' }}</td>
               <td>{{ txn.description || '—' }}</td>
               <td>{{ fmtMoney(txn.total_amount) }}</td>
               <td>
@@ -144,10 +149,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { nightAuditApi } from '@/api'
+import { nightAuditApi, reservationApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import SearchableSelect from '@/components/SearchableSelect.vue'
 
 const { t } = useI18n()
 
@@ -155,22 +161,51 @@ const todayStr = new Date().toISOString().slice(0, 10)
 
 const form = ref({
   audit_date: todayStr,
-  charge_type: 'room',
-  reservation_id: '',
-  room_number: '',
   amount: 0,
   tax_percent: 18,
   guest_name: '',
   description: '',
 })
 
-const chargeTypeLabels = computed(() => ({
-  room: t('nightAudit.chargeRoom'),
-  fnb: t('nightAudit.chargeFnb'),
-  laundry: t('nightAudit.chargeLaundry'),
-  fun_games: t('nightAudit.chargeFunGames'),
-  misc: t('nightAudit.chargeMisc'),
-}))
+const selectedReservationId = ref('')
+const selectedGuest = ref(null)
+const reservationOptions = ref([])
+const reservationSearching = ref(false)
+
+async function searchReservations(query) {
+  if (!query || query.length < 2) {
+    reservationOptions.value = []
+    return
+  }
+  reservationSearching.value = true
+  try {
+    const res = await reservationApi.index({ search: query, status: 'checked_in,confirmed,pending', per_page: 20 })
+    const rows = res.data?.data || []
+    reservationOptions.value = rows.map(r => ({
+      value: r.reservation_id,
+      label: `${r.guest_name || '—'} · ${r.room?.room_number || 'No room'} · ${r.status} · ${r.reservation_id}`,
+      _raw: r,
+    }))
+  } catch {
+    reservationOptions.value = []
+  } finally {
+    reservationSearching.value = false
+  }
+}
+
+function onReservationSelect(option) {
+  if (!option) {
+    selectedReservationId.value = ''
+    selectedGuest.value = null
+    form.value.guest_name = ''
+    return
+  }
+  const raw = option._raw || option
+  selectedReservationId.value = raw.reservation_id
+  selectedGuest.value = raw
+  form.value.guest_name = raw.guest_name || ''
+  form.value.room_number = raw.room?.room_number || ''
+}
 
 const transactions = ref([])
 const closed = ref(false)
@@ -196,16 +231,10 @@ function fmtMoney(v) {
 }
 
 function resetForm() {
-  form.value = {
-    audit_date: todayStr,
-    charge_type: 'room',
-    reservation_id: '',
-    room_number: '',
-    amount: 0,
-    tax_percent: 18,
-    guest_name: '',
-    description: '',
-  }
+  form.value = { audit_date: todayStr, amount: 0, tax_percent: 18, guest_name: '', description: '' }
+  selectedReservationId.value = ''
+  selectedGuest.value = null
+  reservationOptions.value = []
 }
 
 async function load() {
@@ -240,7 +269,7 @@ async function checkClosed() {
 }
 
 async function submit() {
-  if (!form.value.audit_date || amount.value <= 0) {
+  if (!form.value.audit_date || amount.value <= 0 || !selectedReservationId.value) {
     error.value = t('nightAudit.requiredFields')
     return
   }
@@ -250,12 +279,11 @@ async function submit() {
   try {
     await nightAuditApi.insertTransaction({
       audit_date: form.value.audit_date,
-      charge_type: form.value.charge_type,
       amount: amount.value,
       tax_percent: taxPercent.value,
-      reservation_id: form.value.reservation_id || undefined,
-      room_number: form.value.room_number || undefined,
-      guest_name: form.value.guest_name || undefined,
+      reservation_id: selectedReservationId.value,
+      guest_name: selectedGuest.value?.guest_name || form.value.guest_name || undefined,
+      room_number: selectedGuest.value?.room?.room_number || undefined,
       description: form.value.description || undefined,
     })
     success.value = t('nightAudit.insertSuccess')
@@ -308,6 +336,7 @@ onMounted(async () => {
 .two-col { display: grid; grid-template-columns: 1fr 380px; gap: 16px; align-items: start; }
 .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .strong-input { font-weight: 700; color: #005EB8; background: #f0f7ff; }
+.guest-info-card { margin-top: 16px; padding: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; }
 .billing-summary { margin-top: 16px; padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; }
 .billing-summary h4 { margin: 0 0 10px; font-size: 14px; color: #334155; }
 .billing-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; color: #475569; }
@@ -316,7 +345,6 @@ onMounted(async () => {
 .closed-note { color: #b45309; font-size: 13px; }
 .btn-danger-mini { background: #fee2e2; color: #b91c1c; border: none; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
 .btn-danger-mini:hover { background: #fecaca; }
-.capitalize { text-transform: capitalize; }
 @media (max-width: 992px) { .two-col { grid-template-columns: 1fr; } }
 @media (max-width: 768px) {
   .dashboard-page { padding: 20px 16px; }

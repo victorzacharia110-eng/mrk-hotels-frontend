@@ -723,6 +723,16 @@
                 <i class="fas fa-print" aria-hidden="true"></i>
                 {{ invoiceBusy ? $t('invoices.preparing') : $t('stayview.printInvoice') }}
               </button>
+              <button
+                type="button"
+                class="btn btn-secondary sv-modal-manage"
+                :disabled="invoiceBusy || !activeBar.guestEmail"
+                :title="activeBar.guestEmail ? activeBar.guestEmail : $t('stayview.noGuestEmail')"
+                @click="sendInvoice(activeBar)"
+              >
+                <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                {{ invoiceBusy ? $t('invoices.preparing') : $t('stayview.sendInvoice') }}
+              </button>
               <div class="sv-dropdown">
                 <button
                   type="button"
@@ -1267,6 +1277,13 @@
                 </label>
               </div>
               <div class="sv-field-row">
+                <CountryCitySelect
+                  v-model:countryCode="bookingForm.country_code"
+                  v-model:city="bookingForm.city"
+                  :required="false"
+                />
+              </div>
+              <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('reservations.bookingType') }}</span>
                   <select v-model="bookingForm.booking_type" class="input" data-field="booking_type" :class="{ 'sv-input-error': bookingErrors.booking_type }" required>
@@ -1651,7 +1668,9 @@ import RoleBadge from '@/components/RoleBadge.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
+import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import { requiresProvider } from '@/utils/payments'
+import { toast } from '@/utils/toast'
 import { formatDateDMY } from '@/utils/dates'
 import { formatPhoneGaps, formatPhoneNational, validatePhoneNumber } from '@/utils/phone'
 import {
@@ -1930,6 +1949,7 @@ const barsByRoom = computed(() => {
       // Full client/stay details so the modal shows everything in one place.
       reference: r.booking_reference || '—',
       email: r.guest_email || '—',
+      guestEmail: r.guest_email || '',
       phone: r.guest_phone || '—',
       location: [r.city, r.country].filter(Boolean).join(', ') || '—',
       guests: `${r.num_adults ?? 1} ${t('stayview.adults')}${r.num_children ? ` · ${r.num_children} ${t('stayview.children')}` : ''}`,
@@ -2913,6 +2933,19 @@ async function printInvoice(bar) {
   }
 }
 
+async function sendInvoice(bar) {
+  invoiceBusy.value = true
+  actionError.value = ''
+  try {
+    const res = await invoiceApi.send(bar.id)
+    toast(res.data.message || t('stayview.invoiceSent'))
+  } catch (err) {
+    actionError.value = err.response?.data?.message || t('stayview.invoiceError')
+  } finally {
+    invoiceBusy.value = false
+  }
+}
+
 /* ---------------- Stock ledger report ---------------- */
 
 const authStore = useAuthStore()
@@ -3466,6 +3499,7 @@ function resetBookingForm() {
     last_name: '',
     guest_phone: '',
     country_code: 'TZ',
+    city: '',
     booking_type: 'single',
     room_id: rooms.value[0]?.room_id || null,
     check_in_date: today,
