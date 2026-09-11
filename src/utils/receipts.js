@@ -19,6 +19,36 @@ function divider(char = '-') {
   return char.repeat(WIDTH)
 }
 
+// Friendly names for the payment method codes the POS uses, matching the
+// on-screen payment pickers so the till paper says the same thing the cashier
+// saw when the money was taken.
+const PAYMENT_METHOD_LABELS = {
+  cash: 'Cash',
+  mobile_money: 'Mobile Money',
+  bank: 'Bank',
+  selcom: 'Selcom',
+  card: 'Card',
+  clickpesa: 'ClickPesa',
+}
+
+// Brand names for the mobile-money wallets and banks that hold the money.
+const PAYMENT_PROVIDER_LABELS = {
+  mpesa: 'Mpesa',
+  airtel_money: 'Airtel Money',
+  mixx_by_yas: 'Mixx By Yas',
+  halopesa: 'HaloPesa',
+  crdb: 'CRDB',
+  nmb: 'NMB',
+  nbc: 'NBC',
+  other: 'Other',
+}
+
+/** Titlecases an otherwise-unknown code (e.g. `deferred_card` → "Deferred Card"). */
+function friendlyLabel(code, map = {}) {
+  const value = String(code ?? '')
+  return map[value] || value.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
 /**
  * Lines for a guest receipt — a compact bill that fits small receipt paper.
  * Rows are [text, bold?, size?] where size 2 = double-width double-height.
@@ -53,6 +83,11 @@ export function orderReceiptLines(order, opts = {}) {
   for (const item of order.items || []) {
     const qty = item.quantity ?? 1
     lines.push([itemRow(`${qty} x ${item.item_name}`, money(item.subtotal ?? 0))])
+    // Multi-quantity lines also show the unit price so a guest can verify the
+    // math (2 x 1,000 → 2,000) instead of trusting the line total blindly.
+    if (qty > 1 && item.unit_price != null) {
+      lines.push([`   @ ${money(item.unit_price)} each`])
+    }
   }
 
   lines.push([divider()])
@@ -62,6 +97,23 @@ export function orderReceiptLines(order, opts = {}) {
   lines.push([itemRow('Total:', `${money(total)} TSh`), true])
   lines.push([itemRow('Paid:', `${money(paid)} TSh`)])
   lines.push([itemRow('Due:', `${money(due)} TSh`)])
+
+  // Payment service details: how the money was collected, by which provider,
+  // the till reference the hotel can trace it with, and who took it. Only
+  // shown when the order was actually settled (carries a `_payment`).
+  const payment = order._payment
+  if (payment) {
+    lines.push([''])
+    lines.push([padLine('Payment', 'center')])
+    lines.push([itemRow('Method:', friendlyLabel(payment.method, PAYMENT_METHOD_LABELS))])
+    if (payment.provider) lines.push([itemRow('Provider:', friendlyLabel(payment.provider, PAYMENT_PROVIDER_LABELS))])
+    if (payment.payment_id) lines.push([itemRow('Receipt No:', String(payment.payment_id))])
+    if (payment.transaction_reference) lines.push([itemRow('Reference:', String(payment.transaction_reference))])
+    if (payment.status) lines.push([itemRow('Status:', friendlyLabel(payment.status))])
+    lines.push([itemRow('Paid At:', new Date(payment.paid_at || Date.now()).toLocaleString())])
+    lines.push([itemRow('Collected By:', String(payment.collected_by || '-'))])
+  }
+
   lines.push([''])
   lines.push([padLine('Thank you', 'center')])
   lines.push([`Prepared By: ${order._payment?.collected_by || order.waiter_name || ''}`])

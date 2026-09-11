@@ -723,6 +723,13 @@
               <p class="rc-line">{{ $t('orderTaker.receiptTitle') }}</p>
               <p class="rc-line">{{ receipt.order_number }} · {{ new Date(receipt.paid_at).toLocaleString() }}</p>
               <hr />
+              <div v-if="(receipt.order.items || []).length" class="rc-items">
+                <div v-for="(it, i) in receipt.order.items" :key="i" class="rc-item">
+                  <span class="rc-item-name">{{ it.quantity }} × {{ it.item_name }}</span>
+                  <span class="rc-item-amt">{{ money(it.subtotal) }}</span>
+                </div>
+                <hr />
+              </div>
               <p class="rc-total">TZS {{ money(receipt.total) }}</p>
               <p class="rc-line">{{ $t('paymentFields.method') }}: {{ methodLabel(receipt.method) }}</p>
               <p class="rc-line">{{ $t('orderTaker.receiptRef') }}: {{ receipt.transaction_reference }}</p>
@@ -3508,6 +3515,27 @@ function onKey(e) {
   font-size: 12px;
   color: #52525b;
   margin: 2px 0;
+}
+
+.receipt .rc-items {
+  margin: 4px 0;
+}
+
+.receipt .rc-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #3f3f46;
+  padding: 3px 0;
+}
+
+.receipt .rc-item-name {
+  flex: 1;
+}
+
+.receipt .rc-item-amt {
+  font-weight: 600;
 }
 
 .receipt .rc-total {
