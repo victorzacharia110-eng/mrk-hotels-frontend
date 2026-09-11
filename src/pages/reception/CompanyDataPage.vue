@@ -36,7 +36,7 @@
         </div>
         <div class="form-group">
           <label>{{ $t('receptionPanel.companyPhone') }}</label>
-          <PhoneInput v-model="form.phone" v-model:countryCode="form.country_code" />
+          <PhoneInput v-model="form.phone" v-model:countryCode="form.country_code" :error="profilePhoneError" />
         </div>
         <div class="form-group">
           <label>{{ $t('receptionPanel.companyEmail') }}</label>
@@ -134,7 +134,7 @@
           </div>
           <div class="form-group">
             <label>{{ $t('receptionPanel.companyPhone') }}</label>
-            <PhoneInput v-model="companyForm.phone" v-model:countryCode="companyForm.country_code" />
+            <PhoneInput v-model="companyForm.phone" v-model:countryCode="companyForm.country_code" :error="companyPhoneError" />
           </div>
           <div class="form-group">
             <label>{{ $t('receptionPanel.companyEmail') }}</label>
@@ -166,6 +166,7 @@ import { useI18n } from 'vue-i18n'
 import { hotelSettingsApi, companyApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import PhoneInput from '@/components/PhoneInput.vue'
+import { validatePhoneNumber } from '@/utils/phone'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -205,9 +206,23 @@ function reset() {
   load()
 }
 
+const profilePhoneError = ref('')
+
 async function saveProfile() {
   saving.value = true
   error.value = ''
+  profilePhoneError.value = ''
+  if (form.value.phone) {
+    const res = validatePhoneNumber(form.value.phone, form.value.country_code || 'TZ')
+    if (!res.valid) {
+      profilePhoneError.value =
+        res.reason === 'too_long' ? t('validations.phoneTooLong') : t('validations.phoneInvalid')
+    }
+  }
+  if (profilePhoneError.value) {
+    saving.value = false
+    return
+  }
   try {
     await hotelSettingsApi.update({
       hotel_name: form.value.hotel_name,
@@ -232,6 +247,7 @@ const companiesLoading = ref(false)
 const companyModal = ref(false)
 const editingCompany = ref(false)
 const companySaving = ref(false)
+const companyPhoneError = ref('')
 const companyForm = ref(emptyCompany())
 let currentCompany = null
 
@@ -268,6 +284,7 @@ function openCompanyAdd() {
   currentCompany = null
   companyForm.value = emptyCompany()
   error.value = ''
+  companyPhoneError.value = ''
   companyModal.value = true
 }
 
@@ -287,6 +304,7 @@ function openCompanyEdit(c) {
     country_code: c.country_code || '',
   }
   error.value = ''
+  companyPhoneError.value = ''
   companyModal.value = true
 }
 
@@ -299,6 +317,18 @@ async function saveCompany() {
   if (!companyForm.value.name?.trim()) return
   companySaving.value = true
   error.value = ''
+  companyPhoneError.value = ''
+  if (companyForm.value.phone) {
+    const res = validatePhoneNumber(companyForm.value.phone, companyForm.value.country_code || 'TZ')
+    if (!res.valid) {
+      companyPhoneError.value =
+        res.reason === 'too_long' ? t('validations.phoneTooLong') : t('validations.phoneInvalid')
+    }
+  }
+  if (companyPhoneError.value) {
+    companySaving.value = false
+    return
+  }
   const payload = {
     name: companyForm.value.name,
     tin_number: companyForm.value.tin_number,
