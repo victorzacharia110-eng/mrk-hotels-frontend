@@ -161,7 +161,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { hotelSettingsApi, companyApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
@@ -312,6 +312,19 @@ function askCompanyDelete(c) {
   if (!confirm(t('receptionPanel.confirmDeleteCompany', { name: c.name }))) return
   deleteCompany(c)
 }
+
+watch(
+  () => [form.value.phone, form.value.country_code],
+  () => {
+    profilePhoneError.value = ''
+  },
+)
+watch(
+  () => [companyForm.value.phone, companyForm.value.country_code],
+  () => {
+    companyPhoneError.value = ''
+  },
+)
 
 async function saveCompany() {
   if (!companyForm.value.name?.trim()) return

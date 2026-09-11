@@ -99,13 +99,31 @@ function countryDial(code) {
  * @param {Event} event - The originating input event (for a direct DOM fix).
  */
 function onPhoneInput(value, event) {
-  invalidMsg.value = ''
   const capped = capPhoneInput(value, props.countryCode)
   const formatted = formatPhoneInput(capped, props.countryCode)
   if (formatted !== props.modelValue) {
     emit('update:modelValue', formatted)
   } else if (event?.target && event.target.value !== formatted) {
     event.target.value = formatted
+  }
+  refreshValidity()
+}
+
+/**
+ * Live validity check, run on every keystroke (and country change) instead of
+ * only on blur. A definite mistake — a TZ number whose subscriber part opens
+ * with something other than 6/7, or an over-length international form — is
+ * flagged the instant it lands; a merely short number stays silent so a
+ * half-typed input never cries "invalid".
+ */
+function refreshValidity() {
+  const res = validatePhoneNumber(props.modelValue, props.countryCode)
+  if (res.reason === 'too_long') {
+    invalidMsg.value = t('validations.phoneTooLong')
+  } else if (!res.valid && !res.possible && res.reason === 'invalid') {
+    invalidMsg.value = t('validations.phoneInvalid')
+  } else {
+    invalidMsg.value = ''
   }
 }
 
@@ -123,6 +141,7 @@ function onCountryChange(code) {
 
   emit('update:countryCode', code)
   emit('update:modelValue', formatPhoneInput(withoutDial, code))
+  refreshValidity()
 }
 
 /**
