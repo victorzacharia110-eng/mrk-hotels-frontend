@@ -44,12 +44,14 @@
               </span>
             </td>
             <td v-if="canEdit">
-              <button class="btn btn-sm btn-secondary" @click="openEdit(s)">
-                <i class="fas fa-pen"></i>
-              </button>
-              <button class="btn btn-sm btn-danger" @click="askDelete(s)">
-                <i class="fas fa-trash"></i>
-              </button>
+              <div style="display: inline-flex; gap: 8px; align-items: center;">
+                <button class="btn btn-sm btn-secondary" @click="openEdit(s)">
+                  <i class="fas fa-pen"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" @click="askDelete(s)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
             </td>
           </tr>
           <tr v-if="!sources.length && !loading">

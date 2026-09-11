@@ -36,7 +36,7 @@
         </div>
         <div class="form-group">
           <label>{{ $t('receptionPanel.companyPhone') }}</label>
-          <input v-model="form.phone" type="tel" class="input" />
+          <PhoneInput v-model="form.phone" v-model:countryCode="form.country_code" />
         </div>
         <div class="form-group">
           <label>{{ $t('receptionPanel.companyEmail') }}</label>
@@ -85,12 +85,14 @@
               </span>
             </td>
             <td v-if="canEdit">
-              <button class="btn btn-sm btn-secondary" @click="openCompanyEdit(c)">
-                <i class="fas fa-pen"></i>
-              </button>
-              <button class="btn btn-sm btn-danger" @click="askCompanyDelete(c)">
-                <i class="fas fa-trash"></i>
-              </button>
+              <div style="display: inline-flex; gap: 8px; align-items: center;">
+                <button class="btn btn-sm btn-secondary" @click="openCompanyEdit(c)">
+                  <i class="fas fa-pen"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" @click="askCompanyDelete(c)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
             </td>
           </tr>
           <tr v-if="!companies.length && !companiesLoading">
@@ -132,7 +134,7 @@
           </div>
           <div class="form-group">
             <label>{{ $t('receptionPanel.companyPhone') }}</label>
-            <input v-model="companyForm.phone" type="tel" class="input" />
+            <PhoneInput v-model="companyForm.phone" v-model:countryCode="companyForm.country_code" />
           </div>
           <div class="form-group">
             <label>{{ $t('receptionPanel.companyEmail') }}</label>
@@ -163,6 +165,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { hotelSettingsApi, companyApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
+import PhoneInput from '@/components/PhoneInput.vue'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -173,7 +176,7 @@ const success = ref('')
 const error = ref('')
 
 /* ----- Hotel profile ----- */
-const empty = () => ({ hotel_name: '', address: '', phone: '', email: '' })
+const empty = () => ({ hotel_name: '', address: '', phone: '', email: '', country_code: '' })
 const form = ref(empty())
 
 async function load() {
@@ -188,6 +191,7 @@ async function load() {
       address: data.address || '',
       phone: data.phone || '',
       email: data.email || '',
+      country_code: data.country_code || '',
     }
   } catch (err) {
     error.value = err.response?.data?.message || t('common.loadError')
@@ -205,7 +209,12 @@ async function saveProfile() {
   saving.value = true
   error.value = ''
   try {
-    await hotelSettingsApi.update(form.value)
+    await hotelSettingsApi.update({
+      hotel_name: form.value.hotel_name,
+      address: form.value.address,
+      phone: form.value.phone,
+      email: form.value.email,
+    })
     success.value = t('receptionPanel.companySaved')
     await load()
   } catch (err) {
@@ -237,6 +246,7 @@ function emptyCompany() {
     contact_person: '',
     notes: '',
     is_active: true,
+    country_code: '',
   }
 }
 
@@ -274,6 +284,7 @@ function openCompanyEdit(c) {
     contact_person: c.contact_person || '',
     notes: c.notes || '',
     is_active: !!c.is_active,
+    country_code: c.country_code || '',
   }
   error.value = ''
   companyModal.value = true
@@ -288,12 +299,23 @@ async function saveCompany() {
   if (!companyForm.value.name?.trim()) return
   companySaving.value = true
   error.value = ''
+  const payload = {
+    name: companyForm.value.name,
+    tin_number: companyForm.value.tin_number,
+    address: companyForm.value.address,
+    city: companyForm.value.city,
+    phone: companyForm.value.phone,
+    email: companyForm.value.email,
+    contact_person: companyForm.value.contact_person,
+    notes: companyForm.value.notes,
+    is_active: companyForm.value.is_active,
+  }
   try {
     if (editingCompany.value && currentCompany) {
-      await companyApi.update(currentCompany.company_id, companyForm.value)
+      await companyApi.update(currentCompany.company_id, payload)
       success.value = t('common.updateSuccess') || 'Updated.'
     } else {
-      await companyApi.store(companyForm.value)
+      await companyApi.store(payload)
       success.value = t('common.createSuccess') || 'Added.'
     }
     companyModal.value = false
