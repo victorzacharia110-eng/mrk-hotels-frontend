@@ -405,6 +405,11 @@
 
               <!-- Folio Operations -->
               <div v-if="stayTab === 'folio'" class="sv-tab-panel" role="tabpanel">
+                <div class="sv-folio-ref">
+                  <i class="fas fa-book-open" aria-hidden="true"></i>
+                  <span>{{ $t('folio.no') }}</span>
+                  <strong>{{ folio?.folio?.folio_code || activeBar?.folio_code || '—' }}</strong>
+                </div>
                 <div class="sv-panel-cards">
                   <div class="sv-panel-card">
                     <span>{{ $t('stayview.totalRoomCharges') }}</span>
@@ -441,7 +446,7 @@
                         <tr
                           v-for="e in folioEntries"
                           :key="e.key"
-                          :class="[e.credit ? 'row-credit' : 'row-charge', { 'row-muted': e.muted }]"
+                          :class="[e.credit ? 'row-credit' : 'row-charge', { 'row-muted': e.muted, 'row-viewed': viewedRow === e.key }]"
                         >
                           <td>{{ formatDateDMY(e.date) }}</td>
                           <td class="sv-particular">{{ e.particular }}</td>
@@ -460,6 +465,25 @@
                               @click="openEditEntry(e)"
                             >
                               <i class="fas fa-pen" aria-hidden="true"></i>
+                            </button>
+                            <button
+                              v-if="!e.editable && e.entryId"
+                              type="button"
+                              class="sv-icon-link"
+                              :title="$t('folio.view')"
+                              @click="viewEntry(e)"
+                            >
+                              <i class="fas fa-eye" aria-hidden="true"></i>
+                            </button>
+                            <button
+                              v-if="activeBar?.guestEmail && activeBar?.id"
+                              type="button"
+                              class="sv-icon-link"
+                              :title="$t('stayview.sendInvoice')"
+                              :disabled="invoiceBusy"
+                              @click="sendInvoice(activeBar)"
+                            >
+                              <i class="fas fa-paper-plane" aria-hidden="true"></i>
                             </button>
                             <a
                               v-if="e.entryUrl"
@@ -609,10 +633,11 @@
               <div v-else-if="stayTab === 'tasks'" class="sv-tab-panel" role="tabpanel">
                 <div class="sv-tab-head">
                   <span class="sv-tab-section">{{ $t('stayview.tasksForRoom') }}</span>
-                  <button v-if="canSeeFrontDesk" type="button" class="btn btn-secondary btn-sm" :disabled="actionBusy" @click="openTasksModal(activeBar.roomId)">
+                  <button v-if="canSeeFrontDesk" type="button" class="btn btn-secondary btn-sm" :disabled="actionBusy || isStayClosed" :title="isStayClosed ? $t('stayview.tasksLockedAfterCheckout') : ''" @click="openTasksModal(activeBar.roomId)">
                     <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('stayview.taskAdd') }}
                   </button>
                 </div>
+                <p v-if="isStayClosed" class="sv-cap sv-note">{{ $t('stayview.tasksLockedAfterCheckout') }}</p>
                 <div v-if="roomTasksLoading" class="sv-modal-row muted">
                   <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
                   <span>{{ $t('common.loading') }}</span>
@@ -639,8 +664,8 @@
                       <button
                         type="button"
                         class="sv-icon-link"
-                        :title="$t('stayview.taskDelete')"
-                        :disabled="actionBusy"
+                        :title="isStayClosed ? $t('stayview.tasksLockedAfterCheckout') : $t('stayview.taskDelete')"
+                        :disabled="actionBusy || isStayClosed"
                         @click="runRoomTask(tk, 'destroy')"
                       >
                         <i class="fas fa-trash-can" aria-hidden="true"></i>
@@ -1043,44 +1068,113 @@
                 <p class="sv-cap sv-note">{{ $t('stayview.inclusionHint') }}</p>
               </template>
               <template v-else-if="folioOp === 'move'">
-                <div class="sv-status-grid">
+                <div class="sv-move-switch">
                   <button
                     v-for="m in moveModes"
                     :key="m.key"
                     type="button"
                     class="sv-status-btn"
                     :class="{ active: folioMoveMode === m.key }"
-                    :disabled="actionBusy"
-                    @click="folioMoveMode = m.key"
+                    :disabled="actionBusy || newFolioBusy"
+                    @click="setMoveMode(m.key)"
                   >
                     <span class="sv-cap">{{ m.label }}</span>
                   </button>
                 </div>
-                <label class="sv-field">
-                  <span>{{ $t('stayview.moveAmount') }}</span>
-                  <input v-model.number="folioOpForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" required />
-                </label>
-                <label v-if="folioMoveMode !== 'newfolio'" class="sv-field">
-                  <span>{{ $t('stayview.targetFolio') }}</span>
-                  <select v-model="folioOpForm.target_reservation_id" class="input" data-field="target_reservation_id" required>
-                    <option value="" disabled>{{ $t('stayview.selectTarget') }}</option>
-                    <option v-for="opt in folioTargetOptions" :key="opt.value" :value="opt.value">
-                      {{ opt.label }}
-                    </option>
-                  </select>
-                </label>
-                <label v-else class="sv-field">
-                  <span>{{ $t('stayview.newFolioRoom') }}<em class="sv-auto"> · {{ $t('stayview.optional') }}</em></span>
-                  <SearchableSelect
-                    v-model="folioOpForm.new_room_id"
-                    :options="roomMoveOptions"
-                    :search-placeholder="$t('stayview.searchRoom')"
-                    force-search
-                  />
-                </label>
-                <p class="sv-cap sv-note">
-                  {{ folioMoveMode === 'newfolio' ? $t('stayview.newFolioHint') : $t('stayview.moveHint') }}
-                </p>
+
+                <div class="sv-split-panel">
+                  <div class="sv-split-side">
+                    <div class="sv-split-head">
+                      <strong>{{ $t('stayview.splitSourceLabel') }}</strong>
+                      <label class="sv-split-any">
+                        <input type="checkbox" :checked="allOpsSelected" :disabled="!moveSourceOptions.length || actionBusy || newFolioBusy" @change="toggleAllOps" />
+                        <span class="sv-cap">{{ $t('stayview.selectAll') }}</span>
+                      </label>
+                    </div>
+                    <div v-if="folioLoading" class="sv-modal-row muted">
+                      <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+                      <span>{{ $t('common.loading') }}</span>
+                    </div>
+                    <div v-else-if="!moveSourceOptions.length" class="sv-modal-row muted">
+                      <span>{{ $t('stayview.noFolioOps') }}</span>
+                    </div>
+                    <div v-else class="sv-split-ops">
+                      <label v-for="e in moveSourceOptions" :key="e.entryId" class="sv-split-op" :class="{ locked: !e.selectable }">
+                        <input type="checkbox" :value="e.entryId" v-model="moveSelected" :disabled="!e.selectable || actionBusy || newFolioBusy" />
+                        <span class="sv-split-op-text">
+                          <span class="sv-cap">{{ formatDateDMY(e.date) }} · {{ e.particular }}</span>
+                          <span class="sv-cap sv-muted">{{ e.description }}</span>
+                        </span>
+                        <strong class="num">{{ e.credit ? '−' : '' }}TZS {{ fmtNum(e.amount, 2) }}</strong>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="sv-split-arrow" aria-hidden="false">
+                    <div class="sv-split-arrow-bar"></div>
+                    <button
+                      type="button"
+                      class="sv-arrow-btn"
+                      :disabled="actionBusy || newFolioBusy || !moveSelected.length || !moveTarget"
+                      :title="$t('stayview.moveSelectedOps')"
+                      @click="moveSelectedOps"
+                    >
+                      <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    </button>
+                    <div class="sv-split-arrow-bar"></div>
+                  </div>
+
+                  <div class="sv-split-side">
+                    <div class="sv-split-head">
+                      <strong>{{ $t('stayview.splitTargetLabel') }}</strong>
+                      <span v-if="moveTargetObj" class="sv-cap sv-muted">{{ moveTargetObj.folio_code }}</span>
+                    </div>
+                    <div class="sv-split-search">
+                      <input
+                        v-model="moveTargetSearch"
+                        type="text"
+                        class="input"
+                        :placeholder="$t('stayview.splitSearchPlaceholder')"
+                        @keyup.enter="searchFolioTargets"
+                      />
+                      <button type="button" class="btn btn-secondary btn-sm" :disabled="moveTargetLoading" @click="searchFolioTargets">
+                        <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                    <button
+                      v-if="folioMoveMode === 'newfolio'"
+                      type="button"
+                      class="btn btn-secondary btn-sm sv-new-folio-btn"
+                      :disabled="newFolioBusy || actionBusy"
+                      @click="createNewFolioTarget"
+                    >
+                      <i class="fas fa-plus" aria-hidden="true"></i> {{ newFolioBusy ? $t('common.loading') : $t('stayview.openNewFolio') }}
+                    </button>
+                    <div v-if="moveTargetLoading" class="sv-modal-row muted">
+                      <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+                      <span>{{ $t('common.loading') }}</span>
+                    </div>
+                    <div v-else-if="!moveTargets.length" class="sv-modal-row muted">
+                      <span>{{ $t('stayview.noFolioTargets') }}</span>
+                    </div>
+                    <div v-else class="sv-split-ops">
+                      <label v-for="tt in moveTargets" :key="tt.reservation_id" class="sv-split-op sv-split-target" :class="{ checked: moveTarget === tt.reservation_id }">
+                        <input
+                          type="radio"
+                          :value="tt.reservation_id"
+                          v-model="moveTarget"
+                          :disabled="actionBusy || newFolioBusy || tt.reservation_id === activeBar?.id"
+                        />
+                        <span class="sv-split-op-text">
+                          <span><strong>{{ tt.guest_name || '—' }}</strong> <span class="sv-cap">· {{ tt.folio_code }}</span></span>
+                          <span class="sv-cap sv-muted">{{ tt.room_number || '—' }} · {{ (tt.status || '').replace('_', ' ') }}</span>
+                        </span>
+                        <span class="sv-cap num">{{ tt.balance_due !== undefined && tt.balance_due !== null ? 'TZS ' + fmtNum(tt.balance_due, 0) : '' }}</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
                 <label class="sv-field">
                   <span>{{ $t('stayview.folioNote') }}</span>
                   <input v-model="folioOpForm.description" type="text" class="input" data-field="description" maxlength="255" />
@@ -1941,6 +2035,7 @@ const barsByRoom = computed(() => {
       colorClass,
       rawStatus: r.status,
       statusLabel: r.status.replace('_', ' '),
+      folio_code: r.folio_code || '',
       dates: `${fmt(arrival)} → ${fmt(departure)}`,
       nights: diffDays(arrival, departure),
       roomNumber: r.room?.room_number || '—',
@@ -2201,6 +2296,26 @@ async function loadFolio(id) {
 // Active tab in the stay-view modal; "More" dropdown open state.
 const stayTab = ref('folio')
 const moreOpen = ref(false)
+
+/** Converts an ISO date ('YYYY-MM-DD') to a local midnight Date (null if malformed). */
+function isoToLocalDay(iso) {
+  const parts = String(iso || '').split('-').map((s) => Number(s))
+  return parts.length === 3 && parts.every((n) => Number.isFinite(n)) ? new Date(parts[0], parts[1] - 1, parts[2]) : null
+}
+
+/**
+ * Tasks are locked exactly as the doc states: once the current date has passed
+ * AND the guest has checked out (or the stay was cancelled / never arrived).
+ */
+const isStayClosed = computed(() => {
+  const bar = activeBar.value
+  if (!['checked_out', 'cancelled', 'no_show'].includes(bar?.rawStatus)) return false
+  const departure = isoToLocalDay(bar?.departureIso) || isoToLocalDay(folio.value?.reservation?.check_out_date)
+  if (!departure) return bar?.rawStatus === 'checked_out'
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  return departure < todayStart
+})
 
 // The reference panel's tab strip: Folio Operations, Booking Details, Guest
 // Details, Room Charges, Credit Card, Tasks and Audit Trail.
@@ -2657,15 +2772,101 @@ const moveModes = computed(() => [
   { key: 'newfolio', label: t('stayview.modeNewFolio') },
 ])
 
-/** Other active folios to move money onto. */
-const folioTargetOptions = computed(() =>
-  reservations.value
-    .filter((r) => r.status === 'confirmed' || r.status === 'checked_in')
-    .map((r) => ({
-      value: r.reservation_id,
-      label: `${r.guest_name || '—'} · ${r.room?.room_number || '—'} (${r.status.replace('_', ' ')})`,
+/* Two-panel split/transfer/cut/new-folio state. */
+const moveSelected = ref([])
+const moveTarget = ref('')
+const moveTargets = ref([])
+const moveTargetSearch = ref('')
+const moveTargetLoading = ref(false)
+const newFolioBusy = ref(false)
+
+/**
+ * Operations offered in the source (left) panel. Every persisted ledger row
+ * qualifies; rows without an entry id (e.g. the legacy aggregate line) don't.
+ */
+const moveSourceOptions = computed(() =>
+  folioEntries.value
+    .filter((e) => e.entryId != null)
+    .map((e) => ({
+      entryId: e.entryId,
+      date: e.date,
+      particular: e.particular,
+      description: e.description,
+      amount: e.amount,
+      credit: !!e.credit,
+      selectable: !e.muted,
     })),
 )
+
+const allOpsSelected = computed(
+  () => moveSourceOptions.value.length > 0 && moveSourceOptions.value.every((e) => moveSelected.value.includes(e.entryId)),
+)
+
+function toggleAllOps() {
+  moveSelected.value = allOpsSelected.value ? [] : moveSourceOptions.value.map((e) => e.entryId)
+}
+
+/** The currently highlighted target folio (resolves the picked reservation id). */
+const moveTargetObj = computed(() => moveTargets.value.find((tt) => tt.reservation_id === moveTarget.value) || null)
+
+/** Searches receivable folios to use as the transfer/split destination. */
+async function loadFolioTargets(q = '') {
+  if (!activeBar.value?.id) return
+  moveTargetLoading.value = true
+  try {
+    const res = await reservationApi.folioSearch({ q: q || undefined, exclude: activeBar.value.id, limit: 15 })
+    moveTargets.value = res.data?.folios || []
+  } catch {
+    moveTargets.value = []
+  } finally {
+    moveTargetLoading.value = false
+  }
+}
+
+function searchFolioTargets() {
+  loadFolioTargets(moveTargetSearch.value.trim())
+}
+
+function setMoveMode(mode) {
+  folioMoveMode.value = mode
+  moveSelected.value = []
+  moveTarget.value = ''
+  moveTargetSearch.value = ''
+  loadFolioTargets('')
+}
+
+/** Creates a second folio for the stay via a room hearing (mode 'newfolio'). */
+async function createNewFolioTarget() {
+  if (!activeBar.value?.id || newFolioBusy.value || actionBusy.value) return
+  newFolioBusy.value = true
+  try {
+    const res = await reservationApi.folioOpenNewFolio(activeBar.value.id)
+    const created = res.data?.target_reservation
+    await load(true)
+    await loadFolioTargets('')
+    if (created?.reservation_id) moveTarget.value = created.reservation_id
+  } catch (err) {
+    actionError.value = apiErrorMsg(err, t('stayview.actionError'))
+  } finally {
+    newFolioBusy.value = false
+  }
+}
+
+/** Moves the selected operations onto the chosen target folio. */
+async function moveSelectedOps() {
+  const bar = activeBar.value
+  if (!bar?.id || !moveSelected.value.length || !moveTarget.value || actionBusy.value) return
+  const count = moveSelected.value.length
+  const payload = {
+    mode: folioMoveMode.value,
+    target_reservation_id: moveTarget.value,
+    entry_ids: [...moveSelected.value],
+    description: folioOpForm.value.description?.trim() || `${folioMoveMode.value} of ${count} operation(s)`,
+  }
+  folioOp.value = null
+  await runStayAction(() => reservationApi.folioTransfer(bar.id, payload))
+  if (actionError.value) folioOp.value = 'move'
+}
 
 const folioOpTitle = computed(() => {
   if (folioOp.value === 'discount') return t('stayview.folioDiscountTitle')
@@ -2688,10 +2889,7 @@ const folioOpCanPost = computed(() => {
   if (folioOp.value === 'discount') return Number(f.amount) > 0
   if (folioOp.value === 'adjustment') return f.amount !== '' && Number(f.amount) !== 0
   if (folioOp.value === 'inclusion') return !!(f.description && f.description.trim()) && Number(f.amount) >= 0
-  if (folioOp.value === 'move') {
-    if (Number(f.amount) <= 0) return false
-    return folioMoveMode.value === 'newfolio' ? true : !!f.target_reservation_id
-  }
+  if (folioOp.value === 'move') return moveSelected.value.length > 0 && !!moveTarget.value
   return f.files && f.files.length > 0
 })
 
@@ -2700,7 +2898,12 @@ function openFolioOp(op, mode = 'transfer') {
   folioOp.value = op
   folioMoveMode.value = mode
   folioOpForm.value = { amount: null, description: '', target_reservation_id: '', new_room_id: '', files: [] }
+  moveSelected.value = []
+  moveTarget.value = ''
+  moveTargetSearch.value = ''
+  moveTargets.value = []
   actionError.value = ''
+  if (op === 'move') loadFolioTargets('')
 }
 
 function onFolioFilesPick(event) {
@@ -2723,14 +2926,8 @@ async function submitFolioOp() {
       amount: Number.isFinite(Number(f.amount)) && Number(f.amount) > 0 ? Number(f.amount) : 0,
     }
   } else if (op === 'move') {
-    payload = {
-      mode: folioMoveMode.value,
-      target_reservation_id: folioMoveMode.value === 'newfolio' ? undefined : f.target_reservation_id,
-      new_folio: folioMoveMode.value === 'newfolio',
-      new_room_id: folioMoveMode.value === 'newfolio' && f.new_room_id ? f.new_room_id : undefined,
-      amount: f.amount,
-      description: f.description || null,
-    }
+    await moveSelectedOps()
+    return
   }
   folioOp.value = null
   await runStayAction(() => {
@@ -2760,6 +2957,17 @@ async function removeFolioAttachment(e) {
 const folioEdit = ref(null)
 const folioEditForm = ref({})
 const folioEditErrors = ref({})
+
+/** Row currently highlighted by the VIEW action (flashes, then clears). */
+const viewedRow = ref(null)
+
+/** Highlights the selected ledger row — the view action for read-only rows. */
+function viewEntry(e) {
+  viewedRow.value = e?.key || e?.entryId
+  window.setTimeout(() => {
+    if (viewedRow.value === (e?.key || e?.entryId)) viewedRow.value = null
+  }, 1600)
+}
 
 /** Opens the edit form pre-filled from an editable ledger row. */
 function openEditEntry(e) {
@@ -3853,7 +4061,7 @@ onUnmounted(() => clearInterval(refreshTimer))
 .sv-pill.occupied { background: #fde8e8; color: #c0392b; }
 .sv-pill.reserved { background: #fff3cd; color: #856404; }
 .sv-pill.blocked { background: #e2e3e5; color: #383d41; }
-.sv-pill.dueout { background: #d1ecf1; color: #0c5460; }
+.sv-pill.dueout { background: #ede9fe; color: #6d28d9; }
 .sv-pill.dirty { background: #f8d7da; color: #721c24; }
 
 .sv-toolbar-right {
@@ -4951,7 +5159,21 @@ onUnmounted(() => clearInterval(refreshTimer))
 
 /* The stay-view modal is wider than the small action modals. */
 .sv-modal-tabs {
-  width: 640px;
+  width: 960px;
+}
+
+/* Desktop footer: five action buttons on one row, wrapping when tight. */
+.sv-modal-tabs .sv-modal-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.sv-modal-tabs .sv-modal-actions .sv-modal-manage,
+.sv-modal-tabs .sv-modal-actions .sv-modal-danger {
+  width: auto;
+  margin: 0;
+  white-space: nowrap;
 }
 
 /* Small sub-modals (add payment / amend / void). */
@@ -5091,6 +5313,187 @@ onUnmounted(() => clearInterval(refreshTimer))
 
 .sv-panel-card.pay-pending strong { color: #c0392b; }
 .sv-panel-card.pay-ok strong { color: #1e7e34; }
+
+/* Folio reference (code) line above the summary cards. */
+.sv-folio-ref {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: #fbf7ff;
+  border: 1px dashed #d6c8f5;
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: #6b7280;
+}
+.sv-folio-ref i { color: #8b5cf6; }
+.sv-folio-ref strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  color: #5b21b6;
+  letter-spacing: 0.04em;
+}
+
+/* Two-panel split/transfer/cut/new-folio layout. */
+.sv-move-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.sv-split-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+  margin-bottom: 10px;
+}
+
+.sv-split-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px;
+  max-height: 320px;
+}
+
+.sv-split-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #374151;
+}
+
+.sv-split-any {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sv-split-ops {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.sv-split-op {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #eef0f3;
+  border-radius: 8px;
+  background: #fafbfc;
+  cursor: pointer;
+}
+
+.sv-split-op:hover {
+  border-color: #c7d2fe;
+  background: #f5f7ff;
+}
+
+.sv-split-op input[type='checkbox'],
+.sv-split-op input[type='radio'] {
+  accent-color: #6d28d9;
+  flex: none;
+}
+
+.sv-split-op-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sv-split-op-text span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sv-split-op .num {
+  flex: none;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.sv-split-op.locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sv-split-target.checked {
+  border-color: #8b5cf6;
+  background: #f6f1ff;
+}
+
+.sv-split-search {
+  display: flex;
+  gap: 6px;
+}
+
+.sv-split-search .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.sv-new-folio-btn {
+  align-self: flex-start;
+}
+
+.sv-split-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.sv-split-arrow-bar {
+  width: 2px;
+  flex: 1;
+  min-height: 10px;
+  background: #e5e7eb;
+  border-radius: 2px;
+}
+
+.sv-arrow-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: #6d28d9;
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(109, 40, 217, 0.35);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.sv-arrow-btn:disabled {
+  background: #d1d5db;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.sv-arrow-btn:not(:disabled):hover {
+  background: #5b21b6;
+  transform: translateX(2px);
+}
 
 /* Label/value grid used by Booking and Guest details tabs. */
 .sv-grid {
@@ -5400,6 +5803,111 @@ onUnmounted(() => clearInterval(refreshTimer))
 .btn-sm {
   padding: 4px 10px;
   font-size: 12px;
+}
+
+/* VIEW highlight on a folio row. */
+.sv-table tr.row-viewed td {
+  background: #f6f1ff;
+  animation: svRowFlash 1.6s ease;
+}
+
+@keyframes svRowFlash {
+  0% { background: #d6c8f5; }
+  100% { background: #f6f1ff; }
+}
+
+/* ---- Stay-view modal & content responsive rules ---- */
+
+@media (max-width: 1000px) {
+  .sv-modal-tabs {
+    width: calc(100vw - 32px);
+  }
+}
+
+@media (max-width: 768px) {
+  .sv-modal-backdrop {
+    padding: 10px;
+    align-items: stretch;
+  }
+
+  .sv-modal-tabs {
+    width: 100%;
+    max-height: calc(100vh - 20px);
+  }
+
+  .sv-modal-tabs .sv-modal-actions {
+    justify-content: stretch;
+  }
+
+  .sv-modal-tabs .sv-modal-actions .sv-modal-manage,
+  .sv-modal-tabs .sv-modal-actions .sv-modal-danger {
+    flex: 1 1 auto;
+  }
+
+  .sv-modal-tabs .sv-dropdown {
+    flex: 1 1 auto;
+  }
+
+  .sv-modal-tabs .sv-dropdown > .btn {
+    width: 100%;
+  }
+
+  /* Compact header strip becomes a two-column wrap on phones. */
+  .sv-stay-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sv-stay-strip .sv-stay-item:first-child {
+    grid-column: 1 / -1;
+  }
+
+  /* Two-panel split becomes a vertical stack. */
+  .sv-split-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sv-split-arrow {
+    flex-direction: row;
+  }
+
+  .sv-split-arrow-bar {
+    width: auto;
+    height: 2px;
+    min-width: 12px;
+    min-height: 0;
+    flex: 1;
+  }
+
+  .sv-split-side {
+    max-height: none;
+  }
+
+  /* Summary cards drop to two columns, then one on very small screens. */
+  .sv-panel-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .sv-panel-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .sv-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sv-modal-tabs .sv-modal-actions {
+    flex-direction: column;
+  }
+
+  .sv-modal-tabs .sv-modal-actions .sv-modal-manage,
+  .sv-modal-tabs .sv-modal-actions .sv-modal-danger,
+  .sv-modal-tabs .sv-dropdown,
+  .sv-modal-tabs .sv-dropdown > .btn {
+    width: 100%;
+    flex: none;
+  }
 }
 </style>
 

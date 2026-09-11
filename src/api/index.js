@@ -705,6 +705,21 @@ export const reservationApi = {
     return api.get(`${v1}/reservations/${id}/folio`)
   },
   /**
+   * Searches active folios for the split/transfer picker by guest name,
+   * folio code, booking reference, company or room number.
+   * @param params - { q, exclude, limit }.
+   */
+  folioSearch(params) {
+    return api.get(`${v1}/folio/search`, { params })
+  },
+  /**
+   * Opens a brand-new folio for the same customer (split/new folio).
+   * @param data - { new_room_id? }.
+   */
+  folioOpenNewFolio(id, data) {
+    return api.post(`${v1}/reservations/${id}/folio/open-new-folio`, data)
+  },
+  /**
    * Posts a manual folio charge (Add Folio). @param data - { description, amount }.
    */
   folioCharge(id, data) {
@@ -927,6 +942,22 @@ export const distributionSourceApi = {
   },
   reorder(order) {
     return api.put(`${v1}/distribution/sources/reorder`, { order })
+  },
+}
+
+/** Company Database (corporate-client directory). */
+export const companyApi = {
+  index(params) {
+    return api.get(`${v1}/companies`, { params })
+  },
+  store(data) {
+    return api.post(`${v1}/companies`, data)
+  },
+  update(id, data) {
+    return api.put(`${v1}/companies/${id}`, data)
+  },
+  destroy(id) {
+    return api.delete(`${v1}/companies/${id}`)
   },
 }
 
