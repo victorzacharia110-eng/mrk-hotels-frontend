@@ -5436,9 +5436,11 @@ onUnmounted(() => clearInterval(refreshTimer))
 
 /* ---- Stay-view tabs (reference panel layout) ---- */
 
-/* The stay-view modal is wider than the small action modals. */
+/* The stay-view modal is wider than the small action modals so the folio
+   ledger columns (DATE / PARTICULAR / DESCRIPTION / USER / AMOUNT / ACTIONS)
+   don't squeeze guest and user names. */
 .sv-modal-tabs {
-  width: 960px;
+  width: 1120px;
 }
 
 /* Desktop footer: five action buttons on one row, wrapping when tight. */
@@ -6123,7 +6125,7 @@ onUnmounted(() => clearInterval(refreshTimer))
 
 /* ---- Stay-view modal & content responsive rules ---- */
 
-@media (max-width: 1000px) {
+@media (max-width: 1180px) {
   .sv-modal-tabs {
     width: calc(100vw - 32px);
   }
