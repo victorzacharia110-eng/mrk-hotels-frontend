@@ -104,7 +104,11 @@
                 @click="openRoomModal(room, $event)"
                 @keyup.enter="openRoomModal(room, $event)"
               >
-                <span class="sv-room-dot" :class="room.status" :title="room.status"></span>
+                <span
+                  class="sv-room-dot"
+                  :class="roomDotOccupied(room) ? 'occupied' : (room.status !== 'occupied' ? room.status : 'available')"
+                  :title="roomDotOccupied(room) ? (hkRoomGuest(room.room_id) || $t('stayview.occupiedGuest')) : room.status"
+                ></span>
                 <span class="sv-room-number">{{ room.room_number }}</span>
                 <i
                   v-if="room.status === 'dirty' || room.status === 'cleaning'"
@@ -256,7 +260,11 @@
     >
       <header class="sv-hk-card-head">
         <div class="sv-hk-card-room">
-          <span class="sv-room-dot" :class="hkTip.room.status" aria-hidden="true"></span>
+          <span
+            class="sv-room-dot"
+            :class="roomDotOccupied(hkTip.room) ? 'occupied' : (hkTip.room.status !== 'occupied' ? hkTip.room.status : 'available')"
+            :title="roomDotOccupied(hkTip.room) ? (hkRoomGuest(hkTip.room.room_id) || $t('stayview.occupiedGuest')) : hkTip.room.status"
+          ></span>
           <strong>{{ hkTip.room.room_number }}</strong>
           <span class="sv-hk-card-guest">
             {{ hkRoomGuest(hkTip.room.room_id) || roomTypeLabel(hkTip.room.room_type) }}
@@ -2137,6 +2145,7 @@ import PhoneInput from '@/components/PhoneInput.vue'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import { requiresProvider, providersFor, PAYMENT_METHODS, PAYMENT_STATUSES } from '@/utils/payments'
 import { folioBreakdown, isFolioRefundEntry } from '@/utils/folio'
+import { roomOccupiedToday } from '@/utils/roomOccupancy'
 import { toast } from '@/utils/toast'
 import { formatDateDMY, formatDateTime } from '@/utils/dates'
 import { formatPhoneGaps, formatPhoneNational, validatePhoneNumber } from '@/utils/phone'
@@ -4124,6 +4133,11 @@ function toggleHkTip(event, room) {
   hkTip.value = { room, tasks, laundry, pinned: true, ...hkTipPos(event) }
 }
 
+/** Reservation-truth occupancy for the dot board (never the rooms.status column). */
+function roomDotOccupied(room) {
+  return roomOccupiedToday(reservations.value, room?.room_id, startOfDay(new Date()))
+}
+
 /** Guest name of the current stay in a room (from the visible window stays). */
 function hkRoomGuest(roomId) {
   const today = startOfDay(new Date())
@@ -5306,6 +5320,27 @@ onUnmounted(() => clearInterval(refreshTimer))
 .sv-room-dot.cleaning { background: #005eb8; }
 .sv-room-dot.dirty { background: #e0a800; }
 .sv-room-dot.maintenance { background: #7f8c8d; }
+
+/* Occupied dots on the board/HK card carry the guest name, so they grow into
+   a small pill (red fill kept) with the empty status dots staying ~10px. */
+.sv-room-cell .sv-room-dot.occupied,
+.sv-hk-card .sv-room-dot.occupied {
+  width: auto;
+  min-width: 12px;
+  max-width: 96px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 50%;
+  display: inline-block;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  color: #fff;
+  font-size: 9px;
+  line-height: 18px;
+}
 
 .sv-room-track {
   grid-column: 2 / -1;
