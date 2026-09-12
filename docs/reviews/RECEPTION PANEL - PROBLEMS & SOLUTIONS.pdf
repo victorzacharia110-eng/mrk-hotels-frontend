@@ -1,0 +1,785 @@
+%PDF-1.3
+%ºß¬à
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 8602
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F2 16.5 Tf
+18.9749999999999979 TL
+0.071 0.188 0.322 rg
+51.0236220472441033 773.8585039370078675 Td
+(RECEPTION PANEL — PROBLEMS & SOLUTIONS) Tj
+ET
+BT
+/F3 9.5 Tf
+10.9249999999999989 TL
+0.333 g
+51.0236220472441033 745.5120472440944468 Td
+(Every issue raised in the reception-panel proposal, and how it was resolved. Prepared: 11 September 2026.) Tj
+ET
+BT
+/F3 9.5 Tf
+10.9249999999999989 TL
+0.333 g
+51.0236220472441033 720.0002362204724022 Td
+(All changes are live after the latest deployments of the frontend and API.) Tj
+ET
+BT
+/F2 11.5 Tf
+13.2249999999999996 TL
+0.071 0.188 0.322 rg
+51.0236220472441033 691.6537795275589815 Td
+(1. Folio Operations) Tj
+ET
+BT
+/F2 10 Tf
+11.5 TL
+0.071 0.188 0.322 rg
+56.6929133858267775 668.9766141732283131 Td
+(1.1 No way to move operations between folios \(split / transfer / cut\)) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.745 0.176 0.176 rg
+62.3622047244094517 651.9687401574802834 Td
+(Problem:  ) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+108.7222047244094512 651.9687401574802834 Td
+(Staff could read a guest folio but had no way to move a selected charge or credit from one folio into) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 637.2285826771653774 Td
+(another — so a group bill could not be split, an item could not be cut out, and a new folio could not be) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 622.4884251968503577 Td
+(started mid-stay.) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0. 0.51 0.282 rg
+62.3622047244094517 602.0789763779526993 Td
+(Solution:  ) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+108.7222047244094512 602.0789763779526993 Td
+(A two-panel operation modal was added. The left panel lists the current folio’s transferable operations with) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 587.3388188976377933 Td
+(checkboxes \(plus a select-all\), the right panel lists the folios to move into — searchable by folio code or) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 572.5986614173227736 Td
+(guest, excluding the current folio — and an “Open new folio” button creates a fresh folio on the spot. A) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 557.8585039370077538 Td
+(single Apply arrow performs the move; the folio and the “in-house” totals refresh automatically.) Tj
+ET
+BT
+/F2 10 Tf
+11.5 TL
+0.071 0.188 0.322 rg
+56.6929133858267775 534.614409448818833 Td
+(1.2 No visible reference number on a folio) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.745 0.176 0.176 rg
+62.3622047244094517 517.6065354330708033 Td
+(Problem:  ) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+108.7222047244094512 517.6065354330708033 Td
+(Folios were identified only by guest name and totals, with no stable number staff could quote on the) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 502.8663779527557836 Td
+(phone, in a note, or on a receipt.) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0. 0.51 0.282 rg
+62.3622047244094517 482.4569291338581252 Td
+(Solution:  ) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+108.7222047244094512 482.4569291338581252 Td
+(Every reservation and folio now carries a folio code. A “FOLIO NO. / CODE” line is shown above the folio) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 467.7167716535431623 Td
+(totals, generated automatically when the folio is opened and preserved through transfers.) Tj
+ET
+BT
+/F2 10 Tf
+11.5 TL
+0.071 0.188 0.322 rg
+56.6929133858267775 444.4726771653542414 Td
+(1.3 Closed or settled folio lines could not be inspected read-only) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.745 0.176 0.176 rg
+62.3622047244094517 427.4648031496062117 Td
+(Problem:  ) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+108.7222047244094512 427.4648031496062117 Td
+(Some folio entries are not editable \(settled or archived\), so there was no way to review their detail without) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 412.7246456692912489 Td
+(risking a change.) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0. 0.51 0.282 rg
+62.3622047244094517 392.3151968503936473 Td
+(Solution:  ) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+108.7222047244094512 392.3151968503936473 Td
+(Non-editable rows now offer a VIEW action that opens the entry read-only and briefly highlights the row,) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 377.5750393700787413 Td
+(so detail is always available without exposing the entry to edits.) Tj
+ET
+BT
+/F2 10 Tf
+11.5 TL
+0.071 0.188 0.322 rg
+56.6929133858267775 354.3309448818897636 Td
+(1.4 Tasks stayed open after the guest had checked out) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.745 0.176 0.176 rg
+62.3622047244094517 337.3230708661417339 Td
+(Problem:  ) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+108.7222047244094512 337.3230708661417339 Td
+(After the departure date passed and the stay was checked out, cancelled or a no-show, staff could still add) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 322.5829133858268278 Td
+(or delete folio operations — corrupting a closed stay.) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0. 0.51 0.282 rg
+62.3622047244094517 302.1734645669291695 Td
+(Solution:  ) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+108.7222047244094512 302.1734645669291695 Td
+(Folio tasks are now gated by stay status: once the departure date has passed and the stay is checked out,) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 287.4333070866142634 Td
+(cancelled or a no-show, both ADD and DELETE are disabled with an explanatory note. A closed folio can) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 272.6931496062993574 Td
+(no longer be altered.) Tj
+ET
+BT
+/F2 10 Tf
+11.5 TL
+0.071 0.188 0.322 rg
+56.6929133858267775 249.4490551181104365 Td
+(1.5 The operation modal was too narrow and broke on small screens) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.745 0.176 0.176 rg
+62.3622047244094517 232.4411811023624068 Td
+(Problem:  ) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+108.7222047244094512 232.4411811023624068 Td
+(The folio modal was 640px wide, so the two operation lists felt cramped and collapsed badly on laptops) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 217.7010236220473871 Td
+(and smaller screens.) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0. 0.51 0.282 rg
+62.3622047244094517 197.2915748031498424 Td
+(Solution:  ) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+108.7222047244094512 197.2915748031498424 Td
+(The modal was widened to 960px and made responsive: it flows to full width minus padding under 1000px,) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 182.5514173228349364 Td
+(stacks its panels on tablets \(768px\) and drops to a single column on phones \(480px\).) Tj
+ET
+BT
+/F2 11.5 Tf
+13.2249999999999996 TL
+0.071 0.188 0.322 rg
+51.0236220472441033 156.4726771653546393 Td
+(2. Corporate Clients) Tj
+ET
+BT
+/F2 10 Tf
+11.5 TL
+0.071 0.188 0.322 rg
+56.6929133858267775 133.7955118110238573 Td
+(2.1 No place to record the companies behind guest stays) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.745 0.176 0.176 rg
+62.3622047244094517 116.7876377952758276 Td
+(Problem:  ) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+108.7222047244094512 116.7876377952758276 Td
+(Corporate clients live nowhere in the system; reception had no way to keep the list of companies that) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 102.0474803149608078 Td
+(guarantee or endorse stays, with their TIN and contacts.) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0. 0.51 0.282 rg
+62.3622047244094517 81.6380314960632631 Td
+(Solution:  ) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+108.7222047244094512 81.6380314960632631 Td
+(The Company Data page now pairs the hotel-profile card with a corporate-client directory: every company) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 66.8978740157483571 Td
+(on the wheel can be listed, added, edited and deleted, capturing name, TIN number, address, city, phone,) Tj
+ET
+0.82 0.84 0.87 RG
+51.0236220472441033 19.8427559055117015 m
+544.2519685039370643 19.8427559055117015 l
+S
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.333 g
+51.0236220472441033 5.6695275590550409 Td
+(MRK Hotels — Reception Panel — Problems & Solutions) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.333 g
+504.4919685039370165 5.6695275590550409 Td
+(page 1 of 2) Tj
+ET
+endstream
+endobj
+5 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 6 0 R
+>>
+endobj
+6 0 obj
+<<
+/Length 3434
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 782.3624409448818824 Td
+(email, contact person, notes and an active flag. Receptionists get read access; adding and editing is) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 767.6222834645668627 Td
+(limited to managers.) Tj
+ET
+BT
+/F2 11.5 Tf
+13.2249999999999996 TL
+0.071 0.188 0.322 rg
+51.0236220472441033 741.5435433070865656 Td
+(3. Manager Payments Access) Tj
+ET
+BT
+/F2 10 Tf
+11.5 TL
+0.071 0.188 0.322 rg
+56.6929133858267775 718.8663779527558972 Td
+(3.1 The Payments tools were hidden behind a single link) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.745 0.176 0.176 rg
+62.3622047244094517 701.8585039370078675 Td
+(Problem:  ) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+108.7222047244094512 701.8585039370078675 Td
+(Managers could reach Payments, but the payment-related tools — payments list, cashiering, cash drawer,) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 687.1183464566928478 Td
+(business source, company data, POS and exchange rate — were compressed into one Front Desk link, so) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 672.3781889763779418 Td
+(most of them were effectively out of reach.) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0. 0.51 0.282 rg
+62.3622047244094517 651.9687401574802834 Td
+(Solution:  ) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+108.7222047244094512 651.9687401574802834 Td
+(The manager sidebar now nests a Payments sub-accordion under Front Desk that exposes every) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 637.2285826771653774 Td
+(payment-related page, and it auto-expands when the manager opens the Payments screen, so the tools are) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 622.4884251968503577 Td
+(immediately visible instead of buried.) Tj
+ET
+BT
+/F2 11.5 Tf
+13.2249999999999996 TL
+0.071 0.188 0.322 rg
+51.0236220472441033 596.4096850393700606 Td
+(4. List Actions) Tj
+ET
+BT
+/F2 10 Tf
+11.5 TL
+0.071 0.188 0.322 rg
+56.6929133858267775 573.7325196850392786 Td
+(4.1 Edit and delete buttons could be tapped together) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.745 0.176 0.176 rg
+62.3622047244094517 556.7246456692912489 Td
+(Problem:  ) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+108.7222047244094512 556.7246456692912489 Td
+(The edit and delete buttons on list rows sat flush against each other, so a quick tap could hit the wrong) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 541.9844881889762291 Td
+(action.) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0. 0.51 0.282 rg
+62.3622047244094517 521.5750393700786844 Td
+(Solution:  ) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+108.7222047244094512 521.5750393700786844 Td
+(The action buttons are now wrapped with an 8px gap on every affected list, so a stray tap no longer lands) Tj
+ET
+BT
+/F1 9.5 Tf
+10.9249999999999989 TL
+0.118 g
+62.3622047244094517 506.8348818897636647 Td
+(on the neighbour action.) Tj
+ET
+0.82 0.84 0.87 RG
+51.0236220472441033 19.8427559055117015 m
+544.2519685039370643 19.8427559055117015 l
+S
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.333 g
+51.0236220472441033 5.6695275590550409 Td
+(MRK Hotels — Reception Panel — Problems & Solutions) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.333 g
+504.4919685039370165 5.6695275590550409 Td
+(page 2 of 2) Tj
+ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R 5 0 R ]
+/Count 2
+>>
+endobj
+7 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+8 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+9 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+10 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+11 0 obj
+<<
+/Type /Font
+/BaseFont /Courier
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+12 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+13 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+14 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+15 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Roman
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+16 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+17 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Italic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+18 0 obj
+<<
+/Type /Font
+/BaseFont /Times-BoldItalic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+19 0 obj
+<<
+/Type /Font
+/BaseFont /ZapfDingbats
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+20 0 obj
+<<
+/Type /Font
+/BaseFont /Symbol
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 7 0 R
+/F2 8 0 R
+/F3 9 0 R
+/F4 10 0 R
+/F5 11 0 R
+/F6 12 0 R
+/F7 13 0 R
+/F8 14 0 R
+/F9 15 0 R
+/F10 16 0 R
+/F11 17 0 R
+/F12 18 0 R
+/F13 19 0 R
+/F14 20 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+21 0 obj
+<<
+/Producer (jsPDF 2.5.2)
+/CreationDate (D:20260911221623+03'00')
+>>
+endobj
+22 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/OpenAction [3 0 R /FitH null]
+/PageLayout /OneColumn
+>>
+endobj
+xref
+0 23
+0000000000 65535 f 
+0000012429 00000 n 
+0000014254 00000 n 
+0000000015 00000 n 
+0000000152 00000 n 
+0000008806 00000 n 
+0000008943 00000 n 
+0000012492 00000 n 
+0000012617 00000 n 
+0000012747 00000 n 
+0000012880 00000 n 
+0000013018 00000 n 
+0000013142 00000 n 
+0000013271 00000 n 
+0000013403 00000 n 
+0000013539 00000 n 
+0000013667 00000 n 
+0000013794 00000 n 
+0000013923 00000 n 
+0000014056 00000 n 
+0000014158 00000 n 
+0000014504 00000 n 
+0000014590 00000 n 
+trailer
+<<
+/Size 23
+/Root 22 0 R
+/Info 21 0 R
+/ID [ <AE08AECBCB7B0CC5B5E5C4E5DEA3AE3A> <AE08AECBCB7B0CC5B5E5C4E5DEA3AE3A> ]
+>>
+startxref
+14694
+%%EOF

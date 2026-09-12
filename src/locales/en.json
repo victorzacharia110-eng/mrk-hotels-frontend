@@ -3841,7 +3841,8 @@
     "printBreakdownHint": "Preview the folio invoice breakdown before printing.",
     "advancePaid": "Advance paid",
     "earlyDepartureRefund": "Early-departure refund",
-    "netBalance": "Net balance"
+    "netBalance": "Net balance",
+    "occupiedGuest": "Occupied — guest name unavailable"
   },
   "orderTaker": {
     "title": "Take Order",
@@ -3935,6 +3936,7 @@
     "summarySettled": "Settled",
     "summaryVoided": "Voided",
     "summaryTotalToday": "Total today",
+    "summaryTotalFor": "Total for {date}",
     "summaryNoOrders": "No orders yet today.",
     "summaryOrder": "Order",
     "summaryTime": "Time",
@@ -4049,7 +4051,19 @@
     "autoRefresh": "Auto-refresh",
     "loadError": "Failed to load orders.",
     "updateError": "Could not update the item.",
-    "tapWhenReady": "Tap when ready"
+    "tapWhenReady": "Tap when ready",
+    "calendar": "Calendar",
+    "closedTickets": "Closed tickets",
+    "closedTicketsEmpty": "No closed tickets for this day",
+    "ticketNumber": "Ticket",
+    "ticketTable": "Table",
+    "ticketItems": "Items",
+    "ticketTotal": "Total",
+    "ticketServedAt": "Served at",
+    "ticketWaiter": "Waiter"
+  },
+  "waiterPanel": {
+    "settlementMode": "Settlement"
   },
   "storeManager": {
     "panelTitle": "Store Manager",

@@ -45,6 +45,9 @@
         <span class="pos-tab-badge">{{ visibleCount }} {{ $t('kitchen.openOrders') }}</span>
       </h2>
       <div class="kb-controls">
+        <label class="kb-cal" :title="$t('kitchen.calendar')">
+          <input v-model="boardDate" type="date" :aria-label="$t('kitchen.calendar')" />
+        </label>
         <label class="kb-auto">
           <input v-model="autoRefresh" type="checkbox" />
           {{ $t('kitchen.autoRefresh') }}
@@ -127,11 +130,46 @@
         </div>
       </section>
     </div>
+
+    <!-- Closed tickets: history for a past date picked in the calendar -->
+    <section v-if="!isToday" class="kb-closed">
+      <h3 class="kb-section-head">
+        <i class="fas fa-folder-closed" aria-hidden="true"></i> {{ $t('kitchen.closedTickets') }}
+        <span class="pos-tab-badge">{{ closedTickets.length }}</span>
+      </h3>
+      <p v-if="closedLoading" class="cat-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></p>
+      <p v-else-if="closedError" class="send-error">{{ closedError }}</p>
+      <p v-else-if="!closedTickets.length" class="cat-empty">{{ $t('kitchen.closedTicketsEmpty') }}</p>
+      <div v-else class="kb-table-scroll">
+        <table class="kb-closed-table">
+          <thead>
+            <tr>
+              <th>{{ $t('kitchen.ticketNumber') }}</th>
+              <th>{{ $t('kitchen.ticketTable') }}</th>
+              <th class="col-qty">{{ $t('kitchen.ticketItems') }}</th>
+              <th class="col-amount">{{ $t('kitchen.ticketTotal') }}</th>
+              <th>{{ $t('kitchen.ticketServedAt') }}</th>
+              <th>{{ $t('kitchen.ticketWaiter') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="order in closedTickets" :key="order.order_id">
+              <td><strong>{{ order.order_number }}</strong></td>
+              <td>{{ order.table_number || order.room_number || '—' }}</td>
+              <td class="col-qty">{{ itemCount(order) }}</td>
+              <td class="col-amount"><strong>TZS {{ money(order.total_amount) }}</strong></td>
+              <td>{{ timeOf(order.settled_at || order.created_at) }}</td>
+              <td>{{ order.waiter_name || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { orderApi } from '@/api'
 import { useOrderRealtime } from '@/composables/useOrderRealtime'
@@ -149,6 +187,52 @@ const department = ref('all')
 const showSound = ref(false)
 const notifSettingsStore = useNotificationSettingsStore()
 notifSettingsStore.load()
+
+// Board date: today (default) shows the live kitchen grid; a past date shows
+// that day's closed-ticket history below it.
+const boardDate = ref(nowDate())
+const closedTickets = ref([])
+const closedLoading = ref(false)
+const closedError = ref('')
+
+const isToday = computed(() => boardDate.value === nowDate())
+
+/** Today's date in YYYY-MM-DD (local), the board's default. */
+function nowDate() {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+/** Loads the completed tickets for the picked (past) date. */
+async function loadClosed() {
+  closedError.value = ''
+  closedLoading.value = true
+  try {
+    const params = { status: 'completed', date: boardDate.value, per_page: 100 }
+    if (department.value !== 'all') params.department = department.value
+    const res = await orderApi.index(params)
+    closedTickets.value = Array.isArray(res.data) ? res.data : res.data?.data || []
+  } catch (err) {
+    closedError.value = err.response?.data?.message || t('kitchen.loadError')
+    closedTickets.value = []
+  } finally {
+    closedLoading.value = false
+  }
+}
+
+/** Item lines (quantities summed) on a closed ticket. */
+function itemCount(order) {
+  const items = order.items || []
+  if (!items.length) return 0
+  return items.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0)
+}
+
+/** Time only (HH:MM) from an ISO timestamp. */
+function timeOf(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+}
 
 // Statuses that still need kitchen/runner attention; everything else leaves the board.
 const OPEN_STATUSES = ['pending', 'in_progress', 'processing', 'preparing', 'ready', 'served']
@@ -215,6 +299,18 @@ async function load() {
     loading.value = false
   }
 }
+
+// Changing the date reloads the open board (today) and, when it's not today,
+// the closed-ticket history for that day. Flipping the department re-queries
+// the history (the open grid is still filtered client-side as before).
+watch(boardDate, () => {
+  load()
+  if (!isToday.value) loadClosed()
+})
+
+watch(department, () => {
+  if (!isToday.value) loadClosed()
+})
 
 /**
  * One tap on a dish: pending → ready (kitchen), ready → served (runner).
@@ -387,6 +483,70 @@ onUnmounted(() => {
   font-size: 13px;
   color: #71717a;
   cursor: pointer;
+}
+
+.kb-cal {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  color: #52525b;
+}
+
+.kb-cal input[type='date'] {
+  border: 1px solid #d4d4d8;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 13px;
+  color: #27272a;
+  background: #fff;
+}
+
+/* ---- Closed-ticket history table (past dates only) ---- */
+.kb-closed {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kb-table-scroll {
+  overflow-x: auto;
+}
+
+.kb-closed-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border: 1px solid #d4d4d8;
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.kb-closed-table th {
+  background: #3f3f46;
+  color: #fff;
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.kb-closed-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #ececf0;
+  color: #27272a;
+}
+
+.kb-closed-table tr:last-child td {
+  border-bottom: none;
+}
+
+.kb-closed-table .col-qty,
+.kb-closed-table .col-amount {
+  width: 130px;
+  text-align: right;
 }
 
 .pos-tab-badge {

@@ -467,6 +467,9 @@
           </ul>
           <p class="open-total">{{ $t('orderTaker.orderTotal') }}: <strong>TZS {{ money(order.total_amount) }}</strong>
             · <span :class="order.payment_status === 'unpaid' ? 'pay-unpaid' : 'pay-ok'">{{ paymentLabel(order.payment_status) }}</span>
+            <span v-if="order.settlement_mode" class="settle-tag" :title="$t('waiterPanel.settlementMode')">
+              <i class="fas fa-wallet" aria-hidden="true"></i> {{ order.settlement_mode }}
+            </span>
           </p>
           <!-- Single-tap lifecycle: next status, payment, bill to room -->
           <div class="open-actions">
@@ -531,10 +534,19 @@
     <!-- Order Summary: the signed-in waiter's tickets and totals for today -->
     <div v-else class="summary-panel">
       <div class="open-head">
-        <h2><i class="fas fa-chart-simple" aria-hidden="true"></i> {{ $t('orderTaker.summaryTitle') }}</h2>
-        <button type="button" class="oh-manage" @click="loadOrderSummary">
-          <i class="fas fa-rotate" aria-hidden="true"></i> {{ $t('orderTaker.refresh') }}
-        </button>
+        <h2><i class="fas fa-chart-simple" aria-hidden="true"></i> {{ $t('orderTaker.summaryTitle') }} · {{ summaryDate }}</h2>
+        <div class="sb-date-row">
+          <input
+            v-model="summaryDate"
+            type="date"
+            class="dash-date"
+            :aria-label="$t('orderTaker.summaryTitle')"
+            @change="loadOrderSummary"
+          />
+          <button type="button" class="oh-manage" @click="loadOrderSummary">
+            <i class="fas fa-rotate" aria-hidden="true"></i> {{ $t('orderTaker.refresh') }}
+          </button>
+        </div>
       </div>
       <p v-if="summaryLoading" class="cat-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></p>
       <template v-else>
@@ -553,7 +565,7 @@
             <strong>{{ summaryVoided }}</strong>
           </div>
           <div class="summary-kpi kpi-total">
-            <span class="sk-label">{{ $t('orderTaker.summaryTotalToday') }}</span>
+            <span class="sk-label">{{ isSummaryToday ? $t('orderTaker.summaryTotalToday') : $t('orderTaker.summaryTotalFor', { date: summaryDate }) }}</span>
             <strong>TZS {{ money(summaryTotal) }}</strong>
           </div>
         </div>
@@ -961,6 +973,15 @@ const canCollect = computed(() => authStore.can(60))
 // Open Orders board is scoped to them so they never touch another waiter's.
 const isFloorStaff = computed(() => ['waiter', 'bartender'].includes(role.value))
 
+// Floor staff queries are scoped server-side to the signed-in waiter's own
+// user id (the OrderResource.waiter_id = created_by user). Managers keep the
+// department-wide view, exactly as before.
+function waiterScopeParams() {
+  if (!isFloorStaff.value) return {}
+  const uid = authStore.user?.user_id ?? authStore.user?.id
+  return uid ? { waiter_id: uid } : {}
+}
+
 // Bill-to-room posts to a guest folio, so it stays at receptionist level (60)
 // and up — same gate as the backend's `level:60` middleware on that route.
 const canBillToRoom = computed(() => authStore.can(60) && authStore.canOperate)
@@ -983,6 +1004,11 @@ function switchToOpen() {
 const myOrders = ref([])
 const summaryLoading = ref(false)
 const summaryError = ref('')
+// The summary is date-pickable; TODAY is the default on first load and the
+// picker label always mirrors the date actually requested (a past date is
+// never presented as "today's").
+const summaryDate = ref(nowDate())
+const isSummaryToday = computed(() => summaryDate.value === nowDate())
 
 /** Whether the given order belongs to the currently signed-in waiter. */
 function isMine(order) {
@@ -1107,12 +1133,16 @@ async function loadDashboard() {
   }
 }
 
-/** Loads today's orders and keeps only those attributed to this waiter. */
+/** Loads the waiter's orders for the picked day and keeps only this waiter's. */
 async function loadOrderSummary() {
   summaryLoading.value = true
   summaryError.value = ''
   try {
-    const res = await orderApi.index({ department: department.value, per_page: 100 })
+    const res = await orderApi.index({
+      department: department.value,
+      date: summaryDate.value || undefined,
+      per_page: 100,
+    })
     const rows = Array.isArray(res.data) ? res.data : res.data?.data || []
     myOrders.value = rows.filter(isMine)
   } catch (err) {
@@ -1176,7 +1206,11 @@ async function loadOpenOrders() {
   openLoading.value = true
   openError.value = ''
   try {
-    const res = await orderApi.index({ department: department.value, per_page: 50 })
+    const res = await orderApi.index({
+      department: department.value,
+      per_page: 50,
+      ...waiterScopeParams(),
+    })
     const rows = Array.isArray(res.data) ? res.data : res.data?.data || []
     const filtered = rows
       .filter((order) => !['completed', 'cancelled'].includes(order.status))
@@ -3265,6 +3299,23 @@ function onKey(e) {
 .pay-unpaid { color: #b91c1c; font-weight: 700; }
 .pay-ok { color: #15803d; font-weight: 700; }
 
+/* Settlement tag for open orders already paid/billed (OrderResource.settlement_mode) */
+.settle-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #1e40af;
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
 .open-actions {
   display: flex;
   flex-wrap: wrap;
@@ -3578,6 +3629,12 @@ function onKey(e) {
   background: #fff;
   font-size: 14px;
   color: #27272a;
+}
+.sb-date-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 .dash-kpis { grid-template-columns: repeat(4, 1fr); }
 .kpi-stock-items { border-left-color: #6366f1; }

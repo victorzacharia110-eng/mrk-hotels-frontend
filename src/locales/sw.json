@@ -3831,7 +3831,8 @@
     "printBreakdownHint": "Onyesha muhtasari wa ankara kabla ya kuchapisha.",
     "advancePaid": "Akiba iliyolipwa",
     "earlyDepartureRefund": "Rejesho la kuondoka mapema",
-    "netBalance": "Mizani halisi"
+    "netBalance": "Mizani halisi",
+    "occupiedGuest": "Imejaa — jina la mgeni halipatikani"
   },
   "orderTaker": {
     "title": "Chukua Oda",
@@ -3924,6 +3925,7 @@
     "summarySettled": "Zimelipwa",
     "summaryVoided": "Zimefutwa",
     "summaryTotalToday": "Jumla ya leo",
+    "summaryTotalFor": "Jumla ya {date}",
     "summaryNoOrders": "Hakuna oda bado leo.",
     "summaryOrder": "Oda",
     "summaryTime": "Saa",
@@ -4031,7 +4033,19 @@
     "autoRefresh": "Jiondoe mwenyewe",
     "loadError": "Imeshindikana kupakia maagizo.",
     "updateError": "Imeshindikana kubadilisha kipengele.",
-    "tapWhenReady": "Gusa ukiwa tayari"
+    "tapWhenReady": "Gusa ukiwa tayari",
+    "calendar": "Kalenda",
+    "closedTickets": "Tiketi zilizofungwa",
+    "closedTicketsEmpty": "Hakuna tiketi zilizofungwa siku hii",
+    "ticketNumber": "Tiketi N",
+    "ticketTable": "Meza",
+    "ticketItems": "Bidhaa",
+    "ticketTotal": "Jumla",
+    "ticketServedAt": "Ilifungwa saa",
+    "ticketWaiter": "Mhudumu"
+  },
+  "waiterPanel": {
+    "settlementMode": "Namna ya kulipia"
   },
   "storeManager": {
     "panelTitle": "Meneja wa Ghala",
