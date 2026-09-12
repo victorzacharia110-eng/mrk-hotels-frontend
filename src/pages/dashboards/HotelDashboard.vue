@@ -5436,12 +5436,12 @@ onUnmounted(() => clearInterval(refreshTimer))
 
 /* ---- Stay-view tabs (reference panel layout) ---- */
 
-/* The stay-view modal is wider than the small action modals so the folio
-   ledger columns (DATE / PARTICULAR / DESCRIPTION / USER / AMOUNT / ACTIONS)
-   don't squeeze guest and user names. The folio-operation modal (transfer /
-   split / cut / new folio) shares the same wide layout for its two panels. */
+/* The folio-operation modal (transfer / split / cut / new folio) shares the
+   wide layout of the stay-view folio modal so its two panels don't squeeze
+   guest and folio names. Uses the higher-specificity matched class pair so
+   the generic .sv-modal-sm width (420px) never overrides it. */
 .sv-modal-tabs,
-.sv-modal-op {
+.sv-modal-sm.sv-modal-op {
   width: 1120px;
 }
 
@@ -6129,7 +6129,7 @@ onUnmounted(() => clearInterval(refreshTimer))
 
 @media (max-width: 1180px) {
   .sv-modal-tabs,
-  .sv-modal-op {
+  .sv-modal-sm.sv-modal-op {
     width: calc(100vw - 32px);
   }
 }
