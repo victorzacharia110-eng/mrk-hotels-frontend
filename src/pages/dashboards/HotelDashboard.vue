@@ -1085,7 +1085,7 @@
     <Teleport to="body">
       <Transition name="sv-modal">
         <div v-if="folioOp" class="sv-modal-backdrop" @click.self="folioOp = null">
-          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="folioOpTitle">
+          <div class="sv-modal sv-modal-sm sv-modal-op" role="dialog" aria-modal="true" :aria-label="folioOpTitle">
             <div class="sv-modal-head bar-blue">
               <span class="sv-modal-head-icon"><i class="fas fa-folder-open" aria-hidden="true"></i></span>
               <div class="sv-modal-head-text">
@@ -5438,8 +5438,10 @@ onUnmounted(() => clearInterval(refreshTimer))
 
 /* The stay-view modal is wider than the small action modals so the folio
    ledger columns (DATE / PARTICULAR / DESCRIPTION / USER / AMOUNT / ACTIONS)
-   don't squeeze guest and user names. */
-.sv-modal-tabs {
+   don't squeeze guest and user names. The folio-operation modal (transfer /
+   split / cut / new folio) shares the same wide layout for its two panels. */
+.sv-modal-tabs,
+.sv-modal-op {
   width: 1120px;
 }
 
@@ -6126,7 +6128,8 @@ onUnmounted(() => clearInterval(refreshTimer))
 /* ---- Stay-view modal & content responsive rules ---- */
 
 @media (max-width: 1180px) {
-  .sv-modal-tabs {
+  .sv-modal-tabs,
+  .sv-modal-op {
     width: calc(100vw - 32px);
   }
 }
