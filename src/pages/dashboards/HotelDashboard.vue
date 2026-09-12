@@ -457,6 +457,14 @@
                           <td class="num">{{ e.credit ? '−' : '' }}TZS {{ fmtNum(e.amount, 2) }}</td>
                           <td class="sv-cell-actions">
                             <button
+                              type="button"
+                              class="sv-icon-link"
+                              :title="$t('folio.view')"
+                              @click="viewEntry(e)"
+                            >
+                              <i class="fas fa-eye" aria-hidden="true"></i>
+                            </button>
+                            <button
                               v-if="e.editable"
                               type="button"
                               class="sv-icon-link"
@@ -465,15 +473,6 @@
                               @click="openEditEntry(e)"
                             >
                               <i class="fas fa-pen" aria-hidden="true"></i>
-                            </button>
-                            <button
-                              v-if="!e.editable && e.entryId"
-                              type="button"
-                              class="sv-icon-link"
-                              :title="$t('folio.view')"
-                              @click="viewEntry(e)"
-                            >
-                              <i class="fas fa-eye" aria-hidden="true"></i>
                             </button>
                             <button
                               v-if="activeBar?.guestEmail && activeBar?.id"
@@ -505,7 +504,6 @@
                             >
                               <i class="fas fa-trash-can" aria-hidden="true"></i>
                             </button>
-                            <span v-if="!e.entryId && !e.editable" class="sv-muted-cell">—</span>
                           </td>
                         </tr>
                         <tr v-if="!folioEntries.length">
@@ -775,6 +773,11 @@
                       </button>
                     </li>
                     <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                      <button type="button" @click="openPaymentModal('company')">
+                        <i class="fas fa-building" aria-hidden="true"></i> {{ $t('stayview.postToCreditors') }}
+                      </button>
+                    </li>
+                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
                       <button type="button" @click="openAmendModal(false)">
                         <i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('stayview.amendStay') }}
                       </button>
@@ -854,31 +857,90 @@
               </button>
             </div>
             <div class="sv-modal-body">
-              <label class="sv-field">
-                <span>{{ $t('stayview.paymentAmount') }}</span>
-                <input v-model.number="paymentForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" :class="{ 'sv-input-error': paymentErrors.amount }" required />
-                <span v-if="paymentErrors.amount" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentErrors.amount }}</span>
-              </label>
-              <div class="sv-field">
-                <PaymentMethodSelect
-                  v-model:method="paymentForm.payment_method"
-                  v-model:provider="paymentForm.payment_provider"
-                />
-                <span v-if="paymentErrors.payment_method || paymentErrors.payment_provider" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentErrors.payment_method || paymentErrors.payment_provider }}</span>
+              <div class="sv-seg" role="tablist">
+                <button
+                  type="button"
+                  class="sv-seg-btn"
+                  :class="{ 'is-active': payMode === 'collect' }"
+                  :disabled="actionBusy"
+                  @click="setPayMode('collect')"
+                >
+                  <i class="fas fa-wallet" aria-hidden="true"></i> {{ $t('stayview.collectPayment') }}
+                </button>
+                <button
+                  type="button"
+                  class="sv-seg-btn"
+                  :class="{ 'is-active': payMode === 'company' }"
+                  :disabled="actionBusy"
+                  @click="setPayMode('company')"
+                >
+                  <i class="fas fa-building" aria-hidden="true"></i> {{ $t('stayview.postToCreditors') }}
+                </button>
               </div>
-              <label class="sv-field">
-                <span>{{ $t('stayview.paymentRef') }}</span>
-                <input v-model="paymentForm.transaction_reference" type="text" class="input" />
-              </label>
+
+              <template v-if="payMode === 'company'">
+                <div class="sv-field">
+                  <span>{{ $t('stayview.creditorCompany') }}</span>
+                  <SearchableSelect
+                    v-model="paymentForm.company_id"
+                    :options="creditorOptions"
+                    :search-placeholder="$t('stayview.searchCompany')"
+                    :empty-label="$t('stayview.selectCreditorCompany')"
+                    force-search
+                  />
+                  <span v-if="paymentErrors.company_id" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentErrors.company_id }}</span>
+                </div>
+                <label class="sv-field">
+                  <span>{{ $t('stayview.paymentAmount') }}</span>
+                  <input v-model.number="paymentForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" :class="{ 'sv-input-error': paymentErrors.amount }" required />
+                  <span v-if="paymentErrors.amount" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentErrors.amount }}</span>
+                </label>
+                <div v-if="creditorCompany" class="sv-credit-panel">
+                  <div class="sv-credit-row">
+                    <span class="muted">{{ $t('stayview.availableCredit') }}</span>
+                    <strong>TZS {{ fmtNum(creditorAvailable, 2) }}</strong>
+                  </div>
+                  <div class="sv-credit-row">
+                    <span class="muted">{{ $t('stayview.currentBalance') }}</span>
+                    <strong>TZS {{ fmtNum(creditorBalance, 2) }}</strong>
+                  </div>
+                  <div class="sv-credit-row" :class="{ 'sv-credit-over': creditExceeded }">
+                    <span class="muted">{{ $t('stayview.remainingCredit') }}</span>
+                    <strong>TZS {{ fmtNum(creditorRemaining, 2) }}</strong>
+                  </div>
+                  <p v-if="creditExceeded" class="sv-credit-alert" role="alert">
+                    <i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ $t('stayview.creditExceeded') }}
+                  </p>
+                </div>
+              </template>
+
+              <template v-else>
+                <label class="sv-field">
+                  <span>{{ $t('stayview.paymentAmount') }}</span>
+                  <input v-model.number="paymentForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" :class="{ 'sv-input-error': paymentErrors.amount }" required />
+                  <span v-if="paymentErrors.amount" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentErrors.amount }}</span>
+                </label>
+                <div class="sv-field">
+                  <PaymentMethodSelect
+                    v-model:method="paymentForm.payment_method"
+                    v-model:provider="paymentForm.payment_provider"
+                  />
+                  <span v-if="paymentErrors.payment_method || paymentErrors.payment_provider" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentErrors.payment_method || paymentErrors.payment_provider }}</span>
+                </div>
+                <label class="sv-field">
+                  <span>{{ $t('stayview.paymentRef') }}</span>
+                  <input v-model="paymentForm.transaction_reference" type="text" class="input" />
+                </label>
+              </template>
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
             </div>
             <div class="sv-modal-actions">
               <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="paymentModal = false">
                 {{ $t('common.close') }}
               </button>
-              <button type="button" class="btn btn-primary" :disabled="actionBusy || !(paymentForm.amount > 0)" @click="submitPayment">
+              <button type="button" class="btn btn-primary" :disabled="actionBusy || paySubmitDisabled" @click="submitPayment">
                 <i class="fas fa-check" aria-hidden="true"></i>
-                {{ actionBusy ? $t('common.loading') : $t('stayview.savePayment') }}
+                {{ actionBusy ? $t('common.loading') : (payMode === 'company' ? $t('stayview.postToCreditors') : $t('stayview.savePayment')) }}
               </button>
             </div>
           </div>
@@ -1255,6 +1317,58 @@
               >
                 <i class="fas fa-check" aria-hidden="true"></i>
                 {{ actionBusy ? $t('common.loading') : $t('folio.save') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- View folio entry modal: read-only detail of an operation row -->
+    <Teleport to="body">
+      <Transition name="sv-modal">
+        <div v-if="folioView" class="sv-modal-backdrop" @click.self="folioView = null">
+          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="$t('folio.view')">
+            <div class="sv-modal-head bar-blue">
+              <span class="sv-modal-head-icon"><i class="fas fa-eye" aria-hidden="true"></i></span>
+              <div class="sv-modal-head-text">
+                <h3>{{ $t('folio.viewTitle') }}</h3>
+                <span class="sv-modal-status">{{ activeBar?.label }}</span>
+              </div>
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="folioView = null">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="sv-modal-body">
+              <div class="sv-detail-list">
+                <div class="sv-detail-row">
+                  <span class="sv-cap muted">{{ $t('folio.date') }}</span>
+                  <strong>{{ viewEntryLine }}</strong>
+                </div>
+                <div class="sv-detail-row">
+                  <span class="sv-cap muted">{{ $t('folio.particular') }}</span>
+                  <strong>{{ folioView?.particular }}</strong>
+                </div>
+                <div class="sv-detail-row">
+                  <span class="sv-cap muted">{{ $t('folio.description') }}</span>
+                  <strong>{{ viewEntryDescription }}</strong>
+                </div>
+                <div class="sv-detail-row">
+                  <span class="sv-cap muted">{{ $t('folio.user') }}</span>
+                  <strong>{{ folioView?.user }}</strong>
+                </div>
+                <div class="sv-detail-row">
+                  <span class="sv-cap muted">{{ $t('folio.amount') }}</span>
+                  <strong :class="folioView?.credit ? 'sv-amount-credit' : 'sv-amount-charge'">
+                    {{ folioView?.credit ? '−' : '' }}TZS {{ fmtNum(folioView?.amount ?? 0, 2) }}
+                  </strong>
+                </div>
+              </div>
+              <p class="sv-cap sv-note">{{ $t('folio.viewHint') }}</p>
+            </div>
+            <div class="sv-modal-actions">
+              <button type="button" class="btn btn-secondary" @click="folioView = null">
+                {{ $t('common.close') }}
               </button>
             </div>
           </div>
@@ -1755,7 +1869,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useNotificationStore } from '@/stores/notifications'
-import { roomApi, reservationApi, guestApi, housekeepingApi, laundryApi, invoiceApi, inventoryApi, paymentApi } from '@/api'
+import { roomApi, reservationApi, guestApi, housekeepingApi, laundryApi, invoiceApi, inventoryApi, paymentApi, companyApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import AlertModal from '@/components/AlertModal.vue'
 import RoleBadge from '@/components/RoleBadge.vue'
@@ -1765,7 +1879,7 @@ import PhoneInput from '@/components/PhoneInput.vue'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import { requiresProvider } from '@/utils/payments'
 import { toast } from '@/utils/toast'
-import { formatDateDMY } from '@/utils/dates'
+import { formatDateDMY, formatDateTime } from '@/utils/dates'
 import { formatPhoneGaps, formatPhoneNational, validatePhoneNumber } from '@/utils/phone'
 import {
   after,
@@ -2667,16 +2781,101 @@ const paymentForm = ref({})
 const paymentErrors = ref({})
 const paymentTouched = ref(false)
 const paymentSnapshot = ref({})
-function openPaymentModal() {
+const payMode = ref('collect')
+const creditorCompanies = ref([])
+const creditorLoading = ref(false)
+
+const creditorOptions = computed(() =>
+  creditorCompanies.value.map((c) => ({
+    value: c.company_id,
+    label: `${c.name}${c.city ? ` (${c.city})` : ''}`,
+  })),
+)
+
+const creditorCompany = computed(() =>
+  creditorCompanies.value.find((c) => c.company_id === paymentForm.value.company_id),
+)
+
+const creditorAvailable = computed(() => Number(creditorCompany.value?.available_credit ?? 0))
+const creditorBalance = computed(() => Number(creditorCompany.value?.current_balance ?? 0))
+const creditorRemaining = computed(() => Math.max(0, creditorAvailable.value - creditorBalance.value))
+const creditExceeded = computed(
+  () => payMode.value === 'company' && paymentForm.value.amount > creditorRemaining.value,
+)
+
+/**
+ * Loads the postable (active) companies for the creditor picker. Called when
+ * the receptionist switches to Post-to-creditors, then cached for the stay.
+ */
+async function loadCreditorCompanies() {
+  if (creditorCompanies.value.length) return
+  creditorLoading.value = true
+  try {
+    const res = await companyApi.index({ status: 'active', per_page: 100 })
+    creditorCompanies.value = res.data?.companies || res.data?.data || []
+  } catch {
+    creditorCompanies.value = []
+  } finally {
+    creditorLoading.value = false
+  }
+}
+
+/**
+ * Matches the reservation's recorded company (taken at booking) against the
+ * postable directory so the picker opens pre-filled for corporate stays.
+ */
+function prefillCreditorCompany() {
+  const booked = folio.value?.reservation?.company_name
+  if (!booked) return
+  const match = creditorCompanies.value.find(
+    (c) => c.name.trim().toLowerCase() === String(booked).trim().toLowerCase(),
+  )
+  if (match) paymentForm.value.company_id = match.company_id
+}
+
+function openPaymentModal(mode = 'collect') {
   moreOpen.value = false
-  paymentForm.value = { amount: null, payment_method: 'cash', payment_provider: '', transaction_reference: '' }
+  payMode.value = mode
+  paymentForm.value = { amount: null, payment_method: 'cash', payment_provider: '', transaction_reference: '', company_id: '', note: '' }
   paymentErrors.value = {}
   paymentTouched.value = false
   paymentSnapshot.value = { ...paymentForm.value }
   actionError.value = ''
+  if (mode === 'company') {
+    const outstanding = Number(folio.value?.folio?.balance_due ?? activeBar.value?.balance ?? 0)
+    if (outstanding > 0) paymentForm.value.amount = outstanding
+    loadCreditorCompanies().then(() => prefillCreditorCompany())
+  }
   paymentModal.value = true
 }
+
+async function setPayMode(mode) {
+  if (payMode.value === mode) return
+  payMode.value = mode
+  paymentErrors.value = {}
+  if (mode === 'company') {
+    const outstanding = Number(folio.value?.folio?.balance_due ?? activeBar.value?.balance ?? 0)
+    if (!paymentForm.value.amount && outstanding > 0) paymentForm.value.amount = outstanding
+    if (!creditorCompanies.value.length) {
+      await loadCreditorCompanies()
+      prefillCreditorCompany()
+    }
+  }
+}
+
+const paySubmitDisabled = computed(() => {
+  if (actionBusy.value || !(paymentForm.value.amount > 0)) return true
+  if (payMode.value === 'company') return !paymentForm.value.company_id || creditExceeded.value
+  return false
+})
+
 function paymentRules() {
+  if (payMode.value === 'company') {
+    return [
+      { field: 'amount', check: positive(t) },
+      { field: 'company_id', check: required(t) },
+    ]
+  }
   return [
     { field: 'amount', check: positive(t) },
     { field: 'payment_method', check: required(t) },
@@ -2695,15 +2894,25 @@ async function submitPayment() {
     return
   }
   if (!activeBar.value?.id) return
-  const payload = {
-    reservation_id: activeBar.value.id,
-    amount: f.amount,
-    payment_method: f.payment_method,
-    payment_provider: f.payment_provider || null,
-    transaction_reference: f.transaction_reference || null,
-  }
   paymentModal.value = false
-  await runStayAction(() => paymentApi.store(payload))
+  if (payMode.value === 'company') {
+    await runStayAction(() =>
+      reservationApi.folioCreditors(activeBar.value.id, {
+        company_id: f.company_id,
+        amount: f.amount,
+        note: f.note || null,
+      }),
+    )
+  } else {
+    const payload = {
+      reservation_id: activeBar.value.id,
+      amount: f.amount,
+      payment_method: f.payment_method,
+      payment_provider: f.payment_provider || null,
+      transaction_reference: f.transaction_reference || null,
+    }
+    await runStayAction(() => paymentApi.store(payload))
+  }
   if (actionError.value) paymentModal.value = true
 }
 bindBlurValidation(watch, () => paymentForm.value, paymentSnapshot, paymentTouched, paymentErrors, paymentRules)
@@ -2961,8 +3170,21 @@ const folioEditErrors = ref({})
 /** Row currently highlighted by the VIEW action (flashes, then clears). */
 const viewedRow = ref(null)
 
-/** Highlights the selected ledger row — the view action for read-only rows. */
+/** Entry whose read-only detail is shown by the VIEW action. */
+const folioView = ref(null)
+
+const viewEntryLine = computed(() => formatDateTime(folioView.value?.time || folioView.value?.date).slice(0, 16))
+
+const viewEntryDescription = computed(() => {
+  const e = folioView.value
+  if (!e) return ''
+  const desc = e.description || e.particular || ''
+  return e.detail ? `${desc} · ${e.detail}` : desc
+})
+
+/** Opens the entry read-only and briefly highlights the row. */
 function viewEntry(e) {
+  folioView.value = e
   viewedRow.value = e?.key || e?.entryId
   window.setTimeout(() => {
     if (viewedRow.value === (e?.key || e?.entryId)) viewedRow.value = null
@@ -5008,6 +5230,62 @@ onUnmounted(() => clearInterval(refreshTimer))
   color: #c0392b;
 }
 
+/* Add-payment mode toggle + company credit panel. */
+.sv-seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 4px;
+  background: #eef1f6;
+  border-radius: 10px;
+}
+.sv-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #5b6472;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.sv-seg-btn.is-active {
+  color: #fff;
+  background: #0e5b8f;
+}
+.sv-seg-btn:not(.is-active):hover {
+  background: rgba(14, 91, 143, 0.08);
+}
+.sv-credit-panel {
+  margin-top: 4px;
+  padding: 10px 12px;
+  background: #f7f9fc;
+  border: 1px solid #e3e8ef;
+  border-radius: 8px;
+}
+.sv-credit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 13px;
+}
+.sv-credit-row.sv-credit-over strong {
+  color: #c0392b;
+}
+.sv-credit-alert {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #c0392b;
+}
+
 /* Per-field client-side validation: red border + inline message. */
 .sv-input-error {
   border-color: #dc2626 !important;
@@ -5604,7 +5882,7 @@ onUnmounted(() => clearInterval(refreshTimer))
 
 /* Ledger actions column: download / void / remove, always inline and quiet. */
 .sv-folio-table .sv-cell-actions {
-  width: 64px;
+  width: 96px;
   text-align: center;
   white-space: nowrap;
 }
@@ -5617,6 +5895,32 @@ onUnmounted(() => clearInterval(refreshTimer))
   color: #6b7280;
   cursor: pointer;
   font-size: 12px;
+}
+
+/* Read-only folio entry view modal. */
+.sv-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sv-detail-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.sv-detail-row .sv-cap {
+  min-width: 96px;
+}
+.sv-detail-row strong {
+  text-align: right;
+  font-size: 13px;
+}
+.sv-amount-charge {
+  color: #b45309;
+}
+.sv-amount-credit {
+  color: #0e6b3a;
 }
 
 .sv-folio-table .sv-icon-link:hover {

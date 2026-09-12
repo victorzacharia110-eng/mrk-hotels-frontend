@@ -751,6 +751,13 @@ export const reservationApi = {
     return api.post(`${v1}/reservations/${id}/folio/transfer`, data)
   },
   /**
+   * Posts the outstanding balance (or a partial amount) to a corporate
+   * company's credit. @param data - { company_id, amount?, note? }.
+   */
+  folioCreditors(id, data) {
+    return api.post(`${v1}/reservations/${id}/folio/creditors`, data)
+  },
+  /**
    * Uploads documents onto the folio (multipart files[]).
    * @param files - Array of File objects.
    */
