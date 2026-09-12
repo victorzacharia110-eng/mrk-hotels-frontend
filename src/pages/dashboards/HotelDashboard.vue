@@ -410,34 +410,75 @@
                   <span>{{ $t('folio.no') }}</span>
                   <strong>{{ ledgerHeader.code }}</strong>
                   <span v-if="ledgerHeader.guest" class="sv-folio-guest"> · {{ ledgerHeader.guest }}<template v-if="ledgerHeader.room"> · {{ ledgerHeader.room }}</template></span>
+                  <button
+                    type="button"
+                    class="sv-folio-early-dep"
+                    :disabled="actionBusy || folioLoading"
+                    :title="$t('stayview.earlyDepartureTitle')"
+                    @click="openEarlyDeparture"
+                  >
+                    <i class="fas fa-right-from-bracket" aria-hidden="true"></i> {{ $t('stayview.earlyDeparture') }}
+                  </button>
                 </div>
                 <div v-if="relatedFolios.length" class="sv-folio-switch">
                   <span class="sv-folio-switch-label">{{ $t('stayview.foliosForStay') }}</span>
-                  <div class="sv-folio-switch-chips">
-                    <button
-                      type="button"
-                      class="sv-folio-chip"
-                      :class="{ active: !viewingFolio }"
-                      :disabled="folioLoading"
-                      @click="switchFolio({ reservation_id: activeBar.id })"
-                    >
-                      <strong>{{ activeBar.folio_code || ledgerHeader.code }}</strong>
-                      <span>{{ activeBar.label }}</span>
-                      <em>TZS {{ fmtNum(ledgerHeader.balance, 2) }}</em>
-                    </button>
-                    <button
-                      v-for="r in relatedFolios"
-                      :key="r.reservation_id"
-                      type="button"
-                      class="sv-folio-chip"
-                      :class="{ active: viewingFolio?.reservation?.reservation_id === r.reservation_id }"
-                      :disabled="folioLoading"
-                      @click="switchFolio(r)"
-                    >
-                      <strong>{{ r.folio_code }}</strong>
-                      <span>{{ r.guest_name }}<template v-if="r.room_number"> · {{ r.room_number }}</template></span>
-                      <em>TZS {{ fmtNum(r.balance_due, 2) }}</em>
-                    </button>
+                  <div class="sv-folio-switch-table-wrap">
+                    <table class="sv-folio-table-switch">
+                      <thead>
+                        <tr>
+                          <th scope="col">{{ $t('folio.no') }}</th>
+                          <th scope="col">{{ $t('stayview.viewingFolioGuest') }}</th>
+                          <th scope="col" class="sv-folio-col-num">{{ ledgerHeader.guest ? $t('stayview.totalRoomCharges') : '' }}</th>
+                          <th scope="col" class="sv-folio-col-num">{{ $t('stayview.viewingFolioBalance') }}</th>
+                          <th scope="col" class="sv-folio-col-view"><span class="sv-visually-hidden">{{ $t('common.actions') }}</span></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="r in [activeBar, ...relatedFolios]"
+                          :key="r.reservation_id"
+                          :class="{ 'sv-folio-row-active': viewingFolio?.reservation?.reservation_id === r.reservation_id }"
+                        >
+                          <td>
+                            <strong>{{ r.folio_code || ledgerHeader.code }}</strong>
+                            <span class="sv-folio-row-type">{{ r.reservation_id === activeBar.id ? $t('stayview.currentFolio') : $t('stayview.relatedFolio') }}</span>
+                          </td>
+                          <td>
+                            {{ r.guest_name || r.label }}<template v-if="r.room_number"> · {{ r.room_number }}</template>
+                          </td>
+                          <td class="sv-folio-col-num">
+                            <template v-if="viewingFolio?.reservation?.reservation_id === r.reservation_id">TZS {{ fmtNum(ledgerHeader.balance, 2) }}</template>
+                            <template v-else>TZS {{ fmtNum(r.balance_due, 2) }}</template>
+                          </td>
+                          <td class="sv-folio-col-num">
+                            <template v-if="viewingFolio?.reservation?.reservation_id === r.reservation_id">
+                              <strong>TZS {{ fmtNum(ledgerHeader.balance, 2) }}</strong>
+                            </template>
+                            <template v-else><strong>TZS {{ fmtNum(r.balance_due, 2) }}</strong></template>
+                          </td>
+                          <td class="sv-folio-col-view">
+                            <button
+                              type="button"
+                              class="sv-folio-print-btn"
+                              :disabled="printBusy || folioLoading"
+                              :title="$t('stayview.printInvoiceBreakdown') + ' ' + (r.folio_code || ledgerHeader.code)"
+                              @click="openInvoicePreview(r)"
+                            >
+                              <i class="fas fa-print" aria-hidden="true"></i>
+                            </button>
+                            <button
+                              type="button"
+                              class="sv-folio-view-btn"
+                              :disabled="folioLoading"
+                              :aria-label="$t('common.view') + ' ' + (r.folio_code || ledgerHeader.code)"
+                              @click="switchFolio(r)"
+                            >
+                              <i class="fas fa-eye" aria-hidden="true"></i> {{ $t('common.view') }}
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
                 <div v-if="viewingFolio" class="sv-folio-now-viewing">
@@ -489,6 +530,9 @@
                           <td class="sv-particular">{{ e.particular }}</td>
                           <td>
                             {{ e.description }}<span v-if="e.detail" class="sv-cap"> · {{ e.detail }}</span>
+                            <span v-if="e.payment?.edited_by || e.payment?.edited_at" class="sv-folio-edit-note">
+                              {{ $t('stayview.editedBy') }} {{ e.payment.edited_by }}<template v-if="e.payment.edited_at"> {{ $t('stayview.editedAt') }} {{ formatDateDMY(e.payment.edited_at) }}</template>
+                            </span>
                           </td>
                           <td>{{ e.user }}</td>
                           <td class="num">{{ e.credit ? '−' : '' }}TZS {{ fmtNum(e.amount, 2) }}</td>
@@ -510,6 +554,16 @@
                               @click="openEditEntry(e)"
                             >
                               <i class="fas fa-pen" aria-hidden="true"></i>
+                            </button>
+                            <button
+                              v-if="e.kind === 'payment' && e.payment?.payment_id && canSeeFrontDesk"
+                              type="button"
+                              class="sv-folio-payment-edit"
+                              :title="$t('stayview.paymentEdit')"
+                              :disabled="actionBusy"
+                              @click="openPaymentEdit(e)"
+                            >
+                              <i class="fas fa-pen" aria-hidden="true"></i> {{ $t('stayview.paymentEdit') }}
                             </button>
                             <button
                               v-if="activeBar?.id"
@@ -978,6 +1032,173 @@
               <button type="button" class="btn btn-primary" :disabled="actionBusy || paySubmitDisabled" @click="submitPayment">
                 <i class="fas fa-check" aria-hidden="true"></i>
                 {{ actionBusy ? $t('common.loading') : (payMode === 'company' ? $t('stayview.postToCreditors') : $t('stayview.savePayment')) }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Early-departure refund modal -->
+    <Teleport to="body">
+      <Transition name="sv-modal">
+        <div v-if="earlyDepartureOpen" class="sv-modal-backdrop" @click.self="earlyDepartureOpen = false">
+          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="$t('stayview.earlyDepartureTitle')">
+            <div class="sv-modal-head bar-blue">
+              <span class="sv-modal-head-icon"><i class="fas fa-right-from-bracket" aria-hidden="true"></i></span>
+              <div class="sv-modal-head-text">
+                <h3>{{ $t('stayview.earlyDepartureTitle') }}</h3>
+                <span class="sv-modal-status">{{ activeBar?.label }}</span>
+              </div>
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="earlyDepartureOpen = false">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="sv-modal-body">
+              <p class="sv-void-hint">{{ $t('stayview.earlyDepartureHint') }}</p>
+              <label class="sv-field">
+                <span>{{ $t('stayview.departure') }}</span>
+                <input v-model="earlyDepartureForm.actual_departure_date" type="date" class="input" data-field="actual_departure_date" :class="{ 'sv-input-error': earlyDepartureErrors.actual_departure_date }" required />
+                <span v-if="earlyDepartureErrors.actual_departure_date" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ earlyDepartureErrors.actual_departure_date }}</span>
+              </label>
+              <label class="sv-field">
+                <span>{{ $t('stayview.earlyDepartureReason') }}</span>
+                <textarea v-model="earlyDepartureForm.reason" class="input" rows="2"></textarea>
+              </label>
+              <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
+            </div>
+            <div class="sv-modal-actions">
+              <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="earlyDepartureOpen = false">
+                {{ $t('common.close') }}
+              </button>
+              <button type="button" class="btn btn-primary sv-early-dep-confirm" :disabled="actionBusy || !earlyDepartureForm.actual_departure_date" @click="submitEarlyDeparture">
+                <i class="fas fa-check" aria-hidden="true"></i>
+                {{ actionBusy ? $t('common.loading') : $t('stayview.earlyDepartureConfirm') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Edit payment modal: receptionist corrects capture details of a paid row -->
+    <Teleport to="body">
+      <Transition name="sv-modal">
+        <div v-if="paymentEditModal" class="sv-modal-backdrop" @click.self="paymentEditModal = false">
+          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="$t('stayview.paymentEditTitle')">
+            <div class="sv-modal-head bar-green">
+              <span class="sv-modal-head-icon"><i class="fas fa-pen" aria-hidden="true"></i></span>
+              <div class="sv-modal-head-text">
+                <h3>{{ $t('stayview.paymentEditTitle') }}</h3>
+                <span class="sv-modal-status">{{ activeBar?.label }}</span>
+              </div>
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="paymentEditModal = false">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="sv-modal-body sv-pay-edit-page">
+              <label class="sv-field">
+                <span>{{ $t('stayview.paymentEditAmount') }}</span>
+                <input v-model.number="paymentEditForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" :class="{ 'sv-input-error': paymentEditErrors.amount }" required />
+                <span v-if="paymentEditErrors.amount" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentEditErrors.amount }}</span>
+              </label>
+              <label class="sv-field">
+                <span>{{ $t('paymentFields.method') }}</span>
+                <select v-model="paymentEditForm.payment_method" class="input" data-field="payment_method" :class="{ 'sv-input-error': paymentEditErrors.payment_method }">
+                  <option v-for="opt in paymentMethodOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+                <span v-if="paymentEditErrors.payment_method" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentEditErrors.payment_method }}</span>
+              </label>
+              <label v-if="requiresProvider(paymentEditForm.payment_method)" class="sv-field">
+                <span>{{ $t('paymentFields.provider') }}</span>
+                <select v-model="paymentEditForm.payment_provider" class="input" data-field="payment_provider">
+                  <option v-for="opt in paymentProviderOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+              </label>
+              <label class="sv-field">
+                <span>{{ $t('stayview.paymentEditStatus') }}</span>
+                <select v-model="paymentEditForm.payment_status" class="input" data-field="payment_status">
+                  <option v-for="opt in paymentStatusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+              </label>
+              <label class="sv-field">
+                <span>{{ $t('stayview.paymentRef') }}</span>
+                <input v-model="paymentEditForm.transaction_reference" type="text" class="input" />
+              </label>
+              <label class="sv-field">
+                <span>{{ $t('common.notes') }}</span>
+                <textarea v-model="paymentEditForm.notes" class="input" rows="2"></textarea>
+              </label>
+              <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
+            </div>
+            <div class="sv-modal-actions">
+              <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="paymentEditModal = false">
+                {{ $t('common.close') }}
+              </button>
+              <button type="button" class="btn btn-primary sv-pay-edit-submit" :disabled="actionBusy || payEditSubmitDisabled" @click="submitPaymentEdit">
+                <i class="fas fa-check" aria-hidden="true"></i>
+                {{ actionBusy ? $t('common.loading') : $t('stayview.paymentEditSave') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Invoice print breakdown preview for the folio shown in the switcher -->
+    <Teleport to="body">
+      <Transition name="sv-modal">
+        <div v-if="invoicePreviewOpen" class="sv-modal-backdrop" @click.self="invoicePreviewOpen = false">
+          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="$t('stayview.printInvoiceBreakdownTitle')">
+            <div class="sv-modal-head bar-blue">
+              <span class="sv-modal-head-icon"><i class="fas fa-print" aria-hidden="true"></i></span>
+              <div class="sv-modal-head-text">
+                <h3>{{ $t('stayview.printInvoiceBreakdownTitle') }}</h3>
+                <span class="sv-modal-status">{{ invoicePreviewHeader.code }} · {{ invoicePreviewHeader.guest }}</span>
+              </div>
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="invoicePreviewOpen = false">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="sv-modal-body">
+              <div v-if="invoicePreviewLoading" class="sv-modal-row muted">
+                <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+                <span>{{ $t('common.loading') }}</span>
+              </div>
+              <template v-else-if="invoiceBreakdown">
+                <p class="sv-cap sv-note">{{ $t('stayview.printBreakdownHint') }}</p>
+                <table class="sv-print-breakdown">
+                  <tbody>
+                    <tr>
+                      <td>{{ $t('stayview.totalRoomCharges') }}</td>
+                      <td class="num">TZS {{ fmtNum(invoiceBreakdown.roomCharges, 2) }}</td>
+                    </tr>
+                    <tr>
+                      <td>{{ $t('stayview.totalPaid') }}</td>
+                      <td class="num">TZS {{ fmtNum(invoiceBreakdown.paid, 2) }}</td>
+                    </tr>
+                    <tr v-if="invoiceBreakdown.refund > 0" class="sv-refund-pos">
+                      <td>{{ $t('stayview.refundLine') }}</td>
+                      <td class="num">− TZS {{ fmtNum(invoiceBreakdown.refund, 2) }}</td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td>{{ $t('stayview.balance') }}</td>
+                      <td class="num">TZS {{ fmtNum(invoiceBreakdown.net, 2) }}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </template>
+              <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
+            </div>
+            <div class="sv-modal-actions">
+              <button type="button" class="btn btn-secondary" :disabled="invoicePreviewLoading" @click="invoicePreviewOpen = false">
+                {{ $t('common.close') }}
+              </button>
+              <button type="button" class="btn btn-primary sv-breakdown-print" :disabled="printBusy || !invoiceBreakdown" @click="printInvoiceBreakdown">
+                <i class="fas fa-print" aria-hidden="true"></i>
+                {{ printBusy ? $t('invoices.preparing') : $t('stayview.printInvoiceBreakdown') }}
               </button>
             </div>
           </div>
@@ -1914,7 +2135,8 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
-import { requiresProvider } from '@/utils/payments'
+import { requiresProvider, providersFor, PAYMENT_METHODS, PAYMENT_STATUSES } from '@/utils/payments'
+import { folioBreakdown, isFolioRefundEntry } from '@/utils/folio'
 import { toast } from '@/utils/toast'
 import { formatDateDMY, formatDateTime } from '@/utils/dates'
 import { formatPhoneGaps, formatPhoneNational, validatePhoneNumber } from '@/utils/phone'
@@ -2684,18 +2906,20 @@ const folioEntries = computed(() => {
   // with their own poster and date, and can be voided or downloaded.
   for (const e of f.folio_entries || []) {
     const amount = Number(e.amount ?? 0)
+    const isRefund = isFolioRefundEntry(e.type)
     entries.push({
       key: `e${e.folio_entry_id}`,
       date: e.date,
       time: e.posted_at || e.date || '',
       type: e.type,
-      particular: folioEntryLabel(e.type),
-      description: e.description || folioEntryLabel(e.type),
+      particular: isRefund ? t('stayview.refundLine') : folioEntryLabel(e.type),
+      description: isRefund ? (e.description || t('stayview.refundLine')) : (e.description || folioEntryLabel(e.type)),
       detail: e.reference || '',
       user: e.user || '—',
       amount: Math.abs(amount),
       credit: amount <= 0 && e.type !== 'inclusion',
       muted: e.type === 'attachment' || amount === 0,
+      refund: isRefund,
       entryId: e.folio_entry_id,
       entryUrl: e.attachment_url ? reservationApi.folioAttachmentUrl(e.folio_entry_id) : '',
       editable: ['room_charge', 'extra_charge', 'adjustment', 'discount', 'inclusion'].includes(e.type) && e.folio_entry_id != null,
@@ -2728,6 +2952,9 @@ const folioEntries = computed(() => {
       user: p.user || '—',
       amount: Number(p.amount ?? 0),
       credit: true,
+      kind: 'payment',
+      payment: p,
+      editableByPayment: p.payment_id != null,
     })
   }
   // FIFO: sort by the actual posting timestamp, not by a stringified key — a
@@ -3015,6 +3242,136 @@ async function submitPayment() {
   if (actionError.value) paymentModal.value = true
 }
 bindBlurValidation(watch, () => paymentForm.value, paymentSnapshot, paymentTouched, paymentErrors, paymentRules)
+
+/* ----- Early-departure refund ----- */
+
+// Posts a refund for the unused nights when a guest departs before their
+// scheduled date. The backend returns the refreshed folio payload (same shape
+// as folio()), so runStayAction reloads ledgerHeader + relatedFolios and the
+// new signed REFUND ledger line shows straight away.
+const earlyDepartureOpen = ref(false)
+const earlyDepartureForm = ref({})
+const earlyDepartureErrors = ref({})
+const earlyDepartureTouched = ref(false)
+const earlyDepartureSnapshot = ref({})
+
+function openEarlyDeparture() {
+  moreOpen.value = false
+  const scheduled = folio.value?.reservation?.check_out_date || activeBar.value?.departureIso || ''
+  earlyDepartureForm.value = { actual_departure_date: scheduled || isoKey(new Date()), reason: '' }
+  earlyDepartureErrors.value = {}
+  earlyDepartureTouched.value = false
+  earlyDepartureSnapshot.value = { ...earlyDepartureForm.value }
+  actionError.value = ''
+  earlyDepartureOpen.value = true
+}
+
+function earlyDepartureRules() {
+  return [{ field: 'actual_departure_date', check: required(t) }]
+}
+
+async function submitEarlyDeparture() {
+  const f = earlyDepartureForm.value
+  earlyDepartureTouched.value = true
+  const errors = collectErrors(f, earlyDepartureRules())
+  if (Object.keys(errors).length) {
+    earlyDepartureErrors.value = errors
+    return
+  }
+  if (!activeBar.value?.id) return
+  earlyDepartureOpen.value = false
+  await runStayAction(() =>
+    reservationApi.folioEarlyDeparture(activeBar.value.id, {
+      actual_departure_date: f.actual_departure_date,
+      reason: f.reason?.trim() || null,
+    }),
+  )
+  if (actionError.value) {
+    earlyDepartureOpen.value = true
+  } else {
+    toast(t('stayview.earlyDepartureDone'))
+  }
+}
+bindBlurValidation(watch, () => earlyDepartureForm.value, earlyDepartureSnapshot, earlyDepartureTouched, earlyDepartureErrors, earlyDepartureRules)
+
+/* ----- Edit payment (correct amount / method / status / notes) ----- */
+
+// Compact editor for a payment ledger row. Posts { amount?, payment_method?,
+// payment_status?, notes?, transaction_reference? } to paymentApi.paymentEdit;
+// the backend returns the updated payment with edited_by + edited_at, which
+// the ledger row then shows under the payment line.
+const paymentEditModal = ref(false)
+const paymentEditForm = ref({})
+const paymentEditErrors = ref({})
+const paymentEditTouched = ref(false)
+const paymentEditSnapshot = ref({})
+const paymentEditTarget = ref(null)
+
+const paymentMethodOptions = computed(() =>
+  PAYMENT_METHODS.map((m) => ({ value: m, label: t(`paymentFields.methods.${m}`) })),
+)
+const paymentProviderOptions = computed(() =>
+  providersFor(paymentEditForm.value.payment_method).map((p) => ({ value: p, label: t(`paymentFields.providers.${p}`) })),
+)
+const paymentStatusOptions = computed(() =>
+  PAYMENT_STATUSES.map((s) => ({ value: s, label: t(`paymentFields.statuses.${s}`) })),
+)
+
+const payEditSubmitDisabled = computed(() => actionBusy.value || !(Number(paymentEditForm.value.amount) > 0))
+
+/** Opens the payment editor pre-filled from a payment ledger row. */
+function openPaymentEdit(entry) {
+  const p = entry?.payment || {}
+  moreOpen.value = false
+  paymentEditTarget.value = entry
+  paymentEditForm.value = {
+    amount: Number(p.amount ?? 0),
+    payment_method: p.payment_method || 'cash',
+    payment_provider: p.payment_provider || '',
+    payment_status: p.payment_status || 'completed',
+    notes: p.notes || '',
+    transaction_reference: p.transaction_reference || '',
+  }
+  paymentEditErrors.value = {}
+  paymentEditTouched.value = false
+  paymentEditSnapshot.value = { ...paymentEditForm.value }
+  actionError.value = ''
+  paymentEditModal.value = true
+}
+
+function paymentEditRules() {
+  return [
+    { field: 'amount', check: positive(t) },
+    { field: 'payment_method', check: required(t) },
+  ]
+}
+
+async function submitPaymentEdit() {
+  const f = paymentEditForm.value
+  paymentEditTouched.value = true
+  const errors = collectErrors(f, paymentEditRules())
+  if (Object.keys(errors).length) {
+    paymentEditErrors.value = errors
+    return
+  }
+  const target = paymentEditTarget.value
+  if (!target?.payment?.payment_id) return
+  paymentEditModal.value = false
+  const payload = {
+    amount: Number(f.amount),
+    payment_method: f.payment_method,
+    payment_status: f.payment_status || null,
+    notes: f.notes?.trim() || null,
+    transaction_reference: f.transaction_reference?.trim() || null,
+  }
+  await runStayAction(() => paymentApi.paymentEdit(target.payment.payment_id, payload))
+  if (actionError.value) {
+    paymentEditModal.value = true
+  } else {
+    toast(t('stayview.paymentEditDone'))
+  }
+}
+bindBlurValidation(watch, () => paymentEditForm.value, paymentEditSnapshot, paymentEditTouched, paymentEditErrors, paymentEditRules)
 
 /* ----- Add Charges ----- */
 const chargeModal = ref(false)
@@ -3476,6 +3833,106 @@ async function sendInvoice(bar) {
   } finally {
     sendBusy.value = false
   }
+}
+
+/* ----- Folio invoice print preview (switcher per-row action) ----- */
+
+// Per-switcher-row "Print invoice": shows the breakdown for whichever folio is
+// open (the active bar or a related folio after a switch), then opens the same
+// clean print document the ledger reports use.
+const invoicePreviewOpen = ref(false)
+const invoicePreviewLoading = ref(false)
+const invoicePreviewFolio = ref(null)
+
+const invoicePreviewHeader = computed(() => {
+  const f = invoicePreviewFolio.value
+  const fol = f?.folio || {}
+  const res = f?.reservation || {}
+  return {
+    code: fol.folio_code || res.folio_code || '—',
+    guest: res.guest_name || res.label || '',
+    room: res.room?.room_number || '',
+  }
+})
+
+const invoiceBreakdown = computed(() => (invoicePreviewFolio.value ? folioBreakdown(invoicePreviewFolio.value) : null))
+
+/**
+ * Loads the full folio payload for the requested switcher row (reuses the
+ * payload already shown when it is the active or currently-viewed folio) and
+ * opens the invoice breakdown preview for it.
+ */
+async function openInvoicePreview(r) {
+  const id = r?.reservation_id ?? r?.id
+  if (!id || invoicePreviewLoading.value || printBusy.value) return
+  invoicePreviewLoading.value = true
+  actionError.value = ''
+  try {
+    let payload = null
+    if (viewingFolio.value?.reservation?.reservation_id === id) payload = viewingFolio.value
+    else if (activeBar.value?.id === id) payload = folio.value
+    else {
+      const res = await reservationApi.folio(id)
+      payload = res.data
+    }
+    invoicePreviewFolio.value = payload
+    invoicePreviewOpen.value = true
+  } catch (err) {
+    actionError.value = apiErrorMsg(err, t('stayview.invoiceError'))
+  } finally {
+    invoicePreviewLoading.value = false
+  }
+}
+
+/**
+ * Prints the folio invoice breakdown (room charges / advance / early-departure
+ * refund when present / net balance) for the folio currently previewed.
+ */
+function printInvoiceBreakdown() {
+  const f = invoicePreviewFolio.value
+  const b = invoiceBreakdown.value
+  if (!f || !b) return
+  const now = new Date()
+  const stamp = `${isoKey(now)} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+  const header = invoicePreviewHeader.value
+  const head = `
+    <div class="rpt-hotel">${esc(hotelName.value)}</div>
+    <div class="rpt-title">${esc(t('stayview.printInvoiceBreakdownTitle'))}</div>
+    <div class="rpt-meta">
+      ${esc(t('folio.no'))}: ${esc(header.code)}; ${esc(t('stayview.guestName'))}: ${esc(header.guest)}${header.room ? '; ' + esc(t('stayview.room')) + ': ' + esc(header.room) : ''}
+    </div>`
+  const rows = [
+    `<tr><td>${esc(t('stayview.totalRoomCharges'))}</td><td class="num">TZS ${esc(fmtNum(b.roomCharges, 2))}</td></tr>`,
+    `<tr><td>${esc(t('stayview.totalPaid'))}</td><td class="num">TZS ${esc(fmtNum(b.paid, 2))}</td></tr>`,
+  ]
+  if (b.refund > 0) {
+    rows.push(`<tr><td>${esc(t('stayview.refundLine'))}</td><td class="num">TZS ${esc(fmtNum(-b.refund, 2))}</td></tr>`)
+  }
+  rows.push(`<tr><td>${esc(t('stayview.balance'))}</td><td class="num">TZS ${esc(fmtNum(b.net, 2))}</td></tr>`)
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${esc(t('stayview.printInvoiceBreakdownTitle'))}</title>
+<style>
+  @page { size: A4 portrait; margin: 12mm; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111; margin: 0; }
+  .rpt-hotel { text-align: center; font-size: 16px; font-weight: 700; }
+  .rpt-title { text-align: center; font-size: 13px; font-weight: 700; margin-top: 2px; }
+  .rpt-meta { text-align: center; font-size: 10px; color: #444; margin: 4px 0 10px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #999; padding: 3px 6px; text-align: left; }
+  td.num, th.num { text-align: right; }
+  .rpt-foot { margin-top: 12px; font-size: 10px; color: #444; }
+</style></head><body>
+${head}
+<table>
+  <tbody>${rows.join('')}</tbody>
+</table>
+<div class="rpt-foot">${esc(t('stayview.printedBy'))} : ${esc(printedBy.value)} at ${esc(stamp)}</div>
+ <script>window.onload = function () { window.print() }</${'script'}>
+ </body></html>`
+  const win = window.open('', '_blank')
+  if (!win) return
+  win.document.write(html)
+  win.document.close()
 }
 
 /* ---------------- Stock ledger report ---------------- */
@@ -4306,6 +4763,60 @@ onUnmounted(() => clearInterval(refreshTimer))
 
 
 <style scoped>
+/* Folio switcher: pick which folio of the stay you are looking at. */
+.sv-folio-ref{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:8px 12px;background:#f4f0ff;border:1px solid #ddd3f6;border-radius:10px;font-size:13px;color:#4b318c}
+.sv-folio-ref i{color:#8b5cf6}
+.sv-folio-ref strong{font-variant-numeric:tabular-nums;color:#3a256b}
+.sv-folio-guest{color:#7c6aa8}
+.sv-folio-switch{margin:0 0 12px}
+.sv-folio-switch-label{display:block;margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:#8b5cf6}
+.sv-folio-switch-table-wrap{border:1px solid #e2dcf5;border-radius:10px;overflow:hidden}
+.sv-folio-table-switch{width:100%;border-collapse:collapse;background:#fff;font-size:13px}
+.sv-folio-table-switch th{padding:7px 10px;background:#f3effc;color:#4b318c;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;text-align:left;border-bottom:1px solid #e2dcf5}
+.sv-folio-table-switch td{padding:7px 10px;border-bottom:1px solid #f0ecfc;vertical-align:middle}
+.sv-folio-table-switch tbody tr:last-child td{border-bottom:0}
+.sv-folio-table-switch tbody tr:hover td{background:#faf8ff}
+.sv-folio-row-active td{background:#f0ebfe!important}
+.sv-folio-row-active td:first-child{border-left:3px solid #8b5cf6}
+.sv-folio-col-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sv-folio-col-view{text-align:right;white-space:nowrap}
+.sv-folio-code-part{color:#3a256b}
+.sv-folio-mod-since{display:block;font-size:11px;color:#a89cc9}
+.sv-folio-row-type{display:block;font-size:11px;color:#a89cc9}
+.sv-folio-view-btn{display:inline-block;padding:5px 12px;background:#8b5cf6;color:#fff;border:0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s}
+.sv-folio-print-btn{display:inline-block;padding:5px 12px;margin-right:4px;background:#fff;color:#4b318c;border:1px solid #cbbff0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.sv-folio-print-btn:hover{background:#f3effc;color:#3a256b}
+.sv-folio-view-btn:hover{background:#6d3ef0}
+.sv-folio-view-btn:disabled,.sv-folio-print-btn:disabled{background:#cbbff0;color:#fff;cursor:default}
+
+/* 'Now viewing another folio' strip under the reference bar. */
+.sv-folio-now-viewing{display:flex;align-items:center;gap:10px;margin:0 0 10px;padding:8px 12px;background:#fffbeb;border:1px solid #f3e2ae;border-radius:10px;font-size:13px;color:#7a5c14}
+.sv-folio-now-viewing i{color:#d97c0b}
+.sv-folio-now-viewing strong{color:#5c4408}
+.sv-folio-return{margin-left:auto;padding:5px 12px;background:#fff;color:#8b5cf6;border:1px solid #8b5cf6;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.sv-folio-return:hover{background:#8b5cf6;color:#fff}
+.sv-folio-return:disabled{border-color:#cbbff0;color:#cbbff0;cursor:default;background:#fff}
+
+/* Early-departure refund action (folio reference bar, stay-view). */
+.sv-folio-early-dep{display:inline-flex;align-items:center;gap:6px;margin-left:auto;padding:5px 12px;background:#fff;color:#b45309;border:1px solid #f3d29a;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.sv-folio-early-dep:hover{background:#b45309;color:#fff}
+.sv-folio-early-dep:disabled{border-color:#e8d5b8;color:#d9b98a;cursor:default;background:#fff}
+
+/* Payment edit affordance inside the folio ledger. */
+.sv-folio-edit-note{display:inline-block;margin-top:2px;font-size:11px;color:#9c8fc9}
+.sv-folio-payment-edit{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:#fff;color:#0f766e;border:1px solid #99d6cf;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.sv-folio-payment-edit:hover{background:#0f766e;color:#fff}
+.sv-folio-payment-edit:disabled{border-color:#bfe0dc;color:#9cc8c3;cursor:default;background:#fff}
+.sv-pay-edit-page{width:100%;max-height:72vh;overflow-y:auto}
+
+/* Print breakdown preview modal. */
+.sv-print-breakdown{width:100%;border-collapse:collapse;font-size:13px}
+.sv-print-breakdown th,.sv-print-breakdown td{padding:8px 10px;border-bottom:1px solid #ece8fb;text-align:left}
+.sv-print-breakdown th{background:#f6f3fe;color:#4b318c;font-size:11px;text-transform:uppercase;letter-spacing:.03em}
+.sv-print-breakdown td.num{text-align:right;font-variant-numeric:tabular-nums}
+.sv-print-breakdown tfoot td{padding-top:10px;font-weight:700}
+.sv-refund-pos{color:#b45309}
+
 .stayview-page {
   padding: 16px 20px 32px;
   max-width: 100%;

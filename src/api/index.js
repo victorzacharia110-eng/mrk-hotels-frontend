@@ -758,6 +758,16 @@ export const reservationApi = {
     return api.post(`${v1}/reservations/${id}/folio/creditors`, data)
   },
   /**
+   * Processes an early departure and posts the resulting refund onto the
+   * folio. @param data - { actual_departure_date: 'YYYY-MM-DD', reason? }.
+   * @returns {Promise} Axios response with the refreshed folio payload (same
+   * shape as folio(): folio / reservation / orders / laundry / folio_entries /
+   * payments / related_folios / audit), including the posted refund ledger line.
+   */
+  folioEarlyDeparture(id, data) {
+    return api.post(`${v1}/reservations/${id}/folio/early-departure`, data)
+  },
+  /**
    * Uploads documents onto the folio (multipart files[]).
    * @param files - Array of File objects.
    */
@@ -863,6 +873,16 @@ export const paymentApi = {
    */
   show(id) {
     return api.get(`${v1}/payments/${id}`)
+  },
+  /**
+   * Updates a payment's capture details. Only provided fields are changed.
+   * @param {string|number} id - Payment identifier.
+   * @param {object} data - { amount?, payment_method?, payment_status?, notes?, transaction_reference? }.
+   * @returns {Promise} Axios response with the updated payment, including the
+   * editor identity (edited_by) and ISO timestamp (edited_at).
+   */
+  paymentEdit(id, data) {
+    return api.put(`${v1}/payments/${id}`, data)
   },
   /**
    * Deletes a payment.
