@@ -475,11 +475,11 @@
                               <i class="fas fa-pen" aria-hidden="true"></i>
                             </button>
                             <button
-                              v-if="activeBar?.guestEmail && activeBar?.id"
+                              v-if="activeBar?.id"
                               type="button"
                               class="sv-icon-link"
-                              :title="$t('stayview.sendInvoice')"
-                              :disabled="sendBusy"
+                              :title="activeBar.guestEmail ? $t('stayview.sendInvoice') : $t('stayview.noGuestEmail')"
+                              :disabled="sendBusy || !activeBar.guestEmail"
                               @click="sendInvoice(activeBar)"
                             >
                               <i class="fas fa-paper-plane" aria-hidden="true"></i>
