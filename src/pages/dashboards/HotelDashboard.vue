@@ -408,20 +408,57 @@
                 <div class="sv-folio-ref">
                   <i class="fas fa-book-open" aria-hidden="true"></i>
                   <span>{{ $t('folio.no') }}</span>
-                  <strong>{{ folio?.folio?.folio_code || activeBar?.folio_code || '—' }}</strong>
+                  <strong>{{ ledgerHeader.code }}</strong>
+                  <span v-if="ledgerHeader.guest" class="sv-folio-guest"> · {{ ledgerHeader.guest }}<template v-if="ledgerHeader.room"> · {{ ledgerHeader.room }}</template></span>
+                </div>
+                <div v-if="relatedFolios.length" class="sv-folio-switch">
+                  <span class="sv-folio-switch-label">{{ $t('stayview.foliosForStay') }}</span>
+                  <div class="sv-folio-switch-chips">
+                    <button
+                      type="button"
+                      class="sv-folio-chip"
+                      :class="{ active: !viewingFolio }"
+                      :disabled="folioLoading"
+                      @click="switchFolio({ reservation_id: activeBar.id })"
+                    >
+                      <strong>{{ activeBar.folio_code || ledgerHeader.code }}</strong>
+                      <span>{{ activeBar.label }}</span>
+                      <em>TZS {{ fmtNum(ledgerHeader.balance, 2) }}</em>
+                    </button>
+                    <button
+                      v-for="r in relatedFolios"
+                      :key="r.reservation_id"
+                      type="button"
+                      class="sv-folio-chip"
+                      :class="{ active: viewingFolio?.reservation?.reservation_id === r.reservation_id }"
+                      :disabled="folioLoading"
+                      @click="switchFolio(r)"
+                    >
+                      <strong>{{ r.folio_code }}</strong>
+                      <span>{{ r.guest_name }}<template v-if="r.room_number"> · {{ r.room_number }}</template></span>
+                      <em>TZS {{ fmtNum(r.balance_due, 2) }}</em>
+                    </button>
+                  </div>
+                </div>
+                <div v-if="viewingFolio" class="sv-folio-now-viewing">
+                  <i class="fas fa-book-bookmark" aria-hidden="true"></i>
+                  <span>{{ $t('stayview.viewingFolio') }} <strong>{{ ledgerHeader.code }}</strong> — {{ ledgerHeader.guest }}</span>
+                  <button type="button" class="sv-folio-return" :disabled="folioLoading" @click="switchFolio({ reservation_id: activeBar.id })">
+                    <i class="fas fa-arrow-left" aria-hidden="true"></i> {{ $t('stayview.backToCurrentFolio') }}
+                  </button>
                 </div>
                 <div class="sv-panel-cards">
                   <div class="sv-panel-card">
                     <span>{{ $t('stayview.totalRoomCharges') }}</span>
-                    <strong>TZS {{ fmtNum((folio?.folio?.total_amount ?? 0) + (folio?.folio?.room_charges ?? 0), 2) }}</strong>
+                    <strong>TZS {{ fmtNum(ledgerHeader.total, 2) }}</strong>
                   </div>
                   <div class="sv-panel-card">
                     <span>{{ $t('stayview.totalPaid') }}</span>
-                    <strong>TZS {{ fmtNum(folio?.reservation?.advance_payment ?? activeBar.advance ?? 0, 2) }}</strong>
+                    <strong>TZS {{ fmtNum(ledgerHeader.paid, 2) }}</strong>
                   </div>
                   <div class="sv-panel-card" :class="activeBar.paymentPending ? 'pay-pending' : 'pay-ok'">
                     <span>{{ $t('stayview.balance') }}</span>
-                    <strong>TZS {{ fmtNum(folio?.folio?.balance_due ?? activeBar.balance ?? 0, 2) }}</strong>
+                    <strong>TZS {{ fmtNum(ledgerHeader.balance, 2) }}</strong>
                   </div>
                 </div>
 
@@ -2405,6 +2442,60 @@ async function loadFolio(id) {
   }
 }
 
+/* ---------- Folio switching (split / transfer / cut / new folio) ---------- */
+
+/**
+ * Full API payload (same shape as `folio`) of a folio linked to the active
+ * stay by a transfer/split/cut. `null` means the actiove stay's own folio is
+ * being shown, so the Folio Operations ledger toggles between the stay's
+ * folio and every folio that money moved into or out of it.
+ */
+const viewingFolio = ref(null)
+
+/** Folios the backend linked to this stay through moves, one chip each. */
+const relatedFolios = computed(
+  () => (folio.value?.related_folios || []).filter((r) => r.reservation_id !== activeBar.value?.id),
+)
+
+/** The ledger shown in the Folio tab: the stay's own folio unless toggled. */
+const ledgerFolio = computed(() => viewingFolio.value || folio.value)
+
+/** Header data for the Folio tab, reflecting whichever folio is displayed. */
+const ledgerHeader = computed(() => {
+  const src = viewingFolio.value || folio.value || null
+  const f = src?.folio || null
+  const res = src?.reservation || activeBar.value || null
+  return {
+    reservationId: src?.reservation?.reservation_id || activeBar.value?.id || null,
+    code: f?.folio_code || res?.folio_code || activeBar.value?.folio_code || '—',
+    guest: res?.guest_name || res?.label || '',
+    room: res?.room?.room_number || activeBar.value?.roomNumber || '',
+    total: Number(f?.total_amount ?? 0) + Number(f?.room_charges ?? 0),
+    paid: Number(res?.advance_payment ?? activeBar.value?.advance ?? 0),
+    balance: Number(f?.balance_due ?? res?.balance_due ?? activeBar.value?.balance ?? 0),
+  }
+})
+
+/** Shows the stay's own folio (or reloads the toggled one) from a chip click. */
+async function switchFolio(item) {
+  const id = item?.reservation_id
+  if (!id || folioLoading.value) return
+  if (id === activeBar.value?.id) {
+    viewingFolio.value = null
+    return
+  }
+  if (viewingFolio.value?.reservation?.reservation_id === id) return
+  folioLoading.value = true
+  try {
+    const res = await reservationApi.folio(id)
+    viewingFolio.value = res.data
+  } catch (err) {
+    actionError.value = apiErrorMsg(err, t('stayview.actionError'))
+  } finally {
+    folioLoading.value = false
+  }
+}
+
 /* ---------------- Stay-view tabs & panels ---------------- */
 
 // Active tab in the stay-view modal; "More" dropdown open state.
@@ -2555,7 +2646,7 @@ const nightTotal = computed(() => chargeNights.value.reduce((s, n) => s + n.rate
  * rest, so the column totals always add up to balance_due.
  */
 const folioEntries = computed(() => {
-  const f = folio.value || null
+  const f = ledgerFolio.value || null
   if (!f) return []
   const fol = f.folio || {}
   const entries = []
@@ -2767,6 +2858,13 @@ async function runStayAction(fn) {
   try {
     await fn()
     if (activeBar.value?.id) await loadFolio(activeBar.value.id)
+    // An action may have changed the linked folio too (edit/void of one of its
+    // rows); reload it so the toggled ledger stays accurate.
+    const viewedId = viewingFolio.value?.reservation?.reservation_id
+    if (viewedId && viewedId !== activeBar.value?.id) {
+      const res = await reservationApi.folio(viewedId)
+      viewingFolio.value = res.data
+    }
     await load(true)
   } catch (err) {
     actionError.value = apiErrorMsg(err, t('stayview.actionError'))
@@ -2835,6 +2933,7 @@ function prefillCreditorCompany() {
 
 function openPaymentModal(mode = 'collect') {
   moreOpen.value = false
+  viewingFolio.value = null
   payMode.value = mode
   paymentForm.value = { amount: null, payment_method: 'cash', payment_provider: '', transaction_reference: '', company_id: '', note: '' }
   paymentErrors.value = {}
@@ -2925,6 +3024,7 @@ const chargeTouched = ref(false)
 const chargeSnapshot = ref({})
 function openChargeModal() {
   moreOpen.value = false
+  viewingFolio.value = null
   chargeForm.value = { description: '', amount: null }
   chargeErrors.value = {}
   chargeTouched.value = false
@@ -3104,6 +3204,7 @@ const folioOpCanPost = computed(() => {
 
 function openFolioOp(op, mode = 'transfer') {
   moreOpen.value = false
+  viewingFolio.value = null
   folioOp.value = op
   folioMoveMode.value = mode
   folioOpForm.value = { amount: null, description: '', target_reservation_id: '', new_room_id: '', files: [] }

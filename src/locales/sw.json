@@ -3799,7 +3799,10 @@
     "postMove": "Hamisha salio",
     "postUpload": "Pakia faili",
     "noFiles": "Hakuna faili zilizochaguliwa",
-    "folioSaved": "Folio imesasishwa."
+    "folioSaved": "Folio imesasishwa.",
+    "foliosForStay": "Folios za kukaa huku",
+    "viewingFolio": "Unatazama",
+    "backToCurrentFolio": "Rudi kwenye folio ya sasa"
   },
   "orderTaker": {
     "title": "Chukua Oda",

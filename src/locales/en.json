@@ -3812,7 +3812,10 @@
     "postMove": "Move balance",
     "postUpload": "Upload files",
     "noFiles": "No files selected",
-    "folioSaved": "Folio updated."
+    "folioSaved": "Folio updated.",
+    "foliosForStay": "Folios for this stay",
+    "viewingFolio": "Viewing",
+    "backToCurrentFolio": "Back to current folio"
   },
   "orderTaker": {
     "title": "Take Order",
@@ -3879,7 +3882,7 @@
     "markServed": "Served",
     "markPreparing": "Start preparing",
     "markCompleted": "Complete",
-    "collectPayment": "Collect",
+    "collectPayment": "Collect Payment",
     "billToRoom": "Bill to room",
     "orderUpdated": "Order {number} updated.",
     "payTitle": "Collect payment",
@@ -3955,7 +3958,6 @@
     "barTableLocked": "Only bar tables can be managed here.",
     "restaurantTableLocked": "Only restaurant tables can be managed here.",
     "pinnedDept": "Your department is fixed to this one.",
-    "collectPayment": "Collect Payment",
     "postToCreditors": "Post to creditors",
     "creditorCompany": "Company",
     "searchCompany": "Search companies",
