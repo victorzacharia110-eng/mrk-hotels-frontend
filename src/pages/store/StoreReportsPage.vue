@@ -92,10 +92,12 @@ import { reportApi, hotelSettingsApi, inventoryOpsApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useCategoriesStore } from '@/stores/categories'
+import { useWorkingDateStore } from '@/stores/workingDate'
 import { printToPrinter, restorePrinter, buildReportLines } from '@/utils/printer'
 import '@/pages/store/store-shared.css'
 
 const { t } = useI18n()
+const workingDateStore = useWorkingDateStore()
 const route = useRoute()
 const authStore = useAuthStore()
 
@@ -202,8 +204,8 @@ const REPORT_CONFIG = {
   },
 }
 
-const from = ref(new Date().toISOString().slice(0, 10))
-const to = ref(new Date().toISOString().slice(0, 10))
+const from = ref(workingDateStore.workingDate)
+const to = ref(workingDateStore.workingDate)
 const type = ref('ledger-summary')
 const data = ref(null)
 const loading = ref(false)
@@ -441,7 +443,12 @@ async function loadLogo() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await workingDateStore.ensureLoaded()
+  if (workingDateStore.workingDate) {
+    from.value = workingDateStore.workingDate
+    to.value = workingDateStore.workingDate
+  }
   loadReportData()
   restorePrinter()
   if (!route.query.view) generate()

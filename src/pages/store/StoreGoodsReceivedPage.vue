@@ -260,11 +260,13 @@ import { useI18n } from 'vue-i18n'
 import { goodsReceivedNoteApi, purchaseOrderApi } from '@/api'
 import CalendarInput from '@/components/CalendarInput.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
+import { useWorkingDateStore } from '@/stores/workingDate'
 import { saveBlob } from '@/utils/download'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+const workingDateStore = useWorkingDateStore()
 
 const grns = ref([])
 const { q, status, statuses, paged } = useClientTable(grns, { pageSize: 15, searchFields: ['grn_number', 'status', (r) => r.po?.po_number] })
@@ -282,9 +284,7 @@ const printData = ref(null)
 const form = reactive({ po_id: '', inspection_status: 'pending', received_date: todayStr(), delivery_note_number: '', notes: '', items: [], delivery_notes: [] })
 
 function todayStr() {
-  const d = new Date()
-  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-  return local.toISOString().slice(0, 10)
+  return workingDateStore.workingDate
 }
 
 const emptyText = computed(() => {
@@ -547,6 +547,7 @@ async function voidGrn() {
 }
 
 onMounted(async () => {
+  await workingDateStore.ensureLoaded()
   await load(1)
   if (route.query.po_id || route.query.create === '1') openCreate()
 })

@@ -957,6 +957,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useWorkingDateStore } from '@/stores/workingDate'
 import { useOrderRealtime } from '@/composables/useOrderRealtime'
 import { orderApi, menuItemApi, tableApi, tableLocationApi, reportApi } from '@/api'
 import CalendarInput from '@/components/CalendarInput.vue'
@@ -972,6 +973,7 @@ import { toast } from '@/utils/toast'
 const { t } = useI18n()
 const authStore = useAuthStore()
 const printStore = usePrintSettingsStore()
+const workingDateStore = useWorkingDateStore()
 
 // The department defaults from the staff role (bartenders start on the bar)
 // but can be switched at any time with the Restaurant / Bar toggle.
@@ -1072,8 +1074,8 @@ const summaryError = ref('')
 // The summary is date-pickable; TODAY is the default on first load and the
 // picker label always mirrors the date actually requested (a past date is
 // never presented as "today's").
-const summaryDate = ref(nowDate())
-const isSummaryToday = computed(() => summaryDate.value === nowDate())
+const summaryDate = ref(workingDateStore.workingDate)
+const isSummaryToday = computed(() => summaryDate.value === workingDateStore.workingDate)
 
 /** Whether the given order belongs to the currently signed-in waiter. */
 function isMine(order) {
@@ -1156,18 +1158,11 @@ function switchToSummary() {
 
 // Date-filtered department snapshot: stock, low stock, sales summary, fast
 // moving items and the pending/accepted requisition feeds (default today).
-const dashFrom = ref(nowDate())
-const dashTo = ref(nowDate())
+const dashFrom = ref(workingDateStore.workingDate)
+const dashTo = ref(workingDateStore.workingDate)
 const dashboard = ref(null)
 const dashboardLoading = ref(false)
 const dashboardError = ref('')
-
-/** Today's date in YYYY-MM-DD (local), the dashboard's default window. */
-function nowDate() {
-  const d = new Date()
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
 
 /** Switches to the dashboard tab and loads it. */
 function switchToDashboard() {
@@ -2244,8 +2239,12 @@ async function loadMenu() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   restorePrinter()
+  await workingDateStore.ensureLoaded()
+  summaryDate.value = workingDateStore.workingDate
+  dashFrom.value = workingDateStore.workingDate
+  dashTo.value = workingDateStore.workingDate
   loadMenu()
   loadTables()
   loadOpenOrders()

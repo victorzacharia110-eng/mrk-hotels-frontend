@@ -256,9 +256,11 @@ import { cashierApi, orderApi, tableApi } from '@/api'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useOrderRealtime } from '@/composables/useOrderRealtime'
+import { useWorkingDateStore } from '@/stores/workingDate'
 import { toast } from '@/utils/toast'
 
 const { t } = useI18n()
+const workingDateStore = useWorkingDateStore()
 
 const tables = ref([])
 const allWaiters = ref([])
@@ -460,7 +462,7 @@ async function confirmTransfer() {
 async function load() {
   busy.value = true
   try {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = workingDateStore.workingDate
     const [tablesRes, ordersRes, boardRes] = await Promise.all([
       tableApi.index({ per_page: 100 }),
       orderApi.index({ status: 'pending', date: today, per_page: 100 }),
@@ -505,7 +507,8 @@ function onCreated() {
   load()
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await workingDateStore.ensureLoaded()
   load()
 })
 

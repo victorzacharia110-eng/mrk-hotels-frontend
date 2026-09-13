@@ -113,9 +113,11 @@
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fbDayCloseApi } from '@/api'
+import { useWorkingDateStore } from '@/stores/workingDate'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const { t } = useI18n()
+const workingDateStore = useWorkingDateStore()
 
 const loading = ref(false)
 const loadingHistory = ref(false)
@@ -180,6 +182,7 @@ async function doClose() {
     const { data } = await fbDayCloseApi.store({ date: status.value.open_date })
     success.value = data?.message || t('cashier.dayClose.closedSuccess')
     confirmOpen.value = false
+    await workingDateStore.reload()
     await load()
     await loadHistory()
   } catch (err) {

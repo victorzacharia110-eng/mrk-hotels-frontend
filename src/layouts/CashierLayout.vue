@@ -223,6 +223,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useWorkingDateStore } from '@/stores/workingDate'
 import { outletApi } from '@/api'
 import { selectedOutlet } from '@/pages/cashier/outlet-context'
 import { restorePrinter } from '@/utils/printer'
@@ -234,6 +235,7 @@ const route = useRoute()
 const router = useRouter()
 const { t, d } = useI18n()
 const authStore = useAuthStore()
+const workingDateStore = useWorkingDateStore()
 
 const outlets = ref([])
 const gateOpen = ref(false)
@@ -311,7 +313,8 @@ const userInitials = computed(() => {
   return (authStore.user?.user_role || 'CS').slice(0, 2).toUpperCase()
 })
 const hotelName = computed(() => authStore.tenant?.hotel_name || '')
-const workingDate = d(new Date(), 'long')
+/** The panel's working date is the hotel's open business day (Day Close). */
+const workingDate = computed(() => d(new Date(workingDateStore.workingDate + 'T12:00:00'), 'long'))
 
 function isActive(to) {
   return route.path.startsWith(to)
@@ -344,6 +347,7 @@ async function handleLogout() {
 onMounted(() => {
   loadOutlets()
   restorePrinter()
+  workingDateStore.ensureLoaded()
 })
 </script>
 

@@ -325,6 +325,7 @@ import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useWorkingDateStore } from '@/stores/workingDate'
 import { useOrderRealtime } from '@/composables/useOrderRealtime'
 import { PAYMENT_METHODS } from '@/utils/payments'
 import { restorePrinter, printerState, connectPrinter, printerSupported } from '@/utils/printer'
@@ -351,8 +352,10 @@ const orders = ref([])
 const loading = ref(true)
 const error = ref('')
 /** Working date in the hotel's local timezone (not UTC, so night-shift tickets
- *  created just after midnight still land on "today"). */
-const date = ref(utcToday())
+ *  created just after midnight still land on "today"). The panel defaults to
+ *  the Day Close open business date. */
+const workingDateStore = useWorkingDateStore()
+const date = ref(workingDateStore.workingDate)
 const search = ref('')
 const activeTab = ref('running')
 const printArea = ref(null)
@@ -461,11 +464,6 @@ function timeOf(iso) {
 
 function money(value) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value ?? 0)
-}
-
-/** Today's date as the BACKEND sees it (UTC, matching whereDate on created_at). */
-function utcToday() {
-  return new Date().toISOString().slice(0, 10)
 }
 
 async function load() {
@@ -792,7 +790,9 @@ const { stop: stopOrderUpdates } = useOrderRealtime(() => {
   if (!loading.value && !drawerOpen.value && !payOpen.value) load()
 })
 
-onMounted(() => {
+onMounted(async () => {
+  await workingDateStore.ensureLoaded()
+  date.value = workingDateStore.workingDate
   load()
   loadLogo()
   restorePrinter()

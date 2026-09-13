@@ -210,9 +210,11 @@ import { purchaseOrderApi, purchaseRequisitionApi, supplierApi, inventoryApi } f
 import CalendarInput from '@/components/CalendarInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
+import { useWorkingDateStore } from '@/stores/workingDate'
 import { saveBlob } from '@/utils/download'
 
 const { t } = useI18n()
+const workingDateStore = useWorkingDateStore()
 const router = useRouter()
 
 const orders = ref([])
@@ -232,9 +234,7 @@ const formError = ref('')
 const printData = ref(null)
 
 function todayStr() {
-  const d = new Date()
-  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-  return local.toISOString().slice(0, 10)
+  return workingDateStore.workingDate
 }
 
 const form = reactive({ supplier_id: '', pr_id: '', delivery_date: todayStr(), payment_terms: '', delivery_address: '', notes: '', items: [emptyItem()] })
@@ -464,7 +464,7 @@ async function voidPo() {
   }
 }
 
-onMounted(() => load(1))
+onMounted(async () => { await workingDateStore.ensureLoaded(); load(1) })
 </script>
 
 <style scoped>
