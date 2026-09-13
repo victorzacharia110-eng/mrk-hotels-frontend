@@ -675,7 +675,7 @@
       <Transition name="fade">
         <div v-if="billMode" class="cat-pop" role="dialog" :aria-label="billMode === 'split' ? $t('orderTaker.splitTitle') : $t('orderTaker.transferTitle')">
           <div class="cat-pop-backdrop" @click="closeBill"></div>
-          <div class="cat-pop-panel accomp-panel">
+          <div class="cat-pop-panel accomp-panel bill-pop-panel">
             <header class="cat-pop-head">
               <strong>{{ billMode === 'split' ? $t('orderTaker.splitTitle') : $t('orderTaker.transferTitle') }} · {{ billModeOrder?.order_number }}</strong>
               <button type="button" class="cat-pop-close" :aria-label="$t('orderTaker.close')" @click="closeBill">
@@ -3645,12 +3645,31 @@ function onKey(e) {
   font-size: 12px;
   color: #a1a1aa;
 }
+/* Bill split / transfer dialog: wide panel on desktop (1120px, like the folio
+   operation modals), clean single-column flow on phones so a moving waiter can
+   read and tap without cramping. */
+.bill-pop-panel {
+  width: min(1120px, 96vw);
+  max-height: 88vh;
+}
 @media (max-width: 640px) {
+  .bill-pop-panel {
+    width: 96vw;
+    max-height: 94dvh;
+  }
   .bill-split { flex-direction: column; }
   .bill-arrow { flex-direction: row; }
   .bill-arrow-bar { width: auto; height: 2px; min-height: 0; }
   .bill-arrow-btn { transform: rotate(90deg); }
   .bill-arrow-btn:hover:not(:disabled) { transform: rotate(90deg) scale(1.06); }
+  /* Bigger touch targets and scrollable panes so the ticket stays usable on a
+     phone while moving around the restaurant. */
+  .split-pick { max-height: 30vh; }
+  .split-line { padding: 10px 6px; font-size: 14px; }
+  .bill-dests { max-height: 26vh; }
+  .bill-dest { padding: 10px; font-size: 14px; }
+  .bill-actions { flex-wrap: wrap; }
+  .bill-actions .send-btn { width: 100%; min-width: 0; }
 }
 .bill-actions {
   display: flex;
