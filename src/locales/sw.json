@@ -3856,7 +3856,8 @@
     "dotRuleToday": "Leo iko ndani ya dirisha la kukaa",
     "dotRuleGuest": "Mgeni aliyesajiliwa ndiye mgeni wa sasa",
     "dotRuleClear": "Hakuna mgeni aliyesajiliwa anayefunika leo",
-    "dotLegendTitle": "Kanuni za nukta ya chumba"
+    "dotLegendTitle": "Jinsi nukta nyekundu na kijani zinavyoundwa",
+    "dotLegendDesc": "Nyekundu = mgeni amesajiliwa na leo iko ndani ya dirisha la kukaa kwake. Kijani = chumba kiko wazi leo. Bluu = chumba kinasafishwa, njano = ni chafu, kijivu = matengenezo. Ukaguzi unaanzia juu hadi chini — ✓ maana sheria inashikilia kwa chumba hiki, ✗ maana haishikilii."
   },
   "orderTaker": {
     "title": "Chukua Oda",

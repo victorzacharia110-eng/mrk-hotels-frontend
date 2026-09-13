@@ -2044,7 +2044,13 @@
                 <i class="fas fa-layer-group" aria-hidden="true"></i>
                 <span>{{ roomTypeLabel(roomModal.room_type) }} · TZS {{ formatPrice(roomModal.price_per_night) }}</span>
               </div>
-              <div class="sv-modal-section">{{ $t('stayview.dotLegendTitle') }}</div>
+              <header class="sv-dot-rules-head">
+                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                <div>
+                  <h4>{{ $t('stayview.dotLegendTitle') }}</h4>
+                  <p>{{ $t('stayview.dotLegendDesc') }}</p>
+                </div>
+              </header>
               <ul v-if="roomModalRules.length" class="sv-dot-rules">
                 <li
                   v-for="rule in roomModalRules"
@@ -3871,15 +3877,19 @@ async function confirmVoid() {
 const printBusy = ref(false)
 const sendBusy = ref(false)
 
+// Hotel logo shown on printed documents (loaded from settings, silent fallback).
+const hotelLogo = ref('')
+
 /**
  * Generates (or refreshes) the folio invoice for the booking and opens the
  * PDF in a new tab so the receptionist can print it (or save it). Falls back
  * to a direct download when the popup is blocked.
  */
 
-/** Prints a single folio entry as its own invoice (frontend-built document):
- *  targets the clicked row only, with its own entry reference and issued-at
- *  timestamp, independent of the whole-folio bottom print button. */
+/** Prints a single folio entry as its own branded invoice (frontend-built
+ *  document): targets the clicked row only, with its own entry reference and
+ *  issued-at timestamp, independent of the whole-folio bottom print button.
+ *  Rendered with the hotel logo and brand palette on A4. */
 function printEntryInvoice(e) {
   if (!e?.entryId) return
   const folioCode = ledgerHeader.value?.code || activeBar.value?.folio_code || ''
@@ -3887,6 +3897,9 @@ function printEntryInvoice(e) {
   const room = ledgerHeader.value?.room || activeBar.value?.room_number || ''
   const op = e.credit ? '-' : ''
   const balance = e.running_balance != null ? op + fmtNum(e.running_balance, 2) : ''
+  const now = new Date()
+  const stamp = `${isoKey(now)} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+  const logoTag = hotelLogo.value ? `<img src="${esc(hotelLogo.value)}" alt="" />` : ''
   const doc = `
 <!doctype html>
 <html lang="en">
@@ -3894,36 +3907,52 @@ function printEntryInvoice(e) {
 <meta charset="utf-8">
 <title>${t('stayview.printEntryInvoice')} · ${(e.entry_code || e.entryId)}</title>
 <style>
-  body{font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;margin:36px;color:#111;line-height:1.5}
-  .h{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:20px}
-  .h img{max-height:54px} .h h1{font-size:18px;margin:0}
-  .meta{display:grid;grid-template-columns:1fr 1fr;gap:4px 32px;margin-bottom:20px;font-size:13px}
-  .meta b{display:block}
-  table{width:100%;border-collapse:collapse;margin-top:8px}
-  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid #ddd;font-size:13px}
-  th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:#666;border-bottom:2px solid #999}
-  td.num,th.num{text-align:right}
-  .tot td{border-bottom:none;font-weight:700}
-  .tot td.big{font-size:16px}
-  .issued{margin-top:28px;font-size:11px;color:#666}
+  @page { size: A4 portrait; margin: 14mm; }
+  body { font-family: Arial, Helvetica, sans-serif; margin: 0; color: #111; font-size: 12px; line-height: 1.5; }
+  .band { height: 8px; background: #062a52; }
+  .accent { height: 3px; background: #005eb8; }
+  .h { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 18px 0 14px; border-bottom: 3px double #062a52; margin-bottom: 14px; }
+  .h-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .h-left img { max-height: 52px; max-width: 170px; object-fit: contain; }
+  .h-text .hotel { font-size: 11px; font-weight: 800; letter-spacing: 1px; color: #005eb8; text-transform: uppercase; }
+  .h-text h1 { margin: 2px 0 0; font-size: 19px; font-weight: 800; color: #062a52; }
+  .meta { display: grid; grid-template-columns: auto auto; gap: 2px 16px; font-size: 12px; text-align: right; }
+  .meta b { color: #475569; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; }
+  .meta span { font-weight: 700; }
+  .guest { font-size: 15px; font-weight: 700; margin: 4px 0 12px; color: #062a52; }
+  .guest .muted { color: #475569; font-weight: 400; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { background: #062a52; color: #fff; font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; padding: 9px 10px; text-align: left; border: 1px solid #062a52; }
+  th.num { text-align: right; }
+  td { padding: 10px; border: 1px solid #dbe4ef; vertical-align: top; }
+  td.num { text-align: right; }
+  tfoot td { background: #f1f5f9; font-weight: 800; border-top: 2px solid #062a52; }
+  .tot .big { font-size: 16px; color: #005eb8; }
+  .issued { margin-top: 26px; font-size: 11px; color: #94a3b8; }
+  .foot { margin-top: 8px; padding-top: 10px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 10px; color: #94a3b8; letter-spacing: .4px; }
 </style>
 </head>
 <body>
+  <div class="band"></div>
+  <div class="accent"></div>
   <div class="h">
-    <h1>${t('stayview.printEntryInvoice')}</h1>
-    <div class="meta" style="text-align:right;">
-      <b>${esc(t('folio.no'))}</b>
-      <span>${esc(folioCode || '—')}</span>
-      <b>${esc(t('stayview.printEntryInvoiceRef'))}</b>
-      <span>${esc(e.entry_code || e.entryId)}</span>
-      <b>${esc(t('stayview.issuedAt'))}</b>
-      <span>${esc(formatDateDMY(new Date()))} ${esc(new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}))}</span>
+    <div class="h-left">
+      ${logoTag || `<div class="h-text"><div class="hotel">${esc(hotelName.value)}</div></div>`}
+      <div class="h-text">
+        <div class="hotel">${logoTag ? esc(hotelName.value) : ''}</div>
+        <h1>${esc(t('stayview.printEntryInvoice'))}</h1>
+      </div>
+    </div>
+    <div class="meta">
+      <b>${esc(t('folio.no'))}</b><span>${esc(folioCode || '—')}</span>
+      <b>${esc(t('stayview.printEntryInvoiceRef'))}</b><span>${esc(e.entry_code || e.entryId)}</span>
+      <b>${esc(t('stayview.issuedAt'))}</b><span>${esc(formatDateDMY(now))} ${esc(now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}))}</span>
     </div>
   </div>
-  ${guest ? `<p style="font-size:15px"><b>${esc(guest)}</b>${room ? ' · ' + esc(room) : ''}</p>` : ''}
+  ${guest ? `<p class="guest">${esc(guest)}<span class="muted">${room ? ' · ' + esc(room) : ''}</span></p>` : ''}
   <table>
     <thead>
-      <tr><th>${t('stayview.printEntryInvoiceDesc')}</th><th>${t('folio.date')}</th><th class="num">${t('folio.amount')}</th><th class="num">${t('stayview.runningBalance')}</th></tr>
+      <tr><th>${esc(t('stayview.printEntryInvoiceDesc'))}</th><th>${esc(t('folio.date'))}</th><th class="num">${esc(t('folio.amount'))}</th><th class="num">${esc(t('stayview.runningBalance'))}</th></tr>
     </thead>
     <tbody>
       <tr>
@@ -3935,14 +3964,13 @@ function printEntryInvoice(e) {
     </tbody>
     <tfoot>
       <tr class="tot">
-        <td colspan="有多">${t('stayview.printEntryInvoiceTotal')}</td>
-        <td></td>
-        <td class="num big">${op}TZS ${fmtNum(e.amount, 2)}</td>
-        <td></td>
+        <td colspan="2">${esc(t('stayview.printEntryInvoiceTotal'))}</td>
+        <td colspan="2" class="num big">${op}TZS ${fmtNum(e.amount, 2)}</td>
       </tr>
     </tfoot>
   </table>
-  <p class="issued">${t('stayview.printEntryInvoiceNote')}</p>
+  <p class="issued">${esc(t('stayview.printEntryInvoiceNote', { date: formatDateDMY(now) }))}</p>
+  <div class="foot">${esc(hotelName.value)} · ${esc(t('stayview.printedBy'))}: ${esc(printedBy.value)} · ${esc(stamp)}</div>
   <script>window.onload = () => window.print()<\/script>
 </body>
 </html>`
@@ -4349,7 +4377,8 @@ async function wireLogoAccent() {
     let url = ''
     try {
       const res = await hotelSettingsApi.show()
-      url = (res?.data?.logo_url || '').trim()
+      url = String(res?.data?.hotel?.logo_url || res?.data?.logo_url || '').trim()
+      hotelLogo.value = url
     } catch {
       // Settings endpoint unreachable/None-widget — carry on with no accent.
     }
@@ -6284,6 +6313,37 @@ onUnmounted(() => clearInterval(refreshTimer))
 }
 
 /* Dot-rule checklist (dot-why modal + room modal) */
+.sv-dot-rules-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 10px 0 4px;
+  padding: 10px 12px;
+  background: #eaf3fb;
+  border: 1px solid #d0e2f5;
+  border-radius: 8px;
+}
+
+.sv-dot-rules-head > i {
+  font-size: 16px;
+  margin-top: 2px;
+  color: #005eb8;
+}
+
+.sv-dot-rules-head h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: #062a52;
+}
+
+.sv-dot-rules-head p {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #475569;
+}
+
 .sv-dot-rules {
   list-style: none;
   margin: 4px 0 0;

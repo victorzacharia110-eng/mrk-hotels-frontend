@@ -3866,7 +3866,8 @@
     "dotRuleToday": "Today is inside the stay window",
     "dotRuleGuest": "The logged-in guest is the checked-in guest",
     "dotRuleClear": "No checked-in stay covers today",
-    "dotLegendTitle": "Room dot rules"
+    "dotLegendTitle": "How the red and green dots are formed",
+    "dotLegendDesc": "Red = a guest is checked in and today falls inside their stay window. Green = the room is clear today. Blue = cleaning, yellow = dirty, grey = maintenance. The checks below run top to bottom — ✓ means the rule holds for this room, ✗ means it does not."
   },
   "orderTaker": {
     "title": "Take Order",
