@@ -105,10 +105,13 @@
                 @keyup.enter="openRoomModal(room, $event)"
               >
                 <span
-                  class="sv-room-dot"
+                  role="button" tabindex="0" class="sv-room-dot"
                   :class="roomDotOccupied(room) ? 'occupied' : (room.status !== 'occupied' ? room.status : 'available')"
                   :title="roomDotOccupied(room) ? (hkRoomGuest(room.room_id) || $t('stayview.occupiedGuest')) : room.status"
-                ></span>
+                                  @click="openDotWhy(room)"
+                  @keydown.enter.prevent="openDotWhy(room)"
+                  @keydown.space.prevent="openDotWhy(room)"
+                  ></span>
                 <span class="sv-room-number">{{ room.room_number }}</span>
                 <i
                   v-if="room.status === 'dirty' || room.status === 'cleaning'"
@@ -261,10 +264,13 @@
       <header class="sv-hk-card-head">
         <div class="sv-hk-card-room">
           <span
-            class="sv-room-dot"
+            role="button" tabindex="0" class="sv-room-dot"
             :class="roomDotOccupied(hkTip.room) ? 'occupied' : (hkTip.room.status !== 'occupied' ? hkTip.room.status : 'available')"
             :title="roomDotOccupied(hkTip.room) ? (hkRoomGuest(hkTip.room.room_id) || $t('stayview.occupiedGuest')) : hkTip.room.status"
-          ></span>
+                      @click="openDotWhy(hkTip.room)"
+            @keydown.enter.prevent="openDotWhy(hkTip.room)"
+            @keydown.space.prevent="openDotWhy(hkTip.room)"
+            ></span>
           <strong>{{ hkTip.room.room_number }}</strong>
           <span class="sv-hk-card-guest">
             {{ hkRoomGuest(hkTip.room.room_id) || roomTypeLabel(hkTip.room.room_type) }}
@@ -551,7 +557,17 @@
                               :title="$t('folio.view')"
                               @click="viewEntry(e)"
                             >
-                              <i class="fas fa-eye" aria-hidden="true"></i>
+                              <i data-testid="sv-entry-view" class="fas fa-eye" aria-hidden="true"></i>
+                            </button>
+                            <button
+                              v-if="activeBar?.id && e.entryId"
+                              type="button"
+                              class="sv-icon-link"
+                              :title="$t('stayview.printEntryInvoice')"
+                              :disabled="entryPrintBusy === e.entryId || printBusy"
+                              @click="printEntryInvoice(e)"
+                            >
+                              <i data-testid="sv-entry-print" class="fas fa-print" aria-hidden="true"></i>
                             </button>
                             <button
                               v-if="e.editable"
@@ -943,7 +959,38 @@
     <!-- Add payment modal for the active stay -->
     <Teleport to="body">
       <Transition name="sv-modal">
-        <div v-if="paymentModal" class="sv-modal-backdrop" @click.self="paymentModal = false">
+        <div v-if="paymentModal" class="sv-modal-backdrop" @click.self="paymentModal = false">          <div
+            v-if="dotWhyOpen"
+            class="sv-modal sv-modal-sm"
+            role="dialog"
+            aria-modal="true"
+            :aria-label="$t('stayview.dotWhyTitle')"
+          >
+            <div class="sv-modal-head sv-bar-blue">
+              <div class="sv-modal-head-text">
+                <h3><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('stayview.dotWhyTitle') }}</h3>
+              </div>
+              <button type="button" class="sv-modal-close" :aria-label="$t('stayview.dotWhyTitle')" @click="dotWhyOpen = false">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="sv-modal-body">
+              <p v-if="dotWhyOccupied && dotWhyGuest" class="sv-dot-why-guest">
+                <i class="fas fa-user" aria-hidden="true"></i> {{ dotWhyGuest }}
+              </p>
+              <p v-if="dotWhyOccupied" class="sv-dot-why-line occupied">
+                <i class="fas fa-circle-check" aria-hidden="true"></i> {{ $t('stayview.dotWhyOccupied') }}
+              </p>
+              <p v-if="dotWhyOccupied && dotWhyWindow" class="sv-dot-why-window">
+                <i class="fas fa-calendar-days" aria-hidden="true"></i> {{ dotWhyWindow }}
+              </p>
+              <p v-else class="sv-dot-why-line clear">
+                <i class="fas fa-circle-xmark" aria-hidden="true"></i> {{ $t('stayview.dotWhyClear') }}
+              </p>
+            </div>
+          </div>
+
+
           <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="$t('stayview.addPayment')">
             <div class="sv-modal-head bar-green">
               <span class="sv-modal-head-icon"><i class="fas fa-money-bill-wave" aria-hidden="true"></i></span>
@@ -3805,6 +3852,85 @@ const sendBusy = ref(false)
  * PDF in a new tab so the receptionist can print it (or save it). Falls back
  * to a direct download when the popup is blocked.
  */
+
+/** Prints a single folio entry as its own invoice (frontend-built document):
+ *  targets the clicked row only, with its own entry reference and issued-at
+ *  timestamp, independent of the whole-folio bottom print button. */
+function printEntryInvoice(e) {
+  if (!e?.entryId) return
+  const folioCode = ledgerHeader.value?.code || activeBar.value?.folio_code || ''
+  const guest = ledgerHeader.value?.guest || activeBar.value?.guest_name || ''
+  const room = ledgerHeader.value?.room || activeBar.value?.room_number || ''
+  const op = e.credit ? '-' : ''
+  const balance = e.running_balance != null ? op + fmtNum(e.running_balance, 2) : ''
+  const doc = `
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>${t('stayview.printEntryInvoice')} · ${(e.entry_code || e.entryId)}</title>
+<style>
+  body{font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;margin:36px;color:#111;line-height:1.5}
+  .h{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:20px}
+  .h img{max-height:54px} .h h1{font-size:18px;margin:0}
+  .meta{display:grid;grid-template-columns:1fr 1fr;gap:4px 32px;margin-bottom:20px;font-size:13px}
+  .meta b{display:block}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid #ddd;font-size:13px}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:#666;border-bottom:2px solid #999}
+  td.num,th.num{text-align:right}
+  .tot td{border-bottom:none;font-weight:700}
+  .tot td.big{font-size:16px}
+  .issued{margin-top:28px;font-size:11px;color:#666}
+</style>
+</head>
+<body>
+  <div class="h">
+    <h1>${t('stayview.printEntryInvoice')}</h1>
+    <div class="meta" style="text-align:right;">
+      <b>${esc(t('folio.no'))}</b>
+      <span>${esc(folioCode || '—')}</span>
+      <b>${esc(t('stayview.printEntryInvoiceRef'))}</b>
+      <span>${esc(e.entry_code || e.entryId)}</span>
+      <b>${esc(t('stayview.issuedAt'))}</b>
+      <span>${esc(formatDateDMY(new Date()))} ${esc(new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}))}</span>
+    </div>
+  </div>
+  ${guest ? `<p style="font-size:15px"><b>${esc(guest)}</b>${room ? ' · ' + esc(room) : ''}</p>` : ''}
+  <table>
+    <thead>
+      <tr><th>${t('stayview.printEntryInvoiceDesc')}</th><th>${t('folio.date')}</th><th class="num">${t('folio.amount')}</th><th class="num">${t('stayview.runningBalance')}</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>${esc(e.description || e.particular || '')}</td>
+        <td>${esc(formatDateDMY(e.date || e.posted_at))}</td>
+        <td class="num">${op}TZS ${fmtNum(e.amount, 2)}</td>
+        <td class="num">${balance}</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr class="tot">
+        <td colspan="有多">${t('stayview.printEntryInvoiceTotal')}</td>
+        <td></td>
+        <td class="num big">${op}TZS ${fmtNum(e.amount, 2)}</td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+  <p class="issued">${t('stayview.printEntryInvoiceNote')}</p>
+  <script>window.onload = () => window.print()<\/script>
+</body>
+</html>`
+  const win = window.open('', '_blank', 'width=860,height=1000')
+  if (!win) {
+    actionError.value = t('stayview.printEntryInvoiceBlocked')
+    return
+  }
+  win.document.write(doc)
+  win.document.close()
+}
+
 async function printInvoice(bar) {
   printBusy.value = true
   actionError.value = ''
@@ -4134,6 +4260,31 @@ function toggleHkTip(event, room) {
 }
 
 /** Reservation-truth occupancy for the dot board (never the rooms.status column). */
+const dotWhyOpen = ref(false)
+const dotWhyRoom = ref(null)
+const dotWhyOccupied = computed(() => !!dotWhyRoom.value && roomDotOccupied(dotWhyRoom.value))
+const dotWhyGuest = computed(() => (dotWhyOccupied.value && dotWhyRoom.value) ? (hkRoomGuest(dotWhyRoom.value.room_id) || '') : '')
+const dotWhyWindow = computed(() => {
+  const room = dotWhyRoom.value
+  if (!room || !dotWhyOccupied.value) return ''
+  const today = startOfDay(new Date())
+  const stay = (reservations.value || []).find((r) => {
+    if (!r || r.status !== 'checked_in') return false
+    if (reservationRoomId(r) !== room.room_id) return false
+    const { arrival, departure } = reservationDates(r)
+    if (!arrival || !departure) return false
+    return arrival <= today && today < departure
+  })
+  if (!stay) return ''
+  const { arrival, departure } = reservationDates(stay)
+  const fmt = (d) => (d instanceof Date ? d.toISOString().slice(0,10) : String(d).slice(0,10))
+  return fmt(arrival) + ' \u2192 ' + fmt(departure)
+})
+function openDotWhy(room) {
+  dotWhyRoom.value = room
+  dotWhyOpen.value = true
+}
+
 function roomDotOccupied(room) {
   return roomOccupiedToday(reservations.value, room?.room_id, startOfDay(new Date()))
 }
