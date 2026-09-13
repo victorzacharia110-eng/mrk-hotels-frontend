@@ -643,7 +643,7 @@
     <!-- Collect payment popup (single tap on a method) -->
     <Teleport to="body">
       <Transition name="fade">
-        <div v-if="payOrder" class="cat-pop" role="dialog" :aria-label="$t('orderTaker.payTitle')">
+        <div v-if="payOrder" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog" :aria-label="$t('orderTaker.payTitle')">
           <div class="cat-pop-backdrop" @click="payOrder = null"></div>
           <div class="cat-pop-panel accomp-panel">
             <header class="cat-pop-head">
@@ -673,7 +673,7 @@
     <!-- Bill split / transfer: move lines to a fresh bill or the whole ticket to another table -->
     <Teleport to="body">
       <Transition name="fade">
-        <div v-if="billMode" class="cat-pop" role="dialog" :aria-label="billMode === 'split' ? $t('orderTaker.splitTitle') : $t('orderTaker.transferTitle')">
+        <div v-if="billMode" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog" :aria-label="billMode === 'split' ? $t('orderTaker.splitTitle') : $t('orderTaker.transferTitle')">
           <div class="cat-pop-backdrop" @click="closeBill"></div>
           <div class="cat-pop-panel accomp-panel bill-pop-panel">
             <header class="cat-pop-head">
@@ -781,7 +781,7 @@
     <!-- Receipt: the proof of what was paid (printable) -->
     <Teleport to="body">
       <Transition name="fade">
-        <div v-if="receipt" class="cat-pop" role="dialog" :aria-label="$t('orderTaker.receiptTitle')">
+        <div v-if="receipt" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog" :aria-label="$t('orderTaker.receiptTitle')">
           <div class="cat-pop-backdrop" @click="receipt = null"></div>
           <div class="cat-pop-panel receipt-panel">
             <div id="pos-receipt" class="receipt">
@@ -818,7 +818,7 @@
     <!-- "Served with" popup: single-tap side dish for grill mains (Beef Mshikaki → Wali/Ugali…) -->
     <Teleport to="body">
       <Transition name="fade">
-        <div v-if="accompItem" class="cat-pop" role="dialog" :aria-label="$t('orders.servedWithTitle')">
+        <div v-if="accompItem" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog" :aria-label="$t('orders.servedWithTitle')">
           <div class="cat-pop-backdrop" @click="skipAccompaniment"></div>
           <div class="cat-pop-panel accomp-panel">
             <header class="cat-pop-head">
@@ -849,7 +849,7 @@
     <!-- Manager-only table management modal (CRUD for the table list) -->
     <Teleport to="body">
       <Transition name="fade">
-        <div v-if="tableManagerOpen" class="cat-pop" @click.self="tableManagerOpen = false">
+        <div v-if="tableManagerOpen" class="cat-pop" :class="{ 'pos-theme': isPosRole }" @click.self="tableManagerOpen = false">
           <div class="cat-pop-backdrop" @click="tableManagerOpen = false"></div>
           <div class="cat-pop-panel tm-pop" role="dialog" :aria-label="$t('orderTaker.manageTables')">
             <header class="cat-pop-head">
@@ -2983,6 +2983,20 @@ function onKey(e) {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
+}
+
+.cat-pop {
+  --pad-accent: #b8860b;
+  --pad-accent-deep: #a8871e;
+  --pad-accent-soft: #fffbeb;
+  --pad-accent-soft-text: #92400e;
+}
+
+.cat-pop.pos-theme {
+  --pad-accent: #005eb8;
+  --pad-accent-deep: #00468c;
+  --pad-accent-soft: #e8f1fa;
+  --pad-accent-soft-text: #00468c;
 }
 
 .cat-pop-panel {
