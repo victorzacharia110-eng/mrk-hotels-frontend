@@ -174,6 +174,10 @@ const selectedLabel = computed(() => {
  * Toggles the dropdown between open and closed based on its current state.
  */
 function toggle() {
+  // A mobile "ghost click" shortly after a pick can land on the trigger and
+  // instantly reopen the dropdown, making it look like it never vanished.
+  // Flatten any open-attempt in the ~400 ms following a selection.
+  if (Date.now() - lastPickAt < 400) return
   if (open.value) {
     close()
   } else {
@@ -290,6 +294,10 @@ function onListKeydown(event) {
   }
 }
 
+// Timestamp of the last pick. Used to flatten the mobile ghost-click that
+// otherwise reopens the panel right after a selection.
+let lastPickAt = 0
+
 /**
  * Selects an option: emits the model update and change events (unless
  * disabled) and closes the dropdown.
@@ -303,6 +311,7 @@ function pick(value) {
   emit('update:modelValue', value)
   emit('change', target || { value })
   close()
+  lastPickAt = Date.now()
   nextTick(() => {
     if (open.value) close()
   })
