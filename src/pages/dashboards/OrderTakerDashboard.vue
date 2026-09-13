@@ -524,7 +524,7 @@
               </button>
             </template>
             <button
-              v-if="order.status === 'served' && order.payment_status !== 'unpaid'"
+              v-if="!isPosRole && order.status === 'served' && order.payment_status !== 'unpaid'"
               type="button"
               class="open-btn done"
               @click="advanceOrder(order, 'completed')"
@@ -2088,7 +2088,7 @@ function addItem(item) {
     toast(t('orderTaker.outOfStockToast', { name: item.item_name }), 'error')
     return
   }
-  if (department.value === 'restaurant' && isGrillItem(item)) {
+  if (isGrillItem(item)) {
     accompItem.value = item
     return
   }

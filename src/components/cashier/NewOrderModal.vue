@@ -124,6 +124,36 @@
       </div>
     </div>
   </div>
+
+  <Teleport to="body">
+    <Transition name="fade">
+      <div v-if="accompItem" class="cat-pop" role="dialog" :aria-label="$t('orders.servedWithTitle')">
+        <div class="cat-pop-backdrop" @click="skipAccompaniment"></div>
+        <div class="cat-pop-panel accomp-panel">
+          <header class="cat-pop-head">
+            <strong>{{ $t('orders.servedWithTitle') }}</strong>
+            <button type="button" class="cat-pop-close" :aria-label="$t('common.close')" @click="skipAccompaniment">
+              <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+          </header>
+          <p class="accomp-hint">
+            {{ $t('orders.servedWithHint', { item: accompItem.item_name }) }}
+          </p>
+          <div class="accomp-grid">
+            <button
+              v-for="option in accompanimentOptions"
+              :key="option.value"
+              type="button"
+              class="accomp-option"
+              @click="pickAccompaniment(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup>
@@ -156,6 +186,8 @@ const search = ref('')
 const lines = ref([])
 const busy = ref(false)
 const error = ref('')
+/** Grill item waiting for its "served with" side-dish choice. */
+const accompItem = ref(null)
 
 const form = reactive({
   guest_name: props.guestNamePrefill || '',
@@ -218,9 +250,59 @@ const filteredMenu = computed(() => {
 })
 
 function addItem(item) {
-  const found = lines.value.find((l) => l.menu_item_id === item.menu_item_id)
+  if (isGrillItem(item)) {
+    accompItem.value = item
+    return
+  }
+  commitItem(item, '')
+}
+
+/** "Served with" side-dish choices for grill-style mains (mshikaki, choma...). */
+const accompanimentOptions = computed(() => [
+  { value: 'wali', label: t('orders.accompWali') },
+  { value: 'ugali', label: t('orders.accompUgali') },
+  { value: 'chips', label: t('orders.accompChips') },
+  { value: 'chapati', label: t('orders.accompChapati') },
+  { value: 'ndizi', label: t('orders.accompNdizi') },
+  { value: 'maharage', label: t('orders.accompMaharage') },
+  { value: '', label: t('orders.accompNone') },
+])
+
+const GRILL_KEYWORDS = ['mshikaki', 'mishkaki', 'choma', 'kuku', 'nyama', 'samaki', 'maini', 'grill']
+
+function isGrillItem(item) {
+  const name = (item.item_name || '').toLowerCase()
+  return GRILL_KEYWORDS.some((keyword) => name.includes(keyword))
+}
+
+function accompanimentLabel(value) {
+  return accompanimentOptions.value.find((option) => option.value === value)?.label || value
+}
+
+function pickAccompaniment(invoiceValue) {
+  if (accompItem.value) commitItem(accompItem.value, invoiceValue)
+  accompItem.value = null
+}
+
+function skipAccompaniment() {
+  accompItem.value = null
+}
+
+/** Places the item on the ticket, bumping quantity for the same item+side combo. */
+function commitItem(item, accompaniment) {
+  const key = `${item.menu_item_id}|${accompaniment}`
+  const found = lines.value.find((l) => l.key === key)
   if (found) found.quantity += 1
-  else lines.value.push({ menu_item_id: item.menu_item_id, name: item.item_name, price: Number(item.price), quantity: 1 })
+  else lines.value.push({
+    key,
+    menu_item_id: item.menu_item_id,
+    name: accompaniment
+      ? `${item.item_name} · ${accompanimentLabel(accompaniment)}`
+      : item.item_name,
+    accompaniment,
+    price: Number(item.price),
+    quantity: 1,
+  })
 }
 
 function inc(idx) {
@@ -246,7 +328,7 @@ async function submit() {
       room_number: form.room_number || props.roomNumber || null,
       guest_name: form.guest_name || null,
       waiter_name: form.waiter_name || null,
-      items: lines.value.map((l) => ({ menu_item_id: l.menu_item_id, quantity: l.quantity })),
+      items: lines.value.map((l) => ({ menu_item_id: l.menu_item_id, quantity: l.quantity, accompaniment: l.accompaniment || null })),
     }
     if (props.mode === 'dine_in' && form.covers != null) payload.covers = form.covers
     if (props.mode === 'no_charge') {
@@ -350,4 +432,95 @@ onMounted(async () => {
 .order-total strong { font-size: 19px; color: #005eb8; }
 .form-error { color: #dc2626; font-size: 13px; margin: 0; }
 .submit-btn { justify-content: center; }
+
+/* ---- "Served with" popup (single-tap side dish) ---- */
+.cat-pop-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.cat-pop {
+  --pad-accent: #b8860b;
+  --pad-accent-deep: #a8871e;
+  --pad-accent-soft: #fffbeb;
+  --pad-accent-soft-text: #92400e;
+}
+
+.cat-pop-panel {
+  position: relative;
+  background: #fff;
+  border-radius: 12px;
+  width: min(760px, 94vw);
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+.cat-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 18px;
+  background: #3f3f46;
+  color: #fff;
+  font-size: 16px;
+}
+
+.cat-pop-close {
+  border: none;
+  background: none;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.accomp-panel {
+  width: min(560px, 94vw);
+}
+
+.accomp-hint {
+  margin: 0;
+  padding: 12px 18px 0;
+  color: #71717a;
+  font-size: 13px;
+}
+
+.accomp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  padding: 16px;
+}
+
+.accomp-option {
+  border: 1px solid #d4d4d8;
+  background: linear-gradient(180deg, #fafafa, #f0f0f2);
+  border-radius: 9px;
+  padding: 20px 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #27272a;
+  cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s, box-shadow 0.12s;
+}
+
+.accomp-option:hover {
+  transform: translateY(-2px);
+  border-color: var(--pad-accent);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 </style>

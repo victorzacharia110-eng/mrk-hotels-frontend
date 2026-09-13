@@ -4431,7 +4431,7 @@
       "requisitions": "Maombi ya Bidhaa",
       "reports": "Ripoti",
       "reportBrowser": "Kivinjari cha Ripoti",
-      "staffReports": "Ripoti za Wafanyakazi",
+      "staffReports": "Ripoti ya Muhtasari",
       "posReports": "Ripoti za Mhasibu",
       "communication": "Mawasiliano",
       "messages": "Jumbe",
@@ -4644,7 +4644,22 @@
     "takeAway": {
       "title": "Chukua Nje",
       "newOrder": "Oda Mpya ya Kuchukua Nje",
-      "hint": "Mauzo ya kaunta bila meza. Bofya Oda Mpya ya Kuchukua Nje."
+      "hint": "Mauzo ya kaunta bila meza. Bofya Oda Mpya ya Kuchukua Nje kutengeneza tiketi.",
+      "tabAll": "Zote",
+      "tabPreparing": "Zinazoandaliwa",
+      "tabReady": "Ziwe Tayari",
+      "tabCompleted": "Zimekamilika",
+      "guest": "Mteja",
+      "none": "Hakuna oda za kuchukua nje.",
+      "status": {
+        "pending": "Inasubiri",
+        "in_progress": "Inaendelea",
+        "processing": "Inachakatwa",
+        "preparing": "Inaandaliwa",
+        "ready": "Tayari",
+        "served": "Tayari",
+        "completed": "Imekamilika"
+      }
     },
     "roomService": {
       "title": "Huduma ya Chumba — Wageni Ndani",
@@ -4694,6 +4709,8 @@
       "table": "Meza / Chumba",
       "type": "Aina ya Oda",
       "amount": "Kiasi",
+      "actions": "Vitendo",
+      "view": "Tazama",
       "settle": "Lipa",
       "reprintReceipt": "Chapisha Risiti",
       "reprintKot": "Chapisha KOT",

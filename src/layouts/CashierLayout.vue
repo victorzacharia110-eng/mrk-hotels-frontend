@@ -51,17 +51,11 @@
           <i class="fas fa-chevron-down pos-chevron" aria-hidden="true"></i>
         </button>
         <div v-if="isOpen('reports')" class="pos-group-items">
-          <router-link :to="{ name: 'cashier-report-browser' }" class="pos-nav-link"
-            :class="{ active: isActive('/cashier/report-browser') }" @click="mobileOpen = false"
-            :title="$t('cashier.nav.reportBrowser')">
-            <i class="fas fa-chart-pie" aria-hidden="true"></i>
-            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.reportBrowser') }}</span>
-          </router-link>
           <router-link :to="{ name: 'cashier-reports' }" class="pos-nav-link"
             :class="{ active: isActive('/cashier/reports') }" @click="mobileOpen = false"
-            :title="$t('cashier.nav.staffReports')">
+            :title="$t('cashier.nav.summaryReport')">
             <i class="fas fa-chart-simple" aria-hidden="true"></i>
-            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.staffReports') }}</span>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.summaryReport') }}</span>
           </router-link>
           <router-link :to="{ name: 'cashier-pos-reports' }" class="pos-nav-link"
             :class="{ active: isActive('/cashier/pos-report-browser') }" @click="mobileOpen = false"

@@ -46,7 +46,7 @@
             <th>{{ $t('cashier.summary.type') }}</th>
             <th>{{ $t('common.status') }}</th>
             <th>{{ $t('cashier.summary.amount') }}</th>
-            <th></th>
+            <th>{{ $t('cashier.summary.actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -69,6 +69,14 @@
             <td>{{ money(order.total_amount) }}</td>
             <td>
               <div class="row-actions">
+                <button class="sm-btn sm" @click="openDrawer(order)"
+                  :title="$t('cashier.summary.viewOrder')">
+                  <i class="fas fa-eye" aria-hidden="true"></i> {{ $t('cashier.summary.view') }}
+                </button>
+                <button v-if="order.status !== 'cancelled'" class="sm-btn sm danger-ghost" @click="openVoid(order)"
+                  :title="$t('cashier.summary.voidOrder')">
+                  <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.summary.voidOrder') }}
+                </button>
                 <template v-if="isRunning(order)">
                   <button v-if="!order.is_frozen" class="sm-btn sm" @click="freeze(order)"
                     :title="$t('storeManager.common.freeze')">
@@ -191,7 +199,7 @@
           <strong>{{ money(drawerOrder?.total_amount ?? 0) }}</strong>
         </div>
 
-        <div v-if="isRunning(drawerOrder) && voidConfirming" class="drawer-void">
+        <div v-if="drawerOrder && drawerOrder.status !== 'cancelled' && voidConfirming" class="drawer-void">
           <label :for="voidReasonId">{{ $t('storeManager.common.reason') }}</label>
           <input :id="voidReasonId" v-model.trim="voidReason" type="text" maxlength="255" :disabled="savingVoid"
             :placeholder="$t('storeManager.common.reasonTitle')" />
@@ -203,7 +211,7 @@
           </div>
         </div>
 
-        <div v-if="isRunning(drawerOrder)" class="drawer-actions">
+        <div v-if="drawerOrder && drawerOrder.status !== 'cancelled'" class="drawer-actions">
           <template v-if="!splitting && !transferring && !voidConfirming">
             <button type="button" class="sm-btn sm ghost" @click="promptVoid">
               <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.summary.voidOrder') }}
@@ -215,7 +223,7 @@
               <i class="fas fa-scissors" aria-hidden="true"></i> {{ $t('cashier.summary.split') }}
             </button>
           </template>
-          <button type="button" class="sm-btn sm primary" :disabled="splitting || transferring || voidConfirming" @click="settleFromDrawer">
+          <button v-if="isRunning(drawerOrder)" type="button" class="sm-btn sm primary" :disabled="splitting || transferring || voidConfirming" @click="settleFromDrawer">
             <i class="fas fa-money-bill" aria-hidden="true"></i> {{ $t('cashier.summary.settle') }}
           </button>
         </div>
@@ -395,17 +403,16 @@ const roomOptions = computed(() =>
 /** A bank transfer needs the statement reference to be recorded on the till. */
 const needsRef = computed(() => payMethod.value === 'bank')
 
-// "Voided" maps to cancelled orders; settled = paid/billed/completed.
-const isRunning = (order) => !['completed', 'cancelled'].includes(order.status)
+// Settled = paid (any method) / billed-to-room / completed.  Voided = cancelled.
+// Running = everything else (unpaid, not cancelled, not yet settled).
 const isSettled = (order) => order.status === 'completed' || order.payment_status !== 'unpaid'
+const isRunning = (order) => order.status !== 'cancelled' && !isSettled(order)
 
 const filteredOrders = computed(() => {
   const term = search.value.trim().toLowerCase()
   return orders.value.filter((order) => {
     if (activeTab.value === 'running' && !isRunning(order)) return false
-    if (activeTab.value === 'settled' && !(order.status === 'completed' && !['cancelled'].includes(order.status))) {
-      if (activeTab.value === 'settled' && !(order.payment_status !== 'unpaid' || order.status === 'completed')) return false
-    }
+    if (activeTab.value === 'settled' && !isSettled(order)) return false
     if (activeTab.value === 'voided' && order.status !== 'cancelled') return false
     if (term && !`${order.order_number} ${order.guest_name || ''} ${order.table_number || ''} ${order.room_number || ''}`.toLowerCase().includes(term)) return false
     return true
@@ -426,7 +433,7 @@ const filterTabs = computed(() => [
   {
     key: 'settled',
     label: t('cashier.summary.tabSettled'),
-    count: orders.value.filter((o) => o.payment_status !== 'unpaid' || o.status === 'completed').length,
+    count: orders.value.filter(isSettled).length,
   },
   { key: 'voided', label: t('cashier.summary.tabVoided'), count: orders.value.filter((o) => o.status === 'cancelled').length },
 ])
@@ -529,6 +536,13 @@ function closeDrawer() {
   if (savingItem.value || savingVoid.value) return
   drawerOpen.value = false
   drawerOrder.value = null
+}
+
+/** Opens the ticket drawer with the void prompt already armed. */
+async function openVoid(order) {
+  await openDrawer(order)
+  voidReason.value = ''
+  voidConfirming.value = true
 }
 
 /** Settling from the drawer reuses the existing payment modal. */

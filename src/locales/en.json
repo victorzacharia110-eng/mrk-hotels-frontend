@@ -4449,7 +4449,7 @@
       "requisitions": "Requisitions",
       "reports": "Reports",
       "reportBrowser": "Report Browser",
-      "staffReports": "Staff Reports",
+      "staffReports": "Summary Report",
       "posReports": "POS Reports",
       "communication": "Communication",
       "messages": "Messages",
@@ -4662,7 +4662,21 @@
     "takeAway": {
       "title": "Take Away",
       "newOrder": "New Take Away Order",
-      "hint": "Counter sales without a table. Click New Take Away Order to build the ticket."
+      "hint": "Counter sales without a table. Click New Take Away Order to build the ticket.",
+      "tabAll": "All",
+      "tabPreparing": "Preparing",
+      "tabReady": "Ready",
+      "tabCompleted": "Completed",
+      "guest": "Guest",
+      "none": "No take away orders found.",
+      "status": {
+        "pending": "Pending",
+        "in_progress": "In Progress",
+        "preparing": "Preparing",
+        "ready": "Ready",
+        "served": "Ready",
+        "completed": "Completed"
+      }
     },
     "roomService": {
       "title": "Room Service — In-house Guests",
@@ -4712,6 +4726,8 @@
       "table": "Table / Room",
       "type": "Order Type",
       "amount": "Amount",
+      "actions": "Actions",
+      "view": "View",
       "settle": "Settle",
       "reprintReceipt": "Reprint Receipt",
       "reprintKot": "Reprint KOT",
