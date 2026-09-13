@@ -3839,13 +3839,18 @@
     "printEntryInvoiceBlocked": "Kipengee tayari kimechapishwa kwenye ankara ya folio",
     "issuedAt": "Kimetolewa",
     "runningBalance": "Usawa unaoendelea",
-    "dotWhyTitle": "Kwa nini nukta hii ni rangi hii?",
-    "dotWhyOccupied": "Mgeni ameingia sasa hivi.",
-    "dotWhyClear": "Hakuna mgeni ndani leo.",
+    "dotWhyTitle": "Kwa nini nukta hii ni nyekundu?",
+    "dotWhyOccupied": "Mgeni huyu amesajiliwa leo",
+    "dotWhyClear": "Chumba hiki kiko wazi leo",
     "dotWhyFree": "Hakuna mgeni chumbani leo.",
     "dotWhyGates": "Chumba ni nyekundu tu wakati kukaa kumekaguliwa kunafunika leo.",
     "dotWhyWindow": "Dirisha la kukaa",
-    "printEntryInvoiceDesc": "Chapisha kipengee hiki cha folio kwenye ankara yake"
+    "printEntryInvoiceDesc": "Chapisha kipengee hiki cha folio kwenye ankara yake",
+    "dotWhyGuest": "Rangi ya nukta inatokana na mgeni huyu",
+    "dotRuleStatus": "Hali imesajiliwa (checked in)",
+    "dotRuleStay": "Kuna muda wa kukaa umeambatanishwa katika chumba hiki",
+    "dotRuleToday": "Leo iko ndani ya dirisha la kukaa",
+    "dotRuleGuest": "Mgeni aliyesajiliwa ndiye mgeni wa sasa"
   },
   "orderTaker": {
     "title": "Chukua Oda",

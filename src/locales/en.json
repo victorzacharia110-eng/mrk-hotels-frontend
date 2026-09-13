@@ -3849,13 +3849,18 @@
     "printEntryInvoiceBlocked": "Entry already printed on the folio invoice",
     "issuedAt": "Issued at",
     "runningBalance": "Running balance",
-    "dotWhyTitle": "Why is this dot this colour?",
-    "dotWhyOccupied": "A guest is checked in right now.",
-    "dotWhyClear": "No guest is inside today.",
+    "dotWhyTitle": "Why is this dot red?",
+    "dotWhyOccupied": "This guest is checked in today",
+    "dotWhyClear": "This room is clear today",
     "dotWhyFree": "No guest is inside the room today.",
     "dotWhyWindow": "Stay window",
     "dotWhyGates": "Room is red only while a checked-in stay covers today.",
-    "printEntryInvoiceDesc": "Print this single folio entry onto its own entry invoice"
+    "printEntryInvoiceDesc": "Print this single folio entry onto its own entry invoice",
+    "dotWhyGuest": "The dot colour comes from this guest",
+    "dotRuleStatus": "Status is checked in",
+    "dotRuleStay": "A stay is attached to this room",
+    "dotRuleToday": "Today is inside the stay window",
+    "dotRuleGuest": "The logged-in guest is the checked-in guest"
   },
   "orderTaker": {
     "title": "Take Order",

@@ -108,9 +108,9 @@
                   role="button" tabindex="0" class="sv-room-dot"
                   :class="roomDotOccupied(room) ? 'occupied' : (room.status !== 'occupied' ? room.status : 'available')"
                   :title="roomDotOccupied(room) ? (hkRoomGuest(room.room_id) || $t('stayview.occupiedGuest')) : room.status"
-                                  @click="openDotWhy(room)"
-                  @keydown.enter.prevent="openDotWhy(room)"
-                  @keydown.space.prevent="openDotWhy(room)"
+                                  @click.stop.prevent="openDotWhy(room)"
+                  @keydown.enter.stop.prevent="openDotWhy(room)"
+                  @keydown.space.stop.prevent="openDotWhy(room)"
                   ></span>
                 <span class="sv-room-number">{{ room.room_number }}</span>
                 <i
