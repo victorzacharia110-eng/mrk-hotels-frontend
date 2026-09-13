@@ -1583,9 +1583,14 @@ const BAR_FALLBACK_TABLES = Array.from({ length: BAR_FALLBACK_COUNT }, (_, i) =>
 // Becomes true after the bar's placeholder slots are written to the backend as
 // real table records; from then on only the real records are shown/served.
 const barSeeded = ref(false)
+// Every table surface (dine-in map, order picker, split/transfer destinations)
+// shows ONLY the department being worked: bartenders = bar, cashiers =
+// restaurant, waiters = whichever side the switch is on. Restaurant and bar
+// tables therefore never mix or interfere — each belongs to its own setting.
 const servingTables = computed(() => {
-  if (!fixedDept.value) return tables.value
-  const matched = tables.value.filter((t) => String(t.section || '').trim().toLowerCase() === fixedDept.value)
+  const dept = fixedDept.value || department.value
+  if (!dept) return tables.value
+  const matched = tables.value.filter((t) => String(t.section || '').trim().toLowerCase() === dept)
   if (fixedDept.value !== 'bar' || barSeeded.value) return matched
   const taken = new Set(matched.map((t) => String(t.table_name).trim().toLowerCase()))
   const placeholders = BAR_FALLBACK_TABLES
