@@ -542,8 +542,10 @@
       </div>
     </div>
 
-    <!-- Password change section delegated to a shared form component -->
-    <div class="card">
+    <!-- Password change section delegated to a shared form component.
+         Panel roles (waiter/cashier/kitchen) have no password-change
+         privilege — the API refuses them too, so the card stays hidden. -->
+    <div v-if="canChangePassword" class="card">
       <h2 class="card-title">{{ $t('profile.changePassword') }}</h2>
       <ChangePasswordForm />
     </div>
@@ -659,6 +661,9 @@ const canManageQr = computed(() => authStore.can(80))
 const canManageSettings = computed(() => authStore.can(90))
 const canManageSecurity = computed(() => authStore.can(80))
 const canManageHotel = computed(() => authStore.can(80))
+// Waiter/cashier/kitchen panels may not rotate their own passwords — their
+// credentials are issued and rotated by a manager (the API returns 403).
+const canChangePassword = computed(() => !['waiter', 'cashier', 'kitchen'].includes(authStore.user?.user_role))
 
 // Hotel business details form state.
 const allPaymentMethods = PAYMENT_METHODS

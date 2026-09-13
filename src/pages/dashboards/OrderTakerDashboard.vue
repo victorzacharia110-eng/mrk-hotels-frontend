@@ -149,11 +149,14 @@
               :key="tbl.table_id"
               type="button"
               class="table-chip"
-              :class="tableHasLiveOrder(tbl.table_name) ? (tableOccupiedBySelf(tbl.table_name) ? 'mine' : 'taken') : 'free'"
+              :class="tableHasLiveOrder(tbl.table_name) ? (tableOccupiedBySelf(tbl.table_name) ? 'mine' : 'occupied') : 'free'"
               :disabled="tableOccupiedByOther(tbl.table_name)"
               @click="selectTable(tbl)"
             >
-              <span class="table-chip-name">{{ tbl.table_name }}</span>
+              <span class="table-chip-name">
+                {{ tbl.table_name }}
+                <i v-if="form.table_number === tbl.table_name" class="fas fa-circle-check table-chip-tick" aria-hidden="true"></i>
+              </span>
               <span v-if="tableHasLiveOrder(tbl.table_name)" class="table-chip-occ" :class="{ 'is-mine': tableOccupiedBySelf(tbl.table_name) }">
                 {{ tableOccupiedBySelf(tbl.table_name) ? $t('orderTaker.occupiedByYou') : $t('orderTaker.occupiedBy', { waiter: occupiedTables.get(String(tbl.table_name)) }) }}
               </span>
@@ -536,10 +539,9 @@
       <div class="open-head">
         <h2><i class="fas fa-chart-simple" aria-hidden="true"></i> {{ $t('orderTaker.summaryTitle') }} · {{ summaryDate }}</h2>
         <div class="sb-date-row">
-          <input
+          <CalendarInput
             v-model="summaryDate"
-            type="date"
-            class="dash-date"
+            :placeholder="$t('orderTaker.summaryTitle')"
             :aria-label="$t('orderTaker.summaryTitle')"
             @change="loadOrderSummary"
           />
@@ -611,6 +613,7 @@
                   <th>{{ $t('orderTaker.summaryWaiter') }}</th>
                   <th>{{ $t('orderTaker.summaryType') }}</th>
                   <th>{{ $t('orderTaker.summaryStatus') }}</th>
+                  <th>{{ $t('waiterPanel.settlementMode') }}</th>
                   <th class="col-amount">{{ $t('orderTaker.summaryAmount') }}</th>
                 </tr>
               </thead>
@@ -621,6 +624,12 @@
                   <td>{{ order.waiter_name || '—' }}</td>
                   <td>{{ orderTypeLabel(order) }}</td>
                   <td><span class="badge" :class="statusBadge(order.status)">{{ statusLabel(order.status) }}</span></td>
+                  <td>
+                    <span v-if="order.settlement_mode" class="settle-tag">
+                      <i class="fas fa-wallet" aria-hidden="true"></i> {{ settlementLabel(order) }}
+                    </span>
+                    <span v-else>—</span>
+                  </td>
                   <td class="col-amount"><strong>TZS {{ money(order.total_amount) }}</strong></td>
                 </tr>
               </tbody>
@@ -674,51 +683,96 @@
               </button>
             </header>
             <p v-if="billError" class="send-error">{{ billError }}</p>
-            <template v-if="billMode === 'split'">
-              <p class="accomp-hint">{{ $t('orderTaker.splitHint') }}</p>
-              <ul class="split-pick">
-                <li v-for="line in billModeOrder?.items || []" :key="line.order_item_id">
-                  <label class="split-line">
-                    <input type="checkbox" :value="line.order_item_id" v-model="splitSelected" :disabled="billSaving" />
-                    <span class="split-desc">{{ line.quantity }}× {{ line.item_name }}<template v-if="line.accompaniment"> · {{ line.accompaniment }}</template></span>
-                    <span class="split-amt">TZS {{ money(line.subtotal ?? line.unit_price * line.quantity) }}</span>
+            <p class="accomp-hint">{{ billMode === 'split' ? $t('orderTaker.splitHint') : $t('orderTaker.transferHint') }}</p>
+
+            <!-- Folio-split style: current bill on the left, destination on
+                 the right, and the arrow in the middle moves the ticked lines. -->
+            <div class="bill-split">
+              <div class="bill-side">
+                <div class="bill-side-head">
+                  <strong>{{ $t('orderTaker.billFrom') }} · {{ billModeOrder?.table_number || billModeOrder?.order_number }}</strong>
+                  <label class="bill-all">
+                    <input
+                      type="checkbox"
+                      :checked="billAllSelected"
+                      :disabled="billSaving || !(billModeOrder?.items || []).length"
+                      @change="toggleAllBillLines"
+                    />
+                    <span>{{ $t('orderTaker.all') }}</span>
                   </label>
-                </li>
-              </ul>
-              <div class="bill-actions">
-                <span class="bill-summary">{{ $t('orderTaker.splitSummary', { count: splitSelected.length, total: money(splitTotal) }) }}</span>
-                <button type="button" class="send-btn" :disabled="billSaving || !splitSelected.length" @click="confirmSplit">
-                  <i class="fas fa-scissors" aria-hidden="true"></i> {{ $t('orderTaker.split') }}
-                </button>
+                </div>
+                <ul class="split-pick">
+                  <li v-for="line in billModeOrder?.items || []" :key="line.order_item_id">
+                    <label class="split-line">
+                      <input type="checkbox" :value="line.order_item_id" v-model="splitSelected" :disabled="billSaving" />
+                      <span class="split-desc">{{ line.quantity }}× {{ line.item_name }}<template v-if="line.accompaniment"> · {{ line.accompaniment }}</template></span>
+                      <span class="split-amt">TZS {{ money(line.subtotal ?? line.unit_price * line.quantity) }}</span>
+                    </label>
+                  </li>
+                </ul>
               </div>
-            </template>
-            <template v-else>
-              <p class="accomp-hint">{{ $t('orderTaker.transferHint') }}</p>
-              <div class="taker-fld">
-                <span>{{ $t('orderTaker.transferPrompt') }}</span>
-                <SearchableSelect
-                  v-model="transferTable"
-                  :options="transferTableOptions"
-                  :empty-label="$t('orderTaker.selectTable')"
-                  :disabled="billSaving"
-                  force-search
+
+              <div class="bill-arrow">
+                <div class="bill-arrow-bar"></div>
+                <button
+                  type="button"
+                  class="bill-arrow-btn"
+                  :disabled="!billCanMove"
+                  :title="$t('orderTaker.moveToBill')"
+                  @click="confirmBillMove"
                 >
-                  <template #option="{ option }">
-                    <span class="bill-transfer-opt" :class="{ 'is-mine': option.mine, 'is-taken': option.disabled }">
-                      {{ option.label }}
-                      <em v-if="option.mine">{{ $t('orderTaker.yourTable') }}</em>
-                      <em v-else-if="option.disabled">{{ $t('orderTaker.occupiedBy', { waiter: option.occupant }) }}</em>
-                    </span>
-                  </template>
-                </SearchableSelect>
-              </div>
-              <div class="bill-actions">
-                <span class="bill-summary">{{ transferTable ? $t('orderTaker.transferTo', { table: transferTable }) : ' ' }}</span>
-                <button type="button" class="send-btn" :disabled="billSaving || !transferTable" @click="confirmTransfer">
-                  <i class="fas fa-right-left" aria-hidden="true"></i> {{ $t('orderTaker.transfer') }}
+                  <i class="fas fa-arrow-right" aria-hidden="true"></i>
                 </button>
+                <div class="bill-arrow-bar"></div>
               </div>
-            </template>
+
+              <div class="bill-side">
+                <div class="bill-side-head">
+                  <strong>{{ $t('orderTaker.billTo') }}</strong>
+                  <span class="bill-dest-count">{{ $t('orderTaker.splitSummary', { count: splitSelected.length, total: money(splitTotal) }) }}</span>
+                </div>
+                <div class="bill-dests">
+                  <label
+                    v-if="billMode === 'split'"
+                    class="bill-dest"
+                    :class="{ checked: transferTable === (billModeOrder?.table_number || '') }"
+                  >
+                    <input type="radio" :value="billModeOrder?.table_number || ''" v-model="transferTable" :disabled="billSaving" />
+                    <span class="bill-dest-text">{{ $t('orderTaker.newBillSameTable', { table: billModeOrder?.table_number || '—' }) }}</span>
+                  </label>
+                  <label
+                    v-for="option in transferTableOptions"
+                    :key="option.value"
+                    class="bill-dest"
+                    :class="{ checked: transferTable === option.value, 'is-taken': option.disabled }"
+                  >
+                    <input type="radio" :value="option.value" v-model="transferTable" :disabled="billSaving || option.disabled" />
+                    <span class="bill-dest-text">{{ option.label }}</span>
+                    <em v-if="option.mine" class="bill-dest-tag mine">{{ $t('orderTaker.yourTable') }}</em>
+                    <em v-else-if="option.disabled" class="bill-dest-tag taken">{{ $t('orderTaker.occupiedBy', { waiter: option.occupant }) }}</em>
+                  </label>
+                  <p v-if="billMode === 'transfer' && !transferTableOptions.length" class="cat-empty">{{ $t('orderTaker.noTables') }}</p>
+                </div>
+                <ul v-if="billSelectedLines.length" class="bill-preview">
+                  <li v-for="line in billSelectedLines" :key="line.order_item_id">
+                    {{ line.quantity }}× {{ line.item_name }}<template v-if="line.accompaniment"> · {{ line.accompaniment }}</template>
+                  </li>
+                </ul>
+                <p v-else class="bill-preview-empty">{{ $t('orderTaker.noLinesSelected') }}</p>
+              </div>
+            </div>
+
+            <div class="bill-actions">
+              <span class="bill-summary">
+                <template v-if="billAllSelected && transferTable === (billModeOrder?.table_number || '')">{{ $t('orderTaker.leaveOneHint') }}</template>
+                <template v-else-if="transferTable && transferTable !== (billModeOrder?.table_number || '')">{{ $t('orderTaker.transferTo', { table: transferTable }) }}</template>
+                <template v-else>&nbsp;</template>
+              </span>
+              <button type="button" class="send-btn" :disabled="!billCanMove" @click="confirmBillMove">
+                <i :class="billMode === 'split' ? 'fas fa-scissors' : 'fas fa-right-left'" aria-hidden="true"></i>
+                {{ billMode === 'split' ? $t('orderTaker.split') : $t('orderTaker.transfer') }}
+              </button>
+            </div>
           </div>
         </div>
       </Transition>
@@ -903,6 +957,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useOrderRealtime } from '@/composables/useOrderRealtime'
 import { orderApi, menuItemApi, tableApi, tableLocationApi, reportApi } from '@/api'
+import CalendarInput from '@/components/CalendarInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import { PAYMENT_METHODS } from '@/utils/payments'
@@ -980,6 +1035,14 @@ function waiterScopeParams() {
   if (!isFloorStaff.value) return {}
   const uid = authStore.user?.user_id ?? authStore.user?.id
   return uid ? { waiter_id: uid } : {}
+}
+
+// Floor staff portfolios are strictly table-anchored tickets. Room-service,
+// take-away and other table-less orders belong to the cashier's panel, so a
+// waiter never sees them even when a name happens to match (the review).
+function floorStaffOrders(rows) {
+  if (!isFloorStaff.value) return rows
+  return rows.filter((order) => !!order.table_number)
 }
 
 // Bill-to-room posts to a guest folio, so it stays at receptionist level (60)
@@ -1143,15 +1206,11 @@ async function loadOrderSummary() {
     const res = await orderApi.summary({
       department: department.value,
       date: summaryDate.value || undefined,
-      waiter_id: waiterSelfScope.value || undefined,
+      ...waiterScopeParams(),
     })
     const body = res.data?.summary || res.data?.data || res.data || {}
     const rows = Array.isArray(res.data?.orders) ? res.data.orders : (body.orders || [])
-    myOrders.value = rows.filter(isMine)
-    settlementTotal.value = Number(body.paid_total ?? body.gross_total ?? 0)
-    roomPostingTotal.value = Number(body.billed_to_room_total ?? 0)
-    bySettlement.value = body.by_settlement || {}
-    byWaiter.value = body.waiter ? [body.waiter] : (Array.isArray(body.by_waiter) ? body.by_waiter : [])
+    myOrders.value = floorStaffOrders(rows).filter(isMine)
   } catch (err) {
     summaryError.value = err.response?.data?.message || t('orderTaker.loadOrdersError')
     myOrders.value = []
@@ -1219,7 +1278,7 @@ async function loadOpenOrders() {
       ...waiterScopeParams(),
     })
     const rows = Array.isArray(res.data) ? res.data : res.data?.data || []
-    const filtered = rows
+    const filtered = floorStaffOrders(rows)
       .filter((order) => !['completed', 'cancelled'].includes(order.status))
       .filter((order) => (isFloorStaff.value ? isMine(order) : true))
     detectReadyTransitions(filtered)
@@ -1301,16 +1360,49 @@ const splitTotal = computed(() =>
     .reduce((sum, l) => sum + Number(l.subtotal ?? (l.unit_price * l.quantity || 0)), 0),
 )
 
+/** The line objects currently ticked in the bill split/transfer dialog. */
+const billSelectedLines = computed(() =>
+  (billModeOrder.value?.items || []).filter((l) => splitSelected.value.includes(l.order_item_id)),
+)
+
+/** True when every line on the source bill is ticked. */
+const billAllSelected = computed(() => {
+  const items = billModeOrder.value?.items || []
+  return items.length > 0 && splitSelected.value.length === items.length
+})
+
+function toggleAllBillLines() {
+  const items = billModeOrder.value?.items || []
+  splitSelected.value = billAllSelected.value ? [] : items.map((l) => l.order_item_id)
+}
+
+/** The middle arrow only lights up when the move is executable: at least one
+ *  line ticked and a destination chosen. Ticking every line while targeting
+ *  the same table is a no-op, so it stays disabled (that is a transfer). */
+const billCanMove = computed(() => {
+  if (billSaving.value || !splitSelected.value.length) return false
+  const target = String(transferTable.value || '').trim()
+  if (!target) return false
+  const sameTable = target === String(billModeOrder.value?.table_number || '')
+  return !(sameTable && billAllSelected.value)
+})
+
 function openSplit(order) {
   billModeOrder.value = order
   billMode.value = 'split'
   splitSelected.value = []
+  // A split defaults to a fresh bill on the same table; picking another
+  // table on the right moves the ticked lines there instead.
+  transferTable.value = order.table_number || ''
   billError.value = ''
 }
 
 function openTransfer(order) {
   billModeOrder.value = order
   billMode.value = 'transfer'
+  // A transfer starts with every line ticked — untick a line to leave it
+  // behind and it becomes a partial move onto the target table.
+  splitSelected.value = (order.items || []).map((l) => l.order_item_id)
   transferTable.value = ''
   billError.value = ''
 }
@@ -1324,34 +1416,31 @@ function closeBill() {
   billError.value = ''
 }
 
-/** Splits the ticked lines onto a fresh ticket on the same table. */
-async function confirmSplit() {
-  if (!splitSelected.value.length || billSaving.value) return
+/** Executes the arrow: all lines to another table is a plain transfer, some
+ *  lines to another table is a partial transfer, and some lines on the same
+ *  table is a bill split onto a fresh ticket. */
+async function confirmBillMove() {
+  if (!billCanMove.value || !billModeOrder.value) return
   billSaving.value = true
   billError.value = ''
+  const order = billModeOrder.value
+  const target = String(transferTable.value || '').trim()
+  const sameTable = target === String(order.table_number || '')
+  const lines = splitSelected.value.map((id) => ({ order_item_id: id }))
   try {
-    const { data } = await orderApi.splitOrder(billModeOrder.value.order_id, { order_item_ids: splitSelected.value })
-    sentToast.value = data.message || t('orderTaker.splitDone')
+    let data
+    if (!sameTable && billAllSelected.value) {
+      data = (await orderApi.transferOrder(order.order_id, { table_number: target })).data
+    } else if (!sameTable) {
+      data = (await orderApi.transferOrderItems(order.order_id, { target_table_number: target, lines })).data
+    } else {
+      data = (await orderApi.splitOrder(order.order_id, { lines })).data
+    }
+    sentToast.value = data.message || t(billMode.value === 'split' ? 'orderTaker.splitDone' : 'orderTaker.transferred')
     setTimeout(() => (sentToast.value = ''), 3000)
     closeBill()
     await loadOpenOrders()
-  } catch (err) {
-    billError.value = err.response?.data?.message || t('common.actionFailed')
-    billSaving.value = false
-  }
-}
-
-/** Moves the whole ticket onto the chosen table. */
-async function confirmTransfer() {
-  if (!String(transferTable.value || '').trim() || billSaving.value) return
-  billSaving.value = true
-  billError.value = ''
-  try {
-    const { data } = await orderApi.transferOrder(billModeOrder.value.order_id, { table_number: String(transferTable.value).trim() })
-    sentToast.value = data.message || t('orderTaker.transferred')
-    setTimeout(() => (sentToast.value = ''), 3000)
-    closeBill()
-    await loadOpenOrders()
+    loadDeptOrders()
   } catch (err) {
     billError.value = err.response?.data?.message || t('common.actionFailed')
     billSaving.value = false
@@ -1414,6 +1503,16 @@ async function pay(method) {
 /** Display label for a payment method code. */
 function methodLabel(code) {
   return paymentMethodOptions.find((m) => m.value === code)?.label || code
+}
+
+/** Settlement column on the summary: how the ticket was closed — cash,
+ *  mobile/bank channel, creditor account or a room posting. */
+function settlementLabel(order) {
+  const mode = order.settlement_mode
+  if (!mode) return '—'
+  if (mode === 'room_posting') return t('orderTaker.billToRoom')
+  if (mode === 'creditor') return t('orderTaker.creditorAccount')
+  return methodLabel(mode)
 }
 
 /** Prints the receipt of the last collection silently on the till printer. */
@@ -2059,6 +2158,12 @@ function removeLine(line) {
  *  lines to that same order so nothing is ever duplicated. */
 async function sendOrder() {
   if (!orderLines.value.length || sending.value) return
+  // A waiter-panel ticket is always anchored to a table (the API refuses
+  // table-less dine-in tickets from floor staff) — tap a table chip first.
+  if (!form.value.table_number) {
+    sendError.value = t('orderTaker.selectTableFirst')
+    return
+  }
   // Creating a brand-new order on a table that already has a live ticket is
   // blocked; continuing an ongoing ticket (continueOrderId) is allowed.
   if (form.value.table_number && tableHasLiveOrder(form.value.table_number) && !continueOrderId.value) {
@@ -2274,6 +2379,12 @@ function onKey(e) {
   background: #fef2f2;
   border-color: #fecaca;
 }
+
+.table-chip.occupied, .table-chip.occupied:disabled {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
 .table-chip.mine {
   background: #eff6ff;
   border-color: #bfdbfe;
@@ -2286,6 +2397,18 @@ function onKey(e) {
   font-weight: 700;
   font-size: 14px;
   color: #27272a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* The tick marks the table currently selected for the ticket being built. */
+.table-chip-tick {
+  color: #16a34a;
+  font-size: 15px;
+}
+.table-chip.mine .table-chip-tick,
+.table-chip.taken .table-chip-tick {
+  color: #005eb8;
 }
 .table-chip-occ {
   font-size: 11px;
@@ -3390,30 +3513,77 @@ function onKey(e) {
   justify-self: end;
 }
 
-/* ---- Bill split / transfer modal scaffolding ---- */
-.taker-fld {
+/* ---- Bill split / transfer: source bill | arrow | destination panes ---- */
+.bill-split {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  padding: 4px 18px 0;
+}
+.bill-side {
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin: 12px 18px 0;
+  gap: 8px;
 }
-.taker-fld > span {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #52525b;
-}
-.bill-transfer-opt {
+.bill-side-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin: -8px -10px;
-  padding: 8px 10px;
-  border-radius: 4px;
+  gap: 8px;
+  font-size: 13px;
 }
-.bill-transfer-opt em {
+.bill-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #52525b;
+  cursor: pointer;
+}
+.bill-dest-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: #52525b;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.bill-dests {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.bill-dest {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.bill-dest.checked {
+  border-color: #005eb8;
+  background: #eff6ff;
+}
+.bill-dest.is-taken {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.bill-dest-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bill-dest-tag {
   font-style: normal;
   font-size: 11px;
   font-weight: 700;
@@ -3421,25 +3591,67 @@ function onKey(e) {
   border-radius: 999px;
   white-space: nowrap;
 }
-.bill-transfer-opt.is-mine { color: #005eb8; font-weight: 600; background: #eff6ff; }
-.bill-transfer-opt.is-mine em { background: #dbebfb; color: #005eb8; }
-.bill-transfer-opt.is-taken em { background: #ffe4e6; color: #b91c1c; }
-.taker-fld input {
-  width: 100%;
-  border: 1px solid #d4d4d8;
-  border-radius: 8px;
-  padding: 11px 12px;
-  font: inherit;
-  font-size: 14px;
-  color: #1a1a2e;
-  background: #fff;
+.bill-dest-tag.mine { background: #dbebfb; color: #005eb8; }
+.bill-dest-tag.taken { background: #ffe4e6; color: #b91c1c; }
+.bill-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  align-self: center;
+  gap: 6px;
 }
-.taker-fld input:focus {
-  outline: none;
-  border-color: #005eb8;
-  box-shadow: 0 0 0 2px rgba(0, 94, 184, 0.15);
+.bill-arrow-bar {
+  width: 2px;
+  flex: 1;
+  min-height: 24px;
+  border-radius: 2px;
+  background: #e4e4e7;
 }
-
+.bill-arrow-btn {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: var(--pad-accent);
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s, transform 0.12s;
+}
+.bill-arrow-btn:hover:not(:disabled) {
+  background: var(--pad-accent-deep);
+  transform: scale(1.06);
+}
+.bill-arrow-btn:disabled {
+  background: #d4d4d8;
+  cursor: not-allowed;
+}
+.bill-preview {
+  margin: 0;
+  padding: 8px 0 0 18px;
+  border-top: 1px dashed #e4e4e7;
+  list-style: none;
+  font-size: 12px;
+  color: #3f3f46;
+  max-height: 96px;
+  overflow-y: auto;
+}
+.bill-preview-empty {
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px dashed #e4e4e7;
+  font-size: 12px;
+  color: #a1a1aa;
+}
+@media (max-width: 640px) {
+  .bill-split { flex-direction: column; }
+  .bill-arrow { flex-direction: row; }
+  .bill-arrow-bar { width: auto; height: 2px; min-height: 0; }
+  .bill-arrow-btn { transform: rotate(90deg); }
+  .bill-arrow-btn:hover:not(:disabled) { transform: rotate(90deg) scale(1.06); }
+}
 .bill-actions {
   display: flex;
   align-items: center;

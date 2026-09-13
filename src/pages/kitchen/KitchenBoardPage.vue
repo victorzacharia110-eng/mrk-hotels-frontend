@@ -46,7 +46,7 @@
       </h2>
       <div class="kb-controls">
         <label class="kb-cal" :title="$t('kitchen.calendar')">
-          <input v-model="boardDate" type="date" :aria-label="$t('kitchen.calendar')" />
+          <CalendarInput v-model="boardDate" :aria-label="$t('kitchen.calendar')" :clearable="false" />
         </label>
         <label class="kb-auto">
           <input v-model="autoRefresh" type="checkbox" />
@@ -174,6 +174,7 @@ import { useI18n } from 'vue-i18n'
 import { orderApi } from '@/api'
 import { useOrderRealtime } from '@/composables/useOrderRealtime'
 import { useNotificationSettingsStore } from '@/stores/notificationSettings'
+import CalendarInput from '@/components/CalendarInput.vue'
 import NotificationSoundSettings from '@/components/notification/NotificationSoundSettings.vue'
 
 const { t } = useI18n()
@@ -490,15 +491,6 @@ onUnmounted(() => {
   align-items: center;
   font-size: 13px;
   color: #52525b;
-}
-
-.kb-cal input[type='date'] {
-  border: 1px solid #d4d4d8;
-  border-radius: 6px;
-  padding: 5px 8px;
-  font-size: 13px;
-  color: #27272a;
-  background: #fff;
 }
 
 /* ---- Closed-ticket history table (past dates only) ---- */

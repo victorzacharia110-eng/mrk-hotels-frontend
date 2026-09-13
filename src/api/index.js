@@ -1675,7 +1675,7 @@ export const orderApi = {
   /**
    * Splits a bill onto a fresh same-table ticket.
    * @param {string|number} id - Order identifier.
-   * @param {object} data - { order_item_ids: [...] }.
+   * @param {object} data - { lines: [{ order_item_id, quantity? }] }.
    * @returns {Promise} Axios response with the new split order.
    */
   splitOrder(id, data) {

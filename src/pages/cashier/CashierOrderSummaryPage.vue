@@ -642,7 +642,9 @@ async function confirmSplit() {
   savingSplit.value = true
   drawerError.value = ''
   try {
-    await orderApi.splitOrder(drawerOrder.value.order_id, { order_item_ids: splitLines.value })
+    await orderApi.splitOrder(drawerOrder.value.order_id, {
+      lines: splitLines.value.map((id) => ({ order_item_id: id })),
+    })
     closeDrawer()
     await load()
     toast(t('cashier.summary.splitDone'), 'success')
