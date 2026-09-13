@@ -987,6 +987,18 @@
               <p v-else class="sv-dot-why-line clear">
                 <i class="fas fa-circle-xmark" aria-hidden="true"></i> {{ $t('stayview.dotWhyClear') }}
               </p>
+              <ul v-if="dotWhyRules.length" class="sv-dot-rules">
+                <li
+                  v-for="rule in dotWhyRules"
+                  :key="rule.key"
+                  class="sv-dot-rule"
+                  :class="rule.ok ? 'ok' : 'no'"
+                >
+                  <i :class="rule.ok ? 'fas fa-circle-check' : 'fas fa-circle-xmark'" aria-hidden="true"></i>
+                  <span>{{ $t('stayview.' + rule.key) }}</span>
+                </li>
+              </ul>
+
             </div>
           </div>
 
@@ -4280,6 +4292,41 @@ const dotWhyWindow = computed(() => {
   const fmt = (d) => (d instanceof Date ? d.toISOString().slice(0,10) : String(d).slice(0,10))
   return fmt(arrival) + ' \u2192 ' + fmt(departure)
 })
+const dotWhyStay = computed(() => {
+  const room = dotWhyRoom.value
+  if (!room) return null
+  const today = startOfDay(new Date())
+  return (reservations.value || []).find((r) => {
+    if (!r || r.status !== 'checked_in') return false
+    if (reservationRoomId(r) !== room.room_id) return false
+    const { arrival, departure } = reservationDates(r)
+    if (!arrival || !departure) return false
+    return arrival <= today && today < departure
+  }) || null
+})
+const dotWhyRules = computed(() => {
+  const room = dotWhyRoom.value
+  if (!room) return []
+  const today = startOfDay(new Date())
+  const stay = dotWhyStay.value
+  const dates = (r) => { try { return reservationDates(r) } catch (e) { return { arrival: null, departure: null } } }
+  const g1 = () => !!stay
+  const g2 = () => {
+    if (!stay) return false
+    const { arrival, departure } = dates(stay)
+    if (!arrival || !departure) return false
+    return arrival <= today && today < departure
+  }
+  const isOccupied = roomDotOccupied(room)
+  return [
+    { key: 'dotRuleStatus', ok: isOccupied },
+    { key: 'dotRuleStay', ok: !!stay },
+    { key: 'dotRuleToday', ok: g2() },
+    { key: 'dotRuleGuest', ok: isOccupied && !!dotWhyGuest.value },
+    { key: 'sv:isClear', ok: !isOccupied },
+  ]
+})
+
 function openDotWhy(room) {
   dotWhyRoom.value = room
   dotWhyOpen.value = true
