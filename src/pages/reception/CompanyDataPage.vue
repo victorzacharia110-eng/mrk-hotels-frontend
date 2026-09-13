@@ -43,6 +43,15 @@
           <label>{{ $t('receptionPanel.companyEmail') }}</label>
           <input v-model="form.email" type="email" class="input" />
         </div>
+        <div class="form-group">
+          <label>{{ $t('receptionPanel.standardTime') }}</label>
+          <select v-model="form.timezone" class="input">
+            <option v-for="tz in timezoneOptions" :key="tz.value" :value="tz.value">
+              {{ tz.label }}
+            </option>
+          </select>
+          <small class="hint muted">{{ $t('receptionPanel.standardTimeHint') }}</small>
+        </div>
         <button class="btn btn-primary" :disabled="saving" type="submit">
           <i class="fas fa-save"></i> {{ saving ? $t('common.loading') : $t('common.save') }}
         </button>
@@ -230,8 +239,20 @@ function tsh(value) {
 }
 
 /* ----- Hotel profile ----- */
-const empty = () => ({ hotel_name: '', address: '', phone: '', email: '', country_code: '' })
+const empty = () => ({ hotel_name: '', address: '', phone: '', email: '', country_code: '', timezone: 'Africa/Dar_es_Salaam' })
 const form = ref(empty())
+
+const timezoneOptions = [
+  { value: 'Africa/Dar_es_Salaam', label: 'East Africa Time (GMT+3)' },
+  { value: 'Africa/Nairobi', label: 'Kenya — East Africa Time (GMT+3)' },
+  { value: 'Africa/Kampala', label: 'Uganda — East Africa Time (GMT+3)' },
+  { value: 'Africa/Addis_Ababa', label: 'Ethiopia — East Africa Time (GMT+3)' },
+  { value: 'Africa/Cairo', label: 'Egypt (GMT+2)' },
+  { value: 'Africa/Johannesburg', label: 'South Africa (GMT+2)' },
+  { value: 'Africa/Lagos', label: 'West Africa Time (GMT+1)' },
+  { value: 'Africa/Casablanca', label: 'Morocco (GMT+0/1)' },
+  { value: 'UTC', label: 'UTC (GMT+0)' },
+]
 
 async function load() {
   loading.value = true
@@ -246,6 +267,7 @@ async function load() {
       phone: data.phone || '',
       email: data.email || '',
       country_code: data.country_code || '',
+      timezone: data.timezone || 'Africa/Dar_es_Salaam',
     }
   } catch (err) {
     error.value = err.response?.data?.message || t('common.loadError')
@@ -283,6 +305,7 @@ async function saveProfile() {
       address: form.value.address,
       phone: form.value.phone,
       email: form.value.email,
+      timezone: form.value.timezone,
     })
     success.value = t('receptionPanel.companySaved')
     await load()

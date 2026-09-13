@@ -87,6 +87,11 @@
             <i class="fas fa-cash-register" aria-hidden="true"></i>
             <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.shiftManager') }}</span>
           </router-link>
+          <router-link :to="{ name: 'cashier-day-close' }" class="pos-nav-link"
+            :class="{ active: isActive('/cashier/day-close') }" @click="mobileOpen = false">
+            <i class="fas fa-calendar-check" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.dayClose') }}</span>
+          </router-link>
           <router-link :to="{ name: 'cashier-blocked-devices' }" class="pos-nav-link"
             :class="{ active: isActive('/cashier/blocked-devices') }" @click="mobileOpen = false">
             <i class="fas fa-shield-halved" aria-hidden="true"></i>
@@ -261,7 +266,8 @@ watch(() => route.path, () => {
   // Keep the parent group open so the active item stays visible.
   if (route.path.startsWith('/cashier/item-lookup') || route.path.startsWith('/cashier/ingredients')
     || route.path.startsWith('/cashier/shift-manager') || route.path.startsWith('/cashier/blocked-devices')
-    || route.path.startsWith('/cashier/transaction-lock') || route.path.startsWith('/cashier/account-lookup')) {
+    || route.path.startsWith('/cashier/transaction-lock') || route.path.startsWith('/cashier/account-lookup')
+    || route.path.startsWith('/cashier/day-close')) {
     const next = new Set(openGroups.value)
     next.add('manager')
     openGroups.value = next

@@ -824,6 +824,12 @@ onUnmounted(() => {
 .nc-tag { margin-left: 6px; font-size: 11px; color: #333333; background: #ececec; border-radius: 999px; padding: 2px 8px; font-weight: 700; }
 .sm-inline-label { font-size: 13px; color: #475569; font-weight: 600; }
 
+.sm-toolbar input[type="date"] {
+  width: auto;
+  flex: 0 0 auto;
+  min-width: 170px;
+}
+
 .drawer-overlay {
   position: fixed;
   inset: 0;

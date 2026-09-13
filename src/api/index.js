@@ -340,6 +340,13 @@ export const nightAuditApi = {
   deleteTransaction(id) { return api.delete(`${v1}/night-audit/transactions/${id}`) },
 }
 
+/** F&B Business-Day Close — cashier/bar/inventory panel day close. */
+export const fbDayCloseApi = {
+  index() { return api.get(`${v1}/fnb/day-close`) },
+  store(data) { return api.post(`${v1}/fnb/day-close`, data) },
+  history(params) { return api.get(`${v1}/fnb/day-closes`, { params }) },
+}
+
 /** Activity log report — daily/weekly/monthly with CSV download. */
 export const activityLogReportApi = {
   index(params) { return api.get(`${v1}/activity-log-report`, { params }) },

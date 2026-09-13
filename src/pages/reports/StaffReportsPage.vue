@@ -12,7 +12,7 @@
     <header class="rp-head">
       <div class="rp-head-row">
         <div>
-          <h1><i class="fas fa-chart-line" aria-hidden="true"></i> {{ $t('staffDashboard.reportsTitle') }} · {{ $t(`orderTaker.${department}`) }}</h1>
+          <h1><i class="fas fa-chart-line" aria-hidden="true"></i> {{ $t('staffDashboard.summaryTitle') }} · {{ $t(`orderTaker.${department}`) }}</h1>
           <p class="rp-subtitle">{{ $t('staffDashboard.reportsSubtitle') }}</p>
         </div>
         <ul class="rp-meta">

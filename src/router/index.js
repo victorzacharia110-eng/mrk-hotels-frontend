@@ -385,10 +385,16 @@ const routes = [
         meta: { titleKey: 'cashier.nav.requisitions' },
       },
       {
+        path: 'day-close',
+        name: 'cashier-day-close',
+        component: () => import('@/pages/cashier/CashierDayClosePage.vue'),
+        meta: { titleKey: 'cashier.nav.dayClose' },
+      },
+      {
         path: 'reports',
         name: 'cashier-reports',
         component: () => import('@/pages/reports/StaffReportsPage.vue'),
-        meta: { titleKey: 'cashier.nav.reports' },
+        meta: { titleKey: 'cashier.nav.summaryReport' },
       },
       {
         path: 'report-browser',
