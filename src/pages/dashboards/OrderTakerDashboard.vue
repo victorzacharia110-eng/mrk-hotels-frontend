@@ -49,6 +49,7 @@
       <!-- Department switch: flips menu categories, open orders and defaults -->
       <div class="dept-toggle" role="group" :aria-label="$t('orderTaker.department')">
         <button
+          v-if="fixedDept !== 'bar'"
           type="button"
           :class="{ active: department === 'restaurant', locked: fixedDept === 'bar' }"
           :disabled="fixedDept === 'bar'"
@@ -59,6 +60,7 @@
           <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('orderTaker.restaurant') }}
         </button>
         <button
+          v-if="fixedDept !== 'restaurant'"
           type="button"
           :class="{ active: department === 'bar', locked: fixedDept === 'restaurant' }"
           :disabled="fixedDept === 'restaurant'"

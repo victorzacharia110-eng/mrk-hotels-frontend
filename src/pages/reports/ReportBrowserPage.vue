@@ -493,7 +493,7 @@
                     :key="col.key"
                     :class="{ num: col.format === 'money' || col.format === 'pct' }"
                   >
-                    {{ formatEngineCell(row[col.key], col.format) }}
+                    {{ formatEngineCell(row[col.key], col.key, col.format) }}
                   </td>
                 </tr>
                 <tr v-if="!engine.rows.length">
@@ -1526,19 +1526,27 @@ function engineColumnLabel(key, fallback) {
   return fallback || String(key).replace(/_/g, ' ')
 }
 
-function formatEngineCell(value, format) {
+function formatEngineCell(value, key, format) {
   if (value === null || value === undefined || value === '') return '—'
   if (format === 'money' && typeof value === 'number') return money(value)
   if (format === 'pct') return `${value}%`
   if (typeof value === 'number') return String(value)
   if (Array.isArray(value)) return value.join(', ') || '—'
+  // Enum/status codes come through as snake_case from the engine
+  // ("walk_in", "billed_to_room"); render them as plain words.
+  if (typeof value === 'string' && value.includes('_')) {
+    return value
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  }
   return String(value)
 }
 
 function engineTotalFor(key, format) {
   const total = (engine.value?.totals || []).find((t) => t.key === key)
   if (!total) return null
-  return { label: total.label || null, value: formatEngineCell(total.value, format) }
+  return { label: total.label || null, value: formatEngineCell(total.value, key, format) }
 }
 
 function engineSummaryValue(value) {
