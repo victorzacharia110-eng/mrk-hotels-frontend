@@ -82,6 +82,23 @@
     </template>
 
     <!-- ══ Report body ══ -->
+    <!-- Print-only branded head (Night Audit renders its own dedicated
+         sheet; every other report gets this header on paper). -->
+    <div class="print-brand">
+      <div class="print-brand-row">
+        <img v-if="reportLogo" :src="reportLogo" class="print-logo" alt="" />
+        <div>
+          <div class="print-hotel">{{ reportHotel }}</div>
+          <h2 class="print-title">{{ activeLabel }}</h2>
+        </div>
+      </div>
+      <div class="print-meta">
+        <span v-if="printPeriod">{{ $t('reportBrowser.period') }}: <b>{{ printPeriod }}</b></span>
+        <span>{{ $t('staffDashboard.printedOn', { at: printedAt }) }}</span>
+        <span>{{ $t('staffDashboard.printedBy', { name: userName }) }}</span>
+      </div>
+    </div>
+
     <template v-if="activeConfig?.wired">
       <div v-if="loading" class="rb-loading">
         <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> {{ $t('reportBrowser.loading') }}
@@ -535,17 +552,175 @@
         </div>
       </div>
     </details>
+
+    <div class="print-foot">
+      <span>{{ reportHotel }}</span>
+      <span>·</span>
+      <span>{{ activeLabel }}</span>
+      <span v-if="printPeriod">·</span>
+      <span v-if="printPeriod">{{ printPeriod }}</span>
+      <span>·</span>
+      <span>{{ $t('staffDashboard.printedOn', { at: printedAt }) }}</span>
+    </div>
   </ReportBrowserLayout>
+
+  <!-- ══ Print-only Night Audit document ══
+       Hidden on screen; the browser print build strips every piece of app
+       chrome and renders this structured sheet on A4 landscape. -->
+  <div v-if="activeReport === 'night-audit' && report" class="na-sheet">
+    <div class="na-brand">
+      <div class="na-brand-left">
+        <img v-if="reportLogo" :src="reportLogo" class="na-logo" alt="" />
+        <div>
+          <div class="na-hotel">{{ reportHotel }}</div>
+          <div class="na-title">{{ activeLabel }}</div>
+        </div>
+      </div>
+      <span v-if="report.closed" class="na-closed">{{ $t('nightAudit.closed') }}</span>
+    </div>
+
+    <div class="na-meta">
+      <span>{{ $t('reportBrowser.asOnDate') }}: <b>{{ prettyDate(filterValues.businessDate || todayIso()) }}</b></span>
+      <span>{{ $t('staffDashboard.printedOn', { at: printedAt }) }}</span>
+      <span>{{ $t('staffDashboard.printedBy', { name: userName }) }}</span>
+    </div>
+
+    <table class="na-kpi">
+      <thead>
+        <tr>
+          <th>{{ $t('nightAudit.totalRevenue') }}</th>
+          <th>{{ $t('nightAudit.cashInHand') }}</th>
+          <th>{{ $t('nightAudit.netProfit') }}</th>
+          <th>{{ $t('nightAudit.outstanding') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="na-kpi-val">{{ money(report.revenue.total) }}</td>
+          <td class="na-kpi-val" :class="{ 'na-neg': report.cash_in_hand < 0 }">{{ money(report.cash_in_hand) }}</td>
+          <td class="na-kpi-val" :class="{ 'na-neg': report.net_profit < 0 }">{{ money(report.net_profit) }}</td>
+          <td class="na-kpi-val">{{ money(report.outstanding) }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="na-cols">
+      <section class="na-sec">
+        <h3>{{ $t('nightAudit.revenue') }}</h3>
+        <table class="na-table">
+          <thead>
+            <tr>
+              <th>{{ $t('reportBrowser.revenueStream') }}</th>
+              <th class="num">{{ $t('reportBrowser.amount') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{{ $t('nightAudit.rooms') }}</td>
+              <td class="num">{{ money(report.revenue.rooms) }}</td>
+            </tr>
+            <tr>
+              <td>{{ $t('nightAudit.fnb') }}</td>
+              <td class="num">{{ money(report.revenue.fnb) }}</td>
+            </tr>
+            <tr>
+              <td>{{ $t('nightAudit.laundry') }}</td>
+              <td class="num">{{ money(report.revenue.laundry) }}</td>
+            </tr>
+            <tr>
+              <td>{{ $t('nightAudit.funGames') }}</td>
+              <td class="num">{{ money(report.revenue.fun_games) }}</td>
+            </tr>
+            <tr class="na-total">
+              <td>{{ $t('nightAudit.totalRevenue') }}</td>
+              <td class="num">{{ money(report.revenue.total) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="na-sec">
+        <h3>{{ $t('nightAudit.collections') }}</h3>
+        <table class="na-table">
+          <thead>
+            <tr>
+              <th>{{ $t('reportBrowser.method') }}</th>
+              <th class="num">{{ $t('reportBrowser.amount') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(amount, method) in report.collections.by_method" :key="method">
+              <td class="na-cap">{{ method.replace('_', ' ') }}</td>
+              <td class="num">{{ money(amount) }}</td>
+            </tr>
+            <tr class="na-total">
+              <td>{{ $t('nightAudit.totalCollected') }}</td>
+              <td class="num">{{ money(report.collections.total) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="na-sec">
+        <h3>{{ $t('nightAudit.occupancy') }}</h3>
+        <table class="na-table">
+          <thead>
+            <tr>
+              <th>{{ $t('reportBrowser.occupancy') }}</th>
+              <th class="num">{{ $t('reportBrowser.value') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{{ $t('nightAudit.arrivals') }}</td>
+              <td class="num">{{ report.counts.arrivals }}</td>
+            </tr>
+            <tr>
+              <td>{{ $t('nightAudit.departures') }}</td>
+              <td class="num">{{ report.counts.departures }}</td>
+            </tr>
+            <tr>
+              <td>{{ $t('nightAudit.inHouse') }}</td>
+              <td class="num">{{ report.counts.in_house }}</td>
+            </tr>
+            <tr>
+              <td>{{ $t('nightAudit.newBookings') }}</td>
+              <td class="num">{{ report.counts.reservations_created }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <div class="na-sign">
+      <div>
+        <span class="na-sign-label">{{ $t('nightAudit.preparedBy') }}</span>
+        <span class="na-sign-line"></span>
+      </div>
+      <div>
+        <span class="na-sign-label">{{ $t('nightAudit.checkedBy') }}</span>
+        <span class="na-sign-line"></span>
+      </div>
+      <div>
+        <span class="na-sign-label">{{ $t('nightAudit.approvedBy') }}</span>
+        <span class="na-sign-line"></span>
+      </div>
+    </div>
+
+    <div class="na-foot">{{ reportHotel }} · {{ activeLabel }} · {{ prettyDate(filterValues.businessDate || todayIso()) }}</div>
+  </div>
 </template>
 
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
-import { nightAuditApi, guestReportApi, reportApi } from '@/api'
+import { useAuthStore } from '@/stores/auth'
+import { nightAuditApi, guestReportApi, reportApi, hotelSettingsApi } from '@/api'
 import { exportCSV } from '@/utils/export'
 
 const { t, te } = useI18n()
+const authStore = useAuthStore()
 
 /* ── Report catalogue (matches the reference screenshot tree) ── */
 const categories = [
@@ -691,6 +866,22 @@ const templateName = ref('default')
 const helpOpen = ref(true)
 
 const filterValues = reactive({})
+
+/* Human period label for the print header, per report semantics:
+   single dateKey → that date; from+to range → "from → to"; else → blank. */
+const printPeriod = computed(() => {
+  const cfg = activeConfig.value
+  const v = filterValues
+  const dk = cfg?.dateKey
+  if (dk) {
+    if (dk === 'from' && v.from && v.to) return `${prettyDate(v.from)} → ${prettyDate(v.to)}`
+    if (v[dk]) return prettyDate(v[dk])
+  }
+  if (v.from && v.to) return `${prettyDate(v.from)} → ${prettyDate(v.to)}`
+  if (v.businessDate) return prettyDate(v.businessDate)
+  if (v.stayDate) return prettyDate(v.stayDate)
+  return ''
+})
 
 const REPORTS = {
   'night-audit': {
@@ -1227,6 +1418,22 @@ function reportHasConfig(key) {
 /* ── State ── */
 const businessDate = ref(new Date().toISOString().slice(0, 10))
 const currency = ref('TZS')
+
+/* ── Branding for the printable Night Audit document ── */
+const reportHotel = computed(() => authStore.user?.tenant?.hotel_name || 'MRK Hotels')
+const userName = computed(() => authStore.user?.full_name || '—')
+const reportLogo = ref('')
+const printedAt = ref('')
+
+// Fetch the hotel logo once so the printed Night Audit sheet can show it.
+async function loadReportLogo() {
+  try {
+    const res = await hotelSettingsApi.show()
+    reportLogo.value = res?.data?.hotel?.logo_url || ''
+  } catch {
+    reportLogo.value = ''
+  }
+}
 const report = ref(null)
 const engine = ref(null)
 const loading = ref(false)
@@ -1442,6 +1649,7 @@ async function closeDay() {
 }
 
 function printPaper() {
+  printedAt.value = new Date().toLocaleString()
   window.print()
 }
 
@@ -1562,8 +1770,10 @@ function onSearch(term) {
 }
 
 onMounted(() => {
+  printedAt.value = new Date().toLocaleString()
   initFilters('night-audit')
   loadNightAudit()
+  loadReportLogo()
 })
 </script>
 
@@ -1922,5 +2132,351 @@ onMounted(() => {
     border-radius: 0;
     padding: 0;
   }
+}
+</style>
+
+<!--
+  Global (non-scoped) print stylesheet for the Night Audit document.
+
+  The on-screen report shares its classes with the ReportBrowserLayout shell,
+  so the previous scoped @media rules could not reach across components and the
+  browser printed the whole web page. These rules are global on purpose: when
+  the `.na-sheet` is mounted (Night Audit with data loaded) the print build
+  hides every other DOM element with visibility and renders only the sheet on
+  A4 landscape. Every other report keeps its existing printing behaviour.
+-->
+<style>
+.na-sheet {
+  display: none;
+}
+
+@page {
+  size: A4 landscape;
+  margin: 12mm;
+}
+
+@media print {
+  body:has(.na-sheet) * {
+    visibility: hidden;
+  }
+
+  .na-sheet,
+  .na-sheet * {
+    visibility: visible;
+  }
+
+  .na-sheet {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    color: #111;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+}
+
+.na-brand {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 3px double #062a52;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.na-brand-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.na-logo {
+  max-height: 42px;
+  max-width: 150px;
+  object-fit: contain;
+}
+
+.na-hotel {
+  font-size: 16px;
+  font-weight: 800;
+  color: #062a52;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.na-title {
+  font-size: 11px;
+  color: #475569;
+}
+
+.na-closed {
+  border: 1px solid #062a52;
+  color: #062a52;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 4px 12px;
+  border-radius: 4px;
+}
+
+.na-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 28px;
+  font-size: 11.5px;
+  color: #475569;
+  margin-bottom: 10px;
+}
+
+.na-meta b {
+  color: #111;
+}
+
+.na-kpi {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 14px;
+  break-inside: avoid;
+}
+
+.na-kpi th {
+  background: #062a52;
+  color: #fff;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid #062a52;
+}
+
+.na-kpi td {
+  border: 1px solid #cbd5e1;
+  padding: 10px;
+}
+
+.na-kpi-val {
+  font-weight: 800;
+}
+
+.na-neg {
+  color: #b91c1c;
+}
+
+.na-cols {
+  display: flex;
+  gap: 14px;
+  align-items: stretch;
+  break-inside: avoid;
+}
+
+.na-sec {
+  flex: 1;
+  min-width: 0;
+  break-inside: avoid;
+}
+
+.na-sec h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #062a52;
+  border-bottom: 1px solid #062a52;
+  padding-bottom: 4px;
+}
+
+.na-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.na-table th {
+  background: #e8f1fa;
+  color: #062a52;
+  text-align: left;
+  text-transform: uppercase;
+  font-size: 10.5px;
+  letter-spacing: 0.3px;
+  padding: 6px 8px;
+  border: 1px solid #dbe4ef;
+}
+
+.na-table td {
+  padding: 6px 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.na-table .num {
+  text-align: right;
+}
+
+.na-total td {
+  font-weight: 800;
+  background: #f1f5f9;
+  border-top: 2px solid #062a52;
+}
+
+.na-cap {
+  text-transform: capitalize;
+}
+
+.na-sign {
+  display: flex;
+  gap: 32px;
+  margin-top: 34px;
+  break-inside: avoid;
+}
+
+.na-sign > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.na-sign-label {
+  font-size: 11px;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.na-sign-line {
+  border-bottom: 1px solid #94a3b8;
+  height: 4px;
+}
+
+.na-foot {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 10.5px;
+  color: #94a3b8;
+  letter-spacing: 0.4px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 8px;
+}
+
+/* ── Every other report: print only the paper content, no app chrome ──
+   The header / category tree / filter toolbar live in the ReportBrowserLayout
+   child component, so scoped rules could never reach them; these rules are
+   global and only act while this page is mounted (gated on .rb-paper). */
+@media print {
+  body:has(.rb-paper) .rb-header,
+  body:has(.rb-paper) .rb-tree,
+  body:has(.rb-paper) .rb-toolbar,
+  body:has(.rb-paper) .rb-help {
+    display: none !important;
+  }
+
+  body:has(.rb-paper) .rb-root,
+  body:has(.rb-paper) .rb-body,
+  body:has(.rb-paper) .rb-content {
+    display: block;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+    padding: 0;
+  }
+
+  body:has(.rb-paper) .rb-paper {
+    display: block;
+    position: static;
+    margin: 0;
+    padding: 16px 20px;
+    box-shadow: none;
+    border-radius: 0;
+    overflow: visible;
+    height: auto;
+    font-size: 12px;
+  }
+
+  /* Let wide report tables span the full landscape page instead of clipping. */
+  body:has(.rb-paper) .table-scroll {
+    overflow-x: visible !important;
+  }
+
+  /* Night Audit has its own dedicated sheet — drop the on-screen card. */
+  body:has(.na-sheet) .rb-paper {
+    display: none !important;
+  }
+}
+
+/* ── Branded print head/foot for every non-Night-Audit report ── */
+.print-brand,
+.print-foot {
+  display: none;
+}
+
+@media print {
+  body:has(.rb-paper) .print-brand,
+  body:has(.rb-paper) .print-foot {
+    display: flex;
+  }
+}
+
+.print-brand {
+  border-bottom: 3px double #062a52;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.print-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.print-logo {
+  max-height: 38px;
+  max-width: 150px;
+  object-fit: contain;
+}
+
+.print-hotel {
+  font-size: 14px;
+  font-weight: 800;
+  color: #062a52;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.print-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.print-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #475569;
+}
+
+.print-meta b {
+  color: #111;
+}
+
+.print-foot {
+  margin-top: 18px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 10.5px;
+  color: #94a3b8;
+  letter-spacing: 0.4px;
+  justify-content: center;
+  gap: 6px;
 }
 </style>
