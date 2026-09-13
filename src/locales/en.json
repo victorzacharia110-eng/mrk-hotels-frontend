@@ -3854,7 +3854,8 @@
     "dotWhyClear": "No guest is inside today.",
     "dotWhyFree": "No guest is inside the room today.",
     "dotWhyWindow": "Stay window",
-    "dotWhyGates": "Room is red only while a checked-in stay covers today."
+    "dotWhyGates": "Room is red only while a checked-in stay covers today.",
+    "printEntryInvoiceDesc": "Print this single folio entry onto its own entry invoice"
   },
   "orderTaker": {
     "title": "Take Order",

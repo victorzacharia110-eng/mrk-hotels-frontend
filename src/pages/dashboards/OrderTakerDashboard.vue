@@ -1138,13 +1138,20 @@ async function loadOrderSummary() {
   summaryLoading.value = true
   summaryError.value = ''
   try {
-    const res = await orderApi.index({
+    // Dedicated daily settlement summary (mode-of-payment buckets + waiter
+    // scope). The backend closes the same-waiter rule itself for floor staff.
+    const res = await orderApi.summary({
       department: department.value,
       date: summaryDate.value || undefined,
-      per_page: 100,
+      waiter_id: waiterSelfScope.value || undefined,
     })
-    const rows = Array.isArray(res.data) ? res.data : res.data?.data || []
+    const body = res.data?.summary || res.data?.data || res.data || {}
+    const rows = Array.isArray(res.data?.orders) ? res.data.orders : (body.orders || [])
     myOrders.value = rows.filter(isMine)
+    settlementTotal.value = Number(body.paid_total ?? body.gross_total ?? 0)
+    roomPostingTotal.value = Number(body.billed_to_room_total ?? 0)
+    bySettlement.value = body.by_settlement || {}
+    byWaiter.value = body.waiter ? [body.waiter] : (Array.isArray(body.by_waiter) ? body.by_waiter : [])
   } catch (err) {
     summaryError.value = err.response?.data?.message || t('orderTaker.loadOrdersError')
     myOrders.value = []

@@ -3844,7 +3844,8 @@
     "dotWhyClear": "Hakuna mgeni ndani leo.",
     "dotWhyFree": "Hakuna mgeni chumbani leo.",
     "dotWhyGates": "Chumba ni nyekundu tu wakati kukaa kumekaguliwa kunafunika leo.",
-    "dotWhyWindow": "Dirisha la kukaa"
+    "dotWhyWindow": "Dirisha la kukaa",
+    "printEntryInvoiceDesc": "Chapisha kipengee hiki cha folio kwenye ankara yake"
   },
   "orderTaker": {
     "title": "Chukua Oda",

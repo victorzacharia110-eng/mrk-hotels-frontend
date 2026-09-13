@@ -1550,6 +1550,10 @@ export const orderApi = {
   index(params) {
     return api.get(`${v1}/orders`, { params })
   },
+  /** Daily order summary (settlement buckets + waiter scoped). @param {object} params - date, department, waiter_id. */
+  summary(params) {
+    return api.get(`${v1}/orders/summary`, { params })
+  },
   /**
    * Fetches the order form's dropdown data.
    * @returns {Promise} Axios response with form options.

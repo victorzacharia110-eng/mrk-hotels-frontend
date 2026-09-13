@@ -2182,7 +2182,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useNotificationStore } from '@/stores/notifications'
-import { roomApi, reservationApi, guestApi, housekeepingApi, laundryApi, invoiceApi, inventoryApi, paymentApi, companyApi } from '@/api'
+import { roomApi, reservationApi, guestApi, housekeepingApi, laundryApi, invoiceApi, inventoryApi, paymentApi, companyApi,  hotelSettingsApi} from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import AlertModal from '@/components/AlertModal.vue'
 import RoleBadge from '@/components/RoleBadge.vue'
@@ -4285,6 +4285,55 @@ function openDotWhy(room) {
   dotWhyOpen.value = true
 }
 
+async function wireLogoAccent() {
+  // Pull the hotel logo (if any) and lift its dominant accent so the stayview
+  // board's dots/bars/modal can speak the brand's own colour instead of a
+  // hard-coded blue. Pure client-side preference — silently degrades to the
+  // existing default when there is no logo, a blocked canvas, or an error.
+  try {
+    let url = ''
+    try {
+      const res = await hotelSettingsApi.show()
+      url = (res?.data?.logo_url || '').trim()
+    } catch (e) {
+      // Settings endpoint unreachable/None-widget — carry on with no accent.
+    }
+    if (!url) return
+    const img = await new Promise((resolve) => {
+      const i = new Image()
+      i.crossOrigin = 'anonymous'
+      i.onload = () => resolve(i)
+      i.onerror = () => resolve(null)
+      i.src = url
+    })
+    if (!img) return
+    const c = document.createElement('canvas')
+    c.width = c.height = 96
+    const g = c.getContext('2d')
+    g.drawImage(img, 0, 0, 96, 96)
+    const d = g.getImageData(0, 0, 96, 96).data
+    const buckets = new Map()
+    for (let k = 0; k < d.length; k += 4) {
+      const a = d[k + 3]
+      if (a < 200) continue
+      const r = d[k], gg = d[k + 1], b = d[k + 2]
+      if (r > 250 && gg > 250 && b > 250) continue
+      const key = (r >> 4) + ',' + (gg >> 4) + ',' + (b >> 4)
+      buckets.set(key, (buckets.get(key) || 0) + 1)
+    }
+    let best = null, bestN = 0
+    for (const [k, n] of buckets) if (n > bestN) { bestN = n; best = k }
+    if (!best) return
+    const [r, gg, b] = best.split(',').map(Number)
+    const accent = '#' + [r, gg, b].map((v) => v.toString(16).padStart(2, '0')).join('')
+    const root = document.documentElement
+    root.style.setProperty('--sv-accent', accent)
+    root.style.setProperty('--sv-accent-soft', join`, alpha 0.14`)
+  } catch (e) {
+    // Cosmetic only — never block the board over a missing logo color.
+  }
+}
+
 function roomDotOccupied(room) {
   return roomOccupiedToday(reservations.value, room?.room_id, startOfDay(new Date()))
 }
@@ -4920,6 +4969,7 @@ let refreshTimer = null
 
 onMounted(() => {
   load()
+  wireLogoAccent()
   refreshTimer = setInterval(() => load(true), 30000)
 })
 
@@ -4928,6 +4978,12 @@ onUnmounted(() => clearInterval(refreshTimer))
 
 
 <style scoped>
+:root {
+  /* Board accent — recolorable at runtime from the hotel logo (overrides default). */
+  --sv-accent: #005eb8;
+  --sv-accent-soft: rgba(0, 94, 184, 0.14);
+}
+
 /* Folio switcher: pick which folio of the stay you are looking at. */
 .sv-folio-ref{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:8px 12px;background:#f4f0ff;border:1px solid #ddd3f6;border-radius:10px;font-size:13px;color:#4b318c}
 .sv-folio-ref i{color:#8b5cf6}
