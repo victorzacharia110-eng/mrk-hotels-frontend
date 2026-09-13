@@ -3864,7 +3864,9 @@
     "dotRuleStatus": "Status is checked in",
     "dotRuleStay": "A stay is attached to this room",
     "dotRuleToday": "Today is inside the stay window",
-    "dotRuleGuest": "The logged-in guest is the checked-in guest"
+    "dotRuleGuest": "The logged-in guest is the checked-in guest",
+    "dotRuleClear": "No checked-in stay covers today",
+    "dotLegendTitle": "Room dot rules"
   },
   "orderTaker": {
     "title": "Take Order",

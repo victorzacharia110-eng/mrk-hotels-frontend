@@ -3854,7 +3854,9 @@
     "dotRuleStatus": "Hali imesajiliwa (checked in)",
     "dotRuleStay": "Kuna muda wa kukaa umeambatanishwa katika chumba hiki",
     "dotRuleToday": "Leo iko ndani ya dirisha la kukaa",
-    "dotRuleGuest": "Mgeni aliyesajiliwa ndiye mgeni wa sasa"
+    "dotRuleGuest": "Mgeni aliyesajiliwa ndiye mgeni wa sasa",
+    "dotRuleClear": "Hakuna mgeni aliyesajiliwa anayefunika leo",
+    "dotLegendTitle": "Kanuni za nukta ya chumba"
   },
   "orderTaker": {
     "title": "Chukua Oda",

@@ -2044,6 +2044,18 @@
                 <i class="fas fa-layer-group" aria-hidden="true"></i>
                 <span>{{ roomTypeLabel(roomModal.room_type) }} · TZS {{ formatPrice(roomModal.price_per_night) }}</span>
               </div>
+              <div class="sv-modal-section">{{ $t('stayview.dotLegendTitle') }}</div>
+              <ul v-if="roomModalRules.length" class="sv-dot-rules">
+                <li
+                  v-for="rule in roomModalRules"
+                  :key="rule.key"
+                  class="sv-dot-rule"
+                  :class="rule.ok ? 'ok' : 'no'"
+                >
+                  <i :class="rule.ok ? 'fas fa-circle-check' : 'fas fa-circle-xmark'" aria-hidden="true"></i>
+                  <span>{{ $t('stayview.' + rule.key) }}</span>
+                </li>
+              </ul>
               <div class="sv-modal-section">{{ $t('stayview.setStatus') }}</div>
               <div class="sv-status-grid">
                 <button
@@ -4292,26 +4304,19 @@ const dotWhyWindow = computed(() => {
   const fmt = (d) => (d instanceof Date ? d.toISOString().slice(0,10) : String(d).slice(0,10))
   return fmt(arrival) + ' \u2192 ' + fmt(departure)
 })
-const dotWhyStay = computed(() => {
-  const room = dotWhyRoom.value
-  if (!room) return null
+/** Rule checklist explaining a room's dot colour (shared by both modals). */
+function dotRulesFor(room) {
+  if (!room) return []
   const today = startOfDay(new Date())
-  return (reservations.value || []).find((r) => {
+  const dates = (r) => { try { return reservationDates(r) } catch { return { arrival: null, departure: null } } }
+  const stay = (reservations.value || []).find((r) => {
     if (!r || r.status !== 'checked_in') return false
     if (reservationRoomId(r) !== room.room_id) return false
     const { arrival, departure } = reservationDates(r)
     if (!arrival || !departure) return false
     return arrival <= today && today < departure
-  }) || null
-})
-const dotWhyRules = computed(() => {
-  const room = dotWhyRoom.value
-  if (!room) return []
-  const today = startOfDay(new Date())
-  const stay = dotWhyStay.value
-  const dates = (r) => { try { return reservationDates(r) } catch (e) { return { arrival: null, departure: null } } }
-  const g1 = () => !!stay
-  const g2 = () => {
+  })
+  const inWindow = () => {
     if (!stay) return false
     const { arrival, departure } = dates(stay)
     if (!arrival || !departure) return false
@@ -4321,11 +4326,14 @@ const dotWhyRules = computed(() => {
   return [
     { key: 'dotRuleStatus', ok: isOccupied },
     { key: 'dotRuleStay', ok: !!stay },
-    { key: 'dotRuleToday', ok: g2() },
-    { key: 'dotRuleGuest', ok: isOccupied && !!dotWhyGuest.value },
-    { key: 'sv:isClear', ok: !isOccupied },
+    { key: 'dotRuleToday', ok: inWindow() },
+    { key: 'dotRuleGuest', ok: isOccupied && !!hkRoomGuest(room.room_id) },
+    { key: 'dotRuleClear', ok: !isOccupied },
   ]
-})
+}
+
+const dotWhyRules = computed(() => dotRulesFor(dotWhyRoom.value))
+const roomModalRules = computed(() => dotRulesFor(roomModal.value))
 
 function openDotWhy(room) {
   dotWhyRoom.value = room
@@ -4342,7 +4350,7 @@ async function wireLogoAccent() {
     try {
       const res = await hotelSettingsApi.show()
       url = (res?.data?.logo_url || '').trim()
-    } catch (e) {
+    } catch {
       // Settings endpoint unreachable/None-widget — carry on with no accent.
     }
     if (!url) return
@@ -4375,8 +4383,8 @@ async function wireLogoAccent() {
     const accent = '#' + [r, gg, b].map((v) => v.toString(16).padStart(2, '0')).join('')
     const root = document.documentElement
     root.style.setProperty('--sv-accent', accent)
-    root.style.setProperty('--sv-accent-soft', join`, alpha 0.14`)
-  } catch (e) {
+    root.style.setProperty('--sv-accent-soft', accent + '24')
+  } catch {
     // Cosmetic only — never block the board over a missing logo color.
   }
 }
@@ -5575,26 +5583,9 @@ onUnmounted(() => clearInterval(refreshTimer))
 .sv-room-dot.dirty { background: #e0a800; }
 .sv-room-dot.maintenance { background: #7f8c8d; }
 
-/* Occupied dots on the board/HK card carry the guest name, so they grow into
-   a small pill (red fill kept) with the empty status dots staying ~10px. */
-.sv-room-cell .sv-room-dot.occupied,
-.sv-hk-card .sv-room-dot.occupied {
-  width: auto;
-  min-width: 12px;
-  max-width: 96px;
-  height: 18px;
-  padding: 0 6px;
-  border-radius: 50%;
-  display: inline-block;
-  vertical-align: middle;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: center;
-  color: #fff;
-  font-size: 9px;
-  line-height: 18px;
-}
+/* All dots share the same size — the occupied (red) dot stays a ~10px circle
+   exactly like the green available one. The guest name lives in the dot
+   tooltip and on the housekeeping card, never inside the dot itself. */
 
 .sv-room-track {
   grid-column: 2 / -1;
@@ -6291,6 +6282,34 @@ onUnmounted(() => clearInterval(refreshTimer))
   background: #eaf3fb;
   font-weight: 600;
 }
+
+/* Dot-rule checklist (dot-why modal + room modal) */
+.sv-dot-rules {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.sv-dot-rule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #374151;
+}
+
+.sv-dot-rule i {
+  width: 14px;
+  font-size: 12px;
+}
+
+.sv-dot-rule.ok i { color: #15803d; }
+.sv-dot-rule.no i { color: #9ca3af; }
 
 /* Modal open/close transition */
 .sv-modal-enter-active,
