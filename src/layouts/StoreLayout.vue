@@ -195,7 +195,10 @@
               <i class="fas fa-bell"></i>
               <span v-if="notifStore.unreadCount > 0" class="nav-bell-badge">{{ notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount }}</span>
             </button>
-            <span v-if="isAppMode"><RoleBadge /></span>
+            <span v-if="isAppMode" class="nav-staff">
+              <span class="nav-staff-name">{{ authStore.user?.full_name || authStore.user?.name || '' }}</span>
+              <RoleBadge />
+            </span>
             <span v-else class="nav-text"><i class="fas fa-moon" aria-hidden="true"></i> {{ $t('nav.fastBooking')
             }}</span>
           </div>
@@ -1644,6 +1647,23 @@ function formatNotifTime(iso) {
 .nav-right {
   display: flex;
   align-items: center;
+}
+
+.nav-staff {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  padding-left: 20px;
+}
+
+.nav-staff-name {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-text {
