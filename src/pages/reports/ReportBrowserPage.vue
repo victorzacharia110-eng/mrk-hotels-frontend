@@ -1671,15 +1671,23 @@ function printPaper() {
  *  stylesheet rule are copied into a blank window so it prints cleanly. */
 function openReportWindow() {
   const el = document.querySelector('.rb-paper')
-  if (!el || !el.innerText.trim()) return
+  if (!el || !el.innerText.trim()) {
+    error.value = t('reportBrowser.openWindowEmpty')
+    return
+  }
   const css = collectAppCss()
   const win = window.open('', '_blank')
-  if (!win) return
+  if (!win) {
+    // Popup blocker: say something instead of silently doing nothing.
+    error.value = t('reportBrowser.openWindowBlocked')
+    return
+  }
   win.opener = null
   win.document.open()
   win.document.write(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>${t('reportBrowser.title')}</title>
 <style>
+${css}
   @page { size: A4 landscape; margin: 12mm; }
   body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #111; margin: 0; background: #fff; }
   .rpt-bar { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px; background: #eef1f6; }
@@ -1687,7 +1695,7 @@ function openReportWindow() {
   .rpt-bar button:hover { background: #005eb8; }
   .rpt-title { text-align: center; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #062a52; margin: 4px 0 12px; }
   .rb-paper { padding: 18px 22px; box-shadow: none; border-radius: 0; }
-</style>${css}</head><body>
+</style></head><body>
   <div class="rpt-bar"><button onclick="window.print()">${t('common.print')}</button></div>
   <div class="rpt-title">${t('reportBrowser.title')}</div>
   ${el.innerHTML}

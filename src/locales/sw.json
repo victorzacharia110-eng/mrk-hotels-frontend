@@ -4207,7 +4207,9 @@
       "allOutlets": "Sehemu Zote",
       "stockAdjustment": "Urekebishaji wa Hifadhi",
       "printMachine": "Chapisha kwa mashine",
-      "openWindow": "Fungua kwenye dirisha jipya"
+"openWindow": "Fungua kwenye dirisha jipya",
+    "openWindowBlocked": "Dirisha la ripoti lilezuliwa na kivinjari chako. Ruhusu pop-ups kwa tovuti hii ili kufungua ripoti kwenye dirisha jipya.",
+    "openWindowEmpty": "Hakuna cha kuonyesha kwenye dirisha jipya bado — endesha ripoti kwanza."
     },
     "movements": {
       "allTypes": "Aina zote",

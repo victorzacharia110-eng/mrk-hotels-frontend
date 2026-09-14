@@ -4225,7 +4225,9 @@
       "allOutlets": "All Outlets",
       "stockAdjustment": "Stock Adjustment",
       "printMachine": "Print to machine",
-      "openWindow": "Open in new window"
+"openWindow": "Open in new window",
+    "openWindowBlocked": "The report window was blocked by your browser. Allow pop-ups for this site to open reports in a new window.",
+    "openWindowEmpty": "Nothing to show in a new window yet — run the report first."
     },
     "movements": {
       "allTypes": "All types",
