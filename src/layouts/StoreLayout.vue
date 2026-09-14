@@ -355,8 +355,13 @@
       </button>
     </div>
 
-    <!-- Routed page content with a fade transition between pages. -->
+    <!-- Routed page content with a fade transition between pages. A shimmer
+         skeleton fills the brief gap on public routes while the leaving page
+         fades out and the next one fades in. -->
     <main id="main-content" tabindex="-1">
+      <div v-if="routeResolving && !isAppMode" class="route-skeleton" aria-hidden="true">
+        <SkeletonLoader variant="cards" :count="6" :cols="3" />
+      </div>
       <RouterView v-slot="{ Component }">
         <Transition name="page" mode="out-in">
           <component :is="Component" />
@@ -433,7 +438,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import RoleBadge from '@/components/RoleBadge.vue'
@@ -448,6 +453,7 @@ import { useDistribution } from '@/composables/useDistribution'
 import { useNotificationStore } from '@/stores/notifications'
 import { useNotificationSettingsStore } from '@/stores/notificationSettings'
 import NotificationSoundSettings from '@/components/notification/NotificationSoundSettings.vue'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -466,6 +472,20 @@ const showNotifDropdown = ref(false)
 const showNotifSound = ref(false)
 const notifSettingsStore = useNotificationSettingsStore()
 notifSettingsStore.load()
+
+// True while the routed page is swapping in/out (the out-in fade briefly
+// empties #main-content). Public pages show a skeleton shimmer during that
+// gap so the storefront never looks blank mid-navigation.
+const routeResolving = ref(false)
+let routeResolveTimer = null
+let offAfterEach = null
+
+onBeforeRouteUpdate(() => {
+  routeResolving.value = true
+})
+onBeforeRouteLeave(() => {
+  routeResolving.value = true
+})
 
 /** Open/close the notification dropdown, refreshing counts and the list. */
 function toggleNotifDropdown() {
@@ -1043,6 +1063,14 @@ watch(() => authStore.user?.tenant_id, syncPresence)
 onMounted(() => {
   syncPresence()
   notifStore.init()
+  // Hide the transition skeleton once the newly resolved page has mounted and
+  // finished its fade-in (leave 0.25s + enter 0.25s).
+  offAfterEach = router.afterEach(() => {
+    clearTimeout(routeResolveTimer)
+    routeResolveTimer = setTimeout(() => {
+      routeResolving.value = false
+    }, 500)
+  })
   // Show the TSCL services card on every fresh visit (page load / refresh).
   // The × only hides it while browsing — navigating between pages keeps it
   // away since the layout stays mounted.
@@ -1063,6 +1091,8 @@ function closeWelcomeAd() {
 
 // The layout lives for the whole app session; release the socket on exit.
 onUnmounted(() => {
+  if (offAfterEach) offAfterEach()
+  if (routeResolveTimer) clearTimeout(routeResolveTimer)
   notifStore.destroy()
   leavePresence()
   destroyEcho()
@@ -1098,6 +1128,11 @@ function formatNotifTime(iso) {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+}
+
+/* Shimmer placeholder while a public route swaps in (out-in fade gap). */
+.route-skeleton {
+  padding: 24px 0;
 }
 
 .top-bar {

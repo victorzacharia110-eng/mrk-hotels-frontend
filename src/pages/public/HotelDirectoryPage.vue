@@ -23,7 +23,8 @@
 
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
-    <div v-if="loading" class="alert alert-info">{{ $t('home.loadingHotels') }}</div>
+    <!-- Skeleton shimmer while the hotel list loads after opening the page -->
+    <SkeletonLoader v-if="loading && !hotels.length" variant="cards" :count="6" :cols="3" class="hotel-grid-skeleton" />
 
     <!-- Grid of hotel cards, each linking to its detail page -->
     <div v-else-if="hotels.length" class="hotel-grid">
@@ -77,6 +78,7 @@ import { publicApi } from '@/api'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import BookingStatusTracker from '@/components/BookingStatusTracker.vue'
 import InvoiceDownloadCard from '@/components/InvoiceDownloadCard.vue'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -141,6 +143,10 @@ onMounted(search)
 .hero p {
   color: #64748b;
   margin-top: 8px;
+}
+
+.hotel-grid-skeleton {
+  margin-top: 24px;
 }
 
 .hotel-grid {

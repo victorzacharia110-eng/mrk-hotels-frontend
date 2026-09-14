@@ -1,9 +1,19 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import Swal from 'sweetalert2'
 import { notificationApi } from '@/api'
 import { getEcho } from '@/plugins/echo'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationSettingsStore } from '@/stores/notificationSettings'
+import i18n from '@/locales/i18n'
+
+const escapeHtml = (s) =>
+  String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
+
+// Minimum gap between action-alert popups so a burst of notices does not stack
+// modal after modal in front of the desk.
+const ACTION_ALERT_COOLDOWN_MS = 5000
+let lastActionAlertAt = 0
 
 export const useNotificationStore = defineStore('notifications', () => {
   const notifications = ref([])
@@ -20,6 +30,35 @@ export const useNotificationStore = defineStore('notifications', () => {
     const d = event?.data || {}
     const key = d.order_id && d.item_id ? `${d.order_id}:${d.item_id}` : null
     useNotificationSettingsStore().ring(key)
+  }
+
+  /**
+   * Surfaces a needs-action alert as a SweetAlert modal at the desk, so an
+   * important notice (guest due out and still owing, pending approval, ...)
+   * cannot be missed behind the bell badge. Throttled so a burst of alerts
+   * does not stack modals.
+   * @param {object} event - The realtime notification payload.
+   */
+  function showActionAlert(event) {
+    const now = Date.now()
+    if (now - lastActionAlertAt < ACTION_ALERT_COOLDOWN_MS) return
+    lastActionAlertAt = now
+
+    const d = event?.data || {}
+    const title = d.title || event?.title || ''
+    const body = d.body || event?.body || ''
+    const t = i18n.global.t.bind(i18n.global)
+
+    Swal.fire({
+      icon: 'warning',
+      title: t('notifications.actionAlertTitle'),
+      html:
+        `<strong style="font-size:1.05rem;">${escapeHtml(title)}</strong>` +
+        (body ? `<p style="margin:8px 0 0;color:#475569;font-size:0.95rem;">${escapeHtml(body)}</p>` : ''),
+      confirmButtonText: t('notifications.actionAlertConfirm'),
+      confirmButtonColor: '#005EB8',
+      showCloseButton: true,
+    })
   }
 
   /** True when a staff/portal session token exists — public visitors never poll. */
@@ -130,10 +169,12 @@ export const useNotificationStore = defineStore('notifications', () => {
     echoListener = echo.private(`tenant.${tenantId}`)
       .listen('.notification.created', (event) => {
         unreadCount.value++
-        // If it's an alert type, add to alerts and increment alertCount.
+        // If it's an alert type, add to alerts, increment alertCount and
+        // surface it at the desk as a SweetAlert modal.
         if (event.data?.requires_action) {
           alerts.value.unshift(event)
           alertCount.value++
+          showActionAlert(event)
         }
         // Ring the device when a guest's check-out time is up and they still
         // owe money, so the front desk collects payment at check-out.
