@@ -345,6 +345,7 @@ export const fbDayCloseApi = {
   index() { return api.get(`${v1}/fnb/day-close`) },
   store(data) { return api.post(`${v1}/fnb/day-close`, data) },
   history(params) { return api.get(`${v1}/fnb/day-closes`, { params }) },
+  updateTimezone(data) { return api.put(`${v1}/fnb/timezone`, data) },
 }
 
 /** Activity log report — daily/weekly/monthly with CSV download. */

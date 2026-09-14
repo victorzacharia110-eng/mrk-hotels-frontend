@@ -15,6 +15,8 @@
         </button>
       </div>
       <span class="spacer"></span>
+      <label class="sm-inline-label" for="ta-date">{{ $t('cashier.summary.workingDate') }}</label>
+      <input id="ta-date" v-model="date" type="date" class="sm-input" @change="load" />
       <button class="sm-btn sm success" @click="showModal = true">
         <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('cashier.takeAway.newOrder') }}
       </button>
@@ -62,13 +64,16 @@ import { useI18n } from 'vue-i18n'
 import { orderApi } from '@/api'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import { useWorkingDateStore } from '@/stores/workingDate'
 
 const { t, te } = useI18n()
+const workingDateStore = useWorkingDateStore()
 
 const orders = ref([])
 const loading = ref(true)
 const activeTab = ref('all')
 const showModal = ref(false)
+const date = ref('')
 
 const TAB_STATUS = {
   preparing: ['pending', 'in_progress', 'processing', 'preparing'],
@@ -115,7 +120,7 @@ function money(value) {
 async function load() {
   loading.value = true
   try {
-    const { data } = await orderApi.index({ order_type: 'takeaway', per_page: 100 })
+    const { data } = await orderApi.index({ order_type: 'takeaway', date: date.value, per_page: 100 })
     orders.value = data.data || []
   } finally {
     loading.value = false
@@ -127,5 +132,9 @@ function onCreated() {
   load()
 }
 
-onMounted(load)
+onMounted(async () => {
+  await workingDateStore.ensureLoaded()
+  date.value = workingDateStore.workingDate
+  load()
+})
 </script>

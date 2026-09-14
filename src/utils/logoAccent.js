@@ -4,7 +4,7 @@
  * already holds; falls back to the default blue when there is no logo
  * (or when canvas reads are blocked, e.g. tainted cross-origin images).
  */
-function logoAccent(logoUrl, store) {
+function logoAccent(logoUrl, _store) {
   const root = document.documentElement
   const clear = () => {
     root.style.setProperty('--sv-accent', '')
@@ -41,7 +41,7 @@ function logoAccent(logoUrl, store) {
       const soft = 'rgba(' + r + ', ' + g + ', ' + b + ', 0.12)'
       root.style.setProperty('--sv-accent', accent)
       root.style.setProperty('--sv-accent-soft', soft)
-    } catch (e) {
+    } catch {
       clear()
     }
   }

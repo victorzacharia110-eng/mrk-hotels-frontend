@@ -3981,6 +3981,7 @@ function printEntryInvoice(e) {
   const now = new Date()
   const stamp = `${isoKey(now)} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
   const logoTag = hotelLogo.value ? `<img src="${esc(hotelLogo.value)}" alt="" />` : ''
+  const closeScript = '<' + '/script>'
   const doc = `
 <!doctype html>
 <html lang="en">
@@ -4052,7 +4053,7 @@ function printEntryInvoice(e) {
   </table>
   <p class="issued">${esc(t('stayview.printEntryInvoiceNote', { date: formatDateDMY(now) }))}</p>
   <div class="foot">${esc(hotelName.value)} · ${esc(t('stayview.printedBy'))}: ${esc(printedBy.value)} · ${esc(stamp)}</div>
-  <script>window.onload = () => window.print()<\/script>
+  <script>window.onload = () => window.print()${closeScript}
 </body>
 </html>`
   const win = window.open('', '_blank', 'width=860,height=1000')

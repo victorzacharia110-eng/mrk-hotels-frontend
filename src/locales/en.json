@@ -4852,21 +4852,27 @@
     "dayClose": {
       "title": "Day Close",
       "openDate": "Open business day",
+      "dateToClose": "Date to close",
       "timezone": "Timezone",
       "runningOrders": "Running orders",
       "unsettledOrders": "Unsettled orders",
-      "canCloseHint": "This day has no running or unsettled orders. It is ready to be closed — closing it starts the next business day for all cashier, bar and inventory panels.",
+      "canCloseHint": "This day has ended and has no running or unsettled orders. Closing it freezes the day's records and starts the next business date for all cashier, bar and inventory panels.",
       "blockedHint": "This day cannot be closed yet. Settle or cancel all running and unsettled orders first.",
+      "notEndedHint": "This date cannot be closed before it ends. It unlocks at midnight in {timezone}, then it can be closed.",
       "closeDay": "Close This Day",
       "history": "Closed Days",
-      "records": "{{n}} day(s) closed",
+      "records": "{n} day(s) closed",
       "closeDate": "Date",
       "closedBy": "Closed by",
       "closedAt": "Closed at",
       "closed": "Closed",
       "closedSuccess": "Business day closed. All panels now operate on the new date.",
       "confirmTitle": "Close this business day?",
-      "confirmText": "Closing {{date}} freezes its orders and starts the next business day for every cashier, bar and inventory panel. This cannot be undone. Continue?"
+      "confirmText": "Closing {date} freezes its orders and starts the next business day for every cashier, bar and inventory panel. This cannot be undone. Continue?",
+      "standardTime": "Standard Time",
+      "liveHotelTime": "Live time at hotel",
+      "standardTimeHint": "The hotel's standard time. Orders, the Day Close clock and every day's boundaries roll over at midnight in this timezone.",
+      "timezoneSaved": "Standard time updated successfully."
     }
   },
   "paymentInstructionCard": {

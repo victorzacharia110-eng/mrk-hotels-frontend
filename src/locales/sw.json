@@ -4835,21 +4835,27 @@
     "dayClose": {
       "title": "Funga Siku",
       "openDate": "Siku ya biashara iliyo wazi",
+      "dateToClose": "Tarehe ya kufunga",
       "timezone": "Saa",
       "runningOrders": "Oda zinazoendelea",
       "unsettledOrders": "Oda zisizolipwa",
-      "canCloseHint": "Siku hii haina oda zinazoendelea au zisizolipwa. Iko tayari kufungwa — kufunga kunaanzisha siku mpya ya biashara kwa mifumo yote ya kasino, baati na hesabu.",
+      "canCloseHint": "Siku hii imeisha na haina oda zinazoendelea au zisizolipwa. Kufunga kunagandisha rekodi za siku hiyo na kuanzisha tarehe mpya ya biashara kwa mifumo yote ya kasino, baati na hesabu.",
       "blockedHint": "Siku hii haiwezi kufungwa bado. Lipia au ghairi oda zote zinazoendelea na zisizolipwa kwanza.",
+      "notEndedHint": "Tarehe hii haiwezi kufungwa kabla haijaisha. Itafunguka usiku wa manane katika {timezone}, kisha ndipo inaweza kufungwa.",
       "closeDay": "Funga Siku Hii",
       "history": "Siku Zilizofungwa",
-      "records": "{{n}} siku zimefungwa",
+      "records": "{n} siku zimefungwa",
       "closeDate": "Tarehe",
       "closedBy": "Imefungwa na",
       "closedAt": "Ilipofungwa",
       "closed": "Imefungwa",
       "closedSuccess": "Siku ya biashara imefungwa. Mifumo yote sasa inafanya kazi kwenye tarehe mpya.",
       "confirmTitle": "Funga siku hii ya biashara?",
-      "confirmText": "Kufunga {{date}} kunagandisha oda zake na kuanzisha siku mpya ya biashara kwa mifumo yote ya kasino, baati na hesabu. Hili haliwezi kurejeshwa. Endelea?"
+      "confirmText": "Kufunga {date} kunagandisha oda zake na kuanzisha siku mpya ya biashara kwa mifumo yote ya kasino, baati na hesabu. Hili haliwezi kurejeshwa. Endelea?",
+      "standardTime": "Saa Rasmi",
+      "liveHotelTime": "Saa za sasa hotelini",
+      "standardTimeHint": "Saa rasmi ya hoteli. Oda, saa ya kufunga siku na mipaka ya kila siku hubadilika usiku wa manane katika eneo hili la saa.",
+      "timezoneSaved": "Saa rasmi zimesasishwa kikamilifu."
     }
   },
   "paymentInstructionCard": {
