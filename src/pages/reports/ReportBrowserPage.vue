@@ -1441,14 +1441,19 @@ const saving = ref(false)
 const exporting = ref(false)
 const error = ref('')
 
+// "Today" is the hotel's local calendar day, not UTC: in a timezone ahead of
+// UTC the plain toISOString() slice lands on yesterday and reports would
+// quietly exclude the current day. Shift by the local offset like the shared
+// utils/dates.todayISO helper so the default ranges always reach today.
 function todayIso() {
-  return new Date().toISOString().slice(0, 10)
+  const now = new Date()
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
 }
 
 function daysAgoIso(days) {
   const d = new Date()
   d.setDate(d.getDate() - days)
-  return d.toISOString().slice(0, 10)
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
 }
 
 const money = (v) => {
