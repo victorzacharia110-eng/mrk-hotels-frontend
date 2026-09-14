@@ -5204,8 +5204,13 @@ onUnmounted(() => clearInterval(refreshTimer))
 .sv-refund-pos{color:#b45309}
 
 .stayview-page {
-  padding: 16px 20px 32px;
+  padding: 16px 20px 0;
   max-width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Toolbar: status pills + search + assign-room */
@@ -5216,6 +5221,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 14px;
+  flex: none;
 }
 
 .session-chip {
@@ -5315,10 +5321,13 @@ onUnmounted(() => clearInterval(refreshTimer))
   white-space: nowrap;
 }
 
-/* Tape chart: center content scrolls both ways; footer rows stay pinned */
+/* Tape chart: fills the viewport below the toolbar and scrolls both ways
+   internally, so the arrow + Today navigation stays pinned on top. */
 .sv-chart {
   overflow: auto;
-  max-height: calc(100vh - 220px);
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-bottom: 16px;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   background: #fff;

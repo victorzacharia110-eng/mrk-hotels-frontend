@@ -7,7 +7,7 @@
 -->
 
 <template>
-  <div class="store-layout">
+  <div class="store-layout" :class="{ 'app-shell': isAppMode }">
     <a href="#main-content" class="skip-link">{{ $t('common.skipToContent') }}</a>
     <header class="site-header">
       <!-- Top bar: contact details; the viewed hotel's name when in app mode. -->
@@ -1084,6 +1084,22 @@ function formatNotifTime(iso) {
 </script>
 
 <style scoped>
+/* Staff panels already implement their own full-viewport layout (internal
+   scrolling, pinned headers), so the app shell must not grow taller than the
+   window — otherwise the page itself scrolls and pinned controls ride up and
+   out of view. Confined to app mode: the public storefront keeps normal flow
+   scrolling. */
+.store-layout.app-shell {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.store-layout.app-shell #main-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .top-bar {
   background: var(--brand-dark);
   color: #fff;
