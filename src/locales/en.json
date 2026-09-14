@@ -4941,7 +4941,7 @@
     "noSources": "No distribution channels configured yet.",
     "confirmDeleteSource": "Delete channel \"{name}\"?",
     "companyData": "Company Data",
-    "companyDataSubtitle": "Your hotel's legal and company record for receipts.",
+    "companyDataSubtitle": "The company directory the front desk bills against when posting a stay.",
     "hotelProfile": "Hotel profile",
     "corporateDirectory": "Corporate clients",
     "corporateDirectorySubtitle": "Companies the front desk can reference when recording a booking's origin.",

@@ -1,12 +1,9 @@
 <!--
   Company Data page (route: /app/payments/company-data,
   name: hotel-payments-company-data).
-  Two parts:
-  1. Hotel profile — legal name, physical address and phone printed on
-     receipts and invoices (stored through hotel settings).
-  2. Corporate clients — the company directory front desk references when
-     posting a stay to a company's credit. Companies carry a credit profile
-     (available credit, current balance, status) driving the receivables.
+  The corporate-client directory — companies the front desk references when
+  posting a stay to a company's credit. Companies carry a credit profile
+  (available credit, current balance, status) driving the receivables.
 -->
 <template>
   <div class="dashboard-page container">
@@ -15,7 +12,7 @@
         <h1>{{ $t('receptionPanel.companyData') }}</h1>
         <p class="muted">{{ $t('receptionPanel.companyDataSubtitle') }}</p>
       </div>
-      <button class="btn btn-secondary" :disabled="loading || companiesLoading" @click="reset">
+      <button class="btn btn-secondary" :disabled="companiesLoading" @click="reset">
         <i class="fas fa-rotate"></i> {{ $t('common.refresh') }}
       </button>
     </div>
@@ -23,42 +20,7 @@
     <div v-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
-    <div class="card" style="padding: 24px; max-width: 720px;">
-      <h3 style="margin-top: 0;">{{ $t('receptionPanel.hotelProfile') }}</h3>
-      <div v-if="loading" class="alert alert-info" style="margin: 0;">{{ $t('common.loading') }}</div>
-      <form v-else @submit.prevent="saveProfile">
-        <div class="form-group">
-          <label>{{ $t('receptionPanel.companyName') }}</label>
-          <input v-model="form.hotel_name" type="text" class="input" />
-        </div>
-        <div class="form-group">
-          <label>{{ $t('receptionPanel.companyAddress') }}</label>
-          <textarea v-model="form.address" class="input" rows="2"></textarea>
-        </div>
-        <div class="form-group">
-          <label>{{ $t('receptionPanel.companyPhone') }}</label>
-          <PhoneInput v-model="form.phone" v-model:countryCode="form.country_code" :error="profilePhoneError" />
-        </div>
-        <div class="form-group">
-          <label>{{ $t('receptionPanel.companyEmail') }}</label>
-          <input v-model="form.email" type="email" class="input" />
-        </div>
-        <div class="form-group">
-          <label>{{ $t('receptionPanel.standardTime') }}</label>
-          <select v-model="form.timezone" class="input">
-            <option v-for="tz in timezoneOptions" :key="tz.value" :value="tz.value">
-              {{ tz.label }}
-            </option>
-          </select>
-          <small class="hint muted">{{ $t('receptionPanel.standardTimeHint') }}</small>
-        </div>
-        <button class="btn btn-primary" :disabled="saving" type="submit">
-          <i class="fas fa-save"></i> {{ saving ? $t('common.loading') : $t('common.save') }}
-        </button>
-      </form>
-    </div>
-
-    <div class="card" style="padding: 20px; margin-top: 20px;">
+    <div class="card" style="padding: 20px;">
       <div class="head-actions" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
         <div>
           <h3 style="margin: 0;">{{ $t('receptionPanel.corporateDirectory') }}</h3>
@@ -217,7 +179,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { hotelSettingsApi, companyApi } from '@/api'
+import { companyApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import PhoneInput from '@/components/PhoneInput.vue'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
@@ -227,8 +189,6 @@ import { validatePhoneNumber } from '@/utils/phone'
 const { t } = useI18n()
 const authStore = useAuthStore()
 
-const loading = ref(false)
-const saving = ref(false)
 const success = ref('')
 const error = ref('')
 
@@ -238,82 +198,11 @@ function tsh(value) {
   return `TZS ${n.toLocaleString()}`
 }
 
-/* ----- Hotel profile ----- */
-const empty = () => ({ hotel_name: '', address: '', phone: '', email: '', country_code: '', timezone: 'Africa/Dar_es_Salaam' })
-const form = ref(empty())
-
-const timezoneOptions = [
-  { value: 'Africa/Dar_es_Salaam', label: 'East Africa Time (GMT+3)' },
-  { value: 'Africa/Nairobi', label: 'Kenya — East Africa Time (GMT+3)' },
-  { value: 'Africa/Kampala', label: 'Uganda — East Africa Time (GMT+3)' },
-  { value: 'Africa/Addis_Ababa', label: 'Ethiopia — East Africa Time (GMT+3)' },
-  { value: 'Africa/Cairo', label: 'Egypt (GMT+2)' },
-  { value: 'Africa/Johannesburg', label: 'South Africa (GMT+2)' },
-  { value: 'Africa/Lagos', label: 'West Africa Time (GMT+1)' },
-  { value: 'Africa/Casablanca', label: 'Morocco (GMT+0/1)' },
-  { value: 'UTC', label: 'UTC (GMT+0)' },
-]
-
-async function load() {
-  loading.value = true
-  error.value = ''
-  success.value = ''
-  try {
-    const res = await hotelSettingsApi.show()
-    const data = res.data?.hotel || res.data?.data || res.data || {}
-    form.value = {
-      hotel_name: data.hotel_name || '',
-      address: data.address || '',
-      phone: data.phone || '',
-      email: data.email || '',
-      country_code: data.country_code || '',
-      timezone: data.timezone || 'Africa/Dar_es_Salaam',
-    }
-  } catch (err) {
-    error.value = err.response?.data?.message || t('common.loadError')
-  } finally {
-    loading.value = false
-  }
-}
-
+/* ----- Refresh ----- */
 function reset() {
-  form.value = empty()
-  load()
-  loadCompanies()
-}
-
-const profilePhoneError = ref('')
-
-async function saveProfile() {
-  saving.value = true
+  success.value = ''
   error.value = ''
-  profilePhoneError.value = ''
-  if (form.value.phone) {
-    const res = validatePhoneNumber(form.value.phone, form.value.country_code || 'TZ')
-    if (!res.valid) {
-      profilePhoneError.value =
-        res.reason === 'too_long' ? t('validations.phoneTooLong') : t('validations.phoneInvalid')
-    }
-  }
-  if (profilePhoneError.value) {
-    saving.value = false
-    return
-  }
-  try {
-    await hotelSettingsApi.update({
-      hotel_name: form.value.hotel_name,
-      address: form.value.address,
-      phone: form.value.phone,
-      email: form.value.email,
-      timezone: form.value.timezone,
-    })
-    success.value = t('receptionPanel.companySaved')
-    await load()
-  } catch (err) {
-    error.value = err.response?.data?.message || t('common.error')
-  } finally {
-    saving.value = false
-  }
+  loadCompanies()
 }
 
 /* ----- Corporate-client directory ----- */
@@ -467,12 +356,6 @@ function askCompanyDelete(c) {
 }
 
 watch(
-  () => [form.value.phone, form.value.country_code],
-  () => {
-    profilePhoneError.value = ''
-  },
-)
-watch(
   () => [companyForm.value.phone, companyForm.value.country_code],
   () => {
     companyPhoneError.value = ''
@@ -537,7 +420,6 @@ async function deleteCompany(c) {
 }
 
 onMounted(async () => {
-  load()
   loadCompanies()
   loadLocationData().catch(() => {})
 })
