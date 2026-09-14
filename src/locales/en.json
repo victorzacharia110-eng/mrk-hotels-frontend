@@ -5025,7 +5025,7 @@
     "appliedPayment": "Payment Received",
     "totalCharges": "Total charges",
     "totalPaid": "Total paid",
-    "nightsCount": "{nights} nights",
+    "nightsCount": "{nights} night(s)",
     "billedToRoom": "Billed to room",
     "manualCharge": "Manual charge",
     "actions": "ACTIONS",

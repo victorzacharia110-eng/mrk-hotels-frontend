@@ -4983,7 +4983,7 @@
     "appliedPayment": "Malipo Yaliyopokelewa",
     "totalCharges": "Jumla ya gharama",
     "totalPaid": "Jumla ya malipo",
-    "nightsCount": "usiku {nights}",
+    "nightsCount": "{nights} usiku",
     "billedToRoom": "Imechajiwa chumbani",
     "manualCharge": "Chaji ya mwongozo",
     "actions": "VITENDO",

@@ -24,7 +24,7 @@
         <div class="session-chip">
           <span class="session-avatar">{{ sessionInitial }}</span>
           <span class="session-meta">
-            <span class="session-name">{{ authStore.user?.name }}</span>
+            <span class="session-name">{{ authStore.user?.full_name || authStore.user?.name }}</span>
             <RoleBadge />
           </span>
         </div>
@@ -1486,8 +1486,8 @@
                       <span>{{ $t('stayview.noFolioOps') }}</span>
                     </div>
                     <div v-else class="sv-split-ops">
-                      <label v-for="e in moveSourceOptions" :key="e.entryId" class="sv-split-op" :class="{ locked: !e.selectable }">
-                        <input type="checkbox" :value="e.entryId" v-model="moveSelected" :disabled="!e.selectable || actionBusy || newFolioBusy" />
+                      <label v-for="e in moveSourceOptions" :key="e.moveId" class="sv-split-op" :class="{ locked: !e.selectable }">
+                        <input type="checkbox" :value="e.moveId" v-model="moveSelected" :disabled="!e.selectable || actionBusy || newFolioBusy" />
                         <span class="sv-split-op-text">
                           <span class="sv-cap">{{ formatDateDMY(e.date) }} · {{ e.particular }}</span>
                           <span class="sv-cap sv-muted">{{ e.description }}</span>
@@ -2243,7 +2243,7 @@ const { t, te } = useI18n()
 const notifStore = useNotificationStore()
 
 // First letter of the signed-in user's name for the session avatar.
-const sessionInitial = computed(() => (authStore.user?.name || '?').charAt(0).toUpperCase())
+const sessionInitial = computed(() => (authStore.user?.full_name || authStore.user?.name || '?').charAt(0).toUpperCase())
 
 // Number of day columns shown in the tape chart.
 const DAYS = 14
@@ -2948,6 +2948,34 @@ const chargeNights = computed(() => {
 const nightTotal = computed(() => chargeNights.value.reduce((s, n) => s + n.rate, 0))
 
 /**
+ * Rental (room-rate) rows for the displayed folio. Splitting `total_amount`
+ * across the stay's nights keeps the ledger breakdown exact even when the
+ * nightly rate is missing from the room, so the rows always sum precisely to
+ * the rental half of the top TOTAL ROOM CHARGES card.
+ */
+function buildRentalRows(res) {
+  const total = Number(res?.total_amount || 0)
+  if (!(total > 0)) return []
+  const round2 = (v) => Math.round((Number(v) + Number.EPSILON) * 100) / 100
+  const cIn = res.check_in_date || res.arrival_date || res.arrivalIso
+  const cOut = res.check_out_date || res.departure_date || res.departureIso
+  const days = []
+  if (cIn && cOut) {
+    for (let d = parseDate(cIn); d < parseDate(cOut); d = addDays(d, 1)) days.push(d)
+  }
+  if (!days.length) return [{ date: null, time: null, day: '', amount: round2(total) }]
+  const count = days.length
+  const nightly = Number(res.room?.price_per_night || 0)
+  const exact = nightly > 0 && Math.abs(nightly * count - total) < 0.005
+  let remaining = total
+  return days.map((d, i) => {
+    const amount = i === count - 1 ? round2(remaining) : round2(exact ? nightly : total / count)
+    remaining -= amount
+    return { date: formatDateDMY(d), time: isoKey(d), day: d.toLocaleDateString([], { weekday: 'short' }), amount }
+  })
+}
+
+/**
  * Flattened folio transactions for the DATE | PARTICULAR | DESCRIPTION |
  * USER | AMOUNT ledger. Only room-billed orders/laundry count towards the
  * balance; the manual extra-charge remainder and every payment make up the
@@ -2958,6 +2986,26 @@ const folioEntries = computed(() => {
   if (!f) return []
   const fol = f.folio || {}
   const entries = []
+  // Room rental first: each night is a row, together summing exactly to
+  // total_amount, so the ledger's TOTAL CHARGES matches the top card.
+  const rentalNightsCount = Math.max(1, Number(f.reservation?.num_days || f.reservation?.nights || 1))
+  for (const row of buildRentalRows(f.reservation || null)) {
+    entries.push({
+      key: `rent-${row.date || 'one'}-${row.amount}`,
+      date: row.date,
+      time: row.time,
+      particular: t('folio.roomCharge'),
+      description: t('folio.nightsCount', { nights: row.day ? 1 : rentalNightsCount }),
+      detail: row.day,
+      user: '—',
+      amount: row.amount,
+      credit: false,
+      muted: false,
+      rental: true,
+      entryId: null,
+      moveId: null,
+    })
+  }
   for (const o of f.orders || []) {
     if (o.payment_status !== 'billed_to_room') continue
     entries.push({
@@ -2970,6 +3018,7 @@ const folioEntries = computed(() => {
       user: o.user || '—',
       amount: Number(o.total_amount ?? o.total ?? 0),
       credit: false,
+      moveId: o.order_id ? `o:${o.order_id}` : null,
     })
   }
   for (const l of f.laundry || []) {
@@ -2985,6 +3034,7 @@ const folioEntries = computed(() => {
       amount: Number(l.total_charge ?? l.total_amount ?? l.total ?? 0),
       credit: false,
       entryId: null,
+      moveId: l.laundry_order_id ? `l:${l.laundry_order_id}` : null,
     })
   }
   // Persisted front-desk postings (add folio, discount, adjustment,
@@ -3007,6 +3057,7 @@ const folioEntries = computed(() => {
       muted: e.type === 'attachment' || amount === 0,
       refund: isRefund,
       entryId: e.folio_entry_id,
+      moveId: e.folio_entry_id ? `e:${e.folio_entry_id}` : null,
       entryUrl: e.attachment_url ? reservationApi.folioAttachmentUrl(e.folio_entry_id) : '',
       editable: ['room_charge', 'extra_charge', 'adjustment', 'discount', 'inclusion'].includes(e.type) && e.folio_entry_id != null,
     })
@@ -3041,6 +3092,29 @@ const folioEntries = computed(() => {
       kind: 'payment',
       payment: p,
       editableByPayment: p.payment_id != null,
+    })
+  }
+  // The advance/deposit taken at booking is part of TOTAL PAID but has no
+  // ledger row of its own (completed payments already reset it as they come in),
+  // so one deposit credit closes the gap and makes the bottom Paid column match
+  // the top card exactly.
+  const advancePaid = Number(fol.advance_payment ?? f.reservation?.advance_payment ?? 0)
+  const paymentsShown = entries.reduce((sum, e) => sum + (e.kind === 'payment' ? e.amount : 0), 0)
+  const deposit = Math.round((advancePaid - paymentsShown) * 100) / 100
+  if (deposit > 0) {
+    entries.push({
+      key: 'deposit',
+      date: fol.advance_payment_date || f.reservation?.advance_payment_date || '',
+      time: '',
+      particular: t('folio.payment'),
+      description: t('stayview.advancePaid'),
+      detail: '',
+      user: '—',
+      amount: deposit,
+      credit: true,
+      kind: 'deposit',
+      entryId: null,
+      moveId: null,
     })
   }
   // FIFO: sort by the actual posting timestamp, not by a stringified key — a
@@ -3534,13 +3608,15 @@ const newFolioBusy = ref(false)
 
 /**
  * Operations offered in the source (left) panel. Every persisted ledger row
- * qualifies; rows without an entry id (e.g. the legacy aggregate line) don't.
+ * and every room-billed invoice line qualifies for a move; rows without a
+ * stable key (e.g. the legacy aggregate line, payments) do not.
  */
 const moveSourceOptions = computed(() =>
   folioEntries.value
-    .filter((e) => e.entryId != null)
+    .filter((e) => e.moveId != null)
     .map((e) => ({
-      entryId: e.entryId,
+      moveId: e.moveId,
+      entryId: e.entryId ?? null,
       date: e.date,
       particular: e.particular,
       description: e.description,
@@ -3551,11 +3627,11 @@ const moveSourceOptions = computed(() =>
 )
 
 const allOpsSelected = computed(
-  () => moveSourceOptions.value.length > 0 && moveSourceOptions.value.every((e) => moveSelected.value.includes(e.entryId)),
+  () => moveSourceOptions.value.length > 0 && moveSourceOptions.value.every((e) => moveSelected.value.includes(e.moveId)),
 )
 
 function toggleAllOps() {
-  moveSelected.value = allOpsSelected.value ? [] : moveSourceOptions.value.map((e) => e.entryId)
+  moveSelected.value = allOpsSelected.value ? [] : moveSourceOptions.value.map((e) => e.moveId)
 }
 
 /** The currently highlighted target folio (resolves the picked reservation id). */
@@ -3608,12 +3684,17 @@ async function createNewFolioTarget() {
 async function moveSelectedOps() {
   const bar = activeBar.value
   if (!bar?.id || !moveSelected.value.length || !moveTarget.value || actionBusy.value) return
-  const count = moveSelected.value.length
+  const selected = [...moveSelected.value]
+  const entryIds = selected.filter((k) => k.startsWith('e:')).map((k) => k.slice(2))
+  const orderIds = selected.filter((k) => k.startsWith('o:')).map((k) => k.slice(2))
+  const laundryIds = selected.filter((k) => k.startsWith('l:')).map((k) => k.slice(2))
   const payload = {
     mode: folioMoveMode.value,
     target_reservation_id: moveTarget.value,
-    entry_ids: [...moveSelected.value],
-    description: folioOpForm.value.description?.trim() || `${folioMoveMode.value} of ${count} operation(s)`,
+    entry_ids: entryIds,
+    order_ids: orderIds,
+    laundry_ids: laundryIds,
+    description: folioOpForm.value.description?.trim() || `${folioMoveMode.value} of ${selected.length} operation(s)`,
   }
   folioOp.value = null
   await runStayAction(() => reservationApi.folioTransfer(bar.id, payload))
@@ -5258,8 +5339,9 @@ onUnmounted(() => clearInterval(refreshTimer))
   border-right: 1px solid #e5e7eb;
   position: sticky;
   left: 0;
+  top: 0;
   background: #fff;
-  z-index: 3;
+  z-index: 4;
 }
 
 .sv-nav-btn,
