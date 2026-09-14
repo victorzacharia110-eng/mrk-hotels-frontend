@@ -1666,16 +1666,16 @@ function printPaper() {
   window.print()
 }
 
-/** Opens the rendered report in a second window, Ezee-style.
- *  The paper's markup (with Vue scoped attributes intact) and every live
- *  stylesheet rule are copied into a blank window so it prints cleanly. */
+/** Opens a clean, print-ready copy of the current report in a second window.
+ *  Only the report body is copied across — never the app chrome, filter
+ *  toolbar, help guide or editor controls — plus a purpose-built stylesheet,
+ *  so the printed sheet shows just the report, laid out professionally. */
 function openReportWindow() {
-  const el = document.querySelector('.rb-paper')
-  if (!el || !el.innerText.trim()) {
+  const paper = document.querySelector('.rb-paper')
+  if (!paper || !paper.innerText.trim()) {
     error.value = t('reportBrowser.openWindowEmpty')
     return
   }
-  const css = collectAppCss()
   const win = window.open('', '_blank')
   if (!win) {
     // Popup blocker: say something instead of silently doing nothing.
@@ -1684,37 +1684,129 @@ function openReportWindow() {
   }
   win.opener = null
   win.document.open()
-  win.document.write(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${t('reportBrowser.title')}</title>
-<style>
-${css}
-  @page { size: A4 landscape; margin: 12mm; }
-  body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #111; margin: 0; background: #fff; }
-  .rpt-bar { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px; background: #eef1f6; }
-  .rpt-bar button { border: 1px solid #062a52; background: #062a52; color: #fff; border-radius: 5px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
-  .rpt-bar button:hover { background: #005eb8; }
-  .rpt-title { text-align: center; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #062a52; margin: 4px 0 12px; }
-  .rb-paper { padding: 18px 22px; box-shadow: none; border-radius: 0; }
-</style></head><body>
-  <div class="rpt-bar"><button onclick="window.print()">${t('common.print')}</button></div>
-  <div class="rpt-title">${t('reportBrowser.title')}</div>
-  ${el.innerHTML}
- <script>window.onload = function () { setTimeout(function () { window.print() }, 350) }</${'script'}>
-</body></html>`)
+  win.document.write(buildReportDocument(paper.innerHTML))
   win.document.close()
 }
 
-/** Concatenates every same-origin stylesheet rule for the new report window. */
-function collectAppCss() {
-  let css = ''
-  for (const sheet of document.styleSheets) {
-    try {
-      for (const rule of sheet.cssRules) css += rule.cssText + '\n'
-    } catch {
-      // Cross-origin sheet (e.g. web fonts) — not readable, skip it.
-    }
+/** Escapes text from the API so it can't break the standalone report window. */
+function esc(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/** Keeps only the report's own content: drops the screen-only brand head and
+ *  help guide, and any interactive controls that belong to the editor rather
+ *  than the printed document. */
+function reportBodyHtml(inner) {
+  const div = document.createElement('div')
+  div.innerHTML = inner
+  div.querySelectorAll('.print-brand, .rb-help, button, a, input, select').forEach((n) => n.remove())
+  return div.innerHTML
+}
+
+/** Renders the current report as a self-contained, professionally styled
+ *  A4-landscape sheet with a branded header, structured tables and a footer. */
+function buildReportDocument(inner) {
+  const title = activeLabel.value
+  const period = printPeriod.value
+  const hotel = reportHotel.value
+  const logo = reportLogo.value ? `<img class="brand-logo" src="${esc(reportLogo.value)}" alt="" />` : ''
+  const stamp = printedAt.value || new Date().toLocaleString()
+  const by = userName.value || '—'
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${esc(title)}</title>
+<style>
+  @page { size: A4 landscape; margin: 10mm 9mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; line-height: 1.45; color: #111; background: #fff; }
+  .rpt-bar { position: sticky; top: 0; display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px; background: #eef1f6; z-index: 5; }
+  .rpt-bar button { border: 1px solid #062a52; background: #062a52; color: #fff; border-radius: 5px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .rpt-bar button:hover { background: #005eb8; }
+  .sheet { padding: 4px 10px 10px; }
+  .brand { display: flex; align-items: center; gap: 14px; border-bottom: 3px double #062a52; padding-bottom: 10px; margin-bottom: 14px; page-break-inside: avoid; }
+  .brand .brand-logo { max-height: 54px; max-width: 130px; object-fit: contain; }
+  .brand-mid { flex: 1; }
+  .brand-mid .hotel { font-size: 13px; font-weight: 700; letter-spacing: .4px; color: #062a52; }
+  .brand-mid h1 { margin: 2px 0; font-size: 18px; color: #062a52; text-transform: uppercase; letter-spacing: 1px; }
+  .brand-mid .period { font-size: 12px; color: #444; }
+  .brand-meta { font-size: 10.5px; color: #555; text-align: right; white-space: nowrap; }
+  .rb-report-head h2, h2 { font-size: 14px; color: #062a52; margin: 14px 0 4px; }
+  .rb-report-head .rb-date { font-size: 12px; color: #555; }
+  .rb-numcols { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 14px; }
+  .rb-report-row { flex: 1 1 200px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; background: #f8fafc; }
+  .rb-report-row .rb-report-row-label { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; color: #475569; }
+  .rb-report-row strong { font-size: 17px; color: #062a52; }
+  .text-red { color: #b91c1c; }
+  .text-green { color: #15803d; }
+  .rb-section-title { font-size: 12.5px; text-transform: uppercase; letter-spacing: .8px; color: #062a52; border-bottom: 2px solid #062a52; padding-bottom: 3px; margin: 18px 0 8px; page-break-after: avoid; }
+  .table-scroll { overflow: visible !important; margin: 0 0 14px; }
+  table { width: 100%; border-collapse: collapse; margin: 0 0 16px; }
+  thead { display: table-header-group; }
+  tr { page-break-inside: avoid; }
+  th, td { border: 1px solid #cbd5e1; padding: 5px 7px; vertical-align: top; }
+  th { background: #062a52; color: #fff; font-size: 10.5px; text-transform: uppercase; letter-spacing: .4px; text-align: left; }
+  td { font-size: 11px; }
+  tbody tr:nth-child(even) td { background: #f1f5f9; }
+  .num { text-align: right !important; }
+  .capitalize { text-transform: capitalize; }
+  .cap { color: #64748b; font-size: 10px; }
+  .rb-badge { display: inline-block; border-radius: 999px; padding: 1px 9px; font-size: 10px; font-weight: 700; background: #e2e8f0; color: #334155; }
+  .rb-badge-green { background: #dcfce7; color: #15803d; }
+  .rb-badge-red { background: #fee2e2; color: #b91c1c; }
+  .row-arrived td { background: #f0fdf4; }
+  .row-overdue td { background: #fef2f2; }
+  .rb-empty { color: #94a3b8; font-style: italic; text-align: center !important; }
+  .rb-count { color: #475569; font-size: 12px; }
+  .foot { margin-top: 10px; border-top: 1px solid #cbd5e1; padding-top: 6px; font-size: 10px; color: #64748b; display: flex; justify-content: space-between; }
+  .na-sheet .na-brand { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px double #062a52; padding-bottom: 8px; margin-bottom: 10px; page-break-inside: avoid; }
+  .na-sheet .na-brand-left { display: flex; align-items: center; gap: 12px; }
+  .na-sheet .na-logo { max-height: 50px; }
+  .na-sheet .na-hotel { font-size: 13px; font-weight: 700; color: #062a52; }
+  .na-sheet .na-title { font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #062a52; }
+  .na-sheet .na-closed { color: #15803d; font-weight: 700; }
+  .na-sheet .na-meta { font-size: 10.5px; color: #555; display: flex; gap: 14px; margin-bottom: 10px; }
+  .na-sheet .na-kpi th, .na-sheet .na-kpi td { text-align: right; }
+  .na-sheet .na-neg { color: #b91c1c; }
+  .na-sheet .na-cols { display: flex; gap: 14px; align-items: flex-start; }
+  .na-sheet .na-sec { flex: 1; }
+  .na-sheet .na-total td { background: #dbeafe; font-weight: 700; }
+  .na-sheet .na-cap { text-transform: capitalize; }
+  @media print {
+    .rpt-bar { display: none !important; }
+    .sheet { padding: 0; }
   }
-  return css
+</style></head>
+<body>
+  <div class="rpt-bar">
+    <button onclick="window.print()">${t('common.print')}</button>
+    <button onclick="window.close()">${t('common.close')}</button>
+  </div>
+  <div class="sheet">
+    <header class="brand">
+      ${logo}
+      <div class="brand-mid">
+        <div class="hotel">${esc(hotel)}</div>
+        <h1>${esc(title)}</h1>
+        ${period ? `<div class="period">${esc(period)}</div>` : ''}
+      </div>
+      <div class="brand-meta">
+        <div>${esc(t('staffDashboard.printedOn', { at: stamp }))}</div>
+        <div>${esc(t('staffDashboard.printedBy', { name: by }))}</div>
+      </div>
+    </header>
+    ${reportBodyHtml(inner)}
+    <footer class="foot">
+      <span>${esc(hotel)}</span>
+      <span>${esc(t('staffDashboard.printedBy', { name: by }))} · ${esc(stamp)}</span>
+    </footer>
+  </div>
+ <script>window.onload = function () { setTimeout(function () { window.print() }, 350) }</${'script'}>
+</body></html>`
 }
 
 async function exportCsv() {
@@ -2394,7 +2486,8 @@ onMounted(() => {
   body:has(.rb-paper) .rb-header,
   body:has(.rb-paper) .rb-tree,
   body:has(.rb-paper) .rb-toolbar,
-  body:has(.rb-paper) .rb-help {
+  body:has(.rb-paper) .rb-help,
+  body:has(.rb-paper) .site-header {
     display: none !important;
   }
 
