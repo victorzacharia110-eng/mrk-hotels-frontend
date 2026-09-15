@@ -56,6 +56,15 @@
           </div>
 
           <div class="header-actions">
+            <router-link v-if="isAppMode" :to="{ name: 'hotel-profile' }" class="header-account"
+              @click="navOpen = false" :aria-label="$t('nav.profile')">
+              <span class="header-account-avatar" aria-hidden="true">{{ accountInitials }}</span>
+              <span class="header-account-meta">
+                <strong class="header-account-name">{{ accountName }}</strong>
+                <RoleBadge />
+              </span>
+            </router-link>
+
             <router-link v-if="isAppMode" :to="{ name: 'public-home' }" class="action-link" @click="navOpen = false">
               <i class="fas fa-store" aria-hidden="true"></i>
               <span class="action-label">{{ $t('nav.portal') }}</span>
@@ -195,10 +204,6 @@
               <i class="fas fa-bell"></i>
               <span v-if="notifStore.unreadCount > 0" class="nav-bell-badge">{{ notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount }}</span>
             </button>
-            <span v-if="isAppMode" class="nav-staff">
-              <span class="nav-staff-name">{{ authStore.user?.full_name || authStore.user?.name || '' }}</span>
-              <RoleBadge />
-            </span>
             <span v-else class="nav-text"><i class="fas fa-moon" aria-hidden="true"></i> {{ $t('nav.fastBooking')
             }}</span>
           </div>
@@ -224,6 +229,13 @@
           <button type="button" class="drawer-close" :aria-label="$t('common.close')" @click="sideOpen = false">
             <i class="fas fa-times" aria-hidden="true"></i>
           </button>
+        </div>
+        <div v-if="isAppMode && authStore.isAuthenticated" class="drawer-user">
+          <span class="drawer-user-avatar" aria-hidden="true">{{ accountInitials }}</span>
+          <span class="drawer-user-meta">
+            <strong>{{ accountName }}</strong>
+            <RoleBadge />
+          </span>
         </div>
         <nav class="drawer-nav">
           <template v-for="item in visibleModules" :key="item.to || item.key">
@@ -460,6 +472,23 @@ const router = useRouter()
 const { t, locale } = useI18n()
 const authStore = useAuthStore()
 const notifStore = useNotificationStore()
+
+// The signed-in user's full display name (used by the header account chip and
+// the staff drawer), falling back across every field the API may provide.
+const accountName = computed(() =>
+  authStore.user?.full_name ||
+  [authStore.user?.first_name, authStore.user?.last_name].filter(Boolean).join(' ') ||
+  authStore.user?.name ||
+  (authStore.user?.email || '').split('@')[0] ||
+  authStore.user?.user_role ||
+  'User',
+)
+
+// Two-letter initials for the account avatar (e.g. "JD" for Jane Doe).
+const accountInitials = computed(() => {
+  const parts = accountName.value.split(' ').filter(Boolean)
+  return (parts.slice(0, 2).map((part) => part[0]?.toUpperCase() || '').join('') || 'U')
+})
 
 const { holiday } = useHoliday()
 
@@ -1314,6 +1343,64 @@ function formatNotifTime(iso) {
   font-family: inherit;
 }
 
+/* ── Signed-in account chip (app mode): avatar + name + role ─────── */
+.header-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 6px 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f8fafc;
+  text-decoration: none;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.header-account:hover {
+  border-color: var(--brand);
+  background: #eef6ff;
+  box-shadow: 0 2px 8px rgba(0, 94, 184, 0.12);
+}
+
+.header-account-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #005eb8, #0a7ee8);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  flex-shrink: 0;
+}
+
+.header-account-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+}
+
+.header-account-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-account-meta .role-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+}
+
 .hamburger {
   display: none;
   flex-direction: column;
@@ -1398,6 +1485,54 @@ function formatNotifTime(iso) {
 
 .drawer-close:hover {
   color: #fff;
+}
+
+/* Signed-in identity row at the top of the staff drawer. */
+.drawer-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #004a93;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.drawer-user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  flex-shrink: 0;
+}
+
+.drawer-user-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.drawer-user-meta strong {
+  font-size: 14px;
+  color: #fff;
+  line-height: 1.2;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawer-user-meta .role-badge {
+  font-size: 10px;
+  padding: 2px 8px;
 }
 
 .drawer-nav {
@@ -1698,23 +1833,6 @@ function formatNotifTime(iso) {
 .nav-right {
   display: flex;
   align-items: center;
-}
-
-.nav-staff {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  white-space: nowrap;
-  padding-left: 20px;
-}
-
-.nav-staff-name {
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .nav-text {
@@ -2128,6 +2246,24 @@ function formatNotifTime(iso) {
 
 .lang-code {
   line-height: 1;
+}
+
+/* Narrower windows keep just the avatar + role pill of the account chip so the
+   header never crowds the remaining app actions. */
+@media (max-width: 1099px) {
+  .header-account-name {
+    display: none;
+  }
+
+  .header-account-meta .role-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+
+  .header-account {
+    gap: 8px;
+    padding-right: 8px;
+  }
 }
 
 @media (max-width: 768px) {
