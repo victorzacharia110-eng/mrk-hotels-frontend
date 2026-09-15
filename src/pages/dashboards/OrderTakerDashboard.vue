@@ -1688,6 +1688,7 @@ function selectTable(tbl) {
     }))
   } else {
     continueOrderId.value = null
+    orderLines.value = []
   }
 
   form.value.table_number = name
@@ -2188,9 +2189,8 @@ async function sendOrder() {
         const number = res.data?.order?.order_number || ''
         sentToast.value = t('orderTaker.sent', { number })
       }
-      // The just-sent lines become part of the existing ticket so they are not
-      // re-appended next time; the waiter keeps adding to the same order.
-      orderLines.value = orderLines.value.map((l) => (l.existing ? l : { ...l, existing: true }))
+      orderLines.value = []
+      form.value.notes = ''
     } else {
       const res = await orderApi.store({
         department: department.value,

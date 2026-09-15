@@ -123,6 +123,29 @@
         </div>
       </div>
 
+      <!-- Due Out guests -->
+      <div class="card" style="padding: 20px; margin-bottom: 16px;">
+        <h3 style="margin: 0 0 4px;"><i class="fas fa-hourglass-half" style="color: #d97706;"></i> {{ $t('nightAudit.dueOuts') }}</h3>
+        <p class="muted" style="margin: 0 0 12px;">{{ $t('nightAudit.dueOutsSubtitle') }}</p>
+        <div v-if="!dueOuts.length" class="muted">{{ $t('nightAudit.dueOutsEmpty') }}</div>
+        <div v-else class="dueout-list">
+          <div v-for="guest in dueOuts" :key="guest.reservation_id" class="dueout-item" :class="{ overdue: guest.overdue }">
+            <div class="dueout-main">
+              <span class="dueout-name">{{ guest.guest_name }}</span>
+              <span class="dueout-room"><i class="fas fa-bed" aria-hidden="true"></i> {{ guest.room_number || '—' }}</span>
+            </div>
+            <div class="dueout-meta">
+              <span><i class="fas fa-calendar-day" aria-hidden="true"></i> {{ $t('nightAudit.departure') }} {{ guest.departure }}</span>
+              <span class="dueout-bal">{{ $t('nightAudit.dueAmount') }}: {{ fmtMoney(guest.balance) }}</span>
+            </div>
+            <span class="dueout-badge" :class="guest.overdue ? 'badge-overdue' : 'badge-due'">
+              <i class="fas" :class="guest.overdue ? 'fa-triangle-exclamation' : 'fa-hourglass-half'" aria-hidden="true"></i>
+              {{ guest.overdue ? $t('nightAudit.overdue') : $t('nightAudit.dueToday') }}
+            </span>
+          </div>
+        </div>
+      </div>
+
       <!-- Close button -->
       <div v-if="!report.closed" class="card" style="padding: 20px; margin-bottom: 16px; text-align: center;">
         <p style="margin: 0 0 12px; color: #64748b;">{{ $t('nightAudit.closePrompt') }}</p>
@@ -183,6 +206,7 @@ const { t } = useI18n()
 
 const selectedDate = ref(new Date().toISOString().slice(0, 10))
 const report = ref(null)
+const dueOuts = ref([])
 const history = ref([])
 const loading = ref(false)
 const closing = ref(false)
@@ -204,6 +228,7 @@ async function load() {
     ])
     report.value = reportRes.data.report
     report.value.closed = reportRes.data.closed
+    dueOuts.value = reportRes.data.due_outs || []
     history.value = historyRes.data.day_closes || []
   } catch (err) {
     error.value = err.response?.data?.message || t('common.loadError')
@@ -248,6 +273,17 @@ onMounted(load)
 .kpi-label { font-size: 12px; color: #64748b; }
 .kpi.total { border-top: 2px solid #e2e8f0; padding-top: 8px; }
 .kpi.total .kpi-value { color: #005EB8; font-size: 22px; }
+.dueout-list { display: grid; gap: 10px; }
+.dueout-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 12px 16px; border: 1px solid #fbd38d; background: #fffbeb; border-radius: 10px; }
+.dueout-item.overdue { border-color: #fecaca; background: #fef2f2; }
+.dueout-main { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dueout-name { font-weight: 700; color: #062A52; }
+.dueout-room { font-size: 12px; color: #64748b; }
+.dueout-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 13px; color: #475569; }
+.dueout-bal { font-weight: 600; }
+.dueout-badge { white-space: nowrap; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+.badge-due { background: #fef3c7; color: #92400e; }
+.badge-overdue { background: #fee2e2; color: #b91c1c; }
 .text-red { color: #DC2626 !important; }
 .text-green { color: #16A34A !important; }
 .capitalize { text-transform: capitalize; }

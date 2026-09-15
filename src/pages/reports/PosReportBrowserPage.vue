@@ -18,6 +18,7 @@
     :exporting="exporting"
     @select="selectReport"
     @print="printReport"
+    @open-window="openReportWindow"
     @export="exportTable"
   >
     <template #toolbar>
@@ -349,12 +350,108 @@ function printReport() {
   window.print()
 }
 
+/** Escapes API text so it can't break the standalone report window's markup. */
+function esc(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/** Keeps only the report body: drops screen-only chrome and interactive bits. */
+function reportBodyHtml(inner) {
+  const div = document.createElement('div')
+  div.innerHTML = inner
+  div.querySelectorAll('button, a, input, select').forEach((n) => n.remove())
+  return div.innerHTML
+}
+
+/**
+ * Opens a clean, print-ready copy of the current POS report in a new window.
+ * Only the report body inside `.rb-paper` is carried across, wrapped in a
+ * purpose-built A4-landscape stylesheet, so the printed sheet mirrors the
+ * paper the reference system produces.
+ */
+function openReportWindow() {
+  const paper = document.querySelector('.rb-paper')
+  if (!paper || !paper.innerText.trim()) {
+    error.value = t('reportBrowser.openWindowEmpty')
+    return
+  }
+  const win = window.open('', '_blank')
+  if (!win) {
+    error.value = t('reportBrowser.openWindowBlocked')
+    return
+  }
+  win.opener = null
+  win.document.open()
+  win.document.write(
+    `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${esc(activeLabel.value)}</title>
+<style>
+  @page { size: A4 landscape; margin: 10mm 8mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; line-height: 1.45; color: #111; background: #fff; }
+  .rpt-bar { position: sticky; top: 0; display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px; background: #eef1f6; z-index: 5; }
+  .rpt-bar button { border: 1px solid #062a52; background: #062a52; color: #fff; border-radius: 5px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .rpt-bar button:hover { background: #005eb8; }
+  .sheet { padding: 4px 10px 10px; }
+  .brand { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px double #062a52; padding-bottom: 10px; margin-bottom: 14px; }
+  .brand h1 { font-size: 18px; text-transform: uppercase; letter-spacing: 1px; color: #062a52; margin: 0; }
+  .brand .period { font-size: 12px; color: #444; }
+  .rb-report-head h2, h2 { font-size: 14px; color: #062a52; margin: 14px 0 4px; }
+  .rb-legend { font-size: 11.5px; color: #444; margin: 0 0 10px; }
+  .rb-kpi-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+  .rb-kpi { flex: 1 1 160px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; background: #f8fafc; }
+  .rb-kpi-value { display: block; font-size: 17px; color: #062a52; font-weight: 700; }
+  .rb-kpi-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; color: #475569; }
+  .table-scroll { overflow: visible !important; margin: 0 0 14px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead { display: table-header-group; }
+  tr { page-break-inside: avoid; }
+  th, td { border: 1px solid #cbd5e1; padding: 5px 7px; vertical-align: top; }
+  th { background: #062a52; color: #fff; font-size: 10.5px; text-transform: uppercase; letter-spacing: .4px; text-align: left; }
+  td { font-size: 11px; }
+  tbody tr:nth-child(even) td { background: #f1f5f9; }
+  .num { text-align: right !important; }
+  .rb-total-label { font-weight: 700; color: #475569; }
+  .rb-table tfoot td { font-weight: 700; background: #f4f4f5; }
+  .rb-empty { color: #64748b; font-style: italic; text-align: center !important; }
+  tfoot { border-top: 2px solid #062a52; }
+</style>
+</head><body>
+  <div class="rpt-bar"><button type="button" onclick="window.print()">${esc(t('reportBrowser.print'))}</button></div>
+  <div class="sheet">
+    <div class="brand">
+      <h1>${esc(activeLabel.value)}</h1>
+      <span class="period">${esc(windowLabel.value)}</span>
+    </div>
+    ${reportBodyHtml(paper.innerHTML)}
+    <div style="margin-top: 10px; border-top: 1px solid #cbd5e1; padding-top: 6px; font-size: 10px; color: #64748b; display: flex; justify-content: space-between;">
+      <span>Generated ${esc(new Date().toLocaleString())}</span>
+      <span>${esc(activeLabel.value)}</span>
+    </div>
+  </div>
+</body></html>`,
+  )
+  win.document.close()
+}
+
 async function exportTable() {
-  if (!engine.value?.columns?.length) return
+  if (!engine.value?.columns?.length) {
+    error.value = t('reportBrowser.openWindowEmpty')
+    return
+  }
   exporting.value = true
+  error.value = ''
   try {
     await new Promise((r) => setTimeout(r, 250))
     exportCSV(activeReport.value, engine.value.rows || [], engine.value.columns || [])
+  } catch (err) {
+    error.value = err?.message || t('common.loadError')
   } finally {
     exporting.value = false
   }

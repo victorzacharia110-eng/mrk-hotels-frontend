@@ -256,7 +256,10 @@
             </thead>
             <tbody>
               <tr v-for="(row, i) in report.rows" :key="i">
-                <td>{{ row.guest_name }}</td>
+                <td>
+                  {{ row.guest_name }}
+                  <span v-if="row.due_out" class="rb-badge rb-badge-due"><i class="fas fa-hourglass-half"></i> {{ $t('reportBrowser.dueOut') }}</span>
+                </td>
                 <td>{{ row.room }}</td>
                 <td>{{ prettyDate(row.arrival) }}</td>
                 <td>{{ prettyDate(row.departure) }}</td>
@@ -1839,6 +1842,7 @@ async function exportCsv() {
         { key: 'departure', label: t('reportBrowser.departure') },
         { key: 'pax', label: t('reportBrowser.pax') },
         { key: 'rate_type', label: t('reportBrowser.rateType') },
+        { key: 'due_out', label: t('reportBrowser.dueOut') },
         { key: 'balance', label: t('reportBrowser.balance') },
       ]
       exportCSV('guest-list', report.value.rows || [], cols)
@@ -2065,6 +2069,11 @@ onMounted(() => {
 .rb-badge-red {
   background: #fee2e2;
   color: #b91c1c;
+}
+.rb-badge-due {
+  background: #fef3c7;
+  color: #92400e;
+  margin-left: 6px;
 }
 .rb-table .row-overdue td {
   background: #fef2f2;

@@ -158,10 +158,11 @@
               </div>
               <div class="sv-room-track">
                 <div
-                  v-for="d in days"
+                  v-for="(d, di) in days"
                   :key="d.iso"
                   class="sv-cell-bg"
                   :class="{ today: d.isToday, weekend: d.isWeekend, vacant: isVacantCell(room, d.iso) }"
+                  :style="{ gridColumn: `${di * 2 + 1} / span 2`, gridRow: '1 / -1' }"
                   role="button"
                   tabindex="0"
                   :title="isVacantCell(room, d.iso) ? $t('stayview.vacant') : ''"
@@ -169,11 +170,18 @@
                   @keyup.enter="onCellTap($event, room, d.iso)"
                 ></div>
                 <div
+                  v-for="(d, di) in days"
+                  :key="'mid-' + d.iso"
+                  class="sv-day-mid"
+                  :class="{ today: d.isToday }"
+                  :style="{ gridColumn: `${di * 2 + 2} / span 1` }"
+                ></div>
+                <div
                   v-for="bar in barsByRoom[room.room_id] || []"
                   :key="bar.id"
                   class="sv-bar"
                   :class="bar.colorClass"
-                  :style="{ gridColumn: `${bar.start} / span ${bar.span}`, animationDelay: `${bar.start * 30}ms` }"
+                  :style="{ gridColumn: `${bar.start} / span ${bar.span}`, gridRow: bar.lane, animationDelay: `${bar.start * 15}ms` }"
                   role="button"
                   tabindex="0"
                   @click="onBarTap($event, bar)"
@@ -450,22 +458,22 @@
                       <tbody>
                         <tr
                           v-for="r in [activeBar, ...relatedFolios]"
-                          :key="r.reservation_id"
-                          :class="{ 'sv-folio-row-active': viewingFolio?.reservation?.reservation_id === r.reservation_id }"
+                          :key="folioRowId(r)"
+                          :class="{ 'sv-folio-row-active': activeFolioId === folioRowId(r) }"
                         >
                           <td>
                             <strong>{{ r.folio_code || ledgerHeader.code }}</strong>
-                            <span class="sv-folio-row-type">{{ r.reservation_id === activeBar.id ? $t('stayview.currentFolio') : $t('stayview.relatedFolio') }}</span>
+                            <span class="sv-folio-row-type">{{ folioRowId(r) === activeBar.id ? $t('stayview.currentFolio') : $t('stayview.relatedFolio') }}</span>
                           </td>
                           <td>
                             {{ r.guest_name || r.label }}<template v-if="r.room_number"> · {{ r.room_number }}</template>
                           </td>
                           <td class="sv-folio-col-num">
-                            <template v-if="viewingFolio?.reservation?.reservation_id === r.reservation_id">TZS {{ fmtNum(ledgerHeader.balance, 2) }}</template>
+                            <template v-if="activeFolioId === folioRowId(r)">TZS {{ fmtNum(ledgerHeader.balance, 2) }}</template>
                             <template v-else>TZS {{ fmtNum(r.balance_due, 2) }}</template>
                           </td>
                           <td class="sv-folio-col-num">
-                            <template v-if="viewingFolio?.reservation?.reservation_id === r.reservation_id">
+                            <template v-if="activeFolioId === folioRowId(r)">
                               <strong>TZS {{ fmtNum(ledgerHeader.balance, 2) }}</strong>
                             </template>
                             <template v-else><strong>TZS {{ fmtNum(r.balance_due, 2) }}</strong></template>
@@ -610,7 +618,7 @@
                               <i class="fas fa-download" aria-hidden="true"></i>
                             </a>
                             <button
-                              v-if="e.entryId"
+                              v-if="e.entryId && !e.moveLine"
                               type="button"
                               class="sv-icon-link"
                               :title="e.entryUrl ? $t('folio.remove') : $t('folio.void')"
@@ -1562,6 +1570,16 @@
                   </div>
                 </div>
 
+                <div v-if="moveSelected.length" class="sv-move-summary">
+                  <span>{{ $t('stayview.selectedOpsTotal') }}:
+                    <strong>TZS {{ fmtNum(moveSelectedTotal, 2) }}</strong>
+                  </span>
+                  <span v-if="moveTargetObj" class="sv-cap">
+                    <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    {{ moveTargetObj.guest_name || '—' }} · {{ moveTargetObj.folio_code }} ({{ moveTargetObj.room_number || '—' }})
+                  </span>
+                </div>
+
                 <label class="sv-field">
                   <span>{{ $t('stayview.folioNote') }}</span>
                   <input v-model="folioOpForm.description" type="text" class="input" data-field="description" maxlength="255" />
@@ -2462,7 +2480,13 @@ const visibleReservations = computed(() => {
   })
 })
 
-/** Booking bars keyed by room id, positioned on the 14-column day grid. */
+/** Booking bars keyed by room id, positioned on the 28 half-day sub-grid
+ *  (two lanes per room, two half-cells per day). A stay's bar runs from the
+ *  FIRST half of its arrival day to the FIRST half of its departure day, so
+ *  it visibly extends INTO the checkout-day cell (ending on the day's vertical
+ *  midpoint) instead of "touching" it from the outside. Successive guests
+ *  taking over the room on the same departure day are stacked on the lane
+ *  below, each also ending at the midpoint of its own checkout day. */
 const barsByRoom = computed(() => {
   const map = {}
   for (const r of visibleReservations.value) {
@@ -2471,7 +2495,9 @@ const barsByRoom = computed(() => {
     const { arrival, departure } = reservationDates(r)
     const startIdx = Math.max(0, diffDays(windowStart.value, arrival))
     const endIdx = Math.min(DAYS, diffDays(windowStart.value, departure))
-    if (endIdx <= startIdx) continue
+    const halfStart = startIdx * 2
+    const halfEnd = Math.max(halfStart, endIdx * 2)
+    if (halfEnd < halfStart || endIdx <= startIdx) continue
     // Bar colors: blue = checked out, red = payment pending, green = in-house
     // or fully paid. An in-house guest shows green even when a balance remains
     // to be settled at check-out — the stay has started, so there is nothing
@@ -2489,8 +2515,13 @@ const barsByRoom = computed(() => {
       arrivalIso: isoKey(arrival),
       departureIso: isoKey(departure),
       label: (r.guest_name || '—').toUpperCase(),
-      start: startIdx + 1,
-      span: endIdx - startIdx,
+      // Grid column/span on the 28 half-day track (1-based) + the inclusive
+      // 0-based half-cell range used by the vacancy check.
+      halfStart,
+      halfEnd,
+      start: halfStart + 1,
+      span: halfEnd - halfStart + 1,
+      lane: 1,
       colorClass,
       rawStatus: r.status,
       statusLabel: r.status.replace('_', ' '),
@@ -2515,6 +2546,17 @@ const barsByRoom = computed(() => {
       notes: r.notes || '',
       checkedInAt: r.checked_in_at ? fmtDate(r.checked_in_at) : '',
       checkedOutAt: r.checked_out_at ? fmtDate(r.checked_out_at) : '',
+    })
+  }
+  // Stack successive handovers on alternating lanes so a departing guest's
+  // half of the checkout day and the arriving guest's other half render one
+  // below the other on the shared day cell.
+  for (const roomId of Object.keys(map)) {
+    const arr = map[roomId].sort((a, b) =>
+      a.arrivalIso < b.arrivalIso ? -1 : a.arrivalIso > b.arrivalIso ? 1 : 0
+    )
+    arr.forEach((bar, i) => {
+      bar.lane = i % 2 === 0 ? 1 : 2
     })
   }
   return map
@@ -2760,6 +2802,14 @@ async function loadFolio(id) {
  */
 const viewingFolio = ref(null)
 
+/** Folio id of the row being shown: the toggled foreign folio, else the stay's own. */
+const activeFolioId = computed(() => viewingFolio.value?.reservation?.reservation_id || activeBar.value?.id || null)
+
+/** Normalises a switch-table row to the reservation id it stands for (the stay's own bar row only carries `id`). */
+function folioRowId(r) {
+  return r?.reservation_id || activeBar.value?.id || ''
+}
+
 /** Folios the backend linked to this stay through moves, one chip each. */
 const relatedFolios = computed(
   () => (folio.value?.related_folios || []).filter((r) => r.reservation_id !== activeBar.value?.id),
@@ -2786,7 +2836,9 @@ const ledgerHeader = computed(() => {
 
 /** Shows the stay's own folio (or reloads the toggled one) from a chip click. */
 async function switchFolio(item) {
-  const id = item?.reservation_id
+  // The current folio row is the stay's own bar (which only carries `id`), so
+  // falling back to it keeps its VIEW button working as "return to my folio".
+  const id = item?.reservation_id || (item === activeBar.value ? activeBar.value?.id : null)
   if (!id || folioLoading.value) return
   if (id === activeBar.value?.id) {
     viewingFolio.value = null
@@ -3058,6 +3110,11 @@ const folioEntries = computed(() => {
       refund: isRefund,
       entryId: e.folio_entry_id,
       moveId: e.folio_entry_id ? `e:${e.folio_entry_id}` : null,
+      // Transfer/split/cut rows are the ledger's own book-keeping for money
+      // that moved between folios. A donor `*_out` row is a provenance credit
+      // (its effect already lives in room_charges), so it cannot be voided or
+      // moved; only the target folio's live rows travel again.
+      moveLine: /_(out|in)$/.test(e.type),
       entryUrl: e.attachment_url ? reservationApi.folioAttachmentUrl(e.folio_entry_id) : '',
       editable: ['room_charge', 'extra_charge', 'adjustment', 'discount', 'inclusion'].includes(e.type) && e.folio_entry_id != null,
     })
@@ -3613,7 +3670,7 @@ const newFolioBusy = ref(false)
  */
 const moveSourceOptions = computed(() =>
   folioEntries.value
-    .filter((e) => e.moveId != null)
+    .filter((e) => e.moveId != null && !e.moveLine)
     .map((e) => ({
       moveId: e.moveId,
       entryId: e.entryId ?? null,
@@ -3688,18 +3745,28 @@ async function moveSelectedOps() {
   const entryIds = selected.filter((k) => k.startsWith('e:')).map((k) => k.slice(2))
   const orderIds = selected.filter((k) => k.startsWith('o:')).map((k) => k.slice(2))
   const laundryIds = selected.filter((k) => k.startsWith('l:')).map((k) => k.slice(2))
+  // "New Folio" opens the target folio first (createNewFolioTarget); the move
+  // itself is a plain transfer on to that already-existing folio — the backend
+  // only accepts transfer/split/cut as a move mode.
+  const mode = folioMoveMode.value === 'newfolio' ? 'transfer' : folioMoveMode.value
   const payload = {
-    mode: folioMoveMode.value,
+    mode,
     target_reservation_id: moveTarget.value,
     entry_ids: entryIds,
     order_ids: orderIds,
     laundry_ids: laundryIds,
-    description: folioOpForm.value.description?.trim() || `${folioMoveMode.value} of ${selected.length} operation(s)`,
+    description: folioOpForm.value.description?.trim() || '',
   }
   folioOp.value = null
   await runStayAction(() => reservationApi.folioTransfer(bar.id, payload))
   if (actionError.value) folioOp.value = 'move'
 }
+
+/** Total of the operations currently ticked in the move source panel. */
+const moveSelectedTotal = computed(() => {
+  const byId = new Map(moveSourceOptions.value.map((e) => [e.moveId, e]))
+  return moveSelected.value.reduce((sum, id) => sum + (byId.get(id)?.amount || 0), 0)
+})
 
 const folioOpTitle = computed(() => {
   if (folioOp.value === 'discount') return t('stayview.folioDiscountTitle')
@@ -4914,13 +4981,15 @@ watch(
   },
 )
 
-/** Whether a room has no booking bar covering the given day column. */
+/** Whether a room has no booking covering both halves of the given day cell.
+ *  A departing guest's bar only fills the FIRST half of its checkout day, so
+ *  that day stays bookable: the arriving guest takes the other half below. */
 function isVacantCell(room, iso) {
   const idx = days.value.findIndex((d) => d.iso === iso)
   if (idx < 0) return false
-  const col = idx + 1
+  const dayStart = idx * 2
   const bars = barsByRoom.value[room.room_id] || []
-  return !bars.some((b) => col >= b.start && col < b.start + b.span)
+  return !bars.some((b) => b.halfStart <= dayStart && b.halfEnd >= dayStart + 1)
 }
 
 /** Clicking a vacant day opens the booking form with that arrival date. */
@@ -5711,17 +5780,17 @@ onUnmounted(() => clearInterval(refreshTimer))
 .sv-room-track {
   grid-column: 2 / -1;
   display: grid;
-  grid-template-columns: repeat(14, 1fr);
-  align-items: center;
+  grid-template-columns: repeat(28, 1fr);
+  grid-template-rows: 1fr 1fr;
   border-bottom: 1px solid #f0f0f0;
-  min-height: 40px;
+  min-height: 52px;
   position: relative;
 }
 
 .sv-cell-bg {
   height: 100%;
   border-right: 1px solid #f5f5f5;
-  grid-row: 1;
+  grid-row: 1 / -1;
 }
 
 .sv-cell-bg.vacant {
@@ -5734,28 +5803,21 @@ onUnmounted(() => clearInterval(refreshTimer))
   z-index: 1;
 }
 
+/* Divider at the vertical midpoint of every day cell — the departing guest's
+   bar ends here and the arriving guest's bar starts here on the lane below. */
+.sv-day-mid {
+  grid-row: 1 / -1;
+  border-left: 1px dashed #e2e8f0;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .sv-auto {
   color: #1e7e34;
   font-style: normal;
   font-weight: 400;
   opacity: 0.85;
 }
-
-/* Explicit placement so backgrounds and bars share row 1 of the track */
-.sv-cell-bg:nth-child(1) { grid-column: 1; }
-.sv-cell-bg:nth-child(2) { grid-column: 2; }
-.sv-cell-bg:nth-child(3) { grid-column: 3; }
-.sv-cell-bg:nth-child(4) { grid-column: 4; }
-.sv-cell-bg:nth-child(5) { grid-column: 5; }
-.sv-cell-bg:nth-child(6) { grid-column: 6; }
-.sv-cell-bg:nth-child(7) { grid-column: 7; }
-.sv-cell-bg:nth-child(8) { grid-column: 8; }
-.sv-cell-bg:nth-child(9) { grid-column: 9; }
-.sv-cell-bg:nth-child(10) { grid-column: 10; }
-.sv-cell-bg:nth-child(11) { grid-column: 11; }
-.sv-cell-bg:nth-child(12) { grid-column: 12; }
-.sv-cell-bg:nth-child(13) { grid-column: 13; }
-.sv-cell-bg:nth-child(14) { grid-column: 14; }
 
 /* Booking bars */
 .sv-bar {
@@ -6816,6 +6878,24 @@ onUnmounted(() => clearInterval(refreshTimer))
   align-items: center;
   justify-content: center;
   gap: 6px;
+}
+
+.sv-move-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #fefce8;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #713f12;
+}
+.sv-move-summary i {
+  font-size: 11px;
 }
 
 .sv-split-arrow-bar {
