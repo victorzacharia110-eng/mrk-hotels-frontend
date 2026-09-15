@@ -50,7 +50,14 @@
                 <span v-if="table.waiter" class="waiter-chip">
                   <span class="avatar">{{ initials(table.waiter.full_name) }}</span>
                   {{ table.waiter.full_name.split(' ')[0] }}
-                  <button class="chip-x" :title="$t('cashier.waiters.removeTip')" @click.stop="quickUnassign(table)"><i class="fas fa-xmark"></i></button>                </span>
+                  <button class="chip-x" :title="$t('cashier.waiters.removeTip')" @click.stop="quickUnassign(table)"><i class="fas fa-xmark"></i></button>
+                </span>
+                <span v-else-if="getOccupant(table)" class="waiter-chip occupant-chip"
+                  :title="$t('orderTaker.occupiedBy', { waiter: getOccupant(table) })">
+                  <span class="avatar">{{ initials(getOccupant(table)) }}</span>
+                  <i class="fas fa-lock solid-icon"></i>
+                  {{ getOccupant(table).split(' ')[0] }}
+                </span>
                 <span v-else class="unassigned-tag">{{ $t('cashier.waiters.none') }}</span>
               </span>
               <span class="pos-table-time" v-if="table._lastAt">{{ fmtTime(table._lastAt) }}</span>
@@ -335,12 +342,18 @@
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { cashierApi, tableApi } from '@/api'
+import { cashierApi, tableApi, orderApi } from '@/api'
 import { initEcho, getEcho } from '@/plugins/echo'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
+
+// Cashiers run the restaurant, bartenders the bar. Each role only ever sees
+// its own side on this board so bar tables never appear in the restaurant
+// (and vice versa).
+const role = computed(() => authStore.user?.user_role || '')
+const fixedDept = computed(() => (role.value === 'bartender' ? 'bar' : 'restaurant'))
 
 const tables = ref([])
 const waiters = ref([])
@@ -351,6 +364,19 @@ const busy = ref(false)
 const bubbleOpen = ref(false)
 const mode = ref(null)
 const selectedUserId = ref(null)
+// Today's still-open, unpaid orders in this department — the authoritative
+// source of who is serving each locked table, even when no explicit
+// assignment has been made on the board.
+const deptOrders = ref([])
+
+/** The waiter currently serving the named table (live unpaid order), if any. */
+function getOccupant(table) {
+  if (!table || deptOrders.value.length === 0) return null
+  const order = deptOrders.value.find(
+    (o) => String(o.table_number) === String(table.table_name) && o.waiter_name,
+  )
+  return order ? order.waiter_name : null
+}
 
 /* ── Guide modal (first-visit auto-show + manual reopen) ─────── */
 const GUIDE_KEY = 'mrk_waiter_guide_seen'
@@ -540,14 +566,28 @@ async function quickUnassign(table) {
 async function load() {
   busy.value = true
   try {
+    const dept = fixedDept.value
     const [tablesRes, board] = await Promise.all([
-      tableApi.index({ per_page: 100 }),
+      tableApi.index({ per_page: 100, section: dept }),
       cashierApi.waiters(),
     ])
     const list = tablesRes.data.data || tablesRes.data
     const wList = board.data.waiters || []
     waiters.value = wList
     waiterMap.value = Object.fromEntries(wList.map((w) => [w.user_id, w]))
+
+    // Live (running, unpaid) orders decide which locked tables are being served
+    // and by whom — independent of the explicit waiter assignment above.
+    // Best-effort: if the orders feed fails the board still shows every table.
+    try {
+      const ordersRes = await orderApi.index({ department: dept, per_page: 100 })
+      const rows = Array.isArray(ordersRes.data) ? ordersRes.data : ordersRes.data?.data || []
+      deptOrders.value = rows.filter(
+        (o) => !['completed', 'cancelled'].includes(o.status) && o.payment_status !== 'paid',
+      )
+    } catch {
+      deptOrders.value = []
+    }
 
     const enriched = list
       .filter((x) => x.is_active !== false)
