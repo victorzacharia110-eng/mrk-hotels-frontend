@@ -88,12 +88,13 @@
 
         <!-- Activity details toggle -->
         <button class="btn btn-sm btn-secondary" style="margin-top: 12px;" @click="toggleDetails(row.period_start)">
-          <i class="fas" :class="expanded[row.period_start] ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+          <i class="fas" :class="openDetails === row.period_start ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
           {{ $t('activityLog.viewDetails') }}
         </button>
 
-        <div v-if="expanded[row.period_start]" class="activity-details">
-          <div class="table-scroll">
+        <div class="activity-details" :class="{ open: openDetails === row.period_start }">
+          <div class="activity-details-inner">
+            <div class="table-scroll">
           <table class="table" style="margin-top: 12px;">
             <thead>
               <tr>
@@ -117,6 +118,7 @@
             </tbody>
           </table>
           </div>
+          </div>
         </div>
       </div>
     </template>
@@ -128,7 +130,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { activityLogReportApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 
@@ -140,7 +142,7 @@ const to = ref(new Date().toISOString().slice(0, 10))
 const rows = ref([])
 const loading = ref(false)
 const error = ref('')
-const expanded = reactive({})
+const openDetails = ref('')
 const downloading = ref(false)
 
 function actionBadge(action) {
@@ -148,8 +150,9 @@ function actionBadge(action) {
   return map[action] || 'badge-gray'
 }
 
+// Row detail panels are exclusive: opening one smoothly closes the others.
 function toggleDetails(key) {
-  expanded[key] = !expanded[key]
+  openDetails.value = openDetails.value === key ? '' : key
 }
 
 async function downloadCsv() {
@@ -226,6 +229,9 @@ onMounted(load)
 .staff-label { font-size: 12px; color: #64748b; font-weight: 600; }
 .staff-chip { font-size: 11px; padding: 3px 8px; background: #E8F1FA; color: #005EB8; border-radius: 12px; font-weight: 500; }
 .capitalize { text-transform: capitalize; }
+.activity-details { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease; }
+.activity-details.open { grid-template-rows: 1fr; }
+.activity-details-inner { overflow: hidden; min-height: 0; }
 .table-scroll .table { min-width: 640px; }
 @media (max-width: 768px) { .dashboard-page { padding: 20px 16px; } .page-head { flex-direction: column; align-items: flex-start; } .filter-grid { grid-template-columns: 1fr; } }
 </style>

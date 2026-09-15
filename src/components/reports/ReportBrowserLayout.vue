@@ -61,36 +61,38 @@
     <div class="rb-body">
       <!-- ── Left: collapsible report category tree ─────────── -->
       <aside class="rb-tree">
-        <div
-          v-for="cat in categories"
-          :key="cat.key"
-          class="rb-cat"
-          :class="{ open: expanded[cat.key] }"
-        >
-          <button type="button" class="rb-cat-head" @click="toggleCat(cat.key)">
-            <i
-              class="fas"
-              :class="expanded[cat.key] ? 'fa-chevron-down' : 'fa-chevron-right'"
-              aria-hidden="true"
-            ></i>
-            <i :class="cat.icon || 'fas fa-folder'" class="rb-cat-icon" aria-hidden="true"></i>
-            <span>{{ $t(cat.label) }}</span>
-            <span class="rb-cat-count">{{ cat.reports.length }}</span>
-          </button>
-          <div v-show="expanded[cat.key]" class="rb-cat-reports">
-            <button
-              v-for="r in cat.reports"
-              :key="r.key"
-              type="button"
-              class="rb-report"
-              :class="{ active: active === r.key }"
-              @click="$emit('select', r.key)"
-            >
-              <i :class="r.icon || 'fas fa-file-lines'" aria-hidden="true"></i>
-              <span>{{ $t(r.label) }}</span>
+<div
+            v-for="cat in categories"
+            :key="cat.key"
+            class="rb-cat"
+            :class="{ open: cat.key === openCat }"
+          >
+            <button type="button" class="rb-cat-head" @click="toggleCat(cat.key)">
+              <i
+                class="fas"
+                :class="cat.key === openCat ? 'fa-chevron-down' : 'fa-chevron-right'"
+                aria-hidden="true"
+              ></i>
+              <i :class="cat.icon || 'fas fa-folder'" class="rb-cat-icon" aria-hidden="true"></i>
+              <span>{{ $t(cat.label) }}</span>
+              <span class="rb-cat-count">{{ cat.reports.length }}</span>
             </button>
+            <div class="rb-cat-reports" :class="{ open: cat.key === openCat }">
+              <div class="rb-cat-reports-inner">
+                <button
+                  v-for="r in cat.reports"
+                  :key="r.key"
+                  type="button"
+                  class="rb-report"
+                  :class="{ active: active === r.key }"
+                  @click="$emit('select', r.key)"
+                >
+                  <i :class="r.icon || 'fas fa-file-lines'" aria-hidden="true"></i>
+                  <span>{{ $t(r.label) }}</span>
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
       </aside>
 
       <!-- ── Right: active report (toolbar + body via slots) ── -->
@@ -119,17 +121,14 @@ const props = defineProps({
 const emit = defineEmits(['select', 'print', 'open-window', 'export', 'search', 'back'])
 
 const searchTerm = ref('')
-const expanded = ref({})
+const openCat = ref('')
 
 watch(
   () => props.categories,
   (cats) => {
-    const state = {}
-    for (const cat of cats) {
-      // Default to open so the tree reads like the reference on first load.
-      state[cat.key] = true
-    }
-    expanded.value = state
+    // Default to the first category open so the tree reads like the
+    // reference on first load.
+    openCat.value = cats[0]?.key || ''
   },
   { immediate: true },
 )
@@ -140,8 +139,9 @@ watch(searchTerm, (value) => {
   timer = setTimeout(() => emit('search', value.trim()), 300)
 })
 
+// Categories are exclusive: opening one smoothly closes the others.
 function toggleCat(key) {
-  expanded.value[key] = !expanded.value[key]
+  openCat.value = openCat.value === key ? '' : key
 }
 </script>
 
@@ -328,8 +328,12 @@ function toggleCat(key) {
 }
 
 .rb-cat-reports {
-  padding: 2px 0 6px;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease;
 }
+.rb-cat-reports.open { grid-template-rows: 1fr; }
+.rb-cat-reports-inner { overflow: hidden; min-height: 0; display: flex; flex-direction: column; padding: 2px 0 6px; }
 
 .rb-report {
   width: 100%;

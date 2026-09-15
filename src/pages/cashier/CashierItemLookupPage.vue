@@ -24,15 +24,17 @@
           <div v-else class="cat-tree">
             <div v-for="(itemsInCat, cat) in groupedItems" :key="cat" class="cat-group">
               <button class="cat-toggle" @click="toggleCat(cat)">
-                <i :class="collapsed.has(cat) ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" aria-hidden="true"></i>
+                <i :class="openCat === cat ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" aria-hidden="true"></i>
                 {{ cat }}
                 <span class="cat-count">{{ itemsInCat.length }}</span>
               </button>
-              <div v-show="!collapsed.has(cat)" class="cat-kids">
+              <div class="cat-kids" :class="{ open: openCat === cat }">
+                <div class="cat-kids-inner">
                 <button v-for="item in itemsInCat" :key="item.menu_item_id" class="cat-leaf"
                   :class="{ active: activeItemId === item.menu_item_id }" @click="activeItemId = item.menu_item_id">
                   {{ item.item_name }}
                 </button>
+                </div>
               </div>
             </div>
           </div>
@@ -95,7 +97,7 @@ const items = ref([])
 const loading = ref(true)
 const department = ref('')
 const search = ref('')
-const collapsed = ref(new Set())
+const openCat = ref('')
 const activeItemId = ref(null)
 
 // Categories containing the search term stay visible; term also filters leaves.
@@ -115,16 +117,14 @@ const flatItems = computed(() => {
   if (search.value.trim()) {
     return Object.values(groups).flat()
   }
-  // No search: show only the expanded groups so the tree stays authoritative.
-  const open = Object.keys(groups).filter((cat) => !collapsed.value.has(cat))
-  return open.length ? open.flatMap((cat) => groups[cat]) : []
+  // No search: show only the currently open category so the tree stays
+  // authoritative.
+  return openCat.value && groups[openCat.value] ? groups[openCat.value] : []
 })
 
+// Categories are exclusive: opening one smoothly closes the others.
 function toggleCat(cat) {
-  const next = new Set(collapsed.value)
-  if (next.has(cat)) next.delete(cat)
-  else next.add(cat)
-  collapsed.value = next
+  openCat.value = openCat.value === cat ? '' : cat
 }
 
 function yesNo(value) {
@@ -142,6 +142,11 @@ async function load() {
     if (department.value) params.department = department.value
     const { data } = await menuItemApi.index(params)
     items.value = data.data || data
+    // Default to the first category open so the reference tree reads on load.
+    if (!openCat.value) {
+      const first = Object.keys(groupedItems.value).sort((a, b) => a.localeCompare(b))[0]
+      if (first) openCat.value = first
+    }
   } finally {
     loading.value = false
   }

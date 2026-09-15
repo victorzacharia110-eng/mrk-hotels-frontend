@@ -22,12 +22,14 @@
           {{ $t('cashier.nav.ordering') }}
           <i class="fas fa-chevron-down pos-chevron" aria-hidden="true"></i>
         </button>
-        <div v-if="isOpen('ordering')" class="pos-group-items">
+        <div class="pos-group-items" :class="{ open: isOpen('ordering') }">
+          <div class="pos-group-inner">
           <router-link v-for="item in orderingNav" :key="item.to" :to="item.to" class="pos-nav-link"
             :class="{ active: isActive(item.to) }" :title="$t(item.labelKey)" @click="mobileOpen = false">
             <i :class="item.icon" aria-hidden="true"></i>
             <span v-show="!sidebarCollapsed">{{ $t(item.labelKey) }}</span>
           </router-link>
+          </div>
         </div>
 
         <router-link :to="{ name: 'cashier-requisitions' }" class="pos-nav-link"
@@ -50,7 +52,8 @@
           {{ $t('cashier.nav.reports') }}
           <i class="fas fa-chevron-down pos-chevron" aria-hidden="true"></i>
         </button>
-        <div v-if="isOpen('reports')" class="pos-group-items">
+        <div class="pos-group-items" :class="{ open: isOpen('reports') }">
+          <div class="pos-group-inner">
           <router-link :to="{ name: 'cashier-reports' }" class="pos-nav-link"
             :class="{ active: isActive('/cashier/reports') }" @click="mobileOpen = false"
             :title="$t('cashier.nav.summaryReport')">
@@ -63,6 +66,7 @@
             <i class="fas fa-utensils" aria-hidden="true"></i>
             <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.posReports') }}</span>
           </router-link>
+          </div>
         </div>
 
         <button type="button" class="pos-nav-heading pos-group" :class="{ open: isOpen('manager') }"
@@ -71,7 +75,8 @@
           {{ $t('cashier.nav.managerGroup') }}
           <i class="fas fa-chevron-down pos-chevron" aria-hidden="true"></i>
         </button>
-        <div v-if="isOpen('manager')" class="pos-group-items">
+        <div class="pos-group-items" :class="{ open: isOpen('manager') }">
+          <div class="pos-group-inner">
           <router-link :to="{ name: 'cashier-item-lookup' }" class="pos-nav-link"
             :class="{ active: isActive('/cashier/item-lookup') }" @click="mobileOpen = false">
             <i class="fas fa-book-open" aria-hidden="true"></i>
@@ -107,6 +112,7 @@
             <i class="fas fa-users" aria-hidden="true"></i>
             <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.accountLookup') }}</span>
           </router-link>
+          </div>
         </div>
 
         <button type="button" class="pos-nav-heading pos-group" :class="{ open: isOpen('printer') }"
@@ -115,7 +121,8 @@
           {{ $t('cashier.nav.printerGroup') }}
           <i class="fas fa-chevron-down pos-chevron" aria-hidden="true"></i>
         </button>
-        <div v-if="isOpen('printer')" class="pos-group-items">
+        <div class="pos-group-items" :class="{ open: isOpen('printer') }">
+          <div class="pos-group-inner">
           <router-link :to="{ name: 'cashier-printer' }" class="pos-nav-link"
             :class="{ active: isActive('/cashier/printer') }" @click="mobileOpen = false">
             <i class="fas fa-print" aria-hidden="true"></i>
@@ -126,6 +133,7 @@
             <i class="fas fa-cloud-arrow-up" aria-hidden="true"></i>
             <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.printSettings') }}</span>
           </router-link>
+          </div>
         </div>
 
         <button type="button" class="pos-nav-heading pos-group" :class="{ open: isOpen('comm') }"
@@ -134,7 +142,8 @@
           {{ $t('cashier.nav.communication') }}
           <i class="fas fa-chevron-down pos-chevron" aria-hidden="true"></i>
         </button>
-        <div v-if="isOpen('comm')" class="pos-group-items">
+        <div class="pos-group-items" :class="{ open: isOpen('comm') }">
+          <div class="pos-group-inner">
           <router-link :to="{ name: 'hotel-messages' }" class="pos-nav-link"
             :class="{ active: isActive('/app/messages') }" @click="mobileOpen = false"
             :title="$t('cashier.nav.messages')">
@@ -147,6 +156,7 @@
             <i class="fas fa-circle-dot" aria-hidden="true"></i>
             <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.statuses') }}</span>
           </router-link>
+          </div>
         </div>
       </nav>
 
@@ -241,21 +251,19 @@ const outlets = ref([])
 const gateOpen = ref(false)
 const sidebarCollapsed = ref(false)
 const mobileOpen = ref(false)
-// Accordion groups in the sidebar; expanded groups are held in a Set.
-// Ordering and Reports start expanded so both core sections are visible.
-const openGroups = ref(new Set(['ordering', 'reports']))
+// Accordion groups in the sidebar are exclusive: opening one smoothly closes
+// the others, so only the targeted group ever stays expanded. An empty string
+// means every group is closed. Ordering starts expanded as the home section.
+const openGroup = ref('ordering')
 
 /** Whether the given accordion group is currently expanded. */
 function isOpen(key) {
-  return openGroups.value.has(key)
+  return openGroup.value === key
 }
 
-/** Toggles an accordion group open/closed. */
+/** Opens the targeted accordion group and closes every other one. */
 function toggleGroup(key) {
-  const next = new Set(openGroups.value)
-  if (next.has(key)) next.delete(key)
-  else next.add(key)
-  openGroups.value = next
+  openGroup.value = openGroup.value === key ? '' : key
 }
 
 function toggleSidebar() {
@@ -265,29 +273,19 @@ function toggleSidebar() {
 
 watch(() => route.path, () => {
   mobileOpen.value = false
-  // Keep the parent group open so the active item stays visible.
+  // Keep the parent group open so the active item stays visible (exclusive:
+  // navigating to another group's page expands that group instead).
   if (route.path.startsWith('/cashier/item-lookup') || route.path.startsWith('/cashier/ingredients')
     || route.path.startsWith('/cashier/shift-manager') || route.path.startsWith('/cashier/blocked-devices')
     || route.path.startsWith('/cashier/transaction-lock') || route.path.startsWith('/cashier/account-lookup')
     || route.path.startsWith('/cashier/day-close')) {
-    const next = new Set(openGroups.value)
-    next.add('manager')
-    openGroups.value = next
-  }
-  if (route.path.startsWith('/cashier/printer') || route.path.startsWith('/cashier/print-settings')) {
-    const next = new Set(openGroups.value)
-    next.add('printer')
-    openGroups.value = next
-  }
-  if (route.path.startsWith('/cashier/reports') || route.path.startsWith('/cashier/report-browser')) {
-    const next = new Set(openGroups.value)
-    next.add('reports')
-    openGroups.value = next
-  }
-  if (route.path.startsWith('/cashier/dine-in') || route.path.startsWith('/cashier/take-away') || route.path.startsWith('/cashier/room-service') || route.path.startsWith('/cashier/delivery') || route.path.startsWith('/cashier/no-charge')) {
-    const next = new Set(openGroups.value)
-    next.add('ordering')
-    openGroups.value = next
+    openGroup.value = 'manager'
+  } else if (route.path.startsWith('/cashier/printer') || route.path.startsWith('/cashier/print-settings')) {
+    openGroup.value = 'printer'
+  } else if (route.path.startsWith('/cashier/reports') || route.path.startsWith('/cashier/report-browser')) {
+    openGroup.value = 'reports'
+  } else if (route.path.startsWith('/cashier/dine-in') || route.path.startsWith('/cashier/take-away') || route.path.startsWith('/cashier/room-service') || route.path.startsWith('/cashier/delivery') || route.path.startsWith('/cashier/no-charge')) {
+    openGroup.value = 'ordering'
   }
 })
 
@@ -440,7 +438,15 @@ onMounted(() => {
 .pos-group:hover { color: #fff; }
 .pos-group .pos-chevron { transition: transform 0.2s ease; font-size: 12px; }
 .pos-group.open .pos-chevron { transform: rotate(180deg); }
-.pos-group-items { display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+/* Smooth exclusive accordion: the group collapses to a 0-high row and grows
+   open with a height animation instead of popping in/out. */
+.pos-group-items {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease;
+}
+.pos-group-items.open { grid-template-rows: 1fr; }
+.pos-group-inner { overflow: hidden; min-height: 0; display: flex; flex-direction: column; gap: 4px; padding-block: 4px; }
 .pos-nav-link {
   display: flex;
   align-items: center;

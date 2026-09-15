@@ -242,18 +242,20 @@
             <template v-if="item.children">
               <button type="button" class="drawer-link drawer-acc-head" @click="toggleAccordion(item.key)">
                 <i :class="item.icon" aria-hidden="true"></i> {{ item.label }}
-                <i class="fas fa-chevron-down drawer-acc-caret" :class="{ open: openAccordions.has(item.key) }" aria-hidden="true"></i>
+                <i class="fas fa-chevron-down drawer-acc-caret" :class="{ open: accOpen(item.key) }" aria-hidden="true"></i>
               </button>
-              <div v-if="openAccordions.has(item.key)" class="drawer-acc-children">
+              <div class="drawer-acc-children" :class="{ open: accOpen(item.key) }">
+                <div class="drawer-acc-children-inner">
                 <template v-for="child in item.children" :key="child.key || child.to">
                   <template v-if="child.children">
                     <button type="button" class="drawer-link drawer-acc-subhead"
-                      @click="toggleAccordion(subAccordionKey(item.key, child.key))">
+                      @click="toggleSubAccordion(item.key, child.key)">
                       <i :class="child.icon" aria-hidden="true"></i> {{ child.label }}
                       <i class="fas fa-chevron-down drawer-acc-caret"
-                        :class="{ open: openAccordions.has(subAccordionKey(item.key, child.key)) }" aria-hidden="true"></i>
+                        :class="{ open: subAccOpen(item.key, child.key) }" aria-hidden="true"></i>
                     </button>
-                    <div v-if="openAccordions.has(subAccordionKey(item.key, child.key))" class="drawer-acc-subchildren">
+                    <div class="drawer-acc-subchildren" :class="{ open: subAccOpen(item.key, child.key) }">
+                      <div class="drawer-acc-subchildren-inner">
                       <button v-for="gchild in child.children.filter((c) => c.action)" :key="gchild.action" type="button"
                         class="drawer-link drawer-acc-subchild" @click="handleAccordionAction(child.key, gchild.action)">
                         <i :class="gchild.icon" aria-hidden="true"></i> {{ gchild.label }}
@@ -262,6 +264,7 @@
                         class="drawer-link drawer-acc-subchild" @click="sideOpen = false">
                         <i :class="gchild.icon" aria-hidden="true"></i> {{ gchild.label }}
                       </router-link>
+                      </div>
                     </div>
                   </template>
                   <template v-else>
@@ -275,6 +278,7 @@
                     </router-link>
                   </template>
                 </template>
+                </div>
               </div>
             </template>
             <router-link v-else :key="item.to" :to="item.to" class="drawer-link" @click="sideOpen = false">
@@ -527,8 +531,12 @@ function toggleNotifDropdown() {
   }
 }
 const searchQuery = ref(Array.isArray(route.query.search) ? route.query.search[0] : (route.query.search || ''))
-// Nav accordion groups that are currently expanded (e.g. Night Audit).
-const openAccordions = ref(new Set())
+// Drawer accordions are exclusive: opening a main group smoothly closes the
+// others, and only one sub accordion stays open inside the open group (an
+// empty string means the level is fully closed). Sub keys use the
+// "mainKey::subKey" composite form.
+const openAcc = ref('')
+const openSubAcc = ref('')
 
 // Mode detection: whether the header renders the hotel app (/app) or the
 // public directory, and which root the logo should link to.
@@ -926,17 +934,31 @@ const allModulesFlat = computed(() =>
   }),
 )
 
-/** Toggle an accordion group open/closed in the staff drawer. */
-function toggleAccordion(key) {
-  const next = new Set(openAccordions.value)
-  if (next.has(key)) next.delete(key)
-  else next.add(key)
-  openAccordions.value = next
-}
-
 /** Composite key for a sub accordion nested inside a main accordion. */
 function subAccordionKey(mainKey, subKey) {
   return `${mainKey}::${subKey}`
+}
+
+/** Whether the main accordion group is the currently expanded one. */
+function accOpen(key) {
+  return openAcc.value === key
+}
+
+/** Whether the sub accordion nested under `mainKey` is the expanded one. */
+function subAccOpen(mainKey, subKey) {
+  return openSubAcc.value === subAccordionKey(mainKey, subKey)
+}
+
+/** Toggle a main accordion group; opening it closes every other group and its subs. */
+function toggleAccordion(key) {
+  openAcc.value = openAcc.value === key ? '' : key
+  openSubAcc.value = ''
+}
+
+/** Toggle a sub accordion; opening one closes the other subs under its group. */
+function toggleSubAccordion(mainKey, subKey) {
+  const key = subAccordionKey(mainKey, subKey)
+  openSubAcc.value = openSubAcc.value === key ? '' : key
 }
 
 /** Runs a non-route accordion action (e.g. opening the Auto Stopsell drawer). */
@@ -952,38 +974,31 @@ function handleAccordionAction(moduleKey, action) {
 
 const { openStopsell } = useDistribution()
 
-// Auto-expand the Night Audit, Distribution and Payments accordions whenever
-// the user is on one of their child pages so the active item stays visible.
+// When the user lands on one of their pages, expand just the accordion chain
+// that leads to it (main group + the sub accordion that holds it) and close
+// everything else, so the active item stays visible yet the drawer never
+// keeps several groups open at once.
 watch(
   () => route.path,
   (path) => {
-    if (path.startsWith('/app/night-audit')) {
-      const next = new Set(openAccordions.value)
-      next.add('night-audit')
-      next.add('front-desk')
-      next.add('front-desk::night-audit')
-      openAccordions.value = next
-    }
-    if (path.startsWith('/app/distribution')) {
-      const next = new Set(openAccordions.value)
-      next.add('distribution')
-      next.add('front-desk')
-      next.add('front-desk::distribution')
-      openAccordions.value = next
-    }
-    if (path.startsWith('/app/payments')) {
-      const next = new Set(openAccordions.value)
-      next.add('reception-payments')
-      next.add('front-desk')
-      next.add('front-desk::front-payments')
-      openAccordions.value = next
-    }
-    if (path.startsWith('/app/reports') || path.startsWith('/app/staff-reports') || path.startsWith('/app/pos-report-browser')) {
-      const next = new Set(openAccordions.value)
-      next.add('group-reports')
-      next.add('restaurant-bar')
-      next.add('restaurant-bar::fnb-manager')
-      openAccordions.value = next
+    if (!isAppMode.value) return
+    for (const item of visibleModules.value) {
+      if (!item.children) continue
+      for (const child of item.children) {
+        if (child.children) {
+          for (const gchild of child.children) {
+            if (gchild.to && (path === gchild.to || path.startsWith(gchild.to))) {
+              openAcc.value = item.key
+              openSubAcc.value = subAccordionKey(item.key, child.key)
+              return
+            }
+          }
+        } else if (child.to && (path === child.to || path.startsWith(child.to))) {
+          openAcc.value = item.key
+          openSubAcc.value = ''
+          return
+        }
+      }
     }
   },
   { immediate: true },
@@ -1596,9 +1611,12 @@ function formatNotifTime(iso) {
 }
 
 .drawer-acc-children {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease;
 }
+.drawer-acc-children.open { grid-template-rows: 1fr; }
+.drawer-acc-children-inner { overflow: hidden; min-height: 0; display: flex; flex-direction: column; }
 
 .drawer-acc-child {
   padding-left: 34px;
@@ -1617,9 +1635,12 @@ function formatNotifTime(iso) {
 }
 
 .drawer-acc-subchildren {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease;
 }
+.drawer-acc-subchildren.open { grid-template-rows: 1fr; }
+.drawer-acc-subchildren-inner { overflow: hidden; min-height: 0; display: flex; flex-direction: column; }
 
 .drawer-acc-subchild {
   padding-left: 54px;

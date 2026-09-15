@@ -21,12 +21,14 @@
               <span v-show="!sidebarCollapsed">{{ $t(item.labelKey) }}</span>
               <i v-show="!sidebarCollapsed" class="fas fa-chevron-down sm-chevron" aria-hidden="true"></i>
             </button>
-            <div v-if="isOpen(item.labelKey) && !sidebarCollapsed" class="sm-subnav">
-              <router-link v-for="child in item.children" :key="child.to" :to="child.to" class="sm-nav-link sm-sub"
-                :class="{ active: isActive(child.to) }" @click="mobileOpen = false">
-                <i :class="child.icon || 'fas fa-circle'" aria-hidden="true"></i>
-                <span>{{ $t(child.labelKey) }}</span>
-              </router-link>
+            <div class="sm-subnav" :class="{ open: isOpen(item.labelKey) }" v-show="!sidebarCollapsed">
+              <div class="sm-subnav-inner">
+                <router-link v-for="child in item.children" :key="child.to" :to="child.to" class="sm-nav-link sm-sub"
+                  :class="{ active: isActive(child.to) }" @click="mobileOpen = false">
+                  <i :class="child.icon || 'fas fa-circle'" aria-hidden="true"></i>
+                  <span>{{ $t(child.labelKey) }}</span>
+                </router-link>
+              </div>
             </div>
           </div>
           <router-link v-else :key="item.to" :to="item.to" class="sm-nav-link"
@@ -198,18 +200,16 @@ const navItems = [
   },
 ]
 
-// Sidebar groups currently expanded.
-const openGroups = ref(new Set())
+// Sidebar groups are exclusive: opening one smoothly closes the others, so
+// only the targeted group stays expanded. Empty string = all closed.
+const openGroup = ref('')
 
 function isOpen(labelKey) {
-  return openGroups.value.has(labelKey)
+  return openGroup.value === labelKey
 }
 
 function toggleGroup(labelKey) {
-  const next = new Set(openGroups.value)
-  if (next.has(labelKey)) next.delete(labelKey)
-  else next.add(labelKey)
-  openGroups.value = next
+  openGroup.value = openGroup.value === labelKey ? '' : labelKey
 }
 
 function groupActive(item) {
@@ -226,12 +226,14 @@ function isActive(target) {
 }
 
 watch(() => route.query, () => {
-  // Auto-expand whichever group contains the active route.
-  const next = new Set(openGroups.value)
+  // Auto-expand only the group containing the active route (exclusive:
+  // navigating to another group's page switches to that group).
   for (const item of navItems) {
-    if (item.children && item.children.some((child) => isActive(child.to))) next.add(item.labelKey)
+    if (item.children && item.children.some((child) => isActive(child.to))) {
+      openGroup.value = item.labelKey
+      break
+    }
   }
-  openGroups.value = next
 }, { immediate: true })
 
 const pageTitle = computed(() => (route.meta.titleKey ? t(route.meta.titleKey) : t('storeManager.panelTitle')))
@@ -365,13 +367,15 @@ onUnmounted(() => {
 .sm-chevron { margin-left: auto; transition: transform 0.2s ease; }
 .sm-group.open .sm-chevron { transform: rotate(180deg); }
 .sm-subnav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease;
   margin-left: 10px;
   padding-left: 10px;
   border-left: 2px solid rgba(255, 255, 255, 0.18);
 }
+.sm-subnav.open { grid-template-rows: 1fr; }
+.sm-subnav-inner { overflow: hidden; min-height: 0; display: flex; flex-direction: column; gap: 2px; }
 .sm-nav-link.sm-sub { padding: 9px 12px; font-size: 13px; font-weight: 500; }
 .sm-sidebar-footer { padding: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
 .sm-logout:hover { background: rgba(220, 38, 38, 0.2); color: #fca5a5; }

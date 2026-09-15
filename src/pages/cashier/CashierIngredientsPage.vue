@@ -25,16 +25,18 @@
           <div v-else class="cat-tree">
             <div v-for="(itemsInCat, cat) in groupedMenuItems" :key="cat" class="cat-group">
               <button class="cat-toggle" @click="toggleCat(cat)">
-                <i :class="collapsed.has(cat) ? 'fas fa-chevron-right' : 'fas fa-chevron-down'" aria-hidden="true"></i>
+                <i :class="openCat === cat ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" aria-hidden="true"></i>
                 {{ cat }}
                 <span class="cat-count">{{ itemsInCat.length }}</span>
               </button>
-              <div v-show="!collapsed.has(cat)" class="cat-kids">
-                <button v-for="item in itemsInCat" :key="item.menu_item_id" class="cat-leaf"
-                  :class="{ active: activeItemId === item.menu_item_id }" @click="selectItem(item)">
-                  {{ item.item_name }}
-                  <span v-if="item._ingredientCount > 0" class="ing-badge">{{ item._ingredientCount }}</span>
-                </button>
+              <div class="cat-kids" :class="{ open: openCat === cat }">
+                <div class="cat-kids-inner">
+                  <button v-for="item in itemsInCat" :key="item.menu_item_id" class="cat-leaf"
+                    :class="{ active: activeItemId === item.menu_item_id }" @click="selectItem(item)">
+                    {{ item.item_name }}
+                    <span v-if="item._ingredientCount > 0" class="ing-badge">{{ item._ingredientCount }}</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -159,7 +161,7 @@ const menuItems = ref([])
 const loadingMenu = ref(true)
 const department = ref('')
 const menuSearch = ref('')
-const collapsed = ref(new Set())
+const openCat = ref('')
 const activeItem = ref(null)
 
 const groupedMenuItems = computed(() => {
@@ -173,12 +175,9 @@ const groupedMenuItems = computed(() => {
   return groups
 })
 
+// Categories are exclusive: opening one smoothly closes the others.
 function toggleCat(cat) {
-  if (collapsed.value.has(cat)) {
-    collapsed.value.delete(cat)
-  } else {
-    collapsed.value.add(cat)
-  }
+  openCat.value = openCat.value === cat ? '' : cat
 }
 
 async function loadMenuItems() {
@@ -190,6 +189,11 @@ async function loadMenuItems() {
     // Backend ships the ingredient line count per item, so the tree renders
     // badges without one extra request per menu item.
     menuItems.value = (data.data || data).map(i => ({ ...i, _ingredientCount: i.ingredient_count ?? 0 }))
+    // Default to the first category open so the item tree reads on load.
+    if (!openCat.value) {
+      const first = Object.keys(groupedMenuItems.value).sort((a, b) => a.localeCompare(b))[0]
+      if (first) openCat.value = first
+    }
   } finally {
     loadingMenu.value = false
   }

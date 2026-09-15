@@ -172,7 +172,9 @@
 }
 .cat-group > button.cat-toggle:hover { background: var(--mrk-blue-pale); }
 .cat-group > button.cat-toggle i { font-size: 11px; color: var(--mrk-blue); width: 12px; }
-.cat-kids { display: flex; flex-direction: column; gap: 2px; padding-left: 22px; margin-bottom: 4px; }
+.cat-kids { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease; }
+.cat-kids.open { grid-template-rows: 1fr; }
+.cat-kids-inner { overflow: hidden; min-height: 0; display: flex; flex-direction: column; gap: 2px; padding-left: 22px; margin-bottom: 4px; }
 .cat-kids button.cat-leaf {
   background: none; border: none; text-align: left; cursor: pointer;
   font-family: inherit; font-size: 12.5px; color: #475569;
