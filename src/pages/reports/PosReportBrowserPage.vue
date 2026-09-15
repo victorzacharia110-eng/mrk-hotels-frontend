@@ -347,7 +347,14 @@ async function run() {
 }
 
 function printReport() {
-  window.print()
+  const win = openReportWindow()
+  if (!win) return
+  win.addEventListener('afterprint', () => win.close())
+  setTimeout(() => {
+    win.focus()
+    win.print()
+    setTimeout(() => win.close(), 5000)
+  }, 250)
 }
 
 /** Escapes API text so it can't break the standalone report window's markup. */
@@ -398,6 +405,7 @@ function openReportWindow() {
   .rpt-bar { position: sticky; top: 0; display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px; background: #eef1f6; z-index: 5; }
   .rpt-bar button { border: 1px solid #062a52; background: #062a52; color: #fff; border-radius: 5px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
   .rpt-bar button:hover { background: #005eb8; }
+  @media print { .rpt-bar { display: none !important; } }
   .sheet { padding: 4px 10px 10px; }
   .brand { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px double #062a52; padding-bottom: 10px; margin-bottom: 14px; }
   .brand h1 { font-size: 18px; text-transform: uppercase; letter-spacing: 1px; color: #062a52; margin: 0; }
@@ -438,6 +446,7 @@ function openReportWindow() {
 </body></html>`,
   )
   win.document.close()
+  return win
 }
 
 async function exportTable() {
