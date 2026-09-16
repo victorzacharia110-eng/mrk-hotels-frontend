@@ -48,6 +48,9 @@
         <button type="button" class="rb-tool-btn" :title="$t('reportBrowser.openWindow')" @click="$emit('open-window')">
           <i class="fas fa-window-restore" aria-hidden="true"></i>
         </button>
+        <button v-if="posPrint" type="button" class="rb-tool-btn" :title="$t('reportBrowser.posPrint')" @click="$emit('pos-print')">
+          <i class="fas fa-receipt" aria-hidden="true"></i>
+        </button>
         <button type="button" class="rb-tool-btn" :title="$t('reportBrowser.print')" @click="$emit('print')">
           <i class="fas fa-print" aria-hidden="true"></i>
         </button>
@@ -115,10 +118,11 @@ const props = defineProps({
   title: { type: String, required: true },
   subtitle: { type: String, default: '' },
   exporting: { type: Boolean, default: false },
+  posPrint: { type: Boolean, default: false },
   showBack: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['select', 'print', 'open-window', 'export', 'search', 'back'])
+const emit = defineEmits(['select', 'print', 'pos-print', 'open-window', 'export', 'search', 'back'])
 
 const searchTerm = ref('')
 const openCat = ref('')

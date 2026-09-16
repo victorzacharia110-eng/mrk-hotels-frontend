@@ -17,8 +17,10 @@
     :title="$t('posReports.title')"
     :subtitle="windowLabel"
     :exporting="exporting"
+    :pos-print="activeReport === 'cashier-report'"
     @select="selectReport"
     @print="printReport"
+    @pos-print="printPosReceipt"
     @open-window="openReportWindow"
     @export="exportTable"
   >
@@ -73,6 +75,22 @@
                 <option v-for="(label, value) in businessSources" :key="value" :value="value">{{ label }}</option>
               </select>
             </label>
+            <template v-if="activeReport === 'cashier-report'">
+              <label class="posr-field">
+                <span>{{ $t('posReports.payment') }}</span>
+                <select v-model="filterValues.payment" class="rb-input rb-select">
+                  <option value="">{{ $t('posReports.all') }}</option>
+                  <option v-for="m in paymentOptions" :key="m" :value="m">{{ $t(`posReports.paymentMethods.${m}`) }}</option>
+                </select>
+              </label>
+              <label class="posr-field">
+                <span>{{ $t('posReports.expenseVoucher') }}</span>
+                <select v-model="filterValues.voucher" class="rb-input rb-select">
+                  <option value="">{{ $t('posReports.all') }}</option>
+                  <option v-for="c in voucherOptions" :key="c" :value="c">{{ c }}</option>
+                </select>
+              </label>
+            </template>
             <label class="posr-field">
               <span>{{ $t('posReports.category') }}</span>
               <select v-model="filterValues.category_id" class="rb-input rb-select">
@@ -211,15 +229,62 @@ import { exportCSV } from '@/utils/export'
 const { t, te } = useI18n()
 
 const REPORTS = [
-  { key: 'menu-item-sales', label: 'posReports.menuItemSales' },
-  { key: 'sales', label: 'posReports.sales' },
+  { key: 'menu-item-sales', label: 'posReports.menuItemSalesSummary' },
+  { key: 'menu-items-sales-detail', label: 'posReports.menuItemsSalesDetail' },
+  { key: 'menu-item-cost-detail', label: 'posReports.menuItemCostDetail' },
+  { key: 'menu-item-cost-summary', label: 'posReports.menuItemCostSummary' },
+  { key: 'sales', label: 'posReports.salesSummary' },
   { key: 'sales-detail', label: 'posReports.salesDetail' },
+  { key: 'sales-by-variable', label: 'posReports.salesByVariable' },
+  { key: 'top-selling-item', label: 'posReports.topSellingItem' },
+  { key: 'least-selling-item', label: 'posReports.leastSellingItem' },
+  { key: 'hourly-sales', label: 'posReports.hourlySales' },
+  { key: 'cashier-sales-summary', label: 'posReports.cashierSalesSummary' },
+  { key: 'cashier-sales-detail', label: 'posReports.cashierSalesDetail' },
+  { key: 'shift-manager-timing', label: 'posReports.shiftManagerTiming' },
   { key: 'cashier-report', label: 'posReports.cashierReport' },
-  { key: 'no-charge', label: 'posReports.noCharge' },
-  { key: 'back-office', label: 'posReports.backOffice' },
-  { key: 'inventory', label: 'posReports.inventory' },
-  { key: 'stock', label: 'posReports.stock' },
-  { key: 'audit', label: 'posReports.audit' },
+  { key: 'no-charge', label: 'posReports.noChargesSalesSummary' },
+  { key: 'no-charge-menu-item-sales-summary', label: 'posReports.noChargeMenuItemSalesSummary' },
+  { key: 'no-charge-menu-item-sales-detail', label: 'posReports.noChargeMenuItemSalesDetail' },
+  { key: 'no-charge-sales-detail', label: 'posReports.noChargeSalesDetail' },
+  { key: 'payment-summary', label: 'posReports.paymentSummary' },
+  { key: 'payment-detail', label: 'posReports.paymentDetail' },
+  { key: 'tax-collection', label: 'posReports.taxCollection' },
+  { key: 'tax-analysis', label: 'posReports.taxAnalysis' },
+  { key: 'creditors-summary', label: 'posReports.creditorsSummary' },
+  { key: 'creditors-details', label: 'posReports.creditorsDetails' },
+  { key: 'driver-efficiency', label: 'posReports.driverEfficiency' },
+  { key: 'driver-deliveries', label: 'posReports.driverDeliveries' },
+  { key: 'expense-income-detail', label: 'posReports.expenseIncomeDetail' },
+  { key: 'expense-income-summary', label: 'posReports.expenseIncomeSummary' },
+  { key: 'back-office', label: 'posReports.backOfficeSummary' },
+  { key: 'purchase-order-detail', label: 'posReports.purchaseOrderDetail' },
+  { key: 'stock-adjustment-detail', label: 'posReports.stockAdjustmentDetail' },
+  { key: 'physical-stock-detail', label: 'posReports.physicalStockDetail' },
+  { key: 'stock-transfer-detail', label: 'posReports.stockTransferDetail' },
+  { key: 'stock-transfer-summary', label: 'posReports.stockTransferSummary' },
+  { key: 'goods-received-detail', label: 'posReports.goodsReceivedDetail' },
+  { key: 'goods-return-detail', label: 'posReports.goodsReturnDetail' },
+  { key: 'inventory', label: 'posReports.inventoryMovements' },
+  { key: 'stock-ledger', label: 'posReports.stockLedger' },
+  { key: 'closing-stock', label: 'posReports.closingStock' },
+  { key: 'stock-movement-detail', label: 'posReports.stockMovementDetail' },
+  { key: 'low-stock', label: 'posReports.lowStock' },
+  { key: 'physical-stock-taking', label: 'posReports.physicalStockTaking' },
+  { key: 'stock', label: 'posReports.currentStock' },
+  { key: 'audit-void-purchase-order', label: 'posReports.auditVoidPurchaseOrder' },
+  { key: 'audit-void-goods-received', label: 'posReports.auditVoidGoodsReceived' },
+  { key: 'audit-void-physical-stock', label: 'posReports.auditVoidPhysicalStock' },
+  { key: 'audit-void-requisitions', label: 'posReports.auditVoidRequisitions' },
+  { key: 'audit-void-stock-adjustment-detail', label: 'posReports.auditVoidStockAdjustmentDetail' },
+  { key: 'audit-void-stock-transfer-detail', label: 'posReports.auditVoidStockTransferDetail' },
+  { key: 'audit-void-items', label: 'posReports.auditVoidItems' },
+  { key: 'audit-void-charges', label: 'posReports.auditVoidCharges' },
+  { key: 'audit-void-order', label: 'posReports.auditVoidOrder' },
+  { key: 'audit-void-payments', label: 'posReports.auditVoidPayments' },
+  { key: 'audit-void-expense-income-voucher', label: 'posReports.auditVoidExpenseIncomeVoucher' },
+  { key: 'audit-trail', label: 'posReports.auditTrail' },
+  { key: 'audit', label: 'posReports.orderEvents' },
   { key: 'statistical', label: 'posReports.statistical' },
   { key: 'user-terminal', label: 'posReports.userTerminal' },
   { key: 'custom', label: 'posReports.custom' },
@@ -231,7 +296,10 @@ const categories = [
     label: 'posReports.catMenuItemSales',
     icon: 'fas fa-burger',
     reports: [
-      { key: 'menu-item-sales', label: 'posReports.menuItemSales', icon: 'fas fa-burger' },
+      { key: 'menu-item-sales', label: 'posReports.menuItemSalesSummary', icon: 'fas fa-burger' },
+      { key: 'menu-items-sales-detail', label: 'posReports.menuItemsSalesDetail', icon: 'fas fa-list-ul' },
+      { key: 'menu-item-cost-detail', label: 'posReports.menuItemCostDetail', icon: 'fas fa-coins' },
+      { key: 'menu-item-cost-summary', label: 'posReports.menuItemCostSummary', icon: 'fas fa-chart-simple' },
     ],
   },
   {
@@ -241,38 +309,92 @@ const categories = [
     reports: [
       { key: 'sales', label: 'posReports.salesSummary', icon: 'fas fa-chart-simple' },
       { key: 'sales-detail', label: 'posReports.salesDetail', icon: 'fas fa-list-ul' },
-      { key: 'cashier-report', label: 'posReports.cashierReport', icon: 'fas fa-user-tie' },
+      { key: 'sales-by-variable', label: 'posReports.salesByVariable', icon: 'fas fa-sliders' },
+      { key: 'top-selling-item', label: 'posReports.topSellingItem', icon: 'fas fa-arrow-trend-up' },
+      { key: 'least-selling-item', label: 'posReports.leastSellingItem', icon: 'fas fa-arrow-trend-down' },
+      { key: 'hourly-sales', label: 'posReports.hourlySales', icon: 'fas fa-clock' },
+      { key: 'cashier-sales-summary', label: 'posReports.cashierSalesSummary', icon: 'fas fa-user-tie' },
+      { key: 'cashier-sales-detail', label: 'posReports.cashierSalesDetail', icon: 'fas fa-user-tie' },
+      { key: 'shift-manager-timing', label: 'posReports.shiftManagerTiming', icon: 'fas fa-stopwatch' },
+      { key: 'cashier-report', label: 'posReports.cashierReport', icon: 'fas fa-receipt' },
     ],
   },
   {
     key: 'no-charge',
     label: 'posReports.catNoCharge',
     icon: 'fas fa-shirt',
-    reports: [{ key: 'no-charge', label: 'posReports.noCharge', icon: 'fas fa-shirt' }],
+    reports: [
+      { key: 'no-charge', label: 'posReports.noChargesSalesSummary', icon: 'fas fa-shirt' },
+      { key: 'no-charge-menu-item-sales-summary', label: 'posReports.noChargeMenuItemSalesSummary', icon: 'fas fa-burger' },
+      { key: 'no-charge-menu-item-sales-detail', label: 'posReports.noChargeMenuItemSalesDetail', icon: 'fas fa-list-ul' },
+      { key: 'no-charge-sales-detail', label: 'posReports.noChargeSalesDetail', icon: 'fas fa-receipt' },
+    ],
   },
   {
     key: 'back-office',
     label: 'posReports.catBackOffice',
     icon: 'fas fa-briefcase',
-    reports: [{ key: 'back-office', label: 'posReports.backOffice', icon: 'fas fa-briefcase' }],
+    reports: [
+      { key: 'payment-summary', label: 'posReports.paymentSummary', icon: 'fas fa-money-bill-transfer' },
+      { key: 'payment-detail', label: 'posReports.paymentDetail', icon: 'fas fa-list-ul' },
+      { key: 'tax-collection', label: 'posReports.taxCollection', icon: 'fas fa-percent' },
+      { key: 'tax-analysis', label: 'posReports.taxAnalysis', icon: 'fas fa-magnifying-glass-chart' },
+      { key: 'creditors-summary', label: 'posReports.creditorsSummary', icon: 'fas fa-people-group' },
+      { key: 'creditors-details', label: 'posReports.creditorsDetails', icon: 'fas fa-address-book' },
+      { key: 'driver-efficiency', label: 'posReports.driverEfficiency', icon: 'fas fa-gauge-high' },
+      { key: 'driver-deliveries', label: 'posReports.driverDeliveries', icon: 'fas fa-truck-fast' },
+      { key: 'expense-income-detail', label: 'posReports.expenseIncomeDetail', icon: 'fas fa-list-ul' },
+      { key: 'expense-income-summary', label: 'posReports.expenseIncomeSummary', icon: 'fas fa-chart-pie' },
+      { key: 'back-office', label: 'posReports.backOfficeSummary', icon: 'fas fa-briefcase' },
+    ],
   },
   {
     key: 'inventory',
     label: 'posReports.catInventory',
     icon: 'fas fa-boxes-stacked',
-    reports: [{ key: 'inventory', label: 'posReports.inventory', icon: 'fas fa-boxes-stacked' }],
+    reports: [
+      { key: 'purchase-order-detail', label: 'posReports.purchaseOrderDetail', icon: 'fas fa-file-invoice' },
+      { key: 'stock-adjustment-detail', label: 'posReports.stockAdjustmentDetail', icon: 'fas fa-pen-to-square' },
+      { key: 'physical-stock-detail', label: 'posReports.physicalStockDetail', icon: 'fas fa-clipboard-list' },
+      { key: 'stock-transfer-detail', label: 'posReports.stockTransferDetail', icon: 'fas fa-right-left' },
+      { key: 'stock-transfer-summary', label: 'posReports.stockTransferSummary', icon: 'fas fa-chart-simple' },
+      { key: 'goods-received-detail', label: 'posReports.goodsReceivedDetail', icon: 'fas fa-box-open' },
+      { key: 'goods-return-detail', label: 'posReports.goodsReturnDetail', icon: 'fas fa-rotate-left' },
+      { key: 'inventory', label: 'posReports.inventoryMovements', icon: 'fas fa-arrow-right-arrow-left' },
+    ],
   },
   {
     key: 'stock',
     label: 'posReports.catStock',
     icon: 'fas fa-warehouse',
-    reports: [{ key: 'stock', label: 'posReports.stock', icon: 'fas fa-warehouse' }],
+    reports: [
+      { key: 'stock-ledger', label: 'posReports.stockLedger', icon: 'fas fa-book' },
+      { key: 'closing-stock', label: 'posReports.closingStock', icon: 'fas fa-boxes-stacked' },
+      { key: 'stock-movement-detail', label: 'posReports.stockMovementDetail', icon: 'fas fa-arrow-right-arrow-left' },
+      { key: 'low-stock', label: 'posReports.lowStock', icon: 'fas fa-triangle-exclamation' },
+      { key: 'physical-stock-taking', label: 'posReports.physicalStockTaking', icon: 'fas fa-clipboard-check' },
+      { key: 'stock', label: 'posReports.currentStock', icon: 'fas fa-warehouse' },
+    ],
   },
   {
     key: 'audit',
     label: 'posReports.catAudit',
     icon: 'fas fa-file-pen',
-    reports: [{ key: 'audit', label: 'posReports.audit', icon: 'fas fa-file-pen' }],
+    reports: [
+      { key: 'audit-void-purchase-order', label: 'posReports.auditVoidPurchaseOrder', icon: 'fas fa-file-invoice' },
+      { key: 'audit-void-goods-received', label: 'posReports.auditVoidGoodsReceived', icon: 'fas fa-box-open' },
+      { key: 'audit-void-physical-stock', label: 'posReports.auditVoidPhysicalStock', icon: 'fas fa-clipboard-list' },
+      { key: 'audit-void-requisitions', label: 'posReports.auditVoidRequisitions', icon: 'fas fa-file-lines' },
+      { key: 'audit-void-stock-adjustment-detail', label: 'posReports.auditVoidStockAdjustmentDetail', icon: 'fas fa-pen-to-square' },
+      { key: 'audit-void-stock-transfer-detail', label: 'posReports.auditVoidStockTransferDetail', icon: 'fas fa-right-left' },
+      { key: 'audit-void-items', label: 'posReports.auditVoidItems', icon: 'fas fa-boxes-stacked' },
+      { key: 'audit-void-charges', label: 'posReports.auditVoidCharges', icon: 'fas fa-pound-sign' },
+      { key: 'audit-void-order', label: 'posReports.auditVoidOrder', icon: 'fas fa-receipt' },
+      { key: 'audit-void-payments', label: 'posReports.auditVoidPayments', icon: 'fas fa-money-bill-transfer' },
+      { key: 'audit-void-expense-income-voucher', label: 'posReports.auditVoidExpenseIncomeVoucher', icon: 'fas fa-file-circle-xmark' },
+      { key: 'audit-trail', label: 'posReports.auditTrail', icon: 'fas fa-list-check' },
+      { key: 'audit', label: 'posReports.orderEvents', icon: 'fas fa-file-pen' },
+    ],
   },
   {
     key: 'more',
@@ -310,6 +432,8 @@ const filterValues = reactive({
   category_id: '',
   sub_category: '',
   include_no_charge: false,
+  payment: '',
+  voucher: '',
 })
 
 const activeLabel = computed(() => {
@@ -328,6 +452,12 @@ const userOptions = computed(() => engine.value?.filters?.users || [])
 
 /** Managed menu categories for the CATEGORY filter. */
 const categoryOptions = computed(() => engine.value?.filters?.menu_categories || [])
+
+/** Settlement methods offered by the Cashier Report PAYMENT filter. */
+const paymentOptions = computed(() => engine.value?.filters?.payment_options || [])
+
+/** Expense/income voucher categories for the Cashier Report VOUCHER filter. */
+const voucherOptions = computed(() => engine.value?.filters?.voucher_options || [])
 
 const subCategoryOptions = computed(() => {
   const isCategoryReport =
@@ -406,6 +536,8 @@ function resetFilters() {
   filterValues.business_source = ''
   filterValues.category_id = ''
   filterValues.sub_category = ''
+  filterValues.payment = ''
+  filterValues.voucher = ''
   filterValues.include_no_charge = false
   run()
 }
@@ -428,6 +560,8 @@ async function run() {
       created_by: filterValues.user_id || undefined,
       category_id: filterValues.category_id || undefined,
       sub_category: filterValues.sub_category || undefined,
+      payment: filterValues.payment || undefined,
+      voucher: filterValues.voucher || undefined,
       include_no_charge: filterValues.include_no_charge ? '1' : '0',
     }
     const isCustom = activeReport.value === 'custom'
@@ -456,6 +590,81 @@ function printReport() {
     win.print()
     setTimeout(() => win.close(), 5000)
   }, 250)
+}
+
+/**
+ * POS-thermal receipt for the Cashier Report — the reference's small-POS-
+ * printer path (NOT A4). Opens a narrow 80mm till-roll window with the staff
+ * collections, per-cashier breakdown and drawer voucher netting, then hands
+ * off to the browser print dialog so the small POS printer can be selected.
+ */
+function printPosReceipt() {
+  const data = engine.value
+  if (!data || data.wired === false || !data.rows?.length) {
+    error.value = t('reportBrowser.openWindowEmpty')
+    return
+  }
+  const win = window.open('', '_blank')
+  if (!win) {
+    error.value = t('reportBrowser.openWindowBlocked')
+    return
+  }
+  win.opener = null
+
+  const money = (v) => formatCell(v, 'money')
+  const pad = (text, width) => {
+    const s = String(text ?? '')
+    return s.length >= width ? s : s + ' '.repeat(width - s.length)
+  }
+  const kpiLines = (data.summary || [])
+    .map((kpi) => `${pad(esc(kpi.label), 26)} ${esc(summaryValue(kpi.value))}`)
+    .join('\n')
+  const staffLines = data.rows
+    .map(
+      (r) =>
+        `${esc(r.user || '—')}\n` +
+        `  Tickets     ${pad(formatCell(r.tickets, 'text'), 12)}\n` +
+        `  Revenue     ${money(r.revenue)}\n` +
+        `  Collected   ${money(r.collected)}\n` +
+        `  No Charge   ${money(r.no_charge)}\n` +
+        `  Outstanding ${money(r.outstanding)}`,
+    )
+    .join('\n--------------------------------\n')
+  const summaryBlock = kpiLines ? `\n--------------------------------\nSUMMARY\n${kpiLines}` : ''
+
+  const body = `================================
+ MRK HOTELS POS
+ ${activeLabel.value}
+ ${windowLabel.value}
+================================
+STAFF COLLECTIONS
+--------------------------------
+${staffLines}${summaryBlock}
+--------------------------------
+Generated ${new Date().toLocaleString()}
+================================`.trim()
+
+  win.document.open()
+  win.document.write(
+    `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${esc(activeLabel.value)}</title>
+<style>
+  @page { size: 80mm auto; margin: 2mm; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #000; }
+  .bar { position: sticky; top: 0; display: flex; justify-content: flex-end; gap: 6px; padding: 6px 10px; background: #eef1f6; z-index: 5; }
+  .bar button { border: 1px solid #062a52; background: #062a52; color: #fff; border-radius: 5px; padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  @media print { .bar { display: none !important; } }
+  pre { margin: 0; padding: 6px; white-space: pre; }
+</style>
+</head><body>
+  <div class="bar"><button type="button" onclick="window.print()">${esc(t('reportBrowser.print'))}</button></div>
+  <pre>${body}</pre>
+</body></html>`,
+  )
+  win.document.close()
+  win.focus()
+  setTimeout(() => win.print(), 400)
 }
 
 /** Escapes API text so it can't break the standalone report window's markup. */
@@ -582,6 +791,8 @@ async function loadOutlets() {
 watch(activeReport, () => {
   filterValues.sub_category = ''
   filterValues.category_id = ''
+  filterValues.payment = ''
+  filterValues.voucher = ''
 })
 
 onMounted(() => {
