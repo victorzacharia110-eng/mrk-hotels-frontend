@@ -164,6 +164,7 @@ import { selectedOutlet } from '@/pages/cashier/outlet-context'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { displayLines } from '@/utils/receipts'
+import { isGrillMenuItem } from '@/utils/menuAccompaniment'
 import { toast } from '@/utils/toast'
 
 const props = defineProps({
@@ -268,11 +269,8 @@ const accompanimentOptions = computed(() => [
   { value: '', label: t('orders.accompNone') },
 ])
 
-const GRILL_KEYWORDS = ['mshikaki', 'mishkaki', 'choma', 'kuku', 'nyama', 'samaki', 'maini', 'grill']
-
 function isGrillItem(item) {
-  const name = (item.item_name || '').toLowerCase()
-  return GRILL_KEYWORDS.some((keyword) => name.includes(keyword))
+  return isGrillMenuItem(item)
 }
 
 function accompanimentLabel(value) {

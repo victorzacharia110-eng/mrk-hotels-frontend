@@ -968,6 +968,7 @@ import { restorePrinter } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { useNotificationSettingsStore } from '@/stores/notificationSettings'
 import { displayLines } from '@/utils/receipts'
+import { isGrillMenuItem } from '@/utils/menuAccompaniment'
 import { toast } from '@/utils/toast'
 
 const { t } = useI18n()
@@ -2053,16 +2054,12 @@ const accompanimentOptions = computed(() => [
   { value: '', label: t('orders.accompNone') },
 ])
 
-/** Name keywords that mark a menu item as a grill-style main needing a side. */
-const GRILL_KEYWORDS = ['mshikaki', 'mishkaki', 'choma', 'kuku', 'nyama', 'samaki', 'maini', 'grill']
-
 // The grill item waiting for its accompaniment choice.
 const accompItem = ref(null)
 
 /** True when a menu item is a grill-style main (needs a side dish). */
 function isGrillItem(item) {
-  const name = (item.item_name || '').toLowerCase()
-  return GRILL_KEYWORDS.some((keyword) => name.includes(keyword))
+  return isGrillMenuItem(item)
 }
 
 /** Translates a stored accompaniment code back into its display label. */

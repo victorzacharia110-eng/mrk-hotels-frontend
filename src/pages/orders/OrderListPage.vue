@@ -546,6 +546,7 @@ import { orderApi, menuItemApi, tableApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { PAYMENT_METHODS } from '@/utils/payments'
+import { isGrillMenuItem } from '@/utils/menuAccompaniment'
 import { collectAllRows } from '@/utils/export'
 
 const { t } = useI18n()
@@ -727,19 +728,13 @@ const accompanimentOptions = computed(() => [
   { value: '', label: t('orders.accompNone') },
 ])
 
-/** Name keywords that mark a menu item as a grill-style main needing a side. */
-const GRILL_KEYWORDS = ['mshikaki', 'mishkaki', 'choma', 'kuku', 'nyama', 'samaki', 'maini', 'grill']
-
 // Accompaniment modal state: which line item is being asked about.
 const showAccomp = ref(false)
 const accompIdx = ref(null)
 
 /** True when the given menu item is a grill-style main (needs a side dish). */
 function isGrillItem(menuItemId) {
-  const item = menuItems.value.find((mi) => mi.menu_item_id === menuItemId)
-  if (!item) return false
-  const name = (item.item_name || '').toLowerCase()
-  return GRILL_KEYWORDS.some((keyword) => name.includes(keyword))
+  return isGrillMenuItem(menuItemId, menuItems.value)
 }
 
 /** Looks up a line item's menu record for display in the accompaniment modal. */
