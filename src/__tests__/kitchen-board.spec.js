@@ -48,9 +48,10 @@ afterEach(() => {
 describe('KitchenBoardPage', () => {
   it('defaults the board calendar to today (local ISO)', async () => {
     await mountBoard()
-    const input = wrapper.find('input[type="date"]')
-    expect(input.exists()).toBe(true)
-    expect(input.element.value).toBe(iso(new Date()))
+    expect(wrapper.vm.boardDate).toBe(iso(new Date()))
+    const field = wrapper.find('.cal-field')
+    expect(field.exists()).toBe(true)
+    expect(wrapper.find('.cal-value').text()).toBeTruthy()
   })
 
   it('renders today\'s open grid and the closed-ticket history for a past date', async () => {
