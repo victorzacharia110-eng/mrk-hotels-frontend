@@ -41,9 +41,9 @@
             </label>
             <label class="posr-field">
               <span>{{ $t('posReports.outlet') }}</span>
-              <select v-model="filterValues.outlet_id" class="rb-input rb-select" :disabled="outletsLoading">
+              <select v-model="filterValues.outlet_id" class="rb-input rb-select" :disabled="venuesLoading">
                 <option value="">{{ $t('posReports.all') }}</option>
-                <option v-for="o in outlets" :key="o.outlet_id" :value="String(o.outlet_id)">{{ o.outlet_name }}</option>
+                <option v-for="v in venueOptions" :key="v.id" :value="v.id">{{ v.label }}</option>
               </select>
             </label>
           </div>
@@ -63,9 +63,9 @@
             </label>
             <label class="posr-field">
               <span>{{ $t('posReports.terminal') }}</span>
-              <select v-model="filterValues.terminal_id" class="rb-input rb-select" :disabled="outletsLoading">
+              <select v-model="filterValues.terminal_id" class="rb-input rb-select" :disabled="venuesLoading">
                 <option value="">{{ $t('posReports.all') }}</option>
-                <option v-for="o in outlets" :key="'t' + o.outlet_id" :value="String(o.outlet_id)">{{ o.outlet_name }}</option>
+                <option v-for="v in venueOptions" :key="'t' + v.id" :value="v.id">{{ v.label }}</option>
               </select>
             </label>
             <label class="posr-field">
@@ -223,7 +223,7 @@
 import { ref, computed, reactive, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
-import { reportApi, outletApi } from '@/api'
+import { reportApi, outletApi, departmentApi } from '@/api'
 import { exportCSV } from '@/utils/export'
 
 const { t, te } = useI18n()
@@ -421,6 +421,9 @@ const error = ref('')
 
 const outlets = ref([])
 const outletsLoading = ref(false)
+const departments = ref([])
+const departmentsLoading = ref(false)
+const venuesLoading = computed(() => outletsLoading.value || departmentsLoading.value)
 
 const filterValues = reactive({
   from: todayIso(),
@@ -450,8 +453,37 @@ const windowLabel = computed(() => {
 /** Staff members offered by the wired engine's filter options. */
 const userOptions = computed(() => engine.value?.filters?.users || [])
 
-/** Managed menu categories for the CATEGORY filter. */
-const categoryOptions = computed(() => engine.value?.filters?.menu_categories || [])
+/** Inventory & store reports scope by physical department — the role EZEE's
+ * outlet plays for these reports. F&B reports keep scoping by POS outlet. */
+const INVENTORY_REPORTS = new Set([
+  'purchase-order-detail', 'stock-adjustment-detail', 'physical-stock-detail',
+  'stock-transfer-detail', 'stock-transfer-summary', 'goods-received-detail',
+  'goods-return-detail', 'inventory', 'stock-ledger', 'closing-stock',
+  'stock-movement-detail', 'low-stock', 'physical-stock-taking', 'stock',
+])
+
+const usesDepartments = computed(() => INVENTORY_REPORTS.has(activeReport.value))
+
+/** The single Outlet / Terminal picker: departments for inventory reports, outlets otherwise. */
+const venueOptions = computed(() => {
+  const items = usesDepartments.value ? departments.value : outlets.value
+  return (items || []).map((item) => ({
+    id: String(item.department_id || item.outlet_id),
+    label: item.name || item.outlet_name,
+  }))
+})
+
+/** Managed menu categories for the CATEGORY filter; inventory categories for
+ * the inventory & store reports (the backend folds it into the category enum). */
+const categoryOptions = computed(() => {
+  if (usesDepartments.value) {
+    return (engine.value?.filters?.categories || []).map((c) => ({
+      category_id: c,
+      category_name: c,
+    }))
+  }
+  return engine.value?.filters?.menu_categories || []
+})
 
 /** Settlement methods offered by the Cashier Report PAYMENT filter. */
 const paymentOptions = computed(() => engine.value?.filters?.payment_options || [])
@@ -460,11 +492,7 @@ const paymentOptions = computed(() => engine.value?.filters?.payment_options || 
 const voucherOptions = computed(() => engine.value?.filters?.voucher_options || [])
 
 const subCategoryOptions = computed(() => {
-  const isCategoryReport =
-    activeReport.value === 'menu-item-sales' ||
-    activeReport.value === 'inventory' ||
-    activeReport.value === 'stock'
-  if (!isCategoryReport) return []
+  if (activeReport.value !== 'menu-item-sales') return []
   return engine.value?.filters?.categories || []
 })
 
@@ -788,6 +816,18 @@ async function loadOutlets() {
   }
 }
 
+async function loadDepartments() {
+  departmentsLoading.value = true
+  try {
+    const res = await departmentApi.index()
+    departments.value = res.data?.departments ?? res.data?.data ?? []
+  } catch {
+    departments.value = []
+  } finally {
+    departmentsLoading.value = false
+  }
+}
+
 watch(activeReport, () => {
   filterValues.sub_category = ''
   filterValues.category_id = ''
@@ -795,8 +835,16 @@ watch(activeReport, () => {
   filterValues.voucher = ''
 })
 
+watch(usesDepartments, (now, before) => {
+  if (before !== undefined && now !== before) {
+    filterValues.outlet_id = ''
+    filterValues.terminal_id = ''
+  }
+})
+
 onMounted(() => {
   loadOutlets()
+  loadDepartments()
   run()
 })
 
