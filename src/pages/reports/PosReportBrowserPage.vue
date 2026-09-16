@@ -467,7 +467,7 @@ const usesDepartments = computed(() => INVENTORY_REPORTS.has(activeReport.value)
 /** The single Outlet / Terminal picker: departments for inventory reports, outlets otherwise. */
 const venueOptions = computed(() => {
   const items = usesDepartments.value ? departments.value : outlets.value
-  return (items || []).map((item) => ({
+  return (Array.isArray(items) ? items : []).map((item) => ({
     id: String(item.department_id || item.outlet_id),
     label: item.name || item.outlet_name,
   }))
@@ -477,7 +477,8 @@ const venueOptions = computed(() => {
  * the inventory & store reports (the backend folds it into the category enum). */
 const categoryOptions = computed(() => {
   if (usesDepartments.value) {
-    return (engine.value?.filters?.categories || []).map((c) => ({
+    const cats = engine.value?.filters?.categories || []
+    return (Array.isArray(cats) ? cats : []).map((c) => ({
       category_id: c,
       category_name: c,
     }))
@@ -808,7 +809,8 @@ async function loadOutlets() {
   outletsLoading.value = true
   try {
     const res = await outletApi.index()
-    outlets.value = res.data?.data ?? res.data ?? []
+    const raw = res.data?.outlets ?? res.data?.data ?? res.data ?? []
+    outlets.value = Array.isArray(raw) ? raw : []
   } catch {
     outlets.value = []
   } finally {
@@ -820,7 +822,8 @@ async function loadDepartments() {
   departmentsLoading.value = true
   try {
     const res = await departmentApi.index()
-    departments.value = res.data?.departments ?? res.data?.data ?? []
+    const raw = res.data?.departments ?? res.data?.data ?? res.data ?? []
+    departments.value = Array.isArray(raw) ? raw : []
   } catch {
     departments.value = []
   } finally {
