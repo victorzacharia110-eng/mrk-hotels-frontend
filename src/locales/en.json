@@ -2665,7 +2665,19 @@
     "bucket": "Bucket",
     "deleted_at": "Deleted At",
     "verified": "Verified",
-    "invoice_number": "Invoice No."
+    "invoice_number": "Invoice No.",
+    "order_no": "Order No.",
+    "receipt_no": "Receipt No.",
+    "time": "Time",
+    "order_type": "Order Type",
+    "venue": "Table / Room",
+    "waiter": "Waiter / User",
+    "price_total": "Price Total",
+    "payments": "Payments",
+    "payment_status": "Payment",
+    "tickets": "Tickets",
+    "no_charge": "No Charge",
+    "outstanding": "Outstanding"
   },
   "reports": {
     "title": "Reports",
@@ -4238,9 +4250,9 @@
       "allOutlets": "All Outlets",
       "stockAdjustment": "Stock Adjustment",
       "printMachine": "Print to machine",
-"openWindow": "Open in new window",
-    "openWindowBlocked": "The report window was blocked by your browser. Allow pop-ups for this site to open reports in a new window.",
-    "openWindowEmpty": "Nothing to show in a new window yet — run the report first."
+      "openWindow": "Open in new window",
+      "openWindowBlocked": "The report window was blocked by your browser. Allow pop-ups for this site to open reports in a new window.",
+      "openWindowEmpty": "Nothing to show in a new window yet — run the report first."
     },
     "movements": {
       "allTypes": "All types",
@@ -4438,7 +4450,24 @@
       "room_service": "Room Service",
       "delivery": "Delivery",
       "no_charge": "No Charge"
-    }
+    },
+    "salesSummary": "Sales Summary",
+    "salesDetail": "Sales Detail",
+    "cashierReport": "Cashier Report",
+    "catMenuItemSales": "Menu Item Sales",
+    "catSales": "Sales",
+    "catNoCharge": "No Charge",
+    "catBackOffice": "Back Office",
+    "catInventory": "Inventory",
+    "catStock": "Stock",
+    "catAudit": "Audit",
+    "catMore": "More",
+    "user": "User",
+    "terminal": "Terminal",
+    "orderType": "Order Type",
+    "category": "Category",
+    "includeNoCharge": "Include No Charge",
+    "reset": "Reset"
   },
   "cashier": {
     "panelTitle": "POS",

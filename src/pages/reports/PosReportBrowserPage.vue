@@ -2,10 +2,11 @@
   PosReportBrowserPage — the IPOS-style Food & Beverage Report Browser.
 
   Recreates the client's reference layout (WhatsApp screenshot, Sept 2026):
-  a left tree grouped under "Recommended Reports" with the ten F&B report
-  types, and a right content area showing Mandatory Fields (dates + outlet),
-  Filter Options (Business Source + Sub Category), a custom-report builder
-  (pick a source, trim its columns) and the generic wired-engine renderer.
+  a left tree grouped under the EZEE-ABSOLUTE buckets (Menu Item Sales / Sales
+  / No Charge / Back Office / Inventory / Stock / Audit), and a right content
+  area showing Mandatory Fields (dates + outlet), Filter Options (User,
+  Terminal, Category, Sub Category, Order Type, Include No Charge), a
+  custom-report builder and the generic wired-engine renderer.
 
   Every report maps to a live backend builder under GET /reports/wired/{key}.
 -->
@@ -52,10 +53,31 @@
           </div>
           <div class="posr-grid">
             <label class="posr-field">
-              <span>{{ $t('posReports.businessSource') }}</span>
+              <span>{{ $t('posReports.user') }}</span>
+              <select v-model="filterValues.user_id" class="rb-input rb-select">
+                <option value="">{{ $t('posReports.all') }}</option>
+                <option v-for="u in userOptions" :key="u.user_id" :value="u.user_id">{{ u.full_name }}</option>
+              </select>
+            </label>
+            <label class="posr-field">
+              <span>{{ $t('posReports.terminal') }}</span>
+              <select v-model="filterValues.terminal_id" class="rb-input rb-select" :disabled="outletsLoading">
+                <option value="">{{ $t('posReports.all') }}</option>
+                <option v-for="o in outlets" :key="'t' + o.outlet_id" :value="String(o.outlet_id)">{{ o.outlet_name }}</option>
+              </select>
+            </label>
+            <label class="posr-field">
+              <span>{{ $t('posReports.orderType') }}</span>
               <select v-model="filterValues.business_source" class="rb-input rb-select">
                 <option value="">{{ $t('posReports.all') }}</option>
                 <option v-for="(label, value) in businessSources" :key="value" :value="value">{{ label }}</option>
+              </select>
+            </label>
+            <label class="posr-field">
+              <span>{{ $t('posReports.category') }}</span>
+              <select v-model="filterValues.category_id" class="rb-input rb-select">
+                <option value="">{{ $t('posReports.all') }}</option>
+                <option v-for="c in categoryOptions" :key="c.category_id" :value="c.category_id">{{ c.category_name }}</option>
               </select>
             </label>
             <label class="posr-field">
@@ -65,10 +87,17 @@
                 <option v-for="c in subCategoryOptions" :key="c" :value="c">{{ c }}</option>
               </select>
             </label>
+            <label class="posr-field posr-check">
+              <span>{{ $t('posReports.includeNoCharge') }}</span>
+              <input v-model="filterValues.include_no_charge" type="checkbox" class="rb-check" />
+            </label>
           </div>
         </div>
 
         <div class="posr-run">
+          <button type="button" class="rb-btn rb-btn-reset" @click="resetFilters">
+            <i class="fas fa-rotate-left" aria-hidden="true"></i> {{ $t('posReports.reset') }}
+          </button>
           <button type="button" class="rb-btn rb-btn-primary" :disabled="loading || (activeReport === 'custom' && !customSource)" @click="run">
             <i v-if="loading" class="fas fa-spinner fa-spin" aria-hidden="true"></i>
             <i v-else class="fas fa-play" aria-hidden="true"></i>
@@ -181,42 +210,83 @@ import { exportCSV } from '@/utils/export'
 
 const { t, te } = useI18n()
 
-const ACTIVE_REPORTS = [
-  { key: 'custom', label: 'posReports.custom' },
+const REPORTS = [
   { key: 'menu-item-sales', label: 'posReports.menuItemSales' },
   { key: 'sales', label: 'posReports.sales' },
+  { key: 'sales-detail', label: 'posReports.salesDetail' },
+  { key: 'cashier-report', label: 'posReports.cashierReport' },
   { key: 'no-charge', label: 'posReports.noCharge' },
   { key: 'back-office', label: 'posReports.backOffice' },
-  { key: 'statistical', label: 'posReports.statistical' },
   { key: 'inventory', label: 'posReports.inventory' },
   { key: 'stock', label: 'posReports.stock' },
   { key: 'audit', label: 'posReports.audit' },
+  { key: 'statistical', label: 'posReports.statistical' },
   { key: 'user-terminal', label: 'posReports.userTerminal' },
-]
-
-const REPORT_ICONS = [
-  'fas fa-wand-magic-sparkles',
-  'fas fa-burger',
-  'fas fa-cash-register',
-  'fas fa-shirt',
-  'fas fa-briefcase',
-  'fas fa-chart-column',
-  'fas fa-boxes-stacked',
-  'fas fa-warehouse',
-  'fas fa-file-pen',
-  'fas fa-desktop',
+  { key: 'custom', label: 'posReports.custom' },
 ]
 
 const categories = [
   {
-    key: 'recommended',
-    label: 'posReports.recommendedGroup',
-    icon: 'fas fa-bolt',
-    reports: ACTIVE_REPORTS.map((r, i) => ({ ...r, icon: REPORT_ICONS[i] })),
+    key: 'menu-item-sales',
+    label: 'posReports.catMenuItemSales',
+    icon: 'fas fa-burger',
+    reports: [
+      { key: 'menu-item-sales', label: 'posReports.menuItemSales', icon: 'fas fa-burger' },
+    ],
+  },
+  {
+    key: 'sales',
+    label: 'posReports.catSales',
+    icon: 'fas fa-cash-register',
+    reports: [
+      { key: 'sales', label: 'posReports.salesSummary', icon: 'fas fa-chart-simple' },
+      { key: 'sales-detail', label: 'posReports.salesDetail', icon: 'fas fa-list-ul' },
+      { key: 'cashier-report', label: 'posReports.cashierReport', icon: 'fas fa-user-tie' },
+    ],
+  },
+  {
+    key: 'no-charge',
+    label: 'posReports.catNoCharge',
+    icon: 'fas fa-shirt',
+    reports: [{ key: 'no-charge', label: 'posReports.noCharge', icon: 'fas fa-shirt' }],
+  },
+  {
+    key: 'back-office',
+    label: 'posReports.catBackOffice',
+    icon: 'fas fa-briefcase',
+    reports: [{ key: 'back-office', label: 'posReports.backOffice', icon: 'fas fa-briefcase' }],
+  },
+  {
+    key: 'inventory',
+    label: 'posReports.catInventory',
+    icon: 'fas fa-boxes-stacked',
+    reports: [{ key: 'inventory', label: 'posReports.inventory', icon: 'fas fa-boxes-stacked' }],
+  },
+  {
+    key: 'stock',
+    label: 'posReports.catStock',
+    icon: 'fas fa-warehouse',
+    reports: [{ key: 'stock', label: 'posReports.stock', icon: 'fas fa-warehouse' }],
+  },
+  {
+    key: 'audit',
+    label: 'posReports.catAudit',
+    icon: 'fas fa-file-pen',
+    reports: [{ key: 'audit', label: 'posReports.audit', icon: 'fas fa-file-pen' }],
+  },
+  {
+    key: 'more',
+    label: 'posReports.catMore',
+    icon: 'fas fa-ellipsis',
+    reports: [
+      { key: 'statistical', label: 'posReports.statistical', icon: 'fas fa-chart-column' },
+      { key: 'user-terminal', label: 'posReports.userTerminal', icon: 'fas fa-desktop' },
+      { key: 'custom', label: 'posReports.custom', icon: 'fas fa-wand-magic-sparkles' },
+    ],
   },
 ]
 
-const customSources = ACTIVE_REPORTS.filter((r) => r.key !== 'custom')
+const customSources = REPORTS.filter((r) => r.key !== 'custom')
 
 const activeReport = ref('menu-item-sales')
 const customSource = ref('menu-item-sales')
@@ -231,15 +301,19 @@ const outlets = ref([])
 const outletsLoading = ref(false)
 
 const filterValues = reactive({
-  from: daysAgoIso(30),
+  from: todayIso(),
   to: todayIso(),
   outlet_id: '',
+  terminal_id: '',
+  user_id: '',
   business_source: '',
+  category_id: '',
   sub_category: '',
+  include_no_charge: false,
 })
 
 const activeLabel = computed(() => {
-  const cfg = ACTIVE_REPORTS.find((r) => r.key === activeReport.value)
+  const cfg = REPORTS.find((r) => r.key === activeReport.value)
   return cfg ? t(cfg.label) : ''
 })
 
@@ -248,6 +322,12 @@ const windowLabel = computed(() => {
   const to = prettyDate(filterValues.to)
   return `${activeLabel.value} · ${from} → ${to}`
 })
+
+/** Staff members offered by the wired engine's filter options. */
+const userOptions = computed(() => engine.value?.filters?.users || [])
+
+/** Managed menu categories for the CATEGORY filter. */
+const categoryOptions = computed(() => engine.value?.filters?.menu_categories || [])
 
 const subCategoryOptions = computed(() => {
   const isCategoryReport =
@@ -287,7 +367,7 @@ function formatCell(value, format) {
 }
 
 function totalFor(key, format) {
-  const total = (engine.value?.totals || []).find((t) => t.key === key)
+  const total = (engine.value?.totals || []).find((tt) => tt.key === key)
   if (!total) return null
   return { label: total.label || null, value: formatCell(total.value, format) }
 }
@@ -317,6 +397,19 @@ function selectReport(key) {
   run()
 }
 
+function resetFilters() {
+  filterValues.from = todayIso()
+  filterValues.to = todayIso()
+  filterValues.outlet_id = ''
+  filterValues.terminal_id = ''
+  filterValues.user_id = ''
+  filterValues.business_source = ''
+  filterValues.category_id = ''
+  filterValues.sub_category = ''
+  filterValues.include_no_charge = false
+  run()
+}
+
 async function run() {
   loading.value = true
   error.value = ''
@@ -325,9 +418,17 @@ async function run() {
     const params = {
       from: filterValues.from || undefined,
       to: filterValues.to || undefined,
-      outlet_id: filterValues.outlet_id || undefined,
+      // Terminal maps onto the outlet/venue that the ticket was recorded at —
+      // orders do not carry a separate device id, so a POS terminal selection
+      // narrows to that terminal's outlet. The Terminal filter wins.
+      outlet_id: filterValues.terminal_id || filterValues.outlet_id || undefined,
       business_source: filterValues.business_source || undefined,
-      category: filterValues.sub_category || undefined,
+      order_type: filterValues.business_source || undefined,
+      user_id: filterValues.user_id || undefined,
+      created_by: filterValues.user_id || undefined,
+      category_id: filterValues.category_id || undefined,
+      sub_category: filterValues.sub_category || undefined,
+      include_no_charge: filterValues.include_no_charge ? '1' : '0',
     }
     const isCustom = activeReport.value === 'custom'
     if (isCustom) {
@@ -480,6 +581,7 @@ async function loadOutlets() {
 
 watch(activeReport, () => {
   filterValues.sub_category = ''
+  filterValues.category_id = ''
 })
 
 onMounted(() => {
@@ -488,13 +590,8 @@ onMounted(() => {
 })
 
 function todayIso() {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function daysAgoIso(days) {
-  const d = new Date()
-  d.setDate(d.getDate() - days)
-  return d.toISOString().slice(0, 10)
+  const now = new Date()
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
 }
 
 function prettyDate(iso) {
@@ -554,10 +651,21 @@ const money = (v) => {
   font-weight: 600;
   color: #475569;
 }
+.posr-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.posr-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--mrk-blue, #005eb8);
+}
 .posr-run {
   display: flex;
   align-items: flex-end;
   align-self: stretch;
+  gap: 8px;
 }
 /* Custom report builder. */
 .posr-builder {
@@ -691,8 +799,11 @@ const money = (v) => {
   align-items: center;
   gap: 6px;
 }
+.rb-btn-reset {
+  background: #fff;
+  color: var(--mrk-blue, #005eb8);
+}
 .rb-btn-primary {
-  margin-top: 14px;
   align-self: flex-end;
 }
 .rb-btn:disabled {

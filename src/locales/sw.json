@@ -2662,7 +2662,19 @@
     "bucket": "Kundi",
     "deleted_at": "Ilifutwa Saa",
     "verified": "Imethibitishwa",
-    "invoice_number": "Namba ya Ankra"
+    "invoice_number": "Namba ya Ankra",
+    "order_no": "Namba ya Agizo",
+    "receipt_no": "Namba ya Risiti",
+    "time": "Muda",
+    "order_type": "Aina ya Agizo",
+    "venue": "Jedwali / Chumba",
+    "waiter": "Mhudumu / Mtumiaji",
+    "price_total": "Jumla ya Bei",
+    "payments": "Malipo",
+    "payment_status": "Hali ya Malipo",
+    "tickets": "Tiketi",
+    "no_charge": "Hakuna Malipo",
+    "outstanding": "Inayosubiri"
   },
   "reports": {
     "title": "Ripoti",
@@ -4234,9 +4246,9 @@
       "allOutlets": "Sehemu Zote",
       "stockAdjustment": "Urekebishaji wa Hifadhi",
       "printMachine": "Chapisha kwa mashine",
-"openWindow": "Fungua kwenye dirisha jipya",
-    "openWindowBlocked": "Dirisha la ripoti lilezuliwa na kivinjari chako. Ruhusu pop-ups kwa tovuti hii ili kufungua ripoti kwenye dirisha jipya.",
-    "openWindowEmpty": "Hakuna cha kuonyesha kwenye dirisha jipya bado — endesha ripoti kwanza."
+      "openWindow": "Fungua kwenye dirisha jipya",
+      "openWindowBlocked": "Dirisha la ripoti lilezuliwa na kivinjari chako. Ruhusu pop-ups kwa tovuti hii ili kufungua ripoti kwenye dirisha jipya.",
+      "openWindowEmpty": "Hakuna cha kuonyesha kwenye dirisha jipya bado — endesha ripoti kwanza."
     },
     "movements": {
       "allTypes": "Aina zote",
@@ -4434,7 +4446,24 @@
       "room_service": "Huduma ya Chumbani",
       "delivery": "Usafirishaji",
       "no_charge": "Hakuna Malipo"
-    }
+    },
+    "salesSummary": "Muhtasari wa Mauzo",
+    "salesDetail": "Maelezo ya Mauzo",
+    "cashierReport": "Ripoti ya Mwekashaji",
+    "catMenuItemSales": "Mauzo ya Bidhaa",
+    "catSales": "Mauzo",
+    "catNoCharge": "Hakuna Malipo",
+    "catBackOffice": "Ofisi ya Nyuma",
+    "catInventory": "Nyakati",
+    "catStock": "Hifadhi",
+    "catAudit": "Ukaguzi",
+    "catMore": "Zaidi",
+    "user": "Mtumiaji",
+    "terminal": "Kituo",
+    "orderType": "Aina ya Agizo",
+    "category": "Kategoria",
+    "includeNoCharge": "Jumuisha Hakuna Malipo",
+    "reset": "Weka Upya"
   },
   "cashier": {
     "panelTitle": "KARO",
