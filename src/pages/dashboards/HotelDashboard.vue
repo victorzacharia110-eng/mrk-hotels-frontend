@@ -469,12 +469,12 @@
                             {{ r.guest_name || r.label }}<template v-if="r.room_number"> · {{ r.room_number }}</template>
                           </td>
                           <td class="sv-folio-col-num">
-                            <template v-if="activeFolioId === folioRowId(r)">TZS {{ fmtNum(ledgerHeader.balance, 2) }}</template>
+                            <template v-if="activeFolioId === folioRowId(r)">{{ balanceDisplay.text }}</template>
                             <template v-else>TZS {{ fmtNum(r.balance_due, 2) }}</template>
                           </td>
                           <td class="sv-folio-col-num">
                             <template v-if="activeFolioId === folioRowId(r)">
-                              <strong>TZS {{ fmtNum(ledgerHeader.balance, 2) }}</strong>
+                              <strong :class="{ 'sv-balance-negative': balanceDisplay.negative }">{{ balanceDisplay.text }}</strong>
                             </template>
                             <template v-else><strong>TZS {{ fmtNum(r.balance_due, 2) }}</strong></template>
                           </td>
@@ -521,7 +521,7 @@
                   </div>
                   <div class="sv-panel-card" :class="activeBar.paymentPending ? 'pay-pending' : 'pay-ok'">
                     <span>{{ $t('stayview.balance') }}</span>
-                    <strong>TZS {{ fmtNum(ledgerHeader.balance, 2) }}</strong>
+                    <strong :class="{ 'sv-balance-negative': balanceDisplay.negative }">{{ balanceDisplay.text }}</strong>
                   </div>
                 </div>
 
@@ -551,7 +551,7 @@
                           <td>{{ formatDateDMY(e.date) }}</td>
                           <td class="sv-particular">{{ e.particular }}</td>
                           <td>
-                            {{ e.description }}<span v-if="e.detail" class="sv-cap"> · {{ e.detail }}</span>
+                            <template v-if="e.movedFrom"><span class="sv-moved-from">{{ $t('stayview.transferFrom', { guest: e.movedFrom }) }}</span> </template>{{ e.description }}<span v-if="e.detail" class="sv-cap"> · {{ e.detail }}</span>
                             <span v-if="e.payment?.edited_by || e.payment?.edited_at" class="sv-folio-edit-note">
                               {{ $t('stayview.editedBy') }} {{ e.payment.edited_by }}<template v-if="e.payment.edited_at"> {{ $t('stayview.editedAt') }} {{ formatDateDMY(e.payment.edited_at) }}</template>
                             </span>
@@ -630,7 +630,7 @@
                           </td>
                         </tr>
                         <tr v-if="!folioEntries.length">
-                          <td colspan="6" class="sv-muted-cell">{{ $t('folio.empty') }}</td>
+                          <td colspan="6" class="sv-muted-cell sv-no-posted">{{ donorEmptyFolio ? $t('folio.noFolioPosted') : $t('folio.empty') }}</td>
                         </tr>
                       </tbody>
                       <tfoot v-if="folioEntries.length">
@@ -642,6 +642,13 @@
                         <tr class="sv-folio-total">
                           <td colspan="4">{{ $t('folio.totalPaid') }}</td>
                           <td class="num"><strong>TZS {{ fmtNum(folioTotals.credits, 2) }}</strong></td>
+                          <td></td>
+                        </tr>
+                        <tr class="sv-folio-total sv-folio-balance">
+                          <td colspan="4">{{ $t('folio.balance') }}</td>
+                          <td class="num">
+                            <strong :class="{ 'sv-balance-negative': ledgerBalance.negative }">{{ ledgerBalance.text }}</strong>
+                          </td>
                           <td></td>
                         </tr>
                       </tfoot>
@@ -1671,7 +1678,7 @@
     <Teleport to="body">
       <Transition name="sv-modal">
         <div v-if="folioView" class="sv-modal-backdrop" @click.self="folioView = null">
-          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="$t('folio.view')">
+          <div class="sv-modal sv-modal-sm" :class="{ 'sv-modal-receipt': viewEntryReceipt }" role="dialog" aria-modal="true" :aria-label="$t('folio.view')">
             <div class="sv-modal-head bar-blue">
               <span class="sv-modal-head-icon"><i class="fas fa-eye" aria-hidden="true"></i></span>
               <div class="sv-modal-head-text">
@@ -1683,7 +1690,74 @@
               </button>
             </div>
             <div class="sv-modal-body">
-              <div class="sv-detail-list">
+              <template v-if="viewEntryReceipt">
+                <div class="sv-receipt">
+                  <div class="sv-receipt-head">
+                    <div class="sv-receipt-hotel">{{ hotelName }}</div>
+                    <div v-if="tenantPlace">
+                      <span class="sv-receipt-line">{{ tenantAddress }}</span>
+                      <span class="sv-receipt-line">{{ tenantContact }}</span>
+                    </div>
+                  </div>
+                  <div class="sv-receipt-meta">
+                    <div class="sv-receipt-meta-row">
+                      <span class="sv-receipt-key">{{ $t('folio.receiptNo') }}</span>
+                      <span class="sv-receipt-val">{{ viewEntryReceipt.receiptNo }}</span>
+                      <span class="sv-receipt-key">{{ $t('folio.date') }}</span>
+                      <span class="sv-receipt-val">{{ viewEntryReceipt.date }}</span>
+                    </div>
+                    <div class="sv-receipt-meta-row">
+                      <span class="sv-receipt-key">{{ $t('stayview.room') }}</span>
+                      <span class="sv-receipt-val">{{ viewEntryReceipt.room }}</span>
+                      <span class="sv-receipt-key">{{ $t('folio.time') }}</span>
+                      <span class="sv-receipt-val">{{ viewEntryReceipt.time }}</span>
+                    </div>
+                    <div class="sv-receipt-meta-row">
+                      <span class="sv-receipt-key">{{ $t('folio.serviceTable') }}</span>
+                      <span class="sv-receipt-val">{{ viewEntryReceipt.serviceTable || '—' }}</span>
+                      <span class="sv-receipt-key">{{ $t('folio.guestName') }}</span>
+                      <span class="sv-receipt-val">{{ viewEntryReceipt.guest }}</span>
+                    </div>
+                    <div class="sv-receipt-meta-row">
+                      <span class="sv-receipt-key">{{ $t('folio.roomNo') }}</span>
+                      <span class="sv-receipt-val">{{ viewEntryReceipt.room || '—' }}</span>
+                    </div>
+                  </div>
+                  <table class="sv-receipt-items">
+                    <thead>
+                      <tr>
+                        <th>{{ $t('folio.itemName') }}</th>
+                        <th>{{ $t('folio.category') }}</th>
+                        <th class="num">{{ $t('folio.qty') }}</th>
+                        <th class="num">{{ $t('folio.amount') }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(it, i) in viewEntryReceipt.items" :key="i">
+                        <td>{{ it.item_name }}</td>
+                        <td>{{ it.category || '—' }}</td>
+                        <td class="num">{{ it.quantity }}</td>
+                        <td class="num">TZS {{ fmtNum(it.subtotal, 2) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="sv-receipt-totals">
+                    <div class="sv-receipt-total-row">
+                      <span>{{ $t('folio.billAmount') }}</span>
+                      <strong>TZS {{ fmtNum(viewEntryReceipt.billAmount ?? viewEntryReceipt.amount, 2) }}</strong>
+                    </div>
+                    <div class="sv-receipt-total-row">
+                      <span>{{ $t('folio.tax') }}</span>
+                      <strong>—</strong>
+                    </div>
+                    <div class="sv-receipt-total-row sv-receipt-total-pay">
+                      <span>{{ $t('folio.totalPayable') }}</span>
+                      <strong>TZS {{ fmtNum(viewEntryReceipt.amount, 2) }}</strong>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              <div v-else class="sv-detail-list">
                 <div class="sv-detail-row">
                   <span class="sv-cap muted">{{ $t('folio.date') }}</span>
                   <strong>{{ viewEntryLine }}</strong>
@@ -1707,7 +1781,7 @@
                   </strong>
                 </div>
               </div>
-              <p class="sv-cap sv-note">{{ $t('folio.viewHint') }}</p>
+              <p v-if="!viewEntryReceipt" class="sv-cap sv-note">{{ $t('folio.viewHint') }}</p>
             </div>
             <div class="sv-modal-actions">
               <button type="button" class="btn btn-secondary" @click="folioView = null">
@@ -2834,6 +2908,21 @@ const ledgerHeader = computed(() => {
   }
 })
 
+/** Balance text per the Folio Operations layout: when paid exceeds charges
+ *  the figure prints as "- TZS x" (negative reading), mirrored by the tfoot. */
+const balanceDisplay = computed(() => {
+  const b = ledgerHeader.value.balance
+  const negative = b < 0
+  return { negative, text: `${negative ? '- ' : ''}TZS ${fmtNum(Math.abs(b), 2)}` }
+})
+
+/** Bottom-of-ledger BALANCE = TOTAL CHARGES − TOTAL PAID (negative when overpaid). */
+const ledgerBalance = computed(() => {
+  const b = folioTotals.value.charges - folioTotals.value.credits
+  const negative = b < 0
+  return { negative, text: `${negative ? '- ' : ''}TZS ${fmtNum(Math.abs(b), 2)}` }
+})
+
 /** Shows the stay's own folio (or reloads the toggled one) from a chip click. */
 async function switchFolio(item) {
   // The current folio row is the stay's own bar (which only carries `id`), so
@@ -3033,10 +3122,29 @@ function buildRentalRows(res) {
  * balance; the manual extra-charge remainder and every payment make up the
  * rest, so the column totals always add up to balance_due.
  */
+/** A folio whose rows all moved away still holds only its *_out provenance
+ *  book-keeping — per the Folio Operations layout it reads "NO FOLIO POSTED YET". */
+const donorEmptyFolio = computed(() => {
+  const f = ledgerFolio.value || null
+  if (!f) return false
+  const hadOutflow = (f.folio_entries || []).some((e) => /_out$/.test(e.type || ''))
+  const hasLiveRows = (f.folio_entries || []).some((e) => !/_(out|in)$/.test(e.type || '') && e.type !== 'attachment')
+  return (
+    hadOutflow &&
+    !hasLiveRows &&
+    !(f.orders || []).some((o) => o.payment_status === 'billed_to_room') &&
+    !(f.laundry || []).some((l) => l.payment_status === 'billed_to_room')
+  )
+})
+
 const folioEntries = computed(() => {
   const f = ledgerFolio.value || null
   if (!f) return []
   const fol = f.folio || {}
+  // A donor whose rows all moved to another folio has only its book-keeping
+  // provenance (*_out) left — it reads as "NO FOLIO POSTED YET" per the
+  // Folio Operations layout.
+  if (donorEmptyFolio.value) return []
   const entries = []
   // Room rental first: each night is a row, together summing exactly to
   // total_amount, so the ledger's TOTAL CHARGES matches the top card.
@@ -3071,6 +3179,7 @@ const folioEntries = computed(() => {
       user: o.user || '—',
       amount: Number(o.total_amount ?? o.total ?? 0),
       credit: false,
+      order: o,
       moveId: o.order_id ? `o:${o.order_id}` : null,
     })
   }
@@ -3094,6 +3203,11 @@ const folioEntries = computed(() => {
   // Persisted front-desk postings (add folio, discount, adjustment,
   // inclusion, transfers/splits/cuts and attachments) render line by line
   // with their own poster and date, and can be voided or downloaded.
+  const moverName = (rid) => {
+    if (!rid) return ''
+    const known = (f.related_folios || []).find((r) => r.reservation_id === rid)
+    return known?.guest_name || ''
+  }
   for (const e of f.folio_entries || []) {
     // A confirmed/pending stay must not see front-desk postings against the
     // room — only checked-in/out guests do. The nightly room charge and the
@@ -3101,6 +3215,10 @@ const folioEntries = computed(() => {
     if (!canSeeRoomPostings.value && !['room_charge', 'payment'].includes(e.type)) continue
     const amount = Number(e.amount ?? 0)
     const isRefund = isFolioRefundEntry(e.type)
+    // Operations re-parented from another folio (transfer/split/cut) read on
+    // the target as "Transfer from <guest>" per the Folio Operations layout.
+    const fromOther = e.source_reservation_id && e.source_reservation_id !== (f.reservation?.reservation_id || ledgerFolio.value?.reservation?.reservation_id)
+    const sourceLabel = fromOther ? moverName(e.source_reservation_id) : ''
     entries.push({
       key: `e${e.folio_entry_id}`,
       date: e.date,
@@ -3123,6 +3241,7 @@ const folioEntries = computed(() => {
       moveLine: /_(out|in)$/.test(e.type),
       entryUrl: e.attachment_url ? reservationApi.folioAttachmentUrl(e.folio_entry_id) : '',
       editable: ['room_charge', 'extra_charge', 'adjustment', 'discount', 'inclusion'].includes(e.type) && e.folio_entry_id != null,
+      movedFrom: sourceLabel,
     })
   }
   // Legacy manual extra charges (posted before the ledger existed) still show
@@ -3897,6 +4016,37 @@ const viewEntryDescription = computed(() => {
   const desc = e.description || e.particular || ''
   return e.detail ? `${desc} · ${e.detail}` : desc
 })
+
+/** Receipt payload for an F&B room-posting row (order with item lines). */
+const viewEntryReceipt = computed(() => {
+  const e = folioView.value
+  const order = e?.order
+  if (!order || !Array.isArray(order.items) || !order.items.length) return null
+  const guest = order.guest_name || ledgerHeader.value?.guest || ''
+  const room = order.room_number || ledgerHeader.value?.room || ''
+  return {
+    receiptNo: order.order_number || order.reference || t('folio.order'),
+    date: formatDateDMY(e?.date),
+    time: e?.time ? new Date(e.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+    room,
+    serviceTable: order.table_number || '',
+    guest,
+    items: order.items,
+    billAmount: order.total_amount,
+    amount: e?.amount ?? order.total_amount ?? 0,
+  }
+})
+
+/** Hotel contact block printed on the room-posting receipt. */
+const tenantAddress = computed(() => {
+  const tnt = authStore.user?.tenant || {}
+  return [tnt.address, [tnt.city, tnt.country].filter(Boolean).join(', ')].filter(Boolean).join(', ') || ''
+})
+const tenantContact = computed(() => {
+  const tnt = authStore.user?.tenant || {}
+  return [tnt.phone ? `Tel: ${tnt.phone}` : '', tnt.email ? tnt.email : ''].filter(Boolean).join(' · ') || ''
+})
+const tenantPlace = computed(() => Boolean(tenantAddress.value || tenantContact.value))
 
 /** Opens the entry read-only and briefly highlights the row. */
 function viewEntry(e) {
@@ -6636,6 +6786,12 @@ onUnmounted(() => clearInterval(refreshTimer))
   width: 420px;
 }
 
+/* Room-posting receipt view is wider than the plain entry detail. */
+.sv-modal-receipt {
+  width: 560px;
+  max-width: 94vw;
+}
+
 /* Compact header strip under the modal title. */
 .sv-stay-strip {
   display: grid;
@@ -7074,6 +7230,11 @@ onUnmounted(() => clearInterval(refreshTimer))
   border-top: 1px solid #e5e7eb;
 }
 
+/* Overpaid folios: the balance figure reads negative per Folio Operations. */
+.sv-balance-negative {
+  color: #b91c1c !important;
+}
+
 /* Ledger actions column: download / void / remove, always inline and quiet. */
 .sv-folio-table .sv-cell-actions {
   width: 96px;
@@ -7116,9 +7277,33 @@ onUnmounted(() => clearInterval(refreshTimer))
 .sv-amount-credit {
   color: #0e6b3a;
 }
+.sv-receipt { padding: 0 2px; }
+.sv-receipt-head { text-align: center; margin-bottom: 12px; }
+.sv-receipt-head .sv-receipt-hotel { font-size: 14px; font-weight: 800; color: #062a52; letter-spacing: .5px; }
+.sv-receipt-head .sv-receipt-line { display: block; font-size: 11px; color: #475569; }
+.sv-receipt-meta { margin-bottom: 12px; border: 1px solid #dbe4ef; border-radius: 4px; overflow: hidden; }
+.sv-receipt-meta-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; }
+.sv-receipt-meta-row > :nth-child(n+1) { padding: 4px 8px; border: 1px solid #dbe4ef; }
+.sv-receipt-key { font-size: 10px; font-weight: 700; color: #64748b; background: #f8fafc; }
+.sv-receipt-val { font-size: 12px; font-weight: 600; }
+.sv-receipt-items { width: 100%; border-collapse: collapse; margin: 0 0 10px; font-size: 12px; }
+.sv-receipt-items th { background: #062a52; color: #fff; text-transform: uppercase; font-size: 10px; padding: 6px 8px; text-align: left; }
+.sv-receipt-items th.num { text-align: right; }
+.sv-receipt-items td { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; }
+.sv-receipt-items td.num { text-align: right; }
+.sv-receipt-totals { border-top: 1px solid #cbd5e1; padding-top: 8px; }
+.sv-receipt-total-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; color: #374151; }
+.sv-receipt-total-pay { font-size: 14px; font-weight: 800; color: #062a52; border-top: 2px solid #062a52; padding-top: 6px; margin-top: 4px; }
 
 .sv-folio-table .sv-icon-link:hover {
   color: #b91c1c;
+}
+
+.sv-moved-from {
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .sv-folio-table .sv-icon-link:disabled {
