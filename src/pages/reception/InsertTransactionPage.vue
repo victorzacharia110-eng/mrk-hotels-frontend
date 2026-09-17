@@ -179,7 +179,7 @@ async function searchReservations(query) {
   }
   reservationSearching.value = true
   try {
-    const res = await reservationApi.index({ search: query, status: 'checked_in,confirmed,pending', per_page: 20 })
+    const res = await reservationApi.index({ search: query, status: 'checked_in,checked_out', per_page: 20 })
     const rows = res.data?.data || []
     reservationOptions.value = rows.map(r => ({
       value: r.reservation_id,

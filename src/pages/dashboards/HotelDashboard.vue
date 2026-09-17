@@ -665,7 +665,7 @@
                   <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="openPaymentModal">
                     <i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('stayview.addPayment') }}
                   </button>
-                  <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="openChargeModal">
+                  <button v-if="canPostRoomPostings" type="button" class="btn btn-secondary" :disabled="actionBusy" @click="openChargeModal">
                     <i class="fas fa-receipt" aria-hidden="true"></i> {{ $t('stayview.addCharges') }}
                   </button>
                 </div>
@@ -910,37 +910,37 @@
                         <i class="fas fa-arrows-left-right" aria-hidden="true"></i> {{ $t('stayview.roomMove') }}
                       </button>
                     </li>
-                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                    <li v-if="canPostRoomPostings">
                       <button type="button" @click="openChargeModal">
                         <i class="fas fa-receipt" aria-hidden="true"></i> {{ $t('stayview.addCharges') }}
                       </button>
                     </li>
-                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                    <li v-if="canPostRoomPostings">
                       <button type="button" @click="openFolioOp('discount')">
                         <i class="fas fa-percent" aria-hidden="true"></i> {{ $t('stayview.applyDiscount') }}
                       </button>
                     </li>
-                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                    <li v-if="canPostRoomPostings">
                       <button type="button" @click="openFolioOp('adjustment')">
                         <i class="fas fa-scale-balanced" aria-hidden="true"></i> {{ $t('stayview.folioAdjustment') }}
                       </button>
                     </li>
-                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                    <li v-if="canPostRoomPostings">
                       <button type="button" @click="openFolioOp('inclusion')">
                         <i class="fas fa-gift" aria-hidden="true"></i> {{ $t('stayview.folioInclusion') }}
                       </button>
                     </li>
-                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                    <li v-if="canPostRoomPostings">
                       <button type="button" @click="openFolioOp('move')">
                         <i class="fas fa-repeat" aria-hidden="true"></i> {{ $t('stayview.transferFolio') }}
                       </button>
                     </li>
-                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                    <li v-if="canPostRoomPostings">
                       <button type="button" @click="openFolioOp('move', 'split')">
                         <i class="fas fa-code-branch" aria-hidden="true"></i> {{ $t('stayview.splitFolio') }}
                       </button>
                     </li>
-                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                    <li v-if="canPostRoomPostings">
                       <button type="button" @click="openFolioOp('move', 'cut')">
                         <i class="fas fa-scissors" aria-hidden="true"></i> {{ $t('stayview.cutFolio') }}
                       </button>
@@ -3060,6 +3060,7 @@ const folioEntries = computed(() => {
   }
   for (const o of f.orders || []) {
     if (o.payment_status !== 'billed_to_room') continue
+    if (!canSeeRoomPostings.value) continue
     entries.push({
       key: `o${o.order_id ?? o.order_number}`,
       date: o.date,
@@ -3075,6 +3076,7 @@ const folioEntries = computed(() => {
   }
   for (const l of f.laundry || []) {
     if (l.payment_status !== 'billed_to_room') continue
+    if (!canSeeRoomPostings.value) continue
     entries.push({
       key: `l${l.laundry_order_id ?? l.order_number}`,
       date: l.date,
@@ -3093,6 +3095,10 @@ const folioEntries = computed(() => {
   // inclusion, transfers/splits/cuts and attachments) render line by line
   // with their own poster and date, and can be voided or downloaded.
   for (const e of f.folio_entries || []) {
+    // A confirmed/pending stay must not see front-desk postings against the
+    // room — only checked-in/out guests do. The nightly room charge and the
+    // advance/deposit rows stay visible (they make up the booked bill).
+    if (!canSeeRoomPostings.value && !['room_charge', 'payment'].includes(e.type)) continue
     const amount = Number(e.amount ?? 0)
     const isRefund = isFolioRefundEntry(e.type)
     entries.push({
@@ -3122,7 +3128,7 @@ const folioEntries = computed(() => {
   // Legacy manual extra charges (posted before the ledger existed) still show
   // as one aggregate line only when nothing newer accounts for them.
   const legacy = Number(fol.legacy_extra_charges ?? fol.extra_charges ?? 0)
-  if (legacy > 0) {
+  if (legacy > 0 && canSeeRoomPostings.value) {
     entries.push({
       key: 'extra',
       date: fol.room_charges_date,
@@ -3679,7 +3685,9 @@ const moveSourceOptions = computed(() =>
       description: e.description,
       amount: e.amount,
       credit: !!e.credit,
-      selectable: !e.muted,
+      // Inclusions and attachments carry no balance and travel without moving
+      // it; the backend moves them (and everything else with a stable key).
+      selectable: true,
     })),
 )
 
@@ -3729,7 +3737,23 @@ async function createNewFolioTarget() {
     const created = res.data?.target_reservation
     await load(true)
     await loadFolioTargets('')
-    if (created?.reservation_id) moveTarget.value = created.reservation_id
+    // The freshly opened folio has status 'confirmed', so the checked-in-only
+    // folio search never lists it — add it to the picker manually so the
+    // receptionist can select it as the move destination.
+    if (created?.reservation_id) {
+      const shape = {
+        reservation_id: created.reservation_id,
+        folio_code: created.folio_code,
+        guest_name: created.guest_name,
+        room_number: created.room?.room_number || '',
+        status: created.status || 'confirmed',
+        balance_due: Number(created.balance_due ?? 0),
+        check_in_date: created.check_in_date || '',
+        check_out_date: created.check_out_date || '',
+      }
+      moveTargets.value = [shape, ...moveTargets.value.filter((tt) => tt.reservation_id !== shape.reservation_id)]
+      moveTarget.value = shape.reservation_id
+    }
   } catch (err) {
     actionError.value = apiErrorMsg(err, t('stayview.actionError'))
   } finally {
@@ -4300,6 +4324,20 @@ const canSeeLedger = computed(() =>
 const canSeeFrontDesk = computed(() =>
   ['hotel_admin', 'manager', 'receptionist'].includes(authStore.user?.user_role),
 )
+
+// Room postings belong to a stay that has physically begun: a confirmed /
+// pending booking (the red-bar wait for the guest) must not see front-desk
+// or room postings, while a checked-in or checked-out guest sees the rows
+// that were posted against their stay.
+const canSeeRoomPostings = computed(() => {
+  const status = activeBar.value?.rawStatus
+  if (!status) return true
+  return ['checked_in', 'checked_out'].includes(status)
+})
+
+// Only an in-house reservation can accept new postings (charges, moves); a
+// checked-out guest merely reviews what was posted during the stay.
+const canPostRoomPostings = computed(() => activeBar.value?.rawStatus === 'checked_in')
 
 // Voiding a booking is open to any front-desk staff before the guest checks
 // in; an in-house stay additionally requires a manager or accountant (the

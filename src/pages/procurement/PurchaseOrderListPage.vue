@@ -381,6 +381,7 @@ const itemOptions = computed(() =>
     label: `${item.item_name}${item.unit ? ` (${item.unit})` : ''}`,
     category: item.category,
     stock: item.quantity_in_stock,
+    unit_cost: item.unit_cost,
   })),
 )
 
@@ -415,17 +416,19 @@ function unitOptionsFor(item) {
  * stock-in the right record.
  *
  * @param {number} idx - Index of the line item in the form.
- * @param {string} value - The chosen inventory item id.
+ * @param {object|string} hit - The chosen inventory option object (or id).
  */
-function onPickItem(idx, value) {
+function onPickItem(idx, hit) {
   const line = form.items[idx]
-  const found = inventoryItems.value.find((i) => String(i.item_id) === String(value))
-  line.item_id = value
+  const id = hit?.value ?? hit
+  const found = inventoryItems.value.find((i) => String(i.item_id) === String(id))
+  line.item_id = id ?? ''
   line.item_name = found?.item_name || ''
   line.si_units = (found?.si_units || [])
     .map((u) => (typeof u === 'string' ? u : u?.unit))
     .filter(Boolean)
   if (found?.unit) line.unit = found.unit
+  if (found?.unit_cost) line.unit_price = Number(found.unit_cost)
 }
 
 /** Returns a fresh blank PO line item. */

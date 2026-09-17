@@ -268,9 +268,10 @@ function unitOptionsFor(item) {
 }
 
 /** Applies a picked registered item to a PO line (id, name, units + default). */
-function onPickItem(line, value) {
-  const found = inventoryItems.value.find((i) => String(i.item_id) === String(value))
-  line.item_id = value
+function onPickItem(line, hit) {
+  const id = hit?.value ?? hit
+  const found = inventoryItems.value.find((i) => String(i.item_id) === String(id))
+  line.item_id = id ?? ''
   line.item_name = found?.item_name || ''
   line.si_units = (found?.si_units || [])
     .map((u) => (typeof u === 'string' ? u : u?.unit))

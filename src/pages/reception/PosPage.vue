@@ -77,7 +77,7 @@ const success = ref('')
 const error = ref('')
 const form = ref({ reservation_id: null, description: '', amount: null })
 
-const inHouse = computed(() => reservations.value.filter((r) => ['confirmed', 'checked_in'].includes(r.status)))
+const inHouse = computed(() => reservations.value.filter((r) => ['checked_in'].includes(r.status)))
 
 async function load() {
   loading.value = true
