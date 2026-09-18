@@ -902,7 +902,7 @@
                         <i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('stayview.addPayment') }}
                       </button>
                     </li>
-                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                    <li v-if="canPostRoomPostings">
                       <button type="button" @click="openPaymentModal('company')">
                         <i class="fas fa-building" aria-hidden="true"></i> {{ $t('stayview.postToCreditors') }}
                       </button>
@@ -1041,6 +1041,7 @@
                   <i class="fas fa-wallet" aria-hidden="true"></i> {{ $t('stayview.collectPayment') }}
                 </button>
                 <button
+                  v-if="canPostRoomPostings"
                   type="button"
                   class="sv-seg-btn"
                   :class="{ 'is-active': payMode === 'company' }"

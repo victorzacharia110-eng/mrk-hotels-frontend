@@ -211,3 +211,38 @@ describe('folio operations on the stay view', () => {
     expect(html).toContain('refund')
   })
 })
+
+describe('post-to-creditors gating on the stay view', () => {
+  async function menuForStatus(status) {
+    await mountDashboard()
+    wrapper.vm.activeBar = { ...activeBar, rawStatus: status }
+    wrapper.vm.moreOpen = true
+    await wrapper.vm.$nextTick()
+    return document.querySelectorAll('.sv-dropdown-menu')
+  }
+
+  it('hides post-to-creditors and charges before the guest checks in', async () => {
+    const [menu] = await menuForStatus('confirmed')
+    const buttons = [...menu.querySelectorAll('button')].map((b) => b.textContent.trim())
+    expect(buttons).not.toContain('Post to creditors')
+    expect(buttons).not.toContain('Add Charges')
+  })
+
+  it('shows post-to-creditors and charges for an in-house guest', async () => {
+    const [menu] = await menuForStatus('checked_in')
+    const buttons = [...menu.querySelectorAll('button')].map((b) => b.textContent.trim())
+    expect(buttons).toContain('Post to creditors')
+    expect(buttons).toContain('Add Charges')
+  })
+
+  it('hides the creditors segment in the payment modal before check-in', async () => {
+    await mountDashboard()
+    wrapper.vm.activeBar = { ...activeBar, rawStatus: 'pending' }
+    wrapper.vm.moreOpen = false
+    wrapper.vm.openPaymentModal('company')
+    await wrapper.vm.$nextTick()
+    const segText = [...document.querySelectorAll('.sv-seg-btn')].map((b) => b.textContent.trim())
+    expect(segText).toContain('Collect payment')
+    expect(segText).not.toContain('Post to creditors')
+  })
+})
