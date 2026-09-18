@@ -2539,10 +2539,59 @@ function reservationDates(r) {
   }
 }
 
+/** Identity key for clustering duplicate stays: the room plus the guest.
+ *  Falls back to the guest name when the booking has no guest record, so the
+ *  seeded/duplicated bookings the front desk actually sees still cluster. */
+function stayKey(r) {
+  const guest = r.guest_id !== null && r.guest_id !== undefined
+    ? String(r.guest_id)
+    : String(r.guest_name || '').trim().toLowerCase()
+  return `${guest}@${reservationRoomId(r) ?? ''}`
+}
+
+/** A folio a bill-split opened: an un-billed twin of the source reservation
+ *  carrying the same guest, room and dates (its tape twin). */
+function isSplitTwin(r) {
+  return String(r.notes || '').toLowerCase().startsWith('split folio of')
+}
+
+/** Reservations one-per-physical-stay. When a guest holds several overlapping
+ *  bookings in a room (a doubled/re-booked stay, or the twin a bill-split
+ *  opens), only the most representative one feeds the chart so a guest can
+ *  never draw more than one bar whose status reflects the payment state. The
+ *  raw reservations are untouched — this only trims the stayview feed. */
+const tapeReservations = computed(() => {
+  const rows = reservations.value
+  const statusRank = { checked_in: 0, checked_out: 1, confirmed: 2, pending: 3, no_show: 4, cancelled: 5 }
+  const keep = new Set(rows.map((r) => r.reservation_id))
+  const rank = (r) => [
+    isSplitTwin(r) ? 1 : 0,
+    statusRank[r.status] ?? 9,
+    -(Number(r.total_amount) || 0),
+    r.reservation_id,
+  ]
+  for (let i = 0; i < rows.length; i++) {
+    const a = rows[i]
+    if (!keep.has(a.reservation_id)) continue
+    const da = reservationDates(a)
+    if (!da.arrival || !da.departure) continue
+    for (let j = i + 1; j < rows.length; j++) {
+      const b = rows[j]
+      if (!keep.has(b.reservation_id) || stayKey(a) !== stayKey(b)) continue
+      const db = reservationDates(b)
+      if (!db.arrival || !db.departure) continue
+      if (!(da.arrival < db.departure && db.arrival < da.departure)) continue
+      if (rank(a) <= rank(b)) keep.delete(b.reservation_id)
+      else keep.delete(a.reservation_id)
+    }
+  }
+  return rows.filter((r) => keep.has(r.reservation_id))
+})
+
 /** Active reservations overlapping the window and matching the search text. */
 const visibleReservations = computed(() => {
   const q = search.value.trim().toLowerCase()
-  return reservations.value.filter((r) => {
+  return tapeReservations.value.filter((r) => {
     const { arrival, departure } = reservationDates(r)
     if (!arrival || !departure) return false
     if (departure <= windowStart.value || arrival >= windowEnd.value) return false
@@ -2640,7 +2689,7 @@ const barsByRoom = computed(() => {
 /** Count of reservations occupying rooms of a set on a given day. */
 function occupiedOnDay(roomIds, day) {
   let count = 0
-  for (const r of reservations.value) {
+  for (const r of tapeReservations.value) {
     const roomId = reservationRoomId(r)
     if (!roomId || !roomIds.has(roomId)) continue
     const { arrival, departure } = reservationDates(r)
@@ -2693,12 +2742,12 @@ const pills = computed(() => {
   const today = startOfDay(new Date())
   const tomorrow = addDays(today, 1)
   const count = (statuses) => rooms.value.filter((r) => statuses.includes(r.status)).length
-  const reserved = reservations.value.filter((r) => {
+  const reserved = tapeReservations.value.filter((r) => {
     if (!['pending', 'confirmed'].includes(r.status)) return false
     const { arrival } = reservationDates(r)
     return arrival && arrival >= today
   }).length
-  const dueOut = reservations.value.filter((r) => {
+  const dueOut = tapeReservations.value.filter((r) => {
     if (r.status !== 'checked_in') return false
     const { departure } = reservationDates(r)
     return departure && departure >= today && departure < tomorrow

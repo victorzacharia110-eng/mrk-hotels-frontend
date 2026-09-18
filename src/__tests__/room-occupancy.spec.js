@@ -133,6 +133,68 @@ describe('roomOccupiedToday', () => {
   })
 })
 
+describe('stay-view bar deduplication', () => {
+  const today = startOfToday()
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+
+  async function withReservations(reservations) {
+    await mountDashboard()
+    await fillBoard([{ room_id: 1, room_number: '101', room_type: 'single', status: 'available', price_per_night: 100 }], reservations)
+    return wrapper.vm.barsByRoom
+  }
+
+  it('draws ONE bar for overlapping duplicate bookings of the same guest in the same room', async () => {
+    const todayIso = iso(today)
+    const tomorrowIso = iso(tomorrow)
+    const bars = await withReservations([
+      { reservation_id: 1, guest_id: null, guest_name: 'Grace Mollel', room: { room_id: 1 }, arrival_date: todayIso, departure_date: tomorrowIso, status: 'pending', total_amount: 600000 },
+      { reservation_id: 2, guest_id: null, guest_name: 'Grace Mollel', room: { room_id: 1 }, arrival_date: todayIso, departure_date: tomorrowIso, status: 'confirmed', total_amount: 1650000 },
+    ])
+    expect(bars[1]).toHaveLength(1)
+    expect(bars[1][0].id).toBe(2)
+  })
+
+  it('keeps separate bars for the same guest staying in different rooms', async () => {
+    const todayIso = iso(today)
+    const tomorrowIso = iso(tomorrow)
+    await mountDashboard()
+    await fillBoard(
+      [
+        { room_id: 1, room_number: '101', room_type: 'single', status: 'available', price_per_night: 100 },
+        { room_id: 2, room_number: '102', room_type: 'single', status: 'available', price_per_night: 100 },
+      ],
+      [
+        { reservation_id: 1, guest_id: null, guest_name: 'Amina Juma', room: { room_id: 1 }, arrival_date: todayIso, departure_date: tomorrowIso, status: 'pending', total_amount: 700000 },
+        { reservation_id: 2, guest_id: null, guest_name: 'Amina Juma', room: { room_id: 2 }, arrival_date: todayIso, departure_date: tomorrowIso, status: 'confirmed', total_amount: 800000 },
+      ],
+    )
+    expect(wrapper.vm.barsByRoom[1]).toHaveLength(1)
+    expect(wrapper.vm.barsByRoom[2]).toHaveLength(1)
+  })
+
+  it('drops the split-folio twin so the in-house bar is the one that shows', async () => {
+    const todayIso = iso(today)
+    const tomorrowIso = iso(tomorrow)
+    const bars = await withReservations([
+      { reservation_id: 1, guest_id: 7, guest_name: 'Juma Bakari', room: { room_id: 1 }, arrival_date: iso(new Date(today.getTime() - 86400000)), departure_date: tomorrowIso, status: 'pending', total_amount: 900000 },
+      { reservation_id: 2, guest_id: 7, guest_name: 'Juma Bakari', room: { room_id: 1 }, arrival_date: iso(new Date(today.getTime() - 86400000)), departure_date: tomorrowIso, status: 'confirmed', total_amount: 0, notes: 'Split folio of Juma Bakari' },
+    ])
+    expect(bars[1]).toHaveLength(1)
+    expect(bars[1][0].id).toBe(1)
+  })
+
+  it('still draws one bar when the only stay in a room is a split folio', async () => {
+    const todayIso = iso(today)
+    const tomorrowIso = iso(tomorrow)
+    const bars = await withReservations([
+      { reservation_id: 9, guest_id: null, guest_name: 'Lot Two', room: { room_id: 1 }, arrival_date: todayIso, departure_date: tomorrowIso, status: 'confirmed', total_amount: 0, notes: 'Split folio of a stay' },
+    ])
+    expect(bars[1]).toHaveLength(1)
+    expect(bars[1][0].id).toBe(9)
+  })
+})
+
 describe('stay-view dot board occupancy', () => {
   const today = startOfToday()
   const tomorrow = new Date(today)
