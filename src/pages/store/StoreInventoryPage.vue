@@ -27,7 +27,7 @@
         <option value="low">{{ $t('storeManager.dashboard.lowStock') }}</option>
       </select>
       <span class="spacer"></span>
-      <button v-if="bulk.selectedCount > 0" class="sm-btn danger" @click="showBulkDelete = true"><i class="fas fa-trash"></i> {{ $t('common.deleteSelected') }} ({{ bulk.selectedCount }})</button>
+      <button v-if="bulk.selectedCount > 0 && auth.can(80)" class="sm-btn danger" @click="showBulkDelete = true"><i class="fas fa-trash"></i> {{ $t('common.deleteSelected') }} ({{ bulk.selectedCount }})</button>
       <button class="sm-btn" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('storeManager.dashboard.newItem') }}</button>
     </div>
 
@@ -64,7 +64,7 @@
                 <div class="row-actions">
                   <button class="sm-btn sm ghost" @click="openAdjust(item)" :title="$t('inventory.adjustStock')"><i class="fas fa-arrow-trend-up"></i></button>
                   <button class="sm-btn sm ghost" @click="openEdit(item)"><i class="fas fa-pen"></i></button>
-                  <button class="sm-btn sm danger" @click="remove(item)"><i class="fas fa-trash"></i></button>
+                  <button v-if="canDelete(item)" class="sm-btn sm danger" @click="remove(item)"><i class="fas fa-trash"></i></button>
                 </div>
               </td>
             </tr>
@@ -284,9 +284,17 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 import { formatCategory } from '@/utils/format'
 import { useCategoriesStore } from '@/stores/categories'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const { t } = useI18n()
+const auth = useAuthStore()
+
+// Deleting items that hold real stock is destructive, so only management may
+// remove an item already stocked above 1 unit; anything at 0/1 is fair game.
+function canDelete(item) {
+  return Number(item?.quantity_in_stock ?? 0) <= 1 || auth.can(80)
+}
 
 const items = ref([])
 const meta = ref({ current_page: 1, last_page: 1 })

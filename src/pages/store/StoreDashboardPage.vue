@@ -118,19 +118,18 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { inventoryApi, purchaseRequisitionApi, purchaseOrderApi, goodsReceivedNoteApi } from '@/api'
+import { inventoryApi, storeApi, purchaseRequisitionApi, purchaseOrderApi, goodsReceivedNoteApi } from '@/api'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import '@/pages/store/store-shared.css'
 
 const loading = ref(true)
 const items = ref([])
+const lowStockAlerts = ref([])
 const requisitions = ref([])
 const orders = ref([])
 const grns = ref([])
 
-const lowStock = computed(() =>
-  items.value.filter((i) => Number(i.quantity_in_stock) <= Number(i.reorder_level || 0)).slice(0, 8)
-)
+const lowStock = computed(() => lowStockAlerts.value.slice(0, 8))
 const pendingReqs = computed(() => requisitions.value.filter((r) => r.status === 'pending').slice(0, 8))
 const recentGrns = computed(() => grns.value.slice(0, 8))
 
@@ -148,13 +147,15 @@ function formatDate(d) {
 
 onMounted(async () => {
   loading.value = true
-  const [inv, req, po, grn] = await Promise.allSettled([
+  const [inv, low, req, po, grn] = await Promise.allSettled([
     inventoryApi.index({ per_page: 100 }),
+    storeApi.lowStock(),
     purchaseRequisitionApi.index({ per_page: 50 }),
     purchaseOrderApi.index({ per_page: 50 }),
     goodsReceivedNoteApi.index({ per_page: 10 }),
   ])
   if (inv.status === 'fulfilled') items.value = inv.value.data.data || inv.value.data || []
+  if (low.status === 'fulfilled') lowStockAlerts.value = low.value.data.data || low.value.data || []
   if (req.status === 'fulfilled') requisitions.value = req.value.data.data || req.value.data || []
   if (po.status === 'fulfilled') orders.value = po.value.data.data || po.value.data || []
   if (grn.status === 'fulfilled') grns.value = grn.value.data.data || grn.value.data || []

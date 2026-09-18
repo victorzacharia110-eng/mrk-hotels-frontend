@@ -9,6 +9,7 @@
         <option value="out">{{ $t('storeManager.movements.out') }}</option>
         <option value="adjustment">{{ $t('storeManager.movements.adjustment') }}</option>
       </select>
+      <CalendarInput v-model="dateFilter" style="max-width: 150px" @change="load(1)" />
     </div>
     <section class="panel">
       <div v-if="loading" class="sm-loading"><i class="fas fa-circle-notch"></i> {{ $t('common.loading') }}</div>
@@ -48,12 +49,16 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { storeApi } from '../../api'
+import CalendarInput from '@/components/CalendarInput.vue'
+import { useWorkingDateStore } from '@/stores/workingDate'
 
+const workingDateStore = useWorkingDateStore()
 const movements = ref([])
 const meta = ref({ current_page: 1, last_page: 1 })
 const loading = ref(false)
 const search = ref('')
 const typeFilter = ref('')
+const dateFilter = ref(workingDateStore.workingDate)
 let debounce
 function debounced() { clearTimeout(debounce); debounce = setTimeout(() => load(1), 300) }
 function fmtDate(d) { return d ? new Date(d).toLocaleString() : '-' }
@@ -70,10 +75,15 @@ async function load(page = 1) {
     const params = { page, per_page: 25 }
     if (search.value) params.search = search.value
     if (typeFilter.value) params.type = typeFilter.value
+    if (dateFilter.value) params.date = dateFilter.value
     const res = await storeApi.movements(params)
     movements.value = res.data.data || res.data || []
     meta.value = res.data.meta || { current_page: 1, last_page: 1 }
   } catch { movements.value = [] } finally { loading.value = false }
 }
-onMounted(() => load(1))
+onMounted(async () => {
+  await workingDateStore.ensureLoaded()
+  dateFilter.value = workingDateStore.workingDate
+  load(1)
+})
 </script>

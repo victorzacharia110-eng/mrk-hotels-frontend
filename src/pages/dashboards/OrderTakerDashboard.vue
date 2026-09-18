@@ -825,9 +825,21 @@
           <div class="cat-pop-panel accomp-panel">
             <header class="cat-pop-head">
               <strong>{{ $t('orders.servedWithTitle') }}</strong>
-              <button type="button" class="cat-pop-close" :aria-label="$t('orderTaker.close')" @click="skipAccompaniment">
-                <i class="fas fa-times" aria-hidden="true"></i>
-              </button>
+              <div class="cat-pop-head-actions">
+                <button
+                  v-if="canManageSides"
+                  type="button"
+                  class="cat-pop-close"
+                  :title="$t('orders.manageSides')"
+                  :aria-label="$t('orders.manageSides')"
+                  @click="manageAccompaniments"
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="cat-pop-close" :aria-label="$t('orderTaker.close')" @click="skipAccompaniment">
+                  <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+              </div>
             </header>
             <p class="accomp-hint">
               {{ $t('orders.servedWithHint', { item: accompItem.item_name }) }}
@@ -847,6 +859,16 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Register "served with" sides straight from the prompt (cashier/bartender
+         own side, admins/managers/kitchen either). -->
+    <AccompanimentManager
+      v-if="showAccompanimentManager"
+      :department="department"
+      :lock-department="!!fixedDept"
+      @close="showAccompanimentManager = false"
+      @changed="loadAccompaniments(true)"
+    />
 
     <!-- Manager-only table management modal (CRUD for the table list) -->
     <Teleport to="body">
@@ -968,7 +990,9 @@ import { restorePrinter } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { useNotificationSettingsStore } from '@/stores/notificationSettings'
 import { displayLines } from '@/utils/receipts'
-import { isGrillMenuItem } from '@/utils/menuAccompaniment'
+import { isGrillMenuItem, canManageAccompaniments } from '@/utils/menuAccompaniment'
+import { useAccompaniments } from '@/composables/useAccompaniments'
+import AccompanimentManager from '@/components/AccompanimentManager.vue'
 import { toast } from '@/utils/toast'
 
 const { t } = useI18n()
@@ -2043,16 +2067,19 @@ function qtyFor(item) {
 // pops a quick single-tap prompt before it lands on the ticket.
 // ---------------------------------------------------------------------------
 
-/** Accompaniment choices shown in the "served with" prompt. */
-const accompanimentOptions = computed(() => [
-  { value: 'wali', label: t('orders.accompWali') },
-  { value: 'ugali', label: t('orders.accompUgali') },
-  { value: 'chips', label: t('orders.accompChips') },
-  { value: 'chapati', label: t('orders.accompChapati') },
-  { value: 'ndizi', label: t('orders.accompNdizi') },
-  { value: 'maharage', label: t('orders.accompMaharage') },
-  { value: '', label: t('orders.accompNone') },
-])
+/** Accompaniment choices shown in the "served with" prompt (current department). */
+const { accompanimentOptions, loadAccompaniments } = useAccompaniments(t, () => department.value)
+
+// Cashiers (restaurant) and bartenders (bar) may register their own side dishes
+// straight from the prompt; admins/managers/kitchen may manage either side.
+const canManageSides = computed(() => canManageAccompaniments(role.value))
+const showAccompanimentManager = ref(false)
+
+/** Opens the registry (closing the prompt) so staff can add a missing side. */
+function manageAccompaniments() {
+  accompItem.value = null
+  showAccompanimentManager.value = true
+}
 
 // The grill item waiting for its accompaniment choice.
 const accompItem = ref(null)
@@ -3026,6 +3053,12 @@ function onKey(e) {
   color: #fff;
   font-size: 18px;
   cursor: pointer;
+}
+
+.cat-pop-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .cat-pop-grid {

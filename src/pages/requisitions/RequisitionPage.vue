@@ -20,19 +20,16 @@
       </div>
       <div class="rq-head-actions">
         <button class="rq-btn ghost" @click="load"><i class="fas fa-rotate"></i> {{ $t('requisitionPanel.refresh') }}</button>
-        <button v-if="!restricted || availableItems.length" class="rq-btn primary" @click="openCreate">
+        <button v-if="!isStoreManager && (!restricted || availableItems.length)" class="rq-btn primary" @click="openCreate">
           <i class="fas fa-plus"></i> {{ $t('requisitionPanel.new') }}
         </button>
       </div>
     </div>
 
     <!-- Tabs -->
-    <div v-if="isKeeper" class="rq-tabs">
-      <button :class="['rq-tab', { on: tab === 'mine' }]" @click="switchTab('mine')">
-        {{ $t('requisitionPanel.myRequisitions') }}
-      </button>
-      <button :class="['rq-tab', { on: tab === 'inbox' }]" @click="switchTab('inbox')">
-        {{ $t('requisitionPanel.inbox') }}
+    <div v-if="tabs.length" class="rq-tabs">
+      <button v-for="tb in tabs" :key="tb.key" :class="['rq-tab', { on: tab === tb.key }]" @click="switchTab(tb.key)">
+        {{ tb.label }}
       </button>
     </div>
 
@@ -43,21 +40,22 @@
         <option value="">{{ $t('common.all') }}</option>
         <option v-for="s in statusList" :key="s" :value="s">{{ statusLabel(s) }}</option>
       </select>
+      <CalendarInput v-model="filterDate" :placeholder="$t('common.date')" @change="load" />
       <span v-if="restricted" class="rq-dept-badge"><i class="fas fa-building"></i> {{ deptName }}</span>
     </div>
 
     <!-- List -->
     <section class="rq-card">
       <div v-if="loading" class="rq-loading"><i class="fas fa-circle-notch"></i> {{ $t('common.loading') }}</div>
-      <p v-else-if="!filtered.length" class="rq-empty">{{ tab === 'inbox' ? $t('requisitionPanel.emptyInbox') : $t('requisitionPanel.emptyMine') }}</p>
+      <p v-else-if="!filtered.length" class="rq-empty">{{ emptyText }}</p>
       <div v-else class="rq-table-scroll">
         <table class="rq-table">
           <thead>
             <tr>
               <th>{{ $t('common.date') }}</th>
               <th>#</th>
-              <th v-if="tab === 'inbox'">{{ $t('requisitionPanel.department') }}</th>
-              <th v-if="tab === 'inbox'">{{ $t('requisitionPanel.requestedBy') }}</th>
+              <th v-if="showRequestCols">{{ $t('requisitionPanel.department') }}</th>
+              <th v-if="showRequestCols">{{ $t('requisitionPanel.requestedBy') }}</th>
               <th>{{ $t('requisitionPanel.items') }}</th>
               <th>{{ $t('common.status') }}</th>
               <th>{{ $t('common.actions') }}</th>
@@ -67,8 +65,8 @@
             <tr v-for="indent in filtered" :key="indent.indent_id">
               <td>{{ fmtDate(indent.created_at) }}</td>
               <td><strong>{{ indent.indent_number }}</strong></td>
-              <td v-if="tab === 'inbox'">{{ indent.department || indent.department_name || '—' }}</td>
-              <td v-if="tab === 'inbox'">{{ indent.requester_name || '—' }}</td>
+              <td v-if="showRequestCols">{{ indent.department || indent.department_name || '—' }}</td>
+              <td v-if="showRequestCols">{{ indent.requester_name || '—' }}</td>
               <td>{{ lineSummary(indent.items) }}</td>
               <td><span class="rq-chip" :class="statusChip(indent.status)">{{ statusLabel(indent.status) }}</span></td>
               <td class="rq-actions">
@@ -160,7 +158,6 @@
                   <th>{{ $t('requisitionPanel.items') }}</th>
                   <th>{{ $t('requisitionPanel.requested') }}</th>
                   <th>{{ $t('requisitionPanel.inStock') }}</th>
-                  <th>{{ $t('requisitionPanel.available') }}</th>
                   <th>{{ $t('requisitionPanel.supplied') }}</th>
                 </tr>
               </thead>
@@ -169,7 +166,6 @@
                   <td><strong>{{ line.item_name }}</strong></td>
                   <td>{{ line.requested }}</td>
                   <td>{{ line.stock }}</td>
-                  <td><input v-model.number="line.available" type="number" min="0" step="any" class="rq-input slim" /></td>
                   <td><input v-model.number="line.supplied" type="number" min="0" step="any" class="rq-input slim" /></td>
                 </tr>
               </tbody>
@@ -260,10 +256,12 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { inventoryOpsApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
-import { saveBlob } from '@/utils/download'
+import CalendarInput from '@/components/CalendarInput.vue'
+import { useWorkingDateStore } from '@/stores/workingDate'
 
 const { t } = useI18n()
 const auth = useAuthStore()
+const workingDateStore = useWorkingDateStore()
 
 const KEEPER_ROLES = ['store_manager', 'hotel_admin', 'manager', 'owner', 'superadmin']
 
@@ -271,11 +269,34 @@ const role = computed(() => auth.user?.user_role)
 // Every panel except the waiter carries the full requisition page exactly as
 // management sees it (tabs, inbox, supply/approve, any department).
 const isKeeper = computed(() => role.value !== 'waiter')
+const isStoreManager = computed(() => role.value === 'store_manager')
 const isManagement = computed(() => KEEPER_ROLES.includes(role.value))
 const restricted = computed(() => false)
 const deptName = computed(() => auth.user?.department || '')
 
-const tab = ref('mine')
+// The store manager owns everything, so it never asks itself for items: its
+// page shows incoming requisitions to answer and the indents already answered
+// and forwarded. Other keepers/managers keep their own + the shared inbox.
+const tabs = computed(() => {
+  if (isStoreManager.value) {
+    return [
+      { key: 'received', label: t('requisitionPanel.receivedIndents') },
+      { key: 'forward', label: t('requisitionPanel.inbox') },
+    ]
+  }
+  if (isKeeper.value) {
+    return [
+      { key: 'mine', label: t('requisitionPanel.myRequisitions') },
+      { key: 'inbox', label: t('requisitionPanel.inbox') },
+    ]
+  }
+  return []
+})
+
+/** Universal calendar date filter — current working date by default. */
+const filterDate = ref(workingDateStore.workingDate)
+
+const tab = ref(isStoreManager.value ? 'received' : 'mine')
 const indents = ref([])
 const loading = ref(false)
 const saving = ref(false)
@@ -328,9 +349,19 @@ const itemOptions = computed(() =>
   })),
 )
 
+const showRequestCols = computed(() => tab.value !== 'mine')
+
+const emptyText = computed(() => {
+  if (tab.value === 'received') return t('requisitionPanel.emptyReceived')
+  if (tab.value === 'forward' || tab.value === 'inbox') return t('requisitionPanel.emptyInbox')
+  return t('requisitionPanel.emptyMine')
+})
+
 const filtered = computed(() => {
   let list = indents.value
   if (tab.value === 'inbox') list = list.filter((i) => i.status !== 'draft')
+  else if (tab.value === 'received') list = list.filter((i) => i.status === 'pending')
+  else if (tab.value === 'forward') list = list.filter((i) => ['forwarded', 'approved', 'fulfilled'].includes(i.status))
   if (status.value) list = list.filter((i) => i.status === status.value)
   const term = q.value.trim().toLowerCase()
   if (term) {
@@ -352,8 +383,10 @@ function fmtDate(v) {
   return v ? new Date(v).toLocaleDateString() : '—'
 }
 function lineSummary(lines) {
-  const out = (lines || []).map((l) => `${l.item_name || '—'} ×${l.quantity}`).join(', ')
-  return out || '—'
+  const list = lines || []
+  if (!list.length) return '—'
+  const first = `${list[0].item_name || '—'} ×${list[0].quantity}`
+  return list.length > 1 ? `${first}…` : first
 }
 function statusChip(s) {
   return statusChipClass[s] || 'muted'
@@ -363,7 +396,12 @@ function isRequester(indent) {
 }
 
 function canEdit(i) { return isRequester(i) && ['draft', 'pending'].includes(i.status) }
-function canRecall(i) { return isRequester(i) && i.status === 'pending' }
+function canRecall(i) {
+  // The requester recalls a sent request; the store keeper pulls back a
+  // forwarded answer before the requester accepts it.
+  return (isRequester(i) && i.status === 'pending')
+    || (isKeeper.value && !isRequester(i) && i.status === 'forwarded')
+}
 function canAccept(i) { return isRequester(i) && i.status === 'forwarded' }
 function canSupply(i) { return isKeeper.value && !isRequester(i) && i.status === 'pending' }
 function canApprove(i) { return isKeeper.value && i.status === 'pending' }
@@ -409,8 +447,8 @@ async function load() {
   notice.value = ''
   try {
     const params = { per_page: 250 }
-    if (tab.value === 'inbox' && isKeeper.value) params.mine = 0
-    else params.mine = 1
+    params.mine = tab.value === 'mine' ? 1 : 0
+    if (filterDate.value) params.date = filterDate.value
     const res = await inventoryOpsApi.indents(params)
     indents.value = res.data.indents || []
   } catch (e) {
@@ -605,15 +643,10 @@ function openDetail(indent) {
   modal.value = 'detail'
 }
 
-async function printDetail() {
-  const indent = editing.value
-  try {
-    const res = await inventoryOpsApi.printIndentPdf(indent.indent_id)
-    const match = (res.headers['content-disposition'] || '').match(/filename="?([^"]+)/)
-    saveBlob(res.data, match ? match[1] : `Requisition-${indent.indent_number}.pdf`)
-  } catch {
-    window.alert(t('requisitionPanel.printError'))
-  }
+function printDetail() {
+  // Send the user to the browser print setup page on the ready print layout
+  // instead of silently downloading the PDF.
+  window.print()
 }
 
 async function emailDetail() {
@@ -626,7 +659,13 @@ async function emailDetail() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await workingDateStore.ensureLoaded()
+  filterDate.value = workingDateStore.workingDate
+  // Guard against the auth user hydrating after setup: snap onto a real tab.
+  if (!tabs.value.some((tb) => tb.key === tab.value)) {
+    tab.value = tabs.value[0]?.key || 'mine'
+  }
   load()
   loadItems()
   loadDepartments()
@@ -717,8 +756,11 @@ onMounted(() => {
 .rq-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: #334155; margin-bottom: 12px; }
 .rq-meta strong { color: #0f172a; }
 @media print {
+  @page { size: A4 portrait; margin: 12mm; }
   body * { visibility: hidden; }
   #rq-print, #rq-print * { visibility: visible; }
-  #rq-print { position: absolute; inset: 0; }
+  #rq-print { position: absolute; inset: 0; border: 1px solid #cbd5e1; }
+  #rq-print .rq-modal-foot, #rq-print .rq-x { display: none !important; }
+  #rq-print .rq-table th, #rq-print .rq-table td { border: 1px solid #94a3b8 !important; }
 }
 </style>

@@ -163,7 +163,7 @@
             </div>
             <div class="form-group">
               <label>{{ $t('purchaseOrders.deliveryDate') }}</label>
-              <CalendarInput v-model="form.delivery_date" />
+              <CalendarInput v-model="form.delivery_date" :min="todayStr()" />
             </div>
             <div class="form-group">
               <label>{{ $t('purchaseOrders.paymentTerms') }}</label>
@@ -306,10 +306,17 @@ import CalendarInput from '@/components/CalendarInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { collectAllRows } from '@/utils/export'
+import { useWorkingDateStore } from '@/stores/workingDate'
 
 const { t } = useI18n()
 
 const authStore = useAuthStore()
+const workingDateStore = useWorkingDateStore()
+
+// Business "today" — delivery dates must never be scheduled in the past.
+function todayStr() {
+  return workingDateStore.workingDate
+}
 
 // Permission gates for the two-stage approval workflow (manager then finance).
 const canManagerApprove = computed(() => authStore.can(80))
@@ -530,7 +537,7 @@ function openCreate() {
   modalError.value = ''
   form.supplier_id = ''
   form.pr_id = ''
-  form.delivery_date = ''
+  form.delivery_date = todayStr()
   form.delivery_address = ''
   form.payment_terms = ''
   form.notes = ''
@@ -643,7 +650,8 @@ function flattenError(err) {
     : err.response?.data?.message || t('common.actionFailed')
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await workingDateStore.ensureLoaded()
   load()
   loadOptions()
 })

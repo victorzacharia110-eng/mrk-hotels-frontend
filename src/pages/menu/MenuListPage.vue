@@ -21,6 +21,9 @@
         <button v-if="canEdit" class="btn btn-secondary" @click="openCategories">
           <i class="fas fa-tags"></i> {{ $t('menu.manageCategories') }}
         </button>
+        <button v-if="canEdit" class="btn btn-secondary" @click="openAccompaniments">
+          <i class="fas fa-utensils"></i> {{ $t('menu.manageAccompaniments') }}
+        </button>
         <button
           v-if="canEdit && bulk.selectedCount > 0"
           class="btn btn-danger"
@@ -410,6 +413,13 @@
       </div>
     </div>
 
+    <!-- Accompaniment ("served with") registry: the side dishes the POS prompt offers -->
+    <AccompanimentManager
+      v-if="showAccompanimentModal"
+      :department="'restaurant'"
+      @close="showAccompanimentModal = false"
+    />
+
     <!-- Confirmation modal for bulk deletion (type DELETE to confirm) -->
     <DeleteConfirmModal
       v-model="showBulkDelete"
@@ -428,6 +438,7 @@ import { menuItemApi, menuCategoryApi, inventoryApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
+import AccompanimentManager from '@/components/AccompanimentManager.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 import { collectAllRows } from '@/utils/export'
 
@@ -872,6 +883,18 @@ function flattenError(err) {
   return messages
     ? Object.values(messages).flat().join(' ')
     : err.response?.data?.message || t('common.actionFailed')
+}
+
+// ---- Registered "served with" accompaniments ---------------------------------
+// The side dishes (wali, ugali, chips…) the POS offers next to grill-style
+// mains, kept per department. Managed by the shared AccompanimentManager so the
+// POS "served with" prompt and this page use one identical registry UI.
+
+const showAccompanimentModal = ref(false)
+
+/** Opens the accompaniment registry modal (admins/managers can switch sides). */
+function openAccompaniments() {
+  showAccompanimentModal.value = true
 }
 
 onMounted(load)

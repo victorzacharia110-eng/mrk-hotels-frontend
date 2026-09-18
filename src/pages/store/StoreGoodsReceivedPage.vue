@@ -140,6 +140,12 @@
                 <td><input v-model="item.rejection_reason" class="sm-input" style="width:120px" /></td>
               </tr>
             </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="7" style="text-align:right"><strong>{{ $t('goodsReceived.total') }}</strong></td>
+                <td colspan="2"><strong>TZS {{ formatMoney(formTotal) }}</strong></td>
+              </tr>
+            </tfoot>
           </table>
       </div>
 
@@ -220,6 +226,12 @@
                 <td>{{ item.rejection_reason || '-' }}</td>
               </tr>
             </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="8" style="text-align:right"><strong>{{ $t('goodsReceived.total') }}</strong></td>
+                <td><strong>TZS {{ formatMoney(detailTotal) }}</strong></td>
+              </tr>
+            </tfoot>
           </table>
       </div>
         </div>
@@ -248,6 +260,12 @@
             <td>{{ formatMoney(item.unit_price) }}</td><td>{{ formatMoney(item.unit_cost) }}</td><td>{{ item.price_difference != null ? formatMoney(item.price_difference) : '-' }}</td>
           </tr>
         </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="7" style="text-align:right"><strong>{{ $t('goodsReceived.total') }}</strong></td>
+            <td><strong>TZS {{ formatMoney(printTotal) }}</strong></td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   </div>
@@ -295,6 +313,16 @@ const emptyText = computed(() => {
 
 const canRecall = computed(() => detail.value && !detail.value.voided_by)
 const canVoidGrn = computed(() => detail.value && !detail.value.voided_by && !detail.value.recalled_by)
+
+// Grand total of everything actually received, valued at the new cost.
+function lineTotal(item) {
+  const qty = Number(item?.quantity_received ?? 0)
+  const cost = Number(item?.unit_cost ?? item?.unit_price ?? 0)
+  return Math.round(qty * cost * 100) / 100
+}
+const detailTotal = computed(() => (detail.value?.items || []).reduce((sum, i) => sum + lineTotal(i), 0))
+const formTotal = computed(() => (form.items || []).reduce((sum, i) => sum + lineTotal(i), 0))
+const printTotal = computed(() => (printData.value?.items || []).reduce((sum, i) => sum + lineTotal(i), 0))
 
 function formatDate(d) {
   if (!d) return '-'
@@ -574,12 +602,18 @@ onMounted(async () => {
 .hint-note { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
 .print-area { display: none; }
 @media print {
+  @page { size: A4 portrait; margin: 12mm; }
   html, body { background: #ffffff !important; }
   body * { visibility: hidden !important; }
   .print-area, .print-area * { visibility: visible !important; }
-  .print-area { display: block; position: fixed; inset: 0; width: 100%; height: auto; background: #ffffff; padding: 28px; z-index: 99999; color: #111827; }
-  .print-meta, .print-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
-  .print-meta td, .print-table th, .print-table td { border: 1px solid #d1d5db; padding: 5px 7px; text-align: left; }
+  .print-area {
+    display: block; position: fixed; inset: 0; width: 100%; height: auto;
+    background: #ffffff; padding: 14px; z-index: 99999; color: #111827;
+    border: 1px solid #cbd5e1;
+  }
+  .print-meta, .print-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; border: 1px solid #94a3b8; }
+  .print-meta td, .print-table th, .print-table td { border: 1px solid #94a3b8; padding: 5px 7px; text-align: left; }
   .print-table th { background: #f3f4f6; }
+  .print-table tfoot td { background: #eef4fb; font-weight: 700; }
 }
 </style>

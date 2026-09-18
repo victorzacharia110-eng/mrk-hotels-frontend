@@ -132,20 +132,6 @@ const REPORT_CONFIG = {
       { field: 'status', label: 'Status' },
     ],
   },
-  'movement-detail': {
-    labelKey: 'storeManager.reports.movementDetail',
-    rows: 'movements',
-    cols: [
-      { field: 'date', label: 'Date' },
-      { field: 'item_name', label: 'Item' },
-      { field: 'direction', label: 'Direction' },
-      { field: 'transaction', label: 'Transaction' },
-      { field: 'quantity', label: 'Qty', num: true },
-      { field: 'balance_after', label: 'Balance after', num: true },
-      { field: 'value', label: 'Value (TZS)', num: true, money: true },
-      { field: 'recorded_by', label: 'Recorded by' },
-    ],
-  },
   'stock-take-detail': {
     labelKey: 'storeManager.reports.physicalStock',
     rows: 'takes',
@@ -379,7 +365,7 @@ function buildReportHtml() {
 }
 
 // Small reports that fit a 58/80mm thermal roll and print to the till machine.
-const THERMAL_TYPES = ['transfer-register', 'movement-detail', 'stock-adjustment-report', 'goods-return-register']
+const THERMAL_TYPES = ['transfer-register', 'stock-adjustment-report', 'goods-return-register']
 const isThermalReport = computed(() => THERMAL_TYPES.includes(type.value))
 
 // Build the narrow thermal lines for the current small report.
@@ -396,9 +382,6 @@ function buildThermalLines() {
     switch (type.value) {
       case 'transfer-register':
         report.rows.push({ label: r.transfer_number, right: r.status }, { label: ` ${r.date}  ${r.from_department} → ${r.to_department}` })
-        break
-      case 'movement-detail':
-        report.rows.push({ label: r.date, right: r.direction }, { label: ` ${r.item_name}  (${r.transaction})`, right: money(r.quantity) }, { label: `  Bal ${money(r.balance_after)}  ·  ${money(r.value)}` })
         break
       case 'stock-adjustment-report':
         report.rows.push({ label: r.date, right: r.direction }, { label: ` ${r.item_name}  (${r.category}/${r.department})`, right: money(r.quantity) }, { label: `  ${money(r.quantity) || ''} × ${money(r.unit_cost)} = ${money(r.value)}` })

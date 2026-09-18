@@ -14,6 +14,14 @@
         <span class="kpi-label">{{ $t('storeManager.register.currentCash') }}</span>
         <span class="kpi-value">TZS {{ Number(register?.current_cash || 0).toLocaleString() }}</span>
       </div>
+      <div class="kpi">
+        <span class="kpi-label">{{ $t('storeManager.register.cashExpenses') }}</span>
+        <span class="kpi-value warn">TZS {{ Number(register?.expenses_total || 0).toLocaleString() }}</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">{{ $t('storeManager.register.remainingFloat') }}</span>
+        <span class="kpi-value">TZS {{ Number(register?.remaining_float || 0).toLocaleString() }}</span>
+      </div>
     </div>
     <div class="sm-toolbar">
       <div class="sm-search"><i class="fas fa-magnifying-glass"></i><input v-model="q" type="text" :placeholder="$t('common.search')" /></div>
@@ -30,6 +38,7 @@
           <thead><tr>
             <th>{{ $t('storeManager.register.openedAt') }}</th><th>{{ $t('storeManager.register.closedAt') }}</th>
             <th>{{ $t('storeManager.register.openingFloat') }}</th><th>{{ $t('storeManager.register.salesTotal') }}</th>
+            <th>{{ $t('storeManager.register.cashExpenses') }}</th>
             <th>{{ $t('storeManager.register.expected') }}</th><th>{{ $t('storeManager.register.counted') }}</th><th>{{ $t('storeManager.register.difference') }}</th>
           </tr></thead>
           <tbody>
@@ -37,6 +46,7 @@
               <td>{{ fmt(s.opened_at) }}</td><td>{{ fmt(s.closed_at) }}</td>
               <td>{{ Number(s.opening_float || 0).toLocaleString() }}</td>
               <td>{{ Number(s.sales_total || 0).toLocaleString() }}</td>
+              <td>{{ Number(s.expenses_total || 0).toLocaleString() }}</td>
               <td>{{ Number(s.expected_cash || 0).toLocaleString() }}</td>
               <td>{{ Number(s.counted_cash || 0).toLocaleString() }}</td>
               <td :class="Number(s.difference || 0) < 0 ? 'neg' : 'pos'">{{ Number(s.difference || 0).toLocaleString() }}</td>

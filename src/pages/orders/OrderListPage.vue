@@ -396,12 +396,23 @@
       <div class="modal modal-sm">
         <div class="modal-head">
           <h2><i class="fas fa-bowl-rice"></i> {{ $t('orders.servedWithTitle') }}</h2>
-          <button
-            class="modal-close"
-            @click="chooseAccompaniment(form.items[accompIdx]?.accompaniment || '')"
-          >
-            <i class="fas fa-xmark"></i>
-          </button>
+          <div class="modal-head-actions">
+            <button
+              v-if="canManageSides"
+              class="modal-close"
+              :title="$t('orders.manageSides')"
+              :aria-label="$t('orders.manageSides')"
+              @click="manageAccompaniments"
+            >
+              <i class="fas fa-plus"></i>
+            </button>
+            <button
+              class="modal-close"
+              @click="chooseAccompaniment(form.items[accompIdx]?.accompaniment || '')"
+            >
+              <i class="fas fa-xmark"></i>
+            </button>
+          </div>
         </div>
         <p class="muted">
           {{ $t('orders.servedWithHint', { item: accompItemName }) }}
@@ -420,6 +431,16 @@
         </div>
       </div>
     </div>
+
+    <!-- Register "served with" sides from the prompt (cashier/bartender own
+         side, admins/managers/kitchen either). -->
+    <AccompanimentManager
+      v-if="showAccompanimentManager"
+      :department="form.department"
+      :lock-department="isDeptLocked"
+      @close="showAccompanimentManager = false"
+      @changed="loadAccompaniments(true)"
+    />
 
     <!-- Collect payment modal for an unpaid order -->
     <div v-if="showPay" class="modal-overlay" @click.self="showPay = false">
@@ -545,8 +566,10 @@ import { useAuthStore } from '@/stores/auth'
 import { orderApi, menuItemApi, tableApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
+import AccompanimentManager from '@/components/AccompanimentManager.vue'
 import { PAYMENT_METHODS } from '@/utils/payments'
-import { isGrillMenuItem } from '@/utils/menuAccompaniment'
+import { isGrillMenuItem, canManageAccompaniments, lockedAccompanimentDepartment } from '@/utils/menuAccompaniment'
+import { useAccompaniments } from '@/composables/useAccompaniments'
 import { collectAllRows } from '@/utils/export'
 
 const { t } = useI18n()
@@ -717,20 +740,24 @@ function emptyItem() {
 // Picking such an item opens a modal so the waiter records the side dish.
 // ---------------------------------------------------------------------------
 
-/** Accompaniment choices shown in the "served with" modal. */
-const accompanimentOptions = computed(() => [
-  { value: 'wali', label: t('orders.accompWali') },
-  { value: 'ugali', label: t('orders.accompUgali') },
-  { value: 'chips', label: t('orders.accompChips') },
-  { value: 'chapati', label: t('orders.accompChapati') },
-  { value: 'ndizi', label: t('orders.accompNdizi') },
-  { value: 'maharage', label: t('orders.accompMaharage') },
-  { value: '', label: t('orders.accompNone') },
-])
+/** Accompaniment choices shown in the "served with" modal (current department). */
+const { accompanimentOptions, loadAccompaniments } = useAccompaniments(t, () => form.department)
 
 // Accompaniment modal state: which line item is being asked about.
 const showAccomp = ref(false)
 const accompIdx = ref(null)
+
+// Cashiers own the restaurant sides and bartenders the bar sides, so their
+// department is pinned; admins/managers/kitchen may manage either side.
+const canManageSides = computed(() => canManageAccompaniments(authStore.user?.user_role))
+const isDeptLocked = computed(() => !!lockedAccompanimentDepartment(authStore.user?.user_role))
+const showAccompanimentManager = ref(false)
+
+/** Opens the registry (closing the side prompt) to add a missing side dish. */
+function manageAccompaniments() {
+  showAccomp.value = false
+  showAccompanimentManager.value = true
+}
 
 /** True when the given menu item is a grill-style main (needs a side dish). */
 function isGrillItem(menuItemId) {
@@ -1329,6 +1356,12 @@ onMounted(() => {
 
 .modal-head h2 i {
   color: #005eb8;
+}
+
+.modal-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .modal-close {

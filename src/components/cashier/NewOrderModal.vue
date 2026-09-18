@@ -132,9 +132,21 @@
         <div class="cat-pop-panel accomp-panel">
           <header class="cat-pop-head">
             <strong>{{ $t('orders.servedWithTitle') }}</strong>
-            <button type="button" class="cat-pop-close" :aria-label="$t('common.close')" @click="skipAccompaniment">
-              <i class="fas fa-times" aria-hidden="true"></i>
-            </button>
+            <div class="cat-pop-head-actions">
+              <button
+                v-if="canManageSides"
+                type="button"
+                class="cat-pop-close"
+                :title="$t('orders.manageSides')"
+                :aria-label="$t('orders.manageSides')"
+                @click="manageAccompaniments"
+              >
+                <i class="fas fa-plus" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="cat-pop-close" :aria-label="$t('common.close')" @click="skipAccompaniment">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
           </header>
           <p class="accomp-hint">
             {{ $t('orders.servedWithHint', { item: accompItem.item_name }) }}
@@ -154,6 +166,15 @@
       </div>
     </Transition>
   </Teleport>
+
+  <!-- Register restaurant "served with" sides (cashier-owned) from the prompt. -->
+  <AccompanimentManager
+    v-if="showAccompanimentManager"
+    :department="'restaurant'"
+    :lock-department="true"
+    @close="showAccompanimentManager = false"
+    @changed="loadAccompaniments(true)"
+  />
 </template>
 
 <script setup>
@@ -162,9 +183,12 @@ import { useI18n } from 'vue-i18n'
 import { menuItemApi, orderApi } from '@/api'
 import { selectedOutlet } from '@/pages/cashier/outlet-context'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import AccompanimentManager from '@/components/AccompanimentManager.vue'
 import { usePrintSettingsStore } from '@/stores/printSettings'
+import { useAuthStore } from '@/stores/auth'
 import { displayLines } from '@/utils/receipts'
-import { isGrillMenuItem } from '@/utils/menuAccompaniment'
+import { isGrillMenuItem, canManageAccompaniments } from '@/utils/menuAccompaniment'
+import { useAccompaniments } from '@/composables/useAccompaniments'
 import { toast } from '@/utils/toast'
 
 const props = defineProps({
@@ -259,15 +283,19 @@ function addItem(item) {
 }
 
 /** "Served with" side-dish choices for grill-style mains (mshikaki, choma...). */
-const accompanimentOptions = computed(() => [
-  { value: 'wali', label: t('orders.accompWali') },
-  { value: 'ugali', label: t('orders.accompUgali') },
-  { value: 'chips', label: t('orders.accompChips') },
-  { value: 'chapati', label: t('orders.accompChapati') },
-  { value: 'ndizi', label: t('orders.accompNdizi') },
-  { value: 'maharage', label: t('orders.accompMaharage') },
-  { value: '', label: t('orders.accompNone') },
-])
+const { accompanimentOptions, loadAccompaniments } = useAccompaniments(t, 'restaurant')
+
+// The cashier owns the restaurant list, so they may register a missing side
+// straight from the prompt without leaving the order.
+const authStore = useAuthStore()
+const canManageSides = computed(() => canManageAccompaniments(authStore.user?.user_role))
+const showAccompanimentManager = ref(false)
+
+/** Opens the registry (closing the prompt) so the cashier can add a side. */
+function manageAccompaniments() {
+  accompItem.value = null
+  showAccompanimentManager.value = true
+}
 
 function isGrillItem(item) {
   return isGrillMenuItem(item)
@@ -474,6 +502,12 @@ onMounted(async () => {
   color: #fff;
   font-size: 18px;
   cursor: pointer;
+}
+
+.cat-pop-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .accomp-panel {

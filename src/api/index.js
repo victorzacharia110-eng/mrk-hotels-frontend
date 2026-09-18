@@ -1528,6 +1528,57 @@ export const menuCategoryApi = {
   },
 }
 
+/**
+ * Registered "served with" accompaniments (wali, ugali, chips...) the hotel
+ * offers next to grill-style mains. Per department: the restaurant and the bar
+ * keep separate lists. Previously a hard-coded front-end list; now a per-hotel
+ * registry the POS prompts read from.
+ */
+export const menuAccompanimentApi = {
+  /**
+   * Lists one department's accompaniments in display order.
+   * @param {object} params - Query params (department required, is_active).
+   * @returns {Promise} Axios response with the ordered accompaniment list.
+   */
+  index(params) {
+    return api.get(`${v1}/menu-accompaniments`, { params })
+  },
+  /**
+   * Registers a new accompaniment food.
+   * @param {object} data - { department, name, sort_order? }.
+   * @returns {Promise} Axios response with the created accompaniment.
+   */
+  store(data) {
+    return api.post(`${v1}/menu-accompaniments`, data)
+  },
+  /**
+   * Updates an accompaniment (rename / sort_order / is_active).
+   * @param {string} id - Accompaniment identifier.
+   * @param {object} data - Fields to update.
+   * @returns {Promise} Axios response with the updated accompaniment.
+   */
+  update(id, data) {
+    return api.put(`${v1}/menu-accompaniments/${id}`, data)
+  },
+  /**
+   * Persists the display order of a department's accompaniment prompt.
+   * @param {string} department - 'restaurant' | 'bar'.
+   * @param {Array} order - Accompaniment ids in display order.
+   * @returns {Promise} Axios response confirming the order.
+   */
+  reorder(department, order) {
+    return api.put(`${v1}/menu-accompaniments/reorder`, { department, order })
+  },
+  /**
+   * Deletes an accompaniment (blocked once recorded on any order line; hide it instead).
+   * @param {string} id - Accompaniment identifier.
+   * @returns {Promise} Axios response confirming deletion.
+   */
+  destroy(id) {
+    return api.delete(`${v1}/menu-accompaniments/${id}`)
+  },
+}
+
 /** Restaurant/bar tables (manager maintains the list; waiters pick one when ordering). */
 export const tableApi = {
   /**

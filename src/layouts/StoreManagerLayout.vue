@@ -170,7 +170,6 @@ const navItems = [
     children: [
       { to: '/store-manager/reports?view=ledger-summary', icon: 'fas fa-book', labelKey: 'storeManager.reports.stockLedger' },
       { to: '/store-manager/reports?view=transfer-register', icon: 'fas fa-right-left', labelKey: 'storeManager.reports.transferSummary' },
-      { to: '/store-manager/reports?view=movement-detail', icon: 'fas fa-arrow-trend-up', labelKey: 'storeManager.reports.movementDetail' },
       { to: '/store-manager/reports?view=stock-take-detail', icon: 'fas fa-scale-balanced', labelKey: 'storeManager.reports.physicalStock' },
       { to: '/store-manager/reports?view=closing-stock', icon: 'fas fa-warehouse', labelKey: 'storeManager.reports.closingStock' },
       { to: '/store-manager/reports?view=stock-adjustment-report', icon: 'fas fa-sliders', labelKey: 'storeManager.reports.stockAdjustment' },

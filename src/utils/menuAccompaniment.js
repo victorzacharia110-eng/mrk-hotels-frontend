@@ -9,6 +9,8 @@
  * cashier and bartender new-order tabs from drifting apart.
  */
 
+import { menuAccompanimentApi } from '../api'
+
 /** Name keywords that mark a menu item as a grill-style main needing a side. */
 export const GRILL_KEYWORDS = [
   'broiler',
@@ -44,4 +46,87 @@ export function isGrillMenuItem(idOrItem, menuItems = []) {
     name = item?.item_name || ''
   }
   return isGrillItemName(name)
+}
+
+/**
+ * The classic side-dish set shown until the hotel's accompaniment registry is
+ * loaded (and as a fallback when the registry cannot be fetched). Mirrors the
+ * original hard-coded prompt so the POS never shows an empty list.
+ */
+export function fallbackAccompanimentOptions(t) {
+  return [
+    { value: 'wali', label: t('orders.accompWali') },
+    { value: 'ugali', label: t('orders.accompUgali') },
+    { value: 'chips', label: t('orders.accompChips') },
+    { value: 'chapati', label: t('orders.accompChapati') },
+    { value: 'ndizi', label: t('orders.accompNdizi') },
+    { value: 'maharage', label: t('orders.accompMaharage') },
+  ]
+}
+
+/** Roles allowed to register/edit a department's accompaniments. */
+export const ACCOMPANIMENT_MANAGER_ROLES = [
+  'superadmin',
+  'hotel_admin',
+  'manager',
+  'kitchen',
+  'cashier',
+  'bartender',
+]
+
+/** True when the role may manage at least one department's accompaniments. */
+export function canManageAccompaniments(role) {
+  return ACCOMPANIMENT_MANAGER_ROLES.includes(role)
+}
+
+/**
+ * The single department a role is pinned to, or '' when it may manage both.
+ * Cashiers own the restaurant, bartenders own the bar; admins, managers and
+ * kitchen staff cover both sides.
+ */
+export function lockedAccompanimentDepartment(role) {
+  if (role === 'cashier') return 'restaurant'
+  if (role === 'bartender') return 'bar'
+  return ''
+}
+
+/** Normalises an arbitrary value to 'restaurant' or 'bar'. */
+export function normalizeDepartment(department) {
+  return department === 'bar' ? 'bar' : 'restaurant'
+}
+
+/**
+ * Loads one department's registered accompaniments as prompt options.
+ *
+ * Reads the per-hotel, per-department registry (the answer to "where are
+ * accompaniments registered?") and maps each active row to
+ * `{ value: name, label: name }`. The name doubles as the value so order lines
+ * keep a readable snapshot. Cached per department so the waiter, cashier and
+ * order-edit screens share one request each. Returns null on failure so callers
+ * can keep their default fallback options.
+ */
+const accompCache = new Map()
+const accompInflight = new Map()
+export async function loadAccompanimentOptions(department = 'restaurant', { force = false } = {}) {
+  const dept = normalizeDepartment(department)
+
+  if (!force && accompCache.has(dept)) return accompCache.get(dept)
+  if (accompInflight.has(dept)) return accompInflight.get(dept)
+
+  const request = (async () => {
+    try {
+      const res = await menuAccompanimentApi.index({ department: dept, is_active: true })
+      const list = res.data?.data ?? res.data ?? []
+      const options = list.map((a) => ({ value: a.name, label: a.name }))
+      accompCache.set(dept, options)
+      return options
+    } catch {
+      return null
+    } finally {
+      accompInflight.delete(dept)
+    }
+  })()
+
+  accompInflight.set(dept, request)
+  return request
 }

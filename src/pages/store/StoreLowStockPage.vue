@@ -38,7 +38,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { inventoryApi } from '../../api'
+import { storeApi } from '../../api'
 
 const alerts = ref([])
 const loading = ref(false)
@@ -48,9 +48,9 @@ const belowReorder = computed(() => alerts.value.filter((a) => Number(a.quantity
 async function load() {
   loading.value = true
   try {
-    const res = await inventoryApi.index({ per_page: 100 })
+    const res = await storeApi.lowStock()
     const items = res.data.data || res.data || []
-    alerts.value = items.filter((i) => Number(i.quantity_in_stock) <= Number(i.reorder_level || 0))
+    alerts.value = items.filter((i) => Number(i.quantity_in_stock) <= Number(i.reorder_level || 0) || i.status === 'out_of_stock')
   } finally { loading.value = false }
 }
 onMounted(load)
