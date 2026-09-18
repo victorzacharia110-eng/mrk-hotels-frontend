@@ -225,6 +225,32 @@ button {
   font-size: 13px;
 }
 
+.btn-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #005eb8;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.row-muted {
+  opacity: 0.6;
+}
+
 .card {
   background: #fff;
   border: 1px solid #eee;
@@ -635,6 +661,10 @@ button {
   overflow-y: auto;
   padding: 28px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.modal-lg {
+  max-width: 980px;
 }
 
 .modal-head {

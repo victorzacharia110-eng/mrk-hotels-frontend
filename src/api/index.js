@@ -541,6 +541,45 @@ export const roomApi = {
     return api.put(`${v1}/rooms/${id}`, data)
   },
   /**
+   * Room-type inventory + availability for a date window (INVENTORY tab).
+   * @param {object} params - Query params (from, to, status).
+   * @returns {Promise} Axios response with per-type summaries and room rows.
+   */
+  inventory(params) {
+    return api.get(`${v1}/rooms/inventory`, { params })
+  },
+  /**
+   * Bulk rate update for all rooms of one type (RATES tab).
+   * @param {object} data - { room_type, price_per_night }.
+   * @returns {Promise} Axios response with the updated count.
+   */
+  updateRates(data) {
+    return api.put(`${v1}/rooms/rates`, data)
+  },
+  /**
+   * Current stop-sell blocks (STOPSELD tab).
+   * @returns {Promise} Axios response with the blocks list.
+   */
+  stopSell() {
+    return api.get(`${v1}/rooms/stop-sell`)
+  },
+  /**
+   * Places stop-sell blocks for a room type across dates (STOPSELD tab).
+   * @param {object} data - { room_type, dates: [] }.
+   * @returns {Promise} Axios response with the created blocks.
+   */
+  storeStopSell(data) {
+    return api.post(`${v1}/rooms/stop-sell`, data)
+  },
+  /**
+   * Lifts a stop-sell block (STOPSELD tab).
+   * @param {string|number} id - Block identifier.
+   * @returns {Promise} Axios response confirming removal.
+   */
+  destroyStopSell(id) {
+    return api.delete(`${v1}/rooms/stop-sell/${id}`)
+  },
+  /**
    * Changes a room's status (dirty, clean, out of service).
    * @param {string|number} id - Room identifier.
    * @param {object} data - Status change payload.
@@ -993,6 +1032,25 @@ export const companyApi = {
   },
   destroy(id) {
     return api.delete(`${v1}/companies/${id}`)
+  },
+  /**
+   * The posted-folio statement for a company account within a date range —
+   * folios posted to the company plus settle payments received against it.
+   * @param {string} id - Company id.
+   * @param {object} params - Query params ({ from, to }).
+   * @returns {Promise} Axios response with { company, balance, total_posted, total_received, rows }.
+   */
+  postings(id, params) {
+    return api.get(`${v1}/companies/${id}/postings`, { params })
+  },
+  /**
+   * Receives a settlement payment against a company account.
+   * @param {string} id - Company id.
+   * @param {object} data - Payment payload ({ amount, payment_method, payment_provider, transaction_reference, paid_by, notes }).
+   * @returns {Promise} Axios response with the updated company and payment.
+   */
+  settle(id, data) {
+    return api.post(`${v1}/companies/${id}/settle`, data)
   },
 }
 

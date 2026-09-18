@@ -55,7 +55,11 @@
         </thead>
         <tbody>
           <tr v-for="c in companies" :key="c.company_id">
-            <td>{{ c.name }}</td>
+            <td>
+              <button type="button" class="btn btn-link" style="padding: 0;" :title="$t('receptionPanel.viewCompanyStatement')" @click="openPostings(c)">
+                <i class="fas fa-building" aria-hidden="true"></i> {{ c.name }}
+              </button>
+            </td>
             <td>{{ c.contact_person || '—' }}</td>
             <td>{{ countryLabel(c.country_code) }}</td>
             <td>{{ c.email || '—' }}</td>
@@ -92,6 +96,136 @@
           </button>
           <button class="btn btn-sm btn-secondary" :disabled="page >= pagination.last_page || companiesLoading" @click="goPage(page + 1)">
             {{ $t('common.next') }} <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Company posted-folio statement: date range, balance, settle (RECEIVE) -->
+    <div v-if="postingsModal" class="modal-overlay" @click.self="closePostings">
+      <div class="modal modal-lg">
+        <div class="modal-head">
+          <h3>
+            <i class="fas fa-building" aria-hidden="true"></i>
+            {{ postingsCompany?.name || '' }}
+            <span v-if="postingsBalance !== null" class="badge" :class="Number(postingsBalance) > 0 ? 'badge-warning' : 'badge-success'" style="margin-left: 8px;">
+              {{ $t('receptionPanel.postedBalance') }}: {{ tsh(postingsBalance) }}
+            </span>
+          </h3>
+          <button class="modal-close" :aria-label="$t('common.close')" @click="closePostings">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div style="display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;">
+            <div class="form-group" style="margin: 0;">
+              <label>{{ $t('receptionPanel.fromDate') }}</label>
+              <input v-model="postingsFrom" type="date" class="input" @change="loadPostings" />
+            </div>
+            <div class="form-group" style="margin: 0;">
+              <label>{{ $t('receptionPanel.toDate') }}</label>
+              <input v-model="postingsTo" type="date" class="input" @change="loadPostings" />
+            </div>
+            <button class="btn btn-secondary" :disabled="postingsLoading" @click="loadPostings">
+              <i class="fas fa-rotate"></i> {{ $t('common.refresh') }}
+            </button>
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+              <span v-if="selectedPostings.length" class="muted">{{ $t('receptionPanel.settlingBalance') }}: <strong>{{ tsh(selectedPostingsSum) }}</strong></span>
+              <button class="btn btn-primary" :disabled="postingsLoading || !selectedPostings.length" @click="openReceive">
+                <i class="fas fa-money-check-dollar"></i> {{ $t('receptionPanel.receive') }}
+              </button>
+            </div>
+          </div>
+          <div v-if="postingsError" class="alert alert-error" style="margin: 0 0 12px;">{{ postingsError }}</div>
+          <div v-if="postingsLoading" class="alert alert-info" style="margin: 0;">{{ $t('common.loading') }}</div>
+          <table v-else class="table">
+            <thead>
+              <tr>
+                <th style="width: 44px;"></th>
+                <th>{{ $t('receptionPanel.pDate') }}</th>
+                <th>{{ $t('receptionPanel.pDescription') }}</th>
+                <th>{{ $t('receptionPanel.pMeans') }}</th>
+                <th>{{ $t('receptionPanel.pUser') }}</th>
+                <th class="num">{{ $t('receptionPanel.pAmount') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in postingsRows" :key="row.id" :class="{ 'row-muted': row.kind === 'payment' }">
+                <td>
+                  <input
+                    v-if="row.kind === 'folio' && Number(row.amount) > 0"
+                    v-model="selectedPostings"
+                    type="checkbox"
+                    :value="row.id"
+                    :aria-label="$t('receptionPanel.selectFolio')"
+                  />
+                </td>
+                <td class="nowrap">{{ row.date }}</td>
+                <td>
+                  <span v-if="row.kind === 'payment'" class="badge badge-success" style="margin-right: 6px;">{{ $t('receptionPanel.pPayment') }}</span>
+                  {{ row.description }}
+                </td>
+                <td class="nowrap">{{ row.means || '—' }}</td>
+                <td>{{ row.user }}</td>
+                <td class="num">{{ tsh(row.amount) }}</td>
+              </tr>
+              <tr v-if="!postingsRows.length">
+                <td colspan="6" class="muted">{{ $t('receptionPanel.noPostings') }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="modal-foot">
+          <span class="muted" style="margin-right: auto;">
+            {{ $t('receptionPanel.totalPosted') }}: {{ tsh(postingsTotalPosted) }}
+            <span style="margin-left: 12px;">{{ $t('receptionPanel.totalReceived') }}: {{ tsh(postingsTotalReceived) }}</span>
+          </span>
+          <button class="btn btn-secondary" @click="closePostings">{{ $t('common.close') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Receive settlement amount -->
+    <div v-if="receiveModal" class="modal-overlay" @click.self="receiveModal = false">
+      <div class="modal">
+        <div class="modal-head">
+          <h3>{{ $t('receptionPanel.receivePayment') }}</h3>
+          <button class="modal-close" :aria-label="$t('common.close')" @click="receiveModal = false">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="muted" style="margin-top: 0;">{{ $t('receptionPanel.receiveFrom', { company: postingsCompany?.name || '' }) }}</p>
+          <div class="form-group">
+            <label>{{ $t('receptionPanel.settleAmount') }} *</label>
+            <input v-model.number="receiveForm.amount" type="number" min="0.01" step="0.01" class="input" />
+          </div>
+          <div class="form-group">
+            <label>{{ $t('payments.method') }}</label>
+            <select v-model="receiveForm.payment_method" class="input" @change="receiveMethodChanged">
+              <option v-for="m in methodOptions" :key="m.value" :value="m.value">{{ m.label }}</option>
+            </select>
+          </div>
+          <div v-if="requiresProvider(receiveForm.payment_method)" class="form-group">
+            <label>{{ $t('payments.provider') }}</label>
+            <select v-model="receiveForm.payment_provider" class="input">
+              <option v-for="p in providersFor(receiveForm.payment_method)" :key="p" :value="p">{{ p.replace('_', ' ') }}</option>
+            </select>
+          </div>
+          <div v-if="receiveForm.payment_method === 'bank'" class="form-group">
+            <label>{{ $t('payments.transactionReference') }}</label>
+            <input v-model="receiveForm.transaction_reference" type="text" class="input" />
+          </div>
+          <div class="form-group">
+            <label>{{ $t('payments.paidBy') }}</label>
+            <input v-model="receiveForm.paid_by" type="text" class="input" />
+          </div>
+          <p v-if="receiveError" class="alert alert-error" style="margin: 8px 0 0;">{{ receiveError }}</p>
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-secondary" @click="receiveModal = false">{{ $t('common.cancel') }}</button>
+          <button class="btn btn-primary" :disabled="receiveSaving" @click="saveReceive">
+            <i class="fas fa-save"></i> {{ receiveSaving ? $t('common.loading') : $t('receptionPanel.receive') }}
           </button>
         </div>
       </div>
@@ -185,6 +319,7 @@ import PhoneInput from '@/components/PhoneInput.vue'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import { loadLocationData, getCountryName } from '@/utils/locations'
 import { validatePhoneNumber } from '@/utils/phone'
+import { METHOD_CASH, requiresProvider, providersFor } from '@/utils/payments'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -196,6 +331,139 @@ function tsh(value) {
   const n = Number(value)
   if (Number.isNaN(n)) return '—'
   return `TZS ${n.toLocaleString()}`
+}
+
+function isoDate(daysAgo = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() - daysAgo)
+  return d.toISOString().slice(0, 10)
+}
+
+/* ----- Company posted-folio statement & settlement ----- */
+const postingsModal = ref(false)
+const postingsLoading = ref(false)
+const postingsError = ref('')
+const postingsCompany = ref(null)
+const postingsFrom = ref(isoDate(30))
+const postingsTo = ref(isoDate(0))
+const postingsRows = ref([])
+const postingsBalance = ref(null)
+const postingsTotalPosted = ref(0)
+const postingsTotalReceived = ref(0)
+const selectedPostings = ref([])
+
+const methodOptions = [
+  { value: METHOD_CASH, label: t('paymentFields.methods.cash') },
+  { value: 'mobile_money', label: t('paymentFields.methods.mobile_money') },
+  { value: 'bank', label: t('paymentFields.methods.bank') || 'Bank transfer' },
+  { value: 'card', label: t('paymentFields.methods.card') },
+  { value: 'selcom', label: t('paymentFields.methods.selcom') },
+  { value: 'clickpesa', label: 'ClickPesa' },
+]
+
+const selectedPostingsSum = computed(() => {
+  const sum = postingsRows.value
+    .filter((row) => row.kind === 'folio' && selectedPostings.value.includes(row.id))
+    .reduce((total, row) => total + Number(row.amount || 0), 0)
+  // Only the outstanding figure can be received; rows already settled
+  // elsewhere (Cashiering Center) stay selectable but cannot be over-paid.
+  return Math.min(sum, Number(postingsBalance.value || 0))
+})
+
+function openPostings(c) {
+  postingsCompany.value = c
+  postingsBalance.value = Number(c.current_balance ?? 0)
+  postingsRows.value = []
+  postingsTotalPosted.value = 0
+  postingsTotalReceived.value = 0
+  selectedPostings.value = []
+  postingsFrom.value = isoDate(30)
+  postingsTo.value = isoDate(0)
+  postingsError.value = ''
+  postingsModal.value = true
+  loadPostings()
+}
+
+function closePostings() {
+  if (postingsLoading.value || receiveSaving.value) return
+  postingsModal.value = false
+  postingsCompany.value = null
+}
+
+async function loadPostings() {
+  if (!postingsCompany.value) return
+  postingsLoading.value = true
+  postingsError.value = ''
+  selectedPostings.value = []
+  try {
+    const res = await companyApi.postings(postingsCompany.value.company_id, {
+      from: postingsFrom.value || undefined,
+      to: postingsTo.value || undefined,
+    })
+    const data = res.data || {}
+    postingsRows.value = data.rows || []
+    postingsBalance.value = Number(data.balance ?? postingsCompany.value.current_balance ?? 0)
+    postingsTotalPosted.value = Number(data.total_posted ?? 0)
+    postingsTotalReceived.value = Number(data.total_received ?? 0)
+    if (data.company) {
+      postingsCompany.value = data.company
+    }
+  } catch (err) {
+    postingsError.value = err.response?.data?.message || t('common.loadError')
+  } finally {
+    postingsLoading.value = false
+  }
+}
+
+// RECEIVE: settle the selected posted folios with the set amount.
+const receiveModal = ref(false)
+const receiveSaving = ref(false)
+const receiveError = ref('')
+const receiveForm = ref({ amount: null, payment_method: METHOD_CASH, payment_provider: null, transaction_reference: '', paid_by: '' })
+
+function openReceive() {
+  receiveError.value = ''
+  receiveForm.value = {
+    amount: selectedPostingsSum.value > 0 ? selectedPostingsSum.value : null,
+    payment_method: METHOD_CASH,
+    payment_provider: null,
+    transaction_reference: '',
+    paid_by: postingsCompany.value?.name || '',
+  }
+  receiveModal.value = true
+}
+
+function receiveMethodChanged() {
+  receiveForm.value.payment_provider = null
+  if (receiveForm.value.payment_method === METHOD_CASH) receiveForm.value.payment_provider = null
+}
+
+async function saveReceive() {
+  const amount = Number(receiveForm.value.amount)
+  if (!postingsCompany.value || !amount || amount <= 0) return
+  receiveSaving.value = true
+  receiveError.value = ''
+  try {
+    const res = await companyApi.settle(postingsCompany.value.company_id, {
+      amount,
+      payment_method: receiveForm.value.payment_method,
+      payment_provider: receiveForm.value.payment_provider ?? undefined,
+      transaction_reference: receiveForm.value.transaction_reference || undefined,
+      paid_by: receiveForm.value.paid_by || undefined,
+    })
+    receiveModal.value = false
+    success.value = t('receptionPanel.receiveSuccess')
+    if (res.data?.company) {
+      // Merge the fresh balance/name back into the directory row.
+      const merged = companies.value.find((x) => x.company_id === res.data.company.company_id)
+      if (merged) Object.assign(merged, res.data.company)
+    }
+    await loadPostings()
+  } catch (err) {
+    receiveError.value = err.response?.data?.message || t('common.error')
+  } finally {
+    receiveSaving.value = false
+  }
 }
 
 /* ----- Refresh ----- */

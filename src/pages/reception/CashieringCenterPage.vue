@@ -46,6 +46,32 @@
       </div>
     </div>
 
+    <div class="card" style="padding: 20px; margin-bottom: 16px;">
+      <h3 style="margin: 0 0 12px;"><i class="fas fa-hand-holding-dollar" style="color: var(--mrk-blue);"></i> {{ $t('cashiering.creditorsOwed') }}</h3>
+      <p class="muted" style="margin: 0 0 12px;">{{ $t('cashiering.creditorsOwedSubtitle') }}</p>
+      <div v-if="!creditorsOwed.length" class="alert alert-info" style="margin: 0;">{{ $t('cashiering.noCreditorsOwed') }}</div>
+      <table v-else class="table">
+        <thead>
+          <tr>
+            <th>{{ $t('common.name') }}</th>
+            <th>{{ $t('receptionPanel.balance') }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="c in creditorsOwed" :key="c.company_id">
+            <td>{{ c.name }}</td>
+            <td class="nowrap">{{ fmt(c.current_balance) }}</td>
+            <td style="text-align: right;">
+              <button class="btn btn-sm btn-primary" @click="openSettleCreditor(c)">
+                <i class="fas fa-money-check-dollar"></i> {{ $t('cashiering.settleCreditor') }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
     <div class="card" style="padding: 20px;">
       <h3 style="margin: 0 0 12px;"><i class="fas fa-list" style="color: var(--mrk-blue);"></i> {{ $t('payments.title') }}</h3>
       <div v-if="loading" class="alert alert-info" style="margin: 0;">{{ $t('common.loading') }}</div>
@@ -100,10 +126,20 @@
         </div>
         <div class="modal-body">
           <div class="form-group">
-            <label>{{ $t('payments.guest') }} *</label>
-            <select v-model="form.reservation_id" class="input">
+            <label>{{ $t('payments.guest') }}</label>
+            <select v-model="form.reservation_id" class="input" @change="form.company_id = null">
+              <option :value="null">{{ $t('cashiering.selectGuest') }}</option>
               <option v-for="r in reservations" :key="r.reservation_id" :value="r.reservation_id">
                 {{ r.guest_name }} · {{ r.room?.room_number || r.room_number || '' }} · TZS {{ r.balance_due ?? r.balance ?? 0 }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>{{ $t('cashiering.creditor') }}</label>
+            <select v-model="form.company_id" class="input" @change="form.reservation_id = null">
+              <option :value="null">{{ $t('cashiering.selectCreditor') }}</option>
+              <option v-for="c in companies.filter((x) => Number(x.current_balance ?? 0) > 0)" :key="c.company_id" :value="c.company_id">
+                {{ c.name }} · {{ $t('cashiering.owed') }} {{ fmt(c.current_balance) }}
               </option>
             </select>
           </div>
@@ -147,7 +183,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { paymentApi, reservationApi } from '@/api'
+import { companyApi, paymentApi, reservationApi } from '@/api'
 import { METHOD_CASH, requiresProvider, providersFor } from '@/utils/payments'
 
 const { t } = useI18n()
@@ -156,6 +192,7 @@ const today = new Date().toISOString().slice(0, 10)
 const selectedDate = ref(today)
 const payments = ref([])
 const reservations = ref([])
+const companies = ref([])
 const loading = ref(false)
 const saving = ref(false)
 const busy = ref(null)
@@ -172,7 +209,13 @@ const methodOptions = [
   { value: 'clickpesa', label: 'ClickPesa' },
 ]
 
-const form = ref({ reservation_id: null, amount: null, payment_method: METHOD_CASH, payment_provider: null, paid_by: '', transaction_reference: '' })
+const form = ref({ reservation_id: null, company_id: null, amount: null, payment_method: METHOD_CASH, payment_provider: null, paid_by: '', transaction_reference: '' })
+
+// Companies with an outstanding posted-folio balance — the creditors the
+// Cashiering Center is owed money by and can settle.
+const creditorsOwed = computed(() =>
+  companies.value.filter((c) => Number(c.current_balance ?? 0) > 0),
+)
 
 const totals = computed(() => {
   const map = {}
@@ -206,7 +249,15 @@ function methodChanged() {
 
 function openRecord() {
   error.value = ''
-  form.value = { reservation_id: reservations.value[0]?.reservation_id || null, amount: null, payment_method: METHOD_CASH, payment_provider: null, paid_by: '', transaction_reference: '' }
+  form.value = { reservation_id: reservations.value[0]?.reservation_id || null, company_id: null, amount: null, payment_method: METHOD_CASH, payment_provider: null, paid_by: '', transaction_reference: '' }
+  showModal.value = true
+}
+
+// Opens the record-payment modal pre-scoped to a creditor's account so a
+// settlement can be received against a specific posted folio balance.
+function openSettleCreditor(c) {
+  error.value = ''
+  form.value = { reservation_id: null, company_id: c.company_id, amount: Number(c.current_balance ?? 0) || null, payment_method: METHOD_CASH, payment_provider: null, paid_by: c.name, transaction_reference: '' }
   showModal.value = true
 }
 
@@ -215,12 +266,14 @@ async function load() {
   error.value = ''
   success.value = ''
   try {
-    const [payRes, resRes] = await Promise.all([
+    const [payRes, resRes, compRes] = await Promise.all([
       paymentApi.index({ from: selectedDate.value, to: selectedDate.value, per_page: 100 }),
       reservationApi.index({ per_page: 100 }),
+      companyApi.index({ per_page: 100 }),
     ])
     payments.value = Array.isArray(payRes.data) ? payRes.data : payRes.data?.data || []
     reservations.value = (resRes.data?.data || []).filter((r) => ['pending', 'confirmed', 'checked_in'].includes(r.status))
+    companies.value = compRes.data?.companies || compRes.data?.data || []
   } catch (err) {
     error.value = err.response?.data?.message || t('payments.loadError')
   } finally {
@@ -229,14 +282,28 @@ async function load() {
 }
 
 async function savePayment() {
-  if (!form.value.reservation_id || !form.value.amount) return
+  const amount = Number(form.value.amount)
+  if (!amount || amount <= 0) return
+  if (!form.value.reservation_id && !form.value.company_id) return
   saving.value = true
   error.value = ''
   try {
-    await paymentApi.store({ ...form.value, payment_status: 'completed' })
+    if (form.value.company_id) {
+      await companyApi.settle(form.value.company_id, {
+        amount,
+        payment_method: form.value.payment_method,
+        payment_provider: form.value.payment_provider ?? undefined,
+        transaction_reference: form.value.transaction_reference || undefined,
+        paid_by: form.value.paid_by || undefined,
+      })
+    } else {
+      await paymentApi.store({ ...form.value, payment_status: 'completed' })
+    }
     showModal.value = false
-    success.value = t('payments.createSuccess')
+    // Reload first: `load()` clears the banners, so the confirmation toast is
+    // written after the refresh to stay visible.
     await load()
+    success.value = form.value.company_id ? t('cashiering.creditorSettled') : t('payments.createSuccess')
   } catch (err) {
     error.value = err.response?.data?.message || t('payments.createError')
   } finally {
@@ -249,8 +316,8 @@ async function confirmPayment(p) {
   error.value = ''
   try {
     await paymentApi.confirm(p.payment_id, {})
-    success.value = t('payments.confirmed')
     await load()
+    success.value = t('payments.confirmed')
   } catch (err) {
     error.value = err.response?.data?.message || t('payments.confirmReferencePrompt')
   } finally {

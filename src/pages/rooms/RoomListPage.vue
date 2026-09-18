@@ -44,6 +44,127 @@
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
     <!-- Status/type/search filters; each change reloads the list -->
+    <!-- ROOMS TABS: Inventory (per-type summary cards + the rooms table),
+         Rates (bulk per-type pricing) and Stop-sell (date blocks per type).
+         Inventory is open to every staff role; Rates and Stop-sell writes are
+         manager-gated through canEdit (authStore.can(80)). -->
+    <div class="card tab-bar">
+      <button
+        v-for="tab in tabs"
+        :key="tab.key"
+        class="tab"
+        :class="{ active: activeTab === tab.key }"
+        @click="switchTab(tab.key)"
+      >
+        <i :class="tab.icon"></i> {{ tab.label }}
+      </button>
+    </div>
+
+    <!-- ─── INVENTORY (default) ─────────────────────────────────────────── -->
+    <div v-if="activeTab === 'inventory'">
+      <div v-if="invLoading" class="alert alert-info">{{ $t('rooms.loading') }}</div>
+      <div v-else-if="invSummary.length">
+        <div class="summary-grid">
+          <div v-for="s in invSummary" :key="s.room_type" class="card summary-card">
+            <div class="summary-head">
+              <strong>{{ s.room_type }}</strong>
+              <span class="badge" :class="s.available_count > 0 ? 'badge-green' : 'badge-red'">
+                {{ s.available_count }}/{{ s.room_count }} {{ $t('rooms.tabAvailable') }}
+              </span>
+            </div>
+            <p class="muted">
+              {{ $t('rooms.tabMin') }} {{
+                s.min_rate != null ? formatRate(s.min_rate) : '—'
+              }} ·
+              {{ $t('rooms.tabAvg') }} {{
+                s.avg_rate != null ? formatRate(s.avg_rate) : '—'
+              }}
+            </p>
+            <p v-if="s.stop_sold_count > 0" class="warning-inline">
+              <i class="fas fa-ban"></i>
+              {{ $t('rooms.tabStopSoldDays', { count: s.stop_sold_count }) }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── RATES (manager only) ────────────────────────────────────────── -->
+    <div v-else-if="activeTab === 'rates'">
+      <div class="card">
+        <div class="filter-grid">
+          <div class="form-group">
+            <label>{{ $t('rooms.roomType') }}</label>
+            <select v-model="rateForm.room_type" class="input">
+              <option v-for="type in roomTypeOptions" :key="type.value" :value="type.value">
+                {{ type.label }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>{{ $t('rooms.pricePerNightTZS') }}</label>
+            <input v-model.number="rateForm.price_per_night" type="number" min="0" class="input" />
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-primary" :disabled="!canEdit || !rateForm.price_per_night" @click="pushRates">
+              <i class="fas fa-tags"></i> {{ $t('rooms.tabPushRates') }}
+            </button>
+          </div>
+        </div>
+        <p class="muted">{{ $t('rooms.tabRatesHint') }}</p>
+      </div>
+    </div>
+
+    <!-- ─── STOP-SELL (manager only) ────────────────────────────────────── -->
+    <div v-else-if="activeTab === 'stop-sell'">
+      <div class="card">
+        <div class="filter-grid">
+          <div class="form-group">
+            <label>{{ $t('rooms.roomType') }}</label>
+            <select v-model="stopForm.room_type" class="input">
+              <option v-for="type in roomTypeOptions" :key="type.value" :value="type.value">
+                {{ type.label }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>{{ $t('rooms.tabStopDate') }}</label>
+            <input v-model="stopForm.stop_date" type="date" class="input" />
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-primary" :disabled="!canEdit || !stopForm.room_type || !stopForm.stop_date" @click="placeStopSell">
+              <i class="fas fa-ban"></i> {{ $t('rooms.tabPlaceStopSell') }}
+            </button>
+          </div>
+        </div>
+        <p class="muted">{{ $t('rooms.tabStopSellHint') }}</p>
+      </div>
+
+      <div v-if="blocksLoading" class="alert alert-info">{{ $t('rooms.loading') }}</div>
+      <div v-else-if="blocks.length" class="table-scroll">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>{{ $t('rooms.roomType') }}</th>
+              <th>{{ $t('rooms.tabStopDate') }}</th>
+              <th class="bulk-col"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="b in blocks" :key="b.stop_sell_id">
+              <td>{{ b.room_type }}</td>
+              <td>{{ b.stop_date }}</td>
+              <td class="bulk-col">
+                <button v-if="canEdit" class="btn btn-danger btn-sm" @click="liftStopSell(b.stop_sell_id)">
+                  <i class="fas fa-rotate-left"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="card filter-bar">
       <div class="filter-grid">
         <div class="form-group">
@@ -616,7 +737,109 @@ function flattenError(err) {
     : err.response?.data?.message || t('common.actionFailed')
 }
 
-onMounted(load)
+// ─── Rooms tab bar: inventory summary (default), bulk rates, stop-sell ───
+// The list table above stays the INVENTORY tab; the other two panels read/write
+// the same API surface exposed by reservations/rates/stop-sell endpoints.
+const tabs = [
+  { key: 'inventory', label: 'rooms.tabInventory', icon: 'fas fa-bed' },
+  { key: 'rates', label: 'rooms.tabRates', icon: 'fas fa-tags' },
+  { key: 'stop-sell', label: 'rooms.tabStopSell', icon: 'fas fa-ban' },
+]
+const activeTab = ref('inventory')
+
+// Inventory summary (per room type): room_count / available / stop-sold days.
+const invSummary = ref([])
+const invLoading = ref(false)
+
+const loadInventory = async () => {
+  invLoading.value = true
+  try {
+    const res = await roomApi.inventory()
+    invSummary.value = res.data?.summaries ?? []
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    invLoading.value = false
+  }
+}
+
+// RATES: bulk per-room-type update (manager only — canEdit = authStore.can(80)).
+const rateForm = reactive({ room_type: 'single', price_per_night: null })
+const ratesLoading = ref(false)
+
+const pushRates = async () => {
+  if (!rateForm.room_type || !rateForm.price_per_night) return
+  ratesLoading.value = true
+  try {
+    await roomApi.updateRates({
+      room_type: rateForm.room_type,
+      price_per_night: rateForm.price_per_night,
+    })
+    rateForm.price_per_night = null
+    success.value = t('rooms.ratesUpdated')
+    await loadInventory()
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    ratesLoading.value = false
+  }
+}
+
+// STOP-SELL: blocks per room type + date; lift by stop_sell_id.
+const blocks = ref([])
+const blocksLoading = ref(false)
+const stopForm = reactive({ room_type: 'single', stop_date: '' })
+
+const loadBlocks = async () => {
+  blocksLoading.value = true
+  try {
+    const res = await roomApi.stopSell()
+    blocks.value = res.data?.blocks ?? []
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    blocksLoading.value = false
+  }
+}
+
+const placeStopSell = async () => {
+  if (!stopForm.room_type || !stopForm.stop_date) return
+  try {
+    await roomApi.storeStopSell({
+      room_type: stopForm.room_type,
+      stop_date: stopForm.stop_date,
+    })
+    stopForm.stop_date = ''
+    success.value = t('rooms.stopSellPlaced')
+    await Promise.all([loadBlocks(), loadInventory()])
+  } catch (err) {
+    error.value = flattenError(err)
+  }
+}
+
+const liftStopSell = async (id) => {
+  try {
+    await roomApi.destroyStopSell(id)
+    success.value = t('rooms.stopSellLifted')
+    await Promise.all([loadBlocks(), loadInventory()])
+  } catch (err) {
+    error.value = flattenError(err)
+  }
+}
+
+// Tab switch loads each panel's data lazily once; inventory also drives the
+// summary chips pinned above the room table.
+function switchTab(key) {
+  activeTab.value = key
+  if (key === 'inventory' && !invSummary.value.length) loadInventory()
+  if (key === 'stop-sell' && !blocks.value.length) loadBlocks()
+}
+
+onMounted(() => {
+  load()
+  loadInventory()
+})
+
 </script>
 
 <style scoped>
