@@ -3910,6 +3910,7 @@
     "earlyDepartureConfirm": "Confirm refund",
     "earlyDepartureDone": "Early-departure refund posted.",
     "earlyDepartureError": "Failed to post the early-departure refund.",
+    "amountExceedsBalance": "This amount exceeds the folio's current balance.",
     "refundLine": "Early-departure refund",
     "editedBy": "edited by",
     "editedAt": "on",
@@ -4318,7 +4319,8 @@
       "printMachine": "Print to machine",
       "openWindow": "Open in new window",
       "openWindowBlocked": "The report window was blocked by your browser. Allow pop-ups for this site to open reports in a new window.",
-      "openWindowEmpty": "Nothing to show in a new window yet — run the report first."
+      "openWindowEmpty": "Nothing to show in a new window yet — run the report first.",
+      "ledgerEmpty": "No stock movements on this date."
     },
     "expenses": {
       "add": "Add expense",

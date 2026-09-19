@@ -388,11 +388,6 @@ const canVoidGrn = computed(() => detail.value && !detail.value.voided_by && !de
 // Detail page was removed per the panel review — this is its replacement.
 const isLedgerView = computed(() => route.query.view === 'ledger-detail')
 
-function fmtDateTime(d) {
-  if (!d) return '—'
-  return new Date(d).toLocaleString(undefined, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
-
 /** Reference for a movement row: GRN #, indent #, adjustment #, or notes. */
 function movementReference(m) {
   return m.reference || m.grn_number || m.indent_number || m.adjustment_number

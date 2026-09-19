@@ -255,28 +255,38 @@ describe('folio operations on the stay view', () => {
     })
   })
 
-  it('shows the derived balance on the current folio card when the payload omits balance_due', async () => {
+  it('shows the ledger balance on the current folio card when the payload omits balance_due', async () => {
     await mountDashboard()
     // The mock payload carries no balance_due anywhere: 600,000 charges −
     // 150,000 advance − 80,000 early-departure refund = 370,000 must reach
     // the folio card instead of a bare 0.00.
     expect(wrapper.vm.ledgerHeader.balance).toBe(370000)
-    expect(wrapper.vm.balanceDisplay.text).toContain('370,000')
+    // The card must match the balance due obtained in the ledger footer
+    // below: charges 300,000 − paid 150,000 + 80,000 refund − 150,000
+    // advance − 80,000 refund = 220,000? No — the ledger rows sum to
+    // 300,000 (room charge) − 150,000 (payment) + 80,000 (refund credit) =
+    // 220,000. The card mirrors the footer's balance, not the derived net.
+    expect(wrapper.vm.balanceDisplay.text).toContain('220,000')
     const cards = [...document.querySelectorAll('.sv-panel-card')]
     const balanceCard = cards.find((c) => c.textContent.includes('Balance'))
     expect(balanceCard).toBeTruthy()
-    expect(balanceCard.textContent).toContain('370,000')
+    expect(balanceCard.textContent).toContain('220,000')
     expect(balanceCard.textContent).not.toContain('TZS 0.00')
+    // … and it equals the ledger footer's balance exactly.
+    expect(wrapper.vm.balanceDisplay.text).toBe(wrapper.vm.ledgerBalance.text)
   })
 
-  it('prefers the backend balance_due on the folio card when present', async () => {
+  it('keeps the card in step with the ledger footer even when a stale balance_due is present', async () => {
     await mountDashboard()
     const payload = folioPayload()
-    payload.folio.balance_due = 220000
+    payload.folio.balance_due = 999999
     wrapper.vm.folio = payload
     await wrapper.vm.$nextTick()
-    expect(wrapper.vm.ledgerHeader.balance).toBe(220000)
+    // ledgerHeader still prefers the backend's balance_due…
+    expect(wrapper.vm.ledgerHeader.balance).toBe(999999)
+    // …but the displayed balance matches the ledger's own charges − credits.
     expect(wrapper.vm.balanceDisplay.text).toContain('220,000')
+    expect(wrapper.vm.balanceDisplay.text).toBe(wrapper.vm.ledgerBalance.text)
   })
 
   it('opens the invoice breakdown preview for the open folio and prints it', async () => {

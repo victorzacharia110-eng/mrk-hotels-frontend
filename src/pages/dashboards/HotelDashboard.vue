@@ -2972,20 +2972,18 @@ function folioCardBalance(src, bar) {
   return folioBreakdown(src).net
 }
 
-/** Balance text per the Folio Operations layout: when paid exceeds charges
- *  the figure prints as "- TZS x" (negative reading), mirrored by the tfoot. */
-const balanceDisplay = computed(() => {
-  const b = ledgerHeader.value.balance
-  const negative = b < 0
-  return { negative, text: `${negative ? '- ' : ''}TZS ${fmtNum(Math.abs(b), 2)}` }
-})
-
 /** Bottom-of-ledger BALANCE = TOTAL CHARGES − TOTAL PAID (negative when overpaid). */
 const ledgerBalance = computed(() => {
   const b = folioTotals.value.charges - folioTotals.value.credits
   const negative = b < 0
   return { negative, text: `${negative ? '- ' : ''}TZS ${fmtNum(Math.abs(b), 2)}` }
 })
+
+/** Balance text per the Folio Operations layout. The current folio's figure
+ *  must match the balance due obtained in the ledger footer below, so both
+ *  read the same charges − credits total. When paid exceeds charges the
+ *  figure prints as "- TZS x" (negative reading), mirrored by the tfoot. */
+const balanceDisplay = computed(() => ledgerBalance.value)
 
 /** Shows the stay's own folio (or reloads the toggled one) from a chip click. */
 async function switchFolio(item) {
