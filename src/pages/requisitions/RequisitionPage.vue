@@ -67,7 +67,7 @@
               <td><strong>{{ indent.indent_number }}</strong></td>
               <td v-if="showRequestCols">{{ indent.department || indent.department_name || '—' }}</td>
               <td v-if="showRequestCols">{{ indent.requester_name || '—' }}</td>
-              <td>{{ lineSummary(indent.items) }}</td>
+              <td :title="(indent.items || []).map((l) => l.item_name || l.name || `#${l.item_id}`).join(', ')">{{ lineSummary(indent.items) }}</td>
               <td><span class="rq-chip" :class="statusChip(indent.status)">{{ statusLabel(indent.status) }}</span></td>
               <td class="rq-actions">
                 <template v-if="canEdit(indent)">
@@ -157,7 +157,6 @@
                 <tr>
                   <th>{{ $t('requisitionPanel.items') }}</th>
                   <th>{{ $t('requisitionPanel.requested') }}</th>
-                  <th>{{ $t('requisitionPanel.inStock') }}</th>
                   <th>{{ $t('requisitionPanel.supplied') }}</th>
                 </tr>
               </thead>
@@ -165,7 +164,6 @@
                 <tr v-for="line in supplyLines" :key="line.indent_item_id">
                   <td><strong>{{ line.item_name }}</strong></td>
                   <td>{{ line.requested }}</td>
-                  <td>{{ line.stock }}</td>
                   <td><input v-model.number="line.supplied" type="number" min="0" step="any" class="rq-input slim" /></td>
                 </tr>
               </tbody>
@@ -398,18 +396,18 @@ function isRequester(indent) {
 function canEdit(i) { return isRequester(i) && ['draft', 'pending'].includes(i.status) }
 function canRecall(i) {
   // The requester recalls a sent request; the store keeper pulls back a
-  // forwarded answer before the requester accepts it.
+  // forwarded answer ONLY while it is still unanswered — once the requester
+  // accepts, recall is gone and only view/void (management) remain.
   return (isRequester(i) && i.status === 'pending')
-    || (isKeeper.value && !isRequester(i) && i.status === 'forwarded')
+    || (isKeeper.value && !isRequester(i) && i.status === 'forwarded' && !i.accepted_at)
 }
 function canAccept(i) { return isRequester(i) && i.status === 'forwarded' }
 function canSupply(i) { return isKeeper.value && !isRequester(i) && i.status === 'pending' }
 function canApprove(i) { return isKeeper.value && i.status === 'pending' }
 function canVoid(i) {
-  return (
-    (isRequester(i) && ['draft', 'pending', 'forwarded'].includes(i.status)) ||
-    (isManagement.value && ['pending', 'approved', 'forwarded', 'fulfilled'].includes(i.status))
-  )
+  // Void is destructive, so only MANAGEMENT may void; and the store keeper can
+  // no longer recall once the requester has accepted the forwarded answer.
+  return isManagement.value && ['pending', 'approved', 'forwarded', 'fulfilled'].includes(i.status)
 }
 
 function loadMessage(e, fallback) {

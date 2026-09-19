@@ -282,7 +282,11 @@ export function exportPDF(filename, rows, columns, title, options = {}) {
     headStyles: { fillColor: [0, 94, 184] },
     margin: { top: 12, bottom: 12, left: 10, right: 10 },
   })
-  doc.save(`${filename}.pdf`)
+  // Route through saveBlob (like CSV/Excel) instead of doc.save(): the test
+  // suite mocks saveBlob, so unit tests no longer write a stray report.pdf
+  // into the working directory on every run.
+  const blob = new Blob([doc.output('arraybuffer')], { type: 'application/pdf' })
+  saveBlob(blob, `${filename}.pdf`)
 }
 
 /**

@@ -7,6 +7,53 @@
 
 <template>
   <div class="sm-page">
+    <!-- Stock Ledger detail view (replaces the removed Stock Movement page) -->
+    <template v-if="isLedgerView">
+      <div class="sm-toolbar">
+        <h2 class="ledger-title"><i class="fas fa-book"></i> {{ $t('storeManager.reports.movementDetail') }}</h2>
+        <span class="spacer"></span>
+        <CalendarInput v-model="dateFilter" style="max-width: 150px" @change="loadMovements(dateFilter, 1)" />
+      </div>
+      <section class="panel">
+        <div v-if="movementsLoading" class="sm-loading"><i class="fas fa-circle-notch"></i> {{ $t('common.loading') }}</div>
+        <template v-else>
+          <div class="table-scroll">
+            <table class="sm-table" v-if="movementRows.length">
+              <thead>
+                <tr>
+                  <th>{{ $t('common.date') }}</th>
+                  <th>{{ $t('common.time') }}</th>
+                  <th>{{ $t('inventory.itemName') }}</th>
+                  <th>{{ $t('common.type') }}</th>
+                  <th>{{ $t('storeManager.sales.qty') }}</th>
+                  <th>{{ $t('common.reference') }}</th>
+                  <th>{{ $t('storeManager.reports.printedBy') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="m in movementRows" :key="m.movement_id || m.id">
+                  <td>{{ m.created_at ? new Date(m.created_at).toLocaleDateString() : '—' }}</td>
+                  <td>{{ m.created_at ? new Date(m.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '—' }}</td>
+                  <td><strong>{{ m.item_name || m.item?.item_name }}</strong></td>
+                  <td>{{ m.type || m.movement_type }}</td>
+                  <td>{{ m.quantity }}</td>
+                  <td>{{ movementReference(m) }}</td>
+                  <td>{{ m.user_name || m.user?.name || '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-else class="empty">{{ $t('storeManager.reports.ledgerEmpty') }}</p>
+          </div>
+          <div class="sm-pagination" v-if="movementMeta.last_page > 1">
+            <button :disabled="movementMeta.current_page <= 1" @click="loadMovements(dateFilter, movementMeta.current_page - 1)">&laquo;</button>
+            <span>{{ movementMeta.current_page }} / {{ movementMeta.last_page }}</span>
+            <button :disabled="movementMeta.current_page >= movementMeta.last_page" @click="loadMovements(dateFilter, movementMeta.current_page + 1)">&raquo;</button>
+          </div>
+        </template>
+      </section>
+    </template>
+
+    <template v-else>
     <div class="sm-toolbar">
       <div class="sm-search"><i class="fas fa-magnifying-glass"></i><input v-model="q" type="text" :placeholder="$t('common.search')" /></div>
       <select v-if="statuses.length" v-model="status" class="sm-select"><option value="">{{ $t('common.status') }}</option><option v-for="s in statuses" :key="s" :value="s">{{ s }}</option></select>
@@ -89,7 +136,7 @@
                 <option value="failed">{{ $t('goodsReceived.failed') }}</option>
               </select>
             </div>
-            <div class="form-field"><label>{{ $t('goodsReceived.receivedDate') }}</label><CalendarInput v-model="form.received_date" /></div>
+            <div class="form-field"><label>{{ $t('goodsReceived.receivedDate') }}</label><CalendarInput v-model="form.received_date" :min="todayStr" /></div>
             <div class="form-field"><label>{{ $t('goodsReceived.deliveryNote') }}</label><input v-model="form.delivery_note_number" class="sm-input" /></div>
             <div class="form-field full"><label>{{ $t('common.notes') }}</label><textarea v-model="form.notes" rows="2" class="sm-textarea"></textarea></div>
           </div>
@@ -237,6 +284,7 @@
         </div>
       </div>
     </div>
+    </template>
 
     <!-- Printable GRN document -->
     <div v-if="printData" class="print-area">
@@ -275,11 +323,10 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { goodsReceivedNoteApi, purchaseOrderApi } from '@/api'
+import { goodsReceivedNoteApi, purchaseOrderApi, storeApi } from '@/api'
 import CalendarInput from '@/components/CalendarInput.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
 import { useWorkingDateStore } from '@/stores/workingDate'
-import { saveBlob } from '@/utils/download'
 
 const route = useRoute()
 const router = useRouter()
@@ -299,6 +346,28 @@ const formError = ref('')
 const dateFilter = ref(todayStr())
 const printData = ref(null)
 
+// Today's stock movement rows (date/time + reference per line) used to build
+// the Stock Ledger detail table when this page handles the ledger view.
+const movementRows = ref([])
+const movementMeta = ref({ current_page: 1, last_page: 1 })
+const movementsLoading = ref(false)
+
+/** Load one page of stock movements for the given working date. */
+async function loadMovements(date, page = 1) {
+  movementsLoading.value = true
+  try {
+    const params = { page, per_page: 100 }
+    if (date) params.date = date
+    const res = await storeApi.movements(params)
+    movementRows.value = res.data.data || res.data || []
+    movementMeta.value = res.data.meta || { current_page: 1, last_page: 1 }
+  } catch {
+    movementRows.value = []
+  } finally {
+    movementsLoading.value = false
+  }
+}
+
 const form = reactive({ po_id: '', inspection_status: 'pending', received_date: todayStr(), delivery_note_number: '', notes: '', items: [], delivery_notes: [] })
 
 function todayStr() {
@@ -313,6 +382,22 @@ const emptyText = computed(() => {
 
 const canRecall = computed(() => detail.value && !detail.value.voided_by)
 const canVoidGrn = computed(() => detail.value && !detail.value.voided_by && !detail.value.recalled_by)
+
+// Ledger mode: ?view=ledger-detail swaps the GRN list for the Stock Ledger
+// detail table (date/time + reference per movement). The old Stock Movement
+// Detail page was removed per the panel review — this is its replacement.
+const isLedgerView = computed(() => route.query.view === 'ledger-detail')
+
+function fmtDateTime(d) {
+  if (!d) return '—'
+  return new Date(d).toLocaleString(undefined, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+/** Reference for a movement row: GRN #, indent #, adjustment #, or notes. */
+function movementReference(m) {
+  return m.reference || m.grn_number || m.indent_number || m.adjustment_number
+    || m.source_reference || m.document_number || m.notes || m.reason || '—'
+}
 
 // Grand total of everything actually received, valued at the new cost.
 function lineTotal(item) {
@@ -462,6 +547,11 @@ async function loadPoItems() {
 }
 
 async function save() {
+  // Block any past received date at save time too, mirroring the calendar min.
+  if (form.received_date && form.received_date < todayStr()) {
+    formError.value = t('goodsReceived.receivedDatePast')
+    return
+  }
   const reason = editingGrnId.value ? window.prompt(t('goodsReceived.recallReason')) : null
   if (editingGrnId.value) {
     if (reason === null) return
@@ -535,15 +625,13 @@ async function refreshDetail(id) {
   detail.value = res.data.grn
 }
 
+// PRINT opens the browser print-setup page (via the print-area styles) with
+// the GRN laid out inside A4 boundaries — no silent PDF download.
 async function printDetail() {
   const grn = detail.value
-  try {
-    const res = await goodsReceivedNoteApi.printPdf(grn.grn_id)
-    const match = (res.headers['content-disposition'] || '').match(/filename="?([^"]+)/)
-    saveBlob(res.data, match ? match[1] : `GoodsReceivedNote-${grn.grn_number}.pdf`)
-  } catch {
-    window.alert(t('goodsReceived.printError'))
-  }
+  printData.value = grn
+  await new Promise((resolve) => setTimeout(resolve, 60))
+  window.print()
 }
 
 async function emailSupplier() {
@@ -576,6 +664,13 @@ async function voidGrn() {
 
 onMounted(async () => {
   await workingDateStore.ensureLoaded()
+  if (isLedgerView.value) {
+    // Stock Ledger detail: today's movements by default; the universal
+    // calendar (dateFilter) pulls past records.
+    dateFilter.value = workingDateStore.workingDate
+    await loadMovements(dateFilter.value)
+    return
+  }
   await load(1)
   if (route.query.po_id || route.query.create === '1') openCreate()
 })

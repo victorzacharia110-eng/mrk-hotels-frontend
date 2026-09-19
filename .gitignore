@@ -43,3 +43,8 @@ playwright-report/
 
 # Local Netlify folder
 .netlify
+
+# Generated export artifacts (test runs / manual downloads) — never commit
+/*.pdf
+/src/locales/*.pdf
+/pdf-node.mjs

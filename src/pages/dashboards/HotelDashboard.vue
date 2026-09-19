@@ -713,7 +713,7 @@
                   </div>
                   <div class="sv-panel-card">
                     <span>{{ $t('folio.balance') }}</span>
-                    <strong>TZS {{ fmtNum(folio?.folio?.balance_due ?? activeBar.balance ?? 0, 2) }}</strong>
+                    <strong :class="{ 'sv-balance-negative': balanceDisplay.negative }">{{ balanceDisplay.text }}</strong>
                   </div>
                 </div>
                 <div v-if="chargeNights.length" class="sv-table-wrap">
@@ -2954,9 +2954,23 @@ const ledgerHeader = computed(() => {
     room: res?.room?.room_number || activeBar.value?.roomNumber || '',
     total: Number(f?.total_amount ?? 0) + Number(f?.room_charges ?? 0),
     paid: Number(res?.advance_payment ?? activeBar.value?.advance ?? 0),
-    balance: Number(f?.balance_due ?? res?.balance_due ?? activeBar.value?.balance ?? 0),
+    balance: folioCardBalance(src, activeBar.value),
   }
 })
+
+/**
+ * Balance shown on the current/related folio cards. Prefers the backend's
+ * balance_due, then any balance on the reservation/bar. When neither carries
+ * a value (some folio payloads omit balance_due entirely) the card must not
+ * fall to 0.00 — derive it as charges − paid − refunds instead.
+ */
+function folioCardBalance(src, bar) {
+  const f = src?.folio || null
+  const res = src?.reservation || null
+  const direct = f?.balance_due ?? res?.balance_due ?? bar?.balance
+  if (direct !== undefined && direct !== null) return Number(direct)
+  return folioBreakdown(src).net
+}
 
 /** Balance text per the Folio Operations layout: when paid exceeds charges
  *  the figure prints as "- TZS x" (negative reading), mirrored by the tfoot. */
@@ -3166,6 +3180,11 @@ function buildRentalRows(res) {
   })
 }
 
+/** Sums the rental already sitting in the persisted folio entries. */
+function rentalSum(entries) {
+  return (entries || []).reduce((s, e) => s + (e.type === 'room_charge' ? Number(e.amount || 0) : 0), 0)
+}
+
 /**
  * Flattened folio transactions for the DATE | PARTICULAR | DESCRIPTION |
  * USER | AMOUNT ledger. Only room-billed orders/laundry count towards the
@@ -3196,19 +3215,26 @@ const folioEntries = computed(() => {
   // Folio Operations layout.
   if (donorEmptyFolio.value) return []
   const entries = []
-  // Room rental first: each night is a row, together summing exactly to
-  // total_amount, so the ledger's TOTAL CHARGES matches the top card.
-  const rentalNightsCount = Math.max(1, Number(f.reservation?.num_days || f.reservation?.nights || 1))
-  for (const row of buildRentalRows(f.reservation || null)) {
+  // Nightly room-rental rows (the "night(s)" lines) stay in the Room Charges
+  // tab only. The Folio Operations ledger must not show them — only the other
+  // room-charge postings (orders, laundry, front-desk charges) appear here.
+  // To keep the ledger's TOTAL CHARGES in step with the top card, the rental
+  // total folds into a single NON-NEGATIVE adjustment row at the stay's start;
+  // a negative net (e.g. rental moved away) is skipped so the column never
+  // shows a charge that was never posted as a line.
+  const rentalRows = buildRentalRows(f.reservation || null)
+  const rentalTotal = rentalRows.reduce((s, r) => s + Number(r.amount || 0), 0)
+  const rentalNet = Math.round((rentalTotal - rentalSum(f.folio_entries || [])) * 100) / 100
+  if (rentalNet > 0.004) {
     entries.push({
-      key: `rent-${row.date || 'one'}-${row.amount}`,
-      date: row.date,
-      time: row.time,
+      key: 'rental-net',
+      date: rentalRows[0]?.date || f.reservation?.check_in_date || '',
+      time: rentalRows[0]?.time || rentalRows[0]?.date || '',
       particular: t('folio.roomCharge'),
-      description: t('folio.nightsCount', { nights: row.day ? 1 : rentalNightsCount }),
-      detail: row.day,
+      description: t('folio.rentalCharges'),
+      detail: '',
       user: '—',
-      amount: row.amount,
+      amount: rentalNet,
       credit: false,
       muted: false,
       rental: true,
@@ -3521,6 +3547,14 @@ const creditExceeded = computed(
 )
 
 /**
+ * The folio's current outstanding balance. A post-to-creditors amount above
+ * this is invalid and must be blocked before anything is saved. Uses the same
+ * derived fallback as the folio card so a payload without balance_due does
+ * not read as 0 here either.
+ */
+const folioBalanceDue = computed(() => folioCardBalance(folio.value, activeBar.value))
+
+/**
  * Loads the postable (active) companies for the creditor picker. Called when
  * the receptionist switches to Post-to-creditors, then cached for the stay.
  */
@@ -3560,7 +3594,7 @@ function openPaymentModal(mode = 'collect') {
   paymentSnapshot.value = { ...paymentForm.value }
   actionError.value = ''
   if (mode === 'company') {
-    const outstanding = Number(folio.value?.folio?.balance_due ?? activeBar.value?.balance ?? 0)
+    const outstanding = folioBalanceDue.value
     if (outstanding > 0) paymentForm.value.amount = outstanding
     loadCreditorCompanies().then(() => prefillCreditorCompany())
   }
@@ -3572,7 +3606,7 @@ async function setPayMode(mode) {
   payMode.value = mode
   paymentErrors.value = {}
   if (mode === 'company') {
-    const outstanding = Number(folio.value?.folio?.balance_due ?? activeBar.value?.balance ?? 0)
+    const outstanding = folioBalanceDue.value
     if (!paymentForm.value.amount && outstanding > 0) paymentForm.value.amount = outstanding
     if (!creditorCompanies.value.length) {
       await loadCreditorCompanies()
@@ -3609,6 +3643,13 @@ async function submitPayment() {
   const errors = collectErrors(f, paymentRules())
   if (Object.keys(errors).length) {
     paymentErrors.value = errors
+    return
+  }
+  // Post-to-creditors: never let an amount above the folio's current balance
+  // through — the form shows the overage message, and this guard stops the
+  // submission itself so nothing is saved on the creditor's account.
+  if (payMode.value === 'company' && folioBalanceDue.value > 0 && Number(f.amount) > folioBalanceDue.value) {
+    paymentErrors.value = { amount: t('stayview.amountExceedsBalance') }
     return
   }
   if (!activeBar.value?.id) return
@@ -4248,6 +4289,9 @@ async function confirmVoid() {
 
 const printBusy = ref(false)
 const sendBusy = ref(false)
+// Per-row busy flag for the single-entry invoice print: holds the entryId of
+// the row currently being printed so its button (and only its button) greys.
+const entryPrintBusy = ref(null)
 
 // Hotel logo shown on printed documents (loaded from settings, silent fallback).
 const hotelLogo = ref('')
@@ -4264,6 +4308,9 @@ const hotelLogo = ref('')
  *  Rendered with the hotel logo and brand palette on A4. */
 function printEntryInvoice(e) {
   if (!e?.entryId) return
+  // Mark the row busy until the popup document has been handed to the print
+  // dialog; cleared on popup-block and right after the write completes.
+  entryPrintBusy.value = e.entryId
   const folioCode = ledgerHeader.value?.code || activeBar.value?.folio_code || ''
   const guest = ledgerHeader.value?.guest || activeBar.value?.guest_name || ''
   const room = ledgerHeader.value?.room || activeBar.value?.room_number || ''
@@ -4350,10 +4397,12 @@ function printEntryInvoice(e) {
   const win = window.open('', '_blank', 'width=860,height=1000')
   if (!win) {
     actionError.value = t('stayview.printEntryInvoiceBlocked')
+    entryPrintBusy.value = null
     return
   }
   win.document.write(doc)
   win.document.close()
+  entryPrintBusy.value = null
 }
 
 async function printInvoice(bar) {

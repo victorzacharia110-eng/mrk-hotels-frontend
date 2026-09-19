@@ -193,6 +193,92 @@ describe('folio operations on the stay view', () => {
     })
   })
 
+  it('hides nightly "night(s)" room-charge rows from the folio ledger but keeps other room charges', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    // The stay carries a 300,000 rental; the persisted room-charge entry
+    // covers only part of it, so the remainder must fold into a single
+    // non-nightly "Rental charges" row.
+    payload.reservation.total_amount = 300000
+    payload.folio_entries = [
+      { folio_entry_id: 1, type: 'room_charge', amount: 150000, date: '2026-11-01', description: 'Room & taxes' },
+      { folio_entry_id: 2, type: 'payment', amount: 150000, date: '2026-11-01', description: 'Advance' },
+    ]
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    const descriptions = [...document.querySelectorAll('.sv-folio-table tbody tr td:nth-child(3)')].map(
+      (td) => td.textContent.trim(),
+    )
+    expect(descriptions.some((d) => /night\(s\)/.test(d))).toBe(false)
+    // Other room charges (persisted folio entries whose description is not
+    // nights) stay visible.
+    expect(descriptions.some((d) => d.includes('Room & taxes'))).toBe(true)
+    // The rental total still reaches the ledger through a single folded row so
+    // TOTAL CHARGES stays in step with the top card.
+    const rentalRow = wrapper.vm.folioEntries.find((e) => e.rental)
+    expect(rentalRow).toBeTruthy()
+    expect(rentalRow.description).not.toMatch(/night/)
+    expect(rentalRow.amount).toBe(150000)
+  })
+
+  it('blocks post-to-creditors when the amount exceeds the folio balance', async () => {
+    await mountDashboard()
+    // Give the folio a balance_due of 100,000.
+    const payload = folioPayload()
+    payload.folio.balance_due = 100000
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    wrapper.vm.openPaymentModal('company')
+    wrapper.vm.paymentForm.company_id = 9
+    wrapper.vm.paymentForm.amount = 150000
+    await wrapper.vm.submitPayment()
+    expect(api.reservationApi.folioCreditors).not.toHaveBeenCalled()
+    expect(wrapper.vm.paymentErrors.amount).toBeTruthy()
+    expect(wrapper.vm.paymentModal).toBe(true)
+  })
+
+  it('posts to creditors when the amount is within the folio balance', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    payload.folio.balance_due = 100000
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    wrapper.vm.openPaymentModal('company')
+    wrapper.vm.paymentForm.company_id = 9
+    wrapper.vm.paymentForm.amount = 50000
+    await wrapper.vm.submitPayment()
+    expect(api.reservationApi.folioCreditors).toHaveBeenCalledWith(501, {
+      company_id: 9,
+      amount: 50000,
+      note: null,
+    })
+  })
+
+  it('shows the derived balance on the current folio card when the payload omits balance_due', async () => {
+    await mountDashboard()
+    // The mock payload carries no balance_due anywhere: 600,000 charges −
+    // 150,000 advance − 80,000 early-departure refund = 370,000 must reach
+    // the folio card instead of a bare 0.00.
+    expect(wrapper.vm.ledgerHeader.balance).toBe(370000)
+    expect(wrapper.vm.balanceDisplay.text).toContain('370,000')
+    const cards = [...document.querySelectorAll('.sv-panel-card')]
+    const balanceCard = cards.find((c) => c.textContent.includes('Balance'))
+    expect(balanceCard).toBeTruthy()
+    expect(balanceCard.textContent).toContain('370,000')
+    expect(balanceCard.textContent).not.toContain('TZS 0.00')
+  })
+
+  it('prefers the backend balance_due on the folio card when present', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    payload.folio.balance_due = 220000
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.ledgerHeader.balance).toBe(220000)
+    expect(wrapper.vm.balanceDisplay.text).toContain('220,000')
+  })
+
   it('opens the invoice breakdown preview for the open folio and prints it', async () => {
     await mountDashboard()
     await wrapper.vm.openInvoicePreview(activeBar)

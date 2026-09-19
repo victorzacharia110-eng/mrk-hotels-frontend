@@ -1853,6 +1853,7 @@
     "selectSupplier": "Select supplier",
     "linkedRequisition": "Linked requisition",
     "deliveryDate": "Delivery date",
+    "deliveryDatePast": "Delivery date cannot be in the past.",
     "paymentTerms": "Payment terms",
     "deliveryAddress": "Delivery address",
     "deliverBy": "deliver by",
@@ -1942,6 +1943,7 @@
     "view": "View",
     "selectPo": "Select PO",
     "receivedDate": "Received date",
+    "receivedDatePast": "Received date cannot be in the past.",
     "deliveryNoteNumber": "Delivery note number",
     "receivedItems": "Received items",
     "item": "Item",
@@ -4113,7 +4115,8 @@
     "availableCredit": "Available credit",
     "currentBalance": "Current balance",
     "remainingCredit": "Remaining credit",
-    "creditExceeded": "This amount exceeds the company's remaining credit."
+    "creditExceeded": "This amount exceeds the company's remaining credit.",
+    "amountExceedsBalance": "This amount exceeds the folio's current balance."
   },
   "staffDashboard": {
     "title": "Dashboard",
@@ -4202,7 +4205,6 @@
       "categories": "Categories",
       "customers": "Customers",
       "reports": "Reports",
-      "movements": "Stock Movements",
       "expenses": "Expenses",
       "cashRegister": "Cash Register",
       "discounts": "Discounts",
@@ -4312,20 +4314,11 @@
       "printedBy": "Printed By",
       "allOutlets": "All Outlets",
       "stockAdjustment": "Stock Adjustment",
+      "movementDetail": "Stock Movement Detail",
       "printMachine": "Print to machine",
       "openWindow": "Open in new window",
       "openWindowBlocked": "The report window was blocked by your browser. Allow pop-ups for this site to open reports in a new window.",
       "openWindowEmpty": "Nothing to show in a new window yet — run the report first."
-    },
-    "movements": {
-      "allTypes": "All types",
-      "in": "Stock in",
-      "out": "Stock out",
-      "type": "Type",
-      "reason": "Reason",
-      "by": "By",
-      "empty": "No stock movements yet.",
-      "adjustment": "Adjustment"
     },
     "expenses": {
       "add": "Add expense",
@@ -5228,6 +5221,7 @@
     "totalCharges": "Total charges",
     "totalPaid": "Total paid",
     "nightsCount": "{nights} night(s)",
+    "rentalCharges": "Rental charges",
     "billedToRoom": "Billed to room",
     "manualCharge": "Manual charge",
     "actions": "ACTIONS",

@@ -6,6 +6,9 @@
       <div class="kpi"><span class="kpi-label">{{ $t('storeManager.lowStock.belowReorder') }}</span><span class="kpi-value warn">{{ belowReorder.length }}</span></div>
       <div class="kpi"><span class="kpi-label">{{ $t('storeManager.lowStock.totalAlerts') }}</span><span class="kpi-value">{{ alerts.length }}</span></div>
     </div>
+    <div class="sm-toolbar">
+      <CalendarInput v-model="dateFilter" :placeholder="$t('common.date')" @change="load" />
+    </div>
     <section class="panel">
       <div v-if="loading" class="sm-loading"><i class="fas fa-circle-notch"></i> {{ $t('common.loading') }}</div>
       <template v-else>
@@ -39,21 +42,31 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { storeApi } from '../../api'
+import CalendarInput from '@/components/CalendarInput.vue'
+import { useWorkingDateStore } from '@/stores/workingDate'
 
+const workingDateStore = useWorkingDateStore()
 const alerts = ref([])
 const loading = ref(false)
+const dateFilter = ref(workingDateStore.workingDate)
 const outOfStock = computed(() => alerts.value.filter((a) => Number(a.quantity_in_stock) === 0))
 const belowReorder = computed(() => alerts.value.filter((a) => Number(a.quantity_in_stock) > 0))
 
 async function load() {
   loading.value = true
   try {
-    const res = await storeApi.lowStock()
+    const params = {}
+    if (dateFilter.value) params.date = dateFilter.value
+    const res = await storeApi.lowStock(params)
     const items = res.data.data || res.data || []
     alerts.value = items.filter((i) => Number(i.quantity_in_stock) <= Number(i.reorder_level || 0) || i.status === 'out_of_stock')
   } finally { loading.value = false }
 }
-onMounted(load)
+onMounted(async () => {
+  await workingDateStore.ensureLoaded()
+  dateFilter.value = workingDateStore.workingDate
+  load()
+})
 </script>
 
 <style scoped>

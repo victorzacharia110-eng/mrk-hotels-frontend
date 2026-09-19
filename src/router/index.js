@@ -514,13 +514,9 @@ const routes = [
         component: () => import('@/pages/store/StoreReportsPage.vue'),
         meta: { titleKey: 'storeManager.nav.reports' },
       },
-      // Full stock movement audit trail.
-      {
-        path: 'stock-movements',
-        name: 'store-movements',
-        component: () => import('@/pages/store/StoreMovementsPage.vue'),
-        meta: { titleKey: 'storeManager.nav.movements' },
-      },
+      // Stock Movement Detail page removed per the panel review — the Stock
+      // Ledger (Reports) now carries the movement detail with date/time and
+      // reference per row.
       // Store expense tracking.
       {
         path: 'expenses',

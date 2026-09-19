@@ -237,6 +237,11 @@ function todayStr() {
   return workingDateStore.workingDate
 }
 
+// Delivery dates may never be in the past; clamp any stale value up to today.
+function clampMinToday(d) {
+  return d && d < todayStr() ? todayStr() : d
+}
+
 const form = reactive({ supplier_id: '', pr_id: '', delivery_date: todayStr(), payment_terms: '', delivery_address: '', notes: '', items: [emptyItem()] })
 
 function emptyItem() {
@@ -334,6 +339,9 @@ async function primeForm() {
 async function openCreate() {
   editingId.value = null
   Object.assign(form, { supplier_id: '', pr_id: '', delivery_date: todayStr(), payment_terms: '', delivery_address: '', notes: '', items: [emptyItem()] })
+  // The delivery date must never be in the past; the calendar blocks picking
+  // one, and this clamp keeps programmatic resets on/after today too.
+  form.delivery_date = clampMinToday(form.delivery_date)
   formError.value = ''
   showForm.value = true
   await primeForm()
@@ -346,7 +354,7 @@ async function startEdit() {
   Object.assign(form, {
     supplier_id: po.supplier_id || '',
     pr_id: po.pr_id || '',
-    delivery_date: po.delivery_date || todayStr(),
+    delivery_date: clampMinToday(po.delivery_date || todayStr()),
     payment_terms: po.payment_terms || '',
     delivery_address: po.delivery_address || '',
     notes: po.notes || '',
@@ -377,6 +385,10 @@ async function startEdit() {
 async function save() {
   if (form.items.some((i) => !i.item_name || i.quantity == null)) {
     formError.value = t('inventory.selectItem')
+    return
+  }
+  if (form.delivery_date && form.delivery_date < todayStr()) {
+    formError.value = t('purchaseOrders.deliveryDatePast')
     return
   }
   saving.value = true

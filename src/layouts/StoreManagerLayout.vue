@@ -169,6 +169,7 @@ const navItems = [
     labelKey: 'storeManager.nav.reports',
     children: [
       { to: '/store-manager/reports?view=ledger-summary', icon: 'fas fa-book', labelKey: 'storeManager.reports.stockLedger' },
+      { to: '/store-manager/goods-received?view=ledger-detail', icon: 'fas fa-list', labelKey: 'storeManager.reports.movementDetail' },
       { to: '/store-manager/reports?view=transfer-register', icon: 'fas fa-right-left', labelKey: 'storeManager.reports.transferSummary' },
       { to: '/store-manager/reports?view=stock-take-detail', icon: 'fas fa-scale-balanced', labelKey: 'storeManager.reports.physicalStock' },
       { to: '/store-manager/reports?view=closing-stock', icon: 'fas fa-warehouse', labelKey: 'storeManager.reports.closingStock' },
@@ -183,7 +184,6 @@ const navItems = [
     labelKey: 'storeManager.nav.inventory',
     children: [
       { to: '/store-manager/low-stock', icon: 'fas fa-triangle-exclamation', labelKey: 'storeManager.nav.lowStock' },
-      { to: '/store-manager/stock-movements', icon: 'fas fa-arrow-right-arrow-left', labelKey: 'storeManager.nav.movements' },
       { to: '/store-manager/transfers', icon: 'fas fa-right-left', labelKey: 'storeManager.nav.transfers' },
       { to: '/store-manager/stock-counts', icon: 'fas fa-clipboard-check', labelKey: 'storeManager.nav.stockCounts' },
       { to: '/store-manager/stock-adjust', icon: 'fas fa-sliders', labelKey: 'storeManager.nav.stockAdjust' },
