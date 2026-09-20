@@ -1705,7 +1705,9 @@ const DEFAULT_LOCATIONS = ['restaurant', 'bar', 'lounge', 'terrace']
 // Department-wide live tickets (EVERY staff member's open, unpaid orders) used
 // to flag taken tables. The board above is scoped to the signed-in waiter, so
 // occupancy must come from its own query or another waiter's table would stay
-// green and get double-booked.
+// green and get double-booked. The orders endpoint normally scopes floor staff
+// to their own tickets; the `occupancy` read lifts that rule and returns a
+// slim holder-only snapshot precisely for this map.
 const deptOrders = ref([])
 
 async function loadDeptOrders() {
@@ -1716,7 +1718,7 @@ async function loadDeptOrders() {
   const merged = []
   for (const dept of depts) {
     try {
-      const res = await orderApi.index({ department: dept, per_page: 100 })
+      const res = await orderApi.index({ department: dept, per_page: 100, occupancy: 1 })
       const rows = Array.isArray(res.data) ? res.data : res.data?.data || []
       merged.push(...rows)
     } catch {
