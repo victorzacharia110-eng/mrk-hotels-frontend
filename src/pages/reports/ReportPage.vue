@@ -26,8 +26,11 @@
         <img v-if="reportLogo" :src="reportLogo" class="report-logo" alt="" />
         <h2>{{ reportHotel }}</h2>
       </div>
-      <h3 class="report-title">{{ $t('reports.title') }}</h3>
-      <span class="report-period">{{ stockFrom || '—' }} → {{ stockTo || '—' }}</span>
+      <h3 class="report-title">{{ $t('reports.tabStock') }}</h3>
+      <span class="report-period">
+        Date: {{ stockFrom || '—' }} To {{ stockTo || '—' }}; Outlet: {{ reportHotel }};
+        Ignore Zero Stock: {{ stockIgnoreZero ? 'True' : 'False' }}; Cost Calculate With: {{ costMethodLabel }}
+      </span>
     </div>
 
     <!-- Tab switcher between the overview and audit-log views -->
@@ -93,7 +96,10 @@
           <span>{{ stockData.from }} → {{ stockData.to }} · {{ $t('reports.costMethod') }}</span>
         </div>
 
-        <article v-for="item in stockData.items" :key="item.item_id" class="card ledger-item">
+        <template v-for="group in ledgerGroups" :key="group.key">
+        <div class="ledger-group-head">{{ group.label }}</div>
+
+        <article v-for="item in group.items" :key="item.item_id" class="card ledger-item">
           <header class="ledger-item-head">
             <h3>{{ item.item_name }} <small v-if="item.unit">({{ item.unit }})</small></h3>
             <span class="ledger-balance">
@@ -107,11 +113,11 @@
             <thead>
               <tr>
                 <th>{{ $t('reports.date') }}</th>
-                <th>{{ $t('reports.txnType') }}</th>
-                <th>{{ $t('reports.ref') }}</th>
-                <th class="num">{{ $t('reports.stockIn') }}</th>
-                <th class="num">{{ $t('reports.stockOut') }}</th>
-                <th class="num">{{ $t('reports.unitCost') }}</th>
+                <th>{{ $t('reports.ledgerTranType') }}</th>
+                <th>{{ $t('reports.ledgerRefNo') }}</th>
+                <th class="num">{{ $t('reports.ledgerStockIn') }}</th>
+                <th class="num">{{ $t('reports.ledgerStockOut') }}</th>
+                <th class="num">{{ $t('reports.ledgerCostPerUnit') }}</th>
                 <th class="num">{{ $t('reports.value') }}</th>
                 <th class="num">{{ $t('reports.stockCol') }}</th>
                 <th class="num">{{ $t('reports.stockValueCol') }}</th>
@@ -119,28 +125,34 @@
             </thead>
             <tbody>
               <tr class="opening-row">
-                <td colspan="6">{{ $t('reports.openingStock') }}</td>
-                <td class="num">{{ fmtMoney(item.opening_value) }}</td>
-                <td class="num">{{ item.opening_stock }}</td>
-                <td class="num">{{ fmtMoney(item.opening_value) }}</td>
+                <td>{{ stockFrom }}</td>
+                <td>{{ ledgerTypeLabel('opening') }}</td>
+                <td></td>
+                <td class="num">{{ fmtQty(item.opening_stock) }}{{ unitSuffix(item) }}</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td class="num">{{ fmtQty(item.opening_stock) }}{{ unitSuffix(item) }}</td>
+                <td class="num">{{ fmtLedgerMoney(item.opening_value) }}</td>
               </tr>
               <tr v-for="(m, idx) in item.movements" :key="idx"
                   :class="{ 'movement-in': m.in !== null, 'movement-out': m.out !== null }">
-                <td>{{ m.date }}</td>
-                <td>{{ $t('reports.' + m.type) }}</td>
-                <td class="mono">{{ m.ref || '—' }}</td>
-                <td class="num in-cell">{{ m.in ?? '' }}</td>
-                <td class="num out-cell">{{ m.out ?? '' }}</td>
-                <td class="num">{{ fmtMoney(m.unit_cost) }}</td>
-                <td class="num">{{ fmtMoney(m.value) }}</td>
-                <td class="num">{{ m.stock }}</td>
-                <td class="num">{{ fmtMoney(m.stock_value) }}</td>
+                <td>{{ fmtLedgerDateTime(m.date) }}</td>
+                <td>{{ ledgerTypeLabel(m.type) }}</td>
+                <td class="mono">{{ m.reference || m.ref || '' }}</td>
+                <td class="num in-cell">{{ m.in != null ? fmtQty(m.in) + unitSuffix(item) : '' }}</td>
+                <td class="num out-cell">{{ m.out != null ? fmtQty(m.out) + unitSuffix(item) : '' }}</td>
+                <td class="num">{{ fmtLedgerMoney(m.unit_cost) }}</td>
+                <td class="num">{{ fmtLedgerMoney(m.value) }}</td>
+                <td class="num">{{ fmtQty(m.stock) }}{{ unitSuffix(item) }}</td>
+                <td class="num">{{ fmtLedgerMoney(m.stock_value) }}</td>
               </tr>
             </tbody>
           </table>
           </div>
           <p v-else class="no-movements">{{ $t('reports.noStockData') }}</p>
         </article>
+      </template>
 
         <div class="ledger-totals card">
           <span>{{ $t('reports.totalOpeningValue') }}: <strong>TZS {{ fmtMoney(stockData.totals.opening_value) }}</strong></span>
@@ -567,7 +579,7 @@
 
     <!-- Print-only footer with the person who ran the report, like Ezee. -->
     <footer class="print-brand-foot">
-      {{ $t('reports.printedBy') }}: {{ reportUser }} · {{ printedAt }}
+      {{ $t('reports.printedBy') }} : {{ reportUser }} at {{ printedAt }}
     </footer>
   </div>
 </template>
@@ -659,6 +671,91 @@ async function loadStockLedger() {
 function fmtMoney(value) {
   return Number(value || 0).toLocaleString('en-TZ', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
+
+/* ---- Ezee-faithful stock ledger formatting ---- */
+// The Ezee ledger prints amounts like 24670.00 / 310366.00 (two decimals, no
+// commas) and every quantity carries the item's unit (2 BTL, 98 BTL). These
+// helpers mirror that exact layout.
+
+/** Ledger money: always two decimals, no thousands separators (like Ezee). */
+function fmtLedgerMoney(value) {
+  return Number(value || 0).toFixed(2)
+}
+
+/** Ledger quantity: whole numbers stay bare, fractions keep two decimals. */
+function fmtQty(value) {
+  const n = Number(value || 0)
+  return Number.isInteger(n) ? String(n) : n.toFixed(2)
+}
+
+/** " 2 BTL" -> Ezee shows the unit next to every quantity cell. */
+function unitSuffix(item) {
+  return item.unit ? ' ' + item.unit : ''
+}
+
+/** Re-renders a "YYYY-MM-DD HH:mm" stamp as "YYYY-MM-DD hh:mm:ss AM" like Ezee. */
+function fmtLedgerDateTime(str) {
+  const parts = String(str || '').split(' ')
+  if (parts.length < 2) return str || ''
+  const [day, clock] = parts
+  const [y, mo, d] = day.split('-').map(Number)
+  const [h, mi] = clock.split(':').map(Number)
+  if (!y || !mo || !d || h == null || mi == null) return str || ''
+  const dt = new Date(y, mo - 1, d, h, mi, 0)
+  if (Number.isNaN(dt.getTime())) return str || ''
+  const time = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+  return day + ' ' + time
+}
+
+/** Ezee transaction-type wording on the ledger rows. */
+function ledgerTypeLabel(type) {
+  const map = {
+    opening: 'ezOpening',
+    sale: 'ezSale',
+    received: 'ezReceived',
+    wastage: 'ezWastage',
+    transfer: 'ezTransfer',
+    adjustment: 'ezAdjustment',
+  }
+  return t('reports.' + (map[type] || 'ezAdjustment'))
+}
+
+/** The category filter's display labels (mirrors the option list above). */
+const LEDGER_CATEGORY_LABELS = {
+  food: 'Food',
+  beverage: 'Beverage',
+  housekeeping: 'Housekeeping',
+  maintenance: 'Maintenance',
+  procurement: 'Procurement',
+  other: 'Other',
+}
+
+/** Groups the ledger items under Ezee-style category bands (DRINKS, FOOD, ...). */
+const ledgerGroups = computed(() => {
+  const groups = []
+  const seen = new Map()
+  for (const item of stockData.value.items || []) {
+    const key = String(item.category || 'other').trim() || 'other'
+    if (!seen.has(key)) {
+      const group = {
+        key,
+        label: String(LEDGER_CATEGORY_LABELS[key] || key).toUpperCase(),
+        items: [],
+      }
+      seen.set(key, group)
+      groups.push(group)
+    }
+    seen.get(key).items.push(item)
+  }
+  return groups
+})
+
+/** "Configured Purchase Rate" — the cost-basis line on the Print header. */
+const costMethodLabel = computed(() =>
+  stockData.value.cost_method === 'configured_purchase_rate' || !stockData.value.cost_method
+    ? t('reports.configuredPurchaseRate')
+    : String(stockData.value.cost_method).replace(/_/g, ' '),
+)
 
 /** Opens the browser print dialog scoped to the ledger area. */
 function printLedger() {
@@ -1661,6 +1758,20 @@ onMounted(() => {
   gap: 16px;
 }
 
+/* Ezee-style category band that separates item groups (DRINKS, FOOD, ...). */
+.ledger-group-head {
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #0b1f33;
+  background: rgba(59, 130, 246, 0.14);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 10px;
+  padding: 8px 14px;
+  margin-top: 4px;
+}
+
 .ledger-head {
   display: flex;
   justify-content: space-between;
@@ -1810,6 +1921,10 @@ onMounted(() => {
   }
   .print-brand-head .report-period { font-size: 12px; color: #555; }
 
+.ledger-group-head { font-size: 13px; }
+.ledger-item-head h3 { font-size: 13px; }
+.ledger-balance { display: none; }
+
   .print-brand-foot {
     inset: auto 0 0 0;
     margin-top: 14px;
@@ -1841,6 +1956,21 @@ onMounted(() => {
     background: #f0f0f0;
   }
 
+  /* Category band between item groups, Ezee style. */
+  .ledger-group-head {
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: #d9e7f5;
+    border: 1px solid #222;
+    padding: 7px 8px;
+    margin: 12px 0 6px;
+  }
+
+  /* The opening seed reads as a plain seeded row on paper, not an aside. */
+  .opening-row td { font-style: normal; }
+
   .no-print-summary .btn,
   .tabs,
   .filter-bar,
@@ -1851,7 +1981,12 @@ onMounted(() => {
 
   @page {
     size: A4 portrait;
-    margin: 12mm;
+    margin: 14mm 12mm 18mm 12mm;
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 11px;
+      color: #555;
+    }
   }
 }
 </style>
