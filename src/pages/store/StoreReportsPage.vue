@@ -56,12 +56,32 @@
               <tr v-if="group.title" class="ezee-group-row">
                 <td :colspan="cols.length"><strong>{{ group.title }}</strong></td>
               </tr>
-              <tr v-for="(r, i) in group.rows" :key="i">
+              <template v-for="(r, i) in group.rows" :key="i">
+              <tr>
                 <td v-for="col in cols" :key="col.field">
                   <template v-if="col.money || col.num">{{ fmtNum(r[col.field]) }}</template>
                   <template v-else>{{ r[col.field] ?? '—' }}</template>
                 </td>
               </tr>
+              <tr v-for="(m, mi) in (r.movements || [])" :key="`m${i}_${mi}`" class="ezee-detail-row">
+                <td :colspan="cols.length" class="stock-ledger-detail">
+                  <div class="stock-ledger-detail-grid">
+                    <span class="detail-lbl">{{ $t('storeManager.reports.dateTime') }}</span>
+                    <span class="detail-lbl">{{ $t('storeManager.reports.reference') }}</span>
+                    <span class="detail-lbl">{{ $t('storeManager.reports.type') }}</span>
+                    <span class="detail-lbl num">{{ $t('storeManager.reports.received') }}</span>
+                    <span class="detail-lbl num">{{ $t('storeManager.reports.issued') }}</span>
+                    <span class="detail-lbl num">{{ $t('storeManager.reports.stock') }}</span>
+                    <span>{{ m.date }}</span>
+                    <span>{{ m.reference || m.ref || '—' }}</span>
+                    <span>{{ m.type }}</span>
+                    <span class="num">{{ fmtNum(m.in) }}</span>
+                    <span class="num">{{ fmtNum(m.out) }}</span>
+                    <span class="num">{{ fmtNum(m.stock) }}</span>
+                  </div>
+                </td>
+              </tr>
+            </template>
             </template>
           </tbody>
           <tfoot v-if="totals.length">
@@ -125,11 +145,12 @@ const REPORT_CONFIG = {
     labelKey: 'storeManager.reports.transferSummary',
     rows: 'transfers',
     cols: [
-      { field: 'transfer_number', label: 'Transfer #' },
-      { field: 'date', label: 'Date' },
-      { field: 'from_department', label: 'From' },
-      { field: 'to_department', label: 'To' },
-      { field: 'status', label: 'Status' },
+      { field: 'indent_number', label: 'Indent ref' },
+      { field: 'date_time', label: 'Transferred at' },
+      { field: 'department', label: 'Department' },
+      { field: 'accepted_by', label: 'Accepted by' },
+      { field: 'items', label: 'Items', num: true },
+      { field: 'quantity', label: 'Qty', num: true },
     ],
   },
   'stock-take-detail': {
@@ -260,8 +281,33 @@ async function generate() {
     }
     if (departmentId.value) params.department_id = departmentId.value
     if (category.value) params.category = category.value
-    const res = await reportApi.inventoryReport(type.value, params)
-    data.value = res.data
+    if (type.value === 'ledger-summary') {
+      const res = await reportApi.stockLedger({
+        from: params.from,
+        to: params.to,
+        ...(params.category ? { category: params.category } : {}),
+      })
+      const items = (res.data?.items || []).map((it) => {
+        const moves = it.movements || []
+        const received = moves.reduce((s, m) => s + Number(m.in || 0), 0)
+        const issued = moves.reduce((s, m) => s + Number(m.out || 0), 0)
+        const received_value = moves.reduce((s, m) => (m.in != null ? s + Number(m.value || 0) : s), 0)
+        const issued_value = moves.reduce((s, m) => (m.out != null ? s + Number(m.value || 0) : s), 0)
+        return { ...it, movements: moves, received, issued, received_value, issued_value }
+      })
+      const total = (key) => items.reduce((s, it) => s + Number(it[key] || 0), 0)
+      data.value = {
+        items,
+        totals: {
+          received_value: total('received_value'),
+          issued_value: total('issued_value'),
+          closing_value: res.data?.totals?.closing_value ?? total('closing_value'),
+        },
+      }
+    } else {
+      const res = await reportApi.inventoryReport(type.value, params)
+      data.value = res.data
+    }
   } catch {
     data.value = { [cfg.value.rows]: [], totals: {} }
   } finally {
@@ -307,15 +353,28 @@ function buildReportHtml() {
   const tbody = groupedRows.value
     .map((group) => {
       const rowsHtml = group.rows
-        .map(
-          (r) => `<tr>${cols.value
+        .map((r) => {
+          const cells = cols.value
             .map((c) => {
               const cls = c.num || c.money ? ' class="num"' : ''
               const val = c.num || c.money ? fmtNum(r[c.field]) : r[c.field] ?? '—'
               return `<td${cls}>${esc(val)}</td>`
             })
-            .join('')}</tr>`,
-        )
+            .join('')
+          const detail = (r.movements || [])
+            .map(
+              (m) => `<tr class="ledger-move"><td colspan="${cols.value.length}">
+                <span class="lm-dt">${esc(m.date)}</span>
+                <span class="lm-ref">${esc(m.reference || m.ref || '—')}</span>
+                <span class="lm-type">${esc(m.type)}</span>
+                <span class="num">${esc(fmtNum(m.in))}</span>
+                <span class="num">${esc(fmtNum(m.out))}</span>
+                <span class="num">${esc(fmtNum(m.stock))}</span>
+              </td></tr>`,
+            )
+            .join('')
+          return `<tr>${cells}</tr>${detail}`
+        })
         .join('')
       const head = group.title
         ? `<tr class="cat"><td colspan="${cols.value.length}">${esc(group.title.toUpperCase())}</td></tr>`
@@ -350,6 +409,12 @@ function buildReportHtml() {
   td.num, th.num { text-align: right; }
   tr.cat td { background: #e6eee6; font-weight: 700; letter-spacing: .05em; }
   tr.totals td { font-weight: 700; background: #f0f0f0; }
+  tr.ledger-move td { background: #f7f8fa; font-size: 11px; }
+  tr.ledger-move td span { display: inline-block; }
+  tr.ledger-move td .lm-dt { width: 20%; font-weight: 700; }
+  tr.ledger-move td .lm-ref { width: 20%; }
+  tr.ledger-move td .lm-type { width: 20%; text-transform: capitalize; }
+  tr.ledger-move td .num { width: 8%; text-align: right; }
   .rpt-foot { margin-top: 12px; font-size: 11px; color: #444; }
 </style></head><body>
   <div class="rpt-bar"><button onclick="window.print()">${esc(t('common.print'))}</button></div>
@@ -381,7 +446,10 @@ function buildThermalLines() {
   for (const r of rows) {
     switch (type.value) {
       case 'transfer-register':
-        report.rows.push({ label: r.transfer_number, right: r.status }, { label: ` ${r.date}  ${r.from_department} → ${r.to_department}` })
+        report.rows.push(
+          { label: r.indent_number, right: `${money(r.items)} items · ${money(r.quantity)} qty` },
+          { label: ` ${r.date_time}  ${r.department}` , right: r.accepted_by },
+        )
         break
       case 'stock-adjustment-report':
         report.rows.push({ label: r.date, right: r.direction }, { label: ` ${r.item_name}  (${r.category}/${r.department})`, right: money(r.quantity) }, { label: `  ${money(r.quantity) || ''} × ${money(r.unit_cost)} = ${money(r.value)}` })

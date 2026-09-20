@@ -4320,7 +4320,13 @@
       "openWindow": "Open in new window",
       "openWindowBlocked": "The report window was blocked by your browser. Allow pop-ups for this site to open reports in a new window.",
       "openWindowEmpty": "Nothing to show in a new window yet — run the report first.",
-      "ledgerEmpty": "No stock movements on this date."
+      "ledgerEmpty": "No stock movements on this date.",
+      "dateTime": "Date & Time",
+      "reference": "Reference",
+      "type": "Type",
+      "received": "Received",
+      "issued": "Issued",
+      "stock": "Stock"
     },
     "expenses": {
       "add": "Add expense",
@@ -4759,6 +4765,8 @@
       "title": "Dine In",
       "occupied": "Occupied",
       "vacant": "Vacant",
+      "dateTime": "Date / Time",
+      "today": "Today",
       "running": "Running orders",
       "runningCount": "{n} Running",
       "guest": "Guest",

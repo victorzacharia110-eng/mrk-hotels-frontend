@@ -207,6 +207,16 @@ const emit = defineEmits(['close', 'created'])
 
 const { t } = useI18n()
 const printStore = usePrintSettingsStore()
+const authStore = useAuthStore()
+
+/** The logged-in cashier/bartender's display name — used to default the waiter. */
+const selfName = computed(
+  () =>
+    authStore.user?.full_name ||
+    authStore.user?.name ||
+    [authStore.user?.first_name, authStore.user?.last_name].filter(Boolean).join(' ') ||
+    '',
+)
 
 const menu = ref([])
 const waiters = ref([])
@@ -221,7 +231,9 @@ const accompItem = ref(null)
 const form = reactive({
   guest_name: props.guestNamePrefill || '',
   room_number: props.roomNumber || '',
-  waiter_name: '',
+  // Default the waiter to the person taking the order (cashier/bartender).
+  // They can still reassign it to another waiter via the searchable select.
+  waiter_name: selfName.value,
   covers: null,
   no_charge_account: '',
   delivery_phone: '',
@@ -291,7 +303,6 @@ const { accompanimentOptions, loadAccompaniments } = useAccompaniments(t, 'resta
 
 // The cashier owns the restaurant list, so they may register a missing side
 // straight from the prompt without leaving the order.
-const authStore = useAuthStore()
 const canManageSides = computed(() => canManageAccompaniments(authStore.user?.user_role))
 const showAccompanimentManager = ref(false)
 
@@ -415,6 +426,14 @@ onMounted(async () => {
     menu.value = menuRes.data.data || menuRes.data
     waiters.value = options.data.waiters || []
     inHouseRooms.value = options.data.in_house_guests || []
+    // Snap the prefilled waiter to the exact waiter-list entry (case/spacing
+    // differences between the auth profile and the waiter roster) so the order
+    // resolves to a real waiter. Leaves an unmatched name as-is.
+    const self = selfName.value.trim().toLowerCase()
+    if (self) {
+      const match = waiters.value.find((w) => (w.full_name || '').trim().toLowerCase() === self)
+      if (match) form.waiter_name = match.full_name
+    }
   } catch (e) {
     error.value = e.message
   }

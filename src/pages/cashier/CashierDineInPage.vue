@@ -24,6 +24,8 @@
       <div class="panel-head">
         <h2><i class="fas fa-chair" aria-hidden="true"></i> {{ $t('cashier.dineIn.title') }}</h2>
         <div class="sm-search"><i class="fas fa-magnifying-glass"></i><input v-model="tableQ" type="text" :placeholder="$t('common.search')" /></div>
+        <OrderDateNav input-id="dine-date" v-model="boardDate" :today="workingDateStore.workingDate"
+          :today-label="$t('cashier.dineIn.today')" @change="load" />
         <button class="sm-btn ghost sm" @click="load" :disabled="busy">
           <i class="fas fa-rotate" aria-hidden="true"></i> {{ $t('common.refresh') }}
         </button>
@@ -179,6 +181,7 @@
           <thead>
             <tr>
               <th>{{ $t('cashier.summary.order') }}</th>
+              <th>{{ $t('cashier.dineIn.dateTime') }}</th>
               <th>{{ $t('cashier.summary.amount') }}</th>
               <th>{{ $t('common.status') }}</th>
               <th class="actions-col"></th>
@@ -187,6 +190,7 @@
           <tbody>
             <tr v-for="order in runningByTable[ticketTable.table_name] || []" :key="order.order_id">
               <td>{{ order.order_number }}</td>
+              <td>{{ dateTimeOf(order) }}</td>
               <td>{{ money(order.total_amount) }}</td>
               <td><span class="chip pending">{{ order.status }}</span></td>
               <td>
@@ -204,7 +208,7 @@
               </td>
             </tr>
             <tr v-if="!(runningByTable[ticketTable.table_name] || []).length">
-              <td colspan="4" class="empty">{{ $t('cashier.dineIn.noRunning') }}</td>
+              <td colspan="5" class="empty">{{ $t('cashier.dineIn.noRunning') }}</td>
             </tr>
           </tbody>
         </table>
@@ -254,9 +258,11 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cashierApi, orderApi, tableApi } from '@/api'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
+import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useOrderRealtime } from '@/composables/useOrderRealtime'
 import { useWorkingDateStore } from '@/stores/workingDate'
+import { formatOrderDateTime } from '@/utils/dates'
 import { toast } from '@/utils/toast'
 
 const { t } = useI18n()
@@ -275,6 +281,9 @@ const filteredTables = computed(() => {
 })
 const runningOrders = ref([])
 const busy = ref(false)
+/** Date whose open orders are on the floor. Defaults to the working date so
+ *  previous days' orders stay hidden until the cashier navigates back. */
+const boardDate = ref('')
 const showOrderModal = ref(false)
 const activeTable = ref(null)
 const ticketTable = ref(null)
@@ -336,6 +345,11 @@ function initials(name) {
 
 function money(value) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value ?? 0)
+}
+
+/** Human-readable date + time for an open ticket row. */
+function dateTimeOf(order) {
+  return formatOrderDateTime(order.created_at || order.order_date)
 }
 
 /* ── MODAL 1: Waiter list (user icon) ───────────────────────── */
@@ -462,10 +476,12 @@ async function confirmTransfer() {
 async function load() {
   busy.value = true
   try {
-    const today = workingDateStore.workingDate
+    // Show the picked date's open orders (default = working date). Navigating
+    // back surfaces previous days' orders without dumping them by default.
+    const day = boardDate.value || workingDateStore.workingDate
     const [tablesRes, ordersRes, boardRes] = await Promise.all([
       tableApi.index({ per_page: 100 }),
-      orderApi.index({ status: 'pending', date: today, per_page: 100 }),
+      orderApi.index({ status: 'pending', date: day, per_page: 100 }),
       cashierApi.waiters(),
     ])
     const list = (tablesRes.data.data || tablesRes.data).filter((x) => x.is_active !== false)
@@ -473,7 +489,7 @@ async function load() {
 
     const stages = await Promise.all(
       ['in_progress', 'processing', 'preparing', 'ready', 'served'].map((status) =>
-        orderApi.index({ status, date: today, per_page: 100 }).catch(() => ({ data: { data: [] } })),
+        orderApi.index({ status, date: day, per_page: 100 }).catch(() => ({ data: { data: [] } })),
       ),
     )
     runningOrders.value = [{ data: ordersRes.data }, ...stages.map((r) => r.data)]
@@ -509,6 +525,7 @@ function onCreated() {
 
 onMounted(async () => {
   await workingDateStore.ensureLoaded()
+  boardDate.value = workingDateStore.workingDate
   load()
 })
 
