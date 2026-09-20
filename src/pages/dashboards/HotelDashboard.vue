@@ -69,12 +69,7 @@
               <i class="fas fa-chevron-right" aria-hidden="true"></i>
             </button>
           </div>
-          <div
-            v-for="d in days"
-            :key="d.iso"
-            class="sv-day-head"
-            :class="{ today: d.isToday, weekend: d.isWeekend }"
-          >
+          <div v-for="d in days" :key="d.iso" class="sv-day-head" :class="{ today: d.isToday, weekend: d.isWeekend }">
             <span class="dow">{{ d.dow }}</span>
             <span class="dom">{{ d.label }}</span>
           </div>
@@ -82,12 +77,8 @@
           <template v-for="group in groups" :key="group.type">
             <!-- Rate/availability row for the room type -->
             <div class="sv-type-cell">{{ roomTypeLabel(group.type) }}</div>
-            <div
-              v-for="d in days"
-              :key="d.iso"
-              class="sv-rate-cell"
-              :class="{ today: d.isToday, weekend: d.isWeekend }"
-            >
+            <div v-for="d in days" :key="d.iso" class="sv-rate-cell"
+              :class="{ today: d.isToday, weekend: d.isWeekend }">
               <span class="sv-avail-pill" :class="{ zero: group.availability[d.iso] === 0 }">
                 {{ group.availability[d.iso] }}
               </span>
@@ -96,100 +87,48 @@
 
             <!-- One row per physical room, with booking bars spanning its stay dates -->
             <template v-for="room in group.rooms" :key="room.room_id">
-              <div
-                class="sv-room-cell"
-                role="button"
-                tabindex="0"
-                :title="$t('stayview.roomDetails')"
-                @click="openRoomModal(room, $event)"
-                @keyup.enter="openRoomModal(room, $event)"
-              >
-                <span
-                  role="button" tabindex="0" class="sv-room-dot"
+              <div class="sv-room-cell" role="button" tabindex="0" :title="$t('stayview.roomDetails')"
+                @click="openRoomModal(room, $event)" @keyup.enter="openRoomModal(room, $event)">
+                <span role="button" tabindex="0" class="sv-room-dot"
                   :class="roomDotOccupied(room) ? 'occupied' : (room.status !== 'occupied' ? room.status : 'available')"
                   :title="roomDotOccupied(room) ? (hkRoomGuest(room.room_id) || $t('stayview.occupiedGuest')) : room.status"
-                                  @click.stop.prevent="openDotWhy(room)"
-                  @keydown.enter.stop.prevent="openDotWhy(room)"
-                  @keydown.space.stop.prevent="openDotWhy(room)"
-                  ></span>
+                  @click.stop.prevent="openDotWhy(room)" @keydown.enter.stop.prevent="openDotWhy(room)"
+                  @keydown.space.stop.prevent="openDotWhy(room)"></span>
                 <span class="sv-room-number">{{ room.room_number }}</span>
-                <i
-                  v-if="room.status === 'dirty' || room.status === 'cleaning'"
-                  class="fas fa-broom sv-room-flag"
-                  :title="room.status"
-                  aria-hidden="true"
-                ></i>
-                <i
-                  v-if="room.status === 'maintenance'"
-                  class="fas fa-screwdriver-wrench sv-room-flag"
-                  :title="room.status"
-                  aria-hidden="true"
-                ></i>
-                <button
-                  v-if="(hkByRoom[room.room_id] || []).length"
-                  type="button"
-                  class="sv-hk-badge"
+                <i v-if="room.status === 'dirty' || room.status === 'cleaning'" class="fas fa-broom sv-room-flag"
+                  :title="room.status" aria-hidden="true"></i>
+                <i v-if="room.status === 'maintenance'" class="fas fa-screwdriver-wrench sv-room-flag"
+                  :title="room.status" aria-hidden="true"></i>
+                <button v-if="(hkByRoom[room.room_id] || []).length" type="button" class="sv-hk-badge"
                   :class="{ active: hkTip && hkTip.room.room_id === room.room_id }"
-                  :aria-label="hkByRoom[room.room_id].length + ' ' + $t('housekeeping.title').toLowerCase()"
-                  title=""
-                  @click.stop="toggleHkTip($event, room)"
-                  @mouseenter="showHkTip($event, room)"
-                  @mousemove="moveHkTip"
-                  @mouseleave="hideHkTip"
-                >
+                  :aria-label="hkByRoom[room.room_id].length + ' ' + $t('housekeeping.title').toLowerCase()" title=""
+                  @click.stop="toggleHkTip($event, room)" @mouseenter="showHkTip($event, room)" @mousemove="moveHkTip"
+                  @mouseleave="hideHkTip">
                   <i class="fas fa-broom" aria-hidden="true"></i>
                   <b>{{ hkByRoom[room.room_id].length }}</b>
                 </button>
-                <button
-                  v-if="(laundryByRoom[room.room_number] || []).length && !(hkByRoom[room.room_id] || []).length"
-                  type="button"
-                  class="sv-hk-badge sv-hk-badge-laundry"
+                <button v-if="(laundryByRoom[room.room_number] || []).length && !(hkByRoom[room.room_id] || []).length"
+                  type="button" class="sv-hk-badge sv-hk-badge-laundry"
                   :class="{ active: hkTip && hkTip.room.room_id === room.room_id }"
                   :aria-label="(laundryByRoom[room.room_number] || []).length + ' ' + $t('laundry.title').toLowerCase()"
-                  title=""
-                  @click.stop="toggleHkTip($event, room)"
-                  @mouseenter="showHkTip($event, room)"
-                  @mousemove="moveHkTip"
-                  @mouseleave="hideHkTip"
-                >
+                  title="" @click.stop="toggleHkTip($event, room)" @mouseenter="showHkTip($event, room)"
+                  @mousemove="moveHkTip" @mouseleave="hideHkTip">
                   <i class="fas fa-jug-detergent" aria-hidden="true"></i>
                   <b>{{ (laundryByRoom[room.room_number] || []).length }}</b>
                 </button>
               </div>
               <div class="sv-room-track">
-                <div
-                  v-for="(d, di) in days"
-                  :key="d.iso"
-                  class="sv-cell-bg"
+                <div v-for="(d, di) in days" :key="d.iso" class="sv-cell-bg"
                   :class="{ today: d.isToday, weekend: d.isWeekend, vacant: isVacantCell(room, d.iso) }"
-                  :style="{ gridColumn: `${di * 2 + 1} / span 2`, gridRow: '1 / -1' }"
-                  role="button"
-                  tabindex="0"
+                  :style="{ gridColumn: `${di * 2 + 1} / span 2`, gridRow: '1 / -1' }" role="button" tabindex="0"
                   :title="isVacantCell(room, d.iso) ? $t('stayview.vacant') : ''"
-                  @click="onCellTap($event, room, d.iso)"
-                  @keyup.enter="onCellTap($event, room, d.iso)"
-                ></div>
-                <div
-                  v-for="(d, di) in days"
-                  :key="'mid-' + d.iso"
-                  class="sv-day-mid"
-                  :class="{ today: d.isToday }"
-                  :style="{ gridColumn: `${di * 2 + 2} / span 1` }"
-                ></div>
-                <div
-                  v-for="bar in barsByRoom[room.room_id] || []"
-                  :key="bar.id"
-                  class="sv-bar"
-                  :class="bar.colorClass"
+                  @click="onCellTap($event, room, d.iso)" @keyup.enter="onCellTap($event, room, d.iso)"></div>
+                <div v-for="(d, di) in days" :key="'mid-' + d.iso" class="sv-day-mid" :class="{ today: d.isToday }"
+                  :style="{ gridColumn: `${di * 2 + 2} / span 1` }"></div>
+                <div v-for="bar in barsByRoom[room.room_id] || []" :key="bar.id" class="sv-bar" :class="bar.colorClass"
                   :style="{ gridColumn: `${bar.start} / span ${bar.span}`, gridRow: bar.lane, animationDelay: `${bar.start * 15}ms` }"
-                  role="button"
-                  tabindex="0"
-                  @click="onBarTap($event, bar)"
-                  @keyup.enter="onBarTap($event, bar)"
-                  @mouseenter="showBarTip($event, bar)"
-                  @mousemove="moveBarTip"
-                  @mouseleave="hideBarTip"
-                >
+                  role="button" tabindex="0" @click="onBarTap($event, bar)" @keyup.enter="onBarTap($event, bar)"
+                  @mouseenter="showBarTip($event, bar)" @mousemove="moveBarTip" @mouseleave="hideBarTip">
                   <i class="fas fa-hotel" aria-hidden="true"></i>
                   <span class="sv-bar-label">{{ bar.label }}</span>
                 </div>
@@ -199,23 +138,15 @@
 
           <!-- Footer: per-day availability counts (sticky at the bottom) -->
           <div class="sv-footer-cell sv-sticky-avail">{{ $t('stayview.availability') }}</div>
-          <div
-            v-for="d in days"
-            :key="d.iso"
-            class="sv-footer-day sv-sticky-avail"
-            :class="{ today: d.isToday, weekend: d.isWeekend }"
-          >
+          <div v-for="d in days" :key="d.iso" class="sv-footer-day sv-sticky-avail"
+            :class="{ today: d.isToday, weekend: d.isWeekend }">
             <strong>{{ footer[d.iso].available }}</strong>
           </div>
 
           <!-- Footer: per-day occupancy percentage bars (sticky at the bottom) -->
           <div class="sv-footer-cell sv-sticky-occ">{{ $t('stayview.occupancy') }}</div>
-          <div
-            v-for="d in days"
-            :key="d.iso"
-            class="sv-footer-day sv-sticky-occ"
-            :class="{ today: d.isToday, weekend: d.isWeekend }"
-          >
+          <div v-for="d in days" :key="d.iso" class="sv-footer-day sv-sticky-occ"
+            :class="{ today: d.isToday, weekend: d.isWeekend }">
             <div class="sv-occ">
               <div class="sv-occ-bar"><span :style="{ width: footer[d.iso].occupancy + '%' }"></span></div>
               <strong>{{ footer[d.iso].occupancy }}%</strong>
@@ -227,12 +158,7 @@
     </template>
 
     <!-- Hover popover for booking bars (guest, stay status, payment status) -->
-    <div
-      v-if="barTip"
-      class="sv-popover"
-      :style="{ left: barTip.x + 'px', top: barTip.y + 'px' }"
-      role="tooltip"
-    >
+    <div v-if="barTip" class="sv-popover" :style="{ left: barTip.x + 'px', top: barTip.y + 'px' }" role="tooltip">
       <div class="sv-popover-head">
         <span class="sv-popover-icon"><i class="fas fa-hotel" aria-hidden="true"></i></span>
         <div>
@@ -248,37 +174,29 @@
         <i class="fas fa-bed" aria-hidden="true"></i>
         <span>{{ $t('stayview.room') }} {{ barTip.roomNumber }}</span>
       </div>
-      <div class="sv-popover-row" :class="barTip.rawStatus === 'checked_in' ? 'pay-ok' : (barTip.paymentPending ? 'pay-pending' : 'pay-ok')">
+      <div class="sv-popover-row"
+        :class="barTip.rawStatus === 'checked_in' ? 'pay-ok' : (barTip.paymentPending ? 'pay-pending' : 'pay-ok')">
         <i class="fas fa-dollar-sign" aria-hidden="true"></i>
         <span>
           <template v-if="barTip.rawStatus === 'checked_in'">{{ $t('stayview.balanceDue') }}</template>
-          <template v-else>{{ barTip.paymentPending ? $t('stayview.paymentPending') : $t('stayview.paymentPaid') }}</template>
+          <template v-else>{{ barTip.paymentPending ? $t('stayview.paymentPending') : $t('stayview.paymentPaid')
+            }}</template>
           <strong v-if="barTip.paymentPending"> · TZS {{ barTip.balance }}</strong>
         </span>
       </div>
     </div>
 
     <!-- Floating housekeeping card: the assigned work on a room (tap/pin or hover) -->
-    <div
-      v-if="hkTip"
-      class="sv-hk-card"
-      :class="{ pinned: hkTip.pinned }"
-      :style="{ left: hkTip.left + 'px', top: hkTip.top + 'px' }"
-      role="dialog"
-      :aria-label="$t('housekeeping.title')"
-      @mouseenter="pinHkTip"
-      @mouseleave="hideHkTip"
-    >
+    <div v-if="hkTip" class="sv-hk-card" :class="{ pinned: hkTip.pinned }"
+      :style="{ left: hkTip.left + 'px', top: hkTip.top + 'px' }" role="dialog" :aria-label="$t('housekeeping.title')"
+      @mouseenter="pinHkTip" @mouseleave="hideHkTip">
       <header class="sv-hk-card-head">
         <div class="sv-hk-card-room">
-          <span
-            role="button" tabindex="0" class="sv-room-dot"
+          <span role="button" tabindex="0" class="sv-room-dot"
             :class="roomDotOccupied(hkTip.room) ? 'occupied' : (hkTip.room.status !== 'occupied' ? hkTip.room.status : 'available')"
             :title="roomDotOccupied(hkTip.room) ? (hkRoomGuest(hkTip.room.room_id) || $t('stayview.occupiedGuest')) : hkTip.room.status"
-                      @click="openDotWhy(hkTip.room)"
-            @keydown.enter.prevent="openDotWhy(hkTip.room)"
-            @keydown.space.prevent="openDotWhy(hkTip.room)"
-            ></span>
+            @click="openDotWhy(hkTip.room)" @keydown.enter.prevent="openDotWhy(hkTip.room)"
+            @keydown.space.prevent="openDotWhy(hkTip.room)"></span>
           <strong>{{ hkTip.room.room_number }}</strong>
           <span class="sv-hk-card-guest">
             {{ hkRoomGuest(hkTip.room.room_id) || roomTypeLabel(hkTip.room.room_type) }}
@@ -291,7 +209,8 @@
       <ul v-if="hkTip.tasks.length" class="sv-hk-list">
         <li v-for="task in hkTip.tasks" :key="task.task_id" class="sv-hk-item" :class="task.priority">
           <div class="sv-hk-item-top">
-            <span class="sv-hk-task-type"><i class="fas fa-broom" aria-hidden="true"></i> {{ hkLabel(task, 'task_type') }}</span>
+            <span class="sv-hk-task-type"><i class="fas fa-broom" aria-hidden="true"></i> {{ hkLabel(task, 'task_type')
+              }}</span>
             <span class="sv-hk-status" :class="task.status">{{ hkLabel(task, 'status') }}</span>
           </div>
           <div class="sv-hk-item-meta">
@@ -303,40 +222,20 @@
           </div>
           <p v-if="task.notes" class="sv-hk-notes">{{ task.notes }}</p>
           <div v-if="isHousekeepingStaff" class="sv-hk-actions">
-            <button
-              v-if="task.status === 'dirty'"
-              type="button"
-              class="sv-hk-btn sv-hk-btn-primary"
-              :disabled="actionBusy"
-              @click.stop="hkTaskAction(task, 'start')"
-            >
+            <button v-if="task.status === 'dirty'" type="button" class="sv-hk-btn sv-hk-btn-primary"
+              :disabled="actionBusy" @click.stop="hkTaskAction(task, 'start')">
               <i class="fas fa-play" aria-hidden="true"></i> {{ $t('housekeeping.start') }}
             </button>
-            <button
-              v-if="task.status === 'in_progress' && hkCanConfirm"
-              type="button"
-              class="sv-hk-btn"
-              :disabled="actionBusy"
-              @click.stop="hkTaskAction(task, 'confirm')"
-            >
+            <button v-if="task.status === 'in_progress' && hkCanConfirm" type="button" class="sv-hk-btn"
+              :disabled="actionBusy" @click.stop="hkTaskAction(task, 'confirm')">
               <i class="fas fa-check-double" aria-hidden="true"></i> {{ $t('housekeeping.confirm') }}
             </button>
-            <button
-              v-if="task.status === 'confirmed' && hkCanVerify"
-              type="button"
-              class="sv-hk-btn"
-              :disabled="actionBusy"
-              @click.stop="hkTaskAction(task, 'verify')"
-            >
+            <button v-if="task.status === 'confirmed' && hkCanVerify" type="button" class="sv-hk-btn"
+              :disabled="actionBusy" @click.stop="hkTaskAction(task, 'verify')">
               <i class="fas fa-clipboard-check" aria-hidden="true"></i> {{ $t('housekeeping.verify') }}
             </button>
-            <button
-              v-if="task.status === 'verified'"
-              type="button"
-              class="sv-hk-btn sv-hk-btn-success"
-              :disabled="actionBusy"
-              @click.stop="hkTaskAction(task, 'complete')"
-            >
+            <button v-if="task.status === 'verified'" type="button" class="sv-hk-btn sv-hk-btn-success"
+              :disabled="actionBusy" @click.stop="hkTaskAction(task, 'complete')">
               <i class="fas fa-check" aria-hidden="true"></i> {{ $t('housekeeping.complete') }}
             </button>
           </div>
@@ -347,13 +246,15 @@
       <!-- Laundry is housekeeping work too: open orders run on the same bars -->
       <template v-if="hkTip.laundry.length">
         <div class="sv-hk-section">
-          <span class="sv-hk-section-title"><i class="fas fa-jug-detergent" aria-hidden="true"></i> {{ $t('laundry.title') }}</span>
+          <span class="sv-hk-section-title"><i class="fas fa-jug-detergent" aria-hidden="true"></i> {{
+            $t('laundry.title') }}</span>
           <span v-if="hkTip.laundry.length" class="sv-hk-section-count">{{ hkTip.laundry.length }}</span>
         </div>
         <ul class="sv-hk-list">
           <li v-for="order in hkTip.laundry" :key="order.laundry_order_id" class="sv-hk-item" :class="order.status">
             <div class="sv-hk-item-top">
-              <span class="sv-hk-task-type"><i class="fas fa-shirt" aria-hidden="true"></i> {{ hkLaundryLabel(order, 'service') }}</span>
+              <span class="sv-hk-task-type"><i class="fas fa-shirt" aria-hidden="true"></i> {{ hkLaundryLabel(order,
+                'service') }}</span>
               <span class="sv-hk-status" :class="order.status">{{ hkLaundryLabel(order, 'status') }}</span>
             </div>
             <div class="sv-hk-item-meta">
@@ -361,21 +262,18 @@
               <span><i class="fas fa-user" aria-hidden="true"></i> {{ order.guest_name || '—' }}</span>
             </div>
             <div class="sv-hk-item-meta">
-              <span><i class="fas fa-layer-group" aria-hidden="true"></i> {{ order.items_count ?? 0 }} {{ $t('laundry.items') }}</span>
+              <span><i class="fas fa-layer-group" aria-hidden="true"></i> {{ order.items_count ?? 0 }} {{
+                $t('laundry.items') }}</span>
               <span><i class="fas fa-coins" aria-hidden="true"></i> TZS {{ fmtNum(order.total_charge) }}</span>
-              <span v-if="order.attendant?.full_name"><i class="fas fa-user-gear" aria-hidden="true"></i> {{ order.attendant.full_name }}</span>
+              <span v-if="order.attendant?.full_name"><i class="fas fa-user-gear" aria-hidden="true"></i> {{
+                order.attendant.full_name }}</span>
             </div>
             <div v-if="isHousekeepingStaff && hkLaundryNext(order).length" class="sv-hk-actions">
-              <button
-                v-for="next in hkLaundryNext(order)"
-                :key="next"
-                type="button"
-                class="sv-hk-btn"
+              <button v-for="next in hkLaundryNext(order)" :key="next" type="button" class="sv-hk-btn"
                 :class="{ 'sv-hk-btn-success': next === 'delivered' || next === 'ready', 'sv-hk-btn-danger': next === 'cancelled' }"
-                :disabled="actionBusy"
-                @click.stop="hkLaundryAction(order, next)"
-              >
-                <i :class="next === 'delivered' ? 'fas fa-truck' : next === 'cancelled' ? 'fas fa-ban' : 'fas fa-check-double'" aria-hidden="true"></i>
+                :disabled="actionBusy" @click.stop="hkLaundryAction(order, next)">
+                <i :class="next === 'delivered' ? 'fas fa-truck' : next === 'cancelled' ? 'fas fa-ban' : 'fas fa-check-double'"
+                  aria-hidden="true"></i>
                 {{ hkLaundryLabel({ status: next }, 'status') }}
               </button>
             </div>
@@ -410,16 +308,9 @@
 
               <!-- Stay-view tabs -->
               <div class="sv-tabs" role="tablist">
-                <button
-                  v-for="tab in stayTabs"
-                  :key="tab.key"
-                  type="button"
-                  class="sv-tab"
-                  :class="{ active: stayTab === tab.key }"
-                  role="tab"
-                  :aria-selected="stayTab === tab.key"
-                  @click="setStayTab(tab.key)"
-                >
+                <button v-for="tab in stayTabs" :key="tab.key" type="button" class="sv-tab"
+                  :class="{ active: stayTab === tab.key }" role="tab" :aria-selected="stayTab === tab.key"
+                  @click="setStayTab(tab.key)">
                   <i :class="tab.icon" aria-hidden="true"></i>
                   <span>{{ tab.label }}</span>
                 </button>
@@ -431,14 +322,10 @@
                   <i class="fas fa-book-open" aria-hidden="true"></i>
                   <span>{{ $t('folio.no') }}</span>
                   <strong>{{ ledgerHeader.code }}</strong>
-                  <span v-if="ledgerHeader.guest" class="sv-folio-guest"> · {{ ledgerHeader.guest }}<template v-if="ledgerHeader.room"> · {{ ledgerHeader.room }}</template></span>
-                  <button
-                    type="button"
-                    class="sv-folio-early-dep"
-                    :disabled="actionBusy || folioLoading"
-                    :title="$t('stayview.earlyDepartureTitle')"
-                    @click="openEarlyDeparture"
-                  >
+                  <span v-if="ledgerHeader.guest" class="sv-folio-guest"> · {{ ledgerHeader.guest }}<template
+                      v-if="ledgerHeader.room"> · {{ ledgerHeader.room }}</template></span>
+                  <button type="button" class="sv-folio-early-dep" :disabled="actionBusy || folioLoading"
+                    :title="$t('stayview.earlyDepartureTitle')" @click="openEarlyDeparture">
                     <i class="fas fa-right-from-bracket" aria-hidden="true"></i> {{ $t('stayview.earlyDeparture') }}
                   </button>
                 </div>
@@ -450,23 +337,27 @@
                         <tr>
                           <th scope="col">{{ $t('folio.no') }}</th>
                           <th scope="col">{{ $t('stayview.viewingFolioGuest') }}</th>
-                          <th scope="col" class="sv-folio-col-num">{{ ledgerHeader.guest ? $t('stayview.totalRoomCharges') : '' }}</th>
+                          <th scope="col" class="sv-folio-col-num">{{ ledgerHeader.guest ?
+                            $t('stayview.totalRoomCharges') :
+                            '' }}</th>
                           <th scope="col" class="sv-folio-col-num">{{ $t('stayview.viewingFolioBalance') }}</th>
-                          <th scope="col" class="sv-folio-col-view"><span class="sv-visually-hidden">{{ $t('common.actions') }}</span></th>
+                          <th scope="col" class="sv-folio-col-view"><span class="sv-visually-hidden">{{
+                              $t('common.actions')
+                              }}</span></th>
                         </tr>
                       </thead>
                       <tbody>
-                        <tr
-                          v-for="r in [activeBar, ...relatedFolios]"
-                          :key="folioRowId(r)"
-                          :class="{ 'sv-folio-row-active': activeFolioId === folioRowId(r) }"
-                        >
+                        <tr v-for="r in [activeBar, ...relatedFolios]" :key="folioRowId(r)"
+                          :class="{ 'sv-folio-row-active': activeFolioId === folioRowId(r) }">
                           <td>
                             <strong>{{ r.folio_code || ledgerHeader.code }}</strong>
-                            <span class="sv-folio-row-type">{{ folioRowId(r) === activeBar.id ? $t('stayview.currentFolio') : $t('stayview.relatedFolio') }}</span>
+                            <span class="sv-folio-row-type">{{ folioRowId(r) === activeBar.id ?
+                              $t('stayview.currentFolio')
+                              : $t('stayview.relatedFolio') }}</span>
                           </td>
                           <td>
-                            {{ r.guest_name || r.label }}<template v-if="r.room_number"> · {{ r.room_number }}</template>
+                            {{ r.guest_name || r.label }}<template v-if="r.room_number"> · {{ r.room_number
+                              }}</template>
                           </td>
                           <td class="sv-folio-col-num">
                             <template v-if="activeFolioId === folioRowId(r)">{{ balanceDisplay.text }}</template>
@@ -474,27 +365,20 @@
                           </td>
                           <td class="sv-folio-col-num">
                             <template v-if="activeFolioId === folioRowId(r)">
-                              <strong :class="{ 'sv-balance-negative': balanceDisplay.negative }">{{ balanceDisplay.text }}</strong>
+                              <strong :class="{ 'sv-balance-negative': balanceDisplay.negative }">{{ balanceDisplay.text
+                                }}</strong>
                             </template>
                             <template v-else><strong>TZS {{ fmtNum(r.balance_due, 2) }}</strong></template>
                           </td>
                           <td class="sv-folio-col-view">
-                            <button
-                              type="button"
-                              class="sv-folio-print-btn"
-                              :disabled="printBusy || folioLoading"
+                            <button type="button" class="sv-folio-print-btn" :disabled="printBusy || folioLoading"
                               :title="$t('stayview.printInvoiceBreakdown') + ' ' + (r.folio_code || ledgerHeader.code)"
-                              @click="openInvoicePreview(r)"
-                            >
+                              @click="openInvoicePreview(r)">
                               <i class="fas fa-print" aria-hidden="true"></i>
                             </button>
-                            <button
-                              type="button"
-                              class="sv-folio-view-btn"
-                              :disabled="folioLoading"
+                            <button type="button" class="sv-folio-view-btn" :disabled="folioLoading"
                               :aria-label="$t('common.view') + ' ' + (r.folio_code || ledgerHeader.code)"
-                              @click="switchFolio(r)"
-                            >
+                              @click="switchFolio(r)">
                               <i class="fas fa-eye" aria-hidden="true"></i> {{ $t('common.view') }}
                             </button>
                           </td>
@@ -505,8 +389,11 @@
                 </div>
                 <div v-if="viewingFolio" class="sv-folio-now-viewing">
                   <i class="fas fa-book-bookmark" aria-hidden="true"></i>
-                  <span>{{ $t('stayview.viewingFolio') }} <strong>{{ ledgerHeader.code }}</strong> — {{ ledgerHeader.guest }}</span>
-                  <button type="button" class="sv-folio-return" :disabled="folioLoading" @click="switchFolio({ reservation_id: activeBar.id })">
+                  <span>{{ $t('stayview.viewingFolio') }} <strong>{{ ledgerHeader.code }}</strong> — {{
+                    ledgerHeader.guest
+                    }}</span>
+                  <button type="button" class="sv-folio-return" :disabled="folioLoading"
+                    @click="switchFolio({ reservation_id: activeBar.id })">
                     <i class="fas fa-arrow-left" aria-hidden="true"></i> {{ $t('stayview.backToCurrentFolio') }}
                   </button>
                 </div>
@@ -521,7 +408,8 @@
                   </div>
                   <div class="sv-panel-card" :class="activeBar.paymentPending ? 'pay-pending' : 'pay-ok'">
                     <span>{{ $t('stayview.balance') }}</span>
-                    <strong :class="{ 'sv-balance-negative': balanceDisplay.negative }">{{ balanceDisplay.text }}</strong>
+                    <strong :class="{ 'sv-balance-negative': balanceDisplay.negative }">{{ balanceDisplay.text
+                      }}</strong>
                   </div>
                 </div>
 
@@ -543,94 +431,60 @@
                         </tr>
                       </thead>
                       <tbody>
-                        <tr
-                          v-for="e in folioEntries"
-                          :key="e.key"
-                          :class="[e.credit ? 'row-credit' : 'row-charge', { 'row-muted': e.muted, 'row-viewed': viewedRow === e.key }]"
-                        >
+                        <tr v-for="e in folioEntries" :key="e.key"
+                          :class="[e.credit ? 'row-credit' : 'row-charge', { 'row-muted': e.muted, 'row-viewed': viewedRow === e.key }]">
                           <td>{{ formatDateDMY(e.date) }}</td>
                           <td class="sv-particular">{{ e.particular }}</td>
                           <td>
-                            <template v-if="e.movedFrom"><span class="sv-moved-from">{{ $t('stayview.transferFrom', { guest: e.movedFrom }) }}</span> </template>{{ e.description }}<span v-if="e.detail" class="sv-cap"> · {{ e.detail }}</span>
+                            <template v-if="e.movedFrom"><span class="sv-moved-from">{{ $t('stayview.transferFrom', {
+                                guest: e.movedFrom }) }}</span> </template>{{
+                            e.description }}<span v-if="e.detail" class="sv-cap"> · {{ e.detail }}</span>
                             <span v-if="e.payment?.edited_by || e.payment?.edited_at" class="sv-folio-edit-note">
-                              {{ $t('stayview.editedBy') }} {{ e.payment.edited_by }}<template v-if="e.payment.edited_at"> {{ $t('stayview.editedAt') }} {{ formatDateDMY(e.payment.edited_at) }}</template>
+                              {{ $t('stayview.editedBy') }} {{ e.payment.edited_by }}<template
+                                v-if="e.payment.edited_at"> {{ $t('stayview.editedAt') }} {{
+                                formatDateDMY(e.payment.edited_at) }}</template>
                             </span>
                           </td>
                           <td>{{ e.user }}</td>
                           <td class="num">{{ e.credit ? '−' : '' }}TZS {{ fmtNum(e.amount, 2) }}</td>
                           <td class="sv-cell-actions">
-                            <button
-                              type="button"
-                              class="sv-icon-link"
-                              :title="$t('folio.view')"
-                              @click="viewEntry(e)"
-                            >
+                            <button type="button" class="sv-icon-link" :title="$t('folio.view')" @click="viewEntry(e)">
                               <i data-testid="sv-entry-view" class="fas fa-eye" aria-hidden="true"></i>
                             </button>
-                            <button
-                              v-if="activeBar?.id && e.entryId"
-                              type="button"
-                              class="sv-icon-link"
+                            <button v-if="activeBar?.id && e.entryId" type="button" class="sv-icon-link"
                               :title="$t('stayview.printEntryInvoice')"
-                              :disabled="entryPrintBusy === e.entryId || printBusy"
-                              @click="printEntryInvoice(e)"
-                            >
+                              :disabled="entryPrintBusy === e.entryId || printBusy" @click="printEntryInvoice(e)">
                               <i data-testid="sv-entry-print" class="fas fa-print" aria-hidden="true"></i>
                             </button>
-                            <button
-                              v-if="e.editable"
-                              type="button"
-                              class="sv-icon-link"
-                              :title="$t('folio.edit')"
-                              :disabled="actionBusy"
-                              @click="openEditEntry(e)"
-                            >
+                            <button v-if="e.editable" type="button" class="sv-icon-link" :title="$t('folio.edit')"
+                              :disabled="actionBusy" @click="openEditEntry(e)">
                               <i class="fas fa-pen" aria-hidden="true"></i>
                             </button>
-                            <button
-                              v-if="e.kind === 'payment' && e.payment?.payment_id && canSeeFrontDesk"
-                              type="button"
-                              class="sv-folio-payment-edit"
-                              :title="$t('stayview.paymentEdit')"
-                              :disabled="actionBusy"
-                              @click="openPaymentEdit(e)"
-                            >
+                            <button v-if="e.kind === 'payment' && e.payment?.payment_id && canSeeFrontDesk"
+                              type="button" class="sv-folio-payment-edit" :title="$t('stayview.paymentEdit')"
+                              :disabled="actionBusy" @click="openPaymentEdit(e)">
                               <i class="fas fa-pen" aria-hidden="true"></i> {{ $t('stayview.paymentEdit') }}
                             </button>
-                            <button
-                              v-if="activeBar?.id"
-                              type="button"
-                              class="sv-icon-link"
+                            <button v-if="activeBar?.id" type="button" class="sv-icon-link"
                               :title="activeBar.guestEmail ? $t('stayview.sendInvoice') : $t('stayview.noGuestEmail')"
-                              :disabled="sendBusy || !activeBar.guestEmail"
-                              @click="sendInvoice(activeBar)"
-                            >
+                              :disabled="sendBusy || !activeBar.guestEmail" @click="sendInvoice(activeBar)">
                               <i class="fas fa-paper-plane" aria-hidden="true"></i>
                             </button>
-                            <a
-                              v-if="e.entryUrl"
-                              :href="e.entryUrl"
-                              target="_blank"
-                              rel="noopener"
-                              class="sv-icon-link"
-                              :title="$t('folio.download')"
-                            >
+                            <a v-if="e.entryUrl" :href="e.entryUrl" target="_blank" rel="noopener" class="sv-icon-link"
+                              :title="$t('folio.download')">
                               <i class="fas fa-download" aria-hidden="true"></i>
                             </a>
-                            <button
-                              v-if="e.entryId && !e.moveLine"
-                              type="button"
-                              class="sv-icon-link"
-                              :title="e.entryUrl ? $t('folio.remove') : $t('folio.void')"
-                              :disabled="actionBusy"
-                              @click="e.entryUrl ? removeFolioAttachment(e) : voidFolioEntry(e)"
-                            >
+                            <button v-if="e.entryId && !e.moveLine" type="button" class="sv-icon-link"
+                              :title="e.entryUrl ? $t('folio.remove') : $t('folio.void')" :disabled="actionBusy"
+                              @click="e.entryUrl ? removeFolioAttachment(e) : voidFolioEntry(e)">
                               <i class="fas fa-trash-can" aria-hidden="true"></i>
                             </button>
                           </td>
                         </tr>
                         <tr v-if="!folioEntries.length">
-                          <td colspan="6" class="sv-muted-cell sv-no-posted">{{ donorEmptyFolio ? $t('folio.noFolioPosted') : $t('folio.empty') }}</td>
+                          <td colspan="6" class="sv-muted-cell sv-no-posted">{{ donorEmptyFolio ?
+                            $t('folio.noFolioPosted') :
+                            $t('folio.empty') }}</td>
                         </tr>
                       </tbody>
                       <tfoot v-if="folioEntries.length">
@@ -647,7 +501,8 @@
                         <tr class="sv-folio-total sv-folio-balance">
                           <td colspan="4">{{ $t('folio.balance') }}</td>
                           <td class="num">
-                            <strong :class="{ 'sv-balance-negative': ledgerBalance.negative }">{{ ledgerBalance.text }}</strong>
+                            <strong :class="{ 'sv-balance-negative': ledgerBalance.negative }">{{ ledgerBalance.text
+                              }}</strong>
                           </td>
                           <td></td>
                         </tr>
@@ -672,7 +527,8 @@
                   <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="openPaymentModal">
                     <i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('stayview.addPayment') }}
                   </button>
-                  <button v-if="canPostRoomPostings" type="button" class="btn btn-secondary" :disabled="actionBusy" @click="openChargeModal">
+                  <button v-if="canPostRoomPostings" type="button" class="btn btn-secondary" :disabled="actionBusy"
+                    @click="openChargeModal">
                     <i class="fas fa-receipt" aria-hidden="true"></i> {{ $t('stayview.addCharges') }}
                   </button>
                 </div>
@@ -705,7 +561,8 @@
                 <div class="sv-panel-cards">
                   <div class="sv-panel-card">
                     <span>{{ $t('stayview.totalRoomCharges') }}</span>
-                    <strong>TZS {{ fmtNum((folio?.folio?.total_amount ?? 0) + (folio?.folio?.room_charges ?? 0), 2) }}</strong>
+                    <strong>TZS {{ fmtNum((folio?.folio?.total_amount ?? 0) + (folio?.folio?.room_charges ?? 0), 2)
+                      }}</strong>
                   </div>
                   <div class="sv-panel-card">
                     <span>{{ $t('stayview.totalPaid') }}</span>
@@ -713,7 +570,8 @@
                   </div>
                   <div class="sv-panel-card">
                     <span>{{ $t('folio.balance') }}</span>
-                    <strong :class="{ 'sv-balance-negative': balanceDisplay.negative }">{{ balanceDisplay.text }}</strong>
+                    <strong :class="{ 'sv-balance-negative': balanceDisplay.negative }">{{ balanceDisplay.text
+                      }}</strong>
                   </div>
                 </div>
                 <div v-if="chargeNights.length" class="sv-table-wrap">
@@ -761,7 +619,10 @@
               <div v-else-if="stayTab === 'tasks'" class="sv-tab-panel" role="tabpanel">
                 <div class="sv-tab-head">
                   <span class="sv-tab-section">{{ $t('stayview.tasksForRoom') }}</span>
-                  <button v-if="canSeeFrontDesk" type="button" class="btn btn-secondary btn-sm" :disabled="actionBusy || isStayClosed" :title="isStayClosed ? $t('stayview.tasksLockedAfterCheckout') : ''" @click="openTasksModal(activeBar.roomId)">
+                  <button v-if="canSeeFrontDesk" type="button" class="btn btn-secondary btn-sm"
+                    :disabled="actionBusy || isStayClosed"
+                    :title="isStayClosed ? $t('stayview.tasksLockedAfterCheckout') : ''"
+                    @click="openTasksModal(activeBar.roomId)">
                     <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('stayview.taskAdd') }}
                   </button>
                 </div>
@@ -779,23 +640,14 @@
                     </div>
                     <span class="sv-task-status">{{ tk.status }}</span>
                     <span v-if="canSeeFrontDesk" class="sv-task-actions">
-                      <button
-                        v-if="tk.status === 'verified'"
-                        type="button"
-                        class="sv-icon-link"
-                        :title="$t('stayview.taskComplete')"
-                        :disabled="actionBusy"
-                        @click="runRoomTask(tk, 'complete')"
-                      >
+                      <button v-if="tk.status === 'verified'" type="button" class="sv-icon-link"
+                        :title="$t('stayview.taskComplete')" :disabled="actionBusy"
+                        @click="runRoomTask(tk, 'complete')">
                         <i class="fas fa-check" aria-hidden="true"></i>
                       </button>
-                      <button
-                        type="button"
-                        class="sv-icon-link"
+                      <button type="button" class="sv-icon-link"
                         :title="isStayClosed ? $t('stayview.tasksLockedAfterCheckout') : $t('stayview.taskDelete')"
-                        :disabled="actionBusy || isStayClosed"
-                        @click="runRoomTask(tk, 'destroy')"
-                      >
+                        :disabled="actionBusy || isStayClosed" @click="runRoomTask(tk, 'destroy')">
                         <i class="fas fa-trash-can" aria-hidden="true"></i>
                       </button>
                     </span>
@@ -838,61 +690,35 @@
             </div>
             <div v-if="canSeeFrontDesk" class="sv-modal-actions">
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
-              <button
-                v-if="['pending', 'confirmed'].includes(activeBar.rawStatus)"
-                type="button"
-                class="btn btn-primary sv-modal-manage"
-                :disabled="actionBusy"
-                @click="doCheckIn(activeBar)"
-              >
+              <button v-if="['pending', 'confirmed'].includes(activeBar.rawStatus)" type="button"
+                class="btn btn-primary sv-modal-manage" :disabled="actionBusy" @click="doCheckIn(activeBar)">
                 <i class="fas fa-right-to-bracket" aria-hidden="true"></i>
                 {{ actionBusy ? $t('common.loading') : $t('stayview.checkIn') }}
               </button>
-              <button
-                v-if="activeBar.rawStatus === 'checked_in'"
-                type="button"
-                class="btn btn-primary sv-modal-manage"
-                :disabled="actionBusy"
-                @click="doCheckOut(activeBar)"
-              >
+              <button v-if="activeBar.rawStatus === 'checked_in'" type="button" class="btn btn-primary sv-modal-manage"
+                :disabled="actionBusy" @click="doCheckOut(activeBar)">
                 <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
                 {{ actionBusy ? $t('common.loading') : $t('stayview.checkOut') }}
               </button>
-              <button
-                v-if="['pending', 'confirmed'].includes(activeBar.rawStatus)"
-                type="button"
-                class="btn sv-modal-danger"
-                :disabled="actionBusy"
-                @click="doCancel(activeBar)"
-              >
+              <button v-if="['pending', 'confirmed'].includes(activeBar.rawStatus)" type="button"
+                class="btn sv-modal-danger" :disabled="actionBusy" @click="doCancel(activeBar)">
                 <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('stayview.cancelBooking') }}
               </button>
-              <button
-                type="button"
-                class="btn btn-secondary sv-modal-manage"
-                :disabled="printBusy"
-                @click="printInvoice(activeBar)"
-              >
+              <button type="button" class="btn btn-secondary sv-modal-manage" :disabled="printBusy"
+                @click="printInvoice(activeBar)">
                 <i class="fas fa-print" aria-hidden="true"></i>
                 {{ printBusy ? $t('invoices.preparing') : $t('stayview.printInvoice') }}
               </button>
-              <button
-                type="button"
-                class="btn btn-secondary sv-modal-manage"
+              <button type="button" class="btn btn-secondary sv-modal-manage"
                 :disabled="sendBusy || !activeBar.guestEmail"
                 :title="activeBar.guestEmail ? activeBar.guestEmail : $t('stayview.noGuestEmail')"
-                @click="sendInvoice(activeBar)"
-              >
+                @click="sendInvoice(activeBar)">
                 <i class="fas fa-paper-plane" aria-hidden="true"></i>
                 {{ sendBusy ? $t('invoices.preparing') : $t('stayview.sendInvoice') }}
               </button>
               <div class="sv-dropdown">
-                <button
-                  type="button"
-                  class="btn btn-secondary sv-modal-manage"
-                  :disabled="actionBusy"
-                  @click="moreOpen = !moreOpen"
-                >
+                <button type="button" class="btn btn-secondary sv-modal-manage" :disabled="actionBusy"
+                  @click="moreOpen = !moreOpen">
                   <i class="fas fa-ellipsis" aria-hidden="true"></i> {{ $t('stayview.more') }}
                 </button>
                 <Transition name="sv-pop">
@@ -974,18 +800,15 @@
     <!-- Add payment modal for the active stay -->
     <Teleport to="body">
       <Transition name="sv-modal">
-        <div v-if="paymentModal" class="sv-modal-backdrop" @click.self="paymentModal = false">          <div
-            v-if="dotWhyOpen"
-            class="sv-modal sv-modal-sm"
-            role="dialog"
-            aria-modal="true"
-            :aria-label="$t('stayview.dotWhyTitle')"
-          >
+        <div v-if="paymentModal" class="sv-modal-backdrop" @click.self="paymentModal = false">
+          <div v-if="dotWhyOpen" class="sv-modal sv-modal-sm" role="dialog" aria-modal="true"
+            :aria-label="$t('stayview.dotWhyTitle')">
             <div class="sv-modal-head sv-bar-blue">
               <div class="sv-modal-head-text">
                 <h3><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('stayview.dotWhyTitle') }}</h3>
               </div>
-              <button type="button" class="sv-modal-close" :aria-label="$t('stayview.dotWhyTitle')" @click="dotWhyOpen = false">
+              <button type="button" class="sv-modal-close" :aria-label="$t('stayview.dotWhyTitle')"
+                @click="dotWhyOpen = false">
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </div>
@@ -1003,12 +826,7 @@
                 <i class="fas fa-circle-xmark" aria-hidden="true"></i> {{ $t('stayview.dotWhyClear') }}
               </p>
               <ul v-if="dotWhyRules.length" class="sv-dot-rules">
-                <li
-                  v-for="rule in dotWhyRules"
-                  :key="rule.key"
-                  class="sv-dot-rule"
-                  :class="rule.ok ? 'ok' : 'no'"
-                >
+                <li v-for="rule in dotWhyRules" :key="rule.key" class="sv-dot-rule" :class="rule.ok ? 'ok' : 'no'">
                   <i :class="rule.ok ? 'fas fa-circle-check' : 'fas fa-circle-xmark'" aria-hidden="true"></i>
                   <span>{{ $t('stayview.' + rule.key) }}</span>
                 </li>
@@ -1025,29 +843,19 @@
                 <h3>{{ $t('stayview.paymentTitle') }}</h3>
                 <span class="sv-modal-status">{{ activeBar?.label }}</span>
               </div>
-              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="paymentModal = false">
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')"
+                @click="paymentModal = false">
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </div>
             <div class="sv-modal-body">
               <div class="sv-seg" role="tablist">
-                <button
-                  type="button"
-                  class="sv-seg-btn"
-                  :class="{ 'is-active': payMode === 'collect' }"
-                  :disabled="actionBusy"
-                  @click="setPayMode('collect')"
-                >
+                <button type="button" class="sv-seg-btn" :class="{ 'is-active': payMode === 'collect' }"
+                  :disabled="actionBusy" @click="setPayMode('collect')">
                   <i class="fas fa-wallet" aria-hidden="true"></i> {{ $t('stayview.collectPayment') }}
                 </button>
-                <button
-                  v-if="canPostRoomPostings"
-                  type="button"
-                  class="sv-seg-btn"
-                  :class="{ 'is-active': payMode === 'company' }"
-                  :disabled="actionBusy"
-                  @click="setPayMode('company')"
-                >
+                <button v-if="canPostRoomPostings" type="button" class="sv-seg-btn"
+                  :class="{ 'is-active': payMode === 'company' }" :disabled="actionBusy" @click="setPayMode('company')">
                   <i class="fas fa-building" aria-hidden="true"></i> {{ $t('stayview.postToCreditors') }}
                 </button>
               </div>
@@ -1055,19 +863,18 @@
               <template v-if="payMode === 'company'">
                 <div class="sv-field">
                   <span>{{ $t('stayview.creditorCompany') }}</span>
-                  <SearchableSelect
-                    v-model="paymentForm.company_id"
-                    :options="creditorOptions"
+                  <SearchableSelect v-model="paymentForm.company_id" :options="creditorOptions"
                     :search-placeholder="$t('stayview.searchCompany')"
-                    :empty-label="$t('stayview.selectCreditorCompany')"
-                    force-search
-                  />
-                  <span v-if="paymentErrors.company_id" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentErrors.company_id }}</span>
+                    :empty-label="$t('stayview.selectCreditorCompany')" force-search />
+                  <span v-if="paymentErrors.company_id" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentErrors.company_id }}</span>
                 </div>
                 <label class="sv-field">
                   <span>{{ $t('stayview.paymentAmount') }}</span>
-                  <input v-model.number="paymentForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" :class="{ 'sv-input-error': paymentErrors.amount }" required />
-                  <span v-if="paymentErrors.amount" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentErrors.amount }}</span>
+                  <input v-model.number="paymentForm.amount" type="number" min="0" step="0.01" class="input"
+                    data-field="amount" :class="{ 'sv-input-error': paymentErrors.amount }" required />
+                  <span v-if="paymentErrors.amount" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentErrors.amount }}</span>
                 </label>
                 <div v-if="creditorCompany" class="sv-credit-panel">
                   <div class="sv-credit-row">
@@ -1091,15 +898,17 @@
               <template v-else>
                 <label class="sv-field">
                   <span>{{ $t('stayview.paymentAmount') }}</span>
-                  <input v-model.number="paymentForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" :class="{ 'sv-input-error': paymentErrors.amount }" required />
-                  <span v-if="paymentErrors.amount" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentErrors.amount }}</span>
+                  <input v-model.number="paymentForm.amount" type="number" min="0" step="0.01" class="input"
+                    data-field="amount" :class="{ 'sv-input-error': paymentErrors.amount }" required />
+                  <span v-if="paymentErrors.amount" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentErrors.amount }}</span>
                 </label>
                 <div class="sv-field">
-                  <PaymentMethodSelect
-                    v-model:method="paymentForm.payment_method"
-                    v-model:provider="paymentForm.payment_provider"
-                  />
-                  <span v-if="paymentErrors.payment_method || paymentErrors.payment_provider" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentErrors.payment_method || paymentErrors.payment_provider }}</span>
+                  <PaymentMethodSelect v-model:method="paymentForm.payment_method"
+                    v-model:provider="paymentForm.payment_provider" />
+                  <span v-if="paymentErrors.payment_method || paymentErrors.payment_provider" class="sv-field-msg"
+                    role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{
+                      paymentErrors.payment_method || paymentErrors.payment_provider }}</span>
                 </div>
                 <label class="sv-field">
                   <span>{{ $t('stayview.paymentRef') }}</span>
@@ -1112,9 +921,11 @@
               <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="paymentModal = false">
                 {{ $t('common.close') }}
               </button>
-              <button type="button" class="btn btn-primary" :disabled="actionBusy || paySubmitDisabled" @click="submitPayment">
+              <button type="button" class="btn btn-primary" :disabled="actionBusy || paySubmitDisabled"
+                @click="submitPayment">
                 <i class="fas fa-check" aria-hidden="true"></i>
-                {{ actionBusy ? $t('common.loading') : (payMode === 'company' ? $t('stayview.postToCreditors') : $t('stayview.savePayment')) }}
+                {{ actionBusy ? $t('common.loading') : (payMode === 'company' ? $t('stayview.postToCreditors') :
+                  $t('stayview.savePayment')) }}
               </button>
             </div>
           </div>
@@ -1126,14 +937,16 @@
     <Teleport to="body">
       <Transition name="sv-modal">
         <div v-if="earlyDepartureOpen" class="sv-modal-backdrop" @click.self="earlyDepartureOpen = false">
-          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="$t('stayview.earlyDepartureTitle')">
+          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true"
+            :aria-label="$t('stayview.earlyDepartureTitle')">
             <div class="sv-modal-head bar-blue">
               <span class="sv-modal-head-icon"><i class="fas fa-right-from-bracket" aria-hidden="true"></i></span>
               <div class="sv-modal-head-text">
                 <h3>{{ $t('stayview.earlyDepartureTitle') }}</h3>
                 <span class="sv-modal-status">{{ activeBar?.label }}</span>
               </div>
-              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="earlyDepartureOpen = false">
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')"
+                @click="earlyDepartureOpen = false">
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </div>
@@ -1141,8 +954,13 @@
               <p class="sv-void-hint">{{ $t('stayview.earlyDepartureHint') }}</p>
               <label class="sv-field">
                 <span>{{ $t('stayview.departure') }}</span>
-                <input v-model="earlyDepartureForm.actual_departure_date" type="date" class="input" data-field="actual_departure_date" :class="{ 'sv-input-error': earlyDepartureErrors.actual_departure_date }" required />
-                <span v-if="earlyDepartureErrors.actual_departure_date" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ earlyDepartureErrors.actual_departure_date }}</span>
+                <input v-model="earlyDepartureForm.actual_departure_date" type="date" class="input"
+                  data-field="actual_departure_date"
+                  :class="{ 'sv-input-error': earlyDepartureErrors.actual_departure_date }" required />
+                <span v-if="earlyDepartureErrors.actual_departure_date" class="sv-field-msg" role="alert"><i
+                    class="fas fa-circle-exclamation" aria-hidden="true"></i> {{
+                      earlyDepartureErrors.actual_departure_date
+                  }}</span>
               </label>
               <label class="sv-field">
                 <span>{{ $t('stayview.earlyDepartureReason') }}</span>
@@ -1151,10 +969,12 @@
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
             </div>
             <div class="sv-modal-actions">
-              <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="earlyDepartureOpen = false">
+              <button type="button" class="btn btn-secondary" :disabled="actionBusy"
+                @click="earlyDepartureOpen = false">
                 {{ $t('common.close') }}
               </button>
-              <button type="button" class="btn btn-primary sv-early-dep-confirm" :disabled="actionBusy || !earlyDepartureForm.actual_departure_date" @click="submitEarlyDeparture">
+              <button type="button" class="btn btn-primary sv-early-dep-confirm"
+                :disabled="actionBusy || !earlyDepartureForm.actual_departure_date" @click="submitEarlyDeparture">
                 <i class="fas fa-check" aria-hidden="true"></i>
                 {{ actionBusy ? $t('common.loading') : $t('stayview.earlyDepartureConfirm') }}
               </button>
@@ -1168,40 +988,50 @@
     <Teleport to="body">
       <Transition name="sv-modal">
         <div v-if="paymentEditModal" class="sv-modal-backdrop" @click.self="paymentEditModal = false">
-          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="$t('stayview.paymentEditTitle')">
+          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true"
+            :aria-label="$t('stayview.paymentEditTitle')">
             <div class="sv-modal-head bar-green">
               <span class="sv-modal-head-icon"><i class="fas fa-pen" aria-hidden="true"></i></span>
               <div class="sv-modal-head-text">
                 <h3>{{ $t('stayview.paymentEditTitle') }}</h3>
                 <span class="sv-modal-status">{{ activeBar?.label }}</span>
               </div>
-              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="paymentEditModal = false">
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')"
+                @click="paymentEditModal = false">
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </div>
             <div class="sv-modal-body sv-pay-edit-page">
               <label class="sv-field">
                 <span>{{ $t('stayview.paymentEditAmount') }}</span>
-                <input v-model.number="paymentEditForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" :class="{ 'sv-input-error': paymentEditErrors.amount }" required />
-                <span v-if="paymentEditErrors.amount" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentEditErrors.amount }}</span>
+                <input v-model.number="paymentEditForm.amount" type="number" min="0" step="0.01" class="input"
+                  data-field="amount" :class="{ 'sv-input-error': paymentEditErrors.amount }" required />
+                <span v-if="paymentEditErrors.amount" class="sv-field-msg" role="alert"><i
+                    class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentEditErrors.amount }}</span>
               </label>
               <label class="sv-field">
                 <span>{{ $t('paymentFields.method') }}</span>
-                <select v-model="paymentEditForm.payment_method" class="input" data-field="payment_method" :class="{ 'sv-input-error': paymentEditErrors.payment_method }">
-                  <option v-for="opt in paymentMethodOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                <select v-model="paymentEditForm.payment_method" class="input" data-field="payment_method"
+                  :class="{ 'sv-input-error': paymentEditErrors.payment_method }">
+                  <option v-for="opt in paymentMethodOptions" :key="opt.value" :value="opt.value">{{ opt.label }}
+                  </option>
                 </select>
-                <span v-if="paymentEditErrors.payment_method" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentEditErrors.payment_method }}</span>
+                <span v-if="paymentEditErrors.payment_method" class="sv-field-msg" role="alert"><i
+                    class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentEditErrors.payment_method
+                  }}</span>
               </label>
               <label v-if="requiresProvider(paymentEditForm.payment_method)" class="sv-field">
                 <span>{{ $t('paymentFields.provider') }}</span>
                 <select v-model="paymentEditForm.payment_provider" class="input" data-field="payment_provider">
-                  <option v-for="opt in paymentProviderOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                  <option v-for="opt in paymentProviderOptions" :key="opt.value" :value="opt.value">{{ opt.label }}
+                  </option>
                 </select>
               </label>
               <label class="sv-field">
                 <span>{{ $t('stayview.paymentEditStatus') }}</span>
                 <select v-model="paymentEditForm.payment_status" class="input" data-field="payment_status">
-                  <option v-for="opt in paymentStatusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                  <option v-for="opt in paymentStatusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}
+                  </option>
                 </select>
               </label>
               <label class="sv-field">
@@ -1218,7 +1048,8 @@
               <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="paymentEditModal = false">
                 {{ $t('common.close') }}
               </button>
-              <button type="button" class="btn btn-primary sv-pay-edit-submit" :disabled="actionBusy || payEditSubmitDisabled" @click="submitPaymentEdit">
+              <button type="button" class="btn btn-primary sv-pay-edit-submit"
+                :disabled="actionBusy || payEditSubmitDisabled" @click="submitPaymentEdit">
                 <i class="fas fa-check" aria-hidden="true"></i>
                 {{ actionBusy ? $t('common.loading') : $t('stayview.paymentEditSave') }}
               </button>
@@ -1232,14 +1063,16 @@
     <Teleport to="body">
       <Transition name="sv-modal">
         <div v-if="invoicePreviewOpen" class="sv-modal-backdrop" @click.self="invoicePreviewOpen = false">
-          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="$t('stayview.printInvoiceBreakdownTitle')">
+          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true"
+            :aria-label="$t('stayview.printInvoiceBreakdownTitle')">
             <div class="sv-modal-head bar-blue">
               <span class="sv-modal-head-icon"><i class="fas fa-print" aria-hidden="true"></i></span>
               <div class="sv-modal-head-text">
                 <h3>{{ $t('stayview.printInvoiceBreakdownTitle') }}</h3>
                 <span class="sv-modal-status">{{ invoicePreviewHeader.code }} · {{ invoicePreviewHeader.guest }}</span>
               </div>
-              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="invoicePreviewOpen = false">
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')"
+                @click="invoicePreviewOpen = false">
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </div>
@@ -1276,10 +1109,12 @@
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
             </div>
             <div class="sv-modal-actions">
-              <button type="button" class="btn btn-secondary" :disabled="invoicePreviewLoading" @click="invoicePreviewOpen = false">
+              <button type="button" class="btn btn-secondary" :disabled="invoicePreviewLoading"
+                @click="invoicePreviewOpen = false">
                 {{ $t('common.close') }}
               </button>
-              <button type="button" class="btn btn-primary sv-breakdown-print" :disabled="printBusy || !invoiceBreakdown" @click="printInvoiceBreakdown">
+              <button type="button" class="btn btn-primary sv-breakdown-print"
+                :disabled="printBusy || !invoiceBreakdown" @click="printInvoiceBreakdown">
                 <i class="fas fa-print" aria-hidden="true"></i>
                 {{ printBusy ? $t('invoices.preparing') : $t('stayview.printInvoiceBreakdown') }}
               </button>
@@ -1309,59 +1144,71 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('reservations.firstName') }}</span>
-                  <input v-model="amendForm.first_name" type="text" class="input" data-field="first_name" :class="{ 'sv-input-error': amendErrors.first_name }" required />
-                  <span v-if="amendErrors.first_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.first_name }}</span>
+                  <input v-model="amendForm.first_name" type="text" class="input" data-field="first_name"
+                    :class="{ 'sv-input-error': amendErrors.first_name }" required />
+                  <span v-if="amendErrors.first_name" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.first_name }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('reservations.lastName') }}</span>
-                  <input v-model="amendForm.last_name" type="text" class="input" data-field="last_name" :class="{ 'sv-input-error': amendErrors.last_name }" required />
-                  <span v-if="amendErrors.last_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.last_name }}</span>
+                  <input v-model="amendForm.last_name" type="text" class="input" data-field="last_name"
+                    :class="{ 'sv-input-error': amendErrors.last_name }" required />
+                  <span v-if="amendErrors.last_name" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.last_name }}</span>
                 </label>
               </div>
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.phone') }}</span>
-                  <PhoneInput v-model="amendForm.guest_phone" v-model:countryCode="amendForm.country_code" :error="amendErrors.guest_phone" />
+                  <PhoneInput v-model="amendForm.guest_phone" v-model:countryCode="amendForm.country_code"
+                    :error="amendErrors.guest_phone" />
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.email') }}</span>
-                  <input v-model="amendForm.guest_email" type="email" class="input" data-field="guest_email" :class="{ 'sv-input-error': amendErrors.guest_email }" />
-                  <span v-if="amendErrors.guest_email" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.guest_email }}</span>
+                  <input v-model="amendForm.guest_email" type="email" class="input" data-field="guest_email"
+                    :class="{ 'sv-input-error': amendErrors.guest_email }" />
+                  <span v-if="amendErrors.guest_email" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.guest_email }}</span>
                 </label>
               </div>
               <div class="sv-tab-section">{{ $t('stayview.room') }}</div>
               <label class="sv-field">
                 <span>{{ $t('stayview.room') }}</span>
-                <SearchableSelect
-                  v-model="amendForm.room_id"
-                  :options="roomMoveOptions"
-                  :search-placeholder="$t('stayview.searchRoom')"
-                  force-search
-                />
-                <span v-if="amendErrors.room_id" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.room_id }}</span>
+                <SearchableSelect v-model="amendForm.room_id" :options="roomMoveOptions"
+                  :search-placeholder="$t('stayview.searchRoom')" force-search />
+                <span v-if="amendErrors.room_id" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation"
+                    aria-hidden="true"></i> {{ amendErrors.room_id }}</span>
               </label>
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.arrival') }}</span>
-                  <input v-model="amendForm.check_in_date" type="date" class="input" data-field="check_in_date" :class="{ 'sv-input-error': amendErrors.check_in_date }" required />
-                  <span v-if="amendErrors.check_in_date" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.check_in_date }}</span>
+                  <input v-model="amendForm.check_in_date" type="date" class="input" data-field="check_in_date"
+                    :class="{ 'sv-input-error': amendErrors.check_in_date }" required />
+                  <span v-if="amendErrors.check_in_date" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.check_in_date }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.departure') }}</span>
-                  <input v-model="amendForm.check_out_date" type="date" class="input" data-field="check_out_date" :class="{ 'sv-input-error': amendErrors.check_out_date }" required />
-                  <span v-if="amendErrors.check_out_date" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.check_out_date }}</span>
+                  <input v-model="amendForm.check_out_date" type="date" class="input" data-field="check_out_date"
+                    :class="{ 'sv-input-error': amendErrors.check_out_date }" required />
+                  <span v-if="amendErrors.check_out_date" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.check_out_date }}</span>
                 </label>
               </div>
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('reservations.adultsLabel') }}</span>
-                  <input v-model.number="amendForm.num_adults" type="number" min="1" class="input" data-field="num_adults" :class="{ 'sv-input-error': amendErrors.num_adults }" required />
-                  <span v-if="amendErrors.num_adults" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.num_adults }}</span>
+                  <input v-model.number="amendForm.num_adults" type="number" min="1" class="input"
+                    data-field="num_adults" :class="{ 'sv-input-error': amendErrors.num_adults }" required />
+                  <span v-if="amendErrors.num_adults" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.num_adults }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('reservations.childrenLabel') }}</span>
-                  <input v-model.number="amendForm.num_children" type="number" min="0" class="input" data-field="num_children" :class="{ 'sv-input-error': amendErrors.num_children }" />
-                  <span v-if="amendErrors.num_children" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.num_children }}</span>
+                  <input v-model.number="amendForm.num_children" type="number" min="0" class="input"
+                    data-field="num_children" :class="{ 'sv-input-error': amendErrors.num_children }" />
+                  <span v-if="amendErrors.num_children" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.num_children }}</span>
                 </label>
               </div>
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
@@ -1391,20 +1238,25 @@
                 <h3>{{ $t('stayview.chargeTitle') }}</h3>
                 <span class="sv-modal-status">{{ activeBar?.label }}</span>
               </div>
-              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="chargeModal = false">
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')"
+                @click="chargeModal = false">
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </div>
             <div class="sv-modal-body">
               <label class="sv-field">
                 <span>{{ $t('stayview.chargeDescription') }}</span>
-                <input v-model="chargeForm.description" type="text" class="input" data-field="description" :class="{ 'sv-input-error': chargeErrors.description }" required maxlength="255" />
-                <span v-if="chargeErrors.description" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ chargeErrors.description }}</span>
+                <input v-model="chargeForm.description" type="text" class="input" data-field="description"
+                  :class="{ 'sv-input-error': chargeErrors.description }" required maxlength="255" />
+                <span v-if="chargeErrors.description" class="sv-field-msg" role="alert"><i
+                    class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ chargeErrors.description }}</span>
               </label>
               <label class="sv-field">
                 <span>{{ $t('stayview.paymentAmount') }}</span>
-                <input v-model.number="chargeForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" :class="{ 'sv-input-error': chargeErrors.amount }" required />
-                <span v-if="chargeErrors.amount" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ chargeErrors.amount }}</span>
+                <input v-model.number="chargeForm.amount" type="number" min="0" step="0.01" class="input"
+                  data-field="amount" :class="{ 'sv-input-error': chargeErrors.amount }" required />
+                <span v-if="chargeErrors.amount" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation"
+                    aria-hidden="true"></i> {{ chargeErrors.amount }}</span>
               </label>
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
             </div>
@@ -1412,7 +1264,8 @@
               <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="chargeModal = false">
                 {{ $t('common.close') }}
               </button>
-              <button type="button" class="btn btn-primary" :disabled="actionBusy || !chargeForm.description || !(chargeForm.amount > 0)" @click="submitCharge">
+              <button type="button" class="btn btn-primary"
+                :disabled="actionBusy || !chargeForm.description || !(chargeForm.amount > 0)" @click="submitCharge">
                 <i class="fas fa-check" aria-hidden="true"></i>
                 {{ actionBusy ? $t('common.loading') : $t('stayview.saveCharge') }}
               </button>
@@ -1441,46 +1294,46 @@
               <template v-if="folioOp === 'discount'">
                 <label class="sv-field">
                   <span>{{ $t('stayview.discountAmount') }}</span>
-                  <input v-model.number="folioOpForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" required />
+                  <input v-model.number="folioOpForm.amount" type="number" min="0" step="0.01" class="input"
+                    data-field="amount" required />
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.folioNote') }}</span>
-                  <input v-model="folioOpForm.description" type="text" class="input" data-field="description" maxlength="255" />
+                  <input v-model="folioOpForm.description" type="text" class="input" data-field="description"
+                    maxlength="255" />
                 </label>
               </template>
               <template v-else-if="folioOp === 'adjustment'">
                 <label class="sv-field">
                   <span>{{ $t('stayview.adjustmentAmount') }}</span>
-                  <input v-model.number="folioOpForm.amount" type="number" step="0.01" class="input" data-field="amount" placeholder="+… / −…" required />
+                  <input v-model.number="folioOpForm.amount" type="number" step="0.01" class="input" data-field="amount"
+                    placeholder="+… / −…" required />
                 </label>
                 <p class="sv-cap sv-note">{{ $t('stayview.adjustmentHint') }}</p>
                 <label class="sv-field">
                   <span>{{ $t('stayview.folioNote') }}</span>
-                  <input v-model="folioOpForm.description" type="text" class="input" data-field="description" maxlength="255" />
+                  <input v-model="folioOpForm.description" type="text" class="input" data-field="description"
+                    maxlength="255" />
                 </label>
               </template>
               <template v-else-if="folioOp === 'inclusion'">
                 <label class="sv-field">
                   <span>{{ $t('stayview.chargeDescription') }}</span>
-                  <input v-model="folioOpForm.description" type="text" class="input" data-field="description" required maxlength="255" />
+                  <input v-model="folioOpForm.description" type="text" class="input" data-field="description" required
+                    maxlength="255" />
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.adjustmentAmount') }}</span>
-                  <input v-model.number="folioOpForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" :placeholder="$t('stayview.inclusionAmountHint')" />
+                  <input v-model.number="folioOpForm.amount" type="number" min="0" step="0.01" class="input"
+                    data-field="amount" :placeholder="$t('stayview.inclusionAmountHint')" />
                 </label>
                 <p class="sv-cap sv-note">{{ $t('stayview.inclusionHint') }}</p>
               </template>
               <template v-else-if="folioOp === 'move'">
                 <div class="sv-move-switch">
-                  <button
-                    v-for="m in moveModes"
-                    :key="m.key"
-                    type="button"
-                    class="sv-status-btn"
-                    :class="{ active: folioMoveMode === m.key }"
-                    :disabled="actionBusy || newFolioBusy"
-                    @click="setMoveMode(m.key)"
-                  >
+                  <button v-for="m in moveModes" :key="m.key" type="button" class="sv-status-btn"
+                    :class="{ active: folioMoveMode === m.key }" :disabled="actionBusy || newFolioBusy"
+                    @click="setMoveMode(m.key)">
                     <span class="sv-cap">{{ m.label }}</span>
                   </button>
                 </div>
@@ -1490,7 +1343,8 @@
                     <div class="sv-split-head">
                       <strong>{{ $t('stayview.splitSourceLabel') }}</strong>
                       <label class="sv-split-any">
-                        <input type="checkbox" :checked="allOpsSelected" :disabled="!moveSourceOptions.length || actionBusy || newFolioBusy" @change="toggleAllOps" />
+                        <input type="checkbox" :checked="allOpsSelected"
+                          :disabled="!moveSourceOptions.length || actionBusy || newFolioBusy" @change="toggleAllOps" />
                         <span class="sv-cap">{{ $t('stayview.selectAll') }}</span>
                       </label>
                     </div>
@@ -1502,8 +1356,10 @@
                       <span>{{ $t('stayview.noFolioOps') }}</span>
                     </div>
                     <div v-else class="sv-split-ops">
-                      <label v-for="e in moveSourceOptions" :key="e.moveId" class="sv-split-op" :class="{ locked: !e.selectable }">
-                        <input type="checkbox" :value="e.moveId" v-model="moveSelected" :disabled="!e.selectable || actionBusy || newFolioBusy" />
+                      <label v-for="e in moveSourceOptions" :key="e.moveId" class="sv-split-op"
+                        :class="{ locked: !e.selectable }">
+                        <input type="checkbox" :value="e.moveId" v-model="moveSelected"
+                          :disabled="!e.selectable || actionBusy || newFolioBusy" />
                         <span class="sv-split-op-text">
                           <span class="sv-cap">{{ formatDateDMY(e.date) }} · {{ e.particular }}</span>
                           <span class="sv-cap sv-muted">{{ e.description }}</span>
@@ -1515,13 +1371,9 @@
 
                   <div class="sv-split-arrow" aria-hidden="false">
                     <div class="sv-split-arrow-bar"></div>
-                    <button
-                      type="button"
-                      class="sv-arrow-btn"
+                    <button type="button" class="sv-arrow-btn"
                       :disabled="actionBusy || newFolioBusy || !moveSelected.length || !moveTarget"
-                      :title="$t('stayview.moveSelectedOps')"
-                      @click="moveSelectedOps"
-                    >
+                      :title="$t('stayview.moveSelectedOps')" @click="moveSelectedOps">
                       <i class="fas fa-arrow-right" aria-hidden="true"></i>
                     </button>
                     <div class="sv-split-arrow-bar"></div>
@@ -1533,25 +1385,18 @@
                       <span v-if="moveTargetObj" class="sv-cap sv-muted">{{ moveTargetObj.folio_code }}</span>
                     </div>
                     <div class="sv-split-search">
-                      <input
-                        v-model="moveTargetSearch"
-                        type="text"
-                        class="input"
-                        :placeholder="$t('stayview.splitSearchPlaceholder')"
-                        @keyup.enter="searchFolioTargets"
-                      />
-                      <button type="button" class="btn btn-secondary btn-sm" :disabled="moveTargetLoading" @click="searchFolioTargets">
+                      <input v-model="moveTargetSearch" type="text" class="input"
+                        :placeholder="$t('stayview.splitSearchPlaceholder')" @keyup.enter="searchFolioTargets" />
+                      <button type="button" class="btn btn-secondary btn-sm" :disabled="moveTargetLoading"
+                        @click="searchFolioTargets">
                         <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
                       </button>
                     </div>
-                    <button
-                      v-if="folioMoveMode === 'newfolio'"
-                      type="button"
-                      class="btn btn-secondary btn-sm sv-new-folio-btn"
-                      :disabled="newFolioBusy || actionBusy"
-                      @click="createNewFolioTarget"
-                    >
-                      <i class="fas fa-plus" aria-hidden="true"></i> {{ newFolioBusy ? $t('common.loading') : $t('stayview.openNewFolio') }}
+                    <button v-if="folioMoveMode === 'newfolio'" type="button"
+                      class="btn btn-secondary btn-sm sv-new-folio-btn" :disabled="newFolioBusy || actionBusy"
+                      @click="createNewFolioTarget">
+                      <i class="fas fa-plus" aria-hidden="true"></i> {{ newFolioBusy ? $t('common.loading') :
+                        $t('stayview.openNewFolio') }}
                     </button>
                     <div v-if="moveTargetLoading" class="sv-modal-row muted">
                       <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
@@ -1561,18 +1406,18 @@
                       <span>{{ $t('stayview.noFolioTargets') }}</span>
                     </div>
                     <div v-else class="sv-split-ops">
-                      <label v-for="tt in moveTargets" :key="tt.reservation_id" class="sv-split-op sv-split-target" :class="{ checked: moveTarget === tt.reservation_id }">
-                        <input
-                          type="radio"
-                          :value="tt.reservation_id"
-                          v-model="moveTarget"
-                          :disabled="actionBusy || newFolioBusy || tt.reservation_id === activeBar?.id"
-                        />
+                      <label v-for="tt in moveTargets" :key="tt.reservation_id" class="sv-split-op sv-split-target"
+                        :class="{ checked: moveTarget === tt.reservation_id }">
+                        <input type="radio" :value="tt.reservation_id" v-model="moveTarget"
+                          :disabled="actionBusy || newFolioBusy || tt.reservation_id === activeBar?.id" />
                         <span class="sv-split-op-text">
-                          <span><strong>{{ tt.guest_name || '—' }}</strong> <span class="sv-cap">· {{ tt.folio_code }}</span></span>
-                          <span class="sv-cap sv-muted">{{ tt.room_number || '—' }} · {{ (tt.status || '').replace('_', ' ') }}</span>
+                          <span><strong>{{ tt.guest_name || '—' }}</strong> <span class="sv-cap">· {{ tt.folio_code
+                              }}</span></span>
+                          <span class="sv-cap sv-muted">{{ tt.room_number || '—' }} · {{ (tt.status || '').replace('_',
+                            ' ') }}</span>
                         </span>
-                        <span class="sv-cap num">{{ tt.balance_due !== undefined && tt.balance_due !== null ? 'TZS ' + fmtNum(tt.balance_due, 0) : '' }}</span>
+                        <span class="sv-cap num">{{ tt.balance_due !== undefined && tt.balance_due !== null ? 'TZS ' +
+                          fmtNum(tt.balance_due, 0) : '' }}</span>
                       </label>
                     </div>
                   </div>
@@ -1584,25 +1429,22 @@
                   </span>
                   <span v-if="moveTargetObj" class="sv-cap">
                     <i class="fas fa-arrow-right" aria-hidden="true"></i>
-                    {{ moveTargetObj.guest_name || '—' }} · {{ moveTargetObj.folio_code }} ({{ moveTargetObj.room_number || '—' }})
+                    {{ moveTargetObj.guest_name || '—' }} · {{ moveTargetObj.folio_code }} ({{ moveTargetObj.room_number
+                    || '—' }})
                   </span>
                 </div>
 
                 <label class="sv-field">
                   <span>{{ $t('stayview.folioNote') }}</span>
-                  <input v-model="folioOpForm.description" type="text" class="input" data-field="description" maxlength="255" />
+                  <input v-model="folioOpForm.description" type="text" class="input" data-field="description"
+                    maxlength="255" />
                 </label>
               </template>
               <template v-else>
                 <label class="sv-field">
                   <span>{{ $t('stayview.chooseFiles') }}</span>
-                  <input
-                    type="file"
-                    class="input"
-                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                    multiple
-                    @change="onFolioFilesPick"
-                  />
+                  <input type="file" class="input" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                    multiple @change="onFolioFilesPick" />
                 </label>
                 <ul v-if="folioOpForm.files.length" class="sv-file-list">
                   <li v-for="(f, i) in folioOpForm.files" :key="i">
@@ -1618,7 +1460,8 @@
               <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="folioOp = null">
                 {{ $t('common.close') }}
               </button>
-              <button type="button" class="btn btn-primary" :disabled="actionBusy || !folioOpCanPost" @click="submitFolioOp">
+              <button type="button" class="btn btn-primary" :disabled="actionBusy || !folioOpCanPost"
+                @click="submitFolioOp">
                 <i class="fas fa-check" aria-hidden="true"></i>
                 {{ actionBusy ? $t('common.loading') : folioOpPostLabel }}
               </button>
@@ -1646,13 +1489,17 @@
             <div class="sv-modal-body">
               <label class="sv-field">
                 <span>{{ $t('folio.description') }}</span>
-                <input v-model="folioEditForm.description" type="text" class="input" data-field="description" :class="{ 'sv-input-error': folioEditErrors.description }" required maxlength="255" />
-                <span v-if="folioEditErrors.description" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ folioEditErrors.description }}</span>
+                <input v-model="folioEditForm.description" type="text" class="input" data-field="description"
+                  :class="{ 'sv-input-error': folioEditErrors.description }" required maxlength="255" />
+                <span v-if="folioEditErrors.description" class="sv-field-msg" role="alert"><i
+                    class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ folioEditErrors.description }}</span>
               </label>
               <label class="sv-field">
                 <span>{{ $t('folio.amount') }}</span>
-                <input v-model.number="folioEditForm.amount" type="number" min="0" step="0.01" class="input" data-field="amount" :class="{ 'sv-input-error': folioEditErrors.amount }" required />
-                <span v-if="folioEditErrors.amount" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ folioEditErrors.amount }}</span>
+                <input v-model.number="folioEditForm.amount" type="number" min="0" step="0.01" class="input"
+                  data-field="amount" :class="{ 'sv-input-error': folioEditErrors.amount }" required />
+                <span v-if="folioEditErrors.amount" class="sv-field-msg" role="alert"><i
+                    class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ folioEditErrors.amount }}</span>
               </label>
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
             </div>
@@ -1660,12 +1507,9 @@
               <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="folioEdit = null">
                 {{ $t('common.close') }}
               </button>
-              <button
-                type="button"
-                class="btn btn-primary"
+              <button type="button" class="btn btn-primary"
                 :disabled="actionBusy || !folioEditForm.description?.trim() || !(folioEditForm.amount > 0)"
-                @click="submitEditEntry"
-              >
+                @click="submitEditEntry">
                 <i class="fas fa-check" aria-hidden="true"></i>
                 {{ actionBusy ? $t('common.loading') : $t('folio.save') }}
               </button>
@@ -1679,7 +1523,8 @@
     <Teleport to="body">
       <Transition name="sv-modal">
         <div v-if="folioView" class="sv-modal-backdrop" @click.self="folioView = null">
-          <div class="sv-modal sv-modal-sm" :class="{ 'sv-modal-receipt': viewEntryReceipt }" role="dialog" aria-modal="true" :aria-label="$t('folio.view')">
+          <div class="sv-modal sv-modal-sm" :class="{ 'sv-modal-receipt': viewEntryReceipt }" role="dialog"
+            aria-modal="true" :aria-label="$t('folio.view')">
             <div class="sv-modal-head bar-blue">
               <span class="sv-modal-head-icon"><i class="fas fa-eye" aria-hidden="true"></i></span>
               <div class="sv-modal-head-text">
@@ -1798,7 +1643,8 @@
     <Teleport to="body">
       <Transition name="sv-modal">
         <div v-if="voidOpen" class="sv-modal-backdrop" @click.self="voidOpen = false">
-          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="$t('stayview.voidReservation')">
+          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true"
+            :aria-label="$t('stayview.voidReservation')">
             <div class="sv-modal-head bar-red">
               <span class="sv-modal-head-icon"><i class="fas fa-trash-can" aria-hidden="true"></i></span>
               <div class="sv-modal-head-text">
@@ -1821,7 +1667,8 @@
               <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="voidOpen = false">
                 {{ $t('common.close') }}
               </button>
-              <button type="button" class="btn sv-modal-danger" :disabled="actionBusy || !voidName.trim()" @click="confirmVoid">
+              <button type="button" class="btn sv-modal-danger" :disabled="actionBusy || !voidName.trim()"
+                @click="confirmVoid">
                 {{ actionBusy ? $t('common.loading') : $t('stayview.confirmVoid') }}
               </button>
             </div>
@@ -1840,7 +1687,8 @@
               <div class="sv-modal-head-text">
                 <h3>{{ $t('stayview.newBooking') }}</h3>
               </div>
-              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="bookingModal = false">
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')"
+                @click="bookingModal = false">
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </div>
@@ -1848,23 +1696,29 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('reservations.firstName') }}</span>
-                  <input v-model="bookingForm.first_name" type="text" class="input" data-field="first_name" :class="{ 'sv-input-error': bookingErrors.first_name }" required />
-                  <span v-if="bookingErrors.first_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.first_name }}</span>
+                  <input v-model="bookingForm.first_name" type="text" class="input" data-field="first_name"
+                    :class="{ 'sv-input-error': bookingErrors.first_name }" required />
+                  <span v-if="bookingErrors.first_name" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.first_name }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('reservations.lastName') }}</span>
-                  <input v-model="bookingForm.last_name" type="text" class="input" data-field="last_name" :class="{ 'sv-input-error': bookingErrors.last_name }" required />
-                  <span v-if="bookingErrors.last_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.last_name }}</span>
+                  <input v-model="bookingForm.last_name" type="text" class="input" data-field="last_name"
+                    :class="{ 'sv-input-error': bookingErrors.last_name }" required />
+                  <span v-if="bookingErrors.last_name" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.last_name }}</span>
                 </label>
               </div>
               <label class="sv-field">
                 <span>{{ $t('reservations.guestPhone') }}</span>
-                <PhoneInput v-model="bookingForm.guest_phone" v-model:countryCode="bookingForm.country_code" :error="bookingErrors.guest_phone" required />
+                <PhoneInput v-model="bookingForm.guest_phone" v-model:countryCode="bookingForm.country_code"
+                  :error="bookingErrors.guest_phone" required />
               </label>
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('guests.nationality') }}</span>
-                  <input v-model="bookingForm.nationality" type="text" class="input" data-field="nationality" :placeholder="$t('stayview.optional')" />
+                  <input v-model="bookingForm.nationality" type="text" class="input" data-field="nationality"
+                    :placeholder="$t('stayview.optional')" />
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('guests.idTypeOptional') }}</span>
@@ -1879,7 +1733,8 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('guests.idNumber') }}</span>
-                  <input v-model="bookingForm.id_number" type="text" class="input" data-field="id_number" :placeholder="$t('stayview.optional')" />
+                  <input v-model="bookingForm.id_number" type="text" class="input" data-field="id_number"
+                    :placeholder="$t('stayview.optional')" />
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('guests.vipStatus') }}</span>
@@ -1892,69 +1747,75 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.company') }}</span>
-                  <input v-model="bookingForm.company_name" type="text" class="input" data-field="company_name" maxlength="191" :placeholder="$t('stayview.optional')" />
+                  <input v-model="bookingForm.company_name" type="text" class="input" data-field="company_name"
+                    maxlength="191" :placeholder="$t('stayview.optional')" />
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('reservations.businessSource') }}</span>
                   <select v-model="bookingForm.business_source" class="input">
                     <option value=""></option>
-                    <option v-for="src in bookingSourceOptions" :key="src.value" :value="src.value">{{ src.label }}</option>
+                    <option v-for="src in bookingSourceOptions" :key="src.value" :value="src.value">{{ src.label }}
+                    </option>
                   </select>
                 </label>
               </div>
               <div class="sv-field-row">
-                <CountryCitySelect
-                  v-model:countryCode="bookingForm.country_code"
-                  v-model:city="bookingForm.city"
-                  :required="false"
-                />
+                <CountryCitySelect v-model:countryCode="bookingForm.country_code" v-model:city="bookingForm.city"
+                  :required="false" />
               </div>
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('reservations.bookingType') }}</span>
-                  <select v-model="bookingForm.booking_type" class="input" data-field="booking_type" :class="{ 'sv-input-error': bookingErrors.booking_type }" required>
+                  <select v-model="bookingForm.booking_type" class="input" data-field="booking_type"
+                    :class="{ 'sv-input-error': bookingErrors.booking_type }" required>
                     <option value="single">{{ $t('common.bookingTypes.single') }}</option>
                     <option value="couple">{{ $t('common.bookingTypes.couple') }}</option>
                     <option value="family">{{ $t('common.bookingTypes.family') }}</option>
                     <option value="group">{{ $t('common.bookingTypes.group') }}</option>
                   </select>
-                  <span v-if="bookingErrors.booking_type" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.booking_type }}</span>
+                  <span v-if="bookingErrors.booking_type" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.booking_type }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.room') }}</span>
-                  <SearchableSelect
-                    v-model="bookingForm.room_id"
-                    :options="roomMoveOptions"
-                    :search-placeholder="$t('stayview.searchRoom')"
-                    force-search
-                  />
-                  <span v-if="bookingErrors.room_id" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.room_id }}</span>
+                  <SearchableSelect v-model="bookingForm.room_id" :options="roomMoveOptions"
+                    :search-placeholder="$t('stayview.searchRoom')" force-search />
+                  <span v-if="bookingErrors.room_id" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.room_id }}</span>
                 </label>
               </div>
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.arrival') }}</span>
-                  <input v-model="bookingForm.check_in_date" type="date" class="input" data-field="check_in_date" :class="{ 'sv-input-error': bookingErrors.check_in_date }" required />
-                  <span v-if="bookingErrors.check_in_date" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.check_in_date }}</span>
+                  <input v-model="bookingForm.check_in_date" type="date" class="input" data-field="check_in_date"
+                    :class="{ 'sv-input-error': bookingErrors.check_in_date }" required />
+                  <span v-if="bookingErrors.check_in_date" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.check_in_date }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.departure') }}</span>
-                  <input v-model="bookingForm.check_out_date" type="date" class="input" data-field="check_out_date" :class="{ 'sv-input-error': bookingErrors.check_out_date }" required />
-                  <span v-if="bookingErrors.check_out_date" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.check_out_date }}</span>
+                  <input v-model="bookingForm.check_out_date" type="date" class="input" data-field="check_out_date"
+                    :class="{ 'sv-input-error': bookingErrors.check_out_date }" required />
+                  <span v-if="bookingErrors.check_out_date" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.check_out_date
+                    }}</span>
                 </label>
               </div>
               <div class="sv-field-row">
                 <label class="sv-field">
-                  <span>{{ $t('stayview.total') }}<em class="sv-auto"> · {{ $t('reservations.autoTotal', { amount: bookingNights && bookingNights > 0 ? formatPrice(bookingNights * bookingRate) : 0 }) }}</em></span>
-                  <input
-                    :value="bookingTotal"
-                    @input="bookingForm.total_amount = Number($event.target.value) || 0"
-                    type="number" min="0" class="input" required />
+                  <span>{{ $t('stayview.total') }}<em class="sv-auto"> · {{ $t('reservations.autoTotal', {
+                    amount:
+                      bookingNights && bookingNights > 0 ? formatPrice(bookingNights * bookingRate) : 0 })
+                      }}</em></span>
+                  <input v-model.number="bookingForm.total_amount" type="number" min="0" class="input" required />
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.advancePaid') }}</span>
-                  <input v-model.number="bookingForm.advance_payment" type="number" min="0" class="input" data-field="advance_payment" :class="{ 'sv-input-error': bookingErrors.advance_payment }" />
-                  <span v-if="bookingErrors.advance_payment" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.advance_payment }}</span>
+                  <input v-model.number="bookingForm.advance_payment" type="number" min="0" class="input"
+                    data-field="advance_payment" :class="{ 'sv-input-error': bookingErrors.advance_payment }" />
+                  <span v-if="bookingErrors.advance_payment" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.advance_payment
+                    }}</span>
                 </label>
               </div>
               <div class="sv-field-row">
@@ -1976,7 +1837,8 @@
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
             </div>
             <div class="sv-modal-actions">
-              <button type="button" class="btn btn-primary sv-modal-manage" :disabled="actionBusy" @click="submitBooking">
+              <button type="button" class="btn btn-primary sv-modal-manage" :disabled="actionBusy"
+                @click="submitBooking">
                 <i class="fas fa-check" aria-hidden="true"></i>
                 {{ actionBusy ? $t('common.loading') : $t('stayview.createBooking') }}
               </button>
@@ -2004,28 +1866,36 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.firstName') }}</span>
-                  <input v-model="guestForm.first_name" type="text" class="input" data-field="first_name" :class="{ 'sv-input-error': guestErrors.first_name }" required />
-                  <span v-if="guestErrors.first_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ guestErrors.first_name }}</span>
+                  <input v-model="guestForm.first_name" type="text" class="input" data-field="first_name"
+                    :class="{ 'sv-input-error': guestErrors.first_name }" required />
+                  <span v-if="guestErrors.first_name" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ guestErrors.first_name }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.lastName') }}</span>
-                  <input v-model="guestForm.last_name" type="text" class="input" data-field="last_name" :class="{ 'sv-input-error': guestErrors.last_name }" required />
-                  <span v-if="guestErrors.last_name" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ guestErrors.last_name }}</span>
+                  <input v-model="guestForm.last_name" type="text" class="input" data-field="last_name"
+                    :class="{ 'sv-input-error': guestErrors.last_name }" required />
+                  <span v-if="guestErrors.last_name" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ guestErrors.last_name }}</span>
                 </label>
               </div>
               <label class="sv-field">
                 <span>{{ $t('stayview.phone') }}</span>
-                <PhoneInput v-model="guestForm.phone" v-model:countryCode="guestForm.country_code" :error="guestErrors.phone" required />
+                <PhoneInput v-model="guestForm.phone" v-model:countryCode="guestForm.country_code"
+                  :error="guestErrors.phone" required />
               </label>
               <label class="sv-field">
                 <span>{{ $t('stayview.email') }}</span>
-                <input v-model="guestForm.email" type="email" class="input" data-field="email" :class="{ 'sv-input-error': guestErrors.email }" />
-                <span v-if="guestErrors.email" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ guestErrors.email }}</span>
+                <input v-model="guestForm.email" type="email" class="input" data-field="email"
+                  :class="{ 'sv-input-error': guestErrors.email }" />
+                <span v-if="guestErrors.email" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation"
+                    aria-hidden="true"></i> {{ guestErrors.email }}</span>
               </label>
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('guests.nationality') }}</span>
-                  <input v-model="guestForm.nationality" type="text" class="input" data-field="nationality" :placeholder="$t('stayview.optional')" />
+                  <input v-model="guestForm.nationality" type="text" class="input" data-field="nationality"
+                    :placeholder="$t('stayview.optional')" />
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('guests.idTypeOptional') }}</span>
@@ -2040,7 +1910,8 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('guests.idNumber') }}</span>
-                  <input v-model="guestForm.id_number" type="text" class="input" data-field="id_number" :placeholder="$t('stayview.optional')" />
+                  <input v-model="guestForm.id_number" type="text" class="input" data-field="id_number"
+                    :placeholder="$t('stayview.optional')" />
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('guests.vipStatus') }}</span>
@@ -2145,27 +2016,15 @@
                 </div>
               </header>
               <ul v-if="roomModalRules.length" class="sv-dot-rules">
-                <li
-                  v-for="rule in roomModalRules"
-                  :key="rule.key"
-                  class="sv-dot-rule"
-                  :class="rule.ok ? 'ok' : 'no'"
-                >
+                <li v-for="rule in roomModalRules" :key="rule.key" class="sv-dot-rule" :class="rule.ok ? 'ok' : 'no'">
                   <i :class="rule.ok ? 'fas fa-circle-check' : 'fas fa-circle-xmark'" aria-hidden="true"></i>
                   <span>{{ $t('stayview.' + rule.key) }}</span>
                 </li>
               </ul>
               <div class="sv-modal-section">{{ $t('stayview.setStatus') }}</div>
               <div class="sv-status-grid">
-                <button
-                  v-for="s in roomStatuses"
-                  :key="s"
-                  type="button"
-                  class="sv-status-btn"
-                  :class="{ active: roomModal.status === s }"
-                  :disabled="actionBusy"
-                  @click="setRoomStatus(s)"
-                >
+                <button v-for="s in roomStatuses" :key="s" type="button" class="sv-status-btn"
+                  :class="{ active: roomModal.status === s }" :disabled="actionBusy" @click="setRoomStatus(s)">
                   <span class="sv-room-dot" :class="s" aria-hidden="true"></span>
                   <span class="sv-cap">{{ s }}</span>
                 </button>
@@ -2188,7 +2047,8 @@
                 <h3>{{ $t('stayview.stockLedger') }}</h3>
                 <span class="sv-modal-status">{{ hotelName }}</span>
               </div>
-              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="ledgerModal = false">
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')"
+                @click="ledgerModal = false">
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </div>
@@ -2204,12 +2064,8 @@
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.category') }}</span>
-                  <SearchableSelect
-                    v-model="ledgerForm.category"
-                    :options="ledgerCategoryOptions"
-                    :empty-label="$t('stayview.allCategories')"
-                    force-search
-                  />
+                  <SearchableSelect v-model="ledgerForm.category" :options="ledgerCategoryOptions"
+                    :empty-label="$t('stayview.allCategories')" force-search />
                 </label>
                 <label class="sv-field sv-check">
                   <input v-model="ledgerForm.ignoreZero" type="checkbox" />
@@ -2231,54 +2087,55 @@
                 </div>
                 <p v-if="!ledger.groups.length" class="sv-muted">{{ $t('stayview.ledgerEmpty') }}</p>
                 <div v-else class="table-scroll">
-                <table class="sv-ledger-table">
-                  <thead>
-                    <tr>
-                      <th>{{ $t('stayview.date') }}</th>
-                      <th>{{ $t('stayview.tranType') }}</th>
-                      <th>{{ $t('stayview.refNo') }}</th>
-                      <th class="num">{{ $t('stayview.stockIn') }}</th>
-                      <th class="num">{{ $t('stayview.stockOut') }}</th>
-                      <th class="num">{{ $t('stayview.costPerUnit') }}</th>
-                      <th class="num">{{ $t('stayview.value') }}</th>
-                      <th class="num">{{ $t('stayview.stock') }}</th>
-                      <th class="num">{{ $t('stayview.stockValue') }}</th>
-                    </tr>
-                  </thead>
-                  <template v-for="group in ledger.groups" :key="group.category">
-                    <tbody>
-                      <tr class="cat-row"><td colspan="9">{{ group.category.toUpperCase() }}</td></tr>
-                      <template v-for="item in group.items" :key="item.item_id">
-                        <tr class="item-row"><td colspan="9">{{ item.item_name }}</td></tr>
-                        <tr v-for="(row, i) in item.rows" :key="i">
-                          <td>{{ row.date }}</td>
-                          <td>{{ row.type }}</td>
-                          <td>{{ row.ref }}</td>
-                          <td class="num">{{ row.stockIn }}</td>
-                          <td class="num">{{ row.stockOut }}</td>
-                          <td class="num">{{ row.cost }}</td>
-                          <td class="num">{{ row.value }}</td>
-                          <td class="num">{{ row.stock }}</td>
-                          <td class="num">{{ row.stockValue }}</td>
+                  <table class="sv-ledger-table">
+                    <thead>
+                      <tr>
+                        <th>{{ $t('stayview.date') }}</th>
+                        <th>{{ $t('stayview.tranType') }}</th>
+                        <th>{{ $t('stayview.refNo') }}</th>
+                        <th class="num">{{ $t('stayview.stockIn') }}</th>
+                        <th class="num">{{ $t('stayview.stockOut') }}</th>
+                        <th class="num">{{ $t('stayview.costPerUnit') }}</th>
+                        <th class="num">{{ $t('stayview.value') }}</th>
+                        <th class="num">{{ $t('stayview.stock') }}</th>
+                        <th class="num">{{ $t('stayview.stockValue') }}</th>
+                      </tr>
+                    </thead>
+                    <template v-for="group in ledger.groups" :key="group.category">
+                      <tbody>
+                        <tr class="cat-row">
+                          <td colspan="9">{{ group.category.toUpperCase() }}</td>
                         </tr>
-                      </template>
-                    </tbody>
-                  </template>
-                </table>
+                        <template v-for="item in group.items" :key="item.item_id">
+                          <tr class="item-row">
+                            <td colspan="9">{{ item.item_name }}</td>
+                          </tr>
+                          <tr v-for="(row, i) in item.rows" :key="i">
+                            <td>{{ row.date }}</td>
+                            <td>{{ row.type }}</td>
+                            <td>{{ row.ref }}</td>
+                            <td class="num">{{ row.stockIn }}</td>
+                            <td class="num">{{ row.stockOut }}</td>
+                            <td class="num">{{ row.cost }}</td>
+                            <td class="num">{{ row.value }}</td>
+                            <td class="num">{{ row.stock }}</td>
+                            <td class="num">{{ row.stockValue }}</td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </template>
+                  </table>
                 </div>
               </div>
             </div>
             <div class="sv-modal-actions">
-              <button type="button" class="btn btn-primary sv-modal-manage" :disabled="ledgerBusy" @click="generateLedger">
+              <button type="button" class="btn btn-primary sv-modal-manage" :disabled="ledgerBusy"
+                @click="generateLedger">
                 <i class="fas fa-rotate" aria-hidden="true"></i>
                 {{ ledgerBusy ? $t('common.loading') : $t('stayview.generate') }}
               </button>
-              <button
-                v-if="ledger && ledger.groups.length"
-                type="button"
-                class="btn btn-secondary sv-modal-manage"
-                @click="printLedger"
-              >
+              <button v-if="ledger && ledger.groups.length" type="button" class="btn btn-secondary sv-modal-manage"
+                @click="printLedger">
                 <i class="fas fa-print" aria-hidden="true"></i> {{ $t('stayview.print') }}
               </button>
             </div>
@@ -2288,16 +2145,8 @@
     </Teleport>
 
     <!-- Dashboard alert modal for urgent notifications -->
-    <AlertModal
-      v-if="currentAlert"
-      :show="true"
-      :title="currentAlert.title"
-      :body="currentAlert.body"
-      :details="alertDetails"
-      :timestamp="currentAlert.created_at"
-      :type="alertType"
-      @dismiss="dismissCurrentAlert"
-    />
+    <AlertModal v-if="currentAlert" :show="true" :title="currentAlert.title" :body="currentAlert.body"
+      :details="alertDetails" :timestamp="currentAlert.created_at" :type="alertType" @dismiss="dismissCurrentAlert" />
   </div>
 </template>
 
@@ -2305,7 +2154,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useNotificationStore } from '@/stores/notifications'
-import { roomApi, reservationApi, guestApi, housekeepingApi, laundryApi, invoiceApi, inventoryApi, paymentApi, companyApi,  hotelSettingsApi} from '@/api'
+import { roomApi, reservationApi, guestApi, housekeepingApi, laundryApi, invoiceApi, inventoryApi, paymentApi, companyApi, hotelSettingsApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import AlertModal from '@/components/AlertModal.vue'
 import RoleBadge from '@/components/RoleBadge.vue'
@@ -2630,47 +2479,47 @@ const barsByRoom = computed(() => {
     const paymentPending = balance > 0
     const colorClass =
       r.status === 'checked_out' ? 'bar-blue'
-      : r.status === 'checked_in' ? 'bar-green'
-      : paymentPending ? 'bar-red' : 'bar-green'
+        : r.status === 'checked_in' ? 'bar-green'
+          : paymentPending ? 'bar-red' : 'bar-green'
     const fmt = (d) => `${d.getDate()}/${d.getMonth() + 1}/${String(d.getFullYear()).slice(2)}`
-    ;(map[roomId] ||= []).push({
-      id: r.reservation_id,
-      roomId,
-      arrivalIso: isoKey(arrival),
-      departureIso: isoKey(departure),
-      label: (r.guest_name || '—').toUpperCase(),
-      // Grid column/span on the 28 half-day track (1-based) + the inclusive
-      // 0-based half-cell range used by the vacancy check.
-      halfStart,
-      halfEnd,
-      start: halfStart + 1,
-      span: halfEnd - halfStart + 1,
-      lane: 1,
-      colorClass,
-      rawStatus: r.status,
-      statusLabel: r.status.replace('_', ' '),
-      folio_code: r.folio_code || '',
-      dates: `${fmt(arrival)} → ${fmt(departure)}`,
-      nights: diffDays(arrival, departure),
-      roomNumber: r.room?.room_number || '—',
-      paymentPending,
-      balance: balance.toLocaleString(),
-      // Full client/stay details so the modal shows everything in one place.
-      reference: r.booking_reference || '—',
-      email: r.guest_email || '—',
-      guestEmail: r.guest_email || '',
-      phone: r.guest_phone || '—',
-      location: [r.city, r.country].filter(Boolean).join(', ') || '—',
-      guests: `${r.num_adults ?? 1} ${t('stayview.adults')}${r.num_children ? ` · ${r.num_children} ${t('stayview.children')}` : ''}`,
-      roomType: roomTypeLabel(r.room_type || r.room?.room_type || ''),
-      total: Number(r.total_amount || 0).toLocaleString(),
-      advance: Number(r.advance_payment || 0).toLocaleString(),
-      source: (r.booking_source || '—').replace('_', ' '),
-      specialRequests: r.special_requests || '',
-      notes: r.notes || '',
-      checkedInAt: r.checked_in_at ? fmtDate(r.checked_in_at) : '',
-      checkedOutAt: r.checked_out_at ? fmtDate(r.checked_out_at) : '',
-    })
+      ; (map[roomId] ||= []).push({
+        id: r.reservation_id,
+        roomId,
+        arrivalIso: isoKey(arrival),
+        departureIso: isoKey(departure),
+        label: (r.guest_name || '—').toUpperCase(),
+        // Grid column/span on the 28 half-day track (1-based) + the inclusive
+        // 0-based half-cell range used by the vacancy check.
+        halfStart,
+        halfEnd,
+        start: halfStart + 1,
+        span: halfEnd - halfStart + 1,
+        lane: 1,
+        colorClass,
+        rawStatus: r.status,
+        statusLabel: r.status.replace('_', ' '),
+        folio_code: r.folio_code || '',
+        dates: `${fmt(arrival)} → ${fmt(departure)}`,
+        nights: diffDays(arrival, departure),
+        roomNumber: r.room?.room_number || '—',
+        paymentPending,
+        balance: balance.toLocaleString(),
+        // Full client/stay details so the modal shows everything in one place.
+        reference: r.booking_reference || '—',
+        email: r.guest_email || '—',
+        guestEmail: r.guest_email || '',
+        phone: r.guest_phone || '—',
+        location: [r.city, r.country].filter(Boolean).join(', ') || '—',
+        guests: `${r.num_adults ?? 1} ${t('stayview.adults')}${r.num_children ? ` · ${r.num_children} ${t('stayview.children')}` : ''}`,
+        roomType: roomTypeLabel(r.room_type || r.room?.room_type || ''),
+        total: Number(r.total_amount || 0).toLocaleString(),
+        advance: Number(r.advance_payment || 0).toLocaleString(),
+        source: (r.booking_source || '—').replace('_', ' '),
+        specialRequests: r.special_requests || '',
+        notes: r.notes || '',
+        checkedInAt: r.checked_in_at ? fmtDate(r.checked_in_at) : '',
+        checkedOutAt: r.checked_out_at ? fmtDate(r.checked_out_at) : '',
+      })
   }
   // Stack successive handovers on alternating lanes so a departing guest's
   // half of the checkout day and the arriving guest's other half render one
@@ -2703,7 +2552,7 @@ const groups = computed(() => {
   const byType = {}
   for (const room of rooms.value) {
     const type = room.room_type || 'single'
-    ;(byType[type] ||= []).push(room)
+      ; (byType[type] ||= []).push(room)
   }
   return Object.keys(byType)
     .sort()
@@ -4364,7 +4213,7 @@ function printEntryInvoice(e) {
     <div class="meta">
       <b>${esc(t('folio.no'))}</b><span>${esc(folioCode || '—')}</span>
       <b>${esc(t('stayview.printEntryInvoiceRef'))}</b><span>${esc(e.entry_code || e.entryId)}</span>
-      <b>${esc(t('stayview.issuedAt'))}</b><span>${esc(formatDateDMY(now))} ${esc(now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}))}</span>
+      <b>${esc(t('stayview.issuedAt'))}</b><span>${esc(formatDateDMY(now))} ${esc(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</span>
     </div>
   </div>
   ${guest ? `<p class="guest">${esc(guest)}<span class="muted">${room ? ' · ' + esc(room) : ''}</span></p>` : ''}
@@ -4763,7 +4612,7 @@ const dotWhyWindow = computed(() => {
   })
   if (!stay) return ''
   const { arrival, departure } = reservationDates(stay)
-  const fmt = (d) => (d instanceof Date ? d.toISOString().slice(0,10) : String(d).slice(0,10))
+  const fmt = (d) => (d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10))
   return fmt(arrival) + ' \u2192 ' + fmt(departure)
 })
 /** Rule checklist explaining a room's dot colour (shared by both modals). */
@@ -5081,7 +4930,7 @@ async function generateLedger() {
       }
 
       const category = item.category || 'other'
-      ;(groups[category] ||= []).push({ item_id: item.item_id, item_name: item.item_name, rows })
+        ; (groups[category] ||= []).push({ item_id: item.item_id, item_name: item.item_name, rows })
     }
 
     ledger.value = {
@@ -5258,11 +5107,14 @@ const bookingRate = computed(() => {
 /** Suggested total based on nights × rate. */
 const bookingTotal = computed(() => bookingNights.value * bookingRate.value)
 
-/** Keep the total in step with the dates and room, so it is automatic. */
+/** Keep the total in step with the dates and room, so it is automatic. Whenever
+ *  the room or the stay dates change, the total recomputes to nights × rate —
+ *  the desk can still type a different price afterwards, but changing the dates
+ *  always re-seeds it so a 2-night stay can never carry a 1-night total. */
 watch(
   [() => bookingForm.value.room_id, () => bookingForm.value.check_in_date, () => bookingForm.value.check_out_date],
   () => {
-    if (bookingModal.value) bookingForm.value.total_amount = bookingTotal.value
+    bookingForm.value.total_amount = bookingTotal.value
   },
 )
 
@@ -5332,6 +5184,14 @@ async function submitBooking() {
     if (!payload.advance_payment_method) {
       delete payload.advance_payment_method
       delete payload.advance_payment_date
+    }
+    // total_amount is a live two-way binding seeded from bookingTotal (see the
+    // watch below), so it always reflects nights × rate unless the desk typed an
+    // override. As a final safety net, if it is somehow still empty while a real
+    // nights × rate total exists, submit that — a 2-night stay must never persist
+    // the 1-night fallback the backend uses when total_amount arrives as null/0.
+    if (!(Number(payload.total_amount) > 0) && bookingTotal.value > 0) {
+      payload.total_amount = bookingTotal.value
     }
     payload.guest_phone = phoneCheck.number
     await reservationApi.store({ ...payload, status: 'confirmed' })
@@ -5505,58 +5365,315 @@ onUnmounted(() => clearInterval(refreshTimer))
 }
 
 /* Folio switcher: pick which folio of the stay you are looking at. */
-.sv-folio-ref{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:8px 12px;background:#f4f0ff;border:1px solid #ddd3f6;border-radius:10px;font-size:13px;color:#4b318c}
-.sv-folio-ref i{color:#8b5cf6}
-.sv-folio-ref strong{font-variant-numeric:tabular-nums;color:#3a256b}
-.sv-folio-guest{color:#7c6aa8}
-.sv-folio-switch{margin:0 0 12px}
-.sv-folio-switch-label{display:block;margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:#8b5cf6}
-.sv-folio-switch-table-wrap{border:1px solid #e2dcf5;border-radius:10px;overflow:hidden}
-.sv-folio-table-switch{width:100%;border-collapse:collapse;background:#fff;font-size:13px}
-.sv-folio-table-switch th{padding:7px 10px;background:#f3effc;color:#4b318c;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;text-align:left;border-bottom:1px solid #e2dcf5}
-.sv-folio-table-switch td{padding:7px 10px;border-bottom:1px solid #f0ecfc;vertical-align:middle}
-.sv-folio-table-switch tbody tr:last-child td{border-bottom:0}
-.sv-folio-table-switch tbody tr:hover td{background:#faf8ff}
-.sv-folio-row-active td{background:#f0ebfe!important}
-.sv-folio-row-active td:first-child{border-left:3px solid #8b5cf6}
-.sv-folio-col-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-.sv-folio-col-view{text-align:right;white-space:nowrap}
-.sv-folio-code-part{color:#3a256b}
-.sv-folio-mod-since{display:block;font-size:11px;color:#a89cc9}
-.sv-folio-row-type{display:block;font-size:11px;color:#a89cc9}
-.sv-folio-view-btn{display:inline-block;padding:5px 12px;background:#8b5cf6;color:#fff;border:0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s}
-.sv-folio-print-btn{display:inline-block;padding:5px 12px;margin-right:4px;background:#fff;color:#4b318c;border:1px solid #cbbff0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
-.sv-folio-print-btn:hover{background:#f3effc;color:#3a256b}
-.sv-folio-view-btn:hover{background:#6d3ef0}
-.sv-folio-view-btn:disabled,.sv-folio-print-btn:disabled{background:#cbbff0;color:#fff;cursor:default}
+.sv-folio-ref {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  background: #f4f0ff;
+  border: 1px solid #ddd3f6;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #4b318c
+}
+
+.sv-folio-ref i {
+  color: #8b5cf6
+}
+
+.sv-folio-ref strong {
+  font-variant-numeric: tabular-nums;
+  color: #3a256b
+}
+
+.sv-folio-guest {
+  color: #7c6aa8
+}
+
+.sv-folio-switch {
+  margin: 0 0 12px
+}
+
+.sv-folio-switch-label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: #8b5cf6
+}
+
+.sv-folio-switch-table-wrap {
+  border: 1px solid #e2dcf5;
+  border-radius: 10px;
+  overflow: hidden
+}
+
+.sv-folio-table-switch {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  font-size: 13px
+}
+
+.sv-folio-table-switch th {
+  padding: 7px 10px;
+  background: #f3effc;
+  color: #4b318c;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  text-align: left;
+  border-bottom: 1px solid #e2dcf5
+}
+
+.sv-folio-table-switch td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #f0ecfc;
+  vertical-align: middle
+}
+
+.sv-folio-table-switch tbody tr:last-child td {
+  border-bottom: 0
+}
+
+.sv-folio-table-switch tbody tr:hover td {
+  background: #faf8ff
+}
+
+.sv-folio-row-active td {
+  background: #f0ebfe !important
+}
+
+.sv-folio-row-active td:first-child {
+  border-left: 3px solid #8b5cf6
+}
+
+.sv-folio-col-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap
+}
+
+.sv-folio-col-view {
+  text-align: right;
+  white-space: nowrap
+}
+
+.sv-folio-code-part {
+  color: #3a256b
+}
+
+.sv-folio-mod-since {
+  display: block;
+  font-size: 11px;
+  color: #a89cc9
+}
+
+.sv-folio-row-type {
+  display: block;
+  font-size: 11px;
+  color: #a89cc9
+}
+
+.sv-folio-view-btn {
+  display: inline-block;
+  padding: 5px 12px;
+  background: #8b5cf6;
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s
+}
+
+.sv-folio-print-btn {
+  display: inline-block;
+  padding: 5px 12px;
+  margin-right: 4px;
+  background: #fff;
+  color: #4b318c;
+  border: 1px solid #cbbff0;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s
+}
+
+.sv-folio-print-btn:hover {
+  background: #f3effc;
+  color: #3a256b
+}
+
+.sv-folio-view-btn:hover {
+  background: #6d3ef0
+}
+
+.sv-folio-view-btn:disabled,
+.sv-folio-print-btn:disabled {
+  background: #cbbff0;
+  color: #fff;
+  cursor: default
+}
 
 /* 'Now viewing another folio' strip under the reference bar. */
-.sv-folio-now-viewing{display:flex;align-items:center;gap:10px;margin:0 0 10px;padding:8px 12px;background:#fffbeb;border:1px solid #f3e2ae;border-radius:10px;font-size:13px;color:#7a5c14}
-.sv-folio-now-viewing i{color:#d97c0b}
-.sv-folio-now-viewing strong{color:#5c4408}
-.sv-folio-return{margin-left:auto;padding:5px 12px;background:#fff;color:#8b5cf6;border:1px solid #8b5cf6;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
-.sv-folio-return:hover{background:#8b5cf6;color:#fff}
-.sv-folio-return:disabled{border-color:#cbbff0;color:#cbbff0;cursor:default;background:#fff}
+.sv-folio-now-viewing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  background: #fffbeb;
+  border: 1px solid #f3e2ae;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #7a5c14
+}
+
+.sv-folio-now-viewing i {
+  color: #d97c0b
+}
+
+.sv-folio-now-viewing strong {
+  color: #5c4408
+}
+
+.sv-folio-return {
+  margin-left: auto;
+  padding: 5px 12px;
+  background: #fff;
+  color: #8b5cf6;
+  border: 1px solid #8b5cf6;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s
+}
+
+.sv-folio-return:hover {
+  background: #8b5cf6;
+  color: #fff
+}
+
+.sv-folio-return:disabled {
+  border-color: #cbbff0;
+  color: #cbbff0;
+  cursor: default;
+  background: #fff
+}
 
 /* Early-departure refund action (folio reference bar, stay-view). */
-.sv-folio-early-dep{display:inline-flex;align-items:center;gap:6px;margin-left:auto;padding:5px 12px;background:#fff;color:#b45309;border:1px solid #f3d29a;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
-.sv-folio-early-dep:hover{background:#b45309;color:#fff}
-.sv-folio-early-dep:disabled{border-color:#e8d5b8;color:#d9b98a;cursor:default;background:#fff}
+.sv-folio-early-dep {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 5px 12px;
+  background: #fff;
+  color: #b45309;
+  border: 1px solid #f3d29a;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s
+}
+
+.sv-folio-early-dep:hover {
+  background: #b45309;
+  color: #fff
+}
+
+.sv-folio-early-dep:disabled {
+  border-color: #e8d5b8;
+  color: #d9b98a;
+  cursor: default;
+  background: #fff
+}
 
 /* Payment edit affordance inside the folio ledger. */
-.sv-folio-edit-note{display:inline-block;margin-top:2px;font-size:11px;color:#9c8fc9}
-.sv-folio-payment-edit{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:#fff;color:#0f766e;border:1px solid #99d6cf;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
-.sv-folio-payment-edit:hover{background:#0f766e;color:#fff}
-.sv-folio-payment-edit:disabled{border-color:#bfe0dc;color:#9cc8c3;cursor:default;background:#fff}
-.sv-pay-edit-page{width:100%;max-height:72vh;overflow-y:auto}
+.sv-folio-edit-note {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #9c8fc9
+}
+
+.sv-folio-payment-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: #fff;
+  color: #0f766e;
+  border: 1px solid #99d6cf;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s
+}
+
+.sv-folio-payment-edit:hover {
+  background: #0f766e;
+  color: #fff
+}
+
+.sv-folio-payment-edit:disabled {
+  border-color: #bfe0dc;
+  color: #9cc8c3;
+  cursor: default;
+  background: #fff
+}
+
+.sv-pay-edit-page {
+  width: 100%;
+  max-height: 72vh;
+  overflow-y: auto
+}
 
 /* Print breakdown preview modal. */
-.sv-print-breakdown{width:100%;border-collapse:collapse;font-size:13px}
-.sv-print-breakdown th,.sv-print-breakdown td{padding:8px 10px;border-bottom:1px solid #ece8fb;text-align:left}
-.sv-print-breakdown th{background:#f6f3fe;color:#4b318c;font-size:11px;text-transform:uppercase;letter-spacing:.03em}
-.sv-print-breakdown td.num{text-align:right;font-variant-numeric:tabular-nums}
-.sv-print-breakdown tfoot td{padding-top:10px;font-weight:700}
-.sv-refund-pos{color:#b45309}
+.sv-print-breakdown {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px
+}
+
+.sv-print-breakdown th,
+.sv-print-breakdown td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #ece8fb;
+  text-align: left
+}
+
+.sv-print-breakdown th {
+  background: #f6f3fe;
+  color: #4b318c;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .03em
+}
+
+.sv-print-breakdown td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums
+}
+
+.sv-print-breakdown tfoot td {
+  padding-top: 10px;
+  font-weight: 700
+}
+
+.sv-refund-pos {
+  color: #b45309
+}
 
 .stayview-page {
   padding: 16px 20px 0;
@@ -5639,12 +5756,35 @@ onUnmounted(() => clearInterval(refreshTimer))
   font-weight: 700;
 }
 
-.sv-pill.vacant { background: #e7f6ec; color: #1e7e34; }
-.sv-pill.occupied { background: #fde8e8; color: #c0392b; }
-.sv-pill.reserved { background: #fff3cd; color: #856404; }
-.sv-pill.blocked { background: #e2e3e5; color: #383d41; }
-.sv-pill.dueout { background: #ede9fe; color: #6d28d9; }
-.sv-pill.dirty { background: #f8d7da; color: #721c24; }
+.sv-pill.vacant {
+  background: #e7f6ec;
+  color: #1e7e34;
+}
+
+.sv-pill.occupied {
+  background: #fde8e8;
+  color: #c0392b;
+}
+
+.sv-pill.reserved {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.sv-pill.blocked {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+.sv-pill.dueout {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.sv-pill.dirty {
+  background: #f8d7da;
+  color: #721c24;
+}
 
 .sv-toolbar-right {
   display: flex;
@@ -5864,16 +6004,32 @@ onUnmounted(() => clearInterval(refreshTimer))
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
   transition: transform 0.12s ease, background 0.12s ease;
 }
-.sv-hk-badge i { font-size: 10px; }
-.sv-hk-badge:hover { background: #004d97; transform: translateY(-1px); }
-.sv-hk-badge.active { background: #dc3545; }
+
+.sv-hk-badge i {
+  font-size: 10px;
+}
+
+.sv-hk-badge:hover {
+  background: #004d97;
+  transform: translateY(-1px);
+}
+
+.sv-hk-badge.active {
+  background: #dc3545;
+}
 
 /* Laundry orders get their own badge color so laundry-only rooms stand out. */
 .sv-hk-badge-laundry {
   background: #0e9434;
 }
-.sv-hk-badge-laundry:hover { background: #0b7a2b; }
-.sv-hk-badge-laundry.active { background: #dc3545; }
+
+.sv-hk-badge-laundry:hover {
+  background: #0b7a2b;
+}
+
+.sv-hk-badge-laundry.active {
+  background: #dc3545;
+}
 
 /* Floating housekeeping task card (pinned or hover) near the room bar. */
 .sv-hk-card {
@@ -5889,6 +6045,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
   padding: 12px;
 }
+
 .sv-hk-card-head {
   display: flex;
   align-items: flex-start;
@@ -5896,13 +6053,19 @@ onUnmounted(() => clearInterval(refreshTimer))
   gap: 8px;
   margin-bottom: 10px;
 }
+
 .sv-hk-card-room {
   display: flex;
   align-items: center;
   gap: 7px;
   min-width: 0;
 }
-.sv-hk-card-room strong { font-size: 16px; color: #0b1f33; }
+
+.sv-hk-card-room strong {
+  font-size: 16px;
+  color: #0b1f33;
+}
+
 .sv-hk-card-guest {
   font-size: 12px;
   color: #64748b;
@@ -5910,6 +6073,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .sv-hk-card-close {
   flex: none;
   border: none;
@@ -5919,8 +6083,20 @@ onUnmounted(() => clearInterval(refreshTimer))
   cursor: pointer;
   padding: 2px 4px;
 }
-.sv-hk-card-close:hover { color: #dc3545; }
-.sv-hk-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.sv-hk-card-close:hover {
+  color: #dc3545;
+}
+
+.sv-hk-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .sv-hk-item {
   border: 1px solid #e8edf3;
   border-left: 3px solid #94a3b8;
@@ -5928,10 +6104,23 @@ onUnmounted(() => clearInterval(refreshTimer))
   padding: 8px 10px;
   background: #fbfdff;
 }
-.sv-hk-item.urgent { border-left-color: #dc3545; }
-.sv-hk-item.high { border-left-color: #fd7e14; }
-.sv-hk-item.normal { border-left-color: #0d6efd; }
-.sv-hk-item.low { border-left-color: #adb5bd; }
+
+.sv-hk-item.urgent {
+  border-left-color: #dc3545;
+}
+
+.sv-hk-item.high {
+  border-left-color: #fd7e14;
+}
+
+.sv-hk-item.normal {
+  border-left-color: #0d6efd;
+}
+
+.sv-hk-item.low {
+  border-left-color: #adb5bd;
+}
+
 .sv-hk-item-top {
   display: flex;
   align-items: center;
@@ -5939,7 +6128,13 @@ onUnmounted(() => clearInterval(refreshTimer))
   gap: 8px;
   margin-bottom: 5px;
 }
-.sv-hk-task-type { font-size: 12px; font-weight: 800; color: #0b1f33; }
+
+.sv-hk-task-type {
+  font-size: 12px;
+  font-weight: 800;
+  color: #0b1f33;
+}
+
 .sv-hk-status {
   font-size: 10px;
   font-weight: 800;
@@ -5951,9 +6146,24 @@ onUnmounted(() => clearInterval(refreshTimer))
   color: #334155;
   white-space: nowrap;
 }
-.sv-hk-status.dirty, .sv-hk-status.confirmed { background: #fde2e2; color: #b91c1c; }
-.sv-hk-status.in_progress { background: #fff3cd; color: #92400e; }
-.sv-hk-status.verified, .sv-hk-status.completed { background: #dcfce7; color: #166534; }
+
+.sv-hk-status.dirty,
+.sv-hk-status.confirmed {
+  background: #fde2e2;
+  color: #b91c1c;
+}
+
+.sv-hk-status.in_progress {
+  background: #fff3cd;
+  color: #92400e;
+}
+
+.sv-hk-status.verified,
+.sv-hk-status.completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
 .sv-hk-item-meta {
   display: flex;
   flex-wrap: wrap;
@@ -5961,7 +6171,14 @@ onUnmounted(() => clearInterval(refreshTimer))
   font-size: 11px;
   color: #64748b;
 }
-.sv-hk-notes { margin: 6px 0 0; font-size: 11px; color: #475569; font-style: italic; }
+
+.sv-hk-notes {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: #475569;
+  font-style: italic;
+}
+
 .sv-hk-actions {
   display: flex;
   flex-wrap: wrap;
@@ -5970,6 +6187,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   padding-top: 8px;
   border-top: 1px dashed #e2e8f0;
 }
+
 .sv-hk-btn {
   flex: 1;
   min-width: 96px;
@@ -5987,16 +6205,53 @@ onUnmounted(() => clearInterval(refreshTimer))
   cursor: pointer;
   transition: background 0.12s ease, transform 0.12s ease;
 }
-.sv-hk-btn:hover { background: #eef2f7; transform: translateY(-1px); }
-.sv-hk-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+.sv-hk-btn:hover {
+  background: #eef2f7;
+  transform: translateY(-1px);
+}
+
+.sv-hk-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .sv-hk-btn svg,
-.sv-hk-btn i { font-size: 12px; }
-.sv-hk-btn-primary { border-color: #005eb8; background: #005eb8; color: #fff; }
-.sv-hk-btn-primary:hover { background: #004d97; }
-.sv-hk-btn-success { border-color: #198754; background: #198754; color: #fff; }
-.sv-hk-btn-success:hover { background: #157347; }
-.sv-hk-btn-danger { border-color: #b02a37; background: #b02a37; color: #fff; }
-.sv-hk-btn-danger:hover { background: #981f2c; }
+.sv-hk-btn i {
+  font-size: 12px;
+}
+
+.sv-hk-btn-primary {
+  border-color: #005eb8;
+  background: #005eb8;
+  color: #fff;
+}
+
+.sv-hk-btn-primary:hover {
+  background: #004d97;
+}
+
+.sv-hk-btn-success {
+  border-color: #198754;
+  background: #198754;
+  color: #fff;
+}
+
+.sv-hk-btn-success:hover {
+  background: #157347;
+}
+
+.sv-hk-btn-danger {
+  border-color: #b02a37;
+  background: #b02a37;
+  color: #fff;
+}
+
+.sv-hk-btn-danger:hover {
+  background: #981f2c;
+}
+
 .sv-hk-section {
   display: flex;
   align-items: center;
@@ -6005,12 +6260,14 @@ onUnmounted(() => clearInterval(refreshTimer))
   padding-top: 8px;
   border-top: 1px solid #e2e8f0;
 }
+
 .sv-hk-section-title {
   font-size: 12px;
   font-weight: 700;
   color: #0b1f33;
   letter-spacing: 0.02em;
 }
+
 .sv-hk-section-count {
   min-width: 18px;
   height: 18px;
@@ -6024,6 +6281,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   font-size: 11px;
   font-weight: 700;
 }
+
 .sv-hk-empty {
   margin: 4px 0 2px;
   padding: 14px 10px;
@@ -6052,11 +6310,25 @@ onUnmounted(() => clearInterval(refreshTimer))
   flex-shrink: 0;
 }
 
-.sv-room-dot.available { background: #28a745; }
-.sv-room-dot.occupied { background: #dc3545; }
-.sv-room-dot.cleaning { background: #005eb8; }
-.sv-room-dot.dirty { background: #e0a800; }
-.sv-room-dot.maintenance { background: #7f8c8d; }
+.sv-room-dot.available {
+  background: #28a745;
+}
+
+.sv-room-dot.occupied {
+  background: #dc3545;
+}
+
+.sv-room-dot.cleaning {
+  background: #005eb8;
+}
+
+.sv-room-dot.dirty {
+  background: #e0a800;
+}
+
+.sv-room-dot.maintenance {
+  background: #7f8c8d;
+}
 
 /* All dots share the same size — the occupied (red) dot stays a ~10px circle
    exactly like the green available one. The guest name lives in the dot
@@ -6138,6 +6410,7 @@ onUnmounted(() => clearInterval(refreshTimer))
     opacity: 0;
     transform: translateX(-10px) scaleX(0.85);
   }
+
   to {
     opacity: 1;
     transform: translateX(0) scaleX(1);
@@ -6149,9 +6422,17 @@ onUnmounted(() => clearInterval(refreshTimer))
   text-overflow: ellipsis;
 }
 
-.sv-bar.bar-green { background: #28c76f; }
-.sv-bar.bar-red { background: #ff6b6b; }
-.sv-bar.bar-blue { background: #3b82f6; }
+.sv-bar.bar-green {
+  background: #28c76f;
+}
+
+.sv-bar.bar-red {
+  background: #ff6b6b;
+}
+
+.sv-bar.bar-blue {
+  background: #3b82f6;
+}
 
 .sv-bar:hover {
   filter: brightness(0.92);
@@ -6277,9 +6558,17 @@ onUnmounted(() => clearInterval(refreshTimer))
   text-transform: capitalize;
 }
 
-.sv-popover-badge.bar-green { background: #28c76f; }
-.sv-popover-badge.bar-red { background: #ff6b6b; }
-.sv-popover-badge.bar-blue { background: #3b82f6; }
+.sv-popover-badge.bar-green {
+  background: #28c76f;
+}
+
+.sv-popover-badge.bar-red {
+  background: #ff6b6b;
+}
+
+.sv-popover-badge.bar-blue {
+  background: #3b82f6;
+}
 
 .sv-popover-row {
   display: flex;
@@ -6296,10 +6585,21 @@ onUnmounted(() => clearInterval(refreshTimer))
   color: #9ca3af;
 }
 
-.sv-popover-row.pay-pending { color: #c0392b; }
-.sv-popover-row.pay-pending i { color: #c0392b; }
-.sv-popover-row.pay-ok { color: #1e7e34; }
-.sv-popover-row.pay-ok i { color: #1e7e34; }
+.sv-popover-row.pay-pending {
+  color: #c0392b;
+}
+
+.sv-popover-row.pay-pending i {
+  color: #c0392b;
+}
+
+.sv-popover-row.pay-ok {
+  color: #1e7e34;
+}
+
+.sv-popover-row.pay-ok i {
+  color: #1e7e34;
+}
 
 /* Reservation click modal */
 .sv-modal-backdrop {
@@ -6435,9 +6735,17 @@ onUnmounted(() => clearInterval(refreshTimer))
   color: #fff;
 }
 
-.sv-modal-head.bar-green { background: linear-gradient(135deg, #28c76f, #1e9e57); }
-.sv-modal-head.bar-red { background: linear-gradient(135deg, #ff6b6b, #e04b4b); }
-.sv-modal-head.bar-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.sv-modal-head.bar-green {
+  background: linear-gradient(135deg, #28c76f, #1e9e57);
+}
+
+.sv-modal-head.bar-red {
+  background: linear-gradient(135deg, #ff6b6b, #e04b4b);
+}
+
+.sv-modal-head.bar-blue {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
 
 .sv-modal-head-icon {
   display: flex;
@@ -6519,10 +6827,21 @@ onUnmounted(() => clearInterval(refreshTimer))
   color: #9ca3af;
 }
 
-.sv-modal-row.pay-pending { color: #c0392b; }
-.sv-modal-row.pay-pending i { color: #c0392b; }
-.sv-modal-row.pay-ok { color: #1e7e34; }
-.sv-modal-row.pay-ok i { color: #1e7e34; }
+.sv-modal-row.pay-pending {
+  color: #c0392b;
+}
+
+.sv-modal-row.pay-pending i {
+  color: #c0392b;
+}
+
+.sv-modal-row.pay-ok {
+  color: #1e7e34;
+}
+
+.sv-modal-row.pay-ok i {
+  color: #1e7e34;
+}
 
 .sv-modal-actions {
   display: flex;
@@ -6600,6 +6919,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   background: #eef1f6;
   border-radius: 10px;
 }
+
 .sv-seg-btn {
   display: inline-flex;
   align-items: center;
@@ -6615,13 +6935,16 @@ onUnmounted(() => clearInterval(refreshTimer))
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
+
 .sv-seg-btn.is-active {
   color: #fff;
   background: #0e5b8f;
 }
+
 .sv-seg-btn:not(.is-active):hover {
   background: rgba(14, 91, 143, 0.08);
 }
+
 .sv-credit-panel {
   margin-top: 4px;
   padding: 10px 12px;
@@ -6629,6 +6952,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   border: 1px solid #e3e8ef;
   border-radius: 8px;
 }
+
 .sv-credit-row {
   display: flex;
   align-items: center;
@@ -6637,9 +6961,11 @@ onUnmounted(() => clearInterval(refreshTimer))
   padding: 3px 0;
   font-size: 13px;
 }
+
 .sv-credit-row.sv-credit-over strong {
   color: #c0392b;
 }
+
 .sv-credit-alert {
   margin: 6px 0 0;
   font-size: 13px;
@@ -6671,7 +6997,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   color: #444;
 }
 
-.sv-field > span {
+.sv-field>span {
   font-weight: 600;
 }
 
@@ -6763,7 +7089,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   border-radius: 8px;
 }
 
-.sv-dot-rules-head > i {
+.sv-dot-rules-head>i {
   font-size: 16px;
   margin-top: 2px;
   color: #005eb8;
@@ -6807,8 +7133,13 @@ onUnmounted(() => clearInterval(refreshTimer))
   font-size: 12px;
 }
 
-.sv-dot-rule.ok i { color: #15803d; }
-.sv-dot-rule.no i { color: #9ca3af; }
+.sv-dot-rule.ok i {
+  color: #15803d;
+}
+
+.sv-dot-rule.no i {
+  color: #9ca3af;
+}
 
 /* Modal open/close transition */
 .sv-modal-enter-active,
@@ -7019,8 +7350,13 @@ onUnmounted(() => clearInterval(refreshTimer))
   white-space: nowrap;
 }
 
-.sv-panel-card.pay-pending strong { color: #c0392b; }
-.sv-panel-card.pay-ok strong { color: #1e7e34; }
+.sv-panel-card.pay-pending strong {
+  color: #c0392b;
+}
+
+.sv-panel-card.pay-ok strong {
+  color: #1e7e34;
+}
 
 /* Folio reference (code) line above the summary cards. */
 .sv-folio-ref {
@@ -7035,7 +7371,11 @@ onUnmounted(() => clearInterval(refreshTimer))
   font-size: 12.5px;
   color: #6b7280;
 }
-.sv-folio-ref i { color: #8b5cf6; }
+
+.sv-folio-ref i {
+  color: #8b5cf6;
+}
+
 .sv-folio-ref strong {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
@@ -7185,6 +7525,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   font-size: 13px;
   color: #713f12;
 }
+
 .sv-move-summary i {
   font-size: 11px;
 }
@@ -7355,42 +7696,132 @@ onUnmounted(() => clearInterval(refreshTimer))
   flex-direction: column;
   gap: 10px;
 }
+
 .sv-detail-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
 }
+
 .sv-detail-row .sv-cap {
   min-width: 96px;
 }
+
 .sv-detail-row strong {
   text-align: right;
   font-size: 13px;
 }
+
 .sv-amount-charge {
   color: #b45309;
 }
+
 .sv-amount-credit {
   color: #0e6b3a;
 }
-.sv-receipt { padding: 0 2px; }
-.sv-receipt-head { text-align: center; margin-bottom: 12px; }
-.sv-receipt-head .sv-receipt-hotel { font-size: 14px; font-weight: 800; color: #062a52; letter-spacing: .5px; }
-.sv-receipt-head .sv-receipt-line { display: block; font-size: 11px; color: #475569; }
-.sv-receipt-meta { margin-bottom: 12px; border: 1px solid #dbe4ef; border-radius: 4px; overflow: hidden; }
-.sv-receipt-meta-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; }
-.sv-receipt-meta-row > :nth-child(n+1) { padding: 4px 8px; border: 1px solid #dbe4ef; }
-.sv-receipt-key { font-size: 10px; font-weight: 700; color: #64748b; background: #f8fafc; }
-.sv-receipt-val { font-size: 12px; font-weight: 600; }
-.sv-receipt-items { width: 100%; border-collapse: collapse; margin: 0 0 10px; font-size: 12px; }
-.sv-receipt-items th { background: #062a52; color: #fff; text-transform: uppercase; font-size: 10px; padding: 6px 8px; text-align: left; }
-.sv-receipt-items th.num { text-align: right; }
-.sv-receipt-items td { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; }
-.sv-receipt-items td.num { text-align: right; }
-.sv-receipt-totals { border-top: 1px solid #cbd5e1; padding-top: 8px; }
-.sv-receipt-total-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; color: #374151; }
-.sv-receipt-total-pay { font-size: 14px; font-weight: 800; color: #062a52; border-top: 2px solid #062a52; padding-top: 6px; margin-top: 4px; }
+
+.sv-receipt {
+  padding: 0 2px;
+}
+
+.sv-receipt-head {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.sv-receipt-head .sv-receipt-hotel {
+  font-size: 14px;
+  font-weight: 800;
+  color: #062a52;
+  letter-spacing: .5px;
+}
+
+.sv-receipt-head .sv-receipt-line {
+  display: block;
+  font-size: 11px;
+  color: #475569;
+}
+
+.sv-receipt-meta {
+  margin-bottom: 12px;
+  border: 1px solid #dbe4ef;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.sv-receipt-meta-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+}
+
+.sv-receipt-meta-row> :nth-child(n+1) {
+  padding: 4px 8px;
+  border: 1px solid #dbe4ef;
+}
+
+.sv-receipt-key {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.sv-receipt-val {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sv-receipt-items {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 10px;
+  font-size: 12px;
+}
+
+.sv-receipt-items th {
+  background: #062a52;
+  color: #fff;
+  text-transform: uppercase;
+  font-size: 10px;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.sv-receipt-items th.num {
+  text-align: right;
+}
+
+.sv-receipt-items td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.sv-receipt-items td.num {
+  text-align: right;
+}
+
+.sv-receipt-totals {
+  border-top: 1px solid #cbd5e1;
+  padding-top: 8px;
+}
+
+.sv-receipt-total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 3px 0;
+  color: #374151;
+}
+
+.sv-receipt-total-pay {
+  font-size: 14px;
+  font-weight: 800;
+  color: #062a52;
+  border-top: 2px solid #062a52;
+  padding-top: 6px;
+  margin-top: 4px;
+}
 
 .sv-folio-table .sv-icon-link:hover {
   color: #b91c1c;
@@ -7593,13 +8024,19 @@ onUnmounted(() => clearInterval(refreshTimer))
 }
 
 @keyframes svRowFlash {
-  0% { background: #d6c8f5; }
-  100% { background: #f6f1ff; }
+  0% {
+    background: #d6c8f5;
+  }
+
+  100% {
+    background: #f6f1ff;
+  }
 }
 
 /* ---- Stay-view modal & content responsive rules ---- */
 
 @media (max-width: 1180px) {
+
   .sv-modal-tabs,
   .sv-modal-sm.sv-modal-op {
     width: calc(100vw - 32px);
@@ -7630,7 +8067,7 @@ onUnmounted(() => clearInterval(refreshTimer))
     flex: 1 1 auto;
   }
 
-  .sv-modal-tabs .sv-dropdown > .btn {
+  .sv-modal-tabs .sv-dropdown>.btn {
     width: 100%;
   }
 
@@ -7686,10 +8123,9 @@ onUnmounted(() => clearInterval(refreshTimer))
   .sv-modal-tabs .sv-modal-actions .sv-modal-manage,
   .sv-modal-tabs .sv-modal-actions .sv-modal-danger,
   .sv-modal-tabs .sv-dropdown,
-  .sv-modal-tabs .sv-dropdown > .btn {
+  .sv-modal-tabs .sv-dropdown>.btn {
     width: 100%;
     flex: none;
   }
 }
 </style>
-
