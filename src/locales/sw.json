@@ -4082,7 +4082,8 @@
     "cashierLocked": "Oda za baa huchukuliwa na wabartenda",
     "barTableLocked": "Unaweza kusimamia meza za baa pekee hapa.",
     "restaurantTableLocked": "Unaweza kusimamia meza za mgahawa pekee hapa.",
-    "pinnedDept": "Idara yako imewekwa kwenye hii."
+    "pinnedDept": "Idara yako imewekwa kwenye hii.",
+    "today": "Leo"
   },
   "staffDashboard": {
     "title": "Dashibodi",

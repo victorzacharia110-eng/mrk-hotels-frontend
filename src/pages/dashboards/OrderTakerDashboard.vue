@@ -455,10 +455,24 @@
     <!-- Open orders: the whole service lifecycle on one screen, single taps -->
     <div v-else-if="activeTab === 'open'" class="open-panel">
       <div class="open-head">
-        <h2>{{ $t('orderTaker.tabOpenOrders') }} · {{ $t(`orderTaker.${department}`) }}</h2>
-        <button type="button" class="oh-manage" @click="loadOpenOrders">
-          <i class="fas fa-rotate" aria-hidden="true"></i> {{ $t('orderTaker.refresh') }}
-        </button>
+        <h2>
+          {{ $t('orderTaker.tabOpenOrders') }} · {{ $t(`orderTaker.${department}`) }}
+          <span v-if="!isOpenToday" class="open-day-label">{{ formatDateDMY(openDate) }}</span>
+        </h2>
+        <div class="sb-date-row">
+          <button v-if="!isOpenToday" type="button" class="oh-manage" @click="openDate = workingDateStore.workingDate; loadOpenOrders()">
+            <i class="fas fa-calendar-day" aria-hidden="true"></i> {{ $t('orderTaker.today') }}
+          </button>
+          <CalendarInput
+            v-model="openDate"
+            :placeholder="$t('orderTaker.tabOpenOrders')"
+            :aria-label="$t('orderTaker.tabOpenOrders')"
+            @change="loadOpenOrders"
+          />
+          <button type="button" class="oh-manage" @click="loadOpenOrders">
+            <i class="fas fa-rotate" aria-hidden="true"></i> {{ $t('orderTaker.refresh') }}
+          </button>
+        </div>
       </div>
       <p v-if="openError" class="send-error">{{ openError }}</p>
       <div v-if="openLoading" class="cat-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></div>
@@ -475,6 +489,10 @@
               : order.room_number ? $t('orders.roomN', { number: order.room_number })
               : order.guest_name || '—' }}
             · {{ order.waiter_name || '—' }}
+          </p>
+          <p class="open-meta open-time">
+            <i class="fas fa-clock" aria-hidden="true"></i>
+            {{ formatOrderDateTime(order.created_at || order.order_date) }}
           </p>
           <ul class="open-items">
             <li
@@ -1009,7 +1027,7 @@ import { restorePrinter } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { useNotificationSettingsStore } from '@/stores/notificationSettings'
 import { displayLines } from '@/utils/receipts'
-import { formatOrderDateTime } from '@/utils/dates'
+import { formatOrderDateTime, formatDateDMY } from '@/utils/dates'
 import { isGrillMenuItem, canManageAccompaniments } from '@/utils/menuAccompaniment'
 import { useAccompaniments } from '@/composables/useAccompaniments'
 import AccompanimentManager from '@/components/AccompanimentManager.vue'
@@ -1096,6 +1114,10 @@ const activeTab = ref(role.value === 'bartender' ? 'dashboard' : 'new')
 const openOrders = ref([])
 const openLoading = ref(false)
 const openError = ref('')
+// The Open Orders board shows only the current day by default; earlier days
+// stay hidden until picked in the calendar (a "Today" button jumps back).
+const openDate = ref(workingDateStore.workingDate)
+const isOpenToday = computed(() => openDate.value === workingDateStore.workingDate)
 
 // Waiters and bartenders take orders but never settle bills; settlements are
 // left to the cashier's Order Summary. Only receptionist (level 60) and above
@@ -1346,6 +1368,7 @@ async function loadOpenOrders() {
   try {
     const res = await orderApi.index({
       department: department.value,
+      date: openDate.value || undefined,
       per_page: 50,
       ...waiterScopeParams(),
     })
@@ -3505,6 +3528,22 @@ function onKey(e) {
   margin: 0;
   font-size: 13px;
   color: #71717a;
+}
+
+.open-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.open-day-label {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .open-items {

@@ -4119,7 +4119,8 @@
     "currentBalance": "Current balance",
     "remainingCredit": "Remaining credit",
     "creditExceeded": "This amount exceeds the company's remaining credit.",
-    "amountExceedsBalance": "This amount exceeds the folio's current balance."
+    "amountExceedsBalance": "This amount exceeds the folio's current balance.",
+    "today": "Today"
   },
   "staffDashboard": {
     "title": "Dashboard",
