@@ -102,3 +102,18 @@ export function formatDateDMY(value) {
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   return `${dd}/${mm}/${d.getFullYear()}`
 }
+
+/**
+ * Calendar date (`YYYY-MM-DD`) of an ISO timestamp in the browser's LOCAL
+ * timezone — the same convention as todayISO(), so "today's orders" always
+ * lines up with the calendar date the panel shows the cashier.
+ * @param {string|Date} value - ISO timestamp or Date.
+ * @returns {string} Local date string, or '' when empty/invalid.
+ */
+export function localDateOf(value) {
+  if (!value) return ''
+  const d = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+  return local.toISOString().slice(0, 10)
+}

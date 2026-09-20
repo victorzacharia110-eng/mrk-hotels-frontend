@@ -333,7 +333,7 @@ import { PAYMENT_METHODS } from '@/utils/payments'
 import { restorePrinter, printerState, connectPrinter, printerSupported } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { displayLines } from '@/utils/receipts'
-import { formatOrderDateTime, todayISO } from '@/utils/dates'
+import { formatOrderDateTime, localDateOf, todayISO } from '@/utils/dates'
 import { toast } from '@/utils/toast'
 
 const { t, te } = useI18n()
@@ -478,11 +478,12 @@ async function load() {
     if (date.value && date.value < todayISO()) params.date = date.value
     const { data } = await orderApi.index(params)
     const rows = data.data || []
-    // Otherwise show today's tickets by business order date, so anything the
-    // backend clock stamps on the wrong calendar day still surfaces.
+    // Otherwise show today's tickets by their LOCAL calendar day: the API
+    // returns no business-order-date field, so filtering on `order_date`
+    // matches nothing and today's tickets (waiter-created included) vanish.
     orders.value = params.date
       ? rows
-      : rows.filter((o) => (o.order_date || '').slice(0, 10) === date.value)
+      : rows.filter((o) => localDateOf(o.created_at || o.order_date) === date.value)
   } catch (err) {
     error.value = err.response?.data?.message || t('common.loadError')
   } finally {
