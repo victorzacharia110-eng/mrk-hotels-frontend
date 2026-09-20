@@ -474,14 +474,49 @@
           </button>
         </div>
       </div>
+      <div class="open-tools">
+        <div class="ot-search">
+          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+          <input
+            v-model="openSearch"
+            type="search"
+            :placeholder="$t('orderTaker.searchOpen')"
+            :aria-label="$t('orderTaker.searchOpen')"
+          />
+        </div>
+        <div class="ot-chips">
+          <button type="button" :class="{ active: openStatus === '' }" @click="openStatus = ''">
+            {{ $t('orderTaker.filterAll') }} · {{ openOrders.length }}
+          </button>
+          <button type="button" :class="{ active: openStatus === 'running' }" @click="openStatus = 'running'">
+            {{ $t('orderTaker.filterRunning') }} · {{ openRunningCount }}
+          </button>
+          <button type="button" :class="{ active: openStatus === 'ready' }" @click="openStatus = 'ready'">
+            {{ $t('orderTaker.filterReady') }} · {{ openReadyCount }}
+          </button>
+          <button type="button" :class="{ active: openStatus === 'served' }" @click="openStatus = 'served'">
+            {{ $t('orderTaker.filterServed') }} · {{ openServedCount }}
+          </button>
+          <button type="button" :class="{ active: openStatus === 'unpaid' }" @click="openStatus = 'unpaid'">
+            {{ $t('orderTaker.filterUnpaid') }} · {{ openUnpaidCount }}
+          </button>
+        </div>
+      </div>
       <p v-if="openError" class="send-error">{{ openError }}</p>
       <div v-if="openLoading" class="cat-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></div>
       <p v-else-if="!openOrders.length" class="cat-empty">{{ $t('orderTaker.noOpenOrders') }}</p>
+      <p v-else-if="!openFiltered.length" class="cat-empty">{{ $t('orderTaker.openNoMatch') }}</p>
       <div v-else class="open-grid">
-        <article v-for="order in openOrders" :key="order.order_id" class="open-card">
+        <article v-for="order in openFiltered" :key="order.order_id" class="open-card">
           <header class="open-card-head">
             <strong>{{ order.order_number }}</strong>
             <span class="open-badge" :class="statusBadge(order.status)">{{ statusLabel(order.status) }}</span>
+            <span
+              class="open-timer"
+              :title="$t('orderTaker.openFor', { time: formatOrderDateTime(order.created_at || order.order_date) })"
+            >
+              <i class="fas fa-stopwatch" aria-hidden="true"></i> {{ elapsedLabel(order) }}
+            </span>
           </header>
           <p class="open-meta">
             <i class="fas fa-location-dot" aria-hidden="true"></i>
@@ -491,19 +526,33 @@
             · {{ order.waiter_name || '—' }}
           </p>
           <p class="open-meta open-time">
-            <i class="fas fa-clock" aria-hidden="true"></i>
-            {{ formatOrderDateTime(order.created_at || order.order_date) }}
+            <i class="fas fa-user" aria-hidden="true"></i>
+            {{ $t('orders.guestName') }}: {{ order.guest_name || '—' }}
+            <template v-if="order.covers">
+              · <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('orderTaker.diners') }}: {{ order.covers }}
+            </template>
+            · <i class="fas fa-clock" aria-hidden="true"></i> {{ formatOrderDateTime(order.created_at || order.order_date) }}
           </p>
           <ul class="open-items">
             <li
               v-for="item in order.items || []"
               :key="item.order_item_id"
-              :class="{ 'item-served': item.status === 'ready' || item.status === 'served' }"
+              :class="{ 'item-done': item.status === 'served' }"
             >
-              {{ item.quantity }}× {{ item.item_name }}<template v-if="item.accompaniment"> · {{ item.accompaniment }}</template>
-              <span v-if="item.status === 'ready' || item.status === 'served'" class="item-ready-pill">
-                {{ item.status === 'ready' ? $t('orders.statusReady') : $t('orders.statusServed') }}
+              <span class="item-line-text">
+                {{ item.quantity }}× {{ item.item_name }}<template v-if="item.accompaniment"> · {{ item.accompaniment }}</template>
               </span>
+              <span class="item-status-pill" :class="statusBadge(item.status)">{{ statusLabel(item.status) }}</span>
+              <button
+                v-if="nextItemStatus(item)"
+                type="button"
+                class="item-advance"
+                :disabled="advancingItem === item.order_item_id"
+                :aria-label="$t('orderTaker.itemTo', { item: item.item_name, status: statusLabel(nextItemStatus(item)) })"
+                @click="advanceItem(order, item)"
+              >
+                <i class="fas" :class="nextItemStatus(item) === 'served' ? 'fa-utensils' : 'fa-bell-concierge'" aria-hidden="true"></i>
+              </button>
             </li>
           </ul>
           <p class="open-total">{{ $t('orderTaker.orderTotal') }}: <strong>TZS {{ money(order.total_amount) }}</strong>
@@ -559,6 +608,30 @@
                 <i class="fas fa-right-left" aria-hidden="true"></i> {{ $t('orderTaker.transfer') }}
               </button>
             </template>
+            <button
+              v-if="!['completed', 'cancelled'].includes(order.status)"
+              type="button"
+              class="open-btn ghost"
+              @click="printTicket(order, 'kot')"
+            >
+              <i class="fas fa-print" aria-hidden="true"></i> {{ $t('orderTaker.printKot') }}
+            </button>
+            <button
+              v-if="!['completed', 'cancelled'].includes(order.status)"
+              type="button"
+              class="open-btn ghost"
+              @click="printTicket(order, 'receipt')"
+            >
+              <i class="fas fa-receipt" aria-hidden="true"></i> {{ $t('orderTaker.printReceipt') }}
+            </button>
+            <button
+              v-if="['pending', 'preparing', 'in_progress', 'processing'].includes(order.status) && order.payment_status === 'unpaid'"
+              type="button"
+              class="open-btn ghost danger"
+              @click="openVoid(order)"
+            >
+              <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('orderTaker.voidOrder') }}
+            </button>
             <button
               v-if="!isPosRole && order.status === 'served' && order.payment_status !== 'unpaid'"
               type="button"
@@ -701,6 +774,48 @@
                 @click="pay(method.value)"
               >
                 {{ method.label }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Void order: confirm + optional reason (the backend stamps a fallback) -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="voidTarget" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog" :aria-label="$t('orderTaker.voidTitle')">
+          <div class="cat-pop-backdrop" @click="voidTarget = null"></div>
+          <div class="cat-pop-panel accomp-panel">
+            <header class="cat-pop-head">
+              <strong>{{ $t('orderTaker.voidTitle') }} · {{ voidTarget.order_number }}</strong>
+              <button type="button" class="cat-pop-close" :aria-label="$t('orderTaker.cancel')" @click="voidTarget = null">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </header>
+            <p v-if="voidError" class="send-error">{{ voidError }}</p>
+            <p class="accomp-hint">{{ $t('orderTaker.voidHint') }}</p>
+            <p class="void-summary">
+              {{ $t('orderTaker.voidSummary', {
+                table: voidTarget.table_number || voidTarget.room_number || '—',
+                total: money(voidTarget.total_amount),
+              }) }}
+            </p>
+            <label class="void-reason">
+              <textarea
+                v-model="voidReason"
+                rows="2"
+                :placeholder="$t('orderTaker.voidReason')"
+                :disabled="voiding"
+              ></textarea>
+            </label>
+            <div class="void-actions">
+              <button type="button" class="open-btn ghost" :disabled="voiding" @click="voidTarget = null">
+                {{ $t('orderTaker.cancel') }}
+              </button>
+              <button type="button" class="open-btn danger" :disabled="voiding" @click="confirmVoid">
+                <i class="fas fa-ban" aria-hidden="true"></i>
+                {{ voiding ? $t('orderTaker.sending') : $t('orderTaker.voidOrder') }}
               </button>
             </div>
           </div>
@@ -1118,6 +1233,136 @@ const openError = ref('')
 // stay hidden until picked in the calendar (a "Today" button jumps back).
 const openDate = ref(workingDateStore.workingDate)
 const isOpenToday = computed(() => openDate.value === workingDateStore.workingDate)
+
+// Open-orders board filters: instant search across the ticket identity fields,
+// plus quick status chips (all / running / ready / served / unpaid).
+const openSearch = ref('')
+const openStatus = ref('')
+
+const openRunningCount = computed(
+  () => openOrders.value.filter((o) => ['pending', 'preparing', 'in_progress', 'processing'].includes(o.status)).length,
+)
+const openReadyCount = computed(() => openOrders.value.filter((o) => o.status === 'ready').length)
+const openServedCount = computed(() => openOrders.value.filter((o) => o.status === 'served').length)
+const openUnpaidCount = computed(() => openOrders.value.filter((o) => o.payment_status !== 'paid').length)
+
+/** The board rows after search + status chips, keeping the load order. */
+const openFiltered = computed(() => {
+  let rows = openOrders.value
+  if (openStatus.value === 'running') {
+    rows = rows.filter((o) => ['pending', 'preparing', 'in_progress', 'processing'].includes(o.status))
+  } else if (openStatus.value === 'ready') {
+    rows = rows.filter((o) => o.status === 'ready')
+  } else if (openStatus.value === 'served') {
+    rows = rows.filter((o) => o.status === 'served')
+  } else if (openStatus.value === 'unpaid') {
+    rows = rows.filter((o) => o.payment_status !== 'paid')
+  }
+  const term = openSearch.value.trim().toLowerCase()
+  if (term) {
+    rows = rows.filter((o) =>
+      [o.order_number, o.guest_name, o.table_number, o.room_number, o.waiter_name]
+        .some((v) => String(v ?? '').toLowerCase().includes(term)),
+    )
+  }
+  return rows
+})
+
+// Ticking clock that powers the per-order "open for" timers and re-renders the
+// board every 30s without refetching (order pushes still reload instantly).
+const nowTs = ref(Date.now())
+let timerTick = null
+
+/** Localized "opened Xm ago" label for a ticket. */
+function elapsedLabel(order) {
+  const started = new Date(order.created_at || order.order_date || Date.now()).getTime()
+  const mins = Math.max(0, Math.round((nowTs.value - started) / 60000))
+  if (mins < 60) return t('orderTaker.minShort', { n: mins })
+  return t('orderTaker.hrShort', { h: Math.floor(mins / 60), m: mins % 60 })
+}
+
+// Void quick action: confirm + optional reason (the backend requires one, so an
+// empty box falls back to a stamped "voided by <waiter>" note).
+const voidTarget = ref(null)
+const voidReason = ref('')
+const voiding = ref(false)
+const voidError = ref('')
+const advancingItem = ref(null)
+
+function openVoid(order) {
+  voidTarget.value = order
+  voidReason.value = ''
+  voidError.value = ''
+}
+
+async function confirmVoid() {
+  const order = voidTarget.value
+  if (!order || voiding.value) return
+  voiding.value = true
+  voidError.value = ''
+  try {
+    const reason = voidReason.value.trim() || t('orderTaker.voidBy', { waiter: waiterName.value || '-' })
+    await orderApi.voidOrder(order.order_id, { reason })
+    sentToast.value = t('orderTaker.voidDone', { number: order.order_number })
+    setTimeout(() => (sentToast.value = ''), 3000)
+    voidTarget.value = null
+    // Cloud Print Settings: print a void receipt when an order is cancelled.
+    if (printStore.printOnVoid) {
+      const hotel = authStore.user?.tenant?.hotel_name || 'MRK Hotels'
+      if (!(await printStore.print(displayLines({ ...order, _payment: undefined }, 'receipt', { hotel })))) {
+        toast(t('orderTaker.noPrinter'), 'error')
+      }
+    }
+    await loadOpenOrders()
+    loadDeptOrders()
+  } catch (err) {
+    voidError.value = err.response?.data?.message || t('common.actionFailed')
+  } finally {
+    voiding.value = false
+  }
+}
+
+// Per-line cooking status: single tap advances the dish pending -> ready ->
+// served (the only moves the backend allows), then the board refreshes.
+function nextItemStatus(item) {
+  if (item.status === 'pending') return 'ready'
+  if (item.status === 'ready') return 'served'
+  return ''
+}
+
+async function advanceItem(order, item) {
+  const next = nextItemStatus(item)
+  if (!next) return
+  openError.value = ''
+  advancingItem.value = item.order_item_id
+  try {
+    await orderApi.markItemStatus(order.order_id, item.order_item_id, next)
+    sentToast.value = t('orderTaker.itemAdvanced', { item: item.item_name, status: statusLabel(next) })
+    setTimeout(() => (sentToast.value = ''), 3000)
+    await loadOpenOrders()
+    loadDeptOrders()
+  } catch (err) {
+    openError.value = err.response?.data?.message || t('common.actionFailed')
+  } finally {
+    advancingItem.value = null
+  }
+}
+
+// Reprint from the board: kitchen ticket (KOT) or guest receipt, exactly like
+// the cashier's settle screen. A ticket lacking items fetches the full order.
+async function printTicket(order, kind) {
+  if (!(order.items || []).length) {
+    try {
+      const { data } = await orderApi.show(order.order_id)
+      order.items = data.order?.items || []
+    } catch {
+      /* the receipt still prints with whatever items are known */
+    }
+  }
+  const hotel = authStore.user?.tenant?.hotel_name || 'MRK Hotels'
+  const sent = await printStore.print(displayLines(order, kind, { hotel }))
+  if (!sent) toast(t('orderTaker.noPrinter'), 'error')
+}
 
 // Waiters and bartenders take orders but never settle bills; settlements are
 // left to the cashier's Order Summary. Only receptionist (level 60) and above
@@ -2370,10 +2615,12 @@ onMounted(async () => {
     if (activeTab.value === 'dashboard') loadDashboard()
   })
   document.addEventListener('keydown', onKey)
+  timerTick = setInterval(() => (nowTs.value = Date.now()), 30000)
 })
 
 onUnmounted(() => {
   if (orderRealtime) orderRealtime.stop()
+  if (timerTick) clearInterval(timerTick)
   document.removeEventListener('keydown', onKey)
 })
 
@@ -3550,27 +3797,71 @@ function onKey(e) {
 
 .open-items {
   margin: 0;
-  padding: 0 0 0 18px;
+  padding: 0;
+  list-style: none;
   font-size: 13px;
   color: #3f3f46;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.open-items li.item-served {
+.open-items li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.open-items li.item-done .item-line-text {
   color: #15803d;
   font-weight: 600;
+  text-decoration: line-through;
+  opacity: 0.85;
 }
 
-.item-ready-pill {
+.item-line-text { flex: 1 1 auto; min-width: 0; }
+
+.item-status-pill {
   display: inline-block;
-  margin-left: 6px;
-  padding: 1px 8px;
+  padding: 2px 9px;
   border-radius: 999px;
-  background: #dcfce7;
-  color: #166534;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.item-advance {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #d4d4d8;
+  border-radius: 999px;
+  background: #fafafa;
+  color: #52525b;
+  cursor: pointer;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.item-advance:hover { background: #e4e4e7; }
+.item-advance:disabled { opacity: 0.5; cursor: default; }
+
+.open-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #b45309;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 999px;
+  padding: 3px 9px;
+  white-space: nowrap;
 }
 
 .open-total {
@@ -3631,6 +3922,78 @@ function onKey(e) {
   border: 1px solid #d4d4d8;
 }
 .open-btn.ghost:hover { background: #f4f4f5; }
+.open-btn.danger { background: #dc2626; }
+.open-btn.ghost.danger { background: transparent; color: #dc2626; border-color: #fecaca; }
+.open-btn.ghost.danger:hover { background: #fef2f2; }
+
+/* Open-orders board filters: instant search + quick status chips */
+.open-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #d4d4d8;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.ot-search {
+  flex: 1 1 220px;
+  position: relative;
+}
+.ot-search i {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #a1a1aa;
+  font-size: 13px;
+}
+.ot-search input {
+  width: 100%;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  padding: 9px 12px 9px 30px;
+  font-size: 14px;
+  background: #fafafa;
+  color: #27272a;
+}
+.ot-search input:focus { outline: none; border-color: var(--pad-accent); background: #fff; }
+.ot-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ot-chips button {
+  border: 1px solid #d4d4d8;
+  border-radius: 999px;
+  background: #fafafa;
+  color: #52525b;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.ot-chips button:hover { background: #f4f4f5; }
+.ot-chips button.active { background: #0f766e; color: #fff; border-color: #0f766e; }
+
+/* Void-confirm dialog extras */
+.void-summary {
+  margin: 0;
+  font-size: 14px;
+  color: #3f3f46;
+  font-weight: 600;
+}
+.void-reason { display: block; }
+.void-reason textarea {
+  width: 100%;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fafafa;
+  color: #27272a;
+  resize: vertical;
+}
+.void-reason textarea:focus { outline: none; border-color: var(--pad-accent); background: #fff; }
+.void-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
 .split-pick {
   margin: 12px 18px 0;
