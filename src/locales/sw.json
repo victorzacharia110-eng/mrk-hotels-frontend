@@ -1894,7 +1894,6 @@
     "date": "Tarehe",
     "total": "Jumla",
     "items": "Bidhaa",
-    "total": "Jumla",
     "status": "Hali",
     "statusReceived": "Imepokelewa",
     "statusPending": "Inasubiri",
@@ -3896,7 +3895,6 @@
     "earlyDepartureConfirm": "Thibitisha rejesho",
     "earlyDepartureDone": "Rejesho la kuondoka mapema limetumwa.",
     "earlyDepartureError": "Imeshindwa kutuma rejesho la kuondoka mapema.",
-    "amountExceedsBalance": "Kiasi hiki kinazidi salio la sasa la folio.",
     "refundLine": "Rejesho la kuondoka mapema",
     "editedBy": "imehaririwa na",
     "editedAt": "tarehe",
@@ -4272,7 +4270,7 @@
     "reports": {
       "stockLedger": "Daftari la Akiba",
       "transferSummary": "Muhtasari wa Uhamisho wa Akiba",
-      "movementDetail": "Maelezo ya Mabadiliko ya Akiba",
+      "movementDetail": "Taarifa Kamili ya Mienendo ya Akiba",
       "physicalStock": "Hesabu za Stoo",
       "closingStock": "Akiba ya Mwisho wa Siku",
       "goodsReturns": "Ripoti ya Marejesho ya Bidhaa",
@@ -4282,7 +4280,6 @@
       "printedBy": "Imechapishwa Na",
       "allOutlets": "Sehemu Zote",
       "stockAdjustment": "Urekebishaji wa Hifadhi",
-      "movementDetail": "Taarifa Kamili ya Mienendo ya Akiba",
       "printMachine": "Chapisha kwa mashine",
       "openWindow": "Fungua kwenye dirisha jipya",
       "openWindowBlocked": "Dirisha la ripoti lilezuliwa na kivinjari chako. Ruhusu pop-ups kwa tovuti hii ili kufungua ripoti kwenye dirisha jipya.",
@@ -4573,7 +4570,11 @@
     "auditVoidPayments": "Ongea Malipo",
     "auditVoidExpenseIncomeVoucher": "Ripoti ya Ongea Vochari ya Matumizi/Mapato",
     "auditTrail": "Rekodi ya Ukaguzi",
-    "orderEvents": "Matukio ya Agizo"
+    "orderEvents": "Matukio ya Agizo",
+    "menuItem": "Bidhaa",
+    "tax": "Kodi",
+    "discount": "Punguzo",
+    "waiterWiseSales": "Mauzo kwa Mhudumu"
   },
   "cashier": {
     "panelTitle": "KARO",

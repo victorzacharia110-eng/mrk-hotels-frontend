@@ -17,7 +17,7 @@
     :title="$t('posReports.title')"
     :subtitle="windowLabel"
     :exporting="exporting"
-    :pos-print="['sales', 'sales-detail'].includes(activeReport)"
+    :pos-print="['sales', 'sales-detail', 'cashier-sales-summary'].includes(activeReport)"
     @select="selectReport"
     @print="printReport"
     @pos-print="printPosReceipt"
@@ -75,6 +75,28 @@
                 <option v-for="(label, value) in businessSources" :key="value" :value="value">{{ label }}</option>
               </select>
             </label>
+            <template v-if="activeReport === 'cashier-sales-summary'">
+              <label class="posr-field">
+                <span>{{ $t('posReports.menuItem') }}</span>
+                <input v-model="filterValues.menu_item" type="text" class="rb-input" placeholder="e.g. Chicken Tikka" />
+              </label>
+              <label class="posr-field">
+                <span>{{ $t('posReports.tax') }}</span>
+                <input v-model="filterValues.tax" type="text" class="rb-input" placeholder="e.g. VAT" />
+              </label>
+              <label class="posr-field">
+                <span>{{ $t('posReports.discount') }}</span>
+                <input v-model="filterValues.discount" type="text" class="rb-input" placeholder="yes / no" />
+              </label>
+              <label class="posr-field">
+                <span>{{ $t('posReports.payment') }}</span>
+                <input v-model="filterValues.payment" type="text" class="rb-input" placeholder="e.g. M-pesa" />
+              </label>
+              <label class="posr-field">
+                <span>{{ $t('posReports.waiterWiseSales') }}</span>
+                <input v-model="filterValues.waiter_wise_sales" type="text" class="rb-input" placeholder="e.g. John" />
+              </label>
+            </template>
             <template v-if="activeReport === 'cashier-report'">
               <label class="posr-field">
                 <span>{{ $t('posReports.payment') }}</span>
@@ -470,6 +492,10 @@ const filterValues = reactive({
   include_no_charge: false,
   payment: '',
   voucher: '',
+  menu_item: '',
+  tax: '',
+  discount: '',
+  waiter_wise_sales: '',
 })
 
 const activeLabel = computed(() => {
@@ -652,6 +678,10 @@ function resetFilters() {
   filterValues.department = ''
   filterValues.payment = ''
   filterValues.voucher = ''
+  filterValues.menu_item = ''
+  filterValues.tax = ''
+  filterValues.discount = ''
+  filterValues.waiter_wise_sales = ''
   filterValues.include_no_charge = false
   run()
 }
@@ -677,6 +707,10 @@ async function run() {
       department: filterValues.department || undefined,
       payment: filterValues.payment || undefined,
       voucher: filterValues.voucher || undefined,
+      menu_item: filterValues.menu_item || undefined,
+      tax: filterValues.tax || undefined,
+      discount: filterValues.discount || undefined,
+      waiter_wise_sales: filterValues.waiter_wise_sales || undefined,
       include_no_charge: filterValues.include_no_charge ? '1' : '0',
     }
     const isCustom = activeReport.value === 'custom'

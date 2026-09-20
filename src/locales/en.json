@@ -1918,7 +1918,6 @@
     "date": "Date",
     "total": "Total",
     "items": "Items",
-    "total": "Total",
     "status": "Status",
     "statusReceived": "Received",
     "statusPending": "Pending",
@@ -4318,7 +4317,6 @@
       "printedBy": "Printed By",
       "allOutlets": "All Outlets",
       "stockAdjustment": "Stock Adjustment",
-      "movementDetail": "Stock Movement Detail",
       "printMachine": "Print to machine",
       "openWindow": "Open in new window",
       "openWindowBlocked": "The report window was blocked by your browser. Allow pop-ups for this site to open reports in a new window.",
@@ -4609,7 +4607,11 @@
     "auditVoidPayments": "Void Payments",
     "auditVoidExpenseIncomeVoucher": "Void Expense/Income Voucher Report",
     "auditTrail": "Audit Trail",
-    "orderEvents": "Order Events"
+    "orderEvents": "Order Events",
+    "menuItem": "Menu Item",
+    "tax": "Tax",
+    "discount": "Discount",
+    "waiterWiseSales": "Waiter Wise Sales"
   },
   "cashier": {
     "panelTitle": "POS",
