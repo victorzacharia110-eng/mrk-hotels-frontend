@@ -292,12 +292,16 @@ const occupiedCount = computed(() => tables.value.filter((x) => effectiveStatus(
 const vacantCount = computed(() => tables.value.filter((x) => effectiveStatus(x) === 'available').length)
 
 /** Real occupancy: a table is occupied the moment any running ticket sits on
- * it, even if its status column was never updated (e.g. after a void or a
- * manual flag). A frozen ticket still keeps the guest seated until settlement. */
+ *  it, even if its status column was never updated. The register flag is NOT
+ *  trusted here — it can go stale (e.g. a table left flagged "occupied" after
+ *  an unusual flow) and would then contradict the waiter floor, which is
+ *  driven purely by live tickets. A frozen ticket still keeps the guest
+ *  seated until settlement; a manager "reserved" flag is preserved as-is. */
 function effectiveStatus(table) {
   const hasAnyTicket = (runningByTable.value[table.table_name] || []).length > 0
   if (hasAnyTicket) return 'occupied'
-  return table.status === 'occupied' ? 'occupied' : table.status || 'available'
+  if (table.status === 'reserved') return 'reserved'
+  return 'available'
 }
 
 const runningByTable = computed(() => {
