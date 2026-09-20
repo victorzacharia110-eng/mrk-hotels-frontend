@@ -1772,6 +1772,8 @@
     "recall": "Recall",
     "requestedBy": "Requested by",
     "department": "Department",
+    "fromDate": "From date",
+    "toDate": "To date",
     "items": "Items",
     "requested": "Requested",
     "available": "Available",
@@ -3965,6 +3967,7 @@
     "all": "All",
     "bar": "Bar",
     "restaurant": "Restaurant",
+    "dayCloseReminderText": "A new day ({today}) has started, but the open business day is still {open}. Orders taken now join the running orders of {open} until Day Close is done.",
     "dineIn": "Dine in",
     "takeAway": "Take away",
     "table": "Table",
@@ -4501,6 +4504,12 @@
     "outlet": "Outlet",
     "businessSource": "Business Source",
     "subCategory": "Sub Category",
+    "department": "Department",
+    "subTotal": "Sub Total",
+    "departments": {
+      "restaurant": "Restaurant",
+      "bar": "Bar"
+    },
     "all": "All",
     "run": "Run Report",
     "columns": "Columns",
@@ -5055,7 +5064,10 @@
       "standardTime": "Standard Time",
       "liveHotelTime": "Live time at hotel",
       "standardTimeHint": "The hotel's standard time. Orders, the Day Close clock and every day's boundaries roll over at midnight in this timezone.",
-      "timezoneSaved": "Standard time updated successfully."
+      "timezoneSaved": "Standard time updated successfully.",
+      "reminderTitle": "New day started",
+      "reminderText": "A new day ({today}) has started, but the open business day is still {open}. Orders taken now join the running orders of {open} until Day Close is done.",
+      "proceed": "Proceed to Day Close"
     }
   },
   "paymentInstructionCard": {

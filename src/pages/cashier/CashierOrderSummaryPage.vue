@@ -70,7 +70,7 @@
             <td>{{ money(order.total_amount) }}</td>
             <td>
               <div class="row-actions">
-                <button class="sm-btn sm" @click="openDrawer(order)"
+                <button v-if="order.status !== 'cancelled'" class="sm-btn sm" @click="openDrawer(order)"
                   :title="$t('cashier.summary.viewOrder')">
                   <i class="fas fa-eye" aria-hidden="true"></i> {{ $t('cashier.summary.view') }}
                 </button>

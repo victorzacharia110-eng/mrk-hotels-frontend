@@ -225,6 +225,26 @@
         </div>
       </div>
     </div>
+
+    <!-- Day Close reminder: a new calendar day started but the open business
+         day has not been closed, so every order taken now still joins the
+         running orders of the open day until Day Close is run. -->
+    <div v-if="dayCloseReminder" class="sm-modal-backdrop">
+      <div class="sm-modal dc-reminder" role="dialog" aria-modal="true">
+        <div class="sm-modal-head">
+          <h3><i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.reminderTitle') }}</h3>
+        </div>
+        <p class="gate-hint">{{ $t('cashier.dayClose.reminderText', { open: dayCloseOpenLabel, today: dayCloseTodayLabel }) }}</p>
+        <div class="sm-modal-foot">
+          <button class="sm-btn sm ghost" @click="dismissDayCloseReminder">
+            <i class="fas fa-xmark" aria-hidden="true"></i> {{ $t('common.cancel') }}
+          </button>
+          <button class="sm-btn sm" @click="goDayClose">
+            <i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.proceed') }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -342,10 +362,36 @@ async function handleLogout() {
   router.push({ name: 'login' })
 }
 
+// Day Close reminder: once a new calendar day starts while the open business
+// date is unchanged, remind the cashier/bartender that today's orders join the
+// open day's running orders until Day Close is run. Dismissed once per session.
+const dayCloseReminder = ref(false)
+const DAY_CLOSE_REMINDER_KEY = 'dc_reminder_dismissed'
+const dayCloseOpenLabel = computed(() => d(new Date(workingDateStore.openDate + 'T12:00:00'), 'long'))
+const dayCloseTodayLabel = computed(() => d(new Date(), 'long'))
+
+async function checkDayCloseReminder() {
+  await workingDateStore.ensureLoaded()
+  if (workingDateStore.needsDayClose && !sessionStorage.getItem(DAY_CLOSE_REMINDER_KEY)) {
+    dayCloseReminder.value = true
+  }
+}
+
+function dismissDayCloseReminder() {
+  sessionStorage.setItem(DAY_CLOSE_REMINDER_KEY, '1')
+  dayCloseReminder.value = false
+}
+
+function goDayClose() {
+  dismissDayCloseReminder()
+  router.push({ name: 'cashier-day-close' })
+}
+
 onMounted(() => {
   loadOutlets()
   restorePrinter()
   workingDateStore.ensureLoaded()
+  checkDayCloseReminder()
 })
 </script>
 

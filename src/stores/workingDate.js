@@ -27,6 +27,16 @@ export const useWorkingDateStore = defineStore('workingDate', () => {
   /** The business date every cashier/bar/inventory panel should default to. */
   const workingDate = computed(() => openDate.value || localToday())
 
+  /**
+   * True once the wall-clock date has moved past the open business date —
+   * i.e. a new day has started but Day Close has not been run yet. Panels
+   * use this to remind staff that orders taken now still join the running
+   * orders of the open (un-closed) business day.
+   */
+  const needsDayClose = computed(
+    () => Boolean(openDate.value) && openDate.value < localToday(),
+  )
+
   /** Fetches the open business date once; failures keep the local fallback. */
   async function ensureLoaded() {
     if (loaded.value || loading.value) return
@@ -60,6 +70,7 @@ export const useWorkingDateStore = defineStore('workingDate', () => {
     loading,
     loaded,
     workingDate,
+    needsDayClose,
     ensureLoaded,
     reload,
   }

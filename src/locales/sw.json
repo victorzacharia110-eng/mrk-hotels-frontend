@@ -1748,6 +1748,8 @@
     "recall": "Rejesha",
     "requestedBy": "Aliyeomba",
     "department": "Idara",
+    "fromDate": "Tarehe ya kuanzia",
+    "toDate": "Tarehe ya kumalizia",
     "items": "Bidhaa",
     "requested": "Zinazohitajika",
     "available": "Zilizopo",
@@ -3938,6 +3940,7 @@
     "all": "Zote",
     "bar": "Baa",
     "restaurant": "Mgahawa",
+    "dayCloseReminderText": "Siku mpya ({today}) imeanza, lakini siku iliyo wazi bado ni {open}. Oda zinazochukuliwa sasa zitajiunga na oda zinazoendelea za {open} hadi Funga Siku itakapomalizika.",
     "dineIn": "Kula hapa",
     "takeAway": "Chukua kwenda",
     "table": "Meza",
@@ -4465,6 +4468,12 @@
     "outlet": "Duka",
     "businessSource": "Chanzo cha Biashara",
     "subCategory": "Kategoria ndogo",
+    "department": "Idara",
+    "subTotal": "Jumla Ndogo",
+    "departments": {
+      "restaurant": "Mgahawa",
+      "bar": "Baa"
+    },
     "all": "Zote",
     "run": "Endesha Ripoti",
     "columns": "Safu",
@@ -5020,7 +5029,10 @@
       "standardTime": "Saa Rasmi",
       "liveHotelTime": "Saa za sasa hotelini",
       "standardTimeHint": "Saa rasmi ya hoteli. Oda, saa ya kufunga siku na mipaka ya kila siku hubadilika usiku wa manane katika eneo hili la saa.",
-      "timezoneSaved": "Saa rasmi zimesasishwa kikamilifu."
+      "timezoneSaved": "Saa rasmi zimesasishwa kikamilifu.",
+      "reminderTitle": "Siku mpya imeanza",
+      "reminderText": "Siku mpya ({today}) imeanza, lakini siku iliyo wazi bado ni {open}. Oda zinazochukuliwa sasa zitajiunga na oda zinazoendelea za {open} hadi Funga Siku itakapomalizika.",
+      "proceed": "Endelea na Funga Siku"
     }
   },
   "paymentInstructionCard": {

@@ -40,7 +40,8 @@
         <option value="">{{ $t('common.all') }}</option>
         <option v-for="s in statusList" :key="s" :value="s">{{ statusLabel(s) }}</option>
       </select>
-      <CalendarInput v-model="filterDate" :placeholder="$t('common.date')" @change="load" />
+      <CalendarInput v-model="filterFrom" :placeholder="$t('requisitionPanel.fromDate')" @change="load" />
+      <CalendarInput v-model="filterTo" :placeholder="$t('requisitionPanel.toDate')" @change="load" />
       <span v-if="restricted" class="rq-dept-badge"><i class="fas fa-building"></i> {{ deptName }}</span>
     </div>
 
@@ -86,6 +87,9 @@
                 </template>
                 <template v-if="canAccept(indent)">
                   <button class="rq-btn sm primary" @click="accept(indent)"><i class="fas fa-hand-holding"></i> {{ $t('requisitionPanel.accept') }}</button>
+                </template>
+                <template v-if="canRejectAnswer(indent)">
+                  <button class="rq-btn sm danger-text ghost" @click="askReason(reject, indent)"><i class="fas fa-xmark"></i> {{ $t('requisitionPanel.reject') }}</button>
                 </template>
                 <template v-if="canVoid(indent)">
                   <button class="rq-btn sm ghost danger-text" @click="askReason(voidRequisition, indent)"><i class="fas fa-ban"></i> {{ $t('requisitionPanel.void') }}</button>
@@ -291,8 +295,10 @@ const tabs = computed(() => {
   return []
 })
 
-/** Universal calendar date filter — current working date by default. */
-const filterDate = ref(workingDateStore.workingDate)
+/** Universal calendar range — both default to the current working date, so
+ * past requisitions and indents can be browsed within any from/to window. */
+const filterFrom = ref(workingDateStore.workingDate)
+const filterTo = ref(workingDateStore.workingDate)
 
 const tab = ref(isStoreManager.value ? 'received' : 'mine')
 const indents = ref([])
@@ -402,8 +408,12 @@ function canRecall(i) {
     || (isKeeper.value && !isRequester(i) && i.status === 'forwarded' && !i.accepted_at)
 }
 function canAccept(i) { return isRequester(i) && i.status === 'forwarded' }
+// Once the store has answered a requisition, the requester may only ACCEPT it
+// or REJECT it back to the store (never approve or reject their own pending
+// request — that stays with the store keeper/management).
+function canRejectAnswer(i) { return isRequester(i) && i.status === 'forwarded' }
 function canSupply(i) { return isKeeper.value && !isRequester(i) && i.status === 'pending' }
-function canApprove(i) { return isKeeper.value && i.status === 'pending' }
+function canApprove(i) { return isKeeper.value && !isRequester(i) && i.status === 'pending' }
 function canVoid(i) {
   // Void is destructive, so only MANAGEMENT may void; and the store keeper can
   // no longer recall once the requester has accepted the forwarded answer.
@@ -446,7 +456,8 @@ async function load() {
   try {
     const params = { per_page: 250 }
     params.mine = tab.value === 'mine' ? 1 : 0
-    if (filterDate.value) params.date = filterDate.value
+    if (filterFrom.value) params.from = filterFrom.value
+    if (filterTo.value) params.to = filterTo.value
     const res = await inventoryOpsApi.indents(params)
     indents.value = res.data.indents || []
   } catch (e) {
@@ -659,7 +670,8 @@ async function emailDetail() {
 
 onMounted(async () => {
   await workingDateStore.ensureLoaded()
-  filterDate.value = workingDateStore.workingDate
+  filterFrom.value = workingDateStore.workingDate
+  filterTo.value = workingDateStore.workingDate
   // Guard against the auth user hydrating after setup: snap onto a real tab.
   if (!tabs.value.some((tb) => tb.key === tab.value)) {
     tab.value = tabs.value[0]?.key || 'mine'

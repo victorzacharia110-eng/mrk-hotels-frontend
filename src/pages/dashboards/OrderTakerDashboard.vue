@@ -73,6 +73,24 @@
       </div>
     </nav>
 
+    <!-- Day Close reminder (waiter pad): shown once per session when a new
+         calendar day started but the open business day wasn't closed yet.
+         Waiters can only dismiss (CANCEL); bartenders may proceed to Day Close. -->
+    <div v-if="dayCloseBanner" class="dc-banner" role="note">
+      <span class="dc-banner-text">
+        <i class="fas fa-calendar-day" aria-hidden="true"></i>
+        {{ $t('orderTaker.dayCloseReminderText', { open: dayCloseOpenLabel, today: dayCloseTodayLabel }) }}
+      </span>
+      <span class="dc-banner-actions">
+        <button v-if="canOpenDayClose" type="button" class="dc-btn ok" @click="goDayClose">
+          <i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.proceed') }}
+        </button>
+        <button type="button" class="dc-btn" @click="dismissDayCloseBanner">
+          <i class="fas fa-xmark" aria-hidden="true"></i> {{ $t('common.cancel') }}
+        </button>
+      </span>
+    </div>
+
     <template v-if="activeTab === 'new'">
     <div class="taker-split">
       <!-- LEFT: categories + search + inline items (Ezee-style picker) -->
@@ -978,6 +996,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { useOrderRealtime } from '@/composables/useOrderRealtime'
@@ -997,9 +1016,38 @@ import AccompanimentManager from '@/components/AccompanimentManager.vue'
 import { toast } from '@/utils/toast'
 
 const { t } = useI18n()
+const router = useRouter()
 const authStore = useAuthStore()
 const printStore = usePrintSettingsStore()
 const workingDateStore = useWorkingDateStore()
+
+// Day Close reminder — once per session when a new calendar day started but
+// the open business day wasn't closed yet. Waiters may only dismiss (CANCEL);
+// bartenders/cashiers can also proceed to the Day Close page.
+const dayCloseBanner = ref(false)
+const DAY_CLOSE_BANNER_KEY = 'dc_banner_dismissed'
+const canOpenDayClose = computed(() => role.value !== 'waiter')
+const dayCloseOpenLabel = computed(() =>
+  new Date(workingDateStore.openDate + 'T12:00:00').toLocaleDateString(),
+)
+const dayCloseTodayLabel = computed(() => new Date().toLocaleDateString())
+
+function dismissDayCloseBanner() {
+  sessionStorage.setItem(DAY_CLOSE_BANNER_KEY, '1')
+  dayCloseBanner.value = false
+}
+
+function goDayClose() {
+  dismissDayCloseBanner()
+  router.push({ name: 'cashier-day-close' })
+}
+
+async function checkDayCloseBanner() {
+  await workingDateStore.ensureLoaded()
+  if (workingDateStore.needsDayClose && !sessionStorage.getItem(DAY_CLOSE_BANNER_KEY)) {
+    dayCloseBanner.value = true
+  }
+}
 
 // The department defaults from the staff role (bartenders start on the bar)
 // but can be switched at any time with the Restaurant / Bar toggle.
@@ -1219,21 +1267,28 @@ async function loadDashboard() {
   }
 }
 
-/** Loads the waiter's orders for the picked day and keeps only this waiter's. */
+/** Loads the waiter's orders for the picked day and keeps only this waiter's.
+ *  Waiters cover restaurant + bar, so their totals (TOTAL RUNNING — RESTA+BAR,
+ *  SETTLED and VOIDED) always span BOTH sides of the floor. */
 async function loadOrderSummary() {
   summaryLoading.value = true
   summaryError.value = ''
   try {
-    // Dedicated daily settlement summary (mode-of-payment buckets + waiter
-    // scope). The backend closes the same-waiter rule itself for floor staff.
-    const res = await orderApi.summary({
-      department: department.value,
-      date: summaryDate.value || undefined,
-      ...waiterScopeParams(),
-    })
-    const body = res.data?.summary || res.data?.data || res.data || {}
-    const rows = Array.isArray(res.data?.orders) ? res.data.orders : (body.orders || [])
-    myOrders.value = floorStaffOrders(rows).filter(isMine)
+    const depts = fixedDept.value ? [fixedDept.value] : ['restaurant', 'bar']
+    const all = []
+    for (const dept of depts) {
+      // Dedicated daily settlement summary (mode-of-payment buckets + waiter
+      // scope). The backend closes the same-waiter rule itself for floor staff.
+      const res = await orderApi.summary({
+        department: dept,
+        date: summaryDate.value || undefined,
+        ...waiterScopeParams(),
+      })
+      const body = res.data?.summary || res.data?.data || res.data || {}
+      const rows = Array.isArray(res.data?.orders) ? res.data.orders : (body.orders || [])
+      all.push(...rows)
+    }
+    myOrders.value = floorStaffOrders(all).filter(isMine)
   } catch (err) {
     summaryError.value = err.response?.data?.message || t('orderTaker.loadOrdersError')
     myOrders.value = []
@@ -1602,13 +1657,16 @@ const BAR_FALLBACK_TABLES = Array.from({ length: BAR_FALLBACK_COUNT }, (_, i) =>
 const barSeeded = ref(false)
 // Every table surface (dine-in map, order picker, split/transfer destinations)
 // shows ONLY the department being worked: bartenders = bar, cashiers =
-// restaurant, waiters = whichever side the switch is on. Restaurant and bar
-// tables therefore never mix or interfere — each belongs to its own setting.
+// restaurant. Waiters cover BOTH sides, so for them every table is surfaced —
+// including the other side's occupancy and transfer destinations (a waiter
+// must be able to move a bar drinks bill onto a restaurant table and vice
+// versa). Restaurant and bar tables therefore never mix for the fixed roles,
+// while waiters always see the full floor.
 const servingTables = computed(() => {
-  const dept = fixedDept.value || department.value
-  if (!dept) return tables.value
+  if (!fixedDept.value) return tables.value
+  const dept = fixedDept.value
   const matched = tables.value.filter((t) => String(t.section || '').trim().toLowerCase() === dept)
-  if (fixedDept.value !== 'bar' || barSeeded.value) return matched
+  if (dept !== 'bar' || barSeeded.value) return matched
   const taken = new Set(matched.map((t) => String(t.table_name).trim().toLowerCase()))
   const placeholders = BAR_FALLBACK_TABLES
     .filter((f) => !taken.has(String(f.table_name).trim().toLowerCase()))
@@ -1628,15 +1686,23 @@ const DEFAULT_LOCATIONS = ['restaurant', 'bar', 'lounge', 'terrace']
 const deptOrders = ref([])
 
 async function loadDeptOrders() {
-  try {
-    const res = await orderApi.index({ department: department.value, per_page: 100 })
-    const rows = Array.isArray(res.data) ? res.data : res.data?.data || []
-    deptOrders.value = rows.filter(
-      (order) => !['completed', 'cancelled'].includes(order.status) && order.payment_status !== 'paid',
-    )
-  } catch {
-    deptOrders.value = []
+  // Waiters cover restaurant AND bar, so occupancy (and therefore the "TABLE
+  // IS OCCUPIED" flag on the map) must come from BOTH sides for them; the
+  // fixed roles only ever pull their own department's live tickets.
+  const depts = fixedDept.value ? [fixedDept.value] : ['restaurant', 'bar']
+  const merged = []
+  for (const dept of depts) {
+    try {
+      const res = await orderApi.index({ department: dept, per_page: 100 })
+      const rows = Array.isArray(res.data) ? res.data : res.data?.data || []
+      merged.push(...rows)
+    } catch {
+      // A failed side keeps the other side's occupancy.
+    }
   }
+  deptOrders.value = merged.filter(
+    (order) => !['completed', 'cancelled'].includes(order.status) && order.payment_status !== 'paid',
+  )
 }
 
 // Tables currently held by an open, unpaid order in this department (occupied
@@ -2264,6 +2330,7 @@ onMounted(async () => {
   summaryDate.value = workingDateStore.workingDate
   dashFrom.value = workingDateStore.workingDate
   dashTo.value = workingDateStore.workingDate
+  checkDayCloseBanner()
   loadMenu()
   loadTables()
   loadOpenOrders()
@@ -3989,6 +4056,38 @@ function onKey(e) {
   color: #52525b;
 }
 .dash-req-items { color: #71717a; font-weight: 600; }
+
+/* Day Close reminder banner (waiter pad) */
+.dc-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 14px 0;
+  padding: 10px 14px;
+  border: 1px solid #facc15;
+  background: #fffbeb;
+  color: #713f12;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.dc-banner i { color: #d97706; }
+.dc-banner-actions { display: flex; gap: 8px; align-items: center; }
+.dc-btn {
+  border: 1px solid #d6d3d1;
+  background: #fff;
+  color: #44403c;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.dc-btn.ok { background: #005eb8; border-color: #005eb8; color: #fff; }
+.dc-btn.ok:hover { background: #00468c; }
 
 @media (max-width: 900px) {
   .dash-kpis { grid-template-columns: repeat(2, 1fr); }

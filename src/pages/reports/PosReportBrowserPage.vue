@@ -17,7 +17,7 @@
     :title="$t('posReports.title')"
     :subtitle="windowLabel"
     :exporting="exporting"
-    :pos-print="activeReport === 'cashier-report'"
+    :pos-print="['sales', 'sales-detail'].includes(activeReport)"
     @select="selectReport"
     @print="printReport"
     @pos-print="printPosReceipt"
@@ -96,6 +96,13 @@
               <select v-model="filterValues.category_id" class="rb-input rb-select">
                 <option value="">{{ $t('posReports.all') }}</option>
                 <option v-for="c in categoryOptions" :key="c.category_id" :value="c.category_id">{{ c.category_name }}</option>
+              </select>
+            </label>
+            <label v-if="usesDepartmentFilter" class="posr-field">
+              <span>{{ $t('posReports.department') }}</span>
+              <select v-model="filterValues.department" class="rb-input rb-select">
+                <option value="">{{ $t('posReports.all') }}</option>
+                <option v-for="d in departmentOptions" :key="d" :value="d">{{ $t(`posReports.departments.${d}`) }}</option>
               </select>
             </label>
             <label class="posr-field">
@@ -182,18 +189,45 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(row, i) in engine.rows" :key="i">
-                  <td
-                    v-for="col in engine.columns"
-                    :key="col.key"
-                    :class="{ num: col.format === 'money' || col.format === 'pct' }"
-                  >
-                    {{ formatCell(row[col.key], col.format) }}
-                  </td>
-                </tr>
-                <tr v-if="!engine.rows.length">
-                  <td :colspan="engine.columns.length" class="rb-empty">{{ $t('reportBrowser.noRows') }}</td>
-                </tr>
+                <template v-if="groupedModel.length">
+                  <template v-for="(group, gi) in groupedModel" :key="gi">
+                    <tr class="rb-group-head">
+                      <td :colspan="engine.columns.length">
+                        <i class="fas fa-utensils" aria-hidden="true"></i>
+                        {{ $t(`posReports.departments.${group.name}`) }}
+                      </td>
+                    </tr>
+                    <tr v-for="(row, i) in group.items" :key="gi + '-' + i">
+                      <td
+                        v-for="col in engine.columns"
+                        :key="col.key"
+                        :class="{ num: col.format === 'money' || col.format === 'pct' }"
+                      >
+                        {{ formatCell(row[col.key], col.format) }}
+                      </td>
+                    </tr>
+                    <tr class="rb-group-foot">
+                      <td class="rb-subtotal-label">{{ $t('posReports.subTotal') }}</td>
+                      <td v-for="col in groupCols" :key="col.key" class="rb-subtotal-value">
+                        {{ groupCellTotal(group, col) }}
+                      </td>
+                    </tr>
+                  </template>
+                </template>
+                <template v-else>
+                  <tr v-for="(row, i) in engine.rows" :key="i">
+                    <td
+                      v-for="col in engine.columns"
+                      :key="col.key"
+                      :class="{ num: col.format === 'money' || col.format === 'pct' }"
+                    >
+                      {{ formatCell(row[col.key], col.format) }}
+                    </td>
+                  </tr>
+                  <tr v-if="!engine.rows.length">
+                    <td :colspan="engine.columns.length" class="rb-empty">{{ $t('reportBrowser.noRows') }}</td>
+                  </tr>
+                </template>
               </tbody>
               <tfoot v-if="engine.totals?.length">
                 <tr>
@@ -242,7 +276,6 @@ const REPORTS = [
   { key: 'cashier-sales-summary', label: 'posReports.cashierSalesSummary' },
   { key: 'cashier-sales-detail', label: 'posReports.cashierSalesDetail' },
   { key: 'shift-manager-timing', label: 'posReports.shiftManagerTiming' },
-  { key: 'cashier-report', label: 'posReports.cashierReport' },
   { key: 'no-charge', label: 'posReports.noChargesSalesSummary' },
   { key: 'no-charge-menu-item-sales-summary', label: 'posReports.noChargeMenuItemSalesSummary' },
   { key: 'no-charge-menu-item-sales-detail', label: 'posReports.noChargeMenuItemSalesDetail' },
@@ -316,7 +349,6 @@ const categories = [
       { key: 'cashier-sales-summary', label: 'posReports.cashierSalesSummary', icon: 'fas fa-user-tie' },
       { key: 'cashier-sales-detail', label: 'posReports.cashierSalesDetail', icon: 'fas fa-user-tie' },
       { key: 'shift-manager-timing', label: 'posReports.shiftManagerTiming', icon: 'fas fa-stopwatch' },
-      { key: 'cashier-report', label: 'posReports.cashierReport', icon: 'fas fa-receipt' },
     ],
   },
   {
@@ -434,6 +466,7 @@ const filterValues = reactive({
   business_source: '',
   category_id: '',
   sub_category: '',
+  department: '',
   include_no_charge: false,
   payment: '',
   voucher: '',
@@ -496,6 +529,57 @@ const subCategoryOptions = computed(() => {
   if (activeReport.value !== 'menu-item-sales') return []
   return engine.value?.filters?.categories || []
 })
+
+/** F&B department filter for the MENU ITEM SALES reports. */
+const MENU_ITEM_REPORTS = new Set(['menu-item-sales', 'menu-items-sales-detail'])
+const usesDepartmentFilter = computed(
+  () => MENU_ITEM_REPORTS.has(activeReport.value) && (Array.isArray(engine.value?.filters?.departments) ? engine.value.filters.departments.length > 0 : false),
+)
+const departmentOptions = computed(() => engine.value?.filters?.departments || [])
+
+/** The menu-item reports render one table block per department, with a SUB
+ *  TOTAL footer under each block and the engine GRAND TOTAL under all of them.
+ *  Backend rows arrive alphabetically within each department; departments are
+ *  rowed up in the order they first appear. */
+const groupedModel = computed(() => {
+  if (!MENU_ITEM_REPORTS.has(activeReport.value)) return []
+  const rows = engine.value?.rows || []
+  const groups = new Map()
+  for (const row of rows) {
+    const name = row.department || '—'
+    if (!groups.has(name)) groups.set(name, [])
+    groups.get(name).push(row)
+  }
+  return [...groups.entries()].map(([name, items]) => ({ name, items }))
+})
+
+/** Columns that carry numbers on a grouped SUB TOTAL row: everything except
+ *  the identifying/grouping labels. */
+const groupCols = computed(() => {
+  const skip = new Set(['order_no', 'receipt_no', 'ordered_time', 'item', 'department', 'category'])
+  return (engine.value?.columns || []).filter((c) => !skip.has(c.key))
+})
+
+function cellNumber(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  if (typeof value === 'string') {
+    const n = parseFloat(String(value).replace(/,/g, ''))
+    return Number.isNaN(n) ? null : n
+  }
+  return null
+}
+
+function groupCellTotal(group, col) {
+  const nums = group.items.map((r) => cellNumber(r[col.key])).filter((n) => n !== null)
+  if (!nums.length) return '—'
+  const sum = nums.reduce((a, b) => a + b, 0)
+  const sample = group.items[0][col.key]
+  const isMoney = typeof sample === 'string' && /^\d[\d,]*\.\d{2}$/.test(String(sample))
+  if (isMoney) {
+    return sum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+  return String(Math.round(sum * 100) / 100)
+}
 
 const businessSources = computed(() => {
   const orderTypes = {
@@ -565,6 +649,7 @@ function resetFilters() {
   filterValues.business_source = ''
   filterValues.category_id = ''
   filterValues.sub_category = ''
+  filterValues.department = ''
   filterValues.payment = ''
   filterValues.voucher = ''
   filterValues.include_no_charge = false
@@ -589,6 +674,7 @@ async function run() {
       created_by: filterValues.user_id || undefined,
       category_id: filterValues.category_id || undefined,
       sub_category: filterValues.sub_category || undefined,
+      department: filterValues.department || undefined,
       payment: filterValues.payment || undefined,
       voucher: filterValues.voucher || undefined,
       include_no_charge: filterValues.include_no_charge ? '1' : '0',
@@ -622,10 +708,10 @@ function printReport() {
 }
 
 /**
- * POS-thermal receipt for the Cashier Report — the reference's small-POS-
- * printer path (NOT A4). Opens a narrow 80mm till-roll window with the staff
- * collections, per-cashier breakdown and drawer voucher netting, then hands
- * off to the browser print dialog so the small POS printer can be selected.
+ * POS-thermal receipt for the cashier sales reports — the reference's small-
+ * POS-printer path (NOT A4). Opens a narrow 80mm till-roll window with the
+ * report columns and totals, then hands off to the browser print dialog so
+ * the small POS printer can be selected.
  */
 function printPosReceipt() {
   const data = engine.value
@@ -640,38 +726,34 @@ function printPosReceipt() {
   }
   win.opener = null
 
-  const money = (v) => formatCell(v, 'money')
   const pad = (text, width) => {
     const s = String(text ?? '')
     return s.length >= width ? s : s + ' '.repeat(width - s.length)
   }
-  const kpiLines = (data.summary || [])
-    .map((kpi) => `${pad(esc(kpi.label), 26)} ${esc(summaryValue(kpi.value))}`)
-    .join('\n')
-  const staffLines = data.rows
-    .map(
-      (r) =>
-        `${esc(r.user || '—')}\n` +
-        `  Tickets     ${pad(formatCell(r.tickets, 'text'), 12)}\n` +
-        `  Revenue     ${money(r.revenue)}\n` +
-        `  Collected   ${money(r.collected)}\n` +
-        `  No Charge   ${money(r.no_charge)}\n` +
-        `  Outstanding ${money(r.outstanding)}`,
-    )
-    .join('\n--------------------------------\n')
-  const summaryBlock = kpiLines ? `\n--------------------------------\nSUMMARY\n${kpiLines}` : ''
 
-  const body = `================================
+  // Sales Summary / Sales Detail print as a receipt too: every column becomes a
+  // space-padded line so the 80mm till printer keeps the columns readable.
+  const cols = data.columns || []
+  const colWidths = cols.map((c) => Math.max(esc(columnLabel(c.key, c.label)).length, 8)).map((w) => Math.min(w, 16))
+  const head = cols.map((c, i) => esc(columnLabel(c.key, c.label)).padEnd(colWidths[i])).join(' ').slice(0, 46)
+  const lineRows = data.rows.map(
+    (r) => cols.map((c, i) => esc(formatCell(r[c.key], c.format)).padEnd(colWidths[i])).join(' ').trimEnd().slice(0, 46),
+  )
+  const totalLines = (data.totals || [])
+    .map((tt) => `${pad(esc(tt.label), 24)} ${esc(formatCell(tt.value, 'money'))}`)
+    .join('\n')
+  const totalsBlock = totalLines ? `\n------------------------------\n${totalLines}` : ''
+  const body = `===============================
  MRK HOTELS POS
  ${activeLabel.value}
  ${windowLabel.value}
-================================
-STAFF COLLECTIONS
---------------------------------
-${staffLines}${summaryBlock}
---------------------------------
+ ===============================
+${head}
+------------------------------
+${lineRows.join('\n')}${totalsBlock}
+------------------------------
 Generated ${new Date().toLocaleString()}
-================================`.trim()
+===============================`.trim()
 
   win.document.open()
   win.document.write(
@@ -1105,6 +1187,24 @@ const money = (v) => {
   font-weight: 700;
   background: #f7fafd;
 }
+.rb-group-head td {
+  background: #062a52;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 7px 10px;
+}
+.rb-group-head td i { margin-right: 6px; color: #b0cde9; }
+.rb-group-foot td {
+  background: #eef4fb;
+  font-weight: 700;
+  color: #1e3a5f;
+  padding: 6px 10px;
+}
+.rb-subtotal-label { text-transform: uppercase; font-size: 11px; letter-spacing: 0.03em; }
+.rb-subtotal-value { text-align: right; white-space: nowrap; }
 .table-scroll {
   overflow-x: auto;
 }
