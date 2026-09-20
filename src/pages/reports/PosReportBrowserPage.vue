@@ -575,8 +575,19 @@ const filterListsLoaded = computed(
   () => engine.value !== null && !loading.value,
 )
 
+/** Reports whose backend returns a staff list but never applies it — the Staff
+ *  dropdown looks alive but the selection changes nothing (aggregate position,
+ *  ranking and stock reports, not staff-split sales). */
+const USER_FILTER_IGNORED = new Set([
+  'menu-item-cost-summary', 'top-selling-item', 'least-selling-item',
+  'shift-manager-timing', 'closing-stock', 'low-stock',
+  'physical-stock-taking', 'stock', 'inventory',
+])
+
 const userFilterReady = computed(
-  () => filterListsLoaded.value && Array.isArray(userOptions.value) && userOptions.value.length > 0,
+  () => filterListsLoaded.value
+    && !USER_FILTER_IGNORED.has(activeReport.value)
+    && Array.isArray(userOptions.value) && userOptions.value.length > 0,
 )
 
 const categoryFilterReady = computed(
@@ -1115,6 +1126,9 @@ const money = (v) => {
 .rb-filter-block.rb-off .rb-input {
   opacity: 0.55;
   cursor: pointer;
+  /* Disabled selects swallow clicks; let presses fall through to the block so
+     the explanation modal opens instead of a dead control. */
+  pointer-events: none;
 }
 .rb-filter-block.rb-off .fa-circle-info {
   position: absolute;
