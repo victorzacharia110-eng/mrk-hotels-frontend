@@ -4575,7 +4575,15 @@
     "menuItem": "Bidhaa",
     "tax": "Kodi",
     "discount": "Punguzo",
-    "waiterWiseSales": "Mauzo kwa Mhudumu"
+    "waiterWiseSales": "Mauzo kwa Mhudumu",
+    "gotIt": "Nimeelewa",
+    "filterUnavailableStaffTitle": "Kichujio cha Mhudumu hakipo kwa ripoti hii",
+    "filterUnavailableStaffBody": "Ripoti hii inaangalia hoteli nzima na haitenganishi takwimu zake kwa mhudumu, hivyo orodha ya Wahudumu iko tupu hapa. Inafanya kazi tu kwenye ripoti zinazogawa mauzo kwa mhudumu, kama Muhtasari wa Mauzo, Muhtasari wa Mauzo ya Karani na Mauzo ya Bidhaa.",
+    "filterUnavailableCategoryTitle": "Kichujio cha Kategoria hakipo kwa ripoti hii",
+    "filterUnavailableCategoryBody": "Ripoti hii haigawanyi takwimu zake kwa kategoria, hivyo hakuna cha kuchagua kwenye orodha. Kichujio cha Kategoria kinafanya kazi kwenye ripoti zinazopangwa kwa kategoria, kama Mauzo ya Bidhaa na ripoti za mauzo.",
+    "filterUnavailableSubCategoryTitle": "Kichujio cha Kategoria Ndogo hakipo kwa ripoti hii",
+    "filterUnavailableSubCategoryBody": "Ripoti ya Mauzo ya Bidhaa pekee ndiyo inayogawa takwimu kwa kategoria ndogo, hivyo orodha hii iko tupu kwenye ripoti unayoiangalia. Jaribu Mauzo ya Bidhaa ili kuitumia.",
+    "filterUnavailableTitle": "Kichujio hiki hakipo kwenye ripoti hii"
   },
   "cashier": {
     "panelTitle": "KARO",

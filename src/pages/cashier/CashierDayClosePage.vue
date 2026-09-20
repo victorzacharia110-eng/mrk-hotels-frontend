@@ -84,7 +84,7 @@
           <p v-if="tzError" class="form-error">{{ tzError }}</p>
           <p v-if="tzOk && !tzError" class="sm-ok">{{ tzOk }}</p>
           <div class="dc-actions">
-            <button class="sm-btn" :disabled="savingTz || tzSelect === timezoneLabel" @click="saveTimezone">
+            <button class="sm-btn" :disabled="savingTz || tzSelect === timezoneRaw" @click="saveTimezone">
               <i class="fas fa-floppy-disk" aria-hidden="true"></i> {{ savingTz ? $t('common.saving') : $t('common.save') }}
             </button>
           </div>
@@ -174,7 +174,15 @@ let clockTimer = null
 const dayEnded = computed(() => status.value.close_day_has_ended === true)
 const closable = computed(() => status.value.can_close === true)
 
-const timezoneLabel = computed(() => status.value.timezone || 'Africa/Dar_es_Salaam')
+/** The hotel's standard timezone identifier as stored (e.g. Africa/Dar_es_Salaam). */
+const timezoneRaw = computed(() => status.value.timezone || 'Africa/Dar_es_Salaam')
+
+/** A human-friendly timezone name — underscores replaced with spaces. */
+const timezoneLabel = computed(() => prettyTimezone(timezoneRaw.value))
+
+function prettyTimezone(tz) {
+  return String(tz || '').replaceAll('_', ' ')
+}
 
 /** Common hotel timezones with their runtime GMT offset. */
 const TIMEZONES = [
@@ -203,13 +211,13 @@ function formatOffset(tz) {
 }
 
 const timezoneOptions = computed(() =>
-  TIMEZONES.map((value) => ({ value, label: `${value}${formatOffset(value)}` })),
+  TIMEZONES.map((value) => ({ value, label: `${prettyTimezone(value)}${formatOffset(value)}` })),
 )
 
 const hotelNow = computed(() => {
   try {
     const fmt = new Intl.DateTimeFormat(undefined, {
-      timeZone: timezoneLabel.value,
+      timeZone: timezoneRaw.value,
       year: 'numeric',
       month: 'short',
       day: 'numeric',

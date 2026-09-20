@@ -56,10 +56,13 @@
           <div class="posr-grid">
             <label class="posr-field">
               <span>{{ $t('posReports.user') }}</span>
-              <select v-model="filterValues.user_id" class="rb-input rb-select">
-                <option value="">{{ $t('posReports.all') }}</option>
-                <option v-for="u in userOptions" :key="u.user_id" :value="u.user_id">{{ u.full_name }}</option>
-              </select>
+              <div class="rb-filter-block" :class="{ 'rb-off': !userFilterReady }" @click="alertFilterUnavailable('user')">
+                <select v-model="filterValues.user_id" class="rb-input rb-select" :disabled="!userFilterReady">
+                  <option value="">{{ $t('posReports.all') }}</option>
+                  <option v-for="u in userOptions" :key="u.user_id" :value="u.user_id">{{ u.full_name }}</option>
+                </select>
+                <i v-if="!userFilterReady" class="fas fa-circle-info" aria-hidden="true"></i>
+              </div>
             </label>
             <label class="posr-field">
               <span>{{ $t('posReports.terminal') }}</span>
@@ -115,10 +118,13 @@
             </template>
             <label class="posr-field">
               <span>{{ $t('posReports.category') }}</span>
-              <select v-model="filterValues.category_id" class="rb-input rb-select">
-                <option value="">{{ $t('posReports.all') }}</option>
-                <option v-for="c in categoryOptions" :key="c.category_id" :value="c.category_id">{{ c.category_name }}</option>
-              </select>
+              <div class="rb-filter-block" :class="{ 'rb-off': !categoryFilterReady }" @click="alertFilterUnavailable('category')">
+                <select v-model="filterValues.category_id" class="rb-input rb-select" :disabled="!categoryFilterReady">
+                  <option value="">{{ $t('posReports.all') }}</option>
+                  <option v-for="c in categoryOptions" :key="c.category_id" :value="c.category_id">{{ c.category_name }}</option>
+                </select>
+                <i v-if="!categoryFilterReady" class="fas fa-circle-info" aria-hidden="true"></i>
+              </div>
             </label>
             <label v-if="usesDepartmentFilter" class="posr-field">
               <span>{{ $t('posReports.department') }}</span>
@@ -129,10 +135,13 @@
             </label>
             <label class="posr-field">
               <span>{{ $t('posReports.subCategory') }}</span>
-              <select v-model="filterValues.sub_category" class="rb-input rb-select" :disabled="!subCategoryOptions.length">
-                <option value="">{{ $t('posReports.all') }}</option>
-                <option v-for="c in subCategoryOptions" :key="c" :value="c">{{ c }}</option>
-              </select>
+              <div class="rb-filter-block" :class="{ 'rb-off': !subCategoryFilterReady }" @click="alertFilterUnavailable('sub_category')">
+                <select v-model="filterValues.sub_category" class="rb-input rb-select" :disabled="!subCategoryFilterReady">
+                  <option value="">{{ $t('posReports.all') }}</option>
+                  <option v-for="c in subCategoryOptions" :key="c" :value="c">{{ c }}</option>
+                </select>
+                <i v-if="!subCategoryFilterReady" class="fas fa-circle-info" aria-hidden="true"></i>
+              </div>
             </label>
             <label class="posr-field posr-check">
               <span>{{ $t('posReports.includeNoCharge') }}</span>
@@ -278,6 +287,7 @@
 <script setup>
 import { ref, computed, reactive, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import Swal from 'sweetalert2'
 import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
 import { reportApi, outletApi, departmentApi } from '@/api'
 import { exportCSV } from '@/utils/export'
@@ -555,6 +565,58 @@ const subCategoryOptions = computed(() => {
   if (activeReport.value !== 'menu-item-sales') return []
   return engine.value?.filters?.categories || []
 })
+
+/* ---------------- Filter availability + plain-language explainers --------- */
+// Every report renders the shared filter grid, but not every filter applies to
+// every report. A control whose list is empty for the active report is left
+// clickable so the user can find out WHY in plain words instead of it seeming
+// broken. The lists only count once a report has actually run (engine loaded).
+const filterListsLoaded = computed(
+  () => engine.value !== null && !loading.value,
+)
+
+const userFilterReady = computed(
+  () => filterListsLoaded.value && Array.isArray(userOptions.value) && userOptions.value.length > 0,
+)
+
+const categoryFilterReady = computed(
+  () => filterListsLoaded.value && Array.isArray(categoryOptions.value) && categoryOptions.value.length > 0,
+)
+
+const subCategoryFilterReady = computed(
+  () => filterListsLoaded.value && Array.isArray(subCategoryOptions.value) && subCategoryOptions.value.length > 0,
+)
+
+/** Explains in non-technical words why a filter is empty on the active report. */
+function alertFilterUnavailable(field) {
+  if (!filterListsLoaded.value) return
+  if (field === 'user' && userFilterReady.value) return
+  if (field === 'category' && categoryFilterReady.value) return
+  if (field === 'sub_category' && subCategoryFilterReady.value) return
+
+  const copy = {
+    user: {
+      title: t('posReports.filterUnavailableStaffTitle'),
+      body: t('posReports.filterUnavailableStaffBody'),
+    },
+    category: {
+      title: t('posReports.filterUnavailableCategoryTitle'),
+      body: t('posReports.filterUnavailableCategoryBody'),
+    },
+    sub_category: {
+      title: t('posReports.filterUnavailableSubCategoryTitle'),
+      body: t('posReports.filterUnavailableSubCategoryBody'),
+    },
+  }[field]
+
+  Swal.fire({
+    icon: 'info',
+    title: copy?.title || t('posReports.filterUnavailableTitle'),
+    html: copy?.body || '',
+    confirmButtonText: t('posReports.gotIt'),
+    confirmButtonColor: '#6366f1',
+  })
+}
 
 /** F&B department filter for the MENU ITEM SALES reports. */
 const MENU_ITEM_REPORTS = new Set(['menu-item-sales', 'menu-items-sales-detail'])
@@ -1038,6 +1100,30 @@ const money = (v) => {
   width: 16px;
   height: 16px;
   accent-color: var(--mrk-blue, #005eb8);
+}
+.rb-filter-block {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.rb-filter-block .rb-input {
+  width: 100%;
+}
+.rb-filter-block.rb-off {
+  cursor: pointer;
+}
+.rb-filter-block.rb-off .rb-input {
+  opacity: 0.55;
+  cursor: pointer;
+}
+.rb-filter-block.rb-off .fa-circle-info {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6366f1;
+  pointer-events: none;
+  z-index: 1;
 }
 .posr-run {
   display: flex;
