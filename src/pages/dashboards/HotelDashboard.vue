@@ -1821,13 +1821,17 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.advanceAccount') }}</span>
-                  <select v-model="bookingForm.advance_payment_method" class="input">
+                  <select v-model="bookingForm.advance_payment_method" class="input"
+                    data-field="advance_payment_method" :class="{ 'sv-input-error': bookingErrors.advance_payment_method }">
                     <option value="">—</option>
                     <option value="cash">{{ $t('paymentFields.methods.cash') }}</option>
                     <option value="mobile_money">{{ $t('paymentFields.methods.mobile_money') }}</option>
                     <option value="bank">{{ $t('common.paymentMethods.bankTransfer') }}</option>
                     <option value="card">{{ $t('paymentFields.methods.card') }}</option>
                   </select>
+                  <span v-if="bookingErrors.advance_payment_method" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.advance_payment_method
+                    }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.advanceDate') }}</span>
@@ -2173,6 +2177,7 @@ import {
   bindBlurValidation,
   collectErrors,
   email,
+  isBlank,
   minInteger,
   nonNegative,
   phone,
@@ -3207,9 +3212,12 @@ const folioEntries = computed(() => {
   const paymentsShown = entries.reduce((sum, e) => sum + (e.kind === 'payment' ? e.amount : 0), 0)
   const deposit = Math.round((advancePaid - paymentsShown) * 100) / 100
   if (deposit > 0) {
+    // The deposit row shows the advance's recorded date; older bookings taken
+    // without a payment method never stored one, so fall back to the arrival
+    // date that started its bill.
     entries.push({
       key: 'deposit',
-      date: fol.advance_payment_date || f.reservation?.advance_payment_date || '',
+      date: fol.advance_payment_date || f.reservation?.advance_payment_date || f.reservation?.check_in_date || '',
       time: '',
       particular: t('folio.payment'),
       description: t('stayview.advancePaid'),
@@ -5045,7 +5053,7 @@ const bookingSnapshot = ref({})
 
 /** User-edited booking fields (the suggested total auto-updates separately). */
 function bookingSnapshotKeys(form) {
-  return ['first_name', 'last_name', 'guest_phone', 'country_code', 'booking_type', 'room_id', 'check_in_date', 'check_out_date', 'advance_payment', 'advance_payment_method', 'company_name', 'business_source'].map(
+  return ['first_name', 'last_name', 'guest_phone', 'country_code', 'booking_type', 'room_id', 'check_in_date', 'check_out_date', 'advance_payment', 'advance_payment_method', 'advance_payment_date', 'company_name', 'business_source'].map(
     (key) => form[key],
   )
 }
@@ -5168,6 +5176,10 @@ function bookingRules() {
     { field: 'check_out_date', check: required(t) },
     { field: 'check_out_date', check: after(t, 'check_in_date') },
     { field: 'advance_payment', check: nonNegative(t) },
+    // An advance amount is only trustworthy on the bill when it carries its
+    // payment account too — without a method the date is dropped server-side
+    // and the advance would show with no recorded date.
+    { field: 'advance_payment_method', check: (v, form) => Number(form.advance_payment || 0) > 0 && isBlank(v) ? t('validations.fieldRequired') : '' },
   ]
 }
 async function submitBooking() {
