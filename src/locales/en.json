@@ -4055,7 +4055,7 @@
     "summaryTotalFor": "Total for {date}",
     "summaryNoOrders": "No orders yet today.",
     "summaryOrder": "Order",
-    "summaryTime": "Time",
+    "summaryTime": "Date / Time",
     "summaryType": "Type",
     "summaryStatus": "Status",
     "summaryAmount": "Amount",
@@ -4849,7 +4849,10 @@
         "ready": "Ready",
         "served": "Ready",
         "completed": "Completed"
-      }
+      },
+      "dateTime": "Date / Time",
+      "previousOrders": "Previous orders",
+      "today": "Today"
     },
     "roomService": {
       "title": "Room Service — In-house Guests",
@@ -4880,13 +4883,20 @@
         "served": "Dispatched",
         "completed": "Completed",
         "cancelled": "Cancelled"
-      }
+      },
+      "dateTime": "Date / Time",
+      "previousOrders": "Previous orders",
+      "today": "Today"
     },
     "noCharge": {
       "title": "No Charge Orders",
       "newOrder": "New No-Charge Order",
-      "none": "No no-charge orders yet.",
-      "tag": "NO CHARGE"
+      "none": "No no-charge orders for this date.",
+      "tag": "NO CHARGE",
+      "dateTime": "Date / Time",
+      "previousOrders": "Previous orders",
+      "today": "Today",
+      "workingDate": "Working Date"
     },
     "summary": {
       "tabRunning": "Running",
@@ -4896,6 +4906,7 @@
       "order": "Order",
       "waiter": "Waiter",
       "time": "Time",
+      "dateTime": "Date / Time",
       "table": "Table / Room",
       "type": "Order Type",
       "amount": "Amount",

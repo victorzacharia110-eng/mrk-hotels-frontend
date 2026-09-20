@@ -4027,7 +4027,7 @@
     "summaryTotalFor": "Jumla ya {date}",
     "summaryNoOrders": "Hakuna oda bado leo.",
     "summaryOrder": "Oda",
-    "summaryTime": "Saa",
+    "summaryTime": "Tarehe / Muda",
     "summaryType": "Aina",
     "summaryStatus": "Hali",
     "summaryAmount": "Kiasi",
@@ -4814,7 +4814,10 @@
         "ready": "Tayari",
         "served": "Tayari",
         "completed": "Imekamilika"
-      }
+      },
+      "dateTime": "Tarehe / Muda",
+      "previousOrders": "Maagizo ya awali",
+      "today": "Leo"
     },
     "roomService": {
       "title": "Huduma ya Chumba — Wageni Ndani",
@@ -4845,13 +4848,20 @@
         "served": "Imetumwa",
         "completed": "Imemaliza",
         "cancelled": "Imeghairiwa"
-      }
+      },
+      "dateTime": "Tarehe / Muda",
+      "previousOrders": "Maagizo ya awali",
+      "today": "Leo"
     },
     "noCharge": {
       "title": "Oda Bila Malipo",
       "newOrder": "Oda Mpya Bila Malipo",
-      "none": "Hakuna oda bila malipo bado.",
-      "tag": "BILA MALIPO"
+      "none": "Hakuna maagizo ya bure kwa tarehe hii.",
+      "tag": "BILA MALIPO",
+      "dateTime": "Tarehe / Muda",
+      "previousOrders": "Maagizo ya awali",
+      "today": "Leo",
+      "workingDate": "Tarehe ya Kazi"
     },
     "summary": {
       "tabRunning": "Zinazoendelea",
@@ -4861,6 +4871,7 @@
       "order": "Oda",
       "waiter": "Mhudumu",
       "time": "Muda",
+      "dateTime": "Tarehe / Muda",
       "table": "Meza / Chumba",
       "type": "Aina ya Oda",
       "amount": "Kiasi",

@@ -58,6 +58,37 @@ export function formatDateTime(value) {
 }
 
 /**
+ * Time of day from an ISO timestamp, e.g. '14:35'.
+ * @param {string} value - ISO timestamp string.
+ * @returns {string} 'HH:MM' in the browser locale, or an em dash when empty.
+ */
+export function formatTime(value) {
+  return value ? new Date(value).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '—'
+}
+
+/**
+ * Human-readable date label for an ISO timestamp, e.g. 'Sat, 20 Sep 2026'.
+ * @param {string} value - ISO timestamp string.
+ * @returns {string} The formatted date, or an em dash when empty/invalid.
+ */
+export function formatDateHuman(value) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+/**
+ * Human-readable date + time for order rows, e.g. 'Sat, 20 Sep 2026 · 14:35'.
+ * @param {string} value - ISO timestamp string.
+ * @returns {string} The formatted date and time, or an em dash when empty.
+ */
+export function formatOrderDateTime(value) {
+  if (!value) return '—'
+  return `${formatDateHuman(value)} · ${formatTime(value)}`
+}
+
+/**
  * Formats a date as DD/MM/YYYY (the front-desk convention across panels).
  * Accepts an ISO string or a Date and pads both date parts to two digits.
  * @param {string|Date} value - Date value to format.

@@ -7,7 +7,10 @@
 -->
 
 <template>
-  <div class="sm-modal-backdrop" @click.self="$emit('close')">
+  <!-- Teleported so the backdrop is never trapped under the layout's stacking
+       contexts; the served-with popup layers above it via z-index. -->
+  <Teleport to="body">
+  <div class="sm-modal-backdrop order-modal-backdrop" @click.self="$emit('close')">
     <div class="sm-modal wide order-modal" role="dialog" aria-modal="true">
       <div class="sm-modal-head">
         <h3><i class="fas fa-cart-plus" aria-hidden="true"></i> {{ title }}</h3>
@@ -124,6 +127,7 @@
       </div>
     </div>
   </div>
+  </Teleport>
 
   <Teleport to="body">
     <Transition name="fade">
@@ -459,7 +463,22 @@ onMounted(async () => {
 .form-error { color: #dc2626; font-size: 13px; margin: 0; }
 .submit-btn { justify-content: center; }
 
+/* ---- Layering: the teleported modal sits above the layout chrome, and the
+     "served with" popup stacks one level above the modal backdrop so picking
+     a grill item never looks like a dead darker overlay. ---- */
+.order-modal-backdrop { z-index: 1200; }
+
 /* ---- "Served with" popup (single-tap side dish) ---- */
+.cat-pop {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
 .cat-pop-backdrop {
   position: absolute;
   inset: 0;

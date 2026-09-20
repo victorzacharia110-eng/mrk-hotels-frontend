@@ -622,7 +622,7 @@
               <tbody>
                 <tr v-for="order in summaryPageRows" :key="order.order_id">
                   <td><strong>{{ order.order_number }}</strong></td>
-                  <td>{{ timeOf(order.created_at) }}</td>
+                  <td>{{ formatOrderDateTime(order.created_at || order.order_date) }}</td>
                   <td>{{ order.waiter_name || '—' }}</td>
                   <td>{{ orderTypeLabel(order) }}</td>
                   <td><span class="badge" :class="statusBadge(order.status)">{{ statusLabel(order.status) }}</span></td>
@@ -990,6 +990,7 @@ import { restorePrinter } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { useNotificationSettingsStore } from '@/stores/notificationSettings'
 import { displayLines } from '@/utils/receipts'
+import { formatOrderDateTime } from '@/utils/dates'
 import { isGrillMenuItem, canManageAccompaniments } from '@/utils/menuAccompaniment'
 import { useAccompaniments } from '@/composables/useAccompaniments'
 import AccompanimentManager from '@/components/AccompanimentManager.vue'
@@ -1239,12 +1240,6 @@ async function loadOrderSummary() {
   } finally {
     summaryLoading.value = false
   }
-}
-
-/** Human time from an ISO string. */
-function timeOf(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
 }
 
 /** Reads the order type, falling back to the room/table to label DINE IN etc. */

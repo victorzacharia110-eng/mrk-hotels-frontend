@@ -16,7 +16,8 @@
       </div>
       <span class="spacer"></span>
       <label class="sm-inline-label" for="ta-date">{{ $t('cashier.summary.workingDate') }}</label>
-      <input id="ta-date" v-model="date" type="date" class="sm-input" @change="load" />
+      <OrderDateNav input-id="ta-date" v-model="date" :today="workingDateStore.workingDate"
+        :today-label="$t('cashier.takeAway.today')" @change="load" />
       <button class="sm-btn sm success" @click="showModal = true">
         <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('cashier.takeAway.newOrder') }}
       </button>
@@ -31,7 +32,7 @@
             <th>{{ $t('cashier.summary.order') }}</th>
             <th>{{ $t('cashier.takeAway.guest') }}</th>
             <th>{{ $t('cashier.summary.waiter') }}</th>
-            <th>{{ $t('cashier.summary.time') }}</th>
+            <th>{{ $t('cashier.takeAway.dateTime') }}</th>
             <th>{{ $t('common.status') }}</th>
             <th>{{ $t('cashier.summary.amount') }}</th>
           </tr>
@@ -41,7 +42,7 @@
             <td><strong>{{ order.order_number }}</strong></td>
             <td>{{ order.guest_name || '—' }}</td>
             <td>{{ order.waiter_name || '—' }}</td>
-            <td>{{ timeOf(order.created_at) }}</td>
+            <td>{{ dateTimeOf(order) }}</td>
             <td><span class="chip" :class="statusChip(order.status)">{{ statusLabel(order.status) }}</span></td>
             <td>{{ money(order.total_amount) }}</td>
           </tr>
@@ -63,8 +64,10 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { orderApi } from '@/api'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
+import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
+import { formatOrderDateTime, todayISO } from '@/utils/dates'
 
 const { t, te } = useI18n()
 const workingDateStore = useWorkingDateStore()
@@ -109,8 +112,9 @@ function statusChip(status) {
   return 'pending'
 }
 
-function timeOf(iso) {
-  return iso ? new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '—'
+/** Human-readable date + time for the row (the board can show older dates). */
+function dateTimeOf(order) {
+  return formatOrderDateTime(order.created_at || order.order_date)
 }
 
 function money(value) {
@@ -120,8 +124,16 @@ function money(value) {
 async function load() {
   loading.value = true
   try {
-    const { data } = await orderApi.index({ order_type: 'takeaway', date: date.value, per_page: 100 })
-    orders.value = data.data || []
+    const params = { order_type: 'takeaway', per_page: 100 }
+    // "Previous orders" (a date before today) lists that whole date's tickets.
+    if (date.value && date.value < todayISO()) params.date = date.value
+    const { data } = await orderApi.index(params)
+    const rows = data.data || []
+    // Otherwise show today's tickets by business order date, so anything the
+    // backend clock stamps on the wrong calendar day still surfaces.
+    orders.value = params.date
+      ? rows
+      : rows.filter((o) => (o.order_date || '').slice(0, 10) === date.value)
   } finally {
     loading.value = false
   }

@@ -16,7 +16,8 @@
       </div>
       <span class="spacer"></span>
       <label class="sm-inline-label" for="sum-date">{{ $t('cashier.summary.workingDate') }}</label>
-      <input id="sum-date" v-model="date" type="date" class="sm-input" @change="load" />
+      <OrderDateNav input-id="sum-date" v-model="date" :today="workingDateStore.workingDate"
+        :today-label="$t('cashier.takeAway.today')" @change="load" />
       <div class="sm-search">
         <i class="fas fa-search" aria-hidden="true"></i>
         <input v-model="search" type="search" :placeholder="$t('common.search')" />
@@ -41,7 +42,7 @@
           <tr>
             <th>{{ $t('cashier.summary.order') }}</th>
             <th>{{ $t('cashier.summary.waiter') }}</th>
-            <th>{{ $t('cashier.summary.time') }}</th>
+            <th>{{ $t('cashier.summary.dateTime') }}</th>
             <th>{{ $t('cashier.summary.table') }}</th>
             <th>{{ $t('cashier.summary.type') }}</th>
             <th>{{ $t('common.status') }}</th>
@@ -62,7 +63,7 @@
               <span v-if="order.is_no_charge" class="nc-tag">{{ $t('cashier.noCharge.tag') }}</span>
             </td>
             <td>{{ order.waiter_name || '—' }}</td>
-            <td>{{ timeOf(order.created_at) }}</td>
+            <td>{{ dateTimeOf(order) }}</td>
             <td>{{ order.table_number || order.room_number || '—' }}</td>
             <td>{{ typeLabel(order.order_type) }}</td>
             <td><span class="chip" :class="chipFor(order)">{{ statusLabel(order) }}</span></td>
@@ -121,7 +122,7 @@
               <span v-if="drawerOrder.table_number || drawerOrder.room_number"><i class="fas fa-table" aria-hidden="true"></i> {{ drawerOrder.table_number || drawerOrder.room_number }}</span>
               <span v-if="drawerOrder.waiter_name"><i class="fas fa-user" aria-hidden="true"></i> {{ drawerOrder.waiter_name }}</span>
               <span v-if="drawerOrder.guest_name"><i class="fas fa-users" aria-hidden="true"></i> {{ drawerOrder.guest_name }}</span>
-              <span v-if="drawerOrder.created_at"><i class="fas fa-clock" aria-hidden="true"></i> {{ timeOf(drawerOrder.created_at) }}</span>
+              <span v-if="drawerOrder.created_at"><i class="fas fa-clock" aria-hidden="true"></i> {{ dateTimeOf(drawerOrder) }}</span>
             </p>
           </div>
           <button type="button" class="drawer-close" aria-label="Close" @click="closeDrawer">
@@ -320,6 +321,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cashierApi, orderApi, hotelSettingsApi } from '@/api'
+import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
@@ -331,6 +333,7 @@ import { PAYMENT_METHODS } from '@/utils/payments'
 import { restorePrinter, printerState, connectPrinter, printerSupported } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { displayLines } from '@/utils/receipts'
+import { formatOrderDateTime, todayISO } from '@/utils/dates'
 import { toast } from '@/utils/toast'
 
 const { t, te } = useI18n()
@@ -458,8 +461,9 @@ function typeLabel(type) {
   return te(key) ? t(key) : type
 }
 
-function timeOf(iso) {
-  return iso ? new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '—'
+/** Human-readable date + time for the row (the board can show older dates). */
+function dateTimeOf(order) {
+  return formatOrderDateTime(order.created_at || order.order_date)
 }
 
 function money(value) {
@@ -469,8 +473,16 @@ function money(value) {
 async function load() {
   loading.value = true
   try {
-    const { data } = await orderApi.index({ date: date.value, per_page: 100 })
-    orders.value = data.data || []
+    const params = { per_page: 100 }
+    // "Previous orders" (a date before today) lists that whole date's tickets.
+    if (date.value && date.value < todayISO()) params.date = date.value
+    const { data } = await orderApi.index(params)
+    const rows = data.data || []
+    // Otherwise show today's tickets by business order date, so anything the
+    // backend clock stamps on the wrong calendar day still surfaces.
+    orders.value = params.date
+      ? rows
+      : rows.filter((o) => (o.order_date || '').slice(0, 10) === date.value)
   } catch (err) {
     error.value = err.response?.data?.message || t('common.loadError')
   } finally {
