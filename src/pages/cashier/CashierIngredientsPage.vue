@@ -322,4 +322,45 @@ onMounted(() => {
 .add-form label { font-weight: 600; font-size: 13px; color: var(--mrk-charcoal); }
 .add-form small { font-weight: 400; color: #94a3b8; }
 .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+/* ── Add ingredient modal shell (mirrors the dine-in modal) ──── */
+.din-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 88;
+  background: rgba(33, 33, 33, 0.35);
+}
+.din-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 90;
+  width: min(560px, 92vw);
+  max-height: 80vh;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 14px 44px rgba(6, 42, 82, 0.28);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.din-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.din-modal-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+  color: #1e293b;
+}
+.din-modal-body { padding: 14px 18px 18px; overflow-y: auto; }
+.din-pop-enter-active, .din-pop-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
+.din-pop-enter-from, .din-pop-leave-to { opacity: 0; transform: translateY(12px); }
 </style>
