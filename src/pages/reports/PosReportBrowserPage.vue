@@ -325,14 +325,26 @@
                   </template>
                 </template>
                 <template v-else>
-                  <tr v-for="(row, i) in engine.rows" :key="i">
+                  <tr v-for="(row, i) in engine.rows" :key="i" :class="rowBandClass(row)">
                     <td
-                      v-for="col in engine.columns"
-                      :key="col.key"
-                      :class="{ num: col.format === 'money' || col.format === 'pct' }"
+                      v-if="row.band === 'category' || row.band === 'subcategory'"
+                      :colspan="engine.columns.length"
+                      class="rb-band-cell"
                     >
-                      {{ formatCell(row[col.key], col.format) }}
+                      <template v-if="row.band === 'category'">
+                        <i class="fas fa-tag" aria-hidden="true"></i>
+                      </template>
+                      {{ formatCell(row.item) }}
                     </td>
+                    <template v-else>
+                      <td
+                        v-for="col in engine.columns"
+                        :key="col.key"
+                        :class="{ num: col.format === 'money' || col.format === 'pct' }"
+                      >
+                        {{ formatCell(row[col.key], col.format) }}
+                      </td>
+                    </template>
                   </tr>
                   <tr v-if="!engine.rows.length">
                     <td :colspan="engine.columns.length" class="rb-empty">{{ $t('reportBrowser.noRows') }}</td>
@@ -820,6 +832,17 @@ function columnLabel(key, fallback) {
   return fallback || String(key).replace(/_/g, ' ')
 }
 
+/** Rows carrying a `band` marker (menu-item-cost-summary) render as Ezee-style
+ *  stacked band rows: category header, subcategory header, then the Sub Total /
+ *  Category Sub Total / Grand Total footer bands. */
+function rowBandClass(row) {
+  if (!row || !row.band) return ''
+  if (row.band === 'category') return 'rb-group-head'
+  if (row.band === 'subcategory') return 'rb-group-sub'
+  if (row.band === 'grandtotal') return 'rb-group-grand'
+  return 'rb-group-foot'
+}
+
 function formatCell(value, format) {
   if (value === null || value === undefined || value === '') return '—'
   if (format === 'money' && typeof value === 'number') return money(value)
@@ -1140,8 +1163,10 @@ function openReportWindow() {
   th { background: #062a52; color: #fff; font-size: 9.5px; text-transform: uppercase; letter-spacing: .4px; text-align: left; }
   td { font-size: 10px; }
   tbody tr:nth-child(even) td { background: #f1f5f9; }
-  tr.rb-group-head td { background: #e8eef6; color: #062a52; font-weight: 800; font-size: 10px; text-transform: uppercase; }
-  tr.rb-group-foot td { background: #f4f6fa; font-weight: 700; }
+  tbody tr.rb-group-head td { background: #e8eef6; color: #062a52; font-weight: 800; font-size: 10px; text-transform: uppercase; }
+  tbody tr.rb-group-sub td { background: #f4f7fb; color: #0f2f4f; font-weight: 700; font-size: 9.5px; text-transform: uppercase; }
+  tbody tr.rb-group-grand td { background: #062a52; color: #fff; font-weight: 800; }
+  tbody tr.rb-group-foot td { background: #f4f6fa; font-weight: 700; }
   .rb-subtotal-label { color: #475569; }
   .rb-subtotal-value { text-align: right; }
   tfoot td { font-weight: 700; background: #eef2f7; border-top: 2px solid #062a52; }
@@ -1596,6 +1621,21 @@ const money = (v) => {
   padding: 7px 10px;
 }
 .rb-group-head td i { margin-right: 6px; color: #b0cde9; }
+.rb-group-sub td {
+  background: #e8eef6;
+  color: #0f2f4f;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 6px 10px 6px 22px;
+}
+.rb-group-grand td {
+  background: #062a52;
+  color: #fff;
+  font-weight: 800;
+  padding: 6px 10px;
+}
 .rb-group-foot td {
   background: #eef4fb;
   font-weight: 700;
