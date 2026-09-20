@@ -4632,6 +4632,10 @@
     "docPreparedBy": "Imeandaliwa na",
     "docGeneratedAt": "Imetolewa saa",
     "docRows": "safu",
+    "items": "Bidhaa",
+    "rows": "Safu",
+    "ignoreZeroStock": "Puuza Stoo ya Sifuri",
+    "costMethod": "Gharama Huhesabiwa Kwa",
     "yes": "Ndiyo",
     "no": "Hapana"
   },

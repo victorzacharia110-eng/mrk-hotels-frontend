@@ -4660,6 +4660,10 @@
     "docPreparedBy": "Prepared by",
     "docGeneratedAt": "Generated at",
     "docRows": "rows",
+    "items": "Items",
+    "rows": "Rows",
+    "ignoreZeroStock": "Ignore Zero Stock",
+    "costMethod": "Cost Calculate With",
     "yes": "Yes",
     "no": "No"
   },

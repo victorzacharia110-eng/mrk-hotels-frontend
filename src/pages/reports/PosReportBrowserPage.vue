@@ -204,6 +204,85 @@
           <i class="fas fa-circle-info" aria-hidden="true"></i> {{ engine.legend }}
         </p>
 
+        <!-- ── Stock Ledger: the Ezee per-item ledger with category bands ── -->
+        <div v-if="isStockLedger && stockLedger?.items?.length" class="ledger-area">
+          <div class="rb-kpi-grid">
+            <div class="rb-kpi">
+              <span class="rb-kpi-value">{{ stockLedger.items.length }}</span>
+              <span class="rb-kpi-label">{{ $t('posReports.items') }}</span>
+            </div>
+            <div class="rb-kpi">
+              <span class="rb-kpi-value">{{ fmtLedgerMoney(stockLedger.totals?.opening_value) }}</span>
+              <span class="rb-kpi-label">{{ $t('reports.totalOpeningValue') }}</span>
+            </div>
+            <div class="rb-kpi">
+              <span class="rb-kpi-value">{{ fmtLedgerMoney(stockLedger.totals?.closing_value) }}</span>
+              <span class="rb-kpi-label">{{ $t('reports.totalClosingValue') }}</span>
+            </div>
+            <div class="rb-kpi">
+              <span class="rb-kpi-value">{{ stockLedgerRowCount }}</span>
+              <span class="rb-kpi-label">{{ $t('posReports.rows') }}</span>
+            </div>
+          </div>
+
+          <template v-for="group in ledgerGroups" :key="group.key">
+            <h3 class="ledger-band-head">{{ group.label }}</h3>
+            <article v-for="item in group.items" :key="item.item_id" class="ledger-item">
+              <header class="ledger-item-head">
+                <strong>{{ item.item_name }}</strong><small v-if="item.unit"> ({{ item.unit }})</small>
+                <span class="ledger-item-balance">
+                  {{ $t('reports.openingStock') }}: {{ fmtQty(item.opening_stock) }}{{ unitSuffix(item) }}
+                  → {{ $t('reports.closingStock') }}: {{ fmtQty(item.closing_stock) }}{{ unitSuffix(item) }}
+                </span>
+              </header>
+              <table v-if="item.movements?.length" class="ledger-table">
+                <thead>
+                  <tr>
+                    <th>{{ $t('reports.date') }}</th>
+                    <th>{{ $t('reports.ledgerTranType') }}</th>
+                    <th>{{ $t('reports.ledgerRefNo') }}</th>
+                    <th class="num">{{ $t('reports.ledgerStockIn') }}</th>
+                    <th class="num">{{ $t('reports.ledgerStockOut') }}</th>
+                    <th class="num">{{ $t('reports.ledgerCostPerUnit') }}</th>
+                    <th class="num">{{ $t('reports.value') }}</th>
+                    <th class="num">{{ $t('reports.stockCol') }}</th>
+                    <th class="num">{{ $t('reports.stockValueCol') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="opening-row">
+                    <td>{{ stockLedger.from || filterValues.from }}</td>
+                    <td>{{ ledgerTypeLabel('opening', t) }}</td>
+                    <td></td>
+                    <td class="num">{{ fmtQty(item.opening_stock) }}{{ unitSuffix(item) }}</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td class="num">{{ fmtQty(item.opening_stock) }}{{ unitSuffix(item) }}</td>
+                    <td class="num">{{ fmtLedgerMoney(item.opening_value) }}</td>
+                  </tr>
+                  <tr v-for="(m, idx) in item.movements" :key="idx"
+                      :class="{ 'movement-in': m.in !== null, 'movement-out': m.out !== null }">
+                    <td>{{ fmtLedgerDateTime(m.date) }}</td>
+                    <td>{{ ledgerTypeLabel(m.type, t) }}</td>
+                    <td class="mono">{{ m.reference || m.ref || '' }}</td>
+                    <td class="num">{{ m.in != null ? fmtQty(m.in) + unitSuffix(item) : '' }}</td>
+                    <td class="num">{{ m.out != null ? fmtQty(m.out) + unitSuffix(item) : '' }}</td>
+                    <td class="num">{{ fmtLedgerMoney(m.unit_cost) }}</td>
+                    <td class="num">{{ fmtLedgerMoney(m.value) }}</td>
+                    <td class="num">{{ fmtQty(m.stock) }}{{ unitSuffix(item) }}</td>
+                    <td class="num">{{ fmtLedgerMoney(m.stock_value) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p v-else class="rb-empty">{{ $t('reports.noStockData') }}</p>
+            </article>
+          </template>
+        </div>
+        <div v-else-if="isStockLedger && !loading" class="rb-empty">
+          <i class="fas fa-info-circle" aria-hidden="true"></i> {{ $t('reports.noStockData') }}
+        </div>
+
         <div v-if="engine?.summary?.length" class="rb-kpi-grid">
           <div v-for="(kpi, i) in engine.summary" :key="i" class="rb-kpi">
             <span class="rb-kpi-value">{{ summaryValue(kpi.value) }}</span>
@@ -292,6 +371,7 @@ import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
 import { reportApi, outletApi, departmentApi, hotelSettingsApi } from '@/api'
 import { exportCSV } from '@/utils/export'
 import { useAuthStore } from '@/stores/auth'
+import { fmtLedgerMoney, fmtQty, unitSuffix, fmtLedgerDateTime, ledgerTypeLabel, buildLedgerGroups, INVENTORY_CATEGORIES } from '@/utils/ezeeLedger'
 
 const { t, te } = useI18n()
 
@@ -507,6 +587,22 @@ const engine = ref(null)
 const loading = ref(false)
 const exporting = ref(false)
 const error = ref('')
+
+/** The stock-ledger report renders the classic per-item Ezee ledger instead of
+ * the generic wired table: category bands, openings, movements and closing. */
+const stockLedger = ref(null)
+const isStockLedger = computed(() => activeReport.value === 'stock-ledger')
+const ledgerGroups = computed(() => buildLedgerGroups(stockLedger.value?.items))
+const stockLedgerCostMethod = computed(() =>
+  !stockLedger.value?.cost_method || stockLedger.value.cost_method === 'configured_purchase_rate'
+    ? t('reports.configuredPurchaseRate')
+    : String(stockLedger.value.cost_method).replace(/_/g, ' '),
+)
+const stockLedgerRowCount = computed(() => {
+  let count = 0
+  for (const item of stockLedger.value?.items || []) count += 1 + (item.movements?.length || 0)
+  return count
+})
 
 const outlets = ref([])
 const outletsLoading = ref(false)
@@ -812,11 +908,31 @@ async function run() {
       include_no_charge: filterValues.include_no_charge ? '1' : '0',
     }
     const isCustom = activeReport.value === 'custom'
+    let res
+    if (isStockLedger.value) {
+      // The browser's stock-ledger entry prints the same Ezee ledger as the
+      // classic Reports → Stock Ledger: the detailed per-movement payload.
+      res = await reportApi.stockLedger({
+        from: params.from,
+        to: params.to,
+        category: INVENTORY_CATEGORIES.has(filterValues.category_id) ? filterValues.category_id : undefined,
+        ignore_zero: 0,
+      })
+      stockLedger.value = res.data
+      const cats = []
+      for (const item of res.data?.items || []) {
+        const c = String(item.category || '').trim()
+        if (c && INVENTORY_CATEGORIES.has(c) && !cats.includes(c)) cats.push(c)
+      }
+      engine.value = { filters: { categories: cats, users: [] } }
+      return
+    }
+    stockLedger.value = null
     if (isCustom) {
       params.source = customSource.value
       if (customCols.value.length) params.cols = customCols.value.join(',')
     }
-    const res = await reportApi.wired(isCustom ? 'custom' : activeReport.value, params)
+    res = await reportApi.wired(isCustom ? 'custom' : activeReport.value, params)
     engine.value = res.data.data
     if (isCustom && res.data.data?.columns?.length) {
       customCols.value = res.data.data.columns.map((c) => c.key)
@@ -846,6 +962,8 @@ function printReport() {
  * the small POS printer can be selected.
  */
 function printPosReceipt() {
+  // Stock-ledger prints as a full-page Ezee document; the 80mm receipt isn't applicable.
+  if (isStockLedger.value) return
   const data = engine.value
   if (!data || data.wired === false || !data.rows?.length) {
     error.value = t('reportBrowser.openWindowEmpty')
@@ -965,7 +1083,7 @@ function openReportWindow() {
   const title = esc(activeLabel.value)
   const madeBy = esc(userName.value)
   const madeAt = esc(new Date().toLocaleString())
-  const rowCount = engine.value?.rows?.length ?? 0
+  const rowCount = isStockLedger.value ? stockLedgerRowCount.value : (engine.value?.rows?.length ?? 0)
   const body = reportBodyHtml(paper.innerHTML, '.rb-report-head')
 
   win.document.open()
@@ -1032,6 +1150,25 @@ function openReportWindow() {
   .rb-legend { font-size: 10px; color: #475569; margin: 0 0 10px; }
   .rb-legend i { display: none; }
 
+  /* ── Ezee stock ledger (the stock-ledger report) ── */
+  .ledger-area { margin-top: 2px; }
+  .ledger-band { margin: 0 0 14px; }
+  .ledger-band-head { background: #e8eef6; color: #062a52; font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding: 5px 8px; margin: 0 0 6px; border: 1px solid #cbd5e1; border-left: 4px solid #062a52; page-break-after: avoid; }
+  .ledger-item { margin: 0 0 12px; page-break-inside: avoid; }
+  .ledger-item-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 2px 2px 4px; }
+  .ledger-item-head strong { font-size: 11px; color: #062a52; }
+  .ledger-item-head small { color: #64748b; font-weight: 400; }
+  .ledger-item-balance { color: #475569; font-size: 9.5px; white-space: nowrap; }
+  .ledger-table { width: 100%; border-collapse: collapse; }
+  .ledger-table th, .ledger-table td { border: 1px solid #cbd5e1; padding: 3px 6px; font-size: 9px; }
+  .ledger-table th { background: #062a52; color: #fff; font-size: 8.5px; text-transform: uppercase; letter-spacing: .3px; text-align: left; }
+  .ledger-table th.num, .ledger-table td.num { text-align: right; }
+  .ledger-table tbody tr.movement-in td { background: #f0f9f0; }
+  .ledger-table tbody tr.movement-out td { background: #fdf3f3; }
+  .ledger-table tbody tr.opening-row td { background: #eef2f7; font-weight: 700; }
+  .ledger-table tbody tr:nth-child(even) td { background: transparent; }
+  .ledger-table td.mono { font-family: 'Courier New', monospace; }
+
   /* ── Repeating page footer (browser that lacks @page margin boxes) ── */
   .page-foot { display: none; }
   @media print { .page-foot { display: flex; position: fixed; bottom: 0; left: 0; right: 0; justify-content: space-between; border-top: 1px solid #d7dee8; padding: 5px 2px 0; font-size: 8.5px; color: #64748b; } }
@@ -1088,6 +1225,10 @@ function printMetaPairs() {
   add('posReports.orderType', filterValues.business_source ? (businessSources.value[filterValues.business_source] || filterValues.business_source) : '')
   const cat = categoryOptions.value.find((c) => String(c.category_id) === String(filterValues.category_id))
   if (cat) add('posReports.category', cat.category_name)
+  if (isStockLedger.value) {
+    add('posReports.costMethod', stockLedgerCostMethod.value)
+    add('posReports.ignoreZeroStock', t('posReports.no'))
+  }
   add('posReports.subCategory', filterValues.sub_category)
   add('posReports.department', filterValues.department ? (departmentOptions.value.find((d) => d === filterValues.department) || filterValues.department) : '')
   add('posReports.includeNoCharge', filterValues.include_no_charge === true ? t('posReports.yes') : '')
@@ -1466,4 +1607,43 @@ const money = (v) => {
 .table-scroll {
   overflow-x: auto;
 }
+
+/* ── Ezee stock ledger (the stock-ledger report) ── */
+.ledger-band { margin: 0 0 16px; }
+.ledger-band-head {
+  background: #062a52;
+  color: #fff;
+  font-weight: 800;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 7px 10px;
+  margin: 0 0 10px;
+}
+.ledger-item { margin: 0 0 14px; }
+.ledger-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 2px 2px 6px;
+}
+.ledger-item-head strong { font-size: 13px; color: #062a52; }
+.ledger-item-head small { color: #64748b; font-weight: 400; }
+.ledger-item-balance { color: #475569; font-size: 12px; white-space: nowrap; }
+.ledger-table { width: 100%; border-collapse: collapse; }
+.ledger-table th, .ledger-table td { border: 1px solid #d7dee8; padding: 5px 8px; }
+.ledger-table th {
+  background: #062a52;
+  color: #fff;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-align: left;
+}
+.ledger-table th.num, .ledger-table td.num { text-align: right; }
+.ledger-table tbody tr.movement-in td { background: #f0f9f0; }
+.ledger-table tbody tr.movement-out td { background: #fdf3f3; }
+.ledger-table tbody tr.opening-row td { background: #eef2f7; font-weight: 700; }
+.ledger-table td.mono { font-family: 'Courier New', monospace; font-size: 11px; }
 </style>

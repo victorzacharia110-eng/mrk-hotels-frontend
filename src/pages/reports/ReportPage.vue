@@ -126,7 +126,7 @@
             <tbody>
               <tr class="opening-row">
                 <td>{{ stockFrom }}</td>
-                <td>{{ ledgerTypeLabel('opening') }}</td>
+                <td>{{ ledgerTypeLabel('opening', t) }}</td>
                 <td></td>
                 <td class="num">{{ fmtQty(item.opening_stock) }}{{ unitSuffix(item) }}</td>
                 <td></td>
@@ -138,7 +138,7 @@
               <tr v-for="(m, idx) in item.movements" :key="idx"
                   :class="{ 'movement-in': m.in !== null, 'movement-out': m.out !== null }">
                 <td>{{ fmtLedgerDateTime(m.date) }}</td>
-                <td>{{ ledgerTypeLabel(m.type) }}</td>
+                <td>{{ ledgerTypeLabel(m.type, t) }}</td>
                 <td class="mono">{{ m.reference || m.ref || '' }}</td>
                 <td class="num in-cell">{{ m.in != null ? fmtQty(m.in) + unitSuffix(item) : '' }}</td>
                 <td class="num out-cell">{{ m.out != null ? fmtQty(m.out) + unitSuffix(item) : '' }}</td>
@@ -590,6 +590,7 @@ import { useI18n } from 'vue-i18n'
 import { reportApi, hotelSettingsApi } from '@/api'
 import CalendarInput from '@/components/CalendarInput.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
+import { fmtLedgerMoney, fmtQty, unitSuffix, fmtLedgerDateTime, ledgerTypeLabel, buildLedgerGroups } from '@/utils/ezeeLedger'
 import { collectAllRows, exportCSV } from '@/utils/export'
 import { useAuthStore } from '@/stores/auth'
 
@@ -672,83 +673,11 @@ function fmtMoney(value) {
   return Number(value || 0).toLocaleString('en-TZ', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 
-/* ---- Ezee-faithful stock ledger formatting ---- */
-// The Ezee ledger prints amounts like 24670.00 / 310366.00 (two decimals, no
-// commas) and every quantity carries the item's unit (2 BTL, 98 BTL). These
-// helpers mirror that exact layout.
-
-/** Ledger money: always two decimals, no thousands separators (like Ezee). */
-function fmtLedgerMoney(value) {
-  return Number(value || 0).toFixed(2)
-}
-
-/** Ledger quantity: whole numbers stay bare, fractions keep two decimals. */
-function fmtQty(value) {
-  const n = Number(value || 0)
-  return Number.isInteger(n) ? String(n) : n.toFixed(2)
-}
-
-/** " 2 BTL" -> Ezee shows the unit next to every quantity cell. */
-function unitSuffix(item) {
-  return item.unit ? ' ' + item.unit : ''
-}
-
-/** Re-renders a "YYYY-MM-DD HH:mm" stamp as "YYYY-MM-DD hh:mm:ss AM" like Ezee. */
-function fmtLedgerDateTime(str) {
-  const parts = String(str || '').split(' ')
-  if (parts.length < 2) return str || ''
-  const [day, clock] = parts
-  const [y, mo, d] = day.split('-').map(Number)
-  const [h, mi] = clock.split(':').map(Number)
-  if (!y || !mo || !d || h == null || mi == null) return str || ''
-  const dt = new Date(y, mo - 1, d, h, mi, 0)
-  if (Number.isNaN(dt.getTime())) return str || ''
-  const time = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
-  return day + ' ' + time
-}
-
-/** Ezee transaction-type wording on the ledger rows. */
-function ledgerTypeLabel(type) {
-  const map = {
-    opening: 'ezOpening',
-    sale: 'ezSale',
-    received: 'ezReceived',
-    wastage: 'ezWastage',
-    transfer: 'ezTransfer',
-    adjustment: 'ezAdjustment',
-  }
-  return t('reports.' + (map[type] || 'ezAdjustment'))
-}
-
-/** The category filter's display labels (mirrors the option list above). */
-const LEDGER_CATEGORY_LABELS = {
-  food: 'Food',
-  beverage: 'Beverage',
-  housekeeping: 'Housekeeping',
-  maintenance: 'Maintenance',
-  procurement: 'Procurement',
-  other: 'Other',
-}
+/** Ledger formatters/grouping live in src/utils/ezeeLedger.js so the POS
+ * Report Browser's stock-ledger entry prints with the exact same Ezee layout. */
 
 /** Groups the ledger items under Ezee-style category bands (DRINKS, FOOD, ...). */
-const ledgerGroups = computed(() => {
-  const groups = []
-  const seen = new Map()
-  for (const item of stockData.value.items || []) {
-    const key = String(item.category || 'other').trim() || 'other'
-    if (!seen.has(key)) {
-      const group = {
-        key,
-        label: String(LEDGER_CATEGORY_LABELS[key] || key).toUpperCase(),
-        items: [],
-      }
-      seen.set(key, group)
-      groups.push(group)
-    }
-    seen.get(key).items.push(item)
-  }
-  return groups
-})
+const ledgerGroups = computed(() => buildLedgerGroups(stockData.value.items))
 
 /** "Configured Purchase Rate" — the cost-basis line on the Print header. */
 const costMethodLabel = computed(() =>
