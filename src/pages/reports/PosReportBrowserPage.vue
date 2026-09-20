@@ -289,10 +289,35 @@ import { ref, computed, reactive, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Swal from 'sweetalert2'
 import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
-import { reportApi, outletApi, departmentApi } from '@/api'
+import { reportApi, outletApi, departmentApi, hotelSettingsApi } from '@/api'
 import { exportCSV } from '@/utils/export'
+import { useAuthStore } from '@/stores/auth'
 
 const { t, te } = useI18n()
+
+/* ── Branding for the printable A4 document ── */
+const authStore = useAuthStore()
+const reportHotel = computed(() => authStore.user?.tenant?.hotel_name || 'MRK Hotels')
+const userName = computed(() => authStore.user?.full_name || '—')
+const reportAddress = computed(() => {
+  const ten = authStore.user?.tenant || {}
+  return [ten.address, ten.city, ten.country].filter(Boolean).join(', ')
+})
+const reportTax = computed(() => {
+  const ten = authStore.user?.tenant || {}
+  return [ten.tin, ten.vrn].filter(Boolean).join(' ')
+})
+const reportLogo = ref('')
+
+// The night-audit sheet shows the hotel logo; failure just omits the artwork.
+async function loadReportLogo() {
+  try {
+    const res = await hotelSettingsApi.show()
+    reportLogo.value = res?.data?.hotel?.logo_url || ''
+  } catch {
+    reportLogo.value = ''
+  }
+}
 
 const REPORTS = [
   { key: 'menu-item-sales', label: 'posReports.menuItemSalesSummary' },
@@ -895,19 +920,24 @@ function esc(value) {
     .replace(/'/g, '&#39;')
 }
 
-/** Keeps only the report body: drops screen-only chrome and interactive bits. */
-function reportBodyHtml(inner) {
+/** Keeps only the report body: drops screen-only chrome and interactive bits,
+ *  plus any selector the printed letterhead replaces (e.g. the on-screen
+ *  report title, which the document header already shows). */
+function reportBodyHtml(inner, prune = '') {
   const div = document.createElement('div')
   div.innerHTML = inner
   div.querySelectorAll('button, a, input, select').forEach((n) => n.remove())
+  if (prune) div.querySelectorAll(prune).forEach((n) => n.remove())
   return div.innerHTML
 }
 
 /**
- * Opens a clean, print-ready copy of the current POS report in a new window.
+ * Opens a clean, print-ready A4 document of the current POS report.
  * Only the report body inside `.rb-paper` is carried across, wrapped in a
- * purpose-built A4-landscape stylesheet, so the printed sheet mirrors the
- * paper the reference system produces.
+ * purpose-built letterhead — hotel name/logo, report title, the exact filters
+ * that produced it (Period, Outlet, User, Category, …), generated-by stamp,
+ * KPI summary boxes, a wide professional table and a repeating footer — so
+ * the printed sheet reads like a business report, not a web-page copy.
  */
 function openReportWindow() {
   const paper = document.querySelector('.rb-paper')
@@ -921,60 +951,153 @@ function openReportWindow() {
     return
   }
   win.opener = null
+
+  const meta = printMetaPairs()
+    .map(([k, v]) => (v ? `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>` : ''))
+    .join('')
+  const period = `${esc(prettyDate(filterValues.from))} — ${esc(prettyDate(filterValues.to))}`
+  const logo = reportLogo.value
+    ? `<img class="doc-logo" src="${esc(reportLogo.value)}" alt="" />`
+    : '<span class="doc-logo-fallback"><i class="fad fa-hotel"></i></span>'
+  const address = esc(reportAddress.value)
+  const tax = esc(reportTax.value)
+  const hotel = esc(reportHotel.value)
+  const title = esc(activeLabel.value)
+  const madeBy = esc(userName.value)
+  const madeAt = esc(new Date().toLocaleString())
+  const rowCount = engine.value?.rows?.length ?? 0
+  const body = reportBodyHtml(paper.innerHTML, '.rb-report-head')
+
   win.document.open()
   win.document.write(
     `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${esc(activeLabel.value)}</title>
+<html><head><meta charset="utf-8"><title>${title} — ${hotel}</title>
 <style>
-  @page { size: A4 landscape; margin: 10mm 8mm; }
+  @page { size: A4 landscape; margin: 13mm 10mm 16mm 10mm; }
+  @page { @bottom-left { content: "${hotel} — ${title}"; font-family: Helvetica, Arial, sans-serif; font-size: 8.5pt; color: #64748b; }
+           @bottom-right { content: "Page " counter(page) " of " counter(pages); font-family: Helvetica, Arial, sans-serif; font-size: 8.5pt; color: #64748b; } }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
-  body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; line-height: 1.45; color: #111; background: #fff; }
-  .rpt-bar { position: sticky; top: 0; display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px; background: #eef1f6; z-index: 5; }
+  body { font-family: Helvetica, Arial, sans-serif; font-size: 11px; line-height: 1.45; color: #1e293b; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .rpt-bar { position: sticky; top: 0; z-index: 9; display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px; background: #eef1f6; }
   .rpt-bar button { border: 1px solid #062a52; background: #062a52; color: #fff; border-radius: 5px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
-  .rpt-bar button:hover { background: #005eb8; }
   @media print { .rpt-bar { display: none !important; } }
-  .sheet { padding: 4px 10px 10px; }
-  .brand { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px double #062a52; padding-bottom: 10px; margin-bottom: 14px; }
-  .brand h1 { font-size: 18px; text-transform: uppercase; letter-spacing: 1px; color: #062a52; margin: 0; }
-  .brand .period { font-size: 12px; color: #444; }
-  .rb-report-head h2, h2 { font-size: 14px; color: #062a52; margin: 14px 0 4px; }
-  .rb-legend { font-size: 11.5px; color: #444; margin: 0 0 10px; }
-  .rb-kpi-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
-  .rb-kpi { flex: 1 1 160px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; background: #f8fafc; }
-  .rb-kpi-value { display: block; font-size: 17px; color: #062a52; font-weight: 700; }
-  .rb-kpi-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; color: #475569; }
-  .table-scroll { overflow: visible !important; margin: 0 0 14px; }
-  table { width: 100%; border-collapse: collapse; }
+  .sheet { padding: 0 6px 40px; }
+
+  /* ── Letterhead ── */
+  .letterhead { display: flex; align-items: center; gap: 16px; padding-bottom: 10px; border-bottom: 2.5px solid #062a52; }
+  .doc-logo { height: 56px; max-width: 180px; object-fit: contain; }
+  .doc-logo-fallback { display: none; }
+  .letterhead-mid { flex: 1; }
+  .hotel-name { font-size: 22px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #062a52; }
+  .hotel-tag { font-size: 12px; color: #475569; margin-top: 2px; }
+  .letterhead-end { text-align: right; font-size: 9.5px; color: #475569; line-height: 1.5; }
+  .letterhead-end b { display: block; color: #062a52; font-size: 10px; }
+
+  /* ── Title block ── */
+  .title-row { display: flex; align-items: flex-end; justify-content: space-between; margin: 14px 0 10px; }
+  .doc-kicker { font-size: 9.5px; text-transform: uppercase; letter-spacing: 2px; color: #64748b; font-weight: 700; }
+  .doc-title { font-size: 21px; font-weight: 800; color: #062a52; margin: 2px 0 0; }
+  .doc-stamp { text-align: right; font-size: 10px; color: #475569; line-height: 1.55; }
+  .doc-stamp b { color: #1e293b; }
+
+  /* ── Filters that produced this report ── */
+  .meta { width: 100%; border-collapse: collapse; margin: 0 0 12px; border: 1px solid #d7dee8; }
+  .meta tr { page-break-inside: avoid; }
+  .meta th { text-align: left; width: 150px; padding: 3.5px 10px; background: #f1f5f9; color: #475569; font-size: 9.5px; text-transform: uppercase; letter-spacing: .5px; border: 1px solid #e2e8f0; }
+  .meta td { padding: 3.5px 10px; border: 1px solid #e2e8f0; font-size: 10.5px; }
+
+  /* ── KPI summary ── */
+  .rb-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 0 0 12px; }
+  .rb-kpi { border: 1px solid #d7dee8; border-left: 4px solid #062a52; border-radius: 4px; padding: 6px 12px; background: #f8fafc; }
+  .rb-kpi-value { display: block; font-size: 17px; font-weight: 800; color: #062a52; }
+  .rb-kpi-label { display: block; font-size: 8.5px; text-transform: uppercase; letter-spacing: .6px; color: #64748b; margin-top: 1px; }
+
+  /* ── The report table ── */
+  .table-scroll { overflow: visible !important; margin: 0; }
+  table.rb-table { width: 100%; border-collapse: collapse; }
   thead { display: table-header-group; }
-  tr { page-break-inside: avoid; }
-  th, td { border: 1px solid #cbd5e1; padding: 5px 7px; vertical-align: top; }
-  th { background: #062a52; color: #fff; font-size: 10.5px; text-transform: uppercase; letter-spacing: .4px; text-align: left; }
-  td { font-size: 11px; }
+  tbody tr, tfoot tr, tbody tr.rb-group-head, tbody tr.rb-group-foot { page-break-inside: avoid; }
+  th, td { border: 1px solid #cbd5e1; padding: 4px 7px; vertical-align: top; }
+  th { background: #062a52; color: #fff; font-size: 9.5px; text-transform: uppercase; letter-spacing: .4px; text-align: left; }
+  td { font-size: 10px; }
   tbody tr:nth-child(even) td { background: #f1f5f9; }
+  tr.rb-group-head td { background: #e8eef6; color: #062a52; font-weight: 800; font-size: 10px; text-transform: uppercase; }
+  tr.rb-group-foot td { background: #f4f6fa; font-weight: 700; }
+  .rb-subtotal-label { color: #475569; }
+  .rb-subtotal-value { text-align: right; }
+  tfoot td { font-weight: 700; background: #eef2f7; border-top: 2px solid #062a52; }
   .num { text-align: right !important; }
-  .rb-total-label { font-weight: 700; color: #475569; }
-  .rb-table tfoot td { font-weight: 700; background: #f4f4f5; }
   .rb-empty { color: #64748b; font-style: italic; text-align: center !important; }
-  tfoot { border-top: 2px solid #062a52; }
+  .rb-legend { font-size: 10px; color: #475569; margin: 0 0 10px; }
+  .rb-legend i { display: none; }
+
+  /* ── Repeating page footer (browser that lacks @page margin boxes) ── */
+  .page-foot { display: none; }
+  @media print { .page-foot { display: flex; position: fixed; bottom: 0; left: 0; right: 0; justify-content: space-between; border-top: 1px solid #d7dee8; padding: 5px 2px 0; font-size: 8.5px; color: #64748b; } }
 </style>
 </head><body>
   <div class="rpt-bar"><button type="button" onclick="window.print()">${esc(t('reportBrowser.print'))}</button></div>
   <div class="sheet">
-    <div class="brand">
-      <h1>${esc(activeLabel.value)}</h1>
-      <span class="period">${esc(windowLabel.value)}</span>
+    <div class="letterhead">
+      ${logo}
+      <div class="letterhead-mid">
+        <div class="hotel-name">${hotel}</div>
+        <div class="hotel-tag">${address || 'Food &amp; Beverage Operations'}</div>
+      </div>
+      ${tax ? `<div class="letterhead-end">${tax.split(' · ').map(p => esc(p)).join(' · ')}</div>` : ''}
     </div>
-    ${reportBodyHtml(paper.innerHTML)}
-    <div style="margin-top: 10px; border-top: 1px solid #cbd5e1; padding-top: 6px; font-size: 10px; color: #64748b; display: flex; justify-content: space-between;">
-      <span>Generated ${esc(new Date().toLocaleString())}</span>
-      <span>${esc(activeLabel.value)}</span>
+
+    <div class="title-row">
+      <div>
+        <div class="doc-kicker">${esc(t('posReports.docTitle'))}</div>
+        <h1 class="doc-title">${title}</h1>
+      </div>
+      <div class="doc-stamp">
+        <div><b>${esc(t('posReports.docPeriod'))}:</b> ${period}</div>
+        <div><b>${esc(t('posReports.docPreparedBy'))}:</b> ${madeBy}</div>
+        <div><b>${esc(t('posReports.docGeneratedAt'))}:</b> ${madeAt} · ${rowCount} ${esc(t('posReports.docRows'))}</div>
+      </div>
     </div>
+
+    <table class="meta"><tbody>${meta}</tbody></table>
+    ${body}
+
+    <div class="page-foot"><span>${hotel} — ${title} · ${period}</span><span>${madeBy}</span></div>
   </div>
 </body></html>`,
   )
   win.document.close()
   return win
+}
+
+/** Builds the "filters that produced this report" pairs for the print sheet. */
+function printMetaPairs() {
+  const pairs = []
+  const add = (key, value) => {
+    if (value === '' || value === null || value === undefined) return
+    if (typeof value === 'boolean') value = value ? t('posReports.yes') : t('posReports.no')
+    pairs.push([t(key), String(value)])
+  }
+  add('posReports.docPeriod', `${prettyDate(filterValues.from)} — ${prettyDate(filterValues.to)}`)
+  const venueId = String(filterValues.terminal_id || filterValues.outlet_id || '')
+  const venue = venueId ? venueOptions.value.find((v) => v.id === venueId)?.label || '' : ''
+  add('posReports.outlet', venue)
+  const user = userOptions.value.find((u) => String(u.user_id) === String(filterValues.user_id))
+  if (user) add('posReports.user', user.full_name)
+  add('posReports.orderType', filterValues.business_source ? (businessSources.value[filterValues.business_source] || filterValues.business_source) : '')
+  const cat = categoryOptions.value.find((c) => String(c.category_id) === String(filterValues.category_id))
+  if (cat) add('posReports.category', cat.category_name)
+  add('posReports.subCategory', filterValues.sub_category)
+  add('posReports.department', filterValues.department ? (departmentOptions.value.find((d) => d === filterValues.department) || filterValues.department) : '')
+  add('posReports.includeNoCharge', filterValues.include_no_charge === true ? t('posReports.yes') : '')
+  add('posReports.menuItem', filterValues.menu_item)
+  add('posReports.tax', filterValues.tax)
+  add('posReports.discount', filterValues.discount)
+  add('posReports.payment', filterValues.payment)
+  add('posReports.waiterWiseSales', filterValues.waiter_wise_sales)
+  add('posReports.expenseVoucher', filterValues.voucher)
+  return pairs
 }
 
 async function exportTable() {
@@ -1035,6 +1158,7 @@ watch(usesDepartments, (now, before) => {
 })
 
 onMounted(() => {
+  loadReportLogo()
   loadOutlets()
   loadDepartments()
   run()

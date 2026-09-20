@@ -4620,7 +4620,14 @@
     "filterUnavailableCategoryBody": "This report doesn't group its figures by category, so there is nothing to choose in the list. The Category filter works on the reports that are organised by category, such as Menu Item Sales and the sales reports.",
     "filterUnavailableSubCategoryTitle": "The Sub Category filter isn't available for this report",
     "filterUnavailableSubCategoryBody": "Only the Menu Item Sales report splits its figures by sub-category, so this list is empty on the report you are viewing. Try Menu Item Sales to use it.",
-    "filterUnavailableTitle": "This filter isn't available on this report"
+    "filterUnavailableTitle": "This filter isn't available on this report",
+    "docTitle": "Food & Beverage Report",
+    "docPeriod": "Report period",
+    "docPreparedBy": "Prepared by",
+    "docGeneratedAt": "Generated at",
+    "docRows": "rows",
+    "yes": "Yes",
+    "no": "No"
   },
   "cashier": {
     "panelTitle": "POS",

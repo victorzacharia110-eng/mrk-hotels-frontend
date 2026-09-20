@@ -4583,7 +4583,14 @@
     "filterUnavailableCategoryBody": "Ripoti hii haigawanyi takwimu zake kwa kategoria, hivyo hakuna cha kuchagua kwenye orodha. Kichujio cha Kategoria kinafanya kazi kwenye ripoti zinazopangwa kwa kategoria, kama Mauzo ya Bidhaa na ripoti za mauzo.",
     "filterUnavailableSubCategoryTitle": "Kichujio cha Kategoria Ndogo hakipo kwa ripoti hii",
     "filterUnavailableSubCategoryBody": "Ripoti ya Mauzo ya Bidhaa pekee ndiyo inayogawa takwimu kwa kategoria ndogo, hivyo orodha hii iko tupu kwenye ripoti unayoiangalia. Jaribu Mauzo ya Bidhaa ili kuitumia.",
-    "filterUnavailableTitle": "Kichujio hiki hakipo kwenye ripoti hii"
+    "filterUnavailableTitle": "Kichujio hiki hakipo kwenye ripoti hii",
+    "docTitle": "Ripoti ya Vyakula na Vinywaji",
+    "docPeriod": "Kipindi cha ripoti",
+    "docPreparedBy": "Imeandaliwa na",
+    "docGeneratedAt": "Imetolewa saa",
+    "docRows": "safu",
+    "yes": "Ndiyo",
+    "no": "Hapana"
   },
   "cashier": {
     "panelTitle": "KARO",
