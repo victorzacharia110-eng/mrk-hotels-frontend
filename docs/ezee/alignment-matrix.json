@@ -1,0 +1,5151 @@
+[
+ {
+  "ourKey": "menu-item-sales",
+  "ourName": "Menu Item Sales Summary",
+  "ezeeReport": "Menu Item Sales Summary",
+  "action": "MenuItemSalesSummary",
+  "api": "report/menuitemsalessummary",
+  "mrt": "MenuItemSalesSummaryReport.mrt",
+  "priv": "102",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sub Category",
+    "columnname": "Sub_Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price (including Tax)",
+    "columnname": "Price_With_Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Net Rate",
+    "columnname": "Net_Rate",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Session",
+    "columnname": "Session",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Businsess Source",
+    "columnname": "Businsess_Source",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "menu-items-sales-detail",
+  "ourName": "Menu Items Sales Detail",
+  "ezeeReport": "Sales Detail",
+  "action": "SalesDetail",
+  "api": "report/salesdetail",
+  "mrt": "SalesDetailReport.mrt",
+  "priv": "17",
+  "score": 80,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Order No",
+    "columnname": "Order_No",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Receipt No",
+    "columnname": "Receipt_No",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Price Total",
+    "columnname": "Sub_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "4"
+   },
+   {
+    "caption": "Tax Total",
+    "columnname": "Tax_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax1",
+    "columnname": "Tax1",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax2",
+    "columnname": "Tax2",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax3",
+    "columnname": "Tax3",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax4",
+    "columnname": "Tax4",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax5",
+    "columnname": "Tax5",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Others",
+    "columnname": "Others",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tip",
+    "columnname": "Tip",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Final Total Without TIP",
+    "columnname": "Final_Total_W_TIP",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Final Total",
+    "columnname": "Final_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Payment",
+    "columnname": "Payment_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount Due",
+    "columnname": "Amount_Due",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Guest Name",
+    "columnname": "Name",
+    "column_type": "1",
+    "align": "Left",
+    "width": "4"
+   },
+   {
+    "caption": "Guest Mobile Number",
+    "columnname": "GuestMobileNumber",
+    "column_type": "1",
+    "align": "Left",
+    "width": "4"
+   },
+   {
+    "caption": "Guest Email Address",
+    "columnname": "GuestEmailAddress",
+    "column_type": "1",
+    "align": "Left",
+    "width": "4"
+   },
+   {
+    "caption": "User",
+    "columnname": "user",
+    "column_type": "3",
+    "align": "Left",
+    "width": "4"
+   },
+   {
+    "caption": "Terminal",
+    "columnname": "Terminal",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Remark",
+    "columnname": "Remark",
+    "column_type": "1",
+    "align": "Left",
+    "width": "8"
+   },
+   {
+    "caption": "Reference#",
+    "columnname": "ref_no",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Waiter",
+    "columnname": "waiter_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Table#",
+    "columnname": "table_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Floor#",
+    "columnname": "floor_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Payment Type",
+    "columnname": "payment_type",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Payment Method",
+    "columnname": "payment_method",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Absolute Reservation#",
+    "columnname": "ea_reservationno",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Absolute Room#",
+    "columnname": "ea_roomno",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Absolute Folio#",
+    "columnname": "ea_foliono",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Tax Type",
+    "columnname": "tax_type",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Description",
+    "columnname": "description",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "RoundOff",
+    "columnname": "RoundOff",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Promo_Discount",
+    "columnname": "Promo_Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Item Discount",
+    "columnname": "Item_Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Order Discount",
+    "columnname": "Order_Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Order Type",
+    "columnname": "ordertype",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Session",
+    "columnname": "session",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Pax",
+    "columnname": "pax",
+    "column_type": "4",
+    "align": "Right",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "menu-item-cost-detail",
+  "ourName": "Menu Item Cost Detail",
+  "ezeeReport": "Menu Item Cost Detail",
+  "action": "MenuItemCost",
+  "api": "report/menuitemcost",
+  "mrt": "MenuItemCostReport.mrt",
+  "priv": "122",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Order No",
+    "columnname": "Order_No",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Receipt No",
+    "columnname": "Folio_No",
+    "column_type": "1",
+    "align": "Left",
+    "width": "1.5"
+   },
+   {
+    "caption": "Ordered Time",
+    "columnname": "Tran_time",
+    "column_type": "1",
+    "align": "Left",
+    "width": "1.5"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "1",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Est. Cost",
+    "columnname": "Est_Cost",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Sales",
+    "columnname": "Net_Sales",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Cost",
+    "columnname": "Total_Cost",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Diff",
+    "columnname": "Diff",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Diff(%)",
+    "columnname": "Diff_Per",
+    "column_type": "1",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Category",
+    "columnname": "category",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Sub Category",
+    "columnname": "sub_category",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Session",
+    "columnname": "session",
+    "column_type": "1",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Order Type",
+    "columnname": "Ordertype",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Reference#",
+    "columnname": "ref_no",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Waiter",
+    "columnname": "waiter_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Businsess Source",
+    "columnname": "businsess_source",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "menu-item-cost-summary",
+  "ourName": "Menu Item Cost Summary",
+  "ezeeReport": "Menu Item Cost Summary",
+  "action": "MenuItemCostSummary",
+  "api": "report/menuitemcostsummary",
+  "mrt": "MenuItemCostSummaryReport.mrt",
+  "priv": "318",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2.5"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sub Category",
+    "columnname": "Sub_Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "1",
+    "align": "Left",
+    "width": "4"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2.2"
+   },
+   {
+    "caption": "Est. Cost",
+    "columnname": "Est_Cost",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Sales",
+    "columnname": "Net_Sales",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2.6"
+   },
+   {
+    "caption": "Total Cost",
+    "columnname": "Total_Cost",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2.6"
+   },
+   {
+    "caption": "Diff",
+    "columnname": "Diff",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2.2"
+   },
+   {
+    "caption": "Diff(%)",
+    "columnname": "Diff_Per",
+    "column_type": "1",
+    "align": "Right",
+    "width": "2.8"
+   }
+  ]
+ },
+ {
+  "ourKey": "sales",
+  "ourName": "Sales Summary",
+  "ezeeReport": "Sales Summary",
+  "action": "SalesSummary",
+  "api": "report/salessummarydetail",
+  "mrt": "SalesSummaryDetailReport.mrt",
+  "priv": "107",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Date",
+    "columnname": "Tran_datetime",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Sub Total",
+    "columnname": "Sub_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax Total",
+    "columnname": "Tax_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax1",
+    "columnname": "Tax1",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax2",
+    "columnname": "Tax2",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax3",
+    "columnname": "Tax3",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax4",
+    "columnname": "Tax4",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax5",
+    "columnname": "Tax5",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Others",
+    "columnname": "Others",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tip",
+    "columnname": "Tip",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Final Total Without TIP",
+    "columnname": "Final_Total_W_TIP",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Final Total",
+    "columnname": "Final_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Payment",
+    "columnname": "Payment_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount Due",
+    "columnname": "Amount_Due",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "RoundOff",
+    "columnname": "RoundOff",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Promo_Discount",
+    "columnname": "Promo_Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "sales-detail",
+  "ourName": "Sales Detail",
+  "ezeeReport": "Sales Detail",
+  "action": "SalesDetail",
+  "api": "report/salesdetail",
+  "mrt": "SalesDetailReport.mrt",
+  "priv": "17",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Order No",
+    "columnname": "Order_No",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Receipt No",
+    "columnname": "Receipt_No",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Price Total",
+    "columnname": "Sub_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "4"
+   },
+   {
+    "caption": "Tax Total",
+    "columnname": "Tax_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax1",
+    "columnname": "Tax1",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax2",
+    "columnname": "Tax2",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax3",
+    "columnname": "Tax3",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax4",
+    "columnname": "Tax4",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax5",
+    "columnname": "Tax5",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Others",
+    "columnname": "Others",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tip",
+    "columnname": "Tip",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Final Total Without TIP",
+    "columnname": "Final_Total_W_TIP",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Final Total",
+    "columnname": "Final_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Payment",
+    "columnname": "Payment_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount Due",
+    "columnname": "Amount_Due",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Guest Name",
+    "columnname": "Name",
+    "column_type": "1",
+    "align": "Left",
+    "width": "4"
+   },
+   {
+    "caption": "Guest Mobile Number",
+    "columnname": "GuestMobileNumber",
+    "column_type": "1",
+    "align": "Left",
+    "width": "4"
+   },
+   {
+    "caption": "Guest Email Address",
+    "columnname": "GuestEmailAddress",
+    "column_type": "1",
+    "align": "Left",
+    "width": "4"
+   },
+   {
+    "caption": "User",
+    "columnname": "user",
+    "column_type": "3",
+    "align": "Left",
+    "width": "4"
+   },
+   {
+    "caption": "Terminal",
+    "columnname": "Terminal",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Remark",
+    "columnname": "Remark",
+    "column_type": "1",
+    "align": "Left",
+    "width": "8"
+   },
+   {
+    "caption": "Reference#",
+    "columnname": "ref_no",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Waiter",
+    "columnname": "waiter_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Table#",
+    "columnname": "table_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Floor#",
+    "columnname": "floor_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Payment Type",
+    "columnname": "payment_type",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Payment Method",
+    "columnname": "payment_method",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Absolute Reservation#",
+    "columnname": "ea_reservationno",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Absolute Room#",
+    "columnname": "ea_roomno",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Absolute Folio#",
+    "columnname": "ea_foliono",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Tax Type",
+    "columnname": "tax_type",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Description",
+    "columnname": "description",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "RoundOff",
+    "columnname": "RoundOff",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Promo_Discount",
+    "columnname": "Promo_Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Item Discount",
+    "columnname": "Item_Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Order Discount",
+    "columnname": "Order_Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Order Type",
+    "columnname": "ordertype",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Session",
+    "columnname": "session",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Pax",
+    "columnname": "pax",
+    "column_type": "4",
+    "align": "Right",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "sales-by-variable",
+  "ourName": "Sales By Variable",
+  "ezeeReport": "Sales By Variable",
+  "action": "SalesByVariable",
+  "api": "report/salesbyvariable",
+  "mrt": "SalesByVariableReport.mrt",
+  "priv": "108",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "top-selling-item",
+  "ourName": "Top Selling Item",
+  "ezeeReport": "Top Selling Item",
+  "action": "TopSellingItemReport",
+  "api": "report/salesbyvariable",
+  "mrt": "SalesByVariableReport.mrt",
+  "priv": "350",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "least-selling-item",
+  "ourName": "Least Selling Item",
+  "ezeeReport": "Least Selling Item",
+  "action": "LeastSellingItemReport",
+  "api": "report/salesbyvariable",
+  "mrt": "SalesByVariableReport.mrt",
+  "priv": "351",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "hourly-sales",
+  "ourName": "Hourly Sales",
+  "ezeeReport": "Hourly Sales",
+  "action": "HourlySales",
+  "api": "report/salesbyvariable",
+  "mrt": "SalesByVariableReport.mrt",
+  "priv": "352",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "cashier-sales-summary",
+  "ourName": "Cashier Sales Summary",
+  "ezeeReport": "Sales Summary",
+  "action": "SalesSummary",
+  "api": "report/salessummarydetail",
+  "mrt": "SalesSummaryDetailReport.mrt",
+  "priv": "107",
+  "score": 80,
+  "ezeeColumns": [
+   {
+    "caption": "Date",
+    "columnname": "Tran_datetime",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Sub Total",
+    "columnname": "Sub_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax Total",
+    "columnname": "Tax_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax1",
+    "columnname": "Tax1",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax2",
+    "columnname": "Tax2",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax3",
+    "columnname": "Tax3",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax4",
+    "columnname": "Tax4",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax5",
+    "columnname": "Tax5",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Others",
+    "columnname": "Others",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tip",
+    "columnname": "Tip",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Final Total Without TIP",
+    "columnname": "Final_Total_W_TIP",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Final Total",
+    "columnname": "Final_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Payment",
+    "columnname": "Payment_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount Due",
+    "columnname": "Amount_Due",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "RoundOff",
+    "columnname": "RoundOff",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Promo_Discount",
+    "columnname": "Promo_Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "cashier-sales-detail",
+  "ourName": "Cashier Sales Detail",
+  "ezeeReport": "Cashier Sales Detail",
+  "action": "CashierSalesDetail",
+  "api": "report/cashierdetail",
+  "mrt": "CashierSalesReport.mrt",
+  "priv": "169",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "shift-manager-timing",
+  "ourName": "Shift Manager Timing Report",
+  "ezeeReport": "Shift Manager Timing Report",
+  "action": "ShiftManagerTimingReport",
+  "api": "report/shiftmanagertiming",
+  "mrt": "ShiftManagerTimingReport.mrt",
+  "priv": "379",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "no-charge",
+  "ourName": "No Charges Sales Summary",
+  "ezeeReport": "Sales Summary",
+  "action": "SalesSummary",
+  "api": "report/salessummarydetail",
+  "mrt": "SalesSummaryDetailReport.mrt",
+  "priv": "107",
+  "score": 80,
+  "ezeeColumns": [
+   {
+    "caption": "Date",
+    "columnname": "Tran_datetime",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Sub Total",
+    "columnname": "Sub_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax Total",
+    "columnname": "Tax_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax1",
+    "columnname": "Tax1",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax2",
+    "columnname": "Tax2",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax3",
+    "columnname": "Tax3",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax4",
+    "columnname": "Tax4",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax5",
+    "columnname": "Tax5",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Others",
+    "columnname": "Others",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tip",
+    "columnname": "Tip",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Final Total Without TIP",
+    "columnname": "Final_Total_W_TIP",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Final Total",
+    "columnname": "Final_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Payment",
+    "columnname": "Payment_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount Due",
+    "columnname": "Amount_Due",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "RoundOff",
+    "columnname": "RoundOff",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Promo_Discount",
+    "columnname": "Promo_Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "no-charge-menu-item-sales-summary",
+  "ourName": "No Charge Menu Item Sales Summary",
+  "ezeeReport": "No Charge Menu Item Sales Summary",
+  "action": "NoChargeMenuItemSalesSummary",
+  "api": "report/nochargemenuitemsalessummary",
+  "mrt": "NoChargeMenuItemSalesSummaryReport.mrt",
+  "priv": "255",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sub Category",
+    "columnname": "Sub_Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "no-charge-menu-item-sales-detail",
+  "ourName": "No Charge Menu Item Sales Detail",
+  "ezeeReport": "No Charge Menu Item Sales Detail",
+  "action": "NoChargeMenuItemSalesDetail",
+  "api": "report/nochargemenuitemsalesdetail",
+  "mrt": "NoChargeMenuItemSalesDetailReport.mrt",
+  "priv": "254",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Account Name",
+    "columnname": "account_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Guest#",
+    "columnname": "guest_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Order No",
+    "columnname": "Order_No",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Receipt No",
+    "columnname": "Folio_No",
+    "column_type": "1",
+    "align": "Left",
+    "width": "1.5"
+   },
+   {
+    "caption": "Ordered Time",
+    "columnname": "Tran_time",
+    "column_type": "1",
+    "align": "Left",
+    "width": "1.5"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3.8"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Reference#",
+    "columnname": "ref_no",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Waiter",
+    "columnname": "waiter_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "no-charge-sales-detail",
+  "ourName": "No Charge Sales Detail",
+  "ezeeReport": "No Charge Sales Detail",
+  "action": "NoChargeSalesDetail",
+  "api": "report/nochargesalesdetail",
+  "mrt": "NoChargeSalesDetailReport.mrt",
+  "priv": "256",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Order No",
+    "columnname": "Order_No",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Receipt No",
+    "columnname": "Receipt_No",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Price Total",
+    "columnname": "Sub_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "4"
+   },
+   {
+    "caption": "Tax Total",
+    "columnname": "Tax_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax1",
+    "columnname": "Tax1",
+    "column_type": "4",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax2",
+    "columnname": "Tax2",
+    "column_type": "4",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax3",
+    "columnname": "Tax3",
+    "column_type": "4",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax4",
+    "columnname": "Tax4",
+    "column_type": "4",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax5",
+    "columnname": "Tax5",
+    "column_type": "4",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Others",
+    "columnname": "Others",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Final Total",
+    "columnname": "Final_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Guest",
+    "columnname": "Name",
+    "column_type": "1",
+    "align": "Left",
+    "width": "4"
+   },
+   {
+    "caption": "User",
+    "columnname": "User",
+    "column_type": "3",
+    "align": "Left",
+    "width": "4"
+   },
+   {
+    "caption": "Terminal",
+    "columnname": "Terminal",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Remark",
+    "columnname": "Remark",
+    "column_type": "1",
+    "align": "Left",
+    "width": "8"
+   },
+   {
+    "caption": "Reference#",
+    "columnname": "ref_no",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Waiter",
+    "columnname": "waiter_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Tax Type",
+    "columnname": "tax_type",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Description",
+    "columnname": "description",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "RoundOff",
+    "columnname": "RoundOff",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount_Total",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Promo_Discount",
+    "columnname": "Promo_Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Account Name",
+    "columnname": "account_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Absolute Reservation#",
+    "columnname": "ea_reservationno",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Absolute Room#",
+    "columnname": "ea_roomno",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Absolute Folio#",
+    "columnname": "ea_foliono",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Pax",
+    "columnname": "pax",
+    "column_type": "4",
+    "align": "Right",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "payment-summary",
+  "ourName": "Payment Summary",
+  "ezeeReport": "Payment Summary",
+  "action": "PaymentSummary",
+  "api": "report/paymentsummaryNew",
+  "mrt": "",
+  "priv": "330",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_Datetime",
+    "column_type": "1",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sign",
+    "columnname": "Sign",
+    "column_type": "2",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Payment Type",
+    "columnname": "Payment_Type",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Payment Method",
+    "columnname": "Payment_Method",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Terminal",
+    "columnname": "Terminal",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "payment-detail",
+  "ourName": "Payment Detail",
+  "ezeeReport": "Payment Detail",
+  "action": "PaymentDetail",
+  "api": "report/paymentdetailNew",
+  "mrt": "",
+  "priv": "329",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_Datetime",
+    "column_type": "2",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Order Date",
+    "columnname": "Order_Date_Time",
+    "column_type": "1",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sign",
+    "columnname": "Sign",
+    "column_type": "2",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Order No",
+    "columnname": "Order_No",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Receipt No",
+    "columnname": "Folio_No",
+    "column_type": "1",
+    "align": "Left",
+    "width": "1.5"
+   },
+   {
+    "caption": "Payment Type",
+    "columnname": "Payment_Type",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Payment Method",
+    "columnname": "Payment_Method",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Payment Date",
+    "columnname": "Date_Time",
+    "column_type": "1",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Description",
+    "columnname": "Description",
+    "column_type": "1",
+    "align": "Left",
+    "width": "5"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Terminal",
+    "columnname": "Terminal",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Guest",
+    "columnname": "Name",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Order By",
+    "columnname": "OrderByUser",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Settle By",
+    "columnname": "SettleByUser",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Order Type",
+    "columnname": "Ordertype",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Transaction Type",
+    "columnname": "transactiontype",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   }
+  ]
+ },
+ {
+  "ourKey": "tax-collection",
+  "ourName": "Tax Collection",
+  "ezeeReport": "Tax Collection",
+  "action": "TaxCollection",
+  "api": "report/taxcollection",
+  "mrt": "TaxCollectionReport.mrt",
+  "priv": "111",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_Datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Tax Type",
+    "columnname": "Tax_Type",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Rate",
+    "columnname": "Rate",
+    "column_type": "3",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax Collection",
+    "columnname": "Tax_Collected",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Taxable Sales",
+    "columnname": "Taxable_Sales",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax Exempt",
+    "columnname": "Tax_Exempt",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax By User",
+    "columnname": "User",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "tax-analysis",
+  "ourName": "Tax Analysis",
+  "ezeeReport": "Tax Analysis",
+  "action": "TaxAnalysis",
+  "api": "report/taxanalysis",
+  "mrt": "TaxAnalysisReport.mrt",
+  "priv": "259",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "creditors-summary",
+  "ourName": "Creditors Summary",
+  "ezeeReport": "Menu Item Sales Summary",
+  "action": "MenuItemSalesSummary",
+  "api": "report/menuitemsalessummary",
+  "mrt": "MenuItemSalesSummaryReport.mrt",
+  "priv": "102",
+  "score": 0,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sub Category",
+    "columnname": "Sub_Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price (including Tax)",
+    "columnname": "Price_With_Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Net Rate",
+    "columnname": "Net_Rate",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Session",
+    "columnname": "Session",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Businsess Source",
+    "columnname": "Businsess_Source",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "creditors-details",
+  "ourName": "Creditors Details",
+  "ezeeReport": "Menu Item Sales Summary",
+  "action": "MenuItemSalesSummary",
+  "api": "report/menuitemsalessummary",
+  "mrt": "MenuItemSalesSummaryReport.mrt",
+  "priv": "102",
+  "score": 0,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sub Category",
+    "columnname": "Sub_Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price (including Tax)",
+    "columnname": "Price_With_Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Net Rate",
+    "columnname": "Net_Rate",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Session",
+    "columnname": "Session",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Businsess Source",
+    "columnname": "Businsess_Source",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "driver-efficiency",
+  "ourName": "Driver Efficiency",
+  "ezeeReport": "Driver Efficiency",
+  "action": "DriverEfficiency",
+  "api": "report/driverefficiency",
+  "mrt": "DriverEfficiencyReport.mrt",
+  "priv": "284",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Driver Name",
+    "columnname": "Driver_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Order Date",
+    "columnname": "Order_Date",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Order Time",
+    "columnname": "Order_Time",
+    "column_type": "1",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Order No",
+    "columnname": "Order_No",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Receipt No",
+    "columnname": "Folio_No",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Customer",
+    "columnname": "Customer",
+    "column_type": "1",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Address",
+    "columnname": "Address",
+    "column_type": "1",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Out Time",
+    "columnname": "Out_Time",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "In Time",
+    "columnname": "In_Time",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Time Taken",
+    "columnname": "Total_Time_Taken",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Payment Method",
+    "columnname": "Payment_Method",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   }
+  ]
+ },
+ {
+  "ourKey": "driver-deliveries",
+  "ourName": "Driver Deliveries",
+  "ezeeReport": "Driver Deliveries",
+  "action": "DriverDeliveries",
+  "api": "report/driverdeliveries",
+  "mrt": "DriverDeliveriesReport.mrt",
+  "priv": "285",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Driver Name",
+    "columnname": "Driver_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "No Of Deliveries",
+    "columnname": "No_Of_Deliveries",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Average Time Taken",
+    "columnname": "Average_Time_Taken",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "expense-income-detail",
+  "ourName": "Expense/Income Detail Report",
+  "ezeeReport": "Expense/Income Detail Report",
+  "action": "MiscellaneousDetailReport",
+  "api": "report/miscellaneousdetail",
+  "mrt": "MiscellaneousDetail.mrt",
+  "priv": "366",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Order No",
+    "columnname": "Order_No",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Receipt No",
+    "columnname": "Folio_No",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Ordered Time",
+    "columnname": "Tran_time",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Extra Charge",
+    "columnname": "chargename",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "1",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "1",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "1",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Round Off",
+    "columnname": "Roundoff",
+    "column_type": "1",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "1",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Remark",
+    "columnname": "Remark",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "expense-income-summary",
+  "ourName": "Expense/Income Summary Report",
+  "ezeeReport": "Expense/Income Summary Report",
+  "action": "MiscellaneoussummaryReport",
+  "api": "report/miscellaneoussummary",
+  "mrt": "MiscellaneousSummary.mrt",
+  "priv": "368",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Extra Charge",
+    "columnname": "chargename",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Qty",
+    "columnname": "count",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Price",
+    "columnname": "price",
+    "column_type": "1",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "1",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "1",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "1",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Round Off",
+    "columnname": "Roundoff",
+    "column_type": "1",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "1",
+    "align": "Right",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "back-office",
+  "ourName": "Back Office Summary",
+  "ezeeReport": "Menu Item Sales Summary",
+  "action": "MenuItemSalesSummary",
+  "api": "report/menuitemsalessummary",
+  "mrt": "MenuItemSalesSummaryReport.mrt",
+  "priv": "102",
+  "score": 0,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sub Category",
+    "columnname": "Sub_Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price (including Tax)",
+    "columnname": "Price_With_Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Net Rate",
+    "columnname": "Net_Rate",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Session",
+    "columnname": "Session",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Businsess Source",
+    "columnname": "Businsess_Source",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "purchase-order-detail",
+  "ourName": "Purchase Order Detail",
+  "ezeeReport": "Purchase Order Detail",
+  "action": "PurchaseOrderDetail",
+  "api": "report/purchaseorderDetail",
+  "mrt": "PurchaseOrderDetailReport.mrt",
+  "priv": "207",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "purchaseorder_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Order No",
+    "columnname": "orderno",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Ordered Time",
+    "columnname": "Tran_time",
+    "column_type": "1",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Name",
+    "columnname": "name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3.8"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "qty",
+    "column_type": "5",
+    "align": "Left",
+    "width": "1.5"
+   },
+   {
+    "caption": "Unit",
+    "columnname": "unittype",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Price",
+    "columnname": "amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "purchaserate",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Adjustment",
+    "columnname": "adjustment",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2.5"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "totalamount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Terminal",
+    "columnname": "Terminal",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Remark",
+    "columnname": "Remark",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "2",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "GRN No",
+    "columnname": "GRN_No",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "stock-adjustment-detail",
+  "ourName": "Stock Adjustment Detail",
+  "ezeeReport": "Stock Adjustment Detail",
+  "action": "StockAdjustmentDetail",
+  "api": "report/invvoucherdetail",
+  "mrt": "stockadjustmentdetailreport.mrt",
+  "priv": "216",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Date",
+    "columnname": "voucher_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Voucher No",
+    "columnname": "voucher_no",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Time",
+    "columnname": "Tran_time",
+    "column_type": "1",
+    "align": "Left",
+    "width": "1.5"
+   },
+   {
+    "caption": "Type",
+    "columnname": "transactionType",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Item Name",
+    "columnname": "ItemName",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Unit",
+    "columnname": "unit_name",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Price",
+    "columnname": "price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Totalamount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "UserName",
+    "columnname": "user_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Remark",
+    "columnname": "remark",
+    "column_type": "1",
+    "align": "Left",
+    "width": "4"
+   },
+   {
+    "caption": "Terminal",
+    "columnname": "terminal_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "outlet_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "physical-stock-detail",
+  "ourName": "Physical Stock Detail",
+  "ezeeReport": "Physical Stock Detail",
+  "action": "PhysicalStockDetail",
+  "api": "report/physicalstockDetail",
+  "mrt": "physicalstockdetailreport.mrt",
+  "priv": "215",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Voucher No",
+    "columnname": "voucher_no",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Date",
+    "columnname": "voucher_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Time",
+    "columnname": "Tran_time",
+    "column_type": "1",
+    "align": "Left",
+    "width": "1.5"
+   },
+   {
+    "caption": "Itemname",
+    "columnname": "ItemName",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Physical Stock",
+    "columnname": "ph_stock",
+    "column_type": "5",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Stock On Hand",
+    "columnname": "book_stock",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Unit",
+    "columnname": "unit_name",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Difference",
+    "columnname": "Difference",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price",
+    "columnname": "price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Totalamount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "UserName",
+    "columnname": "user_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Remark",
+    "columnname": "remark",
+    "column_type": "1",
+    "align": "Left",
+    "width": "4"
+   },
+   {
+    "caption": "Terminal",
+    "columnname": "terminal_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "outlet_name",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "2",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "stock-transfer-detail",
+  "ourName": "Stock Transfer Detail",
+  "ezeeReport": "Stock Transfer Detail",
+  "action": "StockTransferDetail",
+  "api": "report/stocktransferdetail",
+  "mrt": "stocktransferdetailreport.mrt",
+  "priv": "227",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Date",
+    "columnname": "voucher_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Voucher No",
+    "columnname": "voucher_no",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Time",
+    "columnname": "Tran_time",
+    "column_type": "1",
+    "align": "Left",
+    "width": "1.5"
+   },
+   {
+    "caption": "To Outlet",
+    "columnname": "to_outletunkid",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Itemname",
+    "columnname": "ItemName",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Unit",
+    "columnname": "unit_name",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Price",
+    "columnname": "price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Totalamount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "UserName",
+    "columnname": "user_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Remark",
+    "columnname": "remark",
+    "column_type": "1",
+    "align": "Left",
+    "width": "4"
+   },
+   {
+    "caption": "Terminal",
+    "columnname": "terminal_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "outlet_name",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "2",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "stock-transfer-summary",
+  "ourName": "Stock Transfer Summary",
+  "ezeeReport": "Stock Transfer Summary",
+  "action": "StockTransferSummary",
+  "api": "report/stocktransfersummary",
+  "mrt": "stocktransfersummaryreport.mrt",
+  "priv": "323",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "goods-received-detail",
+  "ourName": "Goods Received Detail",
+  "ezeeReport": "Menu Item Sales Summary",
+  "action": "MenuItemSalesSummary",
+  "api": "report/menuitemsalessummary",
+  "mrt": "MenuItemSalesSummaryReport.mrt",
+  "priv": "102",
+  "score": 0,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sub Category",
+    "columnname": "Sub_Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price (including Tax)",
+    "columnname": "Price_With_Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Net Rate",
+    "columnname": "Net_Rate",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Session",
+    "columnname": "Session",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Businsess Source",
+    "columnname": "Businsess_Source",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "goods-return-detail",
+  "ourName": "Goods Return Detail",
+  "ezeeReport": "Goods Return Detail",
+  "action": "GoodsReturnDetail",
+  "api": "report/goodsreturndetail",
+  "mrt": "GoodsReturnDetail.mrt",
+  "priv": "266",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "foliodatetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Order No",
+    "columnname": "orderno",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Invoice No",
+    "columnname": "Invoice_No",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Vendor",
+    "columnname": "Vendor",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3.8"
+   },
+   {
+    "caption": "Ordered Time",
+    "columnname": "Tran_time",
+    "column_type": "1",
+    "align": "Left",
+    "width": "1.5"
+   },
+   {
+    "caption": "Name",
+    "columnname": "Purchase_Item",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3.8"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "qty",
+    "column_type": "5",
+    "align": "Right",
+    "width": "1"
+   },
+   {
+    "caption": "Unit",
+    "columnname": "unittype",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Price",
+    "columnname": "amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "purchaserate",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Adjustment",
+    "columnname": "adjustment",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "totalamount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "User",
+    "columnname": "User",
+    "column_type": "3",
+    "align": "Left",
+    "width": "4"
+   },
+   {
+    "caption": "Terminal",
+    "columnname": "Terminal",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Remark",
+    "columnname": "Remark",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "2",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "inventory",
+  "ourName": "Inventory Movements",
+  "ezeeReport": "Menu Item Sales Summary",
+  "action": "MenuItemSalesSummary",
+  "api": "report/menuitemsalessummary",
+  "mrt": "MenuItemSalesSummaryReport.mrt",
+  "priv": "102",
+  "score": 0,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sub Category",
+    "columnname": "Sub_Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price (including Tax)",
+    "columnname": "Price_With_Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Net Rate",
+    "columnname": "Net_Rate",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Session",
+    "columnname": "Session",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Businsess Source",
+    "columnname": "Businsess_Source",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "stock-ledger",
+  "ourName": "Stock Ledger",
+  "ezeeReport": "Stock Ledger",
+  "action": "StockLedger",
+  "api": "report/stockledger",
+  "mrt": "StockLedgerReport.mrt",
+  "priv": "198",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "closing-stock",
+  "ourName": "Closing Stock",
+  "ezeeReport": "Closing Stock",
+  "action": "ClosingStock",
+  "api": "report/closingStock",
+  "mrt": "ClosingStockReport.mrt",
+  "priv": "199",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Outlet",
+    "columnname": "outlet_name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Item Name",
+    "columnname": "item_name",
+    "column_type": "1",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "1"
+   },
+   {
+    "caption": "Item Category",
+    "columnname": "item_category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Stock On Hand",
+    "columnname": "stock_on_hand",
+    "column_type": "1",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Rate/Unit",
+    "columnname": "cost_per_unit",
+    "column_type": "1",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Stock Value",
+    "columnname": "stock_Value",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "stock-movement-detail",
+  "ourName": "Stock Movement Detail",
+  "ezeeReport": "Stock Movement Detail",
+  "action": "StockMovementDetail",
+  "api": "report/stockmovdetail",
+  "mrt": "StockMovementDetailReport.mrt",
+  "priv": "200",
+  "score": 100,
+  "ezeeColumns": [
+   {
+    "caption": "Item Name",
+    "columnname": "item_name",
+    "column_type": "1",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Item Category",
+    "columnname": "item_category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Opening",
+    "columnname": "opening",
+    "column_type": "1",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Purchase",
+    "columnname": "purchase",
+    "column_type": "1",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Purchase Return",
+    "columnname": "purchase_return",
+    "column_type": "1",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Stock Transfer",
+    "columnname": "issue",
+    "column_type": "1",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Stock Received",
+    "columnname": "received",
+    "column_type": "1",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Adjustment (Direct)",
+    "columnname": "adjustment_Direct",
+    "column_type": "1",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Adjustment (Physical Stock Taking)",
+    "columnname": "adjustment_PST",
+    "column_type": "1",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Wastage (Purchase)",
+    "columnname": "wastage_Purchase",
+    "column_type": "1",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Wastage (Sales)",
+    "columnname": "wastage_Sales",
+    "column_type": "1",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Wastage (Adjustment)",
+    "columnname": "wastage_Adjustment",
+    "column_type": "1",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Consumption (Manufacturing)",
+    "columnname": "consumption_Manufacturing",
+    "column_type": "1",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Consumption (Sales)",
+    "columnname": "consumption_Sales",
+    "column_type": "1",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Consumption (Adjustment)",
+    "columnname": "consumption_Adjustment",
+    "column_type": "1",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Manufacturing",
+    "columnname": "manufacturing",
+    "column_type": "1",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Closing",
+    "columnname": "closing",
+    "column_type": "1",
+    "align": "Right",
+    "width": "3"
+   }
+  ]
+ },
+ {
+  "ourKey": "low-stock",
+  "ourName": "Low Stock",
+  "ezeeReport": "Low Stock",
+  "action": "LowStock",
+  "api": "report/lowStock",
+  "mrt": "LowStockReport.mrt",
+  "priv": "201",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "physical-stock-taking",
+  "ourName": "Physical Stock Taking",
+  "ezeeReport": "Physical Stock Taking",
+  "action": "PhysicalStockTaking",
+  "api": "report/physicalstocktaking",
+  "mrt": "PhysicalStockTakingReport.mrt",
+  "priv": "235",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "stock",
+  "ourName": "Current Stock",
+  "ezeeReport": "Menu Item Sales Summary",
+  "action": "MenuItemSalesSummary",
+  "api": "report/menuitemsalessummary",
+  "mrt": "MenuItemSalesSummaryReport.mrt",
+  "priv": "102",
+  "score": 0,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sub Category",
+    "columnname": "Sub_Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price (including Tax)",
+    "columnname": "Price_With_Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Net Rate",
+    "columnname": "Net_Rate",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Session",
+    "columnname": "Session",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Businsess Source",
+    "columnname": "Businsess_Source",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "audit-void-purchase-order",
+  "ourName": "Void Purchase Order",
+  "ezeeReport": "Void Purchase order",
+  "action": "VoidPurchesorder",
+  "api": "report/voidpurchaseorder",
+  "mrt": "VoidPurchesorder.mrt",
+  "priv": "304",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "audit-void-goods-received",
+  "ourName": "Void Goods Received",
+  "ezeeReport": "Menu Item Sales Summary",
+  "action": "MenuItemSalesSummary",
+  "api": "report/menuitemsalessummary",
+  "mrt": "MenuItemSalesSummaryReport.mrt",
+  "priv": "102",
+  "score": 0,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sub Category",
+    "columnname": "Sub_Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price (including Tax)",
+    "columnname": "Price_With_Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Net Rate",
+    "columnname": "Net_Rate",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Session",
+    "columnname": "Session",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Businsess Source",
+    "columnname": "Businsess_Source",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "audit-void-physical-stock",
+  "ourName": "Void Physical Stock",
+  "ezeeReport": "Void Physical Stock Detail",
+  "action": "VoidPhysicalStockDetail",
+  "api": "report/voidphysicalstockdetail",
+  "mrt": "VoidPhysicalstockDetailreport.mrt",
+  "priv": "308",
+  "score": 80,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "audit-void-requisitions",
+  "ourName": "Void Requisitions",
+  "ezeeReport": "Menu Item Sales Summary",
+  "action": "MenuItemSalesSummary",
+  "api": "report/menuitemsalessummary",
+  "mrt": "MenuItemSalesSummaryReport.mrt",
+  "priv": "102",
+  "score": 0,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sub Category",
+    "columnname": "Sub_Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price (including Tax)",
+    "columnname": "Price_With_Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Net Rate",
+    "columnname": "Net_Rate",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Session",
+    "columnname": "Session",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Businsess Source",
+    "columnname": "Businsess_Source",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "audit-void-stock-adjustment-detail",
+  "ourName": "Void Stock Adjustment Detail",
+  "ezeeReport": "Void Stock Adjustment Detail",
+  "action": "VoidStockAdjustment",
+  "api": "report/voidinvvourcher",
+  "mrt": "VoidStockadjustmentdetailreport.mrt",
+  "priv": "312",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "audit-void-stock-transfer-detail",
+  "ourName": "Void Stock Transfer Detail",
+  "ezeeReport": "Void Stock Transfer Detail",
+  "action": "VoidStocktransferDetail",
+  "api": "report/voidinvvourcher",
+  "mrt": "VoidStocktransferdetailreport.mrt",
+  "priv": "358",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "audit-void-items",
+  "ourName": "Void Items",
+  "ezeeReport": "Void Items",
+  "action": "VoidItems",
+  "api": "report/voiditem",
+  "mrt": "VoidItemReport.mrt",
+  "priv": "118",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "audit-void-charges",
+  "ourName": "Void Charges",
+  "ezeeReport": "Void Charges",
+  "action": "VoidCharges",
+  "api": "report/voidcharges",
+  "mrt": "VoidChargesReport.mrt",
+  "priv": "120",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "audit-void-order",
+  "ourName": "Void Order",
+  "ezeeReport": "Void Orders",
+  "action": "VoidOrders",
+  "api": "report/voidorder",
+  "mrt": "VoidOrderReport.mrt",
+  "priv": "117",
+  "score": 80,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "audit-void-payments",
+  "ourName": "Void Payments",
+  "ezeeReport": "Void Payments",
+  "action": "VoidPayments",
+  "api": "report/voidpayment",
+  "mrt": "VoidPaymentReport.mrt",
+  "priv": "119",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "audit-void-expense-income-voucher",
+  "ourName": "Void Expense/Income Voucher Report",
+  "ezeeReport": "Menu Item Sales Summary",
+  "action": "MenuItemSalesSummary",
+  "api": "report/menuitemsalessummary",
+  "mrt": "MenuItemSalesSummaryReport.mrt",
+  "priv": "102",
+  "score": 0,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sub Category",
+    "columnname": "Sub_Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price (including Tax)",
+    "columnname": "Price_With_Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Net Rate",
+    "columnname": "Net_Rate",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Session",
+    "columnname": "Session",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Businsess Source",
+    "columnname": "Businsess_Source",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "audit-trail",
+  "ourName": "Audit Trail",
+  "ezeeReport": "Audit Trail",
+  "action": "AuditTrail",
+  "api": "report/audittrail",
+  "mrt": "AuditTrailReport.mrt",
+  "priv": "184",
+  "score": 100,
+  "ezeeColumns": []
+ },
+ {
+  "ourKey": "audit",
+  "ourName": "Order Events",
+  "ezeeReport": "Menu Item Sales Summary",
+  "action": "MenuItemSalesSummary",
+  "api": "report/menuitemsalessummary",
+  "mrt": "MenuItemSalesSummaryReport.mrt",
+  "priv": "102",
+  "score": 0,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sub Category",
+    "columnname": "Sub_Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price (including Tax)",
+    "columnname": "Price_With_Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Net Rate",
+    "columnname": "Net_Rate",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Session",
+    "columnname": "Session",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Businsess Source",
+    "columnname": "Businsess_Source",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "statistical",
+  "ourName": "Statistical Report",
+  "ezeeReport": "Menu Item Sales Summary",
+  "action": "MenuItemSalesSummary",
+  "api": "report/menuitemsalessummary",
+  "mrt": "MenuItemSalesSummaryReport.mrt",
+  "priv": "102",
+  "score": 0,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sub Category",
+    "columnname": "Sub_Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price (including Tax)",
+    "columnname": "Price_With_Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Net Rate",
+    "columnname": "Net_Rate",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Session",
+    "columnname": "Session",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Businsess Source",
+    "columnname": "Businsess_Source",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "user-terminal",
+  "ourName": "User Terminal",
+  "ezeeReport": "Menu Item Sales Summary",
+  "action": "MenuItemSalesSummary",
+  "api": "report/menuitemsalessummary",
+  "mrt": "MenuItemSalesSummaryReport.mrt",
+  "priv": "102",
+  "score": 0,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sub Category",
+    "columnname": "Sub_Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price (including Tax)",
+    "columnname": "Price_With_Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Net Rate",
+    "columnname": "Net_Rate",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Session",
+    "columnname": "Session",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Businsess Source",
+    "columnname": "Businsess_Source",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ },
+ {
+  "ourKey": "custom",
+  "ourName": "Custom Report",
+  "ezeeReport": "Menu Item Sales Summary",
+  "action": "MenuItemSalesSummary",
+  "api": "report/menuitemsalessummary",
+  "mrt": "MenuItemSalesSummaryReport.mrt",
+  "priv": "102",
+  "score": 0,
+  "ezeeColumns": [
+   {
+    "caption": "Ordered Date",
+    "columnname": "Tran_datetime",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Category",
+    "columnname": "Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Sub Category",
+    "columnname": "Sub_Category",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Menu Item",
+    "columnname": "Menu_Item",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "Quantity",
+    "columnname": "Quantity",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Price",
+    "columnname": "Price",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Price (including Tax)",
+    "columnname": "Price_With_Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Amount",
+    "columnname": "Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Discount",
+    "columnname": "Discount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Net Rate",
+    "columnname": "Net_Rate",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Tax",
+    "columnname": "Tax",
+    "column_type": "5",
+    "align": "Right",
+    "width": "2"
+   },
+   {
+    "caption": "Total Amount",
+    "columnname": "Total_Amount",
+    "column_type": "5",
+    "align": "Right",
+    "width": "3"
+   },
+   {
+    "caption": "Outlet",
+    "columnname": "Outlet_Name",
+    "column_type": "3",
+    "align": "Left",
+    "width": "3"
+   },
+   {
+    "caption": "HSN Code",
+    "columnname": "hsncode",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Item Code",
+    "columnname": "item_code",
+    "column_type": "1",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Session",
+    "columnname": "Session",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   },
+   {
+    "caption": "Businsess Source",
+    "columnname": "Businsess_Source",
+    "column_type": "3",
+    "align": "Left",
+    "width": "2"
+   }
+  ]
+ }
+]

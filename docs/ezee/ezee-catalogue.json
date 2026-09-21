@@ -1,0 +1,3552 @@
+[
+ {
+  "group": "lbl_recommended_reports",
+  "reportName": "lbl4",
+  "action": "MenuItemSalesSummary",
+  "api": "report/menuitemsalessummary",
+  "mrt": "MenuItemSalesSummaryReport.mrt",
+  "priv": "102",
+  "mandatory": [
+   "dateRangePicker",
+   "outlets"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "menuItemCategories",
+   "menuItemSubCategories",
+   "menuSubGroups",
+   "menuItem",
+   "businessSource",
+   "orderType",
+   "sessions",
+   "search",
+   "includeNoCharge"
+  ],
+  "columns": [
+   "Tran_datetime",
+   "Category",
+   "Sub_Category",
+   "Menu_Item",
+   "Quantity",
+   "Price",
+   "Price_With_Tax",
+   "Amount",
+   "Discount",
+   "Net_Rate",
+   "Tax",
+   "Total_Amount",
+   "Outlet_Name",
+   "hsncode",
+   "item_code",
+   "Session",
+   "Businsess_Source"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Category",
+   "Sub Category",
+   "Menu Item",
+   "Quantity",
+   "Price",
+   "Price (including Tax)",
+   "Amount",
+   "Discount",
+   "Net Rate",
+   "Tax",
+   "Total Amount",
+   "Outlet",
+   "HSN Code",
+   "Item Code",
+   "Session",
+   "Businsess Source"
+  ]
+ },
+ {
+  "group": "lbl_recommended_reports",
+  "reportName": "lbl8",
+  "action": "SalesDetail",
+  "api": "report/salesdetail",
+  "mrt": "SalesDetailReport.mrt",
+  "priv": "17",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "sessions",
+   "businessSource",
+   "orderType",
+   "search",
+   "includeNoCharge"
+  ],
+  "columns": [
+   "Tran_datetime",
+   "Order_No",
+   "Receipt_No",
+   "Sub_Total",
+   "Tax_Total",
+   "Tax1",
+   "Tax2",
+   "Tax3",
+   "Tax4",
+   "Tax5",
+   "Discount_Total",
+   "Others",
+   "Tip",
+   "Final_Total_W_TIP",
+   "Final_Total",
+   "Payment_Total",
+   "Amount_Due",
+   "Name",
+   "GuestMobileNumber",
+   "GuestEmailAddress",
+   "user",
+   "Terminal",
+   "Outlet",
+   "Remark",
+   "ref_no",
+   "waiter_name",
+   "table_name",
+   "floor_name",
+   "payment_type",
+   "payment_method",
+   "ea_reservationno",
+   "ea_roomno",
+   "ea_foliono",
+   "tax_type",
+   "description",
+   "RoundOff",
+   "Promo_Discount",
+   "Item_Discount",
+   "Order_Discount",
+   "ordertype",
+   "session",
+   "pax"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Order No",
+   "Receipt No",
+   "Price Total",
+   "Tax Total",
+   "Tax1",
+   "Tax2",
+   "Tax3",
+   "Tax4",
+   "Tax5",
+   "Discount",
+   "Others",
+   "Tip",
+   "Final Total Without TIP",
+   "Final Total",
+   "Payment",
+   "Amount Due",
+   "Guest Name",
+   "Guest Mobile Number",
+   "Guest Email Address",
+   "User",
+   "Terminal",
+   "Outlet",
+   "Remark",
+   "Reference#",
+   "Waiter",
+   "Table#",
+   "Floor#",
+   "Payment Type",
+   "Payment Method",
+   "Absolute Reservation#",
+   "Absolute Room#",
+   "Absolute Folio#",
+   "Tax Type",
+   "Description",
+   "RoundOff",
+   "Promo_Discount",
+   "Item Discount",
+   "Order Discount",
+   "Order Type",
+   "Session",
+   "Pax"
+  ]
+ },
+ {
+  "group": "lbl_recommended_reports",
+  "reportName": "lbl_cashiersalesdetail",
+  "action": "CashierSalesDetail",
+  "api": "report/cashierdetail",
+  "mrt": "CashierSalesReport.mrt",
+  "priv": "169",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "includeOrdertype",
+   "includeCategory",
+   "includeSubCategory",
+   "includeMenuitem",
+   "tax",
+   "charge",
+   "discount",
+   "payment",
+   "include_businessource",
+   "include_waitersales",
+   "include_usersales",
+   "showTaxableValueOfSales",
+   "includeNoCharge",
+   "includeMiscellaneous"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl_recommended_reports",
+  "reportName": "lbl_nochargemenuitemsalesdetail",
+  "action": "NoChargeMenuItemSalesDetail",
+  "api": "report/nochargemenuitemsalesdetail",
+  "mrt": "NoChargeMenuItemSalesDetailReport.mrt",
+  "priv": "254",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "menuItemCategories",
+   "menuItemSubCategories",
+   "menuSubGroups",
+   "menuItem",
+   "noChargeAccount",
+   "search"
+  ],
+  "columns": [
+   "account_name",
+   "guest_name",
+   "Tran_datetime",
+   "Order_No",
+   "Folio_No",
+   "Tran_time",
+   "Menu_Item",
+   "Quantity",
+   "Price",
+   "Amount",
+   "Discount",
+   "Tax",
+   "Total_Amount",
+   "ref_no",
+   "waiter_name",
+   "item_code"
+  ],
+  "captions": [
+   "Account Name",
+   "Guest#",
+   "Ordered Date",
+   "Order No",
+   "Receipt No",
+   "Ordered Time",
+   "Menu Item",
+   "Quantity",
+   "Price",
+   "Amount",
+   "Discount",
+   "Tax",
+   "Total Amount",
+   "Reference#",
+   "Waiter",
+   "Item Code"
+  ]
+ },
+ {
+  "group": "lbl_recommended_reports",
+  "reportName": "lbl_nochargemenuitemsalessummary",
+  "action": "NoChargeMenuItemSalesSummary",
+  "api": "report/nochargemenuitemsalessummary",
+  "mrt": "NoChargeMenuItemSalesSummaryReport.mrt",
+  "priv": "255",
+  "mandatory": [
+   "dateRangePicker",
+   "outlets"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "menuItemCategories",
+   "menuItemSubCategories",
+   "menuSubGroups",
+   "menuItem",
+   "noChargeAccount",
+   "search"
+  ],
+  "columns": [
+   "Tran_datetime",
+   "Menu_Item",
+   "Category",
+   "Sub_Category",
+   "Quantity",
+   "Price",
+   "Amount",
+   "Discount",
+   "Tax",
+   "Total_Amount",
+   "Outlet_Name",
+   "item_code"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Menu Item",
+   "Category",
+   "Sub Category",
+   "Quantity",
+   "Price",
+   "Amount",
+   "Discount",
+   "Tax",
+   "Total Amount",
+   "Outlet",
+   "Item Code"
+  ]
+ },
+ {
+  "group": "lbl_recommended_reports",
+  "reportName": "lbl82",
+  "action": "PaymentSummary",
+  "api": "report/paymentsummaryNew",
+  "mrt": "",
+  "priv": "330",
+  "mandatory": [
+   "dateRangePicker",
+   "outlets",
+   "selectPayment"
+  ],
+  "filters": [
+   "paymentType",
+   "paymentMethods",
+   "showCurrency",
+   "currency",
+   "orderBy",
+   "settleBy",
+   "terminal",
+   "orderType",
+   "search"
+  ],
+  "columns": [
+   "Tran_Datetime",
+   "Sign",
+   "Payment_Type",
+   "Payment_Method",
+   "Amount",
+   "Terminal",
+   "Outlet_Name"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Sign",
+   "Payment Type",
+   "Payment Method",
+   "Amount",
+   "Terminal",
+   "Outlet"
+  ]
+ },
+ {
+  "group": "lbl_recommended_reports",
+  "reportName": "lbl14",
+  "action": "CityLedgerDetail",
+  "api": "report/cityledgerdetail",
+  "mrt": "CityLedgerReport.mrt",
+  "priv": "112",
+  "mandatory": [
+   "dateRangePicker",
+   "accountType",
+   "accounts"
+  ],
+  "filters": [
+   "outlet",
+   "ignoreZeroBalance",
+   "search"
+  ],
+  "columns": [
+   "Tran_datetime",
+   "Company_Name",
+   "Order_No",
+   "Master_Name",
+   "Descritption",
+   "Credit",
+   "Debit",
+   "Balance",
+   "User_Name"
+  ],
+  "captions": [
+   "Tran Date Time",
+   "Company Name",
+   "Receipt No",
+   "Description",
+   "Comment",
+   "Credit",
+   "Debit",
+   "Balance",
+   "Tran By User"
+  ]
+ },
+ {
+  "group": "lbl_recommended_reports",
+  "reportName": "lbl_report_Stsmry",
+  "action": "StockTransferSummary",
+  "api": "report/stocktransfersummary",
+  "mrt": "stocktransfersummaryreport.mrt",
+  "priv": "323",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "toOutlets",
+   "invCategories",
+   "invItem",
+   "search"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl_recommended_reports",
+  "reportName": "lbl_sledger",
+  "action": "StockLedger",
+  "api": "report/stockledger",
+  "mrt": "StockLedgerReport.mrt",
+  "priv": "198",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "invCategories",
+   "invItem",
+   "ignoreZeroStock",
+   "costCalculateWith"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl_recommended_reports",
+  "reportName": "lbl_cstock",
+  "action": "ClosingStock",
+  "api": "report/closingStock",
+  "mrt": "ClosingStockReport.mrt",
+  "priv": "199",
+  "mandatory": [
+   "date",
+   "outlets"
+  ],
+  "filters": [
+   "invCategories",
+   "invItem",
+   "ignoreZeroStock",
+   "costCalculateWith"
+  ],
+  "columns": [
+   "outlet_name",
+   "item_name",
+   "item_code",
+   "item_category",
+   "stock_on_hand",
+   "cost_per_unit",
+   "stock_Value"
+  ],
+  "captions": [
+   "Outlet",
+   "Item Name",
+   "Item Code",
+   "Item Category",
+   "Stock On Hand",
+   "Rate/Unit",
+   "Stock Value"
+  ]
+ },
+ {
+  "group": "lbl2",
+  "reportName": "lbl3",
+  "action": "MenuItemSalesDetail",
+  "api": "report/menuitemsalesdetail",
+  "mrt": "MenuItemSalesDetailReport.mrt",
+  "priv": "101",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "menuItemCategories",
+   "menuItemSubCategories",
+   "menuSubGroups",
+   "menuItem",
+   "businessSource",
+   "orderType",
+   "sessions",
+   "search",
+   "includeNoCharge"
+  ],
+  "columns": [
+   "Order_No",
+   "Folio_No",
+   "Tran_datetime",
+   "Tran_time",
+   "Menu_Item",
+   "Quantity",
+   "Price",
+   "Price_With_Tax",
+   "Amount",
+   "Discount",
+   "Discount_Type",
+   "Discount_Name",
+   "Discount_Value",
+   "Net_Rate",
+   "Tax",
+   "Total_Amount",
+   "ref_no",
+   "waiter_name",
+   "guest_name",
+   "guest_mobile",
+   "table_name",
+   "floor_name",
+   "hsncode",
+   "item_code",
+   "Category",
+   "Sub_Category",
+   "Ordertype",
+   "Session",
+   "Businsess_Source"
+  ],
+  "captions": [
+   "Order No",
+   "Receipt No",
+   "Ordered Date",
+   "Ordered Time",
+   "Menu Item",
+   "Quantity",
+   "Price",
+   "Price (Including Tax)",
+   "Amount",
+   "Discount",
+   "Discount Type",
+   "Discount Method",
+   "Discount Value",
+   "Net Rate",
+   "Tax",
+   "Total Amount",
+   "Reference#",
+   "Waiter",
+   "Guest Name",
+   "Guest Mobile",
+   "Table#",
+   "Floor#",
+   "HSN Code",
+   "Item Code",
+   "Category",
+   "Sub Category",
+   "Order Type",
+   "Session",
+   "Businsess Source"
+  ]
+ },
+ {
+  "group": "lbl2",
+  "reportName": "lbl4",
+  "action": "MenuItemSalesSummary",
+  "api": "report/menuitemsalessummary",
+  "mrt": "MenuItemSalesSummaryReport.mrt",
+  "priv": "102",
+  "mandatory": [
+   "dateRangePicker",
+   "outlets"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "menuItemCategories",
+   "menuItemSubCategories",
+   "menuSubGroups",
+   "menuItem",
+   "businessSource",
+   "orderType",
+   "sessions",
+   "search",
+   "includeNoCharge"
+  ],
+  "columns": [
+   "Tran_datetime",
+   "Category",
+   "Sub_Category",
+   "Menu_Item",
+   "Quantity",
+   "Price",
+   "Price_With_Tax",
+   "Amount",
+   "Discount",
+   "Net_Rate",
+   "Tax",
+   "Total_Amount",
+   "Outlet_Name",
+   "hsncode",
+   "item_code",
+   "Session",
+   "Businsess_Source"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Category",
+   "Sub Category",
+   "Menu Item",
+   "Quantity",
+   "Price",
+   "Price (including Tax)",
+   "Amount",
+   "Discount",
+   "Net Rate",
+   "Tax",
+   "Total Amount",
+   "Outlet",
+   "HSN Code",
+   "Item Code",
+   "Session",
+   "Businsess Source"
+  ]
+ },
+ {
+  "group": "lbl2",
+  "reportName": "lbl5",
+  "action": "ComplimentaryMenuItemSalesDetail",
+  "api": "report/complementarymenuitemsalesdetail",
+  "mrt": "ComplementaryMenuItemSalesDetailReport.mrt",
+  "priv": "103",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "menuItemCategories",
+   "menuItemSubCategories",
+   "menuSubGroups",
+   "menuItem",
+   "orderType",
+   "search"
+  ],
+  "columns": [
+   "Order_No",
+   "Folio_No",
+   "Tran_datetime",
+   "Menu_Item",
+   "Quantity",
+   "Price",
+   "Amount",
+   "Ordertype",
+   "item_code"
+  ],
+  "captions": [
+   "Order No",
+   "Receipt No",
+   "Ordered Date",
+   "Menu Item",
+   "Quantity",
+   "Price",
+   "Amount",
+   "Order Type",
+   "Item Code"
+  ]
+ },
+ {
+  "group": "lbl2",
+  "reportName": "lbl6",
+  "action": "MenuItemCost",
+  "api": "report/menuitemcost",
+  "mrt": "MenuItemCostReport.mrt",
+  "priv": "122",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "menuItemCategories",
+   "menuItemSubCategories",
+   "menuSubGroups",
+   "menuItem",
+   "search",
+   "includeNoCharge",
+   "showCostBasedOnBOM",
+   "costCalculateWith"
+  ],
+  "columns": [
+   "Tran_datetime",
+   "Order_No",
+   "Folio_No",
+   "Tran_time",
+   "Menu_Item",
+   "Quantity",
+   "Price",
+   "Est_Cost",
+   "Net_Sales",
+   "Total_Cost",
+   "Diff",
+   "Diff_Per",
+   "category",
+   "sub_category",
+   "item_code",
+   "hsncode",
+   "session",
+   "Ordertype",
+   "ref_no",
+   "waiter_name",
+   "businsess_source"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Order No",
+   "Receipt No",
+   "Ordered Time",
+   "Menu Item",
+   "Quantity",
+   "Price",
+   "Est. Cost",
+   "Sales",
+   "Total Cost",
+   "Diff",
+   "Diff(%)",
+   "Category",
+   "Sub Category",
+   "Item Code",
+   "HSN Code",
+   "Session",
+   "Order Type",
+   "Reference#",
+   "Waiter",
+   "Businsess Source"
+  ]
+ },
+ {
+  "group": "lbl2",
+  "reportName": "lbl_menuitemcostsummary",
+  "action": "MenuItemCostSummary",
+  "api": "report/menuitemcostsummary",
+  "mrt": "MenuItemCostSummaryReport.mrt",
+  "priv": "318",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "menuItemCategories",
+   "menuItemSubCategories",
+   "menuSubGroups",
+   "menuItem",
+   "search",
+   "includeNoCharge",
+   "showCostBasedOnBOM",
+   "costCalculateWith"
+  ],
+  "columns": [
+   "Tran_datetime",
+   "Category",
+   "Sub_Category",
+   "Menu_Item",
+   "Quantity",
+   "Price",
+   "Est_Cost",
+   "Net_Sales",
+   "Total_Cost",
+   "Diff",
+   "Diff_Per"
+  ],
+  "captions": [
+   "Date",
+   "Category",
+   "Sub Category",
+   "Menu Item",
+   "Quantity",
+   "Price",
+   "Est. Cost",
+   "Sales",
+   "Total Cost",
+   "Diff",
+   "Diff(%)"
+  ]
+ },
+ {
+  "group": "lbl2",
+  "reportName": "lbl_menuitemstockdetail",
+  "action": "MenuItemStockDetail",
+  "api": "report/menuitemstockdetail",
+  "mrt": "MenuitemStockReport.mrt",
+  "priv": "356",
+  "mandatory": [
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "menuItem"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl7",
+  "reportName": "lbl8",
+  "action": "SalesDetail",
+  "api": "report/salesdetail",
+  "mrt": "SalesDetailReport.mrt",
+  "priv": "17",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "sessions",
+   "businessSource",
+   "orderType",
+   "search",
+   "includeNoCharge"
+  ],
+  "columns": [
+   "Tran_datetime",
+   "Order_No",
+   "Receipt_No",
+   "Sub_Total",
+   "Tax_Total",
+   "Tax1",
+   "Tax2",
+   "Tax3",
+   "Tax4",
+   "Tax5",
+   "Discount_Total",
+   "Others",
+   "Tip",
+   "Final_Total_W_TIP",
+   "Final_Total",
+   "Payment_Total",
+   "Amount_Due",
+   "Name",
+   "GuestMobileNumber",
+   "GuestEmailAddress",
+   "user",
+   "Terminal",
+   "Outlet",
+   "Remark",
+   "ref_no",
+   "waiter_name",
+   "table_name",
+   "floor_name",
+   "payment_type",
+   "payment_method",
+   "ea_reservationno",
+   "ea_roomno",
+   "ea_foliono",
+   "tax_type",
+   "description",
+   "RoundOff",
+   "Promo_Discount",
+   "Item_Discount",
+   "Order_Discount",
+   "ordertype",
+   "session",
+   "pax"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Order No",
+   "Receipt No",
+   "Price Total",
+   "Tax Total",
+   "Tax1",
+   "Tax2",
+   "Tax3",
+   "Tax4",
+   "Tax5",
+   "Discount",
+   "Others",
+   "Tip",
+   "Final Total Without TIP",
+   "Final Total",
+   "Payment",
+   "Amount Due",
+   "Guest Name",
+   "Guest Mobile Number",
+   "Guest Email Address",
+   "User",
+   "Terminal",
+   "Outlet",
+   "Remark",
+   "Reference#",
+   "Waiter",
+   "Table#",
+   "Floor#",
+   "Payment Type",
+   "Payment Method",
+   "Absolute Reservation#",
+   "Absolute Room#",
+   "Absolute Folio#",
+   "Tax Type",
+   "Description",
+   "RoundOff",
+   "Promo_Discount",
+   "Item Discount",
+   "Order Discount",
+   "Order Type",
+   "Session",
+   "Pax"
+  ]
+ },
+ {
+  "group": "lbl7",
+  "reportName": "lbl9",
+  "action": "SalesSummary",
+  "api": "report/salessummarydetail",
+  "mrt": "SalesSummaryDetailReport.mrt",
+  "priv": "107",
+  "mandatory": [
+   "dateRangePicker",
+   "outlets"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "businessSource",
+   "sessions",
+   "orderType",
+   "search",
+   "includeNoCharge"
+  ],
+  "columns": [
+   "Tran_datetime",
+   "Sub_Total",
+   "Tax_Total",
+   "Tax1",
+   "Tax2",
+   "Tax3",
+   "Tax4",
+   "Tax5",
+   "Discount_Total",
+   "Others",
+   "Tip",
+   "Final_Total_W_TIP",
+   "Final_Total",
+   "Payment_Total",
+   "Amount_Due",
+   "Outlet_Name",
+   "RoundOff",
+   "Promo_Discount"
+  ],
+  "captions": [
+   "Date",
+   "Sub Total",
+   "Tax Total",
+   "Tax1",
+   "Tax2",
+   "Tax3",
+   "Tax4",
+   "Tax5",
+   "Discount",
+   "Others",
+   "Tip",
+   "Final Total Without TIP",
+   "Final Total",
+   "Payment",
+   "Amount Due",
+   "Outlet",
+   "RoundOff",
+   "Promo_Discount"
+  ]
+ },
+ {
+  "group": "lbl7",
+  "reportName": "lbl10",
+  "action": "SalesByVariable",
+  "api": "report/salesbyvariable",
+  "mrt": "SalesByVariableReport.mrt",
+  "priv": "108",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet",
+   "variable",
+   "range"
+  ],
+  "filters": [
+   "rangeIn",
+   "user",
+   "terminal",
+   "orderType",
+   "includeNoCharge"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl7",
+  "reportName": "lbl_topSellingitem",
+  "action": "TopSellingItemReport",
+  "api": "report/salesbyvariable",
+  "mrt": "SalesByVariableReport.mrt",
+  "priv": "350",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "rangeIn",
+   "user",
+   "terminal",
+   "orderType",
+   "includeNoCharge"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl7",
+  "reportName": "lbl_leastsellingitem",
+  "action": "LeastSellingItemReport",
+  "api": "report/salesbyvariable",
+  "mrt": "SalesByVariableReport.mrt",
+  "priv": "351",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "rangeIn",
+   "user",
+   "terminal",
+   "orderType",
+   "includeNoCharge"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl7",
+  "reportName": "lbl_hourlysales",
+  "action": "HourlySales",
+  "api": "report/salesbyvariable",
+  "mrt": "SalesByVariableReport.mrt",
+  "priv": "352",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "orderType",
+   "includeNoCharge"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl7",
+  "reportName": "lbl_cashiersalesdetail",
+  "action": "CashierSalesDetail",
+  "api": "report/cashierdetail",
+  "mrt": "CashierSalesReport.mrt",
+  "priv": "169",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "includeOrdertype",
+   "includeCategory",
+   "includeSubCategory",
+   "includeMenuitem",
+   "tax",
+   "charge",
+   "discount",
+   "payment",
+   "include_businessource",
+   "include_waitersales",
+   "include_usersales",
+   "showTaxableValueOfSales",
+   "includeNoCharge",
+   "includeMiscellaneous"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl7",
+  "reportName": "lbl_cashiershiftreport",
+  "action": "CashierShiftReport",
+  "api": "shiftmanagement/getReportData",
+  "mrt": "CashierShiftReport.mrt",
+  "priv": "248",
+  "mandatory": [
+   "date",
+   "user",
+   "shifts"
+  ],
+  "filters": [],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl7",
+  "reportName": "lbl_shift_manager_timing_report",
+  "action": "ShiftManagerTimingReport",
+  "api": "report/shiftmanagertiming",
+  "mrt": "ShiftManagerTimingReport.mrt",
+  "priv": "379",
+  "mandatory": [
+   "dateRangePicker"
+  ],
+  "filters": [
+   "user",
+   "outlet"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl7",
+  "reportName": "lbl_salescommissiondetail",
+  "action": "SalesCommissionDetail",
+  "api": "report/salescommissiondetail",
+  "mrt": "SalesCommissionDetailReport.mrt",
+  "priv": "190",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet",
+   "commission"
+  ],
+  "filters": [
+   "orderType",
+   "search"
+  ],
+  "columns": [
+   "Tran_datetime",
+   "Name",
+   "Order_No",
+   "Folio_No",
+   "Price_Total",
+   "Total",
+   "Commission",
+   "Final_Total",
+   "Ordertype"
+  ],
+  "captions": [
+   "Date",
+   "Name",
+   "Order No",
+   "Receipt No",
+   "Price Total",
+   "Final Total",
+   "Commission(%)",
+   "Commission Amount",
+   "Order Type"
+  ]
+ },
+ {
+  "group": "lbl7",
+  "reportName": "lbl_salescommissionsummary",
+  "action": "SalesCommissionSummary",
+  "api": "report/salescommissionsummary",
+  "mrt": "SalesCommissionSummaryReport.mrt",
+  "priv": "191",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet",
+   "commission"
+  ],
+  "filters": [
+   "orderType",
+   "search"
+  ],
+  "columns": [
+   "Tran_datetime",
+   "Name",
+   "Price_Total",
+   "Total",
+   "Commission",
+   "Final_Total"
+  ],
+  "captions": [
+   "Date",
+   "Name",
+   "Price Total",
+   "Final Total",
+   "Commission(%)",
+   "Commission Amount"
+  ]
+ },
+ {
+  "group": "lbl7",
+  "reportName": "lbl_Paxsummaryreport",
+  "action": "avgpercover",
+  "api": "report/avgpercover",
+  "mrt": "Paxsummaryreport.mrt",
+  "priv": "322",
+  "mandatory": [
+   "dateRangePicker",
+   "outlets"
+  ],
+  "filters": [
+   "sessions",
+   "includeNoCharge"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl_nochargereport",
+  "reportName": "lbl_nochargemenuitemsalesdetail",
+  "action": "NoChargeMenuItemSalesDetail",
+  "api": "report/nochargemenuitemsalesdetail",
+  "mrt": "NoChargeMenuItemSalesDetailReport.mrt",
+  "priv": "254",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "menuItemCategories",
+   "menuItemSubCategories",
+   "menuSubGroups",
+   "menuItem",
+   "noChargeAccount",
+   "search"
+  ],
+  "columns": [
+   "account_name",
+   "guest_name",
+   "Tran_datetime",
+   "Order_No",
+   "Folio_No",
+   "Tran_time",
+   "Menu_Item",
+   "Quantity",
+   "Price",
+   "Amount",
+   "Discount",
+   "Tax",
+   "Total_Amount",
+   "ref_no",
+   "waiter_name",
+   "item_code"
+  ],
+  "captions": [
+   "Account Name",
+   "Guest#",
+   "Ordered Date",
+   "Order No",
+   "Receipt No",
+   "Ordered Time",
+   "Menu Item",
+   "Quantity",
+   "Price",
+   "Amount",
+   "Discount",
+   "Tax",
+   "Total Amount",
+   "Reference#",
+   "Waiter",
+   "Item Code"
+  ]
+ },
+ {
+  "group": "lbl_nochargereport",
+  "reportName": "lbl_nochargemenuitemsalessummary",
+  "action": "NoChargeMenuItemSalesSummary",
+  "api": "report/nochargemenuitemsalessummary",
+  "mrt": "NoChargeMenuItemSalesSummaryReport.mrt",
+  "priv": "255",
+  "mandatory": [
+   "dateRangePicker",
+   "outlets"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "menuItemCategories",
+   "menuItemSubCategories",
+   "menuSubGroups",
+   "menuItem",
+   "noChargeAccount",
+   "search"
+  ],
+  "columns": [
+   "Tran_datetime",
+   "Menu_Item",
+   "Category",
+   "Sub_Category",
+   "Quantity",
+   "Price",
+   "Amount",
+   "Discount",
+   "Tax",
+   "Total_Amount",
+   "Outlet_Name",
+   "item_code"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Menu Item",
+   "Category",
+   "Sub Category",
+   "Quantity",
+   "Price",
+   "Amount",
+   "Discount",
+   "Tax",
+   "Total Amount",
+   "Outlet",
+   "Item Code"
+  ]
+ },
+ {
+  "group": "lbl_nochargereport",
+  "reportName": "lbl_nochargesalesdetail",
+  "action": "NoChargeSalesDetail",
+  "api": "report/nochargesalesdetail",
+  "mrt": "NoChargeSalesDetailReport.mrt",
+  "priv": "256",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "sessions",
+   "noChargeAccount",
+   "search"
+  ],
+  "columns": [
+   "Tran_datetime",
+   "Order_No",
+   "Receipt_No",
+   "Sub_Total",
+   "Tax_Total",
+   "Tax1",
+   "Tax2",
+   "Tax3",
+   "Tax4",
+   "Tax5",
+   "Others",
+   "Final_Total",
+   "Name",
+   "User",
+   "Terminal",
+   "Outlet",
+   "Remark",
+   "ref_no",
+   "waiter_name",
+   "tax_type",
+   "description",
+   "RoundOff",
+   "Discount_Total",
+   "Promo_Discount",
+   "account_name",
+   "ea_reservationno",
+   "ea_roomno",
+   "ea_foliono",
+   "pax"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Order No",
+   "Receipt No",
+   "Price Total",
+   "Tax Total",
+   "Tax1",
+   "Tax2",
+   "Tax3",
+   "Tax4",
+   "Tax5",
+   "Others",
+   "Final Total",
+   "Guest",
+   "User",
+   "Terminal",
+   "Outlet",
+   "Remark",
+   "Reference#",
+   "Waiter",
+   "Tax Type",
+   "Description",
+   "RoundOff",
+   "Discount",
+   "Promo_Discount",
+   "Account Name",
+   "Absolute Reservation#",
+   "Absolute Room#",
+   "Absolute Folio#",
+   "Pax"
+  ]
+ },
+ {
+  "group": "lbl_nochargereport",
+  "reportName": "lbl_nochargesalessummary",
+  "action": "NoChargeSalesSummary",
+  "api": "report/nochargesalessummarydetail",
+  "mrt": "NoChargeSalesSummaryDetailReport.mrt",
+  "priv": "257",
+  "mandatory": [
+   "dateRangePicker",
+   "outlets"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "sessions",
+   "noChargeAccount",
+   "search"
+  ],
+  "columns": [
+   "Tran_datetime",
+   "Sub_Total",
+   "Tax_Total",
+   "Tax1",
+   "Tax2",
+   "Tax3",
+   "Tax4",
+   "Tax5",
+   "Discount_Total",
+   "Others",
+   "Final_Total",
+   "Outlet_Name",
+   "RoundOff"
+  ],
+  "captions": [
+   "Date",
+   "Sub Total",
+   "Tax Total",
+   "Tax1",
+   "Tax2",
+   "Tax3",
+   "Tax4",
+   "Tax5",
+   "Discount",
+   "Others",
+   "Final Total",
+   "Outlet",
+   "RoundOff"
+  ]
+ },
+ {
+  "group": "lbl11",
+  "reportName": "lbl_Settlementdetail",
+  "action": "SettlementDetail",
+  "api": "report/settlementdetail",
+  "mrt": "",
+  "priv": "331",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "showCurrency",
+   "currency",
+   "paymentType",
+   "paymentMethods",
+   "orderBy",
+   "settleBy",
+   "terminal",
+   "orderType",
+   "search",
+   "includeNoCharge"
+  ],
+  "columns": [
+   "Tran_Datetime",
+   "Sign",
+   "Order_No",
+   "Folio_No",
+   "Payment_Type",
+   "Payment_Method",
+   "Date_Time",
+   "Description",
+   "Amount",
+   "Terminal",
+   "Name",
+   "Order_Date_Time",
+   "OrderByUser",
+   "SettleByUser",
+   "Ordertype"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Sign",
+   "Order No",
+   "Receipt No",
+   "Payment Type",
+   "Payment Method",
+   "Payment Date",
+   "Description",
+   "Amount",
+   "Terminal",
+   "Guest",
+   "Order Date",
+   "Order By",
+   "Settle By",
+   "Order Type"
+  ]
+ },
+ {
+  "group": "lbl11",
+  "reportName": "lbl_Settlementsummary",
+  "action": "SettlementSummary",
+  "api": "report/settlementsummary",
+  "mrt": "",
+  "priv": "328",
+  "mandatory": [
+   "dateRangePicker",
+   "outlets",
+   "selectPayment"
+  ],
+  "filters": [
+   "paymentType",
+   "paymentMethods",
+   "showCurrency",
+   "currency",
+   "orderBy",
+   "settleBy",
+   "terminal",
+   "orderType",
+   "search",
+   "includeNoCharge"
+  ],
+  "columns": [
+   "Tran_Datetime",
+   "Sign",
+   "Payment_Type",
+   "Payment_Method",
+   "Amount",
+   "Terminal",
+   "Outlet_Name"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Sign",
+   "Payment Type",
+   "Payment Method",
+   "Amount",
+   "Terminal",
+   "Outlet"
+  ]
+ },
+ {
+  "group": "lbl11",
+  "reportName": "lbl81",
+  "action": "PaymentDetail",
+  "api": "report/paymentdetailNew",
+  "mrt": "",
+  "priv": "329",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "showCurrency",
+   "currency",
+   "paymentType",
+   "paymentMethods",
+   "orderBy",
+   "settleBy",
+   "terminal",
+   "orderType",
+   "search"
+  ],
+  "columns": [
+   "Tran_Datetime",
+   "Order_Date_Time",
+   "Sign",
+   "Order_No",
+   "Folio_No",
+   "Payment_Type",
+   "Payment_Method",
+   "Date_Time",
+   "Description",
+   "Amount",
+   "Terminal",
+   "Name",
+   "OrderByUser",
+   "SettleByUser",
+   "Ordertype",
+   "transactiontype"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Order Date",
+   "Sign",
+   "Order No",
+   "Receipt No",
+   "Payment Type",
+   "Payment Method",
+   "Payment Date",
+   "Description",
+   "Amount",
+   "Terminal",
+   "Guest",
+   "Order By",
+   "Settle By",
+   "Order Type",
+   "Transaction Type"
+  ]
+ },
+ {
+  "group": "lbl11",
+  "reportName": "lbl82",
+  "action": "PaymentSummary",
+  "api": "report/paymentsummaryNew",
+  "mrt": "",
+  "priv": "330",
+  "mandatory": [
+   "dateRangePicker",
+   "outlets",
+   "selectPayment"
+  ],
+  "filters": [
+   "paymentType",
+   "paymentMethods",
+   "showCurrency",
+   "currency",
+   "orderBy",
+   "settleBy",
+   "terminal",
+   "orderType",
+   "search"
+  ],
+  "columns": [
+   "Tran_Datetime",
+   "Sign",
+   "Payment_Type",
+   "Payment_Method",
+   "Amount",
+   "Terminal",
+   "Outlet_Name"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Sign",
+   "Payment Type",
+   "Payment Method",
+   "Amount",
+   "Terminal",
+   "Outlet"
+  ]
+ },
+ {
+  "group": "lbl11",
+  "reportName": "lbl12",
+  "action": "DiscountDetail",
+  "api": "report/discountdetail",
+  "mrt": "DiscountDetailReport.mrt",
+  "priv": "110",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "discountName",
+   "orderType",
+   "search",
+   "includeNoCharge"
+  ],
+  "columns": [
+   "Tran_Datetime",
+   "Order_No",
+   "Folio_No",
+   "Discount_Type",
+   "Discount_Name",
+   "Date_Time",
+   "Apply_On",
+   "Value",
+   "Amount",
+   "User_Name",
+   "Guest_Name",
+   "Remark",
+   "Item_Name",
+   "Quantity",
+   "Ordertype"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Order No",
+   "Receipt No",
+   "Discount Type",
+   "Discount Method",
+   "Discount Date",
+   "Apply On",
+   "Value",
+   "Amount",
+   "Discount By User",
+   "Guest Name",
+   "Remark",
+   "Item Name",
+   "Quantity",
+   "Order Type"
+  ]
+ },
+ {
+  "group": "lbl11",
+  "reportName": "lbl13",
+  "action": "TaxCollection",
+  "api": "report/taxcollection",
+  "mrt": "TaxCollectionReport.mrt",
+  "priv": "111",
+  "mandatory": [
+   "dateRangePicker",
+   "outlets"
+  ],
+  "filters": [
+   "user",
+   "taxList",
+   "search",
+   "includeNoCharge"
+  ],
+  "columns": [
+   "Tran_Datetime",
+   "Tax",
+   "Tax_Type",
+   "Rate",
+   "Tax_Collected",
+   "Taxable_Sales",
+   "Tax_Exempt",
+   "User",
+   "Outlet_Name"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Tax",
+   "Tax Type",
+   "Rate",
+   "Tax Collection",
+   "Taxable Sales",
+   "Tax Exempt",
+   "Tax By User",
+   "Outlet"
+  ]
+ },
+ {
+  "group": "lbl11",
+  "reportName": "lbl_taxanalysis",
+  "action": "TaxAnalysis",
+  "api": "report/taxanalysis",
+  "mrt": "TaxAnalysisReport.mrt",
+  "priv": "259",
+  "mandatory": [
+   "dateRangePicker",
+   "botype",
+   "outlets"
+  ],
+  "filters": [
+   "user",
+   "search",
+   "includeNoCharge"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl11",
+  "reportName": "lbl14",
+  "action": "CityLedgerDetail",
+  "api": "report/cityledgerdetail",
+  "mrt": "CityLedgerReport.mrt",
+  "priv": "112",
+  "mandatory": [
+   "dateRangePicker",
+   "accountType",
+   "accounts"
+  ],
+  "filters": [
+   "outlet",
+   "ignoreZeroBalance",
+   "search"
+  ],
+  "columns": [
+   "Tran_datetime",
+   "Company_Name",
+   "Order_No",
+   "Master_Name",
+   "Descritption",
+   "Credit",
+   "Debit",
+   "Balance",
+   "User_Name"
+  ],
+  "captions": [
+   "Tran Date Time",
+   "Company Name",
+   "Receipt No",
+   "Description",
+   "Comment",
+   "Credit",
+   "Debit",
+   "Balance",
+   "Tran By User"
+  ]
+ },
+ {
+  "group": "lbl11",
+  "reportName": "lbl15",
+  "action": "CityLedgerSummary",
+  "api": "report/cityledgersummary",
+  "mrt": "CityLedgerSummaryReport.mrt",
+  "priv": "113",
+  "mandatory": [
+   "dateRangePicker",
+   "accountType",
+   "accounts"
+  ],
+  "filters": [
+   "ignoreZeroBalance",
+   "search"
+  ],
+  "columns": [
+   "Company_Name",
+   "Opening_Balance",
+   "Credit",
+   "Debit",
+   "Balance",
+   "Account_Type"
+  ],
+  "captions": [
+   "Company Name",
+   "Opening Balance",
+   "Credit",
+   "Debit",
+   "Balance",
+   "Account Type"
+  ]
+ },
+ {
+  "group": "lbl11",
+  "reportName": "lbl_fiscal",
+  "action": "Fiscal",
+  "api": "",
+  "mrt": "",
+  "priv": "250",
+  "mandatory": [],
+  "filters": [],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl11",
+  "reportName": "lbl_categorytaxcollection",
+  "action": "CategoryWiseTaxCollection",
+  "api": "report/categorywisetaxcollection",
+  "mrt": "",
+  "priv": "280",
+  "mandatory": [
+   "month",
+   "year",
+   "outlets"
+  ],
+  "filters": [
+   "menuItemCategories",
+   "menuItemSubCategories",
+   "taxGroups",
+   "includeNoCharge"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl11",
+  "reportName": "lbl_driverefficiency",
+  "action": "DriverEfficiency",
+  "api": "report/driverefficiency",
+  "mrt": "DriverEfficiencyReport.mrt",
+  "priv": "284",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "driver",
+   "search"
+  ],
+  "columns": [
+   "Driver_Name",
+   "Order_Date",
+   "Order_Time",
+   "Order_No",
+   "Folio_No",
+   "Customer",
+   "Address",
+   "Out_Time",
+   "In_Time",
+   "Total_Time_Taken",
+   "Amount",
+   "Payment_Method"
+  ],
+  "captions": [
+   "Driver Name",
+   "Order Date",
+   "Order Time",
+   "Order No",
+   "Receipt No",
+   "Customer",
+   "Address",
+   "Out Time",
+   "In Time",
+   "Time Taken",
+   "Amount",
+   "Payment Method"
+  ]
+ },
+ {
+  "group": "lbl11",
+  "reportName": "lbl_driverdeliveries",
+  "action": "DriverDeliveries",
+  "api": "report/driverdeliveries",
+  "mrt": "DriverDeliveriesReport.mrt",
+  "priv": "285",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "driver",
+   "search"
+  ],
+  "columns": [
+   "Driver_Name",
+   "No_Of_Deliveries",
+   "Average_Time_Taken"
+  ],
+  "captions": [
+   "Driver Name",
+   "No Of Deliveries",
+   "Average Time Taken"
+  ]
+ },
+ {
+  "group": "lbl11",
+  "reportName": "lbl_customeranalyticsreport",
+  "action": "CustomerAnalytics",
+  "api": "report/getcustomeranalytic",
+  "mrt": "CustomerAnalyticsReport.mrt",
+  "priv": "349",
+  "mandatory": [
+   "dateRangePicker",
+   "outlets"
+  ],
+  "filters": [],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl11",
+  "reportName": "lbl_exp_inc_detail",
+  "action": "MiscellaneousDetailReport",
+  "api": "report/miscellaneousdetail",
+  "mrt": "MiscellaneousDetail.mrt",
+  "priv": "366",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "Voucher",
+   "extracharge",
+   "user"
+  ],
+  "columns": [
+   "Order_No",
+   "Folio_No",
+   "Tran_time",
+   "chargename",
+   "Amount",
+   "Discount",
+   "Tax",
+   "Roundoff",
+   "Total_Amount",
+   "Remark"
+  ],
+  "captions": [
+   "Order No",
+   "Receipt No",
+   "Ordered Time",
+   "Extra Charge",
+   "Amount",
+   "Discount",
+   "Tax",
+   "Round Off",
+   "Total Amount",
+   "Remark"
+  ]
+ },
+ {
+  "group": "lbl11",
+  "reportName": "lbl_exp_inc_register",
+  "action": "MiscellaneousRegisterReport",
+  "api": "report/miscellaneousregister",
+  "mrt": "MiscellaneousRegister.mrt",
+  "priv": "367",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "Voucher",
+   "vendorvoucher",
+   "user"
+  ],
+  "columns": [
+   "Order_No",
+   "Vendor",
+   "Sub_Total",
+   "discount",
+   "tax",
+   "adjustment",
+   "Total",
+   "Payment"
+  ],
+  "captions": [
+   "Order No",
+   "Vendor",
+   "Sub Total",
+   "Discount",
+   "Tax",
+   "Round Off",
+   "Total Amount",
+   "Payment Method"
+  ]
+ },
+ {
+  "group": "lbl11",
+  "reportName": "lbl_exp_inc_summary",
+  "action": "MiscellaneoussummaryReport",
+  "api": "report/miscellaneoussummary",
+  "mrt": "MiscellaneousSummary.mrt",
+  "priv": "368",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "Voucher",
+   "extracharge",
+   "user"
+  ],
+  "columns": [
+   "chargename",
+   "count",
+   "price",
+   "Amount",
+   "Discount",
+   "Tax",
+   "Roundoff",
+   "Total_Amount"
+  ],
+  "captions": [
+   "Extra Charge",
+   "Qty",
+   "Price",
+   "Amount",
+   "Discount",
+   "Tax",
+   "Round Off",
+   "Total Amount"
+  ]
+ },
+ {
+  "group": "lbl16",
+  "reportName": "lbl_dailyflashreport",
+  "action": "DailyFlash",
+  "api": "report/dailyflash",
+  "mrt": "DailyFlashReport.mrt",
+  "priv": "174",
+  "mandatory": [
+   "date",
+   "outlet"
+  ],
+  "filters": [
+   "showTaxableValueOfSales",
+   "includeNoCharge",
+   "includecityledger"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl16",
+  "reportName": "lbl17",
+  "action": "SalesStatistic",
+  "api": "report/salesstatistic",
+  "mrt": "SalesStatisticReport.mrt",
+  "priv": "114",
+  "mandatory": [
+   "timePeriod",
+   "dateRangePicker",
+   "year",
+   "month",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "orderType",
+   "search",
+   "includeNoCharge"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl16",
+  "reportName": "lbl18",
+  "action": "WeeklyFlash",
+  "api": "report/weeklyflash",
+  "mrt": "WeeklyFlashReport.mrt",
+  "priv": "115",
+  "mandatory": [
+   "date",
+   "outlet"
+  ],
+  "filters": [
+   "showTaxableValueOfSales",
+   "includeNoCharge"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl16",
+  "reportName": "lbl19",
+  "action": "ManagerFlash",
+  "api": "report/managerflash",
+  "mrt": "",
+  "priv": "116",
+  "mandatory": [
+   "date",
+   "outlet",
+   "flashYearRange"
+  ],
+  "filters": [
+   "showTaxableValueOfSales",
+   "includeNoCharge",
+   "includecityledger"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl_inventoryreport",
+  "reportName": "lbl_orderreg",
+  "action": "PurchaseOrderRegister",
+  "api": "report/purchaseorderregister",
+  "mrt": "PurchaseOrderRegistrationReport.mrt",
+  "priv": "203",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "vendor",
+   "search"
+  ],
+  "columns": [
+   "purchaseorder_datetime",
+   "purchaseorderno",
+   "vendor_company",
+   "vendor_name",
+   "Sub_Total",
+   "extracharge",
+   "tax",
+   "discount",
+   "adjustment",
+   "Total",
+   "status",
+   "Terminal",
+   "Outlet",
+   "Remark",
+   "GRN_No"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Order No",
+   "Vendor Company",
+   "Vendor Name",
+   "Sub Total",
+   "Extracharge",
+   "Tax",
+   "Discount",
+   "Adjustment",
+   "Total",
+   "Status",
+   "Terminal",
+   "Outlet",
+   "Remark",
+   "GRN No"
+  ]
+ },
+ {
+  "group": "lbl_inventoryreport",
+  "reportName": "lbl_purchaseorderdetail",
+  "action": "PurchaseOrderDetail",
+  "api": "report/purchaseorderDetail",
+  "mrt": "PurchaseOrderDetailReport.mrt",
+  "priv": "207",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "invCategories",
+   "invItem",
+   "invType",
+   "search"
+  ],
+  "columns": [
+   "purchaseorder_datetime",
+   "orderno",
+   "Tran_time",
+   "name",
+   "qty",
+   "unittype",
+   "amount",
+   "purchaserate",
+   "tax",
+   "discount",
+   "adjustment",
+   "totalamount",
+   "Terminal",
+   "Outlet",
+   "Remark",
+   "hsncode",
+   "Category",
+   "GRN_No"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Order No",
+   "Ordered Time",
+   "Name",
+   "Quantity",
+   "Unit",
+   "Price",
+   "Amount",
+   "Tax",
+   "Discount",
+   "Adjustment",
+   "Total Amount",
+   "Terminal",
+   "Outlet",
+   "Remark",
+   "HSN Code",
+   "Category",
+   "GRN No"
+  ]
+ },
+ {
+  "group": "lbl_inventoryreport",
+  "reportName": "lbl_physicalstockdetail",
+  "action": "PhysicalStockDetail",
+  "api": "report/physicalstockDetail",
+  "mrt": "physicalstockdetailreport.mrt",
+  "priv": "215",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "invCategories",
+   "invItem",
+   "search"
+  ],
+  "columns": [
+   "voucher_no",
+   "voucher_datetime",
+   "Tran_time",
+   "ItemName",
+   "ph_stock",
+   "book_stock",
+   "unit_name",
+   "Difference",
+   "price",
+   "Totalamount",
+   "user_name",
+   "remark",
+   "terminal_name",
+   "outlet_name",
+   "hsncode",
+   "Category"
+  ],
+  "captions": [
+   "Voucher No",
+   "Date",
+   "Time",
+   "Itemname",
+   "Physical Stock",
+   "Stock On Hand",
+   "Unit",
+   "Difference",
+   "Price",
+   "Amount",
+   "UserName",
+   "Remark",
+   "Terminal",
+   "Outlet",
+   "HSN Code",
+   "Category"
+  ]
+ },
+ {
+  "group": "lbl_inventoryreport",
+  "reportName": "lbl_stockadjustmentdetail",
+  "action": "StockAdjustmentDetail",
+  "api": "report/invvoucherdetail",
+  "mrt": "stockadjustmentdetailreport.mrt",
+  "priv": "216",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "invCategories",
+   "invItem",
+   "adjtransactionTypes",
+   "search"
+  ],
+  "columns": [
+   "voucher_datetime",
+   "voucher_no",
+   "Tran_time",
+   "transactionType",
+   "ItemName",
+   "Quantity",
+   "unit_name",
+   "price",
+   "Totalamount",
+   "user_name",
+   "remark",
+   "terminal_name",
+   "outlet_name",
+   "hsncode",
+   "Category"
+  ],
+  "captions": [
+   "Date",
+   "Voucher No",
+   "Time",
+   "Type",
+   "Item Name",
+   "Quantity",
+   "Unit",
+   "Price",
+   "Amount",
+   "UserName",
+   "Remark",
+   "Terminal",
+   "Outlet",
+   "HSN Code",
+   "Category"
+  ]
+ },
+ {
+  "group": "lbl_inventoryreport",
+  "reportName": "lbl_manufacturingdetail",
+  "action": "ManufacturingDetail",
+  "api": "report/invvoucherdetail",
+  "mrt": "stockadjustmentdetailreport.mrt",
+  "priv": "217",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "invCategories",
+   "invItem",
+   "search"
+  ],
+  "columns": [
+   "voucher_datetime",
+   "voucher_no",
+   "Tran_time",
+   "ItemName",
+   "Quantity",
+   "unit_name",
+   "price",
+   "Totalamount",
+   "user_name",
+   "remark",
+   "terminal_name",
+   "outlet_name",
+   "hsncode",
+   "Category"
+  ],
+  "captions": [
+   "Date",
+   "Voucher No",
+   "Time",
+   "Item Name",
+   "Quantity",
+   "Unit",
+   "Price",
+   "Amount",
+   "UserName",
+   "Remark",
+   "Terminal",
+   "Outlet",
+   "HSN Code",
+   "Category"
+  ]
+ },
+ {
+  "group": "lbl_inventoryreport",
+  "reportName": "lbl_report_St",
+  "action": "StockTransferDetail",
+  "api": "report/stocktransferdetail",
+  "mrt": "stocktransferdetailreport.mrt",
+  "priv": "227",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "toOutlet",
+   "user",
+   "terminal",
+   "invCategories",
+   "invItem",
+   "search"
+  ],
+  "columns": [
+   "voucher_datetime",
+   "voucher_no",
+   "Tran_time",
+   "to_outletunkid",
+   "ItemName",
+   "Quantity",
+   "unit_name",
+   "price",
+   "Totalamount",
+   "user_name",
+   "remark",
+   "terminal_name",
+   "outlet_name",
+   "hsncode",
+   "Category"
+  ],
+  "captions": [
+   "Date",
+   "Voucher No",
+   "Time",
+   "To Outlet",
+   "Itemname",
+   "Quantity",
+   "Unit",
+   "Price",
+   "Amount",
+   "UserName",
+   "Remark",
+   "Terminal",
+   "Outlet",
+   "HSN Code",
+   "Category"
+  ]
+ },
+ {
+  "group": "lbl_inventoryreport",
+  "reportName": "lbl_report_Stsmry",
+  "action": "StockTransferSummary",
+  "api": "report/stocktransfersummary",
+  "mrt": "stocktransfersummaryreport.mrt",
+  "priv": "323",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "toOutlets",
+   "invCategories",
+   "invItem",
+   "search"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl_inventoryreport",
+  "reportName": "lbl_pgregister",
+  "action": "GoodsReceiptNoteRegister",
+  "api": "report/purchasegrnregister",
+  "mrt": "PurchaseGRNRegistrationReport.mrt",
+  "priv": "219",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "vendor",
+   "search"
+  ],
+  "columns": [
+   "foliodatetime",
+   "Order_No",
+   "Invoice_No",
+   "Tran_time",
+   "vendor_company",
+   "vendor_name",
+   "Sub_Total",
+   "extracharge",
+   "tax",
+   "discount",
+   "adjustment",
+   "Total",
+   "User",
+   "Terminal",
+   "Outlet",
+   "Remark",
+   "Purchase_Order_No"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Order No",
+   "Invoice No",
+   "Ordered Time",
+   "Vendor Company",
+   "Vendor Name",
+   "Sub Total",
+   "Extracharge",
+   "Tax",
+   "Discount",
+   "Adjustment",
+   "Total",
+   "User",
+   "Terminal",
+   "Outlet",
+   "Remark",
+   "Purchase Order No"
+  ]
+ },
+ {
+  "group": "lbl_inventoryreport",
+  "reportName": "lbl_pgdetail",
+  "action": "GoodsReceiptNoteDetail",
+  "api": "report/purchasegrndetail",
+  "mrt": "PurchaseGRNDetailReport.mrt",
+  "priv": "218",
+  "mandatory": [
+   "dateRangePicker",
+   "outlets"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "invCategories",
+   "invItem",
+   "invType",
+   "vendor",
+   "search"
+  ],
+  "columns": [
+   "foliodatetime",
+   "Outlet",
+   "orderno",
+   "Invoice_No",
+   "Tran_time",
+   "vendor_company",
+   "vendor_name",
+   "Purchase_Item",
+   "qty",
+   "unittype",
+   "amount",
+   "purchaserate",
+   "tax",
+   "discount",
+   "adjustment",
+   "totalamount",
+   "User",
+   "Terminal",
+   "Remark",
+   "hsncode",
+   "Category",
+   "Purchase_Order_No"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Outlet",
+   "Order No",
+   "Invoice No",
+   "Ordered Time",
+   "Vendor Company",
+   "Vendor Name",
+   "Name",
+   "Quantity",
+   "Unit",
+   "Price",
+   "Amount",
+   "Tax",
+   "Discount",
+   "Adjustment",
+   "Total Amount",
+   "User",
+   "Terminal",
+   "Remark",
+   "HSN Code",
+   "Category",
+   "Purchase Order No"
+  ]
+ },
+ {
+  "group": "lbl_inventoryreport",
+  "reportName": "lbl_menuitemconsumptiondetail",
+  "action": "MenuItemConsumptionDetail",
+  "api": "report/menuitemconsumptiondetail",
+  "mrt": "MenuItemConsumptionDetailReport.mrt",
+  "priv": "220",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "invCategories",
+   "invItem",
+   "menuItem",
+   "costCalculateWith",
+   "modifier_along_with_item"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl_inventoryreport",
+  "reportName": "lbl_ManufacturingItemConsumptionDetail",
+  "action": "ManufacturingItemConsumptionDetail",
+  "api": "report/ManufacturingItemConsumptionDetail",
+  "mrt": "ManufacturingItemConsumptionDetail.mrt",
+  "priv": "324",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "invItem",
+   "costCalculateWith"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl_inventoryreport",
+  "reportName": "lbl_marketlistdetail",
+  "action": "MarketlistDetail",
+  "api": "report/marketlistdetail",
+  "mrt": "MarketListDetailReport.mrt",
+  "priv": "243",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "invCategories",
+   "invItem"
+  ],
+  "columns": [
+   "voucher_date",
+   "Tran_time",
+   "voucher_no",
+   "itemname",
+   "quantity",
+   "unit",
+   "vendor_company",
+   "vendor_name",
+   "status",
+   "remark",
+   "user",
+   "outlet",
+   "Category"
+  ],
+  "captions": [
+   "Voucher Date",
+   "Voucher Time",
+   "Voucher No",
+   "Inventory Item",
+   "Quantity",
+   "Unit",
+   "Vendor Company",
+   "Vendor Name",
+   "Status",
+   "Remark",
+   "User",
+   "Outlet",
+   "Category"
+  ]
+ },
+ {
+  "group": "lbl_inventoryreport",
+  "reportName": "lbl_indentdetail",
+  "action": "IndentDetail",
+  "api": "report/indentdetail",
+  "mrt": "IndentDetailReport.mrt",
+  "priv": "253",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "invCategories",
+   "invItem"
+  ],
+  "columns": [
+   "voucher_date",
+   "voucher_no",
+   "Tran_time",
+   "to_outlet",
+   "inventory_item",
+   "quantity",
+   "unit",
+   "status",
+   "remark",
+   "user",
+   "terminal",
+   "outlet",
+   "hsncode",
+   "Category"
+  ],
+  "captions": [
+   "Date",
+   "Voucher No",
+   "Time",
+   "To Outlet",
+   "Inventory Item",
+   "Quantity",
+   "Unit",
+   "Status",
+   "Remark",
+   "User",
+   "Terminal",
+   "Outlet",
+   "HSN Code",
+   "Category"
+  ]
+ },
+ {
+  "group": "lbl_inventoryreport",
+  "reportName": "lbl_grnregiter",
+  "action": "GoodsReturnRegister",
+  "api": "report/goodsreturnregister",
+  "mrt": "GoodsReturnRegister.mrt",
+  "priv": "265",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "vendor",
+   "search"
+  ],
+  "columns": [
+   "foliodatetime",
+   "Order_No",
+   "Invoice_No",
+   "Tran_time",
+   "Vendor",
+   "Sub_Total",
+   "extracharge",
+   "tax",
+   "discount",
+   "adjustment",
+   "Total",
+   "User",
+   "Terminal",
+   "Outlet",
+   "Remark"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Order No",
+   "Invoice No",
+   "Time",
+   "Vendor",
+   "Sub Total",
+   "Extracharge",
+   "Tax",
+   "Discount",
+   "Adjustment",
+   "Total",
+   "User",
+   "Terminal",
+   "Outlet",
+   "Remark"
+  ]
+ },
+ {
+  "group": "lbl_inventoryreport",
+  "reportName": "lbl_goodsreturndetail",
+  "action": "GoodsReturnDetail",
+  "api": "report/goodsreturndetail",
+  "mrt": "GoodsReturnDetail.mrt",
+  "priv": "266",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "invCategories",
+   "invItem",
+   "invType",
+   "vendor",
+   "search"
+  ],
+  "columns": [
+   "foliodatetime",
+   "orderno",
+   "Invoice_No",
+   "Vendor",
+   "Tran_time",
+   "Purchase_Item",
+   "qty",
+   "unittype",
+   "amount",
+   "purchaserate",
+   "tax",
+   "discount",
+   "adjustment",
+   "totalamount",
+   "User",
+   "Terminal",
+   "Outlet",
+   "Remark",
+   "hsncode",
+   "Category"
+  ],
+  "captions": [
+   "Ordered Date",
+   "Order No",
+   "Invoice No",
+   "Vendor",
+   "Ordered Time",
+   "Name",
+   "Quantity",
+   "Unit",
+   "Price",
+   "Amount",
+   "Tax",
+   "Discount",
+   "Adjustment",
+   "Total Amount",
+   "User",
+   "Terminal",
+   "Outlet",
+   "Remark",
+   "HSN Code",
+   "Category"
+  ]
+ },
+ {
+  "group": "lbl_stockreport",
+  "reportName": "lbl_sledger",
+  "action": "StockLedger",
+  "api": "report/stockledger",
+  "mrt": "StockLedgerReport.mrt",
+  "priv": "198",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "invCategories",
+   "invItem",
+   "ignoreZeroStock",
+   "costCalculateWith"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl_stockreport",
+  "reportName": "lbl_stockledgersummary",
+  "action": "StockLedgerSummary",
+  "api": "report/stockledgersummary",
+  "mrt": "StockLedgerSummaryReport.mrt",
+  "priv": "301",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "invCategories",
+   "invItem",
+   "ignoreZeroStock",
+   "costCalculateWith"
+  ],
+  "columns": [
+   "item_category",
+   "item_name",
+   "item_code",
+   "OPENING_stock_display",
+   "PURCHASE_stock_display",
+   "RETURN_stock_display",
+   "MFG_stock_display",
+   "MFG_CON_stock_display",
+   "SALES_stock_display",
+   "ADJ_CON_stock_display",
+   "WASTAGE_stock_display",
+   "SALES_WASTAGE_stock_display",
+   "ADJ_WASTAGE_stock_display",
+   "ADJ_stock_display",
+   "PH_ADJ_stock_display",
+   "ISSUE_stock_display",
+   "RECEIVED_stock_display",
+   "CLOSING_stock_display"
+  ],
+  "captions": [
+   "Item Category",
+   "Item Name",
+   "Item Code",
+   "Opening",
+   "Purchase",
+   "Purchase Return",
+   "Manufacturing",
+   "Consumption (Manufacturing)",
+   "Consumption (Sales)",
+   "Consumption (Adjustment)",
+   "Wastage (Purchase)",
+   "Wastage (Sales)",
+   "Wastage (Adjustment)",
+   "Adjustment (Direct)",
+   "Adjustment (Physical Stock Taking)",
+   "Stock Transfer",
+   "Stock Received",
+   "Closing"
+  ]
+ },
+ {
+  "group": "lbl_stockreport",
+  "reportName": "lbl_cstock",
+  "action": "ClosingStock",
+  "api": "report/closingStock",
+  "mrt": "ClosingStockReport.mrt",
+  "priv": "199",
+  "mandatory": [
+   "date",
+   "outlets"
+  ],
+  "filters": [
+   "invCategories",
+   "invItem",
+   "ignoreZeroStock",
+   "costCalculateWith"
+  ],
+  "columns": [
+   "outlet_name",
+   "item_name",
+   "item_code",
+   "item_category",
+   "stock_on_hand",
+   "cost_per_unit",
+   "stock_Value"
+  ],
+  "captions": [
+   "Outlet",
+   "Item Name",
+   "Item Code",
+   "Item Category",
+   "Stock On Hand",
+   "Rate/Unit",
+   "Stock Value"
+  ]
+ },
+ {
+  "group": "lbl_stockreport",
+  "reportName": "lbl_smovdetail",
+  "action": "StockMovementDetail",
+  "api": "report/stockmovdetail",
+  "mrt": "StockMovementDetailReport.mrt",
+  "priv": "200",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "invCategories",
+   "invItem",
+   "ignoreZeroStock"
+  ],
+  "columns": [
+   "item_name",
+   "item_code",
+   "item_category",
+   "opening",
+   "purchase",
+   "purchase_return",
+   "issue",
+   "received",
+   "adjustment_Direct",
+   "adjustment_PST",
+   "wastage_Purchase",
+   "wastage_Sales",
+   "wastage_Adjustment",
+   "consumption_Manufacturing",
+   "consumption_Sales",
+   "consumption_Adjustment",
+   "manufacturing",
+   "closing"
+  ],
+  "captions": [
+   "Item Name",
+   "Item Code",
+   "Item Category",
+   "Opening",
+   "Purchase",
+   "Purchase Return",
+   "Stock Transfer",
+   "Stock Received",
+   "Adjustment (Direct)",
+   "Adjustment (Physical Stock Taking)",
+   "Wastage (Purchase)",
+   "Wastage (Sales)",
+   "Wastage (Adjustment)",
+   "Consumption (Manufacturing)",
+   "Consumption (Sales)",
+   "Consumption (Adjustment)",
+   "Manufacturing",
+   "Closing"
+  ]
+ },
+ {
+  "group": "lbl_stockreport",
+  "reportName": "lbl_lstock",
+  "action": "LowStock",
+  "api": "report/lowStock",
+  "mrt": "LowStockReport.mrt",
+  "priv": "201",
+  "mandatory": [
+   "date",
+   "outlet"
+  ],
+  "filters": [
+   "invCategories"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl_stockreport",
+  "reportName": "lbl_physicalstocktaking",
+  "action": "PhysicalStockTaking",
+  "api": "report/physicalstocktaking",
+  "mrt": "PhysicalStockTakingReport.mrt",
+  "priv": "235",
+  "mandatory": [
+   "date",
+   "outlet",
+   "stockType"
+  ],
+  "filters": [
+   "invCategories",
+   "storageAreas",
+   "showStockOnHand"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl_stockreport",
+  "reportName": "lbl_menuitemrecipe",
+  "action": "MenuItemRecipe",
+  "api": "report/menuitemrecipe",
+  "mrt": "MenuItemRecipeReport.mrt",
+  "priv": "283",
+  "mandatory": [
+   "outlet"
+  ],
+  "filters": [
+   "category",
+   "subcategory",
+   "menuItem",
+   "invItem",
+   "rate",
+   "includeNotConfiguredItem",
+   "search",
+   "costCalculateWith"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl_stockreport",
+  "reportName": "lbl_transactionwise",
+  "action": "Transactionwise",
+  "api": "report/transactionwise",
+  "mrt": "TransactionSummary.mrt",
+  "priv": "321",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet",
+   "invtransactionTypes"
+  ],
+  "filters": [
+   "invCategories",
+   "invItem"
+  ],
+  "columns": [
+   "datetime",
+   "itemname",
+   "Itemcode",
+   "quantity",
+   "value",
+   "Category"
+  ],
+  "captions": [
+   "Date",
+   "Item Name",
+   "Item Code",
+   "Quantity",
+   "Value",
+   "Category"
+  ]
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl_voidpurchesorderreport",
+  "action": "VoidPurchesorder",
+  "api": "report/voidpurchaseorder",
+  "mrt": "VoidPurchesorder.mrt",
+  "priv": "304",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "void_user",
+   "terminal",
+   "vendor",
+   "search"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl_fiscal_report",
+  "action": "FiscalReport",
+  "api": "report/fiscalreport",
+  "mrt": "FiscalReport.mrt",
+  "priv": "378",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "terminal"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl_einvoice_report",
+  "action": "EInvoiceReport",
+  "api": "report/einvoicereport",
+  "mrt": "EInvoiceReport.mrt",
+  "priv": "383",
+  "mandatory": [
+   "dateRangePicker"
+  ],
+  "filters": [
+   "outlet"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl_voidpurchesorderreportdetail",
+  "action": "VoidPurchesOrderDetail",
+  "api": "report/voidpurchaseorderdetail",
+  "mrt": "VoidPurchaseOrderDetailReport.mrt",
+  "priv": "306",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "void_user",
+   "terminal",
+   "invCategories",
+   "invItem",
+   "invType",
+   "search"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl_voidgoodsreciptdetail",
+  "action": "VoidGoodsReciptnoteDetail",
+  "api": "report/voidpurchasegrndetail",
+  "mrt": "VoidGoodsreciptnote.mrt",
+  "priv": "307",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "void_user",
+   "terminal",
+   "invCategories",
+   "invItem",
+   "invType",
+   "vendor",
+   "search"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl_voidphysicalstock",
+  "action": "VoidPhysicalStockDetail",
+  "api": "report/voidphysicalstockdetail",
+  "mrt": "VoidPhysicalstockDetailreport.mrt",
+  "priv": "308",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "invCategories",
+   "invItem",
+   "search"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl_voidmanufacturing",
+  "action": "VoidManufacturingDetail",
+  "api": "report/voidinvvourcher",
+  "mrt": "VoidManufacturing.mrt",
+  "priv": "309",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "void_user",
+   "terminal",
+   "invCategories",
+   "invItem",
+   "search"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl_voidindentdetail",
+  "action": "VoidIndentDetail",
+  "api": "report/voidindentdetail",
+  "mrt": "VoidIndentDetailReport.mrt",
+  "priv": "310",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "invCategories",
+   "invItem"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl_voidmarketlistdetail",
+  "action": "VoidMarketlistDetails",
+  "api": "report/voidmarketlistdetail",
+  "mrt": "VoidMarketListDetailReport.mrt",
+  "priv": "311",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "invCategories",
+   "invItem"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl_voidstockadjustment",
+  "action": "VoidStockAdjustment",
+  "api": "report/voidinvvourcher",
+  "mrt": "VoidStockadjustmentdetailreport.mrt",
+  "priv": "312",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "void_user",
+   "terminal",
+   "invCategories",
+   "invItem",
+   "search"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl_voidstocktransfer",
+  "action": "VoidStocktransferDetail",
+  "api": "report/voidinvvourcher",
+  "mrt": "VoidStocktransferdetailreport.mrt",
+  "priv": "358",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "void_user",
+   "terminal",
+   "invCategories",
+   "invItem",
+   "search"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl24",
+  "action": "VoidCharges",
+  "api": "report/voidcharges",
+  "mrt": "VoidChargesReport.mrt",
+  "priv": "120",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "void_user",
+   "user",
+   "terminal",
+   "search"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl_voiditems",
+  "action": "VoidItems",
+  "api": "report/voiditem",
+  "mrt": "VoidItemReport.mrt",
+  "priv": "118",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "void_user",
+   "user",
+   "terminal",
+   "search",
+   "includeVoidedBySplitorMerge"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl_voidorders",
+  "action": "VoidOrders",
+  "api": "report/voidorder",
+  "mrt": "VoidOrderReport.mrt",
+  "priv": "117",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "void_user",
+   "user",
+   "terminal",
+   "search",
+   "includeVoidedBySplitorMerge"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl_voidpayments",
+  "action": "VoidPayments",
+  "api": "report/voidpayment",
+  "mrt": "VoidPaymentReport.mrt",
+  "priv": "119",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "user",
+   "terminal",
+   "auditPaymentMethod",
+   "auditPaymentType",
+   "search"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl_audittrail",
+  "action": "AuditTrail",
+  "api": "report/audittrail",
+  "mrt": "AuditTrailReport.mrt",
+  "priv": "184",
+  "mandatory": [
+   "dateRangePicker"
+  ],
+  "filters": [
+   "user",
+   "operation",
+   "search"
+  ],
+  "columns": [],
+  "captions": []
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl_void_exp_inc_detail",
+  "action": "voidMiscellaneousDetailReport",
+  "api": "report/voidmiscellaneousdetail",
+  "mrt": "VoidMiscellaneousDetail.mrt",
+  "priv": "371",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "Voucher",
+   "extracharge",
+   "user"
+  ],
+  "columns": [
+   "Order_No",
+   "Folio_No",
+   "chargename",
+   "Amount",
+   "Discount",
+   "Tax",
+   "Roundoff",
+   "Total_Amount",
+   "Remark",
+   "void_datetime",
+   "User"
+  ],
+  "captions": [
+   "Order No",
+   "Receipt No",
+   "Extra Charge",
+   "Amount",
+   "Discount",
+   "Tax",
+   "Round Off",
+   "Total Amount",
+   "Remark",
+   "Void DateTime",
+   "User"
+  ]
+ },
+ {
+  "group": "lbl20",
+  "reportName": "lbl_void_exp_inc_register",
+  "action": "voidMiscellaneousRegisterReport",
+  "api": "report/voidmiscellaneousregister",
+  "mrt": "VoidMiscellaneousRegister.mrt",
+  "priv": "372",
+  "mandatory": [
+   "dateRangePicker",
+   "outlet"
+  ],
+  "filters": [
+   "Voucher",
+   "vendorvoucher",
+   "user"
+  ],
+  "columns": [
+   "Order_No",
+   "Vendor",
+   "Sub_Total",
+   "discount",
+   "tax",
+   "adjustment",
+   "Total",
+   "Payment",
+   "Remark",
+   "void_datetime",
+   "User"
+  ],
+  "captions": [
+   "Order No",
+   "Vendor",
+   "Sub Total",
+   "Discount",
+   "Tax",
+   "Round Off",
+   "Total Amount",
+   "Payment Method",
+   "Remark",
+   "Void DateTime",
+   "User"
+  ]
+ }
+]
