@@ -174,7 +174,6 @@ describe('stay-view bar deduplication', () => {
   })
 
   it('drops the split-folio twin so the in-house bar is the one that shows', async () => {
-    const todayIso = iso(today)
     const tomorrowIso = iso(tomorrow)
     const bars = await withReservations([
       { reservation_id: 1, guest_id: 7, guest_name: 'Juma Bakari', room: { room_id: 1 }, arrival_date: iso(new Date(today.getTime() - 86400000)), departure_date: tomorrowIso, status: 'pending', total_amount: 900000 },

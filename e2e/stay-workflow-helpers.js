@@ -100,9 +100,8 @@ function dayDiff(fromIso, toIso) {
  * cells, whose single-day vacancy does not guarantee the following nights.
  */
 export async function createFutureStay(page, last, baseDay = 4, nights = 2) {
-  let arrivalIso = null
   for (let base = baseDay; base <= baseDay + 6; base += 2) {
-    arrivalIso = isoDate(base)
+    const arrivalIso = isoDate(base)
     if (await _createStayTry(page, last, arrivalIso, nights)) return
   }
   throw new Error('no window returned an available room in the list create modal')

@@ -21,12 +21,9 @@ import { test, expect } from '@playwright/test'
 import { signIn, trackPageErrors, isoDate } from './helpers.js'
 import {
   guestName,
-  dismissAlerts,
   openBoard,
   tapVacantToday,
   createFutureStay,
-  fillByLabel,
-  pickOptionIn,
   openBookingModal,
   fillNewBooking,
   submitNewBooking,
@@ -69,13 +66,15 @@ test.describe('receptionist workflow', () => {
     let bar = await barFor(page, last)
     expect(await bar.getAttribute('class'), 'reserved + balance due = red bar').toContain('bar-red')
 
-    // Settle the whole balance through the stay modal "Add payment".
+    // Settle the whole balance through the stay modal "Add payment". The folio
+    // ledger lives on the default Folio Operations panel, so read it there.
     let modal = await openStay(page, last)
-    await openStayCharges(page, modal)
     const balance = tzs(await folioCard(page, modal, /balance/i))
     await moreAction(page, modal, /add payment/i)
 
-    const payment = page.locator('.sv-modal[role="dialog"]', { hasText: /add payment/i }).last()
+    // The "Add payment" op opens a SMALL dialog; the bigger stay modal (which
+    // also carries an "Add payment" manage action) must not be mistaken for it.
+    const payment = page.locator('.sv-modal-sm[role="dialog"]', { hasText: /add payment/i }).first()
     await expect(payment.locator('input[data-field="amount"]')).toBeVisible()
     await payment.locator('input[data-field="amount"]').fill(String(balance))
     await payment.locator('.ss-trigger').first().click()
@@ -83,8 +82,10 @@ test.describe('receptionist workflow', () => {
     await payment.locator('.btn-primary', { hasText: /save payment/i }).last().click()
 
     // The payment modal closes, but the stay modal stays open with a reloaded
-    // folio; "Total paid" must now equal the settled balance.
-    await expect(payment).toBeHidden({ timeout: 15_000 })
+    // folio; "Total paid" must now equal the settled balance. The amount input
+    // lives ONLY in the small payment modal (the stay modal has no such field),
+    // so keying the close-assertion on it makes it immune to the bigger dialog.
+    await expect(page.locator('.sv-modal-sm[role="dialog"] input[data-field="amount"]')).toBeHidden({ timeout: 15_000 })
     await expect
       .poll(async () => tzs(await folioCard(page, modal, /total paid/i)), { timeout: 15_000 })
       .toBe(balance)
@@ -194,7 +195,6 @@ test.describe('receptionist workflow', () => {
 
     await waitForBarClass(page, last, 'bar-green')
     modal = await openStay(page, last)
-    await openStayCharges(page, modal)
     const paidBefore = tzs(await folioCard(page, modal, /Total Paid/i))
     const balBefore = tzs(await folioCard(page, modal, /balance/i))
     await moreAction(page, modal, /adjustment/i)
