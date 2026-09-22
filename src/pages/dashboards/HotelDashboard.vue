@@ -7158,13 +7158,29 @@ onUnmounted(() => clearInterval(refreshTimer))
     padding: 12px;
   }
 
-  .sv-search {
-    min-width: 0;
-    flex: 1;
+  .sv-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .sv-toolbar-right {
-    width: 100%;
+    flex: 1 1 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .sv-search {
+    min-width: 0;
+    flex: 1 1 200px;
+  }
+
+  .sv-assign {
+    white-space: nowrap;
+  }
+
+  .sv-pills {
+    order: 3;
+    flex-basis: 100%;
   }
 }
 
