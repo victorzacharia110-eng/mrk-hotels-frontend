@@ -440,7 +440,8 @@
                                 guest: e.movedFrom }) }}</span> </template>{{
                             e.description }}<span v-if="e.detail" class="sv-cap"> · {{ e.detail }}</span>
                             <span v-if="e.payment?.edited_by || e.payment?.edited_at" class="sv-folio-edit-note">
-                              {{ $t('stayview.editedBy') }} {{ e.payment.edited_by }}<template
+                              {{ $t('stayview.editedBy') }} {{ e.payment.edited_by_name ||
+                                e.payment.edited_by }}<template
                                 v-if="e.payment.edited_at"> {{ $t('stayview.editedAt') }} {{
                                 formatDateDMY(e.payment.edited_at) }}</template>
                             </span>
@@ -2448,7 +2449,10 @@ const visibleReservations = computed(() => {
   return tapeReservations.value.filter((r) => {
     const { arrival, departure } = reservationDates(r)
     if (!arrival || !departure) return false
-    if (departure <= windowStart.value || arrival >= windowEnd.value) return false
+    // A stay departing ON the window's first day still owns the room for that
+    // day's first half (half-day handover), so it must stay visible — only
+    // stays that ended before the window are hidden.
+    if (departure < windowStart.value || arrival >= windowEnd.value) return false
     if (!q) return true
     const roomNumber = r.room?.room_number || ''
     return (
@@ -2457,6 +2461,56 @@ const visibleReservations = computed(() => {
     )
   })
 })
+
+/** Maps ONE raw reservation onto the fields the stay sidebar/modal renders.
+ *  Shared by the booking-bar grid (which adds grid geometry on top) and by
+ *  runStayAction, which re-points the open modal at the FRESH row after a stay
+ *  action instead of leaving stale bar data (vis. a Send-invoice button that
+ *  stays disabled after the guest's e-mail arrives via amend-stay). */
+function toPanelBar(r, colorClass = '') {
+  const { arrival, departure } = reservationDates(r)
+  const balance = Number(r.balance_due ?? r.balance ?? 0)
+  const paymentPending = balance > 0
+  if (!colorClass && departure) {
+    colorClass =
+      r.status === 'checked_out' ? 'bar-blue'
+        : r.status === 'checked_in'
+          ? (departure.toDateString() === new Date().toDateString() ? 'bar-purple' : 'bar-green')
+          : 'bar-red'
+  }
+  const fmt = (d) => `${d.getDate()}/${d.getMonth() + 1}/${String(d.getFullYear()).slice(2)}`
+  return {
+    id: r.reservation_id,
+    roomId: reservationRoomId(r),
+    arrivalIso: arrival ? isoKey(arrival) : '',
+    departureIso: departure ? isoKey(departure) : '',
+    label: (r.guest_name || '—').toUpperCase(),
+    colorClass,
+    rawStatus: r.status,
+    statusLabel: r.status.replace('_', ' '),
+    folio_code: r.folio_code || '',
+    dates: arrival && departure ? `${fmt(arrival)} → ${fmt(departure)}` : '—',
+    nights: arrival && departure ? diffDays(arrival, departure) : 0,
+    roomNumber: r.room?.room_number || '—',
+    paymentPending,
+    balance: balance.toLocaleString(),
+    // Full client/stay details so the modal shows everything in one place.
+    reference: r.booking_reference || '—',
+    email: r.guest_email || '—',
+    guestEmail: r.guest_email || '',
+    phone: r.guest_phone || '—',
+    location: [r.city, r.country].filter(Boolean).join(', ') || '—',
+    guests: `${r.num_adults ?? 1} ${t('stayview.adults')}${r.num_children ? ` · ${r.num_children} ${t('stayview.children')}` : ''}`,
+    roomType: roomTypeLabel(r.room_type || r.room?.room_type || ''),
+    total: Number(r.total_amount || 0).toLocaleString(),
+    advance: Number(r.advance_payment || 0).toLocaleString(),
+    source: (r.booking_source || '—').replace('_', ' '),
+    specialRequests: r.special_requests || '',
+    notes: r.notes || '',
+    checkedInAt: r.checked_in_at ? fmtDate(r.checked_in_at) : '',
+    checkedOutAt: r.checked_out_at ? fmtDate(r.checked_out_at) : '',
+  }
+}
 
 /** Booking bars keyed by room id, positioned on the 28 half-day sub-grid
  *  (two lanes per room, two half-cells per day). A stay's bar runs from the
@@ -2475,56 +2529,26 @@ const barsByRoom = computed(() => {
     const endIdx = Math.min(DAYS, diffDays(windowStart.value, departure))
     const halfStart = startIdx * 2
     const halfEnd = Math.max(halfStart, endIdx * 2)
-    if (halfEnd < halfStart || endIdx <= startIdx) continue
-    // Bar colors: blue = checked out, red = payment pending, green = in-house
-    // or fully paid. An in-house guest shows green even when a balance remains
-    // to be settled at check-out — the stay has started, so there is nothing
-    // to be "waiting for".
-    const balance = Number(r.balance_due ?? r.balance ?? 0)
-    const paymentPending = balance > 0
-    const colorClass =
-      r.status === 'checked_out' ? 'bar-blue'
-        : r.status === 'checked_in' ? 'bar-green'
-          : paymentPending ? 'bar-red' : 'bar-green'
-    const fmt = (d) => `${d.getDate()}/${d.getMonth() + 1}/${String(d.getFullYear()).slice(2)}`
-      ; (map[roomId] ||= []).push({
-        id: r.reservation_id,
-        roomId,
-        arrivalIso: isoKey(arrival),
-        departureIso: isoKey(departure),
-        label: (r.guest_name || '—').toUpperCase(),
-        // Grid column/span on the 28 half-day track (1-based) + the inclusive
-        // 0-based half-cell range used by the vacancy check.
-        halfStart,
-        halfEnd,
-        start: halfStart + 1,
-        span: halfEnd - halfStart + 1,
-        lane: 1,
-        colorClass,
-        rawStatus: r.status,
-        statusLabel: r.status.replace('_', ' '),
-        folio_code: r.folio_code || '',
-        dates: `${fmt(arrival)} → ${fmt(departure)}`,
-        nights: diffDays(arrival, departure),
-        roomNumber: r.room?.room_number || '—',
-        paymentPending,
-        balance: balance.toLocaleString(),
-        // Full client/stay details so the modal shows everything in one place.
-        reference: r.booking_reference || '—',
-        email: r.guest_email || '—',
-        guestEmail: r.guest_email || '',
-        phone: r.guest_phone || '—',
-        location: [r.city, r.country].filter(Boolean).join(', ') || '—',
-        guests: `${r.num_adults ?? 1} ${t('stayview.adults')}${r.num_children ? ` · ${r.num_children} ${t('stayview.children')}` : ''}`,
-        roomType: roomTypeLabel(r.room_type || r.room?.room_type || ''),
-        total: Number(r.total_amount || 0).toLocaleString(),
-        advance: Number(r.advance_payment || 0).toLocaleString(),
-        source: (r.booking_source || '—').replace('_', ' '),
-        specialRequests: r.special_requests || '',
-        notes: r.notes || '',
-        checkedInAt: r.checked_in_at ? fmtDate(r.checked_in_at) : '',
-        checkedOutAt: r.checked_out_at ? fmtDate(r.checked_out_at) : '',
-      })
+    // Skip stays that fully ended before the window, but DO keep a resident
+    // whose checkout day falls inside it: a guest arriving before the window
+    // and checking out today draws a one-half-of-the-day sliver (their bar
+    // otherwise degenerates to zero width because endIdx == startIdx at the
+    // clamped window edge, hiding the resident the front desk must clear out
+    // before their same-day successor checks in).
+    if (halfEnd < halfStart || diffDays(windowStart.value, departure) < 0) continue
+    // Bar colors: blue = checked out, green = in-house, red = anything not yet
+    // checked in. A reserved guest that has paid in full must NOT flip green —
+    // only an actual check-in turns the bar green.
+    ; (map[roomId] ||= []).push({
+      ...toPanelBar(r),
+      // Grid column/span on the 28 half-day track (1-based) + the inclusive
+      // 0-based half-cell range used by the vacancy check.
+      halfStart,
+      halfEnd,
+      start: halfStart + 1,
+      span: halfEnd - halfStart + 1,
+      lane: 1,
+    })
   }
   // Stack successive handovers on alternating lanes so a departing guest's
   // half of the checkout day and the arriving guest's other half render one
@@ -3158,6 +3182,9 @@ const folioEntries = computed(() => {
       user: e.user || '—',
       amount: Math.abs(amount),
       credit: amount <= 0 && e.type !== 'inclusion',
+      // Inclusions read on the ledger at their display value but never count
+      // towards the balance (the backend keeps them out of room_charges too).
+      balanceNeutral: e.type === 'inclusion',
       muted: e.type === 'attachment' || amount === 0,
       refund: isRefund,
       entryId: e.folio_entry_id,
@@ -3250,6 +3277,10 @@ const folioTotals = computed(() => {
   let charges = 0
   let credits = 0
   for (const e of folioEntries.value) {
+    // A complimentary inclusion carries a display value but never moves the
+    // balance: it shows on the ledger at its amount yet must not alter the
+    // charges−credits total (or the matching balance card).
+    if (e.balanceNeutral) continue
     if (e.credit) credits += e.amount
     else charges += e.amount
   }
@@ -3366,6 +3397,13 @@ async function runStayAction(fn) {
       viewingFolio.value = res.data
     }
     await load(true)
+    // A stay action (amend, room move, edit/void, payment…) may have changed
+    // the bar the stay modal is bound to — the reservations list is fresh, so
+    // re-point the modal at the UPDATED row (e-mail, status, dates, balance)
+    // instead of showing stale bar data (e.g. Send-invoice staying disabled
+    // after the guest's e-mail arrives via amend-stay).
+    const fresh = reservations.value.find((r) => r.reservation_id === activeBar.value?.id)
+    if (fresh) activeBar.value = toPanelBar(fresh)
   } catch (err) {
     actionError.value = apiErrorMsg(err, t('stayview.actionError'))
   } finally {
@@ -6438,6 +6476,10 @@ onUnmounted(() => clearInterval(refreshTimer))
   background: #28c76f;
 }
 
+.sv-bar.bar-purple {
+  background: #9f7aea;
+}
+
 .sv-bar.bar-red {
   background: #ff6b6b;
 }
@@ -6572,6 +6614,10 @@ onUnmounted(() => clearInterval(refreshTimer))
 
 .sv-popover-badge.bar-green {
   background: #28c76f;
+}
+
+.sv-popover-badge.bar-purple {
+  background: #9f7aea;
 }
 
 .sv-popover-badge.bar-red {
@@ -6749,6 +6795,10 @@ onUnmounted(() => clearInterval(refreshTimer))
 
 .sv-modal-head.bar-green {
   background: linear-gradient(135deg, #28c76f, #1e9e57);
+}
+
+.sv-modal-head.bar-purple {
+  background: linear-gradient(135deg, #9f7aea, #7b5cd6);
 }
 
 .sv-modal-head.bar-red {
