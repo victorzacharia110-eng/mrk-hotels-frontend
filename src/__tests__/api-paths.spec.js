@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import api from '@/api/axios'
-import { reservationApi, paymentApi } from '@/api'
+import { paymentApi } from '@/api'
 
 describe('folio operations API contract', () => {
   beforeEach(() => {
@@ -10,19 +10,6 @@ describe('folio operations API contract', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
-  })
-
-  it('posts an early departure refund to /v1/reservations/{id}/folio/early-departure', async () => {
-    const payload = { actual_departure_date: '2026-11-03', reason: 'Guests cut the safari short' }
-    await reservationApi.folioEarlyDeparture(42, payload)
-    expect(api.post).toHaveBeenCalledWith('/v1/reservations/42/folio/early-departure', payload)
-  })
-
-  it('sends the reason as null when omitted', async () => {
-    await reservationApi.folioEarlyDeparture(7, { actual_departure_date: '2026-11-03' })
-    expect(api.post).toHaveBeenCalledWith('/v1/reservations/7/folio/early-departure', {
-      actual_departure_date: '2026-11-03',
-    })
   })
 
   it('PUTs a payment edit to /v1/payments/{id}', async () => {

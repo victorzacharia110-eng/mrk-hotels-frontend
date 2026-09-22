@@ -324,10 +324,6 @@
                   <strong>{{ ledgerHeader.code }}</strong>
                   <span v-if="ledgerHeader.guest" class="sv-folio-guest"> · {{ ledgerHeader.guest }}<template
                       v-if="ledgerHeader.room"> · {{ ledgerHeader.room }}</template></span>
-                  <button type="button" class="sv-folio-early-dep" :disabled="actionBusy || folioLoading"
-                    :title="$t('stayview.earlyDepartureTitle')" @click="openEarlyDeparture">
-                    <i class="fas fa-right-from-bracket" aria-hidden="true"></i> {{ $t('stayview.earlyDeparture') }}
-                  </button>
                 </div>
                 <div v-if="relatedFolios.length" class="sv-folio-switch">
                   <span class="sv-folio-switch-label">{{ $t('stayview.foliosForStay') }}</span>
@@ -375,6 +371,12 @@
                               :title="$t('stayview.printInvoiceBreakdown') + ' ' + (r.folio_code || ledgerHeader.code)"
                               @click="openInvoicePreview(r)">
                               <i class="fas fa-print" aria-hidden="true"></i>
+                            </button>
+                            <button type="button" class="sv-folio-send-btn"
+                              :title="folioRowEmail(r) ? $t('stayview.sendInvoice') : $t('stayview.noGuestEmail')"
+                              :disabled="sendBusy || !folioRowEmail(r)"
+                              @click="sendFolioInvoice(r)">
+                              <i class="fas fa-paper-plane" aria-hidden="true"></i>
                             </button>
                             <button type="button" class="sv-folio-view-btn" :disabled="folioLoading"
                               :aria-label="$t('common.view') + ' ' + (r.folio_code || ledgerHeader.code)"
@@ -467,17 +469,18 @@
                               <i class="fas fa-pen" aria-hidden="true"></i> {{ $t('stayview.paymentEdit') }}
                             </button>
                             <button v-if="activeBar?.id" type="button" class="sv-icon-link"
-                              :title="activeBar.guestEmail ? $t('stayview.sendInvoice') : $t('stayview.noGuestEmail')"
-                              :disabled="sendBusy || !activeBar.guestEmail" @click="sendInvoice(activeBar)">
+                              :title="currentFolioTarget.email ? $t('stayview.sendInvoice') : $t('stayview.noGuestEmail')"
+                              :disabled="sendBusy || !currentFolioTarget.email" @click="sendFolioInvoice(currentFolioTarget)">
                               <i class="fas fa-paper-plane" aria-hidden="true"></i>
                             </button>
                             <a v-if="e.entryUrl" :href="e.entryUrl" target="_blank" rel="noopener" class="sv-icon-link"
                               :title="$t('folio.download')">
                               <i class="fas fa-download" aria-hidden="true"></i>
                             </a>
-                            <button v-if="e.entryId && !e.moveLine" type="button" class="sv-icon-link"
-                              :title="e.entryUrl ? $t('folio.remove') : $t('folio.void')" :disabled="actionBusy"
-                              @click="e.entryUrl ? removeFolioAttachment(e) : voidFolioEntry(e)">
+                            <button v-if="e.entryId && !e.moveLine && (canManageFolioOps || (e.type !== 'room_charge' && !folioLocked))"
+                            type="button" class="sv-icon-link"
+                            :title="e.entryUrl ? $t('folio.remove') : $t('folio.void')" :disabled="actionBusy"
+                            @click="e.entryUrl ? removeFolioAttachment(e) : voidFolioEntry(e)">
                               <i class="fas fa-trash-can" aria-hidden="true"></i>
                             </button>
                           </td>
@@ -711,9 +714,9 @@
                 {{ printBusy ? $t('invoices.preparing') : $t('stayview.printInvoice') }}
               </button>
               <button type="button" class="btn btn-secondary sv-modal-manage"
-                :disabled="sendBusy || !activeBar.guestEmail"
-                :title="activeBar.guestEmail ? activeBar.guestEmail : $t('stayview.noGuestEmail')"
-                @click="sendInvoice(activeBar)">
+                :disabled="sendBusy || !currentFolioTarget.email"
+                :title="currentFolioTarget.email ? currentFolioTarget.email : $t('stayview.noGuestEmail')"
+                @click="sendFolioInvoice(currentFolioTarget)">
                 <i class="fas fa-paper-plane" aria-hidden="true"></i>
                 {{ sendBusy ? $t('invoices.preparing') : $t('stayview.sendInvoice') }}
               </button>
@@ -927,57 +930,6 @@
                 <i class="fas fa-check" aria-hidden="true"></i>
                 {{ actionBusy ? $t('common.loading') : (payMode === 'company' ? $t('stayview.postToCreditors') :
                   $t('stayview.savePayment')) }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
-
-    <!-- Early-departure refund modal -->
-    <Teleport to="body">
-      <Transition name="sv-modal">
-        <div v-if="earlyDepartureOpen" class="sv-modal-backdrop" @click.self="earlyDepartureOpen = false">
-          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true"
-            :aria-label="$t('stayview.earlyDepartureTitle')">
-            <div class="sv-modal-head bar-blue">
-              <span class="sv-modal-head-icon"><i class="fas fa-right-from-bracket" aria-hidden="true"></i></span>
-              <div class="sv-modal-head-text">
-                <h3>{{ $t('stayview.earlyDepartureTitle') }}</h3>
-                <span class="sv-modal-status">{{ activeBar?.label }}</span>
-              </div>
-              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')"
-                @click="earlyDepartureOpen = false">
-                <i class="fas fa-times" aria-hidden="true"></i>
-              </button>
-            </div>
-            <div class="sv-modal-body">
-              <p class="sv-void-hint">{{ $t('stayview.earlyDepartureHint') }}</p>
-              <label class="sv-field">
-                <span>{{ $t('stayview.departure') }}</span>
-                <input v-model="earlyDepartureForm.actual_departure_date" type="date" class="input"
-                  data-field="actual_departure_date"
-                  :class="{ 'sv-input-error': earlyDepartureErrors.actual_departure_date }" required />
-                <span v-if="earlyDepartureErrors.actual_departure_date" class="sv-field-msg" role="alert"><i
-                    class="fas fa-circle-exclamation" aria-hidden="true"></i> {{
-                      earlyDepartureErrors.actual_departure_date
-                  }}</span>
-              </label>
-              <label class="sv-field">
-                <span>{{ $t('stayview.earlyDepartureReason') }}</span>
-                <textarea v-model="earlyDepartureForm.reason" class="input" rows="2"></textarea>
-              </label>
-              <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
-            </div>
-            <div class="sv-modal-actions">
-              <button type="button" class="btn btn-secondary" :disabled="actionBusy"
-                @click="earlyDepartureOpen = false">
-                {{ $t('common.close') }}
-              </button>
-              <button type="button" class="btn btn-primary sv-early-dep-confirm"
-                :disabled="actionBusy || !earlyDepartureForm.actual_departure_date" @click="submitEarlyDeparture">
-                <i class="fas fa-check" aria-hidden="true"></i>
-                {{ actionBusy ? $t('common.loading') : $t('stayview.earlyDepartureConfirm') }}
               </button>
             </div>
           </div>
@@ -2492,6 +2444,7 @@ function toPanelBar(r, colorClass = '') {
     dates: arrival && departure ? `${fmt(arrival)} → ${fmt(departure)}` : '—',
     nights: arrival && departure ? diffDays(arrival, departure) : 0,
     roomNumber: r.room?.room_number || '—',
+    room_number: r.room?.room_number || '',
     paymentPending,
     balance: balance.toLocaleString(),
     // Full client/stay details so the modal shows everything in one place.
@@ -3072,7 +3025,7 @@ function rentalSum(entries) {
 const donorEmptyFolio = computed(() => {
   const f = ledgerFolio.value || null
   if (!f) return false
-  const hadOutflow = (f.folio_entries || []).some((e) => /_out$/.test(e.type || ''))
+  const hadOutflow = (f.folio_entries || []).some((e) => String(e.type || '').endsWith('_out'))
   const hasLiveRows = (f.folio_entries || []).some((e) => !/_(out|in)$/.test(e.type || '') && e.type !== 'attachment')
   return (
     hadOutflow &&
@@ -3195,7 +3148,11 @@ const folioEntries = computed(() => {
       // moved; only the target folio's live rows travel again.
       moveLine: /_(out|in)$/.test(e.type),
       entryUrl: e.attachment_url ? reservationApi.folioAttachmentUrl(e.folio_entry_id) : '',
-      editable: ['room_charge', 'extra_charge', 'adjustment', 'discount', 'inclusion'].includes(e.type) && e.folio_entry_id != null,
+      editable: ['room_charge', 'extra_charge', 'adjustment', 'discount', 'inclusion'].includes(e.type)
+        && e.folio_entry_id != null
+        // Room charges are the frozen stay bill and closed folios are final:
+        // both can only be rewritten by management (manager/accountant+).
+        && (canManageFolioOps.value || (e.type !== 'room_charge' && !folioLocked.value)),
       movedFrom: sourceLabel,
     })
   }
@@ -3569,57 +3526,6 @@ async function submitPayment() {
 }
 bindBlurValidation(watch, () => paymentForm.value, paymentSnapshot, paymentTouched, paymentErrors, paymentRules)
 
-/* ----- Early-departure refund ----- */
-
-// Posts a refund for the unused nights when a guest departs before their
-// scheduled date. The backend returns the refreshed folio payload (same shape
-// as folio()), so runStayAction reloads ledgerHeader + relatedFolios and the
-// new signed REFUND ledger line shows straight away.
-const earlyDepartureOpen = ref(false)
-const earlyDepartureForm = ref({})
-const earlyDepartureErrors = ref({})
-const earlyDepartureTouched = ref(false)
-const earlyDepartureSnapshot = ref({})
-
-function openEarlyDeparture() {
-  moreOpen.value = false
-  const scheduled = folio.value?.reservation?.check_out_date || activeBar.value?.departureIso || ''
-  earlyDepartureForm.value = { actual_departure_date: scheduled || isoKey(new Date()), reason: '' }
-  earlyDepartureErrors.value = {}
-  earlyDepartureTouched.value = false
-  earlyDepartureSnapshot.value = { ...earlyDepartureForm.value }
-  actionError.value = ''
-  earlyDepartureOpen.value = true
-}
-
-function earlyDepartureRules() {
-  return [{ field: 'actual_departure_date', check: required(t) }]
-}
-
-async function submitEarlyDeparture() {
-  const f = earlyDepartureForm.value
-  earlyDepartureTouched.value = true
-  const errors = collectErrors(f, earlyDepartureRules())
-  if (Object.keys(errors).length) {
-    earlyDepartureErrors.value = errors
-    return
-  }
-  if (!activeBar.value?.id) return
-  earlyDepartureOpen.value = false
-  await runStayAction(() =>
-    reservationApi.folioEarlyDeparture(activeBar.value.id, {
-      actual_departure_date: f.actual_departure_date,
-      reason: f.reason?.trim() || null,
-    }),
-  )
-  if (actionError.value) {
-    earlyDepartureOpen.value = true
-  } else {
-    toast(t('stayview.earlyDepartureDone'))
-  }
-}
-bindBlurValidation(watch, () => earlyDepartureForm.value, earlyDepartureSnapshot, earlyDepartureTouched, earlyDepartureErrors, earlyDepartureRules)
-
 /* ----- Edit payment (correct amount / method / status / notes) ----- */
 
 // Compact editor for a payment ledger row. Posts { amount?, payment_method?,
@@ -3707,7 +3613,8 @@ const chargeTouched = ref(false)
 const chargeSnapshot = ref({})
 function openChargeModal() {
   moreOpen.value = false
-  viewingFolio.value = null
+  // Postings keep targeting the folio being viewed (the related folio opened
+  // via the switcher), so a post-split charge lands on the viewed guest.
   chargeForm.value = { description: '', amount: null }
   chargeErrors.value = {}
   chargeTouched.value = false
@@ -3731,8 +3638,11 @@ async function submitCharge() {
   }
   if (!activeBar.value?.id) return
   chargeModal.value = false
+  // Post the charge to whatever folio is on screen: the active stay, or the
+  // related (split) folio the receptionist is viewing right now.
+  const target = activeFolioId.value || activeBar.value.id
   await runStayAction(() =>
-    reservationApi.postRoomCharge(activeBar.value.id, { description: f.description, amount: f.amount }),
+    reservationApi.postRoomCharge(target, { description: f.description, amount: f.amount }),
   )
   if (actionError.value) chargeModal.value = true
 }
@@ -3922,7 +3832,9 @@ const folioOpCanPost = computed(() => {
 
 function openFolioOp(op, mode = 'transfer') {
   moreOpen.value = false
-  viewingFolio.value = null
+  // Discounts/adjustments/inclusions land on the folio being viewed; moving
+  // operations always start from the active stay's folio.
+  if (op === 'move') viewingFolio.value = null
   folioOp.value = op
   folioMoveMode.value = mode
   folioOpForm.value = { amount: null, description: '', target_reservation_id: '', new_room_id: '', files: [] }
@@ -3943,6 +3855,9 @@ async function submitFolioOp() {
   const f = folioOpForm.value
   if (!bar?.id || !folioOpCanPost.value) return
   const op = folioOp.value
+  // Discounts/adjustments/inclusions post to the folio currently on screen:
+  // after a split the receptionist may be viewing the related folio.
+  const target = activeFolioId.value || bar.id
   let payload = null
   if (op === 'discount') {
     payload = { amount: f.amount, description: f.description || null }
@@ -3959,11 +3874,11 @@ async function submitFolioOp() {
   }
   folioOp.value = null
   await runStayAction(() => {
-    if (op === 'discount') return reservationApi.folioDiscount(bar.id, payload)
-    if (op === 'adjustment') return reservationApi.folioAdjustment(bar.id, payload)
-    if (op === 'inclusion') return reservationApi.folioInclusion(bar.id, payload)
+    if (op === 'discount') return reservationApi.folioDiscount(target, payload)
+    if (op === 'adjustment') return reservationApi.folioAdjustment(target, payload)
+    if (op === 'inclusion') return reservationApi.folioInclusion(target, payload)
     if (op === 'move') return reservationApi.folioTransfer(bar.id, payload)
-    return reservationApi.folioAttachments(bar.id, f.files)
+    return reservationApi.folioAttachments(target, f.files)
   })
   if (actionError.value) folioOp.value = op
 }
@@ -4298,25 +4213,45 @@ function printEntryInvoice(e) {
   entryPrintBusy.value = null
 }
 
+/**
+ * The folio/email to which a Print Invoice / Send Invoice action applies: the
+ * folio the receptionist is CURRENTLY viewing, else the stay's own folio. This
+ * is what makes split bills actionable — after a split, invoices are generated
+ * and sent per folio (each gets its own number and its own guest line).
+ */
+const currentFolioTarget = computed(() => {
+  const src = viewingFolio.value || folio.value || { reservation: activeBar.value }
+  const res = src?.reservation || activeBar.value || {}
+  return {
+    reservation_id: res.reservation_id ?? activeBar.value?.id ?? null,
+    name: res.guest_name || res.label || '',
+    email: res.guest_email || res.guestEmail || src?.guest_email || '',
+  }
+})
+
+/** Guest e-mail for a switcher row (the stay's own bar or a related folio). */
+function folioRowEmail(r) {
+  return r?.guest_email || r?.guestEmail || (r === activeBar.value ? activeBar.value?.guestEmail : '') || ''
+}
+
+/**
+ * Prints the invoice for the folio currently on screen. Instead of opening the
+ * raw backend PDF, it renders the folio invoice breakdown into a print page of
+ * its own (A4, 12 mm margins, same layout the ledger reports use) so the
+ * browser's print dialog applies margins and pagination.
+ */
 async function printInvoice(bar) {
   printBusy.value = true
   actionError.value = ''
   try {
-    const gen = await invoiceApi.generate(bar.id)
-    const invoice = gen.data.invoice
-    const res = await invoiceApi.download(invoice.invoice_id)
-    const url = URL.createObjectURL(
-      new Blob([res.data], { type: res.headers['content-type'] || 'application/pdf' }),
-    )
-    const win = window.open(url, '_blank')
-    if (!win) {
-      // Popup blocked: fall back to a plain file download.
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${invoice.invoice_number}.pdf`
-      a.click()
-    }
-    setTimeout(() => URL.revokeObjectURL(url), 60000)
+    const id = currentFolioTarget.value.reservation_id || bar?.id
+    if (!id) return
+    let payload = null
+    if (viewingFolio.value?.reservation?.reservation_id === id) payload = viewingFolio.value
+    else if (folio.value?.reservation?.reservation_id === id) payload = folio.value
+    else payload = (await reservationApi.folio(id)).data
+    invoicePreviewFolio.value = payload
+    printInvoiceBreakdown()
   } catch (err) {
     actionError.value = err.response?.data?.message || t('stayview.invoiceError')
   } finally {
@@ -4324,11 +4259,14 @@ async function printInvoice(bar) {
   }
 }
 
-async function sendInvoice(bar) {
+/** Sends the invoice for a folio (which reservation its invoice is generated for). */
+async function sendFolioInvoice(r) {
+  const id = r?.reservation_id ?? r?.id
+  if (!id || sendBusy.value) return
   sendBusy.value = true
   actionError.value = ''
   try {
-    const res = await invoiceApi.send(bar.id)
+    const res = await invoiceApi.send(id)
     toast(res.data.message || t('stayview.invoiceSent'))
   } catch (err) {
     actionError.value = err.response?.data?.message || t('stayview.invoiceError')
@@ -4489,6 +4427,12 @@ const canVoidReservation = computed(() => {
   if (activeBar.value?.rawStatus !== 'checked_in') return true
   return mgmtOnly.includes(authStore.user?.user_role)
 })
+
+// A nightly room charge IS the frozen stay bill, so editing or voiding those
+// rows is manager/accountant work. A closed (checked-out) folio is a final
+// record too: after the guest leaves, every correction is management's job.
+const canManageFolioOps = computed(() => authStore.can(70))
+const folioLocked = computed(() => activeBar.value?.rawStatus === 'checked_out')
 
 // Housekeeping tasks follow the housekeeping module matrix.
 const canSeeHousekeeping = computed(() =>
@@ -5615,35 +5559,6 @@ onUnmounted(() => clearInterval(refreshTimer))
 .sv-folio-return:disabled {
   border-color: #cbbff0;
   color: #cbbff0;
-  cursor: default;
-  background: #fff
-}
-
-/* Early-departure refund action (folio reference bar, stay-view). */
-.sv-folio-early-dep {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-  padding: 5px 12px;
-  background: #fff;
-  color: #b45309;
-  border: 1px solid #f3d29a;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all .15s
-}
-
-.sv-folio-early-dep:hover {
-  background: #b45309;
-  color: #fff
-}
-
-.sv-folio-early-dep:disabled {
-  border-color: #e8d5b8;
-  color: #d9b98a;
   cursor: default;
   background: #fff
 }

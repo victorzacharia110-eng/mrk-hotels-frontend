@@ -12,8 +12,10 @@
 // keep each panel to what its staff actually need.
 export const MODULES = [
   // Landing dashboard (reception stay-view). Management lands on the overview
-  // dashboard instead, so it is gated to the front-desk roles that use it.
-  { key: 'dashboard', to: '/app', icon: 'fas fa-gauge-high', labelKey: 'nav.dashboard', roles: ['receptionist', 'housekeeping', 'procurement_officer', 'staff', 'kitchen', 'waiter', 'bartender'] },
+  // dashboard after sign-in, but still may open the board to audit stays and
+  // to perform the management-only folio rewrites (edit/void of the frozen
+  // room-charge rows and of closed folios).
+  { key: 'dashboard', to: '/app', icon: 'fas fa-gauge-high', labelKey: 'nav.dashboard', roles: ['receptionist', 'housekeeping', 'procurement_officer', 'staff', 'kitchen', 'waiter', 'bartender', 'hotel_admin', 'manager', 'accountant'] },
   // Read-only operational dashboard for management.
   { key: 'overview', to: '/app/overview', icon: 'fas fa-chart-simple', labelKey: 'overview.title', roles: ['hotel_admin', 'manager', 'accountant'], feature: 'overview' },
   // Reservations management.

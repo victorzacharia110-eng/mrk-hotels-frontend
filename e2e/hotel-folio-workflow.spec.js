@@ -4,19 +4,27 @@
  *
  *   A1 Amend stays must reflect live on the stay and the board.
  *   A2 Room moves relocate the stay to the new room.
+ *   A3 A CHECKED-IN room move keeps the stay live and shows the new room.
+ *   A4 Extending a checked-in stay posts the added nights live; shortening
+ *      them releases them (bill stays in step with the window).
+ *   A5 The arrival day of a checked-in stay is immutable.
  *   B1 A checked-in guest can add a payment to settle the folio.
  *   B2 A guest due to check out today must show the due-out PURPLE bar.
  *   B3 An outstanding balance can be posted to a creditor company.
  *   B4 Sending the invoice by e-mail completes without a server error.
- *   B5 Editing a posted room charge moves the balance, row intact, no dupes.
- *   B6 Voiding a posted room charge removes only that row.
+ *   B5 Editing a posted room charge is management-only (front desk cannot)
+ *      and moves the balance, row intact, no dupes.
+ *   B6 Voiding a posted room charge is management-only and removes only that
+ *      row.
  *   B7 An edited payment is attributed to the staff member's name.
  *   C1 After a folio transfer the switcher keeps both balances consistent.
  *   C2 A payment can never push the current folio balance negative while a
  *      related folio is open.
+ *   C3 Postings land on the related folio being VIEWED, not the current one.
  *   D1 Folio edit/void operations are management-only once a guest checks out.
  *   E1 Folio entries stay ordered chronologically (FIFO).
  *   E2 An inclusion appears on the ledger without moving the balance.
+ *   G1 No checked-in stay can be cancelled; only unstarted bookings can.
  *
  * Tests that encode a still-broken document item carry the intended assertion
  * and FAIL until the bug is fixed, so the suite doubles as a regression list.
@@ -43,6 +51,19 @@ import {
 
 const roomChargeRows = (modal) => modal.locator('.sv-folio-table tbody tr', { hasText: /room charge/i })
 const folioRow = (modal, re) => modal.locator('.sv-folio-table tbody tr').filter({ hasText: re }).first()
+
+/**
+ * Re-authenticate mid-test as another staff member. The app keeps the session
+ * in sessionStorage, so it must be dropped first or /login bounces straight
+ * back to the dashboard without ever rendering the sign-in form.
+ */
+async function relogin(page, email) {
+  await page.evaluate(() => {
+    sessionStorage.clear()
+    localStorage.clear()
+  })
+  await signIn(page, { email })
+}
 
 /** The single SearchableSelect within the given modal (room picker etc.). */
 const ssTrigger = (modal) => modal.locator('.ss-trigger').first()
@@ -132,6 +153,113 @@ test.describe('hotel folio workflow', () => {
     const reopen = page.locator('.sv-modal-sm[role="dialog"]', { hasText: /room move/i }).last()
     const movedRoom = (await ssTrigger(reopen).innerText()).match(/\d+/)?.[0]
     expect(movedRoom, 'the stay must now be in the new room').toBe(chosenRoom)
+    expect(errors).toEqual([])
+  })
+
+  test('A3 - a checked-in room move keeps the stay live and shows the new room', async ({ page }) => {
+    const errors = trackPageErrors(page)
+    await signIn(page, { email: 'reception' })
+    const last = guestName('cimv')
+    await bookAndCheckIn(page, last)
+
+    let modal = await openStay(page, last)
+    await moreAction(page, modal, /room move/i)
+    const move = page.locator('.sv-modal-sm[role="dialog"]', { hasText: /room move/i }).last()
+    await expect(move).toBeVisible()
+    const trigger = ssTrigger(move)
+    await expect(trigger).toBeVisible()
+    const origRoom = (await trigger.innerText()).match(/\d+/)?.[0]
+    expect(origRoom, 'the stay must currently be in a room').toBeTruthy()
+
+    await trigger.click()
+    const options = page.locator('.ss-panel [role="option"]')
+    await expect(options.nth(1)).toBeVisible({ timeout: 8_000 })
+    const chosenRoom = (await options.nth(1).innerText()).match(/\d+/)?.[0]
+    await options.nth(1).click()
+    await page.waitForTimeout(250)
+    expect(chosenRoom, 'the picked room must differ from the current one').not.toBe(origRoom)
+
+    await move.locator('.btn-primary', { hasText: /save changes/i }).click()
+    await expect(move).toBeHidden({ timeout: 15_000 })
+    await expect(page.locator('.sv-action-error')).toHaveCount(0)
+    await waitForBarClass(page, last, 'bar-green')
+    await closeStay(page).catch(() => {})
+
+    // The guest is still checked in and the stay now points at the new room.
+    modal = await openStay(page, last)
+    await moreAction(page, modal, /room move/i)
+    const reopen = page.locator('.sv-modal-sm[role="dialog"]', { hasText: /room move/i }).last()
+    const movedRoom = (await ssTrigger(reopen).innerText()).match(/\d+/)?.[0]
+    expect(movedRoom, 'the checked-in stay must now be in the new room').toBe(chosenRoom)
+    await reopen.locator('button.sv-modal-close, .sv-modal-close').first().click().catch(() => {})
+    expect(errors).toEqual([])
+  })
+
+  test('A4 - extending a checked-in stay posts extra nights live; shortening releases them', async ({ page }) => {
+    const errors = trackPageErrors(page)
+    await signIn(page, { email: 'reception' })
+    const last = guestName('ext')
+    await bookAndCheckIn(page, last)
+
+    let modal = await openStay(page, last)
+    let rows = roomChargeRows(modal)
+    await expect(rows.first()).toBeVisible()
+    const oneNight = tzs(await rows.first().locator('td.num').innerText())
+    const bal1 = tzs(await folioCard(page, modal, /balance/i))
+
+    // Extend today→tomorrow to today→day after tomorrow: a second night must
+    // be posted and the live balance must rise by exactly one night.
+    await moreAction(page, modal, /amend stay/i)
+    const amend = page.locator('.sv-modal-sm[role="dialog"]', { hasText: /amend stay/i }).last()
+    await expect(amend).toBeVisible()
+    await amend.locator('[data-field="check_out_date"]').fill(isoDate(2))
+    await amend.locator('.btn-primary', { hasText: /save changes/i }).click()
+    await expect(amend).toBeHidden({ timeout: 15_000 })
+    await expect(page.locator('.sv-action-error')).toHaveCount(0)
+
+    await expect
+      .poll(async () => (await roomChargeRows(modal).count()), { timeout: 20_000 })
+      .toBe(2)
+    await expect
+      .poll(async () => tzs(await folioCard(page, modal, /balance/i)), { timeout: 20_000 })
+      .toBe(bal1 + oneNight)
+
+    // Shorten back: the second night's row is released and the bill drops.
+    await moreAction(page, modal, /amend stay/i)
+    const shorten = page.locator('.sv-modal-sm[role="dialog"]', { hasText: /amend stay/i }).last()
+    await expect(shorten).toBeVisible()
+    await shorten.locator('[data-field="check_out_date"]').fill(isoDate(1))
+    await shorten.locator('.btn-primary', { hasText: /save changes/i }).click()
+    await expect(shorten).toBeHidden({ timeout: 15_000 })
+    await expect(page.locator('.sv-action-error')).toHaveCount(0)
+
+    await expect
+      .poll(async () => (await roomChargeRows(modal).count()), { timeout: 20_000 })
+      .toBe(1)
+    await expect
+      .poll(async () => tzs(await folioCard(page, modal, /balance/i)), { timeout: 20_000 })
+      .toBe(bal1)
+    expect(errors).toEqual([])
+  })
+
+  test('A5 - the arrival day of a checked-in stay is locked against amendment', async ({ page }) => {
+    const errors = trackPageErrors(page)
+    await signIn(page, { email: 'reception' })
+    const last = guestName('lock')
+    await bookAndCheckIn(page, last)
+
+    const modal = await openStay(page, last)
+    await moreAction(page, modal, /amend stay/i)
+    const amend = page.locator('.sv-modal-sm[role="dialog"]', { hasText: /amend stay/i }).last()
+    await expect(amend).toBeVisible()
+    await amend.locator('[data-field="check_in_date"]').fill(isoDate(1))
+    await amend.locator('.btn-primary', { hasText: /save changes/i }).click()
+
+    // Checked-in stays cannot move their arrival day: the amend stays open
+    // with the backend's refusal shown to the clerk.
+    await expect(amend).toBeVisible({ timeout: 10_000 })
+    const errText = (await amend.locator('.sv-action-error').first().innerText().catch(() => '')).toLowerCase()
+    expect(errText, 'the immutability refusal must be visible').toContain('check-in')
     expect(errors).toEqual([])
   })
 
@@ -226,17 +354,31 @@ test.describe('hotel folio workflow', () => {
     expect(errors).toEqual([])
   })
 
-  test('B5 - editing a posted room charge moves the balance without duplicates', async ({ page }) => {
+  test('B5 - editing a posted room charge is management-only and moves the balance without duplicates', async ({ page }) => {
     const errors = trackPageErrors(page)
     await signIn(page, { email: 'reception' })
     const last = guestName('edit')
     await bookAndCheckIn(page, last)
 
-    const modal = await openStay(page, last)
-    const rows = roomChargeRows(modal)
+    // The nightly room charge is the frozen stay bill: a front-desk clerk
+    // must not be able to rewrite it.
+    let modal = await openStay(page, last)
+    let rows = roomChargeRows(modal)
     await expect(rows.first()).toBeVisible()
     const count = await rows.count()
     expect(count, 'a two-night stay must post two room charges').toBeGreaterThan(0)
+    await expect(rows.first().locator('button[title="Edit"]')).toHaveCount(0)
+    await expect(rows.first().locator('button[title="Void"]')).toHaveCount(0)
+    await closeStay(page).catch(() => {})
+
+    // Management (manager level 80) rewrites the row: no duplicates, and the
+    // balance moves by exactly the difference.
+    await relogin(page, 'manager')
+    await openBoard(page)
+    modal = await openStay(page, last)
+    rows = roomChargeRows(modal)
+    await expect(rows.first()).toBeVisible()
+    await expect(rows.first().locator('button[title="Edit"]')).toBeVisible()
     const target = rows.first()
     const amount = tzs(await target.locator('td.num').innerText())
     const balBefore = tzs(await folioCard(page, modal, /balance/i))
@@ -265,15 +407,27 @@ test.describe('hotel folio workflow', () => {
     expect(errors).toEqual([])
   })
 
-  test('B6 - voiding a posted room charge removes only that row', async ({ page }) => {
+  test('B6 - voiding a posted room charge is management-only and removes only that row', async ({ page }) => {
     const errors = trackPageErrors(page)
     await signIn(page, { email: 'reception' })
     const last = guestName('void')
     await bookAndCheckIn(page, last, { nights: 2 })
 
-    const modal = await openStay(page, last)
-    const rows = roomChargeRows(modal)
+    // A front-desk clerk sees no edit/void on a nightly room charge at all.
+    let modal = await openStay(page, last)
+    let rows = roomChargeRows(modal)
     await expect(rows.first()).toBeVisible()
+    await expect(rows.first().locator('button[title="Edit"]')).toHaveCount(0)
+    await expect(rows.first().locator('button[title="Void"]')).toHaveCount(0)
+    await closeStay(page).catch(() => {})
+
+    // Management voids the second night: only that row disappears.
+    await relogin(page, 'manager')
+    await openBoard(page)
+    modal = await openStay(page, last)
+    rows = roomChargeRows(modal)
+    await expect(rows.first()).toBeVisible()
+    await expect(rows.first().locator('button[title="Void"]')).toBeVisible()
     const count = await rows.count()
     expect(count, 'a two-night stay must post two room charges').toBeGreaterThan(1)
     const target = rows.nth(1)
@@ -375,7 +529,13 @@ test.describe('hotel folio workflow', () => {
     modal = await openStay(page, lastA)
     await expect(switcherRows()).toHaveCount(2)
     await expect(modal.locator('.sv-folio-row-active')).toHaveCount(1)
+
+    // Bug #9: each switcher row must name its room so the clerk can tell the
+    // current folio from the receiving one at a glance.
     const aRow = switcherRows().nth(0)
+    const aRowCol1 = await aRow.locator('td').nth(1).innerText()
+    expect(aRowCol1.toLowerCase()).toContain(lastA.toLowerCase())
+    expect(aRowCol1, 'the current-folio row must show the room').toMatch(/·\s*\d+/)
     await expect.poll(async () => tzs(await aRow.locator('td').nth(3).innerText()), { timeout: 20_000 }).toBe(residual)
 
     const bRow = switcherRows().nth(1)
@@ -408,6 +568,99 @@ test.describe('hotel folio workflow', () => {
     await expect.poll(async () => tzs(await folioCard(page, modal, /balance/i)), { timeout: 20_000 }).toBe(curBal)
     await pm.locator('button.sv-modal-close, .sv-modal-close').first().click().catch(() => {})
     await expect(pm).toBeHidden({ timeout: 10_000 }).catch(() => {})
+    expect(errors).toEqual([])
+  })
+
+  test('C3 - a posting lands on the related folio being viewed, not the current one', async ({ page }) => {
+    const errors = trackPageErrors(page)
+    await signIn(page, { email: 'reception' })
+    const lastA = guestName('view')
+    const lastB = guestName('vw')
+    await bookAndCheckIn(page, lastA)
+    await bookAndCheckIn(page, lastB)
+
+    const aStart = tzs(await (async () => {
+      const m = await openStay(page, lastA)
+      const b = tzs(await folioCard(page, m, /balance/i))
+      await closeStay(page).catch(() => {})
+      return b
+    })())
+    const bStart = tzs(await (async () => {
+      const m = await openStay(page, lastB)
+      const b = tzs(await folioCard(page, m, /balance/i))
+      await closeStay(page).catch(() => {})
+      return b
+    })())
+
+    let modal = await openStay(page, lastA)
+    await expect(roomChargeRows(modal).first()).toBeVisible()
+    const moveAmt = tzs(await roomChargeRows(modal).first().locator('td.num').innerText())
+
+    // Split one charge from A to B so the stay carries two folios.
+    await moreAction(page, modal, /transfer folio/i)
+    const tm = page.locator('.sv-modal-sm[role="dialog"]').filter({ has: page.locator('.sv-split-panel') }).last()
+    await expect(tm).toBeVisible()
+    await tm.locator('.sv-split-op input[type="checkbox"]').first().check()
+    await tm.locator('.sv-split-search input').fill(lastB)
+    await tm.locator('.sv-split-search button').click()
+    const target = tm.locator('.sv-split-target').filter({ hasText: lastB }).first()
+    await expect(target).toBeVisible({ timeout: 10_000 })
+    await target.click()
+    await page.waitForTimeout(200)
+    await tm.locator('.sv-arrow-btn').click()
+    await expect(tm).toBeHidden({ timeout: 20_000 })
+    await expect(page.locator('.sv-action-error')).toHaveCount(0)
+
+    // Switch the VIEW (not the stay) to B: postings must then hit B's folio.
+    const switcherRows = () => modal.locator('.sv-folio-table-switch tbody tr')
+    await expect(switcherRows()).toHaveCount(2)
+    const bRow = switcherRows().filter({ hasText: lastB.toUpperCase() }).first()
+    await expect(bRow).toBeVisible({ timeout: 10_000 })
+    await bRow.locator('.sv-folio-view-btn').click()
+    await expect(modal.locator('.sv-folio-now-viewing')).toBeVisible({ timeout: 10_000 })
+
+    // The ledger now shows the related (B) folio's balance.
+    const bBalViewing = tzs(await folioCard(page, modal, /balance/i))
+    expect(bBalViewing, 'viewing switches the ledger to the related folio').toBe(bStart + moveAmt)
+
+    const charge = 5000
+    await moreAction(page, modal, /add charges/i)
+    const c = page.locator('.sv-modal-sm[role="dialog"]', { hasText: /save charge/i }).last()
+    await expect(c).toBeVisible()
+    await c.locator('[data-field="description"]').fill('QA viewed-folio charge')
+    await c.locator('[data-field="amount"]').fill(String(charge))
+    await c.locator('.btn-primary').click()
+    await expect(c).toBeHidden({ timeout: 15_000 })
+    await expect(page.locator('.sv-action-error')).toHaveCount(0)
+
+    // The viewed (B) folio took the charge; the current (A) folio is untouched.
+    await expect
+      .poll(async () => tzs(await folioCard(page, modal, /balance/i)), { timeout: 20_000 })
+      .toBe(bBalViewing + charge)
+    await modal.locator('.sv-folio-return').click()
+    await expect
+      .poll(async () => tzs(await folioCard(page, modal, /balance/i)), { timeout: 20_000 })
+      .toBe(aStart - moveAmt)
+    expect(errors).toEqual([])
+  })
+
+  test('G1 - a checked-in stay cannot be cancelled from the modal', async ({ page }) => {
+    const errors = trackPageErrors(page)
+    await signIn(page, { email: 'reception' })
+    const last = guestName('nocl')
+    const nights = 2
+    await bookAndCheckIn(page, last, { nights })
+
+    const modal = await openStay(page, last)
+    // Bug #3: the cancel booking action must not offer itself to a guest who
+    // already occupies a room; only pending/confirmed stays can be cancelled.
+    await expect(modal.locator('.sv-modal-danger', { hasText: /cancel booking/i })).toHaveCount(0)
+    await moreAction(page, modal, /amend stay/i).catch(() => {})
+    // The More menu must not list a cancel action for this checked-in stay.
+    if (await page.locator('.sv-dropdown-menu').isVisible().catch(() => false)) {
+      await expect(page.locator('.sv-dropdown-menu button', { hasText: /cancel booking/i })).toHaveCount(0)
+      await page.keyboard.press('Escape')
+    }
     expect(errors).toEqual([])
   })
 

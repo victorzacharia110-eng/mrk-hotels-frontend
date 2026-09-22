@@ -14,12 +14,15 @@ describe('module config', () => {
       expect(moduleByKey('nonexistent')).toBeUndefined()
     })
 
-    it('dashboard (stay-view) is gated to front-desk roles, not management', () => {
+    it('dashboard (stay-view) opens to front-desk and management roles', () => {
       const mod = moduleByKey('dashboard')
       expect(mod.roles).toContain('receptionist')
-      expect(mod.roles).not.toContain('manager')
-      expect(mod.roles).not.toContain('hotel_admin')
-      expect(mod.roles).not.toContain('accountant')
+      // Management may audit stays and perform the management-only folio
+      // rewrites (edit/void of frozen room-charge rows and closed folios);
+      // they just land on the overview dashboard after sign-in.
+      expect(mod.roles).toContain('manager')
+      expect(mod.roles).toContain('hotel_admin')
+      expect(mod.roles).toContain('accountant')
     })
   })
 

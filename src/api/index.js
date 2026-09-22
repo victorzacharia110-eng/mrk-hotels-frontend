@@ -805,16 +805,6 @@ export const reservationApi = {
     return api.post(`${v1}/reservations/${id}/folio/creditors`, data)
   },
   /**
-   * Processes an early departure and posts the resulting refund onto the
-   * folio. @param data - { actual_departure_date: 'YYYY-MM-DD', reason? }.
-   * @returns {Promise} Axios response with the refreshed folio payload (same
-   * shape as folio(): folio / reservation / orders / laundry / folio_entries /
-   * payments / related_folios / audit), including the posted refund ledger line.
-   */
-  folioEarlyDeparture(id, data) {
-    return api.post(`${v1}/reservations/${id}/folio/early-departure`, data)
-  },
-  /**
    * Uploads documents onto the folio (multipart files[]).
    * @param files - Array of File objects.
    */
@@ -1503,7 +1493,7 @@ export const menuCategoryApi = {
   },
   /**
    * Updates a menu category (name / sort_order / is_active).
-   * @param {string} id - Category identifier.
+   * @param {string} id - Category 
    * @param {object} data - Fields to update.
    * @returns {Promise} Axios response with the updated category.
    */

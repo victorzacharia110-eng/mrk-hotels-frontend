@@ -108,10 +108,11 @@ describe('folioBreakdown', () => {
 })
 
 describe('folio operations on the stay view', () => {
-  it('renders one view/print action per switcher row', async () => {
+  it('renders one view/print/send action per switcher row', async () => {
     await mountDashboard()
     expect(document.querySelectorAll('.sv-folio-view-btn')).toHaveLength(2)
     expect(document.querySelectorAll('.sv-folio-print-btn')).toHaveLength(2)
+    expect(document.querySelectorAll('.sv-folio-send-btn')).toHaveLength(2)
   })
 
   it('skips print buttons when the folio is still loading', async () => {
@@ -141,41 +142,7 @@ describe('folio operations on the stay view', () => {
     expect(note.textContent).toMatch(/\d{2}\/\d{2}\/\d{4}/)
   })
 
-  it('posts the early-departure refund from the modal form', async () => {
-    await mountDashboard()
-    wrapper.vm.openEarlyDeparture()
-    expect(wrapper.vm.earlyDepartureOpen).toBe(true)
-    wrapper.vm.earlyDepartureForm.actual_departure_date = '2026-11-03'
-    wrapper.vm.earlyDepartureForm.reason = 'Guests cut the safari short'
-    await wrapper.vm.submitEarlyDeparture()
-    expect(api.reservationApi.folioEarlyDeparture).toHaveBeenCalledWith(501, {
-      actual_departure_date: '2026-11-03',
-      reason: 'Guests cut the safari short',
-    })
-  })
-
-  it('posts a null reason when the early-departure reason is blank', async () => {
-    await mountDashboard()
-    wrapper.vm.openEarlyDeparture()
-    wrapper.vm.earlyDepartureForm.actual_departure_date = '2026-11-03'
-    wrapper.vm.earlyDepartureForm.reason = '   '
-    await wrapper.vm.submitEarlyDeparture()
-    expect(api.reservationApi.folioEarlyDeparture).toHaveBeenCalledWith(
-      501,
-      expect.objectContaining({ actual_departure_date: '2026-11-03', reason: null }),
-    )
-  })
-
-  it('keeps the modal open and skips the request when the date is empty', async () => {
-    await mountDashboard()
-    wrapper.vm.openEarlyDeparture()
-    wrapper.vm.earlyDepartureForm.actual_departure_date = ''
-    await wrapper.vm.submitEarlyDeparture()
-    expect(api.reservationApi.folioEarlyDeparture).not.toHaveBeenCalled()
-    expect(wrapper.vm.earlyDepartureOpen).toBe(true)
-  })
-
-  it('PUTs the payment edit for the targeted payment', async () => {
+  it('puts the payment edit for the targeted payment', async () => {
     await mountDashboard()
     wrapper.vm.openPaymentEdit({ payment: { payment_id: 7, amount: 150000, payment_method: 'cash', payment_status: 'completed', transaction_reference: 'T-101' } })
     expect(wrapper.vm.paymentEditModal).toBe(true)
@@ -304,7 +271,7 @@ describe('folio operations on the stay view', () => {
     expect(html).toContain('Folio invoice')
     expect(html).toContain('F-501')
     expect(html).toContain('Amina Hassan')
-    expect(html).toContain('refund')
+    expect(html).toMatch(/refund/i)
   })
 })
 
