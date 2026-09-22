@@ -374,7 +374,7 @@
                             </button>
                             <button type="button" class="sv-folio-send-btn"
                               :title="folioRowEmail(r) ? $t('stayview.sendInvoice') : $t('stayview.noGuestEmail')"
-                              :disabled="sendBusy || !folioRowEmail(r)"
+                              :disabled="sendBusy"
                               @click="sendFolioInvoice(r)">
                               <i class="fas fa-paper-plane" aria-hidden="true"></i>
                             </button>
@@ -470,7 +470,7 @@
                             </button>
                             <button v-if="activeBar?.id" type="button" class="sv-icon-link"
                               :title="currentFolioTarget.email ? $t('stayview.sendInvoice') : $t('stayview.noGuestEmail')"
-                              :disabled="sendBusy || !currentFolioTarget.email" @click="sendFolioInvoice(currentFolioTarget)">
+                              :disabled="sendBusy" @click="sendFolioInvoice(currentFolioTarget)">
                               <i class="fas fa-paper-plane" aria-hidden="true"></i>
                             </button>
                             <a v-if="e.entryUrl" :href="e.entryUrl" target="_blank" rel="noopener" class="sv-icon-link"
@@ -714,7 +714,7 @@
                 {{ printBusy ? $t('invoices.preparing') : $t('stayview.printInvoice') }}
               </button>
               <button type="button" class="btn btn-secondary sv-modal-manage"
-                :disabled="sendBusy || !currentFolioTarget.email"
+                :disabled="sendBusy"
                 :title="currentFolioTarget.email ? currentFolioTarget.email : $t('stayview.noGuestEmail')"
                 @click="sendFolioInvoice(currentFolioTarget)">
                 <i class="fas fa-paper-plane" aria-hidden="true"></i>
@@ -4263,6 +4263,13 @@ async function printInvoice(bar) {
 async function sendFolioInvoice(r) {
   const id = r?.reservation_id ?? r?.id
   if (!id || sendBusy.value) return
+  const email = folioRowEmail(r) || currentFolioTarget.value?.email
+  if (!email) {
+    // No guest e-mail on this folio (typical for company/DBA folios): do NOT
+    // silently swallow the click — surface why so the button never feels dead.
+    actionError.value = t('stayview.noGuestEmail')
+    return
+  }
   sendBusy.value = true
   actionError.value = ''
   try {
