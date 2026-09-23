@@ -1185,6 +1185,9 @@ async function checkDayCloseBanner() {
 // The department defaults from the staff role (bartenders start on the bar)
 // but can be switched at any time with the Restaurant / Bar toggle.
 const role = computed(() => authStore.user?.user_role || '')
+// Waiters place and read tickets; they never drive delivery/void flow (the API
+// 403s them, mirrored here so the pad does not even reach the blocked calls).
+const isWaiterRole = computed(() => role.value === 'waiter')
 const department = ref(role.value === 'bartender' ? 'bar' : 'restaurant')
 // Bartenders run the bar, cashiers run the restaurant: each role is locked to
 // its own department so one side never bleeds into the other. Waiters (who
@@ -1290,6 +1293,7 @@ const voidError = ref('')
 const advancingItem = ref(null)
 
 function openVoid(order) {
+  if (isWaiterRole.value) return
   voidTarget.value = order
   voidReason.value = ''
   voidError.value = ''
@@ -1663,6 +1667,10 @@ function statusBadge(status) {
 
 /** Advances an order one step in its lifecycle with a single tap. */
 async function advanceOrder(order, status) {
+  if (isWaiterRole.value) {
+    openError.value = t('orderTaker.waiterCannotAdvance')
+    return
+  }
   openError.value = ''
   try {
     await orderApi.update(order.order_id, { status })
