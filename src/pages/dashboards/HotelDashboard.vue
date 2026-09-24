@@ -2449,8 +2449,8 @@ function toPanelBar(r, colorClass = '') {
     balance: balance.toLocaleString(),
     // Full client/stay details so the modal shows everything in one place.
     reference: r.booking_reference || '—',
-    email: r.guest_email || '—',
-    guestEmail: r.guest_email || '',
+    email: r.guest_email || r.guest?.email || '—',
+    guestEmail: r.guest_email || r.guest?.email || '',
     phone: r.guest_phone || '—',
     location: [r.city, r.country].filter(Boolean).join(', ') || '—',
     guests: `${r.num_adults ?? 1} ${t('stayview.adults')}${r.num_children ? ` · ${r.num_children} ${t('stayview.children')}` : ''}`,
@@ -2972,8 +2972,12 @@ const guestGrid = computed(() => {
   const show = (v) => (v === undefined || v === null || v === '' ? '—' : String(v))
   return [
     { label: t('stayview.guestName'), value: show(g.full_name || g.guest_name || g.label) },
-    { label: t('stayview.phone'), value: show(formatPhoneGaps(g.phone || g.guest_phone)) },
-    { label: t('stayview.email'), value: show(g.email || g.guest_email) },
+    { label: t('stayview.phone'), value: show(formatPhoneGaps(g.phone || g.guest_phone || activeBar.value?.phone)) },
+    // The e-mail of record may live on the guest profile OR the reservation
+    // (an amended stay writes reservation.guest_email even when the profile row
+    // is blank/legacy), so the tab falls across every source before showing —
+    // it must never read "—" while the amended address exists anywhere.
+    { label: t('stayview.email'), value: show(g.email || g.guest_email || g.guestEmail || res?.guest_email || activeBar.value?.guestEmail || '') },
     { label: t('guests.nationality'), value: show(g.nationality || g.country) },
     { label: t('guests.idType'), value: show(g.id_type) },
     { label: t('guests.idNumber'), value: show(g.id_number) },
@@ -4032,7 +4036,7 @@ function openAmendModal(roomMove = false) {
     last_name: res.last_name || '',
     guest_phone: formatPhoneNational(res.guest_phone),
     country_code: res.country_code || 'TZ',
-    guest_email: res.guest_email || '',
+    guest_email: res.guest_email || res.guest?.email || '',
   }
   amendErrors.value = {}
   amendTouched.value = false
@@ -4081,7 +4085,10 @@ async function submitAmend() {
       if (f.country_code && f.country_code !== (res.country_code || '')) payload.country_code = f.country_code
     }
   }
-  if (f.guest_email !== (res.guest_email ?? '') && f.guest_email) payload.guest_email = f.guest_email
+  // The e-mail is sent on every amend that carries one (even when it already
+  // matches the reservation) so the folio/Guest-Details/send-invoice always
+  // read the address of record from the reservation after an amendment.
+  if (f.guest_email) payload.guest_email = f.guest_email
   amendModal.value = false
   await runStayAction(() => reservationApi.update(activeBar.value.id, payload))
   if (actionError.value) amendModal.value = true
@@ -4246,13 +4253,13 @@ const currentFolioTarget = computed(() => {
   return {
     reservation_id: res.reservation_id ?? activeBar.value?.id ?? null,
     name: res.guest_name || res.label || '',
-    email: res.guest_email || res.guestEmail || src?.guest_email || '',
+    email: res.guest_email || res.guestEmail || res.guest?.email || src?.guest_email || src?.reservation?.guest?.email || '',
   }
 })
 
 /** Guest e-mail for a switcher row (the stay's own bar or a related folio). */
 function folioRowEmail(r) {
-  return r?.guest_email || r?.guestEmail || (r === activeBar.value ? activeBar.value?.guestEmail : '') || ''
+  return r?.guest_email || r?.guestEmail || r?.guest?.email || (r === activeBar.value ? activeBar.value?.guestEmail : '') || ''
 }
 
 /**
@@ -5142,6 +5149,11 @@ watch(
 function isVacantCell(room, iso) {
   const idx = days.value.findIndex((d) => d.iso === iso)
   if (idx < 0) return false
+  // While reservations are still being paginated in, the bar track is empty, so
+  // *every* cell would look vacant. That phantom vacancy is what made the front
+  // desk (and the e2e) tap an occupied room. Rooms are only bookable once the
+  // stay tape is fully painted — until then no cell may claim to be vacant.
+  if (loading.value) return false
   const dayStart = idx * 2
   const bars = barsByRoom.value[room.room_id] || []
   return !bars.some((b) => b.halfStart <= dayStart && b.halfEnd >= dayStart + 1)
