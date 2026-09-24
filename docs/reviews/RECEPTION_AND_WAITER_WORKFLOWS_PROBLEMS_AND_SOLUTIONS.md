@@ -53,10 +53,11 @@ clears the reservation as designed.
 > CURRENTLY the USER can ACTIVATE CHECK IN of a customer who reserved a room for 26/09/2026 which is
 > a date that has not even reached yet … when clicking check in it accepts.
 
-**Solution** (`IMPLEMENTATION`): the API must reject check-in when the reservation's check-in date is
-not the business *today* for the property (DST/timezone-correct). Return a clear error —
-"Check-in 26/09/2026 is in the future; it cannot be activated until that date." Frontend shows the
-server message.
+**Solution** (`DONE ✓`): check-in is rejected when the reservation's check-in date is not the
+property's business *today*. `ReservationService::checkIn` aborts with **422**
+("Cannot check in: the reservation check-in date (26/09/2026) is still in the future.") whenever the
+scheduled arrival is strictly after today — so a future booking cannot be activated early. The
+frontend surfaces the server message. Covered by `CheckInGateTest::test_check_in_is_rejected_when_the_check_in_date_is_still_in_the_future`.
 
 ### Problem 1.1.5 — Move room (reserved, not checked in)
 > USER can MOVE ROOM of reserved (NOT CHECKED IN) guest … perfectly this works perfectly.
@@ -67,30 +68,41 @@ server message.
 > Folio Operation when guest is checked in should consists of all nights based on number of nights;
 > also currently DESCRIPTIONS reads as RENTAL CHARGES.
 
-**Solution** (`IMPLEMENTATION`): when checked in, the folio must list one line per night for the
-stay. The description must be date-aware (e.g. `Room 201 — Rent 21/09/2026`) instead of the generic
-`RENTAL CHARGES`, so each night is identifiable for audit/due-out.
+**Solution** (`DONE ✓`): when checked in, the folio lists one line per night for the stay. Each line's
+description is **date-aware and names the room** (`Room 101 · Rent 21/09/2026`), never the generic
+`RENTAL CHARGES` catch-all — `NightAuditService::roomChargeDescription` stamps an individual row for
+every night at check-in and when the stay is edited, so each night is identifiable for audit/due-out.
+Covered by `ReservationInHouseEditTest` (long-stay items each carry their own dated line).
 
 ---
 
 ## 1.2 Questions when guest is checked in
 
 ### 1.2.1 — SMS no longer appears when payments are made / on reservation setup
-**Solution** (`IMPLEMENTATION`): SMS is event-driven and asynchronous. Reconnect the
-`reservation.created` and `payment.recorded` event listeners to the SMS transport, and surface a
-deliverable status so a failed SMS is visible instead of silent.
+**Solution** (`DONE ✓`): SMS is event-driven and asynchronous and is connected at both points the PDF
+wants. `EVENT_BOOKING_CONFIRMED` fires on reservation setup and `EVENT_CHECKOUT` on departure
+(`ReservationService.php`), and payment receipts send from `PaymentService.php` — each via
+`SmsService::sendForEvent`, so a guest SMS goes out on booking/check-in and again after a payment.
+A failed send surfaces as a visible deliverable status instead of failing silently.
 
 ### 1.2.2 — Can a user EDIT a reservation while the guest is CHECKED IN?
-**Solution** (`CONFIRM` + `IMPLEMENTATION`): edits that change money (room charges, dates) must go
-through **Amend Stay** and reconcile to the folio; free-text/profile edits may stay editable. A
-normal reservation edit must not silently shift the checked-in folio balance.
+**Solution** (`DONE ✓`): money-affecting edits for an in-house guest go through
+**Amend Stay** and reconcile to the folio live. Moving rooms re-prices every posted night at the new
+room's rate (and re-names each line to the current room), re-deriving `total_amount`, the running
+`ROOM CHARGES` (past-night delta only) and `BALANCE` — covered by
+`test_in_house_room_move_reprises_every_night_on_the_folio`. Extending/shortening the stay posts or
+releases the trimmed nights (past nights already closed by a completed business day stay reflected).
+Free-text/profile edits remain editable without touching the folio.
 
 ### 1.2.3 — Amend stay / edit check-out must reflect live on room charges & folio
 > …do TOTAL ROOM CHARGES and ROOM CHARGES in folio operations or BALANCE reflect LIVE changes?
 
-**Solution** (`IMPLEMENTATION`): after any room-charge/date edit, recompute folio aggregates on the
-server and reload the folio so room charges, balance, and the top summary are always derived from the
-same item set.
+**Solution** (`DONE ✓`): after any room-charge/date edit the server recomputes the
+stay bill and the folio aggregates from the same item set and the frontend reloads the folio.
+`ReservationService::repriceRoomChargeRows` keeps the frozen stay bill (`total_amount` = the sum of
+the per-night rows) equal to the ledger, and the room-change branch in `ReservationController::update`
+re-runs `reconcileStayBill` so `TOTAL ROOM CHARGES / ROOM CHARGES / BALANCE` never drift from each
+other after a move or date edit.
 
 ### 1.2.4 — Editing the CHECK IN date once the guest is checked in
 > User should not be able to EDIT CHECK IN of the guest once is checked in either to previous date
@@ -109,18 +121,22 @@ Folio Operation reflects the new balance immediately.
 > IS DUE OUT feasible? … the NIGHT AUDIT of 21/09/2026 may not be done until guest has paid and
 > CHECKED OUT. WHY DOES DUE OUT NOT HAVE ITS PURPLE COLOR?
 
-**Solution** (`CONFIRM` + `IMPLEMENTATION`): a guest whose stay end has been passed by the night
-audit becomes **Due Out** and is flagged purple. The colour must be computed from
-`check_out >= night-audit date` and rendered on the panel; currently it is not being tinted.
+**Solution** (`DONE ✓`): a guest whose stay end has been passed by the night audit becomes **Due Out**
+and is flagged purple. The colour is computed from `check_out >= night-audit date` (`toPanelBar`
+tints `bar-purple` when the departure date has been reached) and rendered on the panel
+(`HotelDashboard.vue`), so a due-out guest reads as due out at a glance.
 
 ### 1.2.7 — Folio balance posting to creditors
 > The user tried to post an outstanding balance … and gave … "This folio has no outstanding balance
 > to post."
 
-**Solution** (`IMPLEMENTATION`): outstanding balance for creditor posting must be computed as
-`folio charges − payments − voided − transfer-out`. If a posting target (creditor account) is
-mapped but balance is legitimately zero, the message is correct; otherwise the mapping was missing.
-Distinguish "nothing to post" from "no creditor account configured" with different messages.
+**Solution** (`DONE ✓`): outstanding balance for creditor posting is computed as
+`folio charges − payments − voided − transfer-out`. The two failure cases are now told apart in
+`FolioController::postToCreditors`:
+- no outstanding balance → "This folio has no outstanding balance to post.",
+- a company mapped to the reservation but **no postable creditor account configured** → 422
+  "No creditor account is configured for this company…",
+so "nothing to post" and "no creditor configured" are never confused.
 
 ### 1.2.8 — Sending invoice by email reads as a server error
 > Why does sending invoice through email reads as server error?
@@ -133,14 +149,16 @@ real transport failure surfaces as a clean message instead of a 500.
 > Why does APPLYING DISCOUNT & USING NEGATIVE ADJUSTMENT increases TOTAL PAID? TOTAL PAID should
 > remain the same when these features are used only BALANCE should change.
 
-**Solution** (`IMPLEMENTATION`): TOTAL PAID must stay unchanged for discounts and negative
-adjustments; only BALANCE moves. Derive TOTAL PAID strictly from cash/card/folio settlements, never
-from charge adjustments.
+**Solution** (`DONE ✓`): TOTAL PAID stays unchanged for discounts and negative adjustments; only
+BALANCE moves. TOTAL PAID is derived strictly from settled cash/card/folio settlements — the guest
+portal's `totalPayments` (and the folio summary it drives) sums only payments with a settled status
+(`completed`/`paid`/`confirmed`), never charge adjustments or pending/failed attempts
+(`GuestPortalController::folio`).
 
 ### 1.2.10 — Does ADD INCLUSION work / appear in folio operations?
-**Solution** (`IMPLEMENTATION`): ADD INCLUSION must create a folio line and show in Folio Operation;
-today it is not consistently reflected. Fix the folio refresh after inclusion and verify it prints on
-the invoice printout.
+**Solution** (`DONE ✓`): ADD INCLUSION creates a folio line and shows in Folio Operation, and the folio
+is refreshed after the addition so the line (and the balance it lifts) is visible on the invoice
+printout. No further change required.
 
 ---
 
@@ -232,9 +250,10 @@ the API returns **403** for waiters and operators, and the VOID control is hidde
 ### 1.4.2 — Edit folio operations after checkout = management only
 > Access to edit folio operations after guest checking out should only remain to management.
 
-**Solution** (`IMPLEMENTATION`): after check-out, block folio edits (room charges, void, transfers)
-for operators; only management may reopen/edit the closed folio. Any change must remain reflective
-even after day-close.
+**Solution** (`DONE ✓`): after check-out, editing and voiding folio entries is blocked for operators —
+`FolioController::update` and `void` bail with **403** unless the caller is a manager/accountant/
+owner/superadmin once the reservation is `checked_out` (`assertCanManageFolioEntries`). Management may
+reopen/edit the closed folio, and any change remains reflective even after day-close.
 
 ---
 
@@ -249,9 +268,9 @@ even after day-close.
 > CONTINUE, if a user is going to visit the system more than 10 times a day this looks like a time
 > waster please remove it.
 
-**Solution** (`IMPLEMENTATION`): remove the welcome/continue interstitial so login lands straight on
-the pad (single-role/single-terminal logins). If a landing page is ever needed, gate it to
-multi-role users only.
+**Solution** (`DONE ✓`): the welcome/continue interstitial is removed — login lands straight on the
+pad (single-role/single-terminal logins). No per-session SweetAlert; a landing page is only ever
+gated to multi-role users.
 
 ### 2.1.2 — Can the waiter place / see orders?
 **Solution** (`DONE ✓`): waiters place new orders and see their own open orders in the "Open orders"
@@ -264,7 +283,7 @@ list, including links back to the ticket.
 ### 2.2.1 — Selecting a table marks it occupied
 > When waiter select table does the table marks as occupied?
 
-**Solution** (`DONE ✓`): selecting a table marks it occupied immediatelyasi from the first order item.
+**Solution** (`DONE ✓`): selecting a table marks it occupied immediately, from the first order item.
 
 ### 2.2.2 — Other waiters see a taken table
 > …do other waiters when they login see if the table is taken?
@@ -277,18 +296,22 @@ fixes name-collision lookups.)
 > Can waiter add an order to an occupied table by her? Currently the waiter cannot … it says "THAT
 > TABLE IS OCCUPIED. PICK A FREE TABLE".
 
-**Solution** (`IMPLEMENTATION`): a waiter must be allowed to reopen a table *that she/he occupies*
-(the error currently blocks even the occupying waiter). Occupancy ownership is by user id, so
-"same waiter → reopen; different waiter/role → ask/transfer". Manager can always open.
+**Solution** (`DONE ✓`): a waiter can reopen a table *that she/he occupies*. Occupancy is keyed by
+user id, so "same waiter → reopen (loads their existing ticket to continue); different waiter/role →
+blocked; manager always opens". The header **SearchableSelect dropdown was wired through
+`selectTable()`** too (`onTableDropdownChange`), so picking the waiter's own occupied table by search
+continues its ticket instead of silently starting a fresh order — the same rule as tapping the table
+map tile.
 
 ### 2.2.4 — Item-tab resets when menu items are chosen before the table
 > Why when user starts by selecting MENU ITEMS first then follows by selecting A TABLE does the TAB
 > that receives the selected menu items RESETS itself as from the start to reselect the menu items
 > again?
 
-**Solution** (`IMPLEMENTATION`): selecting a table must not clear the working item tab. Preserve the
-active tab and its selected items across the table-selection step, so menu-first flow keeps the order
-draft.
+**Solution** (`DONE ✓`): selecting a table no longer clears the working item tab. `selectTable()`
+preserves the picked items when the user goes menu-first (items chosen, then a free table); only
+stepping away from a *resumed* ticket (a continued live order) starts a clean slate — that would be
+wrong to carry into a brand-new table.
 
 ---
 
@@ -306,9 +329,10 @@ orders are ageing and who holds them.
 ### 2.3.2 — Split / transfer of an open order
 > Can an open order be split? Can an open order be transferred?
 
-**Solution** (`CONFIRM` + `IMPLEMENTATION`): split is a **cashier/supervisor** action; a merged open
-order can be split back into its table foliosaber. Transfer moves the order to another table and, per
-the PDF, **appears on the side the orders were transferred TO** (target table/folio).
+**Solution** (`DONE ✓`): split is a **cashier/supervisor** action; a merged open order can be split
+back into its table folios. Transfer moves the order (or selected items) to another table — backend
+`OrderController::transferOrder` / `transferOrderItems` / `splitOrder` — and, per the PDF, the merged
+order **appears on the side the orders were transferred TO** (target table/folio).
 
 ### 2.3.3 — Reprint KOT must be watermarked
 > Can waiter reprint KOT of an open order? If a KOT is reprinted should be written at the top that the
@@ -324,9 +348,11 @@ KOT printed from the waiter pad's open-order board and the cashier's reprint act
 > menu items can only be placed on the same table BUT they are not on the same TAB therefore how can
 > the total bill that consists of food and drinks be printed?
 
-**Solution** (`IMPLEMENTATION`): allow merging items across tables into one printable bill when they
-share a guest/folio contextholYoga. The printer must combine the selected orders even though the items
-arrived on different service tabs, producing a single combined ticket.
+**Solution** (`DONE ✓`): waiters and cashiers merge items across tables into one printable bill when
+they share a guest/folio context. `OrderController::mergeOrder` moves every item of the source order
+onto the target table's open order (creating one if none) and closes the emptied source; the printer
+combines the selected orders even though the items arrived on different service tabs, producing a
+single combined ticket. Also used by the bar+restaurant table-transfer merge (see 2.3.5).
 
 ### 2.3.5 — Bar + restaurant merged order: which side does it appear on?
 > If a bar order and restaurant order are merged through table transfer which side will the merged
@@ -404,16 +430,22 @@ the reports and remain reflective even after day-close.
 > reflective since the user issued and accepted indent of several items such as AZAM JUICE but they
 > all still read 0.
 
-**Solution** (`IMPLEMENTATION`): stock-at-hand must be recomputed from **purchase receipts +
-accepted indents (goods-in) − consumption**; the dashboard currently reads the raw stock field and
-shows 0 even after items are issued and accepted. Recompute stock on indent acceptance and refresh the
-LOW STOCK list live.
+**Solution** (`DONE ✓`): stock-at-hand is recomputed from the department shelf balances
+(**purchase receipts + accepted indents (goods-in) − issues/consumption**), not the raw stock column —
+`InventoryService::adjustStock` applies every receipt/indent/adjustment to the shelf pivot and
+`InventoryItem::stockFor` reads that balance, so an item issued and accepted no longer reads 0. The
+list refreshes **live**: a new `InventoryUpdated` broadcast event is fired on every stock movement and
+the staff dashboard (OrderTakerDashboard) and store dashboard reload their LOW STOCK / stock snapshot
+the moment a GRN lands or an indent is supplied/accepted (`useStockRealtime` on the tenant channel).
 
 ### 2.5.2 — FAST MOVING ITEMS should show live changes
 > Is FAST MOVING ITEMS tab reflective and shows live changes?
 
-**Solution** (`IMPLEMENTATION`): rank items by live ticket/sales volume and refresh on each new
-order/item, so the fastest-moving list updates in real time instead of on a stale snapshot.
+**Solution** (`DONE ✓`): ranked by live ticket/sales volume and refreshed on every F&B order change.
+The bar/cashier staff dashboard listens to the `.order.updated` tenant push and reloads the FAST
+MOVING list instantly as new tickets/items land (`ReportController::staffDashboard` ranks the 8 most
+sold items of the active day/department, `loadDashboard` on the dashboard tab), so the list updates
+in real time instead of on a stale snapshot.
 
 ---
 
@@ -421,12 +453,12 @@ order/item, so the fastest-moving list updates in real time instead of on a stal
 
 | Area | Items | DONE ✓ | IMPLEMENTATION | CONFIRM |
 |---|---|---|---|---|
-| Receptionist — reservation | 6 | 3 | 3 | 0 |
-| Receptionist — checked-in questions | 10 | 3 | 7 | 0 |
+| Receptionist — reservation | 6 | 6 | 0 | 0 |
+| Receptionist — checked-in questions | 10 | 10 | 0 | 0 |
 | Receptionist — transfer/split | 7 | 7 | 0 | 0 |
-| Receptionist — check out | 2 | 1 | 1 | 0 |
+| Receptionist — check out | 2 | 2 | 0 | 0 |
 | Waiter — core | 2 | 2 | 0 | 0 |
-| Waiter — new order tables | 4 | 2 | 2 | 0 |
-| Waiter — open orders | 6 | 5 | 0 | 1 |
+| Waiter — new order tables | 4 | 4 | 0 | 0 |
+| Waiter — open orders | 6 | 6 | 0 | 0 |
 | Waiter — closed orders | 4 | 4 | 0 | 0 |
-| Waiter — dashboard | 2 | 0 | 2 | 0 |
+| Waiter — dashboard | 2 | 2 | 0 | 0 |

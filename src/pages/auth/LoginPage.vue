@@ -120,7 +120,6 @@ import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
 import { useHoliday } from '@/composables/useHoliday'
 import HolidayDecor from '@/components/HolidayDecor.vue'
-import Swal from 'sweetalert2'
 import versionData from '@/version.json'
 
 const { t } = useI18n()
@@ -213,50 +212,6 @@ function validateAll() {
 }
 
 /**
- * Logged-in role label, mirroring RoleBadge's map so the welcome modal and the
- * header badge always agree.
- * @param {string} role - Backend user_role key.
- * @returns {string} Localized role name.
- */
-function roleLabel(role) {
-  const labels = {
-    superadmin: 'Superadmin',
-    owner: 'Owner',
-    hotel_admin: t('common.roles.hotelAdmin'),
-    manager: t('common.roles.manager'),
-    accountant: t('common.roles.accountant'),
-    store_manager: t('common.roles.storeManager'),
-    procurement_officer: t('common.roles.procurementOfficer'),
-    receptionist: t('common.roles.receptionist'),
-    housekeeping: t('common.roles.housekeeping'),
-    kitchen: t('common.roles.kitchen'),
-    waiter: t('common.roles.waiter'),
-    bartender: t('common.roles.bartender'),
-    cashier: t('common.roles.cashier'),
-    staff: t('common.roles.staff'),
-  }
-  return labels[role] || labels.staff
-}
-
-/**
- * Shows the SweetAlert welcome modal once the session is established: a
- * success popup greeting the user by name and role. Includes the signed-in
- * role so a manager recognises they are in a manager session.
- */
-function showWelcome() {
-  const name = authStore.user?.full_name || authStore.user?.name || ''
-  Swal.fire({
-    icon: 'success',
-    title: t('auth.welcomeTitle', { name: name || 'MRK Hotels' }),
-    text: t('auth.welcomeText', { role: roleLabel(authStore.user?.user_role) }),
-    confirmButtonText: t('auth.welcomeConfirm'),
-    confirmButtonColor: '#005EB8',
-    timer: 6500,
-    timerProgressBar: true,
-  })
-}
-
-/**
  * Performs the login, redirecting by role and surfacing API/server errors.
  * Honours the ?redirect= query param first, then falls back to role-based
  * landing pages; also starts the inactivity session timer on success.
@@ -270,7 +225,6 @@ async function handleLogin() {
   try {
     const data = await authStore.login(form.value)
     sessionStore.start()
-    showWelcome()
     const redirect = route.query.redirect
     if (redirect) {
       router.push(redirect)
@@ -351,7 +305,6 @@ async function submitPin() {
   try {
     await authStore.loginPin({ pin: pinForm.value.pin })
     sessionStore.start()
-    showWelcome()
     const redirect = route.query.redirect
     if (redirect) {
       router.push(redirect)

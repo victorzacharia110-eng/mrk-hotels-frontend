@@ -117,8 +117,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { inventoryApi, purchaseRequisitionApi, purchaseOrderApi, goodsReceivedNoteApi } from '@/api'
+import { useStockRealtime } from '@/composables/useStockRealtime'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import '@/pages/store/store-shared.css'
 
@@ -145,8 +146,7 @@ function formatDate(d) {
   return new Date(d).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-onMounted(async () => {
-  loading.value = true
+async function loadDashboard() {
   const [inv, req, po, grn] = await Promise.allSettled([
     inventoryApi.index({ per_page: 100 }),
     purchaseRequisitionApi.index({ per_page: 50 }),
@@ -162,6 +162,20 @@ onMounted(async () => {
   if (req.status === 'fulfilled') requisitions.value = req.value.data.data || req.value.data || []
   if (po.status === 'fulfilled') orders.value = po.value.data.data || po.value.data || []
   if (grn.status === 'fulfilled') grns.value = grn.value.data.data || grn.value.data || []
+}
+
+let stockRealtime = null
+
+onMounted(async () => {
+  loading.value = true
+  await loadDashboard()
   loading.value = false
+  // Live stock: any movement (GRN, indent accepted, issue/adjustment) reloads
+  // the dashboard so IN STOCK / LOW STOCK never show a stale snapshot.
+  stockRealtime = useStockRealtime(() => loadDashboard())
+})
+
+onUnmounted(() => {
+  if (stockRealtime) stockRealtime.stop()
 })
 </script>

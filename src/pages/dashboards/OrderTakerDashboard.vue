@@ -216,6 +216,7 @@
               :options="tableOptions"
               :empty-label="isBartender ? $t('orderTaker.counterOrder') : $t('orderTaker.selectTable')"
               force-search
+              @change="onTableDropdownChange"
             />
           </div>
           <label class="oh-check">
@@ -1172,6 +1173,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { useOrderRealtime } from '@/composables/useOrderRealtime'
+import { useStockRealtime } from '@/composables/useStockRealtime'
 import { orderApi, menuItemApi, tableApi, tableLocationApi, reportApi } from '@/api'
 import CalendarInput from '@/components/CalendarInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
@@ -1971,6 +1973,8 @@ async function billToRoom(order) {
 
 // Keep the open-orders board fresh while that tab is showing.
 let orderRealtime = null
+// Keep the department stock/LOW STOCK snapshot fresh when stock moves.
+let stockRealtime = null
 
 // The waiter name is auto-stamped from the logged-in staff member — the
 // order belongs to them; they cannot impersonate another waiter.
@@ -2112,7 +2116,8 @@ function ownLiveOrderForTable(name) {
 
 /** Selects a table for the ticket. Re-opening the waiter's own occupied table
  *  loads its existing lines so they can continue that ticket (issue 7); any
- *  other table starts a fresh order. */
+ *  other table keeps the working item tab as-is, so items picked menu-first
+ *  survive the table-selection step (issue 2.2.4). */
 function selectTable(tbl) {
   const name = tbl.table_name
   // Another staff member's live ticket: do not even start a fresh order here.
@@ -2135,13 +2140,30 @@ function selectTable(tbl) {
       existing: true,
     }))
   } else {
+    const steppingAwayFromContinuedOrder = Boolean(continueOrderId.value)
     continueOrderId.value = null
-    orderLines.value = []
+    // A menu-first flow expects draft items picked before the table to stay on
+    // the tab; only stepping away from a resumed ticket starts a clean slate.
+    if (steppingAwayFromContinuedOrder) orderLines.value = []
   }
 
   form.value.table_number = name
   form.value.covers = continueTarget?.covers || form.value.covers || 0
   page.value = pageCount.value
+}
+
+/** Header table dropdown must resolve through the same selectTable() logic as
+ *  the table map, so picking the waiter's own occupied table via search also
+ *  continues its ticket instead of silently starting a fresh order. */
+function onTableDropdownChange(option) {
+  const name = option?.value
+  const tbl = servingTables.value.find((t) => String(t.table_name) === String(name))
+  if (tbl) {
+    selectTable(tbl)
+  } else if (!name) {
+    continueOrderId.value = null
+    form.value.table_number = ''
+  }
 }
 
 /** Active tables as searchable options (name + section for context). Occupied
@@ -2706,12 +2728,18 @@ onMounted(async () => {
     if (activeTab.value === 'open') loadOpenOrders()
     if (activeTab.value === 'dashboard') loadDashboard()
   })
+  // Stock is recomputed from receipts + accepted indents on the server; a
+  // movement push reloads the dashboard's LOW STOCK list and stock snapshot.
+  stockRealtime = useStockRealtime(() => {
+    if (activeTab.value === 'dashboard') loadDashboard()
+  })
   document.addEventListener('keydown', onKey)
   timerTick = setInterval(() => (nowTs.value = Date.now()), 30000)
 })
 
 onUnmounted(() => {
   if (orderRealtime) orderRealtime.stop()
+  if (stockRealtime) stockRealtime.stop()
   if (timerTick) clearInterval(timerTick)
   document.removeEventListener('keydown', onKey)
 })
