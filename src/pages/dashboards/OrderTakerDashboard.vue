@@ -607,6 +607,9 @@
               <button type="button" class="open-btn ghost" @click="openTransfer(order)">
                 <i class="fas fa-right-left" aria-hidden="true"></i> {{ $t('orderTaker.transfer') }}
               </button>
+              <button v-if="!isPosRole" type="button" class="open-btn ok" @click="openMerge(order)">
+                <i class="fas fa-merge" aria-hidden="true"></i> {{ $t('orderTaker.mergeBill') }}
+              </button>
             </template>
             <button
               v-if="!['completed', 'cancelled'].includes(order.status)"
@@ -917,13 +920,14 @@
 
             <div class="bill-actions">
               <span class="bill-summary">
-                <template v-if="billAllSelected && transferTable === (billModeOrder?.table_number || '')">{{ $t('orderTaker.leaveOneHint') }}</template>
+                <template v-if="billMode === 'merge'">{{ $t('orderTaker.mergeHint') }}</template>
+                <template v-else-if="billAllSelected && transferTable === (billModeOrder?.table_number || '')">{{ $t('orderTaker.leaveOneHint') }}</template>
                 <template v-else-if="transferTable && transferTable !== (billModeOrder?.table_number || '')">{{ $t('orderTaker.transferTo', { table: transferTable }) }}</template>
                 <template v-else>&nbsp;</template>
               </span>
               <button type="button" class="send-btn" :disabled="!billCanMove" @click="confirmBillMove">
-                <i :class="billMode === 'split' ? 'fas fa-scissors' : 'fas fa-right-left'" aria-hidden="true"></i>
-                {{ billMode === 'split' ? $t('orderTaker.split') : $t('orderTaker.transfer') }}
+                <i :class="billMode === 'split' ? 'fas fa-scissors' : billMode === 'merge' ? 'fas fa-merge' : 'fas fa-right-left'" aria-hidden="true"></i>
+                {{ billMode === 'split' ? $t('orderTaker.split') : billMode === 'merge' ? $t('orderTaker.mergeBill') : $t('orderTaker.transfer') }}
               </button>
             </div>
           </div>
@@ -1755,6 +1759,16 @@ function openTransfer(order) {
   billError.value = ''
 }
 
+function openMerge(order) {
+  billModeOrder.value = order
+  billMode.value = 'merge'
+  // A merge moves the whole bill onto another table: every line crosses over,
+  // exactly one printable bill remains on the destination.
+  splitSelected.value = (order.items || []).map((l) => l.order_item_id)
+  transferTable.value = ''
+  billError.value = ''
+}
+
 function closeBill() {
   billMode.value = null
   billModeOrder.value = null
@@ -1777,7 +1791,9 @@ async function confirmBillMove() {
   const lines = splitSelected.value.map((id) => ({ order_item_id: id }))
   try {
     let data
-    if (!sameTable && billAllSelected.value) {
+    if (billMode.value === 'merge') {
+      data = (await orderApi.mergeOrder(order.order_id, { target_table_number: target })).data
+    } else if (!sameTable && billAllSelected.value) {
       data = (await orderApi.transferOrder(order.order_id, { table_number: target })).data
     } else if (!sameTable) {
       data = (await orderApi.transferOrderItems(order.order_id, { target_table_number: target, lines })).data

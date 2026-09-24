@@ -4147,7 +4147,9 @@
     "voidDone": "Order {number} voided",
     "voidBy": "Voided by {waiter}",
     "today": "Today",
-    "waiterCannotAdvance": "The kitchen and bar lead the service flow; waiters place and read tickets."
+    "waiterCannotAdvance": "The kitchen and bar lead the service flow; waiters place and read tickets.",
+    "mergeBill": "Merge into one bill",
+    "mergeHint": "The whole ticket moves to the chosen table as one bill."
   },
   "staffDashboard": {
     "title": "Dashboard",

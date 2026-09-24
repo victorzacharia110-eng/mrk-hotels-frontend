@@ -4119,7 +4119,9 @@
     "voidDone": "Agizo {number} limetenguliwa",
     "voidBy": "Limetenguliwa na {waiter}",
     "today": "Leo",
-    "waiterCannotAdvance": "Jikoni na baa ndio huendesha mtiririko wa huduma; wahudumu wanaandika na kusoma tiketi tu."
+    "waiterCannotAdvance": "Jikoni na baa ndio huendesha mtiririko wa huduma; wahudumu wanaandika na kusoma tiketi tu.",
+    "mergeBill": "Unganisha ankara moja",
+    "mergeHint": "Tiketi nzima huhamia kwenye meza iliyochaguliwa kama ankara moja."
   },
   "staffDashboard": {
     "title": "Dashibodi",

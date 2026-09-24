@@ -1788,6 +1788,16 @@ export const orderApi = {
   splitOrder(id, data) {
     return api.post(`${v1}/orders/${id}/split`, data)
   },
+  /**
+   * Merges the whole bill onto another table so two tickets are paid as ONE
+   * printable bill. Callers pass { target_table_number }.
+   * @param {string|number} id - Source order identifier.
+   * @param {object} data - { target_table_number }.
+   * @returns {Promise} Axios response with the merged order + closed source.
+   */
+  mergeOrder(id, data) {
+    return api.post(`${v1}/orders/${id}/merge`, data)
+  },
 }
 
 /** POS outlets: the service points (restaurant/bar) a cashier works from. */
