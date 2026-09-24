@@ -282,9 +282,10 @@ draft.
 > Do open orders show date & time when the order was taken? Do open orders show how much time the
 > order has been running? Do open orders show the name of the waiter that placed the order?
 
-**Solution** (`IMPLEMENTATION`): open-order cards should display **taken-at date/time**, a live
-**elapsed running timer**, and the **waiter name** (from `created_by`), so F&B can see which orders
-are ageing and who holds them.
+**Solution** (`DONE`): open-order cards display **taken-at date/time** (clock row with
+`created_at`/`order_date`), a live **elapsed running timer** (stopwatch row, refreshed every 30s), and
+the **waiter name** (from the order's `waiter_name`, backed by `created_by`), so F&B can see which
+orders are ageing and who holds them.
 
 ### 2.3.2 — Split / transfer of an open order
 > Can an open order be split? Can an open order be transferred?
@@ -297,8 +298,10 @@ the PDF, **appears on the side the orders were transferred TO** (target table/fo
 > Can waiter reprint KOT of an open order? If a KOT is reprinted should be written at the top that the
 > order is REPRINTED.
 
-**Solution** (`IMPLEMENTATION`): allow KOT reprint, but print **REPRINTED** prominently at the top of
-the ticket so a reprint can never be mistaken for the original.
+**Solution** (`DONE`): KOT reprints carry a **`*** REPRINTED ***`** watermark stamped between the
+header and the ticket number, so a reprint can never be mistaken for the original. Applied to every
+KOT printed from the waiter pad's open-order board and the cashier's reprint action (`utils/receipts.js`
+`kitchenTicketLines` + `opts.reprinted`, tested in `src/__tests__/receipts.spec.js`).
 
 ### 2.3.4 — Merge menu items from 2 tables into ONE printable bill
 > Can waiter merge menu items from 2 different tables to create ONE BILL that is printable? Currently
@@ -314,9 +317,10 @@ arrived on different service tabs, producing a single combined ticket.
 > order appear? The merged order should appear to the side to which the selected orders where
 > transferred to.
 
-**Solution** (`IMPLEMENTATION`): the merged order takes the **destination** of the transfer. Create
-the merged ticket on the table/folio the orders were transferred into, and remove the originals from
-the source side.
+**Solution** (`DONE`): the merged order takes the **destination** of the transfer — `mergeOrder`
+moves all items onto the target table's open order (creating one if none) via
+`target_table_number`, and the emptied source order is closed (`cancelled`). The merged bill appears
+on the side the orders were transferred TO; the originals are removed from the source side.
 
 ### 2.3.6 — REMOVE status-advance from the waiter panel (RUNNING/SETTLED only)
 > Why do waiters panel open orders have access to set ORDER IS READY or ORDER IS SERVED? There should
@@ -396,6 +400,6 @@ order/item, so the fastest-moving list updates in real time instead of on a stal
 | Receptionist — check out | 2 | 1 | 1 | 0 |
 | Waiter — core | 2 | 2 | 0 | 0 |
 | Waiter — new order tables | 4 | 2 | 2 | 0 |
-| Waiter — open orders | 6 | 1 | 4 | 1 |
+| Waiter — open orders | 6 | 5 | 0 | 1 |
 | Waiter — closed orders | 4 | 1 | 3 | 0 |
 | Waiter — dashboard | 2 | 0 | 2 | 0 |
