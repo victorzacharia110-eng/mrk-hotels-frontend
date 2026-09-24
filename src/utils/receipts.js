@@ -126,7 +126,7 @@ export function orderReceiptLines(order, opts = {}) {
  * @param {object} order  Order (must carry items).
  * @returns {Array<Array<string|boolean|number>>} [text, bold?, size?] rows.
  */
-export function kitchenTicketLines(order) {
+export function kitchenTicketLines(order, opts = {}) {
   const lines = [
     ['KITCHEN ORDER TICKET', true, 2],
     [String(order.order_number || ''), false, 2],
@@ -134,6 +134,13 @@ export function kitchenTicketLines(order) {
     [`Type: ${order.order_type || 'dine_in'}   Covers: ${order.covers ?? '-'}`],
     [''],
   ]
+
+  // A reprint must never be mistaken for the original ticket: stamp the
+  // watermark across the top of the paper, right after the header, so even a
+  // quick scan shows this KOT already went to the kitchen before.
+  if (opts.reprinted) {
+    lines.splice(1, 0, [padLine('*** REPRINTED ***', 'center', WIDTH), true, 2])
+  }
 
   for (const item of order.items || []) {
     const qty = item.quantity ?? 1

@@ -766,7 +766,10 @@ async function confirmRoomPost() {
 
 async function doPrint(order, kind) {
   const hotel = authStore.user?.tenant?.hotel_name || 'MRK HOTELS'
-  const sent = await printStore.print(displayLines(order, kind, { hotel }), { logo: logoUrl.value })
+  // KOTs printed here are reprints by definition — the kitchen saw the ticket
+  // when the order was sent — so the paper carries the REPRINTED watermark.
+  const opts = kind === 'kot' ? { hotel, reprinted: true } : { hotel }
+  const sent = await printStore.print(displayLines(order, kind, opts), { logo: logoUrl.value })
   if (!sent) toast(printerState.reason || t('printer.noPrinter'), 'error')
 }
 

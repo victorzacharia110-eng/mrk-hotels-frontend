@@ -1358,6 +1358,8 @@ async function advanceItem(order, item) {
 
 // Reprint from the board: kitchen ticket (KOT) or guest receipt, exactly like
 // the cashier's settle screen. A ticket lacking items fetches the full order.
+// Every board KOT is a reprint by definition — the kitchen saw it when the
+// order was sent — so the paper carries the REPRINTED watermark.
 async function printTicket(order, kind) {
   if (!(order.items || []).length) {
     try {
@@ -1368,7 +1370,8 @@ async function printTicket(order, kind) {
     }
   }
   const hotel = authStore.user?.tenant?.hotel_name || 'MRK Hotels'
-  const sent = await printStore.print(displayLines(order, kind, { hotel }))
+  const opts = kind === 'kot' ? { hotel, reprinted: true } : { hotel }
+  const sent = await printStore.print(displayLines(order, kind, opts))
   if (!sent) toast(t('orderTaker.noPrinter'), 'error')
 }
 

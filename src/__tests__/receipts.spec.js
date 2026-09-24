@@ -112,4 +112,22 @@ describe('receipt line widths', () => {
     expect(text).toContain('2 x Soda (Coca/Fanta)')
     expect(text).toContain('each')
   })
+
+  it('reprinted KOT is watermarked REPRINTED under the header', () => {
+    const lines = kitchenTicketLines(order, { reprinted: true })
+    const text = lines.map((l) => l[0]).join('\n')
+    expect(lines[0][0]).toBe('KITCHEN ORDER TICKET')
+    expect(text).toContain('REPRINTED')
+    expect(text.indexOf('REPRINTED')).toBeGreaterThanOrEqual(0)
+    // the watermark must appear after the header yet before the order number
+    const headerIdx = text.indexOf('KITCHEN ORDER TICKET')
+    const stampIdx = text.indexOf('REPRINTED')
+    expect(stampIdx).toBeGreaterThan(headerIdx)
+  })
+
+  it('plain KOT stays clean — no watermark on the first ticket', () => {
+    const lines = kitchenTicketLines(order)
+    const text = lines.map((l) => l[0]).join('\n')
+    expect(text).not.toContain('REPRINTED')
+  })
 })
