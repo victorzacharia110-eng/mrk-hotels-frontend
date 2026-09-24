@@ -357,14 +357,14 @@
                           </td>
                           <td class="sv-folio-col-num">
                             <template v-if="activeFolioId === folioRowId(r)">{{ balanceDisplay.text }}</template>
-                            <template v-else>TZS {{ fmtNum(r.balance_due, 2) }}</template>
+                            <template v-else>TZS {{ fmtNum(folioRowBalance(r), 2) }}</template>
                           </td>
                           <td class="sv-folio-col-num">
                             <template v-if="activeFolioId === folioRowId(r)">
                               <strong :class="{ 'sv-balance-negative': balanceDisplay.negative }">{{ balanceDisplay.text
                                 }}</strong>
                             </template>
-                            <template v-else><strong>TZS {{ fmtNum(r.balance_due, 2) }}</strong></template>
+                            <template v-else><strong>TZS {{ fmtNum(folioRowBalance(r), 2) }}</strong></template>
                           </td>
                           <td class="sv-folio-col-view">
                             <button type="button" class="sv-folio-print-btn" :disabled="printBusy || folioLoading"
@@ -2803,6 +2803,22 @@ function folioCardBalance(src, bar) {
   return folioBreakdown(src).net
 }
 
+/**
+ * Balance a folio switch-row should show, independent of which folio is being
+ * viewed. The current-folio row (the bar) carries no `balance_due` itself, so
+ * its figure must come from the loaded stay folio — otherwise opening a
+ * related folio would blank the current one to TZS 0.00 exactly as the review
+ * reported. Related rows keep the balance the backend returned for them.
+ */
+function folioRowBalance(r) {
+  if (r === activeBar.value || r?.reservation_id === activeBar.value?.id) {
+    const b = folioCardBalance(folio.value, activeBar.value)
+    return Number.isFinite(b) ? b : 0
+  }
+  const b = Number(r?.balance_due ?? r?.balance)
+  return Number.isFinite(b) ? b : 0
+}
+
 /** Bottom-of-ledger BALANCE = TOTAL CHARGES − TOTAL PAID (negative when overpaid). */
 const ledgerBalance = computed(() => {
   const b = folioTotals.value.charges - folioTotals.value.credits
@@ -3504,9 +3520,14 @@ async function submitPayment() {
   }
   if (!activeBar.value?.id) return
   paymentModal.value = false
+  // Post the payment to whatever folio is on screen: the active stay, or the
+  // related (split) folio the receptionist is viewing right now. Posting to
+  // the active bar only is exactly why paying a related folio put the money
+  // on the CURRENT folio and left a negative balance behind.
+  const target = activeFolioId.value || activeBar.value.id
   if (payMode.value === 'company') {
     await runStayAction(() =>
-      reservationApi.folioCreditors(activeBar.value.id, {
+      reservationApi.folioCreditors(target, {
         company_id: f.company_id,
         amount: f.amount,
         note: f.note || null,
@@ -3514,7 +3535,7 @@ async function submitPayment() {
     )
   } else {
     const payload = {
-      reservation_id: activeBar.value.id,
+      reservation_id: target,
       amount: f.amount,
       payment_method: f.payment_method,
       payment_provider: f.payment_provider || null,
