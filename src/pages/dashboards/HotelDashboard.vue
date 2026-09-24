@@ -3454,11 +3454,17 @@ function prefillCreditorCompany() {
   if (match) paymentForm.value.company_id = match.company_id
 }
 
+function genReqId() {
+  return typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `req-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
 function openPaymentModal(mode = 'collect') {
   moreOpen.value = false
   viewingFolio.value = null
   payMode.value = mode
-  paymentForm.value = { amount: null, payment_method: 'cash', payment_provider: '', transaction_reference: '', company_id: '', note: '' }
+  paymentForm.value = { amount: null, payment_method: 'cash', payment_provider: '', transaction_reference: '', company_id: '', note: '', request_id: genReqId() }
   paymentErrors.value = {}
   paymentTouched.value = false
   paymentSnapshot.value = { ...paymentForm.value }
@@ -3535,6 +3541,7 @@ async function submitPayment() {
         company_id: f.company_id,
         amount: f.amount,
         note: f.note || null,
+        request_id: f.request_id || genReqId(),
       }),
     )
   } else {
@@ -3640,7 +3647,7 @@ function openChargeModal() {
   moreOpen.value = false
   // Postings keep targeting the folio being viewed (the related folio opened
   // via the switcher), so a post-split charge lands on the viewed guest.
-  chargeForm.value = { description: '', amount: null }
+  chargeForm.value = { description: '', amount: null, request_id: genReqId() }
   chargeErrors.value = {}
   chargeTouched.value = false
   chargeSnapshot.value = { ...chargeForm.value }
@@ -3667,7 +3674,11 @@ async function submitCharge() {
   // related (split) folio the receptionist is viewing right now.
   const target = activeFolioId.value || activeBar.value.id
   await runStayAction(() =>
-    reservationApi.postRoomCharge(target, { description: f.description, amount: f.amount }),
+    reservationApi.postRoomCharge(target, {
+      description: f.description,
+      amount: f.amount,
+      request_id: f.request_id || genReqId(),
+    }),
   )
   if (actionError.value) chargeModal.value = true
 }

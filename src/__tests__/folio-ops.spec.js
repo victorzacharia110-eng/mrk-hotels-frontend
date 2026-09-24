@@ -219,7 +219,40 @@ describe('folio operations on the stay view', () => {
       company_id: 9,
       amount: 50000,
       note: null,
+      request_id: expect.any(String),
     })
+  })
+
+  it('reuses one idempotency key across retries of the same posting intent', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    payload.folio.balance_due = 100000
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    wrapper.vm.openPaymentModal('company')
+    wrapper.vm.paymentForm.company_id = 9
+    wrapper.vm.paymentForm.amount = 50000
+    const firstKey = wrapper.vm.paymentForm.request_id
+    expect(firstKey).toBeTruthy()
+    await wrapper.vm.submitPayment()
+    await wrapper.vm.submitPayment()
+    expect(api.reservationApi.folioCreditors).toHaveBeenCalledTimes(2)
+    expect(api.reservationApi.folioCreditors.mock.calls[0][1].request_id).toBe(firstKey)
+    expect(api.reservationApi.folioCreditors.mock.calls[1][1].request_id).toBe(firstKey)
+  })
+
+  it('reuses one idempotency key across retries of the same add-charge intent', async () => {
+    await mountDashboard()
+    wrapper.vm.openChargeModal()
+    wrapper.vm.chargeForm.description = 'Mini-bar'
+    wrapper.vm.chargeForm.amount = 5000
+    const firstKey = wrapper.vm.chargeForm.request_id
+    expect(firstKey).toBeTruthy()
+    await wrapper.vm.submitCharge()
+    await wrapper.vm.submitCharge()
+    expect(api.reservationApi.postRoomCharge).toHaveBeenCalledTimes(2)
+    expect(api.reservationApi.postRoomCharge.mock.calls[0][1].request_id).toBe(firstKey)
+    expect(api.reservationApi.postRoomCharge.mock.calls[1][1].request_id).toBe(firstKey)
   })
 
   it('shows the ledger balance on the current folio card when the payload omits balance_due', async () => {
