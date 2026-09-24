@@ -106,8 +106,8 @@
             </div>
           </div>
 
-          <button v-if="!isAppMode" class="hamburger" :class="{ active: navOpen }" @click="navOpen = !navOpen" :aria-expanded="navOpen"
-            :aria-label="$t('nav.menuToggle')" aria-controls="mobile-menu">
+          <button v-if="!isAppMode" class="hamburger" :class="{ active: navOpen }" @click="navOpen = !navOpen"
+            :aria-expanded="navOpen" :aria-label="$t('nav.menuToggle')" aria-controls="mobile-menu">
             <span></span><span></span><span></span>
           </button>
         </div>
@@ -198,11 +198,11 @@
             </div>
           </div>
           <div class="nav-right">
-            <button v-if="isAppMode" class="nav-bell"
-              @click="toggleNotifDropdown"
+            <button v-if="isAppMode" class="nav-bell" @click="toggleNotifDropdown"
               :aria-label="$t('notifications.unreadCount', { count: notifStore.unreadCount })">
               <i class="fas fa-bell"></i>
-              <span v-if="notifStore.unreadCount > 0" class="nav-bell-badge">{{ notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount }}</span>
+              <span v-if="notifStore.unreadCount > 0" class="nav-bell-badge">{{ notifStore.unreadCount > 99 ? '99+' :
+                notifStore.unreadCount }}</span>
             </button>
             <span v-else class="nav-text"><i class="fas fa-moon" aria-hidden="true"></i> {{ $t('nav.fastBooking')
             }}</span>
@@ -242,42 +242,44 @@
             <template v-if="item.children">
               <button type="button" class="drawer-link drawer-acc-head" @click="toggleAccordion(item.key)">
                 <i :class="item.icon" aria-hidden="true"></i> {{ item.label }}
-                <i class="fas fa-chevron-down drawer-acc-caret" :class="{ open: accOpen(item.key) }" aria-hidden="true"></i>
+                <i class="fas fa-chevron-down drawer-acc-caret" :class="{ open: accOpen(item.key) }"
+                  aria-hidden="true"></i>
               </button>
               <div class="drawer-acc-children" :class="{ open: accOpen(item.key) }">
                 <div class="drawer-acc-children-inner">
-                <template v-for="child in item.children" :key="child.key || child.to">
-                  <template v-if="child.children">
-                    <button type="button" class="drawer-link drawer-acc-subhead"
-                      @click="toggleSubAccordion(item.key, child.key)">
-                      <i :class="child.icon" aria-hidden="true"></i> {{ child.label }}
-                      <i class="fas fa-chevron-down drawer-acc-caret"
-                        :class="{ open: subAccOpen(item.key, child.key) }" aria-hidden="true"></i>
-                    </button>
-                    <div class="drawer-acc-subchildren" :class="{ open: subAccOpen(item.key, child.key) }">
-                      <div class="drawer-acc-subchildren-inner">
-                      <button v-for="gchild in child.children.filter((c) => c.action)" :key="gchild.action" type="button"
-                        class="drawer-link drawer-acc-subchild" @click="handleAccordionAction(child.key, gchild.action)">
-                        <i :class="gchild.icon" aria-hidden="true"></i> {{ gchild.label }}
+                  <template v-for="child in item.children" :key="child.key || child.to">
+                    <template v-if="child.children">
+                      <button type="button" class="drawer-link drawer-acc-subhead"
+                        @click="toggleSubAccordion(item.key, child.key)">
+                        <i :class="child.icon" aria-hidden="true"></i> {{ child.label }}
+                        <i class="fas fa-chevron-down drawer-acc-caret"
+                          :class="{ open: subAccOpen(item.key, child.key) }" aria-hidden="true"></i>
                       </button>
-                      <router-link v-for="gchild in child.children.filter((c) => c.to)" :key="gchild.to" :to="gchild.to"
-                        class="drawer-link drawer-acc-subchild" @click="sideOpen = false">
-                        <i :class="gchild.icon" aria-hidden="true"></i> {{ gchild.label }}
-                      </router-link>
+                      <div class="drawer-acc-subchildren" :class="{ open: subAccOpen(item.key, child.key) }">
+                        <div class="drawer-acc-subchildren-inner">
+                          <button v-for="gchild in child.children.filter((c) => c.action)" :key="gchild.action"
+                            type="button" class="drawer-link drawer-acc-subchild"
+                            @click="handleAccordionAction(child.key, gchild.action)">
+                            <i :class="gchild.icon" aria-hidden="true"></i> {{ gchild.label }}
+                          </button>
+                          <router-link v-for="gchild in child.children.filter((c) => c.to)" :key="gchild.to"
+                            :to="gchild.to" class="drawer-link drawer-acc-subchild" @click="sideOpen = false">
+                            <i :class="gchild.icon" aria-hidden="true"></i> {{ gchild.label }}
+                          </router-link>
+                        </div>
                       </div>
-                    </div>
+                    </template>
+                    <template v-else>
+                      <button v-if="child.action" :key="child.action" type="button" class="drawer-link drawer-acc-child"
+                        @click="handleAccordionAction(item.key, child.action)">
+                        <i :class="child.icon" aria-hidden="true"></i> {{ child.label }}
+                      </button>
+                      <router-link v-else :key="child.to" :to="child.to" class="drawer-link drawer-acc-child"
+                        @click="sideOpen = false">
+                        <i :class="child.icon" aria-hidden="true"></i> {{ child.label }}
+                      </router-link>
+                    </template>
                   </template>
-                  <template v-else>
-                    <button v-if="child.action" :key="child.action" type="button" class="drawer-link drawer-acc-child"
-                      @click="handleAccordionAction(item.key, child.action)">
-                      <i :class="child.icon" aria-hidden="true"></i> {{ child.label }}
-                    </button>
-                    <router-link v-else :key="child.to" :to="child.to" class="drawer-link drawer-acc-child"
-                      @click="sideOpen = false">
-                      <i :class="child.icon" aria-hidden="true"></i> {{ child.label }}
-                    </router-link>
-                  </template>
-                </template>
                 </div>
               </div>
             </template>
@@ -290,7 +292,8 @@
           <button class="drawer-link drawer-notif" @click="toggleNotifDropdown(); sideOpen = false">
             <i class="fas fa-bell" aria-hidden="true"></i>
             {{ $t('notifications.title') }}
-            <span v-if="notifStore.unreadCount > 0" class="drawer-notif-badge">{{ notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount }}</span>
+            <span v-if="notifStore.unreadCount > 0" class="drawer-notif-badge">{{ notifStore.unreadCount > 99 ? '99+' :
+              notifStore.unreadCount }}</span>
           </button>
           <router-link :to="{ name: 'public-home' }" class="drawer-link" @click="sideOpen = false">
             <i class="fas fa-store" aria-hidden="true"></i> {{ $t('nav.portal') }}
@@ -1615,8 +1618,17 @@ function formatNotifTime(iso) {
   grid-template-rows: 0fr;
   transition: grid-template-rows 0.3s ease;
 }
-.drawer-acc-children.open { grid-template-rows: 1fr; }
-.drawer-acc-children-inner { overflow: hidden; min-height: 0; display: flex; flex-direction: column; }
+
+.drawer-acc-children.open {
+  grid-template-rows: 1fr;
+}
+
+.drawer-acc-children-inner {
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
 
 .drawer-acc-child {
   padding-left: 34px;
@@ -1639,8 +1651,17 @@ function formatNotifTime(iso) {
   grid-template-rows: 0fr;
   transition: grid-template-rows 0.3s ease;
 }
-.drawer-acc-subchildren.open { grid-template-rows: 1fr; }
-.drawer-acc-subchildren-inner { overflow: hidden; min-height: 0; display: flex; flex-direction: column; }
+
+.drawer-acc-subchildren.open {
+  grid-template-rows: 1fr;
+}
+
+.drawer-acc-subchildren-inner {
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
 
 .drawer-acc-subchild {
   padding-left: 54px;
@@ -2205,6 +2226,7 @@ function formatNotifTime(iso) {
 /* Printers/print previews run at narrow widths, where the mobile welcome
    card would otherwise be "visible" and leak into every printed page. */
 @media print {
+
   .welcome-ad,
   .powered-tip-bubble {
     display: none !important;
@@ -2591,6 +2613,7 @@ function formatNotifTime(iso) {
   align-items: center;
   gap: 8px;
 }
+
 .btn-sound {
   display: inline-flex;
   align-items: center;
@@ -2598,9 +2621,11 @@ function formatNotifTime(iso) {
   background: #eff6ff;
   color: #2563eb;
 }
+
 .btn-sound:hover {
   background: #dbeafe;
 }
+
 .notif-sound-wrap {
   padding: 0 16px 14px;
   border-top: 1px dashed #e2e8f0;

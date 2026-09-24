@@ -439,8 +439,10 @@
                           <td class="sv-particular">{{ e.particular }}</td>
                           <td>
                             <template v-if="e.movedFrom"><span class="sv-moved-from">{{ $t('stayview.transferFrom', {
-                                guest: e.movedFrom }) }}</span> </template>{{
-                            e.description }}<span v-if="e.detail" class="sv-cap"> · {{ e.detail }}</span>
+                                guest: e.movedFrom.guest_name, code: e.movedFrom.folio_code }) }}</span> </template>
+                            <template v-if="e.movedTo"><span class="sv-moved-from">{{ $t('stayview.transferTo', {
+                                guest: e.movedTo.guest_name, code: e.movedTo.folio_code }) }}</span> </template>
+                            {{ e.description }}<span v-if="e.detail" class="sv-cap"> · {{ e.detail }}</span>
                             <span v-if="e.payment?.edited_by || e.payment?.edited_at" class="sv-folio-edit-note">
                               {{ $t('stayview.editedBy') }} {{ e.payment.edited_by_name ||
                                 e.payment.edited_by }}<template
@@ -499,7 +501,7 @@
                         </tr>
                         <tr class="sv-folio-total">
                           <td colspan="4">{{ $t('folio.totalPaid') }}</td>
-                          <td class="num"><strong>TZS {{ fmtNum(folioTotals.credits, 2) }}</strong></td>
+                          <td class="num"><strong>TZS {{ fmtNum(folioTotals.paid, 2) }}</strong></td>
                           <td></td>
                         </tr>
                         <tr class="sv-folio-total sv-folio-balance">
@@ -1345,7 +1347,10 @@
                         <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
                       </button>
                     </div>
-                    <button v-if="folioMoveMode === 'newfolio'" type="button"
+                    {/* The created folio is targetable from any move mode once it
+                        exists — show the open-new-folio shortcut on SPLIT/CUT too so
+                        the receptionist can split a bill onto a brand-new folio. */}
+                    <button v-if="folioMoveMode !== 'transfer'" type="button"
                       class="btn btn-secondary btn-sm sv-new-folio-btn" :disabled="newFolioBusy || actionBusy"
                       @click="createNewFolioTarget">
                       <i class="fas fa-plus" aria-hidden="true"></i> {{ newFolioBusy ? $t('common.loading') :
@@ -2664,6 +2669,9 @@ function openBarModal(bar) {
   hideBarTip()
   activeBar.value = bar
   folio.value = null
+  // A switcher VIEW is per-stay: opening a different bar must not keep showing
+  // the previous stay's related folio in the ledger.
+  viewingFolio.value = null
   stayTab.value = 'folio'
   moreOpen.value = false
   roomTasks.value = []
@@ -2709,6 +2717,7 @@ function closeBarModal() {
   activeBar.value = null
   folio.value = null
   folioLoading.value = false
+  viewingFolio.value = null
   stayTab.value = 'folio'
   moreOpen.value = false
   roomTasks.value = []
@@ -2765,10 +2774,145 @@ function folioRowId(r) {
   return r?.reservation_id || activeBar.value?.id || ''
 }
 
-/** Folios the backend linked to this stay through moves, one chip each. */
-const relatedFolios = computed(
-  () => (folio.value?.related_folios || []).filter((r) => r.reservation_id !== activeBar.value?.id),
-)
+/** Folios the backend linked to this stay through moves, one chip each. A
+ *  TRANSFER posts money onto ANOTHER guest's bill, so its target must not keep
+ *  surfacing here as a "Related Folio" chip under the donor — only split/cut
+ *  (parts of the SAME bill) and new-folio (same guest) links stay visible. */
+const relatedFolios = computed(() => {
+  const donorId = activeBar.value?.id
+  const away = donorId ? transferredAway(donorId) : new Set()
+  return (folio.value?.related_folios || []).filter(
+    (r) => r.reservation_id !== donorId && !away.has(String(r.reservation_id)),
+  )
+})
+
+/** Persisted "transferred away" markers: donor stay id -> target folio ids.
+ *  Written when the receptionist runs a TRANSFER (never split/cut/new-folio),
+ *  so the removed RELATED FOLIO chip stays gone across reloads until the donor
+ *  stay itself is long past. Kept in a reactive ref so the computed above
+ *  recomputes on the spot, then mirrored to localStorage to survive reloads. */
+const TRANSFER_MARK_KEY = 'mrk:folioTransferredAway'
+
+function readTransferMark() {
+  try {
+    const map = JSON.parse(localStorage.getItem(TRANSFER_MARK_KEY) || '{}') || {}
+    const out = {}
+    for (const [key, value] of Object.entries(map)) out[String(key)] = new Set((value || []).map(String))
+    return out
+  } catch {
+    return {}
+  }
+}
+
+const transferredMark = ref(readTransferMark())
+
+function transferredAway(donorId) {
+  return transferredMark.value[String(donorId)] || new Set()
+}
+
+function markTransferredAway(donorId, targetId, donor, target) {
+  const key = String(donorId)
+  const set = new Set(transferredMark.value[key] || [])
+  set.add(String(targetId))
+  transferredMark.value = { ...transferredMark.value, [key]: set }
+  if (donor && target) saveTransferLabels(donor, target)
+  try {
+    const map = {}
+    for (const [k, v] of Object.entries(transferredMark.value)) map[k] = [...v]
+    localStorage.setItem(TRANSFER_MARK_KEY, JSON.stringify(map))
+  } catch {
+    // Storage unavailable (private mode): the chip stays removed for the
+    // current stay view via the reactive ref instead.
+  }
+}
+
+// Test-only helper: clears the persisted transfer marks/labels.
+/* eslint-disable-next-line no-unused-vars */
+function resetTransferMark() {
+  transferredMark.value = {}
+  transferLabelMap.value = {}
+  try {
+    localStorage.removeItem(TRANSFER_MARK_KEY)
+    localStorage.removeItem(TRANSFER_LABEL_KEY)
+  } catch {
+    // ignore storage failures
+  }
+}
+
+/** Persisted display names for transfer partners: reservation id -> { guest_name, folio_code }.
+ *  Both the donor and the receiver are saved at transfer time so the ledger can
+ *  read "Transfer from <guest> (<code>)" on the receiver and "Transfer to
+ *  <guest> (<code>)" on the sender even though transfers are deliberately
+ *  absent from related_folios (which only links split/cut bills). */
+const TRANSFER_LABEL_KEY = 'mrk:folioTransferLabels'
+
+const transferLabelMap = ref(readTransferLabelMap())
+
+function readTransferLabelMap() {
+  try {
+    return JSON.parse(localStorage.getItem(TRANSFER_LABEL_KEY) || '{}') || {}
+  } catch {
+    return {}
+  }
+}
+
+async function persistTransferLabelMap() {
+  try {
+    localStorage.setItem(TRANSFER_LABEL_KEY, JSON.stringify(transferLabelMap.value))
+  } catch {
+    // storage unavailable (private mode): labels stay live for the session
+  }
+}
+
+function saveTransferLabels(donor, target) {
+  const next = { ...transferLabelMap.value }
+  if (donor?.reservation_id) {
+    next[String(donor.reservation_id)] = { guest_name: donor.guest_name, folio_code: donor.folio_code }
+  }
+  if (target?.reservation_id) {
+    next[String(target.reservation_id)] = { guest_name: target.guest_name, folio_code: target.folio_code }
+  }
+  transferLabelMap.value = next
+  persistTransferLabelMap()
+}
+
+/** Persisted "created folio" rows: donor stay id -> rows fit for the split/transfer
+ *  target picker. The backend folio search only lists checked-in stays, so a
+ *  freshly opened split folio (status confirmed) never comes back from the API —
+ *  the review flagged that the created bill "doesn't appear anywhere". We keep a
+ *  local mirror so the created folio stays visible and searchable on the split
+ *  page, and survives modal close/reload. */
+const CREATED_FOLIOS_KEY = 'mrk:folioCreatedTargets'
+
+const createdFolioTargets = ref(readCreatedFolioTargets())
+
+function readCreatedFolioTargets() {
+  try {
+    const map = JSON.parse(localStorage.getItem(CREATED_FOLIOS_KEY) || '{}') || {}
+    const out = {}
+    for (const [key, rows] of Object.entries(map)) {
+      if (Array.isArray(rows)) out[String(key)] = rows
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
+async function persistCreatedFolioTargets() {
+  try {
+    localStorage.setItem(CREATED_FOLIOS_KEY, JSON.stringify(createdFolioTargets.value))
+  } catch {
+    // storage unavailable (private mode): keeps working for the session
+  }
+}
+
+function rememberCreatedFolio(donorId, row) {
+  const key = String(donorId)
+  const rows = (createdFolioTargets.value[key] || []).filter((r) => String(r.reservation_id) !== String(row.reservation_id))
+  createdFolioTargets.value = { ...createdFolioTargets.value, [key]: [row, ...rows] }
+  persistCreatedFolioTargets()
+}
 
 /** The ledger shown in the Folio tab: the stay's own folio unless toggled. */
 const ledgerFolio = computed(() => viewingFolio.value || folio.value)
@@ -2910,7 +3054,10 @@ const stayStrip = computed(() => {
     {
       key: 'balance',
       label: t('stayview.balance'),
-      value: folio.value?.folio ? `TZS ${fmtNum(folio.value.folio.balance_due ?? 0, 2)}` : '—',
+      // Live figure from the same charges − credits arithmetic as the folio
+      // card and ledger footer, so a stay edit (rate/dates/payment) moves the
+      // strip balance at once instead of waiting on a stale backend balance_due.
+      value: folio.value?.folio ? ledgerBalance.value.text : '—',
       fresh: true,
     },
   ]
@@ -3008,8 +3155,7 @@ const nightTotal = computed(() => chargeNights.value.reduce((s, n) => s + n.rate
  * the rental half of the top TOTAL ROOM CHARGES card.
  */
 function buildRentalRows(res) {
-  const total = Number(res?.total_amount || 0)
-  if (!(total > 0)) return []
+  if (!res) return []
   const round2 = (v) => Math.round((Number(v) + Number.EPSILON) * 100) / 100
   const cIn = res.check_in_date || res.arrival_date || res.arrivalIso
   const cOut = res.check_out_date || res.departure_date || res.departureIso
@@ -3017,13 +3163,18 @@ function buildRentalRows(res) {
   if (cIn && cOut) {
     for (let d = parseDate(cIn); d < parseDate(cOut); d = addDays(d, 1)) days.push(d)
   }
+  // The nightly rate is the live price of a night: prefer rate × nights so a
+  // stay edit (extend/shorten) reflects at once even when the backend's stored
+  // total_amount is stale. Fall back to the quoted total only when the room
+  // carries no known rate.
+  const nightly = Number(res.room?.price_per_night || 0)
+  const total = nightly > 0 && days.length ? round2(nightly * days.length) : Number(res?.total_amount || 0)
+  if (!(total > 0)) return []
   if (!days.length) return [{ date: null, time: null, day: '', amount: round2(total) }]
   const count = days.length
-  const nightly = Number(res.room?.price_per_night || 0)
-  const exact = nightly > 0 && Math.abs(nightly * count - total) < 0.005
   let remaining = total
   return days.map((d, i) => {
-    const amount = i === count - 1 ? round2(remaining) : round2(exact ? nightly : total / count)
+    const amount = i === count - 1 ? round2(remaining) : round2(nightly > 0 ? nightly : total / count)
     remaining -= amount
     return { date: formatDateDMY(d), time: isoKey(d), day: d.toLocaleDateString([], { weekday: 'short' }), amount }
   })
@@ -3064,31 +3215,41 @@ const folioEntries = computed(() => {
   // Folio Operations layout.
   if (donorEmptyFolio.value) return []
   const entries = []
-  // Nightly room-rental rows (the "night(s)" lines) stay in the Room Charges
-  // tab only. The Folio Operations ledger must not show them — only the other
-  // room-charge postings (orders, laundry, front-desk charges) appear here.
-  // To keep the ledger's TOTAL CHARGES in step with the top card, the rental
-  // total folds into a single NON-NEGATIVE adjustment row at the stay's start;
-  // a negative net (e.g. rental moved away) is skipped so the column never
-  // shows a charge that was never posted as a line.
+  // The rental posts as one row PER NIGHT ("Room 101 · Rent 24/09/2026")
+  // instead of a single generic "RENTAL CHARGES" line, so each night is
+  // identifiable and stay edits show up live. Only the nights the backend has
+  // NOT already posted as room-charge entries are synthesised here (after
+  // check-in the backend's own per-night rows cover the stay and the net is
+  // zero, so nothing extra appears). A stay with no usable dates still folds
+  // into one legacy row so TOTAL CHARGES stays in step with the top card.
   const rentalRows = buildRentalRows(f.reservation || null)
   const rentalTotal = rentalRows.reduce((s, r) => s + Number(r.amount || 0), 0)
   const rentalNet = Math.round((rentalTotal - rentalSum(f.folio_entries || [])) * 100) / 100
   if (rentalNet > 0.004) {
-    entries.push({
-      key: 'rental-net',
-      date: rentalRows[0]?.date || f.reservation?.check_in_date || '',
-      time: rentalRows[0]?.time || rentalRows[0]?.date || '',
-      particular: t('folio.roomCharge'),
-      description: t('folio.rentalCharges'),
-      detail: '',
-      user: '—',
-      amount: rentalNet,
-      credit: false,
-      muted: false,
-      rental: true,
-      entryId: null,
-      moveId: null,
+    const round2 = (v) => Math.round((Number(v) + Number.EPSILON) * 100) / 100
+    const roomNo = f.reservation?.room?.room_number || ''
+    const nights = rentalRows.length > 1 ? rentalRows : [{ date: '', time: '', amount: rentalNet }]
+    const scale = rentalTotal > 0 ? rentalNet / rentalTotal : 0
+    let remaining = rentalNet
+    nights.forEach((n, i) => {
+      const amount = i === nights.length - 1 ? round2(remaining) : round2(n.amount * scale)
+      remaining -= amount
+      const dated = n.date ? `${roomNo ? `Room ${roomNo} · ` : ''}${t('stayview.rentNight', { date: n.date })}` : ''
+      entries.push({
+        key: `rental:${i}`,
+        date: n.date || f.reservation?.check_in_date || '',
+        time: n.time || '',
+        particular: t('folio.roomCharge'),
+        description: dated || t('folio.rentalCharges'),
+        detail: '',
+        user: '—',
+        amount,
+        credit: false,
+        muted: false,
+        rental: true,
+        entryId: null,
+        moveId: null,
+      })
     })
   }
   for (const o of f.orders || []) {
@@ -3128,10 +3289,15 @@ const folioEntries = computed(() => {
   // Persisted front-desk postings (add folio, discount, adjustment,
   // inclusion, transfers/splits/cuts and attachments) render line by line
   // with their own poster and date, and can be voided or downloaded.
-  const moverName = (rid) => {
-    if (!rid) return ''
+  // Partner lookups: split/cut partners ride on related_folios; transfer
+  // partners are deliberately absent from it (the chip must go away), so they
+  // are resolved from the labels persisted when the transfer ran.
+  const moverInfo = (rid) => {
+    if (!rid) return null
     const known = (f.related_folios || []).find((r) => r.reservation_id === rid)
-    return known?.guest_name || ''
+    if (known) return { guest_name: known.guest_name, folio_code: known.folio_code || '' }
+    const label = transferLabelMap.value[String(rid)]
+    return label ? { guest_name: label.guest_name, folio_code: label.folio_code || '' } : null
   }
   for (const e of f.folio_entries || []) {
     // A confirmed/pending stay must not see front-desk postings against the
@@ -3141,9 +3307,15 @@ const folioEntries = computed(() => {
     const amount = Number(e.amount ?? 0)
     const isRefund = isFolioRefundEntry(e.type)
     // Operations re-parented from another folio (transfer/split/cut) read on
-    // the target as "Transfer from <guest>" per the Folio Operations layout.
+    // the target as "Transferred from <guest> (<code>)" per the Folio
+    // Operations layout; the `_out` provenance rows on the donor read
+    // "Transferred to <guest> (<code>)".
+    const isProvenance = e.type.endsWith('_out') || e.type.endsWith('_in')
+    const toPartner = isProvenance && e.type.endsWith('_out')
+      ? moverInfo(e.source_reservation_id)
+      : null
     const fromOther = e.source_reservation_id && e.source_reservation_id !== (f.reservation?.reservation_id || ledgerFolio.value?.reservation?.reservation_id)
-    const sourceLabel = fromOther ? moverName(e.source_reservation_id) : ''
+    const fromPartner = fromOther && !toPartner ? moverInfo(e.source_reservation_id) : null
     entries.push({
       key: `e${e.folio_entry_id}`,
       date: e.date,
@@ -3173,7 +3345,8 @@ const folioEntries = computed(() => {
         // Room charges are the frozen stay bill and closed folios are final:
         // both can only be rewritten by management (manager/accountant+).
         && (canManageFolioOps.value || (e.type !== 'room_charge' && !folioLocked.value)),
-      movedFrom: sourceLabel,
+      movedFrom: fromPartner || null,
+      movedTo: toPartner || null,
     })
   }
   // Legacy manual extra charges (posted before the ledger existed) still show
@@ -3249,10 +3422,14 @@ const folioEntries = computed(() => {
 })
 
 // Column totals for the folio ledger: charges that move the balance up and
-// credits (payments, discounts, adjustments) that move it down.
+// credits (payments, discounts, adjustments) that move it down. `paid` is a
+// smaller, narrower figure: only money actually RECEIVED (recorded payments +
+// the booking deposit), so the "Total Paid" column can never be inflated by a
+// discount, a negative adjustment, an early-departure refund or an inclusion.
 const folioTotals = computed(() => {
   let charges = 0
   let credits = 0
+  let paid = 0
   for (const e of folioEntries.value) {
     // A complimentary inclusion carries a display value but never moves the
     // balance: it shows on the ledger at its amount yet must not alter the
@@ -3260,8 +3437,9 @@ const folioTotals = computed(() => {
     if (e.balanceNeutral) continue
     if (e.credit) credits += e.amount
     else charges += e.amount
+    if (e.kind === 'payment' || e.kind === 'deposit') paid += e.amount
   }
-  return { charges, credits }
+  return { charges, credits, paid }
 })
 
 // Housekeeping tasks for the active stay's room (Tasks tab).
@@ -3462,7 +3640,10 @@ function genReqId() {
 
 function openPaymentModal(mode = 'collect') {
   moreOpen.value = false
-  viewingFolio.value = null
+  // The payment posts to the folio the receptionist is VIEWING (the active
+  // stay's own folio, or a related/split folio the switcher has opened) — never
+  // to the current folio behind their back, which is exactly what used to turn
+  // the current balance negative when settling a related bill.
   payMode.value = mode
   paymentForm.value = { amount: null, payment_method: 'cash', payment_provider: '', transaction_reference: '', company_id: '', note: '', request_id: genReqId() }
   paymentErrors.value = {}
@@ -3757,9 +3938,21 @@ async function loadFolioTargets(q = '') {
   moveTargetLoading.value = true
   try {
     const res = await reservationApi.folioSearch({ q: q || undefined, exclude: activeBar.value.id, limit: 15 })
-    moveTargets.value = res.data?.folios || []
+    const server = res.data?.folios || []
+    // Freshly created split folios (status confirmed) are invisible to the
+    // checked-in-only folio search, so merge the local mirror back in — both
+    // on the initial picker and on every search keystroke.
+    const local = (createdFolioTargets.value[String(activeBar.value.id)] || [])
+      .filter((tt) => tt && tt.reservation_id !== activeBar.value.id && !server.some((s) => s.reservation_id === tt.reservation_id))
+      .filter((tt) => {
+        if (!q?.trim()) return true
+        const needle = q.trim().toLowerCase()
+        return [tt.guest_name, tt.folio_code, tt.room_number].some((v) => String(v ?? '').toLowerCase().includes(needle))
+      })
+    moveTargets.value = [...server, ...local]
   } catch {
-    moveTargets.value = []
+    moveTargets.value = (createdFolioTargets.value[String(activeBar.value.id)] || [])
+      .filter((tt) => tt && tt.reservation_id !== activeBar.value.id)
   } finally {
     moveTargetLoading.value = false
   }
@@ -3789,20 +3982,23 @@ async function createNewFolioTarget() {
     // The freshly opened folio has status 'confirmed', so the checked-in-only
     // folio search never lists it — add it to the picker manually so the
     // receptionist can select it as the move destination.
-    if (created?.reservation_id) {
-      const shape = {
-        reservation_id: created.reservation_id,
-        folio_code: created.folio_code,
-        guest_name: created.guest_name,
-        room_number: created.room?.room_number || '',
-        status: created.status || 'confirmed',
-        balance_due: Number(created.balance_due ?? 0),
-        check_in_date: created.check_in_date || '',
-        check_out_date: created.check_out_date || '',
+if (created?.reservation_id) {
+        const shape = {
+          reservation_id: created.reservation_id,
+          folio_code: created.folio_code,
+          guest_name: created.guest_name,
+          room_number: created.room?.room_number || '',
+          status: created.status || 'confirmed',
+          balance_due: Number(created.balance_due ?? 0),
+          check_in_date: created.check_in_date || '',
+          check_out_date: created.check_out_date || '',
+        }
+        // Persist so the created folio re-appears on the split/transfer picker
+        // after the modal closes and is findable via search.
+        rememberCreatedFolio(activeBar.value.id, shape)
+        moveTargets.value = [shape, ...moveTargets.value.filter((tt) => tt.reservation_id !== shape.reservation_id)]
+        moveTarget.value = shape.reservation_id
       }
-      moveTargets.value = [shape, ...moveTargets.value.filter((tt) => tt.reservation_id !== shape.reservation_id)]
-      moveTarget.value = shape.reservation_id
-    }
   } catch (err) {
     actionError.value = apiErrorMsg(err, t('stayview.actionError'))
   } finally {
@@ -3818,10 +4014,15 @@ async function moveSelectedOps() {
   const entryIds = selected.filter((k) => k.startsWith('e:')).map((k) => k.slice(2))
   const orderIds = selected.filter((k) => k.startsWith('o:')).map((k) => k.slice(2))
   const laundryIds = selected.filter((k) => k.startsWith('l:')).map((k) => k.slice(2))
+  // The command the receptionist actually chose before the new-folio shortcut
+  // rewrites it to a plain transfer for the API (transfer = onto another
+  // guest's bill -> related chip removed later; new-folio = same guest's extra
+  // folio -> chip stays).
+  const realMode = folioMoveMode.value
   // "New Folio" opens the target folio first (createNewFolioTarget); the move
   // itself is a plain transfer on to that already-existing folio — the backend
   // only accepts transfer/split/cut as a move mode.
-  const mode = folioMoveMode.value === 'newfolio' ? 'transfer' : folioMoveMode.value
+  const mode = realMode === 'newfolio' ? 'transfer' : realMode
   const payload = {
     mode,
     target_reservation_id: moveTarget.value,
@@ -3832,7 +4033,23 @@ async function moveSelectedOps() {
   }
   folioOp.value = null
   await runStayAction(() => reservationApi.folioTransfer(bar.id, payload))
-  if (actionError.value) folioOp.value = 'move'
+  if (actionError.value) {
+    folioOp.value = 'move'
+    return
+  }
+  // A transfer moved money off this folio onto ANOTHER guest's bill — that
+  // target must not linger below as a "Related Folio" chip. The partner labels
+  // are kept so the receiver's ledger can still read "Transfer from <guest>"
+  // and the sender's "Transfer to <guest>".
+  if (realMode === 'transfer') {
+    const targetRow = moveTargetObj.value
+    markTransferredAway(
+      bar.id,
+      moveTarget.value,
+      { reservation_id: bar.id, guest_name: bar.guest_name, folio_code: bar.folio_code },
+      { reservation_id: targetRow?.reservation_id, guest_name: targetRow?.guest_name, folio_code: targetRow?.folio_code },
+    )
+  }
 }
 
 /** Total of the operations currently ticked in the move source panel. */
@@ -4309,13 +4526,29 @@ async function sendFolioInvoice(r) {
     actionError.value = t('stayview.noGuestEmail')
     return
   }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
+    // A malformed e-mail can only ever come back as a server error — catch it
+    // here so the receptionist sees the reason instead.
+    actionError.value = t('stayview.invoiceEmailInvalid')
+    return
+  }
   sendBusy.value = true
   actionError.value = ''
   try {
     const res = await invoiceApi.send(id)
     toast(res.data.message || t('stayview.invoiceSent'))
   } catch (err) {
-    actionError.value = err.response?.data?.message || t('stayview.invoiceError')
+    // Never show a raw "server error". A failed send is either a real mail-
+    // delivery problem (the hotel's e-mail settings) or a validation refusal —
+    // each gets its own readable message, with the backend's own words kept
+    // only when they are a real, structured explanation.
+    const status = Number(err?.response?.status || 0)
+    const backendMsg = err?.response?.data?.message
+    if (status >= 500) actionError.value = t('stayview.invoiceEmailServer')
+    else if (status === 422) actionError.value = backendMsg || t('stayview.invoiceError')
+    else if (!status && String(err?.message || '').toLowerCase().includes('network')) {
+      actionError.value = t('stayview.invoiceEmailNetwork')
+    } else actionError.value = backendMsg || t('stayview.invoiceError')
   } finally {
     sendBusy.value = false
   }

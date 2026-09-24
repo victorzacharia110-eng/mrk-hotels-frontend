@@ -160,33 +160,173 @@ describe('folio operations on the stay view', () => {
     })
   })
 
-  it('hides nightly "night(s)" room-charge rows from the folio ledger but keeps other room charges', async () => {
+  it('itemises the rental one row per night with the room and date in the folio ledger', async () => {
     await mountDashboard()
     const payload = folioPayload()
-    // The stay carries a 300,000 rental; the persisted room-charge entry
-    // covers only part of it, so the remainder must fold into a single
-    // non-nightly "Rental charges" row.
+    // The stay runs 3 nights at 100,000 each (total 300,000); the persisted
+    // room-charge entry only covers half of it, so the ledger must spell out
+    // the unposted half one night per row ("Room 101 · Rent {date}") instead
+    // of folding it into a single generic "Rental charges" line — and the
+    // rows must sum exactly to the unposted remainder.
+    payload.reservation.check_in_date = '2026-11-01'
     payload.reservation.total_amount = 300000
     payload.folio_entries = [
       { folio_entry_id: 1, type: 'room_charge', amount: 150000, date: '2026-11-01', description: 'Room & taxes' },
-      { folio_entry_id: 2, type: 'payment', amount: 150000, date: '2026-11-01', description: 'Advance' },
     ]
     wrapper.vm.folio = payload
     await wrapper.vm.$nextTick()
     await wrapper.vm.$nextTick()
+    const nights = wrapper.vm.folioEntries.filter((e) => e.rental)
+    expect(nights).toHaveLength(3)
+    for (const n of nights) {
+      expect(n.description).toContain('Room 101')
+      expect(n.description).toMatch(/rent/i)
+      expect(n.description).toMatch(/\d{2}\/\d{2}\/\d{4}/)
+    }
+    expect(Math.round(nights.reduce((s, n) => s + n.amount, 0))).toBe(150000)
+    // Other room charges (persisted folio entries) stay visible.
     const descriptions = [...document.querySelectorAll('.sv-folio-table tbody tr td:nth-child(3)')].map(
       (td) => td.textContent.trim(),
     )
-    expect(descriptions.some((d) => /night\(s\)/.test(d))).toBe(false)
-    // Other room charges (persisted folio entries whose description is not
-    // nights) stay visible.
     expect(descriptions.some((d) => d.includes('Room & taxes'))).toBe(true)
-    // The rental total still reaches the ledger through a single folded row so
-    // TOTAL CHARGES stays in step with the top card.
-    const rentalRow = wrapper.vm.folioEntries.find((e) => e.rental)
-    expect(rentalRow).toBeTruthy()
-    expect(rentalRow.description).not.toMatch(/night/)
-    expect(rentalRow.amount).toBe(150000)
+    // TOTAL CHARGES still equals the full rental (posted + itemised).
+    expect(wrapper.vm.folioTotals.charges).toBe(300000)
+  })
+
+  it('keeps a single legacy rental row when the stay has no usable dates', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    // No check-in date on the base payload: the rental cannot be split per
+    // night, so it folds into one generic row when nothing covers it yet.
+    payload.reservation.total_amount = 300000
+    payload.folio_entries = []
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    const rental = wrapper.vm.folioEntries.filter((e) => e.rental)
+    expect(rental).toHaveLength(1)
+    expect(rental[0].amount).toBe(300000)
+    expect(rental[0].description).toBe('Rental charges')
+  })
+
+  it('Total Paid counts only money received, never discounts or refunds', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    payload.folio_entries = [
+      { folio_entry_id: 1, type: 'room_charge', amount: 300000, date: '2026-11-01', description: 'Room & taxes' },
+      { folio_entry_id: 2, type: 'payment', amount: 150000, date: '2026-11-01', description: 'Advance' },
+      { folio_entry_id: 5, type: 'discount', amount: -25000, date: '2026-11-02', description: 'QA discount' },
+      { folio_entry_id: 6, type: 'adjustment', amount: -10000, date: '2026-11-02', description: 'QA adjustment' },
+    ]
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    // The balance moves for the discount + adjustment…
+    expect(wrapper.vm.folioTotals.credits).toBe(185000)
+    // …but Total Paid is still only the money actually received.
+    expect(wrapper.vm.folioTotals.paid).toBe(150000)
+  })
+
+  it('keeps the strip balance in step with the live ledger, not a stale balance_due', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    payload.folio.balance_due = 999999
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    const strip = wrapper.vm.stayStrip.find((s) => s.key === 'balance')
+    expect(strip.value).toBe(wrapper.vm.ledgerBalance.text)
+    expect(strip.value).not.toContain('999,999')
+  })
+
+  it('resets a viewed related folio when another stay opens or the modal closes', async () => {
+    await mountDashboard()
+    wrapper.vm.viewingFolio = { reservation: { reservation_id: 502 } }
+    wrapper.vm.openBarModal(activeBar)
+    expect(wrapper.vm.viewingFolio).toBeNull()
+    wrapper.vm.viewingFolio = { reservation: { reservation_id: 502 } }
+    wrapper.vm.closeBarModal()
+    expect(wrapper.vm.viewingFolio).toBeNull()
+  })
+
+  it('posts a payment to the VIEWED folio when a related folio is open', async () => {
+    await mountDashboard()
+    wrapper.vm.viewingFolio = { reservation: { reservation_id: 502, guest_name: 'Lot 2' } }
+    await wrapper.vm.$nextTick()
+    wrapper.vm.openPaymentModal()
+    wrapper.vm.paymentForm.amount = 25000
+    wrapper.vm.paymentForm.payment_method = 'cash'
+    await wrapper.vm.submitPayment()
+    expect(api.paymentApi.store).toHaveBeenCalledWith({
+      reservation_id: 502,
+      amount: 25000,
+      payment_method: 'cash',
+      payment_provider: null,
+      transaction_reference: null,
+    })
+  })
+
+  it('hides a transferred folio from the RELATED FOLIO chips, keeping split/cut links', async () => {
+    await mountDashboard()
+    // The base payload links reservation 502 to stay 501 as a related folio.
+    expect(wrapper.vm.relatedFolios.map((r) => r.reservation_id)).toEqual([502])
+    // After a TRANSFER that target belongs to another guest's bill — mark it
+    // and the chip must disappear.
+    wrapper.vm.markTransferredAway(501, 502)
+    expect(wrapper.vm.relatedFolios).toEqual([])
+    // A split/new-folio target (not marked) still shows.
+    wrapper.vm.resetTransferMark()
+    expect(wrapper.vm.relatedFolios.map((r) => r.reservation_id)).toEqual([502])
+  })
+
+  it('records the target when the move command is TRANSFER, never split/new-folio', async () => {
+    await mountDashboard()
+    wrapper.vm.resetTransferMark()
+
+    wrapper.vm.folioMoveMode = 'transfer'
+    wrapper.vm.moveSelected = ['e:2']
+    wrapper.vm.moveTarget = '502'
+    await wrapper.vm.moveSelectedOps()
+    expect(api.reservationApi.folioTransfer).toHaveBeenCalledWith(
+      501,
+      expect.objectContaining({ mode: 'transfer', target_reservation_id: '502' }),
+    )
+    expect([...wrapper.vm.transferredAway(501)]).toEqual(['502'])
+
+    wrapper.vm.resetTransferMark()
+    wrapper.vm.folioMoveMode = 'split'
+    wrapper.vm.moveSelected = ['e:2']
+    wrapper.vm.moveTarget = '502'
+    await wrapper.vm.moveSelectedOps()
+    expect(wrapper.vm.transferredAway(501).size).toBe(0)
+
+    wrapper.vm.resetTransferMark()
+    wrapper.vm.folioMoveMode = 'newfolio'
+    wrapper.vm.moveSelected = ['e:2']
+    wrapper.vm.moveTarget = '502'
+    await wrapper.vm.moveSelectedOps()
+    // New-folio posts through the same transfer endpoint but stays linked.
+    expect(api.reservationApi.folioTransfer).toHaveBeenLastCalledWith(
+      501,
+      expect.objectContaining({ mode: 'transfer', target_reservation_id: '502' }),
+    )
+    expect(wrapper.vm.transferredAway(501).size).toBe(0)
+  })
+
+  it('refuses to send an invoice to a malformed guest e-mail', async () => {
+    await mountDashboard()
+    wrapper.vm.activeBar = { ...activeBar, guestEmail: 'not-an-email' }
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.sendFolioInvoice(wrapper.vm.activeBar)
+    expect(api.invoiceApi.send).not.toHaveBeenCalled()
+    expect(wrapper.vm.actionError).toBeTruthy()
+  })
+
+  it('shows a readable message instead of a raw server error when the e-mail fails', async () => {
+    await mountDashboard()
+    api.invoiceApi.send.mockRejectedValueOnce({ response: { status: 500 } })
+    await wrapper.vm.sendFolioInvoice(activeBar)
+    expect(api.invoiceApi.send).toHaveBeenCalledWith(501)
+    expect(wrapper.vm.actionError).toContain('e-mail settings')
   })
 
   it('blocks post-to-creditors when the amount exceeds the folio balance', async () => {
@@ -340,5 +480,162 @@ describe('post-to-creditors gating on the stay view', () => {
     const segText = [...document.querySelectorAll('.sv-seg-btn')].map((b) => b.textContent.trim())
     expect(segText).toContain('Collect payment')
     expect(segText).not.toContain('Post to creditors')
+  })
+})
+
+describe('transfer flip labels per the Folio Operations adjustment', () => {
+  async function mountWithTransfer() {
+    await mountDashboard()
+    // The ledger carries a transfer in/out pair carried by the backend.
+    wrapper.vm.folio = {
+      ...folioPayload(),
+      related_folios: [],
+      folio_entries: [
+        { folio_entry_id: 1, type: 'room_charge', amount: 300000, date: '2026-11-01', description: 'Room & taxes' },
+        {
+          folio_entry_id: 2,
+          type: 'transfer_out',
+          amount: -30000,
+          date: '2026-11-02',
+          description: 'Moved to EMMANUEL MALLYA',
+          source_reservation_id: 502,
+        },
+        {
+          folio_entry_id: 3,
+          type: 'transfer_in',
+          amount: 45000,
+          date: '2026-11-02',
+          description: 'ROOM POSTING',
+          source_reservation_id: 801,
+        },
+      ],
+    }
+    await wrapper.vm.$nextTick()
+  }
+
+  it('records transfer labels so the receiver ledger can read "Transfer from guest (code)"', async () => {
+    await mountDashboard()
+    wrapper.vm.markTransferredAway(
+      501,
+      502,
+      { reservation_id: 501, guest_name: 'Amina Hassan', folio_code: 'F-501' },
+      { reservation_id: 502, guest_name: 'EMMANUEL MALLYA', folio_code: 'F-502' },
+    )
+    expect(wrapper.vm.transferLabelMap['501']).toEqual({ guest_name: 'Amina Hassan', folio_code: 'F-501' })
+    expect(wrapper.vm.transferLabelMap['502']).toEqual({ guest_name: 'EMMANUEL MALLYA', folio_code: 'F-502' })
+  })
+
+  it('renders Transfer to on the sender ledger and Transfer from on the receiver', async () => {
+    await mountWithTransfer()
+    wrapper.vm.markTransferredAway(
+      501,
+      502,
+      { reservation_id: 501, guest_name: 'Amina Hassan', folio_code: 'F-501' },
+      { reservation_id: 502, guest_name: 'EMMANUEL MALLYA', folio_code: 'F-502' },
+    )
+    await wrapper.vm.$nextTick()
+    const html = document.querySelector('.sv-stay-folio')?.innerHTML || document.body.innerHTML
+    expect(html).toContain('Transfer to EMMANUEL MALLYA')
+    expect(html).toContain('F-502')
+
+    // Now look at the receiver's ledger: the transferred-in row (source 801)
+    // carries no label of its own, so only the sender's out leg shows a name.
+    const text = document.body.textContent
+    expect(text).toContain('Transfer to EMMANUEL MALLYA')
+    expect(text).toContain('F-502')
+
+    // Receiver view: a `transfer_in` with source 501 must read Transfer from.
+    wrapper.vm.activeBar = { ...activeBar, id: 802, label: 'EMMANUEL MALLYA', folio_code: 'F-802', roomNumber: '102' }
+    wrapper.vm.folio = {
+      ...folioPayload(),
+      reservation: { ...folioPayload().reservation, reservation_id: 802, guest_name: 'EMMANUEL MALLYA' },
+      related_folios: [],
+      folio_entries: [
+        { folio_entry_id: 1, type: 'room_charge', amount: 300000, date: '2026-11-01', description: 'Room & taxes' },
+        {
+          folio_entry_id: 2,
+          type: 'transfer_in',
+          amount: 45000,
+          date: '2026-11-02',
+          description: 'ROOM POSTING',
+          source_reservation_id: 501,
+        },
+      ],
+    }
+    await wrapper.vm.$nextTick()
+    const receiverText = document.body.textContent
+    expect(receiverText).toContain('Transfer from Amina Hassan')
+    expect(receiverText).toContain('F-501')
+  })
+
+  it('splits off the target selection when the transfer bool hides the transferred chip', async () => {
+    await mountDashboard()
+    wrapper.vm.activeBar = { ...activeBar }
+    wrapper.vm.markTransferredAway(
+      501,
+      502,
+      { reservation_id: 501, guest_name: 'Amina Hassan', folio_code: 'F-501' },
+      { reservation_id: 502, guest_name: 'EMMANUEL MALLYA', folio_code: 'F-502' },
+    )
+    expect(wrapper.vm.relatedFolios.map((r) => r.reservation_id)).toEqual([])
+  })
+})
+
+describe('created folio appears and is searchable on the split page', () => {
+  it('remembers a created folio so it survives modal close and search', async () => {
+    await mountDashboard()
+    api.reservationApi.folioOpenNewFolio.mockResolvedValueOnce({
+      data: {
+        target_reservation: {
+          reservation_id: 999,
+          folio_code: 'F-999',
+          guest_name: 'Amina Hassan',
+          room: { room_number: '101' },
+          status: 'confirmed',
+        },
+      },
+    })
+    // exercise the split-page create path (any non-transfer mode)
+    wrapper.vm.folioMoveMode = 'split'
+    await wrapper.vm.createNewFolioTarget()
+    expect(wrapper.vm.moveTargets.map((t) => t.reservation_id)).toContain(999)
+    expect(wrapper.vm.moveTarget).toBe(999)
+    expect(wrapper.vm.createdFolioTargets['501'].map((t) => t.reservation_id)).toContain(999)
+
+    // Reload the picker without the API knowing about the confirmed folio.
+    api.reservationApi.folioSearch.mockResolvedValueOnce({
+      data: { folios: [{ reservation_id: 502, folio_code: 'F-502', guest_name: 'Lot 2', room_number: '0', balance_due: 0 }] },
+    })
+    await wrapper.vm.loadFolioTargets('')
+    expect(wrapper.vm.moveTargets.map((t) => t.reservation_id).sort()).toEqual([502, 999])
+
+    // And it is findable via the split-page search box.
+    await wrapper.vm.loadFolioTargets('F-999')
+    expect(wrapper.vm.moveTargets.map((t) => t.reservation_id)).toEqual([999])
+  })
+
+  it('does not leak a remembered folio between different stays', async () => {
+    await mountDashboard()
+    wrapper.vm.rememberCreatedFolio(9999, {
+      reservation_id: 111,
+      folio_code: 'F-111',
+      guest_name: 'Other Guest',
+      room_number: '5',
+    })
+    await wrapper.vm.loadFolioTargets('')
+    expect(wrapper.vm.moveTargets.map((t) => t.reservation_id)).not.toContain(111)
+  })
+
+  it('does not mark the split-created folio as if it were a transfer target', async () => {
+    await mountDashboard()
+    wrapper.vm.resetTransferMark()
+    api.reservationApi.folioOpenNewFolio.mockResolvedValueOnce({
+      data: {
+        target_reservation: { reservation_id: 999, folio_code: 'F-999', guest_name: 'Amina Hassan', status: 'confirmed' },
+      },
+    })
+    wrapper.vm.folioMoveMode = 'newfolio'
+    await wrapper.vm.createNewFolioTarget()
+    expect([...wrapper.vm.transferredAway(501)]).toEqual([])
   })
 })

@@ -545,7 +545,7 @@
               </span>
               <span class="item-status-pill" :class="statusBadge(item.status)">{{ statusLabel(item.status) }}</span>
               <button
-                v-if="nextItemStatus(item)"
+                v-if="!isWaiterRole && nextItemStatus(item)"
                 type="button"
                 class="item-advance"
                 :disabled="advancingItem === item.order_item_id"
@@ -565,7 +565,7 @@
           <!-- Single-tap lifecycle: next status, payment, bill to room -->
           <div class="open-actions">
             <button
-              v-if="order.status === 'pending'"
+              v-if="!isWaiterRole && order.status === 'pending'"
               type="button"
               class="open-btn warn"
               @click="advanceOrder(order, 'preparing')"
@@ -573,7 +573,7 @@
               <i class="fas fa-fire-burner" aria-hidden="true"></i> {{ $t('orderTaker.markPreparing') }}
             </button>
             <button
-              v-else-if="['preparing', 'in_progress', 'processing'].includes(order.status)"
+              v-else-if="!isWaiterRole && ['preparing', 'in_progress', 'processing'].includes(order.status)"
               type="button"
               class="open-btn info"
               @click="advanceOrder(order, 'ready')"
@@ -581,7 +581,7 @@
               <i class="fas fa-bell-concierge" aria-hidden="true"></i> {{ $t('orderTaker.markReady') }}
             </button>
             <button
-              v-else-if="order.status === 'ready'"
+              v-else-if="!isWaiterRole && order.status === 'ready'"
               type="button"
               class="open-btn ok"
               @click="advanceOrder(order, 'served')"
@@ -629,7 +629,7 @@
               <i class="fas fa-receipt" aria-hidden="true"></i> {{ $t('orderTaker.printReceipt') }}
             </button>
             <button
-              v-if="['pending', 'preparing', 'in_progress', 'processing'].includes(order.status) && order.payment_status === 'unpaid'"
+              v-if="!isWaiterRole && ['pending', 'preparing', 'in_progress', 'processing'].includes(order.status) && order.payment_status === 'unpaid'"
               type="button"
               class="open-btn ghost danger"
               @click="openVoid(order)"
@@ -637,7 +637,7 @@
               <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('orderTaker.voidOrder') }}
             </button>
             <button
-              v-if="!isPosRole && order.status === 'served' && order.payment_status !== 'unpaid'"
+              v-if="!isWaiterRole && !isPosRole && order.status === 'served' && order.payment_status !== 'unpaid'"
               type="button"
               class="open-btn done"
               @click="advanceOrder(order, 'completed')"
@@ -1376,6 +1376,10 @@ function nextItemStatus(item) {
 }
 
 async function advanceItem(order, item) {
+  if (isWaiterRole.value) {
+    openError.value = t('orderTaker.waiterCannotAdvance')
+    return
+  }
   const next = nextItemStatus(item)
   if (!next) return
   openError.value = ''
@@ -1697,7 +1701,7 @@ async function loadOpenOrders() {
     })
     const rows = Array.isArray(res.data) ? res.data : res.data?.data || []
     const filtered = floorStaffOrders(rows)
-      .filter((order) => !['completed', 'cancelled'].includes(order.status))
+      .filter((order) => !['completed', 'cancelled', 'merged'].includes(order.status))
       .filter((order) => (isFloorStaff.value ? isMine(order) : true))
     detectReadyTransitions(filtered)
     openOrders.value = filtered
@@ -1720,6 +1724,7 @@ function statusLabel(status) {
     served: t('orders.statusServed'),
     completed: t('orders.statusCompleted'),
     cancelled: t('orders.statusCancelled'),
+    merged: t('orders.statusMerged'),
   }
   return map[status] || status
 }
@@ -1735,6 +1740,7 @@ function statusBadge(status) {
     served: 'badge-green',
     completed: 'badge-green',
     cancelled: 'badge-red',
+    merged: 'badge-gray',
   }
   return map[status] || 'badge-gray'
 }

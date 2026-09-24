@@ -21,7 +21,7 @@ test('receptionist sees report browser in staff drawer and loads night audit pil
   await expect(page.locator('#staff-drawer')).toBeVisible()
   // Reports lives inside the (collapsed) Administration accordion group.
   await page.locator('.drawer-acc-head', { hasText: /administration/i }).first().click()
-  await expect(page.locator('#staff-drawer')).toContainText('Reports')
+  await expect(page.locator('#staff-drawer')).toContainText('Report Browser')
   await page.locator('#staff-drawer a[href="/app/reports"]').click()
 
   await expect(page).toHaveURL(/\/app\/reports$/)

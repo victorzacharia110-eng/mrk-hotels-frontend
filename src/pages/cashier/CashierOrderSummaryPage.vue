@@ -74,7 +74,7 @@
                   :title="$t('cashier.summary.viewOrder')">
                   <i class="fas fa-eye" aria-hidden="true"></i> {{ $t('cashier.summary.view') }}
                 </button>
-                <button v-if="order.status !== 'cancelled'" class="sm-btn sm danger-ghost" @click="openVoid(order)"
+                <button v-if="canVoid(order)" class="sm-btn sm danger-ghost" @click="openVoid(order)"
                   :title="$t('cashier.summary.voidOrder')">
                   <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.summary.voidOrder') }}
                 </button>
@@ -214,7 +214,7 @@
 
         <div v-if="drawerOrder && drawerOrder.status !== 'cancelled'" class="drawer-actions">
           <template v-if="!splitting && !transferring && !voidConfirming">
-            <button type="button" class="sm-btn sm ghost" @click="promptVoid">
+            <button v-if="canVoid(drawerOrder)" type="button" class="sm-btn sm ghost" @click="promptVoid">
               <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.summary.voidOrder') }}
             </button>
             <button type="button" class="sm-btn sm ghost" @click="promptTransfer">
@@ -410,9 +410,19 @@ const roomOptions = computed(() =>
 const needsRef = computed(() => payMethod.value === 'bank')
 
 // Settled = paid (any method) / billed-to-room / completed.  Voided = cancelled.
-// Running = everything else (unpaid, not cancelled, not yet settled).
+// Merged = the emptied source of a merge; it carries no bill of its own, so it
+// is neither running (never shows on the floor) nor voided (never a VOID).
+// Running = everything else (unpaid, not closed, not yet settled).
 const isSettled = (order) => order.status === 'completed' || order.payment_status !== 'unpaid'
-const isRunning = (order) => order.status !== 'cancelled' && !isSettled(order)
+const isRunning = (order) => !['cancelled', 'merged'].includes(order.status) && !isSettled(order)
+
+// Only management may void a settled / closed bill (the reversal rewrites the
+// day's numbers); cashiers and bartenders keep voiding running tickets.
+const isManagement = computed(() => ['hotel_admin', 'manager'].includes(authStore.user?.user_role))
+
+// Void is available on any running ticket, and on settled/closed bills for
+// management only — exactly the authority the cashier & bartender panels ask.
+const canVoid = (order) => order && order.status !== 'cancelled' && (isRunning(order) || isManagement.value)
 
 const filteredOrders = computed(() => {
   const term = search.value.trim().toLowerCase()
@@ -618,7 +628,10 @@ async function confirmVoid() {
   savingVoid.value = true
   drawerError.value = ''
   try {
-    await orderApi.voidOrder(drawerOrder.value.order_id, { reason: voidReason.value.trim() })
+    await orderApi.voidOrder(drawerOrder.value.order_id, {
+      reason: voidReason.value.trim(),
+      ...(isManagement.value ? { override: true } : {}),
+    })
     closeDrawer()
     await load()
     toast(t('cashier.summary.voided'), 'success')

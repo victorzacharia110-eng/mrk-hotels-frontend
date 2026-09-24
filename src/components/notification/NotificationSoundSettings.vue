@@ -60,13 +60,69 @@ function test() {
 </script>
 
 <style scoped>
-.nss { display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
-.nss-row { display: flex; align-items: center; }
-.nss-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #334155; cursor: pointer; }
-.nss-toggle input { width: 16px; height: 16px; accent-color: #3b82f6; cursor: pointer; }
-.nss-field { display: flex; flex-direction: column; gap: 4px; flex: 1; }
-.nss-label { font-size: 12px; color: #64748b; }
-.nss-select { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #334155; background: #fff; }
-.nss-test { align-self: flex-start; padding: 6px 12px; border: none; border-radius: 6px; background: #3b82f6; color: #fff; font-size: 12px; cursor: pointer; }
-.nss-test:disabled { background: #cbd5e1; cursor: not-allowed; }
+.nss {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.nss-row {
+  display: flex;
+  align-items: center;
+}
+
+.nss-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #334155;
+  cursor: pointer;
+}
+
+.nss-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: #3b82f6;
+  cursor: pointer;
+}
+
+.nss-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.nss-label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.nss-select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #334155;
+  background: #fff;
+}
+
+.nss-test {
+  align-self: flex-start;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.nss-test:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
 </style>

@@ -31,15 +31,12 @@
       </div>
       <div class="rb-search">
         <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
-        <input
-          type="search"
-          v-model="searchTerm"
-          :placeholder="$t('reportBrowser.search')"
-          :aria-label="$t('reportBrowser.search')"
-        />
+        <input type="search" v-model="searchTerm" :placeholder="$t('reportBrowser.search')"
+          :aria-label="$t('reportBrowser.search')" />
       </div>
       <div class="rb-tools">
-        <select class="rb-quick" :value="active" :aria-label="$t('reportBrowser.jumpTo')" @change="$emit('select', $event.target.value)">
+        <select class="rb-quick" :value="active" :aria-label="$t('reportBrowser.jumpTo')"
+          @change="$emit('select', $event.target.value)">
           <option value="" disabled>{{ $t('reportBrowser.jumpTo') }}</option>
           <optgroup v-for="cat in categories" :key="cat.key" :label="$t(cat.label)">
             <option v-for="r in cat.reports" :key="r.key" :value="r.key">{{ $t(r.label) }}</option>
@@ -48,13 +45,15 @@
         <button type="button" class="rb-tool-btn" :title="$t('reportBrowser.openWindow')" @click="$emit('open-window')">
           <i class="fas fa-window-restore" aria-hidden="true"></i>
         </button>
-        <button v-if="posPrint" type="button" class="rb-tool-btn" :title="$t('reportBrowser.posPrint')" @click="$emit('pos-print')">
+        <button v-if="posPrint" type="button" class="rb-tool-btn" :title="$t('reportBrowser.posPrint')"
+          @click="$emit('pos-print')">
           <i class="fas fa-receipt" aria-hidden="true"></i>
         </button>
         <button type="button" class="rb-tool-btn" :title="$t('reportBrowser.print')" @click="$emit('print')">
           <i class="fas fa-print" aria-hidden="true"></i>
         </button>
-        <button type="button" class="rb-tool-btn" :disabled="exporting" :title="$t('reportBrowser.export')" @click="$emit('export')">
+        <button type="button" class="rb-tool-btn" :disabled="exporting" :title="$t('reportBrowser.export')"
+          @click="$emit('export')">
           <i v-if="exporting" class="fas fa-spinner fa-spin" aria-hidden="true"></i>
           <i v-else class="fas fa-download" aria-hidden="true"></i>
         </button>
@@ -64,38 +63,23 @@
     <div class="rb-body">
       <!-- ── Left: collapsible report category tree ─────────── -->
       <aside class="rb-tree">
-<div
-            v-for="cat in categories"
-            :key="cat.key"
-            class="rb-cat"
-            :class="{ open: cat.key === openCat }"
-          >
-            <button type="button" class="rb-cat-head" @click="toggleCat(cat.key)">
-              <i
-                class="fas"
-                :class="cat.key === openCat ? 'fa-chevron-down' : 'fa-chevron-right'"
-                aria-hidden="true"
-              ></i>
-              <i :class="cat.icon || 'fas fa-folder'" class="rb-cat-icon" aria-hidden="true"></i>
-              <span>{{ $t(cat.label) }}</span>
-              <span class="rb-cat-count">{{ cat.reports.length }}</span>
-            </button>
-            <div class="rb-cat-reports" :class="{ open: cat.key === openCat }">
-              <div class="rb-cat-reports-inner">
-                <button
-                  v-for="r in cat.reports"
-                  :key="r.key"
-                  type="button"
-                  class="rb-report"
-                  :class="{ active: active === r.key }"
-                  @click="$emit('select', r.key)"
-                >
-                  <i :class="r.icon || 'fas fa-file-lines'" aria-hidden="true"></i>
-                  <span>{{ $t(r.label) }}</span>
-                </button>
-              </div>
+        <div v-for="cat in categories" :key="cat.key" class="rb-cat" :class="{ open: cat.key === openCat }">
+          <button type="button" class="rb-cat-head" @click="toggleCat(cat.key)">
+            <i class="fas" :class="cat.key === openCat ? 'fa-chevron-down' : 'fa-chevron-right'" aria-hidden="true"></i>
+            <i :class="cat.icon || 'fas fa-folder'" class="rb-cat-icon" aria-hidden="true"></i>
+            <span>{{ $t(cat.label) }}</span>
+            <span class="rb-cat-count">{{ cat.reports.length }}</span>
+          </button>
+          <div class="rb-cat-reports" :class="{ open: cat.key === openCat }">
+            <div class="rb-cat-reports-inner">
+              <button v-for="r in cat.reports" :key="r.key" type="button" class="rb-report"
+                :class="{ active: active === r.key }" @click="$emit('select', r.key)">
+                <i :class="r.icon || 'fas fa-file-lines'" aria-hidden="true"></i>
+                <span>{{ $t(r.label) }}</span>
+              </button>
             </div>
           </div>
+        </div>
       </aside>
 
       <!-- ── Right: active report (toolbar + body via slots) ── -->
@@ -336,8 +320,18 @@ function toggleCat(key) {
   grid-template-rows: 0fr;
   transition: grid-template-rows 0.3s ease;
 }
-.rb-cat-reports.open { grid-template-rows: 1fr; }
-.rb-cat-reports-inner { overflow: hidden; min-height: 0; display: flex; flex-direction: column; padding: 2px 0 6px; }
+
+.rb-cat-reports.open {
+  grid-template-rows: 1fr;
+}
+
+.rb-cat-reports-inner {
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 2px 0 6px;
+}
 
 .rb-report {
   width: 100%;
@@ -397,6 +391,7 @@ function toggleCat(key) {
     width: 210px;
     min-width: 210px;
   }
+
   .rb-search {
     order: 5;
     width: 100%;
@@ -408,9 +403,11 @@ function toggleCat(key) {
   .rb-header {
     align-items: flex-start;
   }
+
   .rb-body {
     flex-direction: column;
   }
+
   .rb-tree {
     width: 100%;
     min-width: 0;

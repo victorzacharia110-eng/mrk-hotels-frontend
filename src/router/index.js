@@ -281,7 +281,7 @@ const routes = [
   {
     path: '/cashier',
     component: () => import('@/layouts/CashierLayout.vue'),
-    meta: { requiresAuth: true, role: ['cashier', 'bartender'] },
+    meta: { requiresAuth: true, role: ['cashier', 'bartender', 'hotel_admin', 'manager'] },
     children: [
       // Dine In floor map with running-order timers.
       {
@@ -646,9 +646,9 @@ router.onError((error) => {
 export const dashboardMap = {
   superadmin: '/superadmin',
   owner: '/owner',
-  hotel_admin: '/app/overview',
-  manager: '/app/overview',
-  accountant: '/app/overview',
+  hotel_admin: '/app',
+  manager: '/app',
+  accountant: '/app',
   receptionist: '/app',
   store_manager: '/store-manager',
   procurement_officer: '/app',
