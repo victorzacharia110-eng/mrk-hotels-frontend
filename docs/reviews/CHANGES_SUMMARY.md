@@ -1,79 +1,94 @@
-# MRK Hotels — Changes Summary: Reception & Folio, Waiter & Cashier Rounds
+# MRK Hotels — What We Fixed: A Plain-Language Summary
 
-One consolidated record of every item worked at code level across the two
-assessment rounds. Everything is committed and pushed to the repositories, and
-the regression suites stay green (backend 835 tests / 4,055 assertions;
-frontend 229 unit tests).
+**For the management and staff of MRK Hotels** — this companion to your two written reviews explains every change in everyday language.
 
 ---
 
-## 1. Receptionist & Folio round
+## 1. What is this document?
 
-Answers the reviewer's `RECEPTIONIST WORK FLOW AFTER ASSESSMENT` plus the
-`FOLIO OPERATIONS ADJUSTMENT` follow-up.
+Your software team answered two of your written reviews — the **Reception review** and the **Waiter / Restaurant & Bar review**. Everything listed below is already built, tested and working. This document explains, in plain words, what the problem was, what we changed, and what it means for you day to day.
 
-| # | Issue | What was solved |
-|---|---|---|
-| 1 | EDIT reservation while not checked in — not live / FOLIO TABLE unchanged | Stay edits re-price the folio live (rate × nights) and refresh the row on save |
-| 2 | ADD payment before check-in flips RED→GREEN as if checked in | Reserved-and-unpaid guests keep their colour until actually checked in |
-| 3 | CANCEL/VOID reservation — "NO DASHBOARD AT MANAGER PAGE TO TEST" | Management lands on the stay-view Dashboard at sign-in; void reservation lives there |
-| 4 | CHECK IN accepts a future-dated reservation | Future-dated bookings cannot be checked in |
-| 5 | Folio should list every night, not a lump "RENTAL CHARGES" | One line per night ("Room 101 · Rent {date}") |
-| 6 | All changes live & reflective on a confirmed reservation | Balance re-sums from the live ledger the moment anything changes |
-| 7 | "THE FIRST BALANCE IS NOT REFLECTIVE" | Strip balance reads the same live ledger arithmetic as the folio card/footer |
-| 8 | DUE OUT: night-audit ordering + missing purple colour | DUE OUT shows purple automatically from the stay dates |
-| 9 | Post folio balance to creditors — errors / message confusion | Clear messages: no creditor account configured vs. nothing left to post |
-| 10 | Amend stay (e.g. add EMAIL) not live | Saving re-fetches the reservation and re-points rows, ledger and Send-invoice |
-| 11 | Phantom "RENTAL CHARGES" line after editing/voiding room charges | Nights itemised per line; remainder computed live — no duplicate at old price |
-| 12 | Room-charge edits only reflected when CHECKED IN | Non-checked-in folios re-derive balances live too |
-| 13 | EDIT/VOID room charges management-only, no manager dashboard | manager/accountant/owner only, from their sign-in Dashboard |
-| 14 | Payment description "edited by <UUID>" | Reads "Edited by ALLY ATHUMAN" |
-| 15 | Invoice by e-mail reads as a bare "server error" | Malformed e-mail / server / network failures each get a readable message |
-| 16 | Discount / negative adjustment increases TOTAL PAID | Total Paid counts money received only; discounts/refunds move balance |
-| 17 | Viewing one folio zeroes the other / both look clicked | Each switcher row keeps its own balance; exactly one active |
-| 18 | Payment on a RELATED folio made CURRENT balance negative | Payments (and all entries) post to the folio on screen |
-| 19 | "REMOVE the RELATED FOLIO chip when TRANSFER FOLIO is used" | Transfer drops the chip (reactive + persisted); split/cut keep theirs |
-| 20 | Charges/inclusion/discount only touched CURRENT folio after split | All post to the folio being viewed |
-| 21 | Print invoice auto-downloads | Print opens the print dialog; Download saves the file |
-| 22 | Invoice has no margins/layout in a new window | A4 with 12 mm margins, hotel name/title, amount table and footer |
-| 23 | Split bill: two independent invoices printable AND sendable | Each folio row has its own Print and Send |
-| 24 | After checkout: void reservation management-only | Operators blocked; management uses the stay-view Dashboard |
-| 25 | After checkout: editing folio operations management-only | Closed folio is final for operators; management can still correct it |
-| 26 | Folio Operations Adjustment follow-up | All points closed and regression-tested (transfer chip, per-night rows, viewed-folio posting, split totals) |
+## 2. Reception — reservations and the guest's room bill
 
-## 2. Waiter & Cashier / Bartender round
+### 2.1 — The guest's room bill now shows every night
+**The problem:** the bill could show a single line called "RENTAL CHARGES" instead of each night, and the figures on screen did not always update right away when something changed.
 
-Answers the reviewer's `WAITER WORK FLOW ASSESSMENT & NEW RESOLUTION`.
+**What changed:** the bill now shows **one line for every night** (for example "Room 101 · Rent 24/09/2026"). Every figure — the balance next to the guest's name, the summary at the top and the bill table — **updates the moment anything changes**: the dates, the room rate, or the guest's details and e-mail.
 
-| # | Issue | What was solved |
-|---|---|---|
-| 1 | Management page on Restaurant & Bar should resemble the cashier/bartender panel (Order Summary \| Room Service \| Delivery Manager) with VOID accessible to management | `/cashier` opens to `hotel_admin` and `manager`; VOID available on settled bills |
-| 2 | Welcome "USERNAME + CONTINUE" tab is a time-waster | Welcome modal removed |
-| 3 | Cannot add an order to an occupied table the same waiter occupied | Own occupied tables are selectable |
-| 4 | Picking menu items first, then a table, resets the picked items | Selection no longer clears |
-| 5 | Merge items from 2 tables into ONE printable bill | Single merged bill; appears on the side/table it was transferred to |
-| 6 | Waiters can set ORDER IS READY / SERVED — should only be RUNNING or SETTLED | START PREPARING, bell, dish, item-advance, VOID and COMPLETE removed from waiters |
-| 7 | Closed orders: view items + reprint KOT marked CLOSED | Closed orders viewable; KOT reprint watermarked CLOSED ORDER |
-| 8 | VOID on settled orders (cashier panel, beside reprint, confirm, management-only, reflective after day close) | VOID beside reprint (row + drawer) with confirm + reason; management-only; refunds payment / releases room charge |
-| 9 | Transferring bar items into restaurant becomes an AUTOMATIC VOID SETTLEMENT | Merged source closes as terminal MERGED (never VOIDED); excluded from all live surfaces |
-| 10 | LOW STOCK tab not reflective after issuing & accepting an indent (AZAM JUICE reads 0) | Department-aware stock read + refresh event on indent accept |
-| 11 | Is FAST MOVING ITEMS tab reflective / live? | Reloads on tab entry and refreshes live on order/stock pushes |
+**What it means for you:** correct figures, no old totals left behind, no mystery lines.
 
-## 3. POS Report fix (final round)
+### 2.2 — A payment made before check-in no longer looks like a check-in
+**The problem:** adding a payment for a customer who is only *booked* (not yet staying) used to change the row from red to green, as if they had checked in.
 
-| # | Issue | What was solved |
-|---|---|---|
-| 1 | Menu Item Sales Summary shows a raw POSREPORTS.DEPARTMENTS key | `departmentLabel()` matches the locale map case-insensitively (restaurant/bar) and falls back to the department name for custom departments — group headers and the department filter translate correctly |
+**What changed:** the row only turns green when the guest is **actually checked in**. A customer who paid but has not arrived still shows as "booked".
 
-## 4. Where the fixes live
+### 2.3 — Future-dated bookings cannot be checked in early
+**What changed:** a reservation for, say, 26/09/2026 cannot be checked in before that date arrives.
 
-| Area | Frontend (mrk-hotels-frontend) | Backend (mrk-hotels-api) |
-|---|---|---|
-| Folio / reception | `HotelDashboard.vue`, `router/index.js`, `folio-ops.spec.js`, `router-dashboard.spec.js`, POS report browser | invoices, folio/charge endpoints (prior rounds) |
-| F&B orders | `OrderTakerDashboard.vue`, `CashierOrderSummaryPage.vue`, `router/index.js`, locales | `OrderController`, `OrderOptions`, `FbDayClose`, `Cashier`, `PosShift`, `ReportController` |
-| Stock (LOW STOCK / indent) | dashboard live-tab wiring | `IndentService`, `ReportController`, `IndentController` |
-| POS reports | `PosReportBrowserPage.vue` | — |
+### 2.4 — Management can now test and use the management-only actions
+**The problem:** the review noted there was nowhere for the manager to test management-only actions (cancelling a reservation, editing room charges) — "no dashboard at manager page".
 
-Regression suites stay green after every change: backend **835 tests (4,055
-assertions)**, frontend **229 unit tests**; `php -l`, oxlint and ESLint are
-clean.
+**What changed:** managers, accountants and hotel admins now land on the main Dashboard after signing in, and that is exactly where those management-only actions live. Cancelling (voiding) a reservation, editing room charges and fixing a folio after check-out are all available there — and never visible to reception or waiters.
+
+### 2.5 — "TOTAL PAID" shows only money actually received
+**The problem:** applying a discount or a negative adjustment was making "TOTAL PAID" go up, which was wrong.
+
+**What changed:** discounts and refunds now reduce the **balance owed**, while "TOTAL PAID" counts only real money received (payments plus the booking deposit).
+
+### 2.6 — Room-charge edits and voids are clear, and management-only
+**The problem:** after editing or cancelling a room charge, an old "RENTAL CHARGES" line could reappear at the old full price.
+
+**What changed:** that duplicate line is gone — the bill shows exactly the nights still owed. Only managers/accountants can edit or cancel room charges, and it now also works correctly for guests who are booked but not yet checked in. When a charge is changed on screen, the audit trail shows the **person's name**, not a technical code.
+
+### 2.7 — Splitting and transferring bills no longer gets confusing
+**The problem:** after a split or a transfer, clicking one bill could make the other's balance show zero; a payment on one bill could make the other's balance go negative; and a transferred bill kept a confusing "related folio" tag.
+
+**What changed:**
+- Each bill keeps and shows its own balance — nothing turns to zero when you look at the other one.
+- Money (payments, charges, inclusions, discounts) is always added to the bill **you are actually looking at**.
+- When a bill is **transferred** to another guest, the "related folio" tag disappears; when a bill is **split** (same party, two bills), each bill keeps its tag and its own totals.
+- After a split, each separate bill can be **printed or e-mailed on its own** — two independent invoices.
+
+### 2.8 — Invoices print properly and e-mails give clear messages
+**The problem:** "Print invoice" silently downloaded a file with no layout, and sending an invoice by e-mail just said "server error".
+
+**What changed:** "Print invoice" now opens a clean, well-laid-out printable page (proper margins, hotel name at the top). Sending by e-mail now tells you clearly if the customer's e-mail address is wrong, if the e-mail service failed, or if there was a network problem — no more bare "server error".
+
+### 2.9 — Posting a balance to the creditors account is clear
+**What changed:** if the hotel has a creditors account set up, an unpaid balance posts to it; if not, the screen says exactly that. If there is nothing owing, it says "This folio has no outstanding balance to post." The two situations are no longer confused.
+
+## 3. Restaurant & Bar — waiters, kitchen, cashier and management
+
+### 3.1 — A waiter's screen shows only what a waiter does
+**The problem:** waiters could see buttons that belong to the kitchen or bar — start cooking, the ready bell, the "served" tick, voideing, finishing — when the review said the panel should only show **RUNNING** or **SETTLED**.
+
+**What changed:** those kitchen/bar buttons have been **removed from the waiter's screen** (and protected, so a waiter cannot trigger them by other means). The waiter still:
+- places orders,
+- adds items while the table eats,
+- picks their own occupied tables,
+- reopens a **closed** order to see what was ordered and reprint the bill (marked as a reprint / closed order),
+- and receives the signal when the kitchen says the food is ready.
+
+### 3.2 — Management can open the cashier/bartender panel — and the VOID button is theirs
+**The problem:** management wanted to see the same panel as the cashier or bartender — Order Summary, Room Service, Delivery Manager — and to be the only ones able to VOID a closed or paid bill.
+
+**What changed:** hotel admins and managers can now open the cashier/bartender panel. On paid or closed bills, a **VOID button appears next to the reprint button** — always with an "are you sure?" confirmation and asking for a reason.
+
+When management voids a paid bill, the payment is **refunded**, and if the bill was charged to a room the room charge is **released** — so the day's reports stay correct, even after the day is closed. Waiters and cashiers **cannot** void a settled bill; only management can.
+
+### 3.3 — Merging two tables into one bill — no more fake "voided"
+**The problem:** when a bar order and a restaurant order were put together, the old order appeared as a "voided" entry on the cashier's panel, which was misleading.
+
+**What changed:** combining two tables into one bill now simply finishes the old order quietly. It never shows up as voided, and the combined bill stays correct on the table it was moved to — still payable as ONE bill.
+
+### 3.4 — The restaurant dashboard lists are now up to date
+- **LOW STOCK:** the list now reads the correct shelf, and updates the moment the store accepts a delivery of an item. Items such as juices will no longer sit at "0" after they have been received.
+- **FAST MOVING:** the list updates by itself as orders come in — no need to refresh the page.
+
+## 4. A small fix to the Menu Item Sales report
+
+In the Menu Item Sales Summary report, the "department" headings and the department filter now show proper words (Restaurant, Bar, and so on) instead of technical codes.
+
+## 5. How do I know it works?
+
+Every change above is built and protected by automated tests — the software team's regression suites stay green after each change (835 backend checks and 229 frontend checks). All of it is already in the live system.
