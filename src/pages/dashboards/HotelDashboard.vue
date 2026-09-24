@@ -514,6 +514,10 @@
                         </tr>
                       </tfoot>
                     </table>
+                    <p v-if="folioEntries.length" class="sv-folio-hint">
+                      <i class="fas fa-circle-info" aria-hidden="true"></i>
+                      {{ $t('folio.minusHint') }}
+                    </p>
                   </div>
                 </template>
 
@@ -7948,6 +7952,22 @@ onUnmounted(() => clearInterval(refreshTimer))
 /* Overpaid folios: the balance figure reads negative per Folio Operations. */
 .sv-balance-negative {
   color: #b91c1c !important;
+}
+
+/* Folio Operations hint: explains the '−' on credit rows and a negative balance. */
+.sv-folio-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 8px 2px 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.sv-folio-hint i {
+  margin-top: 2px;
+  color: #005EB8;
 }
 
 /* Ledger actions column: download / void / remove, always inline and quiet. */

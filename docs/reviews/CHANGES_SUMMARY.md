@@ -57,6 +57,13 @@ Your software team answered two of your written reviews — the **Reception revi
 ### 2.9 — Posting a balance to the creditors account is clear
 **What changed:** if the hotel has a creditors account set up, an unpaid balance posts to it; if not, the screen says exactly that. If there is nothing owing, it says "This folio has no outstanding balance to post." The two situations are no longer confused.
 
+### 2.10 — What the "−" sign in the bill means
+**What changed:** inside the Folio Operations section on the guest's bill, a small note now explains the "−" sign, so no one has to guess:
+- a "−" before an amount means **money received** (a payment, discount or refund);
+- a "−" on the **balance** means the guest has **paid more than their charges** — the difference is a credit on the bill.
+
+This makes the figures on the bill clear for reception, management and the guest alike.
+
 ## 3. Restaurant & Bar — waiters, kitchen, cashier and management
 
 ### 3.1 — A waiter's screen shows only what a waiter does

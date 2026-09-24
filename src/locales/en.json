@@ -5294,6 +5294,7 @@
     "no": "FOLIO NO. / CODE",
     "roomCharges": "Room charges",
     "balance": "Balance due",
+    "minusHint": "The '−' before an amount means money received (payment, discount or refund). When the balance shows '−', the guest has paid more than their charges — the difference is a credit on this bill.",
     "payment": "Payment",
     "order": "Order",
     "laundry": "Laundry",

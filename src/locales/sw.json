@@ -5260,6 +5260,7 @@
   "folio": {
     "auditTrail": "Rekodi ya miamala",
     "balance": "Salio linalodaiwa",
+    "minusHint": "Alama '−' mbele ya kiasi inamaanisha pesa zilizopokelewa (malipo, punguzo au marejesho). Balance inapoonyesha '−', mgeni amelipa zaidi ya kiasi cha bili — tofauti ni salio kwenye bili hii.",
     "empty": "Hakuna michango kwenye folio bado.",
     "laundry": "Dobi",
     "order": "Agizo",
