@@ -130,4 +130,14 @@ describe('receipt line widths', () => {
     const text = lines.map((l) => l[0]).join('\n')
     expect(text).not.toContain('REPRINTED')
   })
+
+  it('reprint of a CLOSED order KOT is watermarked CLOSED ORDER', () => {
+    const lines = kitchenTicketLines(order, { reprinted: true, closed: true })
+    const text = lines.map((l) => l[0]).join('\n')
+    expect(text).toContain('CLOSED ORDER')
+    // the closed-order stamp must sit under the header like the plain reprint
+    const headerIdx = text.indexOf('KITCHEN ORDER TICKET')
+    const stampIdx = text.indexOf('CLOSED ORDER')
+    expect(stampIdx).toBeGreaterThan(headerIdx)
+  })
 })

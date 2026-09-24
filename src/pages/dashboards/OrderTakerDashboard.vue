@@ -729,23 +729,58 @@
                   <th>{{ $t('orderTaker.summaryStatus') }}</th>
                   <th>{{ $t('waiterPanel.settlementMode') }}</th>
                   <th class="col-amount">{{ $t('orderTaker.summaryAmount') }}</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="order in summaryPageRows" :key="order.order_id">
-                  <td><strong>{{ order.order_number }}</strong></td>
-                  <td>{{ formatOrderDateTime(order.created_at || order.order_date) }}</td>
-                  <td>{{ order.waiter_name || '—' }}</td>
-                  <td>{{ orderTypeLabel(order) }}</td>
-                  <td><span class="badge" :class="statusBadge(order.status)">{{ statusLabel(order.status) }}</span></td>
-                  <td>
-                    <span v-if="order.settlement_mode" class="settle-tag">
-                      <i class="fas fa-wallet" aria-hidden="true"></i> {{ settlementLabel(order) }}
-                    </span>
-                    <span v-else>—</span>
-                  </td>
-                  <td class="col-amount"><strong>TZS {{ money(order.total_amount) }}</strong></td>
-                </tr>
+                <template v-for="order in summaryPageRows" :key="order.order_id">
+                  <tr>
+                    <td><strong>{{ order.order_number }}</strong></td>
+                    <td>{{ formatOrderDateTime(order.created_at || order.order_date) }}</td>
+                    <td>{{ order.waiter_name || '—' }}</td>
+                    <td>{{ orderTypeLabel(order) }}</td>
+                    <td><span class="badge" :class="statusBadge(order.status)">{{ statusLabel(order.status) }}</span></td>
+                    <td>
+                      <span v-if="order.settlement_mode" class="settle-tag">
+                        <i class="fas fa-wallet" aria-hidden="true"></i> {{ settlementLabel(order) }}
+                      </span>
+                      <span v-else>—</span>
+                    </td>
+                    <td class="col-amount"><strong>TZS {{ money(order.total_amount) }}</strong></td>
+                    <td class="summ-actions">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-secondary"
+                        :aria-expanded="summaryOpenId === order.order_id"
+                        @click="toggleSummaryItems(order)"
+                      >
+                        <i class="fas" :class="summaryOpenId === order.order_id ? 'fa-chevron-up' : 'fa-chevron-down'" aria-hidden="true"></i>
+                        {{ $t('orderTaker.summaryViewItems') }}
+                      </button>
+                      <button
+                        v-if="['completed', 'cancelled'].includes(order.status) && !isPosRole"
+                        type="button"
+                        class="btn btn-sm btn-secondary"
+                        @click="reprintClosedKot(order)"
+                      >
+                        <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('orderTaker.summaryReprintKot') }}
+                      </button>
+                    </td>
+                  </tr>
+                  <tr v-if="summaryOpenId === order.order_id" class="summary-items-row">
+                    <td colspan="8">
+                      <ul class="summary-items">
+                        <li v-for="item in order.items || []" :key="item.order_item_id">
+                          <span class="item-line-text">
+                            {{ item.quantity }}× {{ item.item_name }}<template v-if="item.accompaniment"> · {{ item.accompaniment }}</template>
+                          </span>
+                          <span class="summary-item-amount">TZS {{ money(item.subtotal ?? Number(item.unit_price || 0) * Number(item.quantity || 1)) }}</span>
+                        </li>
+                        <li v-if="!(order.items || []).length" class="cat-empty">{{ $t('orderTaker.summaryNoItems') }}</li>
+                      </ul>
+                    </td>
+                  </tr>
+                </template>
               </tbody>
             </table>
             <PaginationBar :page="summaryPage" :last-page="summaryLastPage" @change="summaryPage = $event" />
@@ -1359,7 +1394,9 @@ async function advanceItem(order, item) {
 // Reprint from the board: kitchen ticket (KOT) or guest receipt, exactly like
 // the cashier's settle screen. A ticket lacking items fetches the full order.
 // Every board KOT is a reprint by definition — the kitchen saw it when the
-// order was sent — so the paper carries the REPRINTED watermark.
+// order was sent — so the paper carries the REPRINTED watermark. A CLOSED
+// order's KOT additionally stamps CLOSED ORDER so the kitchen never treats it
+// as live work (review "reprint of a closed order, labelled as closed").
 async function printTicket(order, kind) {
   if (!(order.items || []).length) {
     try {
@@ -1370,7 +1407,8 @@ async function printTicket(order, kind) {
     }
   }
   const hotel = authStore.user?.tenant?.hotel_name || 'MRK Hotels'
-  const opts = kind === 'kot' ? { hotel, reprinted: true } : { hotel }
+  const closed = ['completed', 'cancelled'].includes(order.status)
+  const opts = kind === 'kot' ? { hotel, reprinted: true, closed } : { hotel }
   const sent = await printStore.print(displayLines(order, kind, opts))
   if (!sent) toast(t('orderTaker.noPrinter'), 'error')
 }
@@ -1504,6 +1542,33 @@ watch([summarySearch, summaryStatus, summarySort], () => {
 function switchToSummary() {
   activeTab.value = 'summary'
   loadOrderSummary()
+}
+
+// Closed-order drill-down (review "can the waiter see the menu items of a
+// closed order?"): expanding a row reveals its item lines. A ticket closing
+// with no item payload falls back to the full order fetch so the list is
+// still answerable.
+const summaryOpenId = ref(null)
+async function toggleSummaryItems(order) {
+  if (summaryOpenId.value === order.order_id) {
+    summaryOpenId.value = null
+    return
+  }
+  if (!(order.items || []).length) {
+    try {
+      const { data } = await orderApi.show(order.order_id)
+      order.items = data.order?.items || []
+    } catch {
+      /* keep whatever items are known */
+    }
+  }
+  summaryOpenId.value = order.order_id
+}
+
+/** Reprints the KOT of an already-closed order — the paper is watermarked
+ *  CLOSED ORDER so the kitchen never mistakes it for live work. */
+async function reprintClosedKot(order) {
+  await printTicket(order, 'kot')
 }
 
 /* ---------------- Bar/cashier dashboard (date + department) ---------------- */
@@ -3748,6 +3813,29 @@ function onKey(e) {
 }
 .summary-link:hover { background: #e4e4e7; }
 .summary-table th, .summary-table td { padding: 10px 12px; }
+.summary-actions {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+.summary-actions .btn { height: 32px; }
+.summary-items-row td { background: #f7f7f8; }
+.summary-items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.summary-items li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  color: #27272a;
+}
+.summary-item-amount { font-weight: 600; white-space: nowrap; }
+.summary-items .cat-empty { color: #71717a; font-style: italic; }
 .summary-tools {
   display: flex;
   gap: 8px;

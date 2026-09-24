@@ -359,21 +359,32 @@ on the side the orders were transferred TO; the originals are removed from the s
 > Can waiter see the menu items of a closed order? Waiter should be able to view closed order consists
 > of which menu items.
 
-**Solution** (`IMPLEMENTATION`): allow read-only viewing of a closed order's item list so a waiter can
-answer "what was on that ticket".
+**Solution** (`DONE ✓`): the **Order Summary** tab lists every one of the waiter's tickets for the day
+(including settled/closed ones; the backend eager-loads `items`). Each row now has a **View items**
+toggle that expands the item lines (qty × name + accompaniment + line amount). A ticket that arrives
+without an item payload falls back to `GET /orders/{id}` to fetch them, so "what was on that ticket"
+is always answerable.
 
 ### 2.4.2 — Does the table free when the order is settled?
 > When an order is settled does the table become free?
 
-**Solution** (`IMPLEMENTATION`): the table must be released exactly when the order reaches **Settled**
-(payment), not on any earlier status; release is bound to settlement.
+**Solution** (`DONE ✓`): the table is released exactly when the last open ticket on it is settled —
+`OrderController::pay()` flips the order to **completed** then calls `freeTableIfCleared()`, which only
+frees when no remaining order on the table is outside `['completed', 'cancelled']`. The void and
+bill-to-room paths trigger the same release. Covered by
+`test_table_auto_occupies_on_order_and_frees_when_settled` (auto-occupies on order, stays occupied
+while a second ticket runs, frees on final settle, frees on void, reserves/out-of-service never
+auto-flipped).
 
 ### 2.4.3 — Reprint a closed order's KOT (labelled as closed)
 > Can waiter reprint KOT of a closed order? Waiter should be able to reprint closed order but should
 > be able to indicate that it's a closed order.
 
-**Solution** (`IMPLEMENTATION`): allow reprint of a closed order's KOT only with a **CLOSED ORDER —
-REPRINT** watermark at the top.
+**Solution** (`DONE ✓`): a closed order (completed/cancelled) in the **Order Summary** tab carries a
+**Reprint KOT** action. The reprint goes through the shared reprint path with a **CLOSED ORDER —
+REPRINT** watermark stamped under the ticket header (distinct from the plain `REPRINTED` stamp used
+for open tickets), so the kitchen never mistakes it for live work. The cashier's summary reprint uses
+the same closed watermark. Covered by a receipts unit test for the closed watermark placement.
 
 ### 2.4.4 — VOID of a closed order is management-only
 > Can a closed order be voided? THE MANAGEMENT should be able to VOID closed order but the VOID option
@@ -417,5 +428,5 @@ order/item, so the fastest-moving list updates in real time instead of on a stal
 | Waiter — core | 2 | 2 | 0 | 0 |
 | Waiter — new order tables | 4 | 2 | 2 | 0 |
 | Waiter — open orders | 6 | 5 | 0 | 1 |
-| Waiter — closed orders | 4 | 1 | 3 | 0 |
+| Waiter — closed orders | 4 | 4 | 0 | 0 |
 | Waiter — dashboard | 2 | 0 | 2 | 0 |

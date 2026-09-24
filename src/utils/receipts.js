@@ -137,9 +137,12 @@ export function kitchenTicketLines(order, opts = {}) {
 
   // A reprint must never be mistaken for the original ticket: stamp the
   // watermark across the top of the paper, right after the header, so even a
-  // quick scan shows this KOT already went to the kitchen before.
+  // quick scan shows this KOT already went to the kitchen before. Reprinting
+  // a CLOSED order additionally says so — the kitchen must not treat a closed
+  // ticket as live work.
   if (opts.reprinted) {
-    lines.splice(1, 0, [padLine('*** REPRINTED ***', 'center', WIDTH), true, 2])
+    const mark = opts.closed ? '*** CLOSED ORDER — REPRINT ***' : '*** REPRINTED ***'
+    lines.splice(1, 0, [padLine(mark, 'center', WIDTH), true, 2])
   }
 
   for (const item of order.items || []) {
