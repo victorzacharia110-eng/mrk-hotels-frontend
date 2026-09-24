@@ -18,19 +18,26 @@ Each problem is quoted from the PDF, followed by its solution and an honest stat
 > details to change check in or check out. **CURRENTLY the changes are not live** meaning they are
 > not reflective when changes are saved the TAB remains unchanged.
 
-**Solution** (`IMPLEMENTATION`): the save already reaches the backend, but the tab keeps the old
-stale state. After a successful save the component must reload the reservation from the server
-(`GET reservation/{id}`) and rebind the tab. Save ⏺ refresh must be one atomic operation.
+**Solution** (`DONE`): edits are live. The stay-dashboard Amend Stay / Room Move works for
+pending, confirmed and in-house stays and every save runs through `runStayAction`, which
+reloads the folio and — critically — re-points the modal at the freshly fetched row instead of
+staying bound to the stale bar (`HotelDashboard.vue`: after `load(true)` it re-selects the row by
+`reservation_id` and rebinds `activeBar`). The backend `update` accepts pending/confirmed/checked_in
+edits, so a reserved guest's details or dates can be corrected before check-in. Covered end-to-end by
+`e2e/hotel-folio-workflow.spec.js` A1 "amend stay edits are reflected live" (reopening the modal reads
+back the edited date) and backend `ReservationInHouseEditTest`.
 
 ### Problem 1.1.2 — Pre-check-in payment wrongly turns the row green
 > USER can ADD payment of a customer that is not yet checked in but only reserved … **CURRENTLY when
 > the USER ADDS payment the color changes from RED TO GREEN as if the customer has been checked in
 > while not. UNLESS the customer is CHECKED IN the color should not change.**
 
-**Solution** (`IMPLEMENTATION`): the row colour is bound to *has payment* instead of *check-in state*.
-Colour must be driven by `checked_in_at`/reservation status only. Adding a reservation deposit must
-**not** change the colour; it only appears as a folio payment. Requires the API to expose check-in
-state separate from payment presence.
+**Solution** (`DONE`): the row colour is bound to check-in state, never to payment. The stay tape
+colours from `status` (`toPanelBar`: `checked_in` → green, else red/blue per lifecycle); a reserved
+guest that has paid in full stays RED — only an actual check-in turns the bar green
+(`HotelDashboard.vue`, comment "A reserved guest that has paid in full must NOT flip green"). The
+reservation list badge likewise derives from `statusBadge(r.status)`, so adding a deposit never
+recolours the row; it only appears as a folio payment.
 
 ### Problem 1.1.3 — Cancel booking vs. VOID after check-in
 > USER can CANCEL BOOKING of a reserved guest and data is completely erased but when CHECKED IN only
@@ -89,9 +96,10 @@ same item set.
 > User should not be able to EDIT CHECK IN of the guest once is checked in either to previous date
 > (which should be impossible once night audit is done) or to future date.
 
-**Solution** (`IMPLEMENTATION`): lock the check-in date after check-in; reject edits that cross a
-completed night audit (past) or a future date. Use **Amend Stay** for legitimate changes and require
-management override.
+**Solution** (`DONE`): the check-in date is immutable once the guest is in-house — the API rejects any
+edit that pushes arrival to an earlier or later date (`ReservationController::update` →
+"The check-in date of an in-house guest cannot be changed.") and the stay ledger is recomputed from
+the booked nights. Covered by `test_checked_in_check_in_date_is_immutable`.
 
 ### 1.2.5 — Add payment to a checked-in guest
 **Solution** (`DONE ✓`): supported; payment appears as a positive folio line and reduces the balance.
@@ -177,31 +185,39 @@ charge/inclusion/discount lands on the folio the user is actually looking at.
 > When user CLICKS PRINT INVOICE why does it automatically download the invoice instead of
 > redirecting to PRINT PAGE?
 
-**Solution** (`IMPLEMENTATION`): switch from a raw blob download to the print pipeline
-(`printStore`) that opens the print dialog/layout like KOT printouts, instead of forcing a direct
-file download.
+**Solution** (`DONE`): the stay-view **Print invoice** action no longer downloads a blob — it opens the
+professional print document (folio header, room charges / total paid / refund / net balance table,
+"printed by" footer) in a new window that auto-fires the print dialog, the same clean sheet the ledger
+reports use (`HotelDashboard.vue` `printInvoiceBreakdown`). The labelled **Download/Invoice** buttons
+in the reservation detail and payment list still save the backend PDF — that is intentional and
+separate from printing.
 
 ### 1.3.5 — Invoice has no margins/layout
 > Why does INVOICE not have MARGINS and LAYOUT?
 
-**Solution** (`IMPLEMENTATION`): apply the same print CSS (margins, page layout, headers/footers)
-used by the other receivable printouts so the invoice renders as a properly paginated A4 print.
+**Solution** (`DONE`): the invoice/folio print document carries the full print stylesheet — `@page
+A4 portrait; margin: 12mm`, centered hotel name, title, meta row, bordered right-aligned number
+table, and footer — so it renders as a properly paginated, margined A4 print like every other
+receivable printout.
 
 ### 1.3.6 — New folio for a current guest changes the ROOM NUMBER in the FOLIO NAME CODE
 > Why does creating new folio for current guest changes room number … the name of the guest remains
 > the same but the room number changes?
 
-**Solution** (`IMPLEMENTATION`): the FOLIO NAME CODE is built from the *currently selected* room
-instead of the guest's assigned room. Build the code from the guest's stable room/`created_by`,
-so an additional folio keeps the same room in its code.
+**Solution** (`DONE`): the FOLIO NAME CODE keeps the guest's assigned room. Opening an additional
+folio for a current guest (`POST …/folio/open-new-folio`) inherits the stay's `room_id` — the
+frontend sends no room, and `createSplitFolio` copies the source room — so the new folio reads the
+same `guest_name · room` as the original. Locked by `test_open_new_folio_keeps_the_guests_assigned_room`.
 
 ### 1.3.7 — After a split, can 2 independent invoices be printed / sent?
 > If bill is split can user print 2 independent invoices since there are 2 folios? … can user send 2
 > independent invoices since there are 2 folios?
 
-**Solution** (`IMPLEMENTATION`): yes — a split yields two folios, each with its own payable balance
-and its own invoice. Make the invoice/email action iterate the folios so each prints/sends its agreed
-portion independently.
+**Solution** (`DONE`): yes — after a split/cut the folio switcher lists each folio row with its own
+**print** (fetches that folio's payload and opens its invoice breakdown) and **send** actions
+(`HotelDashboard.vue` `openInvoicePreview`/`sendFolioInvoice` on the row's `reservation_id`), so the
+receptionist prints or e-mails 2 independent invoices, each carrying its own folio code, balance and
+invoice.
 
 ---
 
@@ -394,9 +410,9 @@ order/item, so the fastest-moving list updates in real time instead of on a stal
 
 | Area | Items | DONE ✓ | IMPLEMENTATION | CONFIRM |
 |---|---|---|---|---|
-| Receptionist — reservation | 6 | 1 | 5 | 0 |
-| Receptionist — checked-in questions | 10 | 2 | 8 | 0 |
-| Receptionist — transfer/split | 7 | 3 | 4 | 0 |
+| Receptionist — reservation | 6 | 3 | 3 | 0 |
+| Receptionist — checked-in questions | 10 | 3 | 7 | 0 |
+| Receptionist — transfer/split | 7 | 7 | 0 | 0 |
 | Receptionist — check out | 2 | 1 | 1 | 0 |
 | Waiter — core | 2 | 2 | 0 | 0 |
 | Waiter — new order tables | 4 | 2 | 2 | 0 |
