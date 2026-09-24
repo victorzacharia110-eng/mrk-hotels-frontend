@@ -130,7 +130,7 @@
               <span>{{ $t('posReports.department') }}</span>
               <select v-model="filterValues.department" class="rb-input rb-select">
                 <option value="">{{ $t('posReports.all') }}</option>
-                <option v-for="d in departmentOptions" :key="d" :value="d">{{ $t(`posReports.departments.${d}`) }}</option>
+                <option v-for="d in departmentOptions" :key="d" :value="d">{{ departmentLabel(d) }}</option>
               </select>
             </label>
             <label class="posr-field">
@@ -304,7 +304,7 @@
                     <tr class="rb-group-head">
                       <td :colspan="engine.columns.length">
                         <i class="fas fa-utensils" aria-hidden="true"></i>
-                        {{ $t(`posReports.departments.${group.name}`) }}
+                        {{ departmentLabel(group.name) }}
                       </td>
                     </tr>
                     <tr v-for="(row, i) in group.items" :key="gi + '-' + i">
@@ -778,6 +778,11 @@ const usesDepartmentFilter = computed(
   () => MENU_ITEM_REPORTS.has(activeReport.value) && (Array.isArray(engine.value?.filters?.departments) ? engine.value.filters.departments.length > 0 : false),
 )
 const departmentOptions = computed(() => engine.value?.filters?.departments || [])
+function departmentLabel(name) {
+  const key = String(name || '').toLowerCase()
+  if (te(`posReports.departments.${key}`)) return t(`posReports.departments.${key}`)
+  return name || '—'
+}
 
 /** The menu-item reports render one table block per department, with a SUB
  *  TOTAL footer under each block and the engine GRAND TOTAL under all of them.
