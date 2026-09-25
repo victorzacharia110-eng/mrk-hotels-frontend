@@ -775,8 +775,8 @@ async function loadOptions() {
 }
 
 /** Sets the page number and reloads the task list. */
-function goPage(page) {
-  page.value = page
+function goPage(p) {
+  page.value = p
   load()
 }
 

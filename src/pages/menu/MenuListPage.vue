@@ -573,8 +573,8 @@ function loadAllMenuItems() {
 }
 
 /** Moves to the given page and reloads. */
-function goPage(page) {
-  page.value = page
+function goPage(p) {
+  page.value = p
   load()
 }
 

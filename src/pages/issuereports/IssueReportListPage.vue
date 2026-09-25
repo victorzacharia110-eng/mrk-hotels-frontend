@@ -545,8 +545,8 @@ async function loadUsers() {
 }
 
 /** Sets the page number and reloads the report list. */
-function goPage(page) {
-  page.value = page
+function goPage(p) {
+  page.value = p
   load()
 }
 

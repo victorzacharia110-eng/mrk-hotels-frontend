@@ -56,7 +56,7 @@
         :class="{ active: activeTab === tab.key }"
         @click="switchTab(tab.key)"
       >
-        <i :class="tab.icon"></i> {{ tab.label }}
+        <i :class="tab.icon"></i> {{ $t(tab.label) }}
       </button>
     </div>
 
@@ -555,10 +555,10 @@ function loadAllRooms() {
 
 /**
  * Moves to the given page and reloads the list.
- * @param {number} page - The 1-based page number.
+ * @param {number} p - The 1-based page number.
  */
-function goPage(page) {
-  page.value = page
+function goPage(p) {
+  page.value = p
   load()
 }
 

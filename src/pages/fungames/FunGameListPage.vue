@@ -406,8 +406,8 @@ async function loadUsers() {
 }
 
 /** Sets the page number and reloads the order list. */
-function goPage(page) {
-  page.value = page
+function goPage(p) {
+  page.value = p
   load()
 }
 
