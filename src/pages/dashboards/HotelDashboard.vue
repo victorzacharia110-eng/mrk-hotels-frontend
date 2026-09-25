@@ -398,11 +398,11 @@
                 <div class="sv-panel-cards">
                   <div class="sv-panel-card">
                     <span>{{ $t('stayview.totalRoomCharges') }}</span>
-                    <strong>TZS {{ fmtNum(ledgerHeader.total, 2) }}</strong>
+                    <strong>TZS {{ fmtNum(folioTotals.charges, 2) }}</strong>
                   </div>
                   <div class="sv-panel-card">
                     <span>{{ $t('stayview.totalPaid') }}</span>
-                    <strong>TZS {{ fmtNum(ledgerHeader.paid, 2) }}</strong>
+                    <strong>TZS {{ fmtNum(folioTotals.paid, 2) }}</strong>
                   </div>
                   <div class="sv-panel-card" :class="activeBar.paymentPending ? 'pay-pending' : 'pay-ok'">
                     <span>{{ $t('stayview.balance') }}</span>
@@ -2766,6 +2766,11 @@ async function loadFolio(id) {
  */
 const viewingFolio = ref(null)
 
+/** Real (charges − credits) ledger balances of related folios once drawn, so
+ *  their switcher rows never read a stale backend balance_due — e.g. a split
+ *  target the header formulas score at 0.00 although its ledger has a balance. */
+const relatedBalanceCache = ref({})
+
 /** Folio id of the row being shown: the toggled foreign folio, else the stay's own. */
 const activeFolioId = computed(() => viewingFolio.value?.reservation?.reservation_id || activeBar.value?.id || null)
 
@@ -2917,7 +2922,10 @@ function rememberCreatedFolio(donorId, row) {
 /** The ledger shown in the Folio tab: the stay's own folio unless toggled. */
 const ledgerFolio = computed(() => viewingFolio.value || folio.value)
 
-/** Header data for the Folio tab, reflecting whichever folio is displayed. */
+/** Header identity data for the Folio tab, reflecting whichever folio is
+ *  displayed. The charge/paid figures live in the ledger totals, not here —
+ *  the backend's header fields (total_amount/room_charges/advance_payment) go
+ *  stale after splits and creditor postings, so the panel cards read the ledger. */
 const ledgerHeader = computed(() => {
   const src = viewingFolio.value || folio.value || null
   const f = src?.folio || null
@@ -2927,8 +2935,6 @@ const ledgerHeader = computed(() => {
     code: f?.folio_code || res?.folio_code || activeBar.value?.folio_code || '—',
     guest: res?.guest_name || res?.label || '',
     room: res?.room?.room_number || activeBar.value?.roomNumber || '',
-    total: Number(f?.total_amount ?? 0) + Number(f?.room_charges ?? 0),
-    paid: Number(res?.advance_payment ?? activeBar.value?.advance ?? 0),
     balance: folioCardBalance(src, activeBar.value),
   }
 })
@@ -2952,7 +2958,11 @@ function folioCardBalance(src, bar) {
  * viewed. The current-folio row (the bar) carries no `balance_due` itself, so
  * its figure must come from the loaded stay folio — otherwise opening a
  * related folio would blank the current one to TZS 0.00 exactly as the review
- * reported. Related rows keep the balance the backend returned for them.
+ * reported. Related rows prefer the folio's OWN ledger balance once it is (or
+ * has been) loaded: the backend header `balance_due` on a split/cut target
+ * reads 0 (its formula counts the post-split room_charges), while the real
+ * ledger can be, say, 180,000. Only never-viewed related rows fall back to the
+ * backend figure.
  */
 function folioRowBalance(r) {
   if (r === activeBar.value || r?.reservation_id === activeBar.value?.id) {
@@ -2963,7 +2973,22 @@ function folioRowBalance(r) {
     const b = t.charges - t.credits
     return Number.isFinite(b) ? b : 0
   }
-  const b = Number(r?.balance_due ?? r?.balance)
+  const id = r?.reservation_id
+  // While the related bill is OPEN its row reads the live viewed ledger, so a
+  // payment or creditor posting made on it is reflected immediately.
+  const viewing = viewingFolio.value
+  if (viewing?.reservation?.reservation_id === id) {
+    const t = totalsForEntries(folioEntries.value)
+    const b = Math.round((t.charges - t.credits) * 100) / 100
+    if (Number.isFinite(b)) {
+      relatedBalanceCache.value[id] = b
+      return b
+    }
+  }
+  // Nothing is ever 0 because of a stale backend header: keep the last real
+  // ledger figure once this folio has been opened.
+  const cached = relatedBalanceCache.value[id]
+  const b = cached ?? Number(r?.balance_due ?? r?.balance)
   return Number.isFinite(b) ? b : 0
 }
 
@@ -3002,6 +3027,9 @@ async function switchFolio(item) {
   try {
     const res = await reservationApi.folio(id)
     viewingFolio.value = res.data
+    const loaded = totalsForEntries(buildLedgerEntries(res.data))
+    const bal = Math.round((loaded.charges - loaded.credits) * 100) / 100
+    if (Number.isFinite(bal)) relatedBalanceCache.value[id] = bal
   } catch (err) {
     actionError.value = apiErrorMsg(err, t('stayview.actionError'))
   } finally {
@@ -3352,13 +3380,20 @@ function buildLedgerEntries(src) {
       user: e.user || '—',
       amount: Math.abs(amount),
       credit: amount <= 0 && e.type !== 'inclusion',
+      // An operator-side posting to a company A/R account (creditors) is money
+      // the stay no longer owes: it clears the balance like a payment (the
+      // backend already removed the amount from room_charges) and must surface
+      // under TOTAL PAID so a creditor-settled bill reads as paid. Only *_out
+      // rows that actually moved money to ANOTHER folio are donor book-keeping
+      // and stay balance-neutral.
+      kind: e.type === 'creditors_out' ? 'creditors' : undefined,
       // Inclusions read on the ledger at their display value but never count
       // towards the balance (the backend keeps them out of room_charges too).
       // A donor transfer/split/cut provenance row (*_out) is pure book-keeping
       // — the moved money already left room_charges, so treating it as a
       // credit here would deduct the same amount twice. It still renders in
       // the ledger, just never moves the charges−credits total.
-      balanceNeutral: e.type === 'inclusion' || e.type.endsWith('_out'),
+      balanceNeutral: e.type === 'inclusion' || (e.type.endsWith('_out') && e.type !== 'creditors_out'),
       muted: e.type === 'attachment' || amount === 0,
       refund: isRefund,
       entryId: e.folio_entry_id,
@@ -3455,8 +3490,10 @@ const folioEntries = computed(() => buildLedgerEntries(ledgerFolio.value))
 // Column totals for the folio ledger: charges that move the balance up and
 // credits (payments, discounts, adjustments) that move it down. `paid` is a
 // smaller, narrower figure: only money actually RECEIVED (recorded payments +
-// the booking deposit), so the "Total Paid" column can never be inflated by a
-// discount, a negative adjustment, an early-departure refund or an inclusion.
+// the booking deposit) plus folio amounts settled via a creditor posting —
+// the client expressly wants a bill posted to creditors to read as PAID — so
+// the "Total Paid" column can never be inflated by a discount, a negative
+// adjustment, an early-departure refund or an inclusion.
 function totalsForEntries(entries) {
   let charges = 0
   let credits = 0
@@ -3468,7 +3505,7 @@ function totalsForEntries(entries) {
     if (e.balanceNeutral) continue
     if (e.credit) credits += e.amount
     else charges += e.amount
-    if (e.kind === 'payment' || e.kind === 'deposit') paid += e.amount
+    if (e.kind === 'payment' || e.kind === 'deposit' || e.kind === 'creditors') paid += e.amount
   }
   return { charges, credits, paid }
 }

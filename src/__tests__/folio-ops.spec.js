@@ -457,6 +457,84 @@ describe('folio operations on the stay view', () => {
     expect(wrapper.vm.balanceDisplay.text).toBe(wrapper.vm.ledgerBalance.text)
   })
 
+  it('counts a creditor posting as PAID and clears the balance it covers', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    // Posting to creditors decrements the backend's room_charges and journals a
+    // negative creditors_out row; the client requires the bill to read as paid.
+    payload.folio_entries = [
+      ...payload.folio_entries,
+      { folio_entry_id: 9, type: 'creditors_out', amount: -50000, date: '2026-11-02', description: 'Invoiced to Crestline Ltd' },
+    ]
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    // It is a real credit, NOT a donor provenance row (balance-neutral).
+    const entry = wrapper.vm.folioEntries.find((e) => e.type === 'creditors_out')
+    expect(entry).toBeTruthy()
+    expect(entry.credit).toBe(true)
+    expect(entry.balanceNeutral).toBe(false)
+    expect(entry.particular).toBe('Creditors')
+    // The balance drops by the posted amount and the amount lands in Total Paid.
+    expect(wrapper.vm.folioTotals.credits).toBe(280000)
+    expect(wrapper.vm.folioTotals.paid).toBe(200000)
+    expect(wrapper.vm.folioTotals.charges - wrapper.vm.folioTotals.credits).toBe(170000)
+    // The cards tell the same story as the ledger footer (they read the ledger,
+    // not the backend header fields that never move on a creditor posting).
+    const cards = [...document.querySelectorAll('.sv-panel-card')]
+    const chargesCard = cards.find((c) => c.textContent.includes('Total Room Charges'))
+    const paidCard = cards.find((c) => c.textContent.includes('Total Paid'))
+    const balanceCard = cards.find((c) => c.textContent.includes('Balance'))
+    expect(chargesCard.textContent).toContain('450,000')
+    expect(paidCard.textContent).toContain('200,000')
+    expect(paidCard.textContent).not.toContain('150,000')
+    expect(balanceCard.textContent).toContain('170,000')
+  })
+
+  it('keeps donor transfer-outs balance-neutral alongside a creditor posting', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    payload.folio_entries = [
+      ...payload.folio_entries,
+      { folio_entry_id: 8, type: 'transfer_out', amount: -30000, date: '2026-11-02', description: 'Moved to F-502', source_reservation_id: 502 },
+    ]
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    // Only the creditor posting moves the ledger; a donor *_out row stays
+    // pure book-keeping (its money already left room_charges).
+    expect(wrapper.vm.folioEntries.find((e) => e.type === 'transfer_out').balanceNeutral).toBe(true)
+    expect(wrapper.vm.folioTotals.charges - wrapper.vm.folioTotals.credits).toBe(220000)
+    expect(wrapper.vm.folioTotals.paid).toBe(150000)
+  })
+
+  it('shows a related switcher row its real ledger balance instead of a 0 balance_due', async () => {
+    await mountDashboard()
+    // The backend header balance_due on a split/cut target reads 0 while its
+    // ledger carries a real balance — the row must prefer the ledger once the
+    // bill is (or has been) open.
+    const row = wrapper.vm.folio.related_folios[0]
+    expect(wrapper.vm.folioRowBalance(row)).toBe(0)
+    const relatedPayload = folioPayload()
+    relatedPayload.reservation = { ...relatedPayload.reservation, reservation_id: 502, guest_name: 'Lot 2' }
+    relatedPayload.folio = { folio_code: 'F-502', total_amount: 180000, room_charges: 180000, advance_payment: 0, paid_amount: 0 }
+    relatedPayload.folio_entries = [
+      { folio_entry_id: 1, type: 'room_charge', amount: 180000, date: '2026-11-01', description: 'Room & taxes' },
+    ]
+    relatedPayload.payments = []
+    wrapper.vm.viewingFolio = relatedPayload
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    // While open the row reads the live viewed ledger, not the header's 0.
+    expect(wrapper.vm.folioRowBalance(row)).toBe(180000)
+    // After returning to the current folio it keeps the real figure (cached).
+    wrapper.vm.viewingFolio = null
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.folioRowBalance(row)).toBe(180000)
+    expect(wrapper.vm.folioRowBalanceText(row)).toContain('180,000')
+  })
+
   it('opens the invoice breakdown preview for the open folio and prints it', async () => {
     await mountDashboard()
     await wrapper.vm.openInvoicePreview(activeBar)

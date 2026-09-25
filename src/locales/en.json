@@ -5317,6 +5317,7 @@
     "roomPosting": "Room Posting",
     "extraCharges": "Extra Charges",
     "appliedPayment": "Payment Received",
+    "creditorsOut": "Creditors",
     "totalCharges": "Total charges",
     "totalPaid": "Total paid",
     "nightsCount": "{nights} night(s)",
