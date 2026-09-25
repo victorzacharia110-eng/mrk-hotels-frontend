@@ -5115,12 +5115,16 @@ async function wireLogoAccent() {
       // Settings endpoint unreachable/None-widget — carry on with no accent.
     }
     if (!url) return
+    // The public asset host caches objects without the bucket's CORS headers;
+    // a fixed query param keys a fresh CDN entry that DOES carry them, so the
+    // crossOrigin read succeeds regardless of the stale cache's TTL.
+    const probeUrl = url + (url.includes('?') ? '&' : '?') + 'cors=1'
     const img = await new Promise((resolve) => {
       const i = new Image()
       i.crossOrigin = 'anonymous'
       i.onload = () => resolve(i)
       i.onerror = () => resolve(null)
-      i.src = url
+      i.src = probeUrl
     })
     if (!img) return
     const c = document.createElement('canvas')
