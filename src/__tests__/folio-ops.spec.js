@@ -446,6 +446,34 @@ describe('folio operations on the stay view', () => {
     expect(html).toContain('Amina Hassan')
     expect(html).toMatch(/refund/i)
   })
+
+  it('prints the full branded invoice with the company name and ledger particulars', async () => {
+    await mountDashboard()
+    // Hotel identity comes from the signed-in tenant.
+    const auth = wrapper.vm.authStore
+    auth.user = {
+      user_role: 'receptionist',
+      full_name: 'Receptionist Vanessa',
+      tenant: { hotel_name: 'Azure Bay Resort', city: 'Bagamoyo', country: 'Tanzania', phone: '+255 700 000 000', email: 'info@azurebay.tz', vrn: 'TIN-123456' },
+    }
+    wrapper.vm.folio = {
+      ...folioPayload(),
+      reservation: { ...folioPayload().reservation, check_in_date: '2026-11-01', check_out_date: '2026-11-04' },
+    }
+    await wrapper.vm.openInvoicePreview(activeBar)
+    wrapper.vm.printInvoiceBreakdown()
+    const html = window.open.mock.results[0].value.document.write.mock.calls[0][0]
+    expect(html).toContain('Azure Bay Resort')
+    expect(html).toContain('Bagamoyo, Tanzania')
+    expect(html).toContain('+255 700 000 000')
+    expect(html).toContain('062a52') // brand navy band/header
+    expect(html).toContain('005eb8') // brand accent & balance figure
+    expect(html).toContain('Room 101')
+    expect(html).toContain('Room &amp; taxes') // a ledger particular with description
+    expect(html).toContain('Check in') // dated particulars block
+    expect(html).toContain('Check out')
+    expect(html).toContain('Balance') // totals row labelled like Folio Operations
+  })
 })
 
 describe('post-to-creditors gating on the stay view', () => {
@@ -637,5 +665,84 @@ describe('created folio appears and is searchable on the split page', () => {
     wrapper.vm.folioMoveMode = 'newfolio'
     await wrapper.vm.createNewFolioTarget()
     expect([...wrapper.vm.transferredAway(501)]).toEqual([])
+  })
+})
+
+describe('transfer/split math per the reception adjustments', () => {
+  it('deducts a transferred amount ONCE from the sender balance, never twice', async () => {
+    await mountDashboard()
+    // Sender before the move: rent 300,000 + parking 5,000 = 305,000.
+    let payload = folioPayload()
+    payload.payments = []
+    payload.reservation = { ...payload.reservation, advance_payment: 0 }
+    payload.folio = { ...payload.folio, advance_payment: 0 }
+    payload.folio_entries = [
+      { folio_entry_id: 1, type: 'room_charge', amount: 300000, date: '2026-11-01', description: 'Room & taxes' },
+      { folio_entry_id: 2, type: 'extra_charge', amount: 5000, date: '2026-11-02', description: 'Parking fees' },
+    ]
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    const before = wrapper.vm.folioTotals.charges - wrapper.vm.folioTotals.credits
+
+    // After: parking (5,000) moved away — only rent remains on the donor plus
+    // its book-keeping provenance row (split_out −5,000).
+    payload = { ...payload, related_folios: [], folio_entries: [
+      { folio_entry_id: 1, type: 'room_charge', amount: 300000, date: '2026-11-01', description: 'Room & taxes' },
+      { folio_entry_id: 3, type: 'split_out', amount: -5000, date: '2026-11-02', description: 'Moved to EMMANUEL MALLYA' },
+    ] }
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.folioTotals.charges).toBe(300000)
+    expect(wrapper.vm.folioTotals.credits).toBe(0)
+    // The balance fell by exactly the moved 5,000 (305,000 → 300,000).
+    expect(wrapper.vm.folioTotals.charges - wrapper.vm.folioTotals.credits).toBe(before - 5000)
+  })
+
+  it('a split/new folio never inventories room rent — only the moved item shows', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    payload.reservation = {
+      ...folioPayload().reservation,
+      reservation_id: 999,
+      total_amount: 0,
+      check_in_date: '2026-11-01',
+      check_out_date: '2026-11-04',
+      room: { room_number: '101', price_per_night: 100000 },
+    }
+    payload.related_folios = []
+    payload.payments = []
+    payload.folio_entries = [
+      { folio_entry_id: 1, type: 'room_charge', amount: 50000, date: '2026-11-02', description: 'ROOM POSTING' },
+    ]
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    // The shared room's 100,000/night must not fabricate rent on this folio:
+    // its own bill is zero, so only the split item (50,000) appears.
+    expect(wrapper.vm.folioEntries.some((e) => e.rental)).toBe(false)
+    expect(wrapper.vm.folioTotals.charges).toBe(50000)
+  })
+
+  it('does not re-invent a rent night that was split away from the donor', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    payload.reservation = {
+      ...folioPayload().reservation,
+      total_amount: 300000,
+      check_in_date: '2026-11-01',
+      check_out_date: '2026-11-04',
+      room: { room_number: '101', price_per_night: 100000 },
+    }
+    payload.related_folios = []
+    payload.payments = []
+    payload.folio_entries = [
+      { folio_entry_id: 1, type: 'room_charge', amount: 250000, date: '2026-11-01', description: 'Room & taxes' },
+      { folio_entry_id: 2, type: 'split_out', amount: -50000, date: '2026-11-02', description: 'Moved to new folio' },
+    ]
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    // The night moved onto the new folio must not be synthesised back here as
+    // a fresh rent line (that was the "room charges reappear" glitch).
+    expect(wrapper.vm.folioEntries.filter((e) => e.rental)).toHaveLength(0)
+    expect(wrapper.vm.folioTotals.charges).toBe(250000)
   })
 })

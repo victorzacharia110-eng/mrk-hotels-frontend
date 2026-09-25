@@ -64,6 +64,27 @@ Your software team answered two of your written reviews — the **Reception revi
 
 This makes the figures on the bill clear for reception, management and the guest alike.
 
+### 2.11 — A transferred item is deducted from the sender's bill only once
+**The problem:** moving an item from one guest's bill to another (for example TZS 5,000 of parking fees) deducted twice the amount from the first bill — the sender's balance dropped by TZS 10,000 instead of TZS 5,000.
+
+**What changed:** the "moved to …" line that stays on the original bill is only for the record. It still shows on screen (so you can see where the money went), but it is no longer counted as a separate credit. The sender's balance now falls by exactly the amount moved, and the receiver's bill rises by exactly that amount.
+
+### 2.12 — After a split, each bill shows only its own items
+**The problem:** after splitting a bill, the new (second) bill showed the full room rental on top of the single item that was actually moved onto it, as if the room had been booked twice.
+
+**What changed:** the new bill carries only the items moved onto it. The shared room rate is no longer invented on the second bill, and the original bill does not recreate the night that was moved away. Each bill now prints exactly what it is owed.
+
+### 2.13 — The printed invoice looks like a proper company bill again
+**The problem:** the invoice printed from the bill had almost no layout — just a couple of lines of plain text with no company name, no colours, no dates and no line-by-line details.
+
+**What changed:** "Print invoice" now produces a full, properly laid-out company invoice:
+- the **hotel's name, address, phone, e-mail and tax/VAT numbers** at the top (and the logo, if one is set);
+- the brand colours (navy band and blue accent);
+- the guest's **particulars: folio number, guest name, room, check-in and check-out dates, and the time it was printed**;
+- every **line from Folio Operations** — date, particular, description and amount (payments and refunds shown as minus), exactly as the bill on screen;
+- totals at the bottom in the same words as the bill: **TOTAL CHARGES, TOTAL PAID, and BALANCE**;
+- clean margins on A4 paper, matching the other printed documents.
+
 ## 3. Restaurant & Bar — waiters, kitchen, cashier and management
 
 ### 3.1 — A waiter's screen shows only what a waiter does
@@ -98,4 +119,4 @@ In the Menu Item Sales Summary report, the "department" headings and the departm
 
 ## 5. How do I know it works?
 
-Every change above is built and protected by automated tests — the software team's regression suites stay green after each change (835 backend checks and 229 frontend checks). All of it is already in the live system.
+Every change above is built and protected by automated tests — the software team's regression suites stay green after each change (835 backend checks and 233 frontend checks). All of it is already in the live system.

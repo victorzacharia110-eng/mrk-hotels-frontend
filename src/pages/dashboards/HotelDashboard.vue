@@ -3160,6 +3160,12 @@ const nightTotal = computed(() => chargeNights.value.reduce((s, n) => s + n.rate
  */
 function buildRentalRows(res) {
   if (!res) return []
+  // A folio that carries no bill of its own (a split/new folio created with a
+  // zero total, or a nothing-owed stay) must never conjure the nightly rent:
+  // it shares the room with the original stay, so the room's price would
+  // otherwise fabricate charges the guest never owes on this folio. Only the
+  // items actually moved onto it make up its bill.
+  if (!(Number(res.total_amount || 0) > 0)) return []
   const round2 = (v) => Math.round((Number(v) + Number.EPSILON) * 100) / 100
   const cIn = res.check_in_date || res.arrival_date || res.arrivalIso
   const cOut = res.check_out_date || res.departure_date || res.departureIso
@@ -3186,7 +3192,14 @@ function buildRentalRows(res) {
 
 /** Sums the rental already sitting in the persisted folio entries. */
 function rentalSum(entries) {
-  return (entries || []).reduce((s, e) => s + (e.type === 'room_charge' ? Number(e.amount || 0) : 0), 0)
+  return (entries || []).reduce((s, e) => {
+    if (e.type === 'room_charge') s += Number(e.amount || 0)
+    // Donor provenance rows (*_out) are book-keeping for money that already
+    // left this folio — counting the moved amount keeps the generator from
+    // re-synthesising the very rent night that was transferred/split away.
+    else if ((e.type || '').endsWith('_out')) s += Math.abs(Number(e.amount || 0))
+    return s
+  }, 0)
 }
 
 /**
@@ -3333,7 +3346,11 @@ const folioEntries = computed(() => {
       credit: amount <= 0 && e.type !== 'inclusion',
       // Inclusions read on the ledger at their display value but never count
       // towards the balance (the backend keeps them out of room_charges too).
-      balanceNeutral: e.type === 'inclusion',
+      // A donor transfer/split/cut provenance row (*_out) is pure book-keeping
+      // — the moved money already left room_charges, so treating it as a
+      // credit here would deduct the same amount twice. It still renders in
+      // the ledger, just never moves the charges−credits total.
+      balanceNeutral: e.type === 'inclusion' || e.type.endsWith('_out'),
       muted: e.type === 'attachment' || amount === 0,
       refund: isRefund,
       entryId: e.folio_entry_id,
@@ -4611,6 +4628,80 @@ async function openInvoicePreview(r) {
  * Prints the folio invoice breakdown (room charges / advance / early-departure
  * refund when present / net balance) for the folio currently previewed.
  */
+/**
+ * The ledger lines for the printed invoice, mirroring the Folio Operations
+ * table the front desk sees (DATE | PARTICULAR | DESCRIPTION | AMOUNT): the
+ * nightly rent (synthesised only for the nights the backend has not posted),
+ * room-billed orders and laundry, every persisted folio entry, payments and
+ * the leftover advance/deposit credit. Rows carry a raw sort key so the bill
+ * prints in the same posted_at order as the on-screen operations table.
+ */
+function buildInvoiceLines(f) {
+  const res = f?.reservation || {}
+  const fol = f?.folio || {}
+  const lines = []
+  const push = (raw, particular, description, amount) => {
+    const value = Number(amount ?? 0)
+    lines.push({
+      raw,
+      date: formatDateDMY(raw || ''),
+      particular,
+      description: String(description || ''),
+      amount: value,
+      credit: value < 0,
+      muted: value === 0,
+    })
+  }
+
+  // Rent: one line per unposted night, exactly like the stay-view ledger.
+  const rentalRows = buildRentalRows(res)
+  const rentalTotal = rentalRows.reduce((s, r) => s + Number(r.amount || 0), 0)
+  const rentalNet = Math.round((rentalTotal - rentalSum(f.folio_entries || [])) * 100) / 100
+  if (rentalNet > 0.004) {
+    const round2 = (v) => Math.round((Number(v) + Number.EPSILON) * 100) / 100
+    const magnitudes = rentalRows.length > 1 ? rentalRows : [{ date: null, amount: rentalNet }]
+    const scale = rentalTotal > 0 ? rentalNet / rentalTotal : 0
+    let remaining = rentalNet
+    magnitudes.forEach((n, i) => {
+      const amount = i === magnitudes.length - 1 ? round2(remaining) : round2(n.amount * scale)
+      remaining -= amount
+      push(n.date, t('folio.roomCharge'), n.date ? t('stayview.rentNight', { date: n.date }) : t('folio.rentalCharges'), amount)
+    })
+  }
+
+  for (const o of f?.orders || []) {
+    if (o.payment_status !== 'billed_to_room') continue
+    push(o.posted_at || o.date, t('folio.roomPosting'), o.reference || o.order_number || t('folio.order'), o.total_amount ?? o.total ?? 0)
+  }
+  for (const l of f?.laundry || []) {
+    if (l.payment_status !== 'billed_to_room') continue
+    push(l.posted_at || l.date, t('folio.laundry'), l.order_number || t('folio.laundry'), l.total_charge ?? l.total_amount ?? l.total ?? 0)
+  }
+  for (const e of f?.folio_entries || []) {
+    if (e.type === 'attachment') continue
+    const amount = Number(e.amount ?? 0)
+    push(e.posted_at || e.date, isFolioRefundEntry(e.type) ? t('stayview.refundLine') : folioEntryLabel(e.type), e.description || '', amount)
+  }
+  const advancePaid = Number(fol.advance_payment ?? res.advance_payment ?? 0)
+  let paymentsShown = 0
+  for (const p of f?.payments || []) {
+    const amount = Number(p.amount ?? 0)
+    paymentsShown += amount
+    push(p.posted_at || p.date, t('folio.payment'), paymentMethodLabel(p.payment_method), -amount)
+  }
+  const deposit = Math.round((advancePaid - paymentsShown) * 100) / 100
+  if (deposit > 0) {
+    push(fol.advance_payment_date || res.advance_payment_date || res.check_in_date, t('folio.payment'), t('stayview.advancePaid'), -deposit)
+  }
+  const legacy = Number(fol.legacy_extra_charges ?? fol.extra_charges ?? 0)
+  if (legacy > 0) {
+    push(fol.room_charges_date, t('folio.extraCharges'), t('folio.manualCharge'), legacy)
+  }
+
+  const iso = (raw) => (raw ? raw.replace(/^(\d{2})\/(\d{2})\/(\d{4})$/, '$3-$2-$1') : '')
+  return lines.sort((a, b) => String(iso(a.raw) || a.raw).localeCompare(String(iso(b.raw) || b.raw)))
+}
+
 function printInvoiceBreakdown() {
   const f = invoicePreviewFolio.value
   const b = invoiceBreakdown.value
@@ -4618,39 +4709,104 @@ function printInvoiceBreakdown() {
   const now = new Date()
   const stamp = `${isoKey(now)} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
   const header = invoicePreviewHeader.value
-  const head = `
-    <div class="rpt-hotel">${esc(hotelName.value)}</div>
-    <div class="rpt-title">${esc(t('stayview.printInvoiceBreakdownTitle'))}</div>
-    <div class="rpt-meta">
-      ${esc(t('folio.no'))}: ${esc(header.code)}; ${esc(t('stayview.guestName'))}: ${esc(header.guest)}${header.room ? '; ' + esc(t('stayview.room')) + ': ' + esc(header.room) : ''}
-    </div>`
-  const rows = [
-    `<tr><td>${esc(t('stayview.totalRoomCharges'))}</td><td class="num">TZS ${esc(fmtNum(b.roomCharges, 2))}</td></tr>`,
-    `<tr><td>${esc(t('stayview.totalPaid'))}</td><td class="num">TZS ${esc(fmtNum(b.paid, 2))}</td></tr>`,
-  ]
-  if (b.refund > 0) {
-    rows.push(`<tr><td>${esc(t('stayview.refundLine'))}</td><td class="num">TZS ${esc(fmtNum(-b.refund, 2))}</td></tr>`)
+  const tenant = authStore.user?.tenant || {}
+  const res = f?.reservation || {}
+  const company = {
+    name: hotelName.value,
+    line: [tenant.city, tenant.country].filter(Boolean).join(', '),
+    contacts: [tenant.phone, tenant.email].filter(Boolean).join(' · '),
+    tax: [tenant.vrn, tenant.tin].filter(Boolean).join(' · '),
   }
-  rows.push(`<tr><td>${esc(t('stayview.balance'))}</td><td class="num">TZS ${esc(fmtNum(b.net, 2))}</td></tr>`)
+  const logoTag = hotelLogo.value ? `<img src="${esc(hotelLogo.value)}" alt="" />` : ''
+  const particulars = [
+    `<b>${esc(t('folio.no'))}</b><span>${esc(header.code)}</span>`,
+    `<b>${esc(t('stayview.guestName'))}</b><span>${esc(header.guest)}${header.room ? ' · Room ' + esc(header.room) : ''}</span>`,
+    `<b>${esc(t('stayview.issuedAt'))}</b><span>${esc(formatDateDMY(now))} ${esc(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</span>`,
+  ]
+  const checkIn = formatDateDMY(res.check_in_date || res.arrival_date)
+  const checkOut = formatDateDMY(res.check_out_date || res.departure_date)
+  if (checkIn) particulars.push(`<b>${esc(t('stayview.checkIn'))}</b><span>${esc(checkIn)}</span>`)
+  if (checkOut) particulars.push(`<b>${esc(t('stayview.checkOut'))}</b><span>${esc(checkOut)}</span>`)
+
+  const rows = buildInvoiceLines(f)
+    .map(
+      (r) => `<tr class="${r.muted ? 'muted' : ''}">
+        <td>${esc(r.date || '—')}</td>
+        <td>${esc(r.particular)}</td>
+        <td>${esc(r.description)}</td>
+        <td class="num ${r.credit ? 'credit' : ''}">${r.muted ? '—' : (r.credit ? '− ' : '') + 'TZS ' + esc(fmtNum(Math.abs(r.amount), 2))}</td>
+      </tr>`,
+    )
+    .join('')
+
+  const summary = []
+  summary.push(`<tr class="tot"><td colspan="3">${esc(t('stayview.totalRoomCharges'))}</td><td class="num">TZS ${esc(fmtNum(b.roomCharges, 2))}</td></tr>`)
+  summary.push(`<tr><td colspan="3">${esc(t('stayview.totalPaid'))}</td><td class="num">TZS ${esc(fmtNum(b.paid, 2))}</td></tr>`)
+  if (b.refund > 0) {
+    summary.push(`<tr><td colspan="3">${esc(t('stayview.refundLine'))}</td><td class="num credit">− TZS ${esc(fmtNum(b.refund, 2))}</td></tr>`)
+  }
+  const stillOwing = b.net > 0
+  summary.push(`<tr class="balance"><td colspan="3">${esc(t('stayview.balance'))}</td><td class="num big">${stillOwing ? '' : '− '}TZS ${esc(fmtNum(Math.abs(b.net), 2))}</td></tr>`)
+
   const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${esc(t('stayview.printInvoiceBreakdownTitle'))}</title>
+<html><head><meta charset="utf-8"><title>${esc(t('stayview.printInvoiceBreakdownTitle'))} · ${esc(header.code)}</title>
 <style>
   @page { size: A4 portrait; margin: 12mm; }
-  body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111; margin: 0; }
-  .rpt-hotel { text-align: center; font-size: 16px; font-weight: 700; }
-  .rpt-title { text-align: center; font-size: 13px; font-weight: 700; margin-top: 2px; }
-  .rpt-meta { text-align: center; font-size: 10px; color: #444; margin: 4px 0 10px; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { border: 1px solid #999; padding: 3px 6px; text-align: left; }
-  td.num, th.num { text-align: right; }
-  .rpt-foot { margin-top: 12px; font-size: 10px; color: #444; }
+  body { font-family: Arial, Helvetica, sans-serif; margin: 0; color: #111; font-size: 12px; line-height: 1.5; }
+  .band { height: 8px; background: #062a52; }
+  .accent { height: 3px; background: #005eb8; }
+  .h { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 16px 0 12px; border-bottom: 3px double #062a52; }
+  .h-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .h-left img { max-height: 54px; max-width: 180px; object-fit: contain; }
+  .h-text .hotel { font-size: 11px; font-weight: 800; letter-spacing: 1px; color: #005eb8; text-transform: uppercase; }
+  .h-text h1 { margin: 2px 0 0; font-size: 20px; font-weight: 800; color: #062a52; }
+  .co { margin-top: 6px; font-size: 10.5px; color: #475569; }
+  .co .tax { color: #64748b; }
+  .meta { display: grid; grid-template-columns: auto auto; gap: 3px 18px; font-size: 12px; text-align: right; }
+  .meta b { color: #475569; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; }
+  .meta span { font-weight: 700; }
+  .guest { font-size: 15px; font-weight: 700; margin: 12px 0 10px; color: #062a52; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  thead th { background: #062a52; color: #fff; font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; padding: 9px 10px; text-align: left; border: 1px solid #062a52; }
+  th.num { text-align: right; }
+  td { padding: 8px 10px; border: 1px solid #dbe4ef; vertical-align: top; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.credit { color: #b91c1c; }
+  tr.muted td { color: #94a3b8; }
+  tbody tr:nth-child(even) td { background: #f8fafc; }
+  .summary tr td { background: #f1f5f9; font-weight: 700; border-top: 1px solid #cbd5e1; }
+  .summary .balance td { background: #eef4ff; border-top: 2px solid #062a52; font-weight: 800; }
+  .summary .balance td.big { font-size: 15px; color: #005eb8; }
+  .issued { margin-top: 22px; font-size: 11px; color: #94a3b8; }
+  .foot { margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 10px; color: #94a3b8; letter-spacing: .4px; }
 </style></head><body>
-${head}
-<table>
-  <tbody>${rows.join('')}</tbody>
-</table>
-<div class="rpt-foot">${esc(t('stayview.printedBy'))} : ${esc(printedBy.value)} at ${esc(stamp)}</div>
- <script>window.onload = function () { window.print() }</${'script'}>
+  <div class="band"></div>
+  <div class="accent"></div>
+  <div class="h">
+    <div class="h-left">
+      ${logoTag || `<div class="h-text"><div class="hotel">${esc(company.name)}</div></div>`}
+      <div class="h-text">
+        <div class="hotel">${logoTag ? esc(company.name) : ''}</div>
+        <h1>${esc(t('stayview.printInvoiceBreakdownTitle'))}</h1>
+        ${company.line ? `<div class="co">${esc(company.line)}</div>` : ''}
+        ${company.contacts ? `<div class="co">${esc(company.contacts)}</div>` : ''}
+        ${company.tax ? `<div class="co tax">${esc(company.tax)}</div>` : ''}
+      </div>
+    </div>
+    <div class="meta">${particulars.join('')}</div>
+  </div>
+  <table>
+    <thead>
+      <tr><th>${esc(t('folio.date'))}</th><th>${esc(t('folio.particular'))}</th><th>${esc(t('common.description'))}</th><th class="num">${esc(t('folio.amount'))}</th></tr>
+    </thead>
+    <tbody>${rows}</tbody>
+    <tfoot class="summary">
+      ${summary.join('')}
+    </tfoot>
+  </table>
+  <p class="issued">${esc(t('stayview.printEntryInvoiceNote', { date: formatDateDMY(now) }))}</p>
+  <div class="foot">${esc(company.name)} · ${esc(t('stayview.printedBy'))}: ${esc(printedBy.value)} · ${esc(stamp)}</div>
+  <script>window.onload = function () { window.print() }</${'script'}>
  </body></html>`
   const win = window.open('', '_blank')
   if (!win) return
