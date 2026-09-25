@@ -53,7 +53,8 @@
         v-for="tab in tabs"
         :key="tab.key"
         class="tab"
-        :class="{ active: activeTab === tab.key }"
+        :class="[`tab-${tab.tone}`, { active: activeTab === tab.key }]"
+        :aria-pressed="activeTab === tab.key"
         @click="switchTab(tab.key)"
       >
         <i :class="tab.icon"></i> {{ $t(tab.label) }}
@@ -741,9 +742,9 @@ function flattenError(err) {
 // The list table above stays the INVENTORY tab; the other two panels read/write
 // the same API surface exposed by reservations/rates/stop-sell endpoints.
 const tabs = [
-  { key: 'inventory', label: 'rooms.tabInventory', icon: 'fas fa-bed' },
-  { key: 'rates', label: 'rooms.tabRates', icon: 'fas fa-tags' },
-  { key: 'stop-sell', label: 'rooms.tabStopSell', icon: 'fas fa-ban' },
+  { key: 'inventory', label: 'rooms.tabInventory', icon: 'fas fa-bed', tone: 'brand' },
+  { key: 'rates', label: 'rooms.tabRates', icon: 'fas fa-tags', tone: 'success' },
+  { key: 'stop-sell', label: 'rooms.tabStopSell', icon: 'fas fa-ban', tone: 'danger' },
 ]
 const activeTab = ref('inventory')
 
@@ -807,7 +808,7 @@ const placeStopSell = async () => {
   try {
     await roomApi.storeStopSell({
       room_type: stopForm.room_type,
-      stop_date: stopForm.stop_date,
+      dates: [stopForm.stop_date],
     })
     stopForm.stop_date = ''
     success.value = t('rooms.stopSellPlaced')
@@ -845,6 +846,67 @@ onMounted(() => {
 <style scoped>
 .dashboard-page {
   padding: 32px 20px;
+}
+
+/* Tab bar: spaced pills; the active tab is tinted by its role
+   (brand = inventory, success = rates, danger = stop-sell). */
+.tab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px;
+  margin-bottom: 20px;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: 1px solid #eee;
+  border-radius: 999px;
+  background: #f0f2f5;
+  color: #757575;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.tab:hover {
+  background: #e4e8ec;
+  color: #333;
+}
+
+.tab i {
+  font-size: 13px;
+}
+
+.tab.active {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.tab-brand.active {
+  background: #005eb8;
+  border-color: #005eb8;
+  color: #fff;
+}
+
+.tab-success.active {
+  background: #1e8449;
+  border-color: #1e8449;
+  color: #fff;
+}
+
+.tab-danger.active {
+  background: #c0392b;
+  border-color: #c0392b;
+  color: #fff;
 }
 
 .page-head {
