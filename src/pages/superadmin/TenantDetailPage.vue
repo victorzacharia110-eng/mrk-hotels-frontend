@@ -201,8 +201,25 @@
         </button>
       </form>
 
-      <div class="branding-section">
-        <h3 class="accounts-title">{{ $t('superadmin.signatureStamp') }}</h3>
+<div class="branding-section">
+          <h3 class="accounts-title">{{ $t('superadmin.hotelLogo') }}</h3>
+          <p class="muted">{{ $t('superadmin.hotelLogoHint') }}</p>
+          <div class="branding-grid">
+            <div class="branding-field">
+              <label>{{ $t('superadmin.hotelLogo') }}</label>
+              <div v-if="tenant.logo_url" class="branding-preview">
+                <img :src="tenant.logo_url" :alt="$t('superadmin.hotelLogo')" />
+                <button type="button" class="btn-link" @click="removeBranding('logo')">
+                  {{ $t('superadmin.removeImage') }}
+                </button>
+              </div>
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" @change="onBrandingFile($event, 'logo')" />
+            </div>
+          </div>
+        </div>
+
+        <div class="branding-section">
+          <h3 class="accounts-title">{{ $t('superadmin.signatureStamp') }}</h3>
         <p class="muted">{{ $t('superadmin.signatureStampHint') }}</p>
         <div class="branding-grid">
           <div class="branding-field">
@@ -226,7 +243,7 @@
             <input type="file" accept="image/png,image/jpeg" @change="onBrandingFile($event, 'stamp')" />
           </div>
         </div>
-        <button class="btn" :disabled="savingBranding || (!brandingFiles.signature && !brandingFiles.stamp)" @click="saveBranding">
+        <button class="btn" :disabled="savingBranding || (!brandingFiles.logo && !brandingFiles.signature && !brandingFiles.stamp)" @click="saveBranding">
           {{ savingBranding ? $t('common.saving') : $t('superadmin.uploadBranding') }}
         </button>
       </div>
@@ -359,7 +376,7 @@ const codeForm = ref({ registration_code: '' })
 const codeSaving = ref(false)
 const contactForm = ref({ hotel_name: '', contact_person: '', email: '', phone: '', address: '', city: '', country: '' })
 const savingContact = ref(false)
-const brandingFiles = ref({ signature: null, stamp: null })
+const brandingFiles = ref({ logo: null, signature: null, stamp: null })
 const owners = ref([])
 const ownerForm = ref({ owner_id: '' })
 const newOwner = ref({ full_name: '', email: '' })
@@ -665,7 +682,8 @@ async function downloadBackup() {
 }
 
 /**
- * Stores the selected image file ('signature' or 'stamp') for the branding upload.
+ * Stores the selected image file ('logo', 'signature' or 'stamp') for the
+ * branding upload.
  * @param {Event} event - The file input change event.
  * @param {string} key - Which branding asset the input belongs to.
  */
@@ -673,18 +691,20 @@ function onBrandingFile(event, key) {
   brandingFiles.value[key] = event.target.files?.[0] || null
 }
 
-/** Uploads the signature/stamp images and updates their URLs on the tenant. */
+/** Uploads the logo/signature/stamp images and updates their URLs on the tenant. */
 async function saveBranding() {
   savingBranding.value = true
   error.value = ''
   try {
     const fd = new FormData()
+    if (brandingFiles.value.logo) fd.append('logo', brandingFiles.value.logo)
     if (brandingFiles.value.signature) fd.append('signature', brandingFiles.value.signature)
     if (brandingFiles.value.stamp) fd.append('stamp', brandingFiles.value.stamp)
     const res = await tenantApi.uploadBranding(route.params.id, fd)
+    tenant.value.logo_url = res.data.tenant?.logo_url ?? tenant.value.logo_url
     tenant.value.signature_url = res.data.tenant?.signature_url ?? null
     tenant.value.stamp_url = res.data.tenant?.stamp_url ?? null
-    brandingFiles.value = { signature: null, stamp: null }
+    brandingFiles.value = { logo: null, signature: null, stamp: null }
     window.alert(res.data.message || t('superadmin.brandingSaved'))
   } catch (err) {
     error.value = err.response?.data?.message || t('superadmin.brandingSaveError')
@@ -695,7 +715,7 @@ async function saveBranding() {
 
 /**
  * Removes one of the branding assets by telling the API to clear its image.
- * @param {string} asset - The asset to remove ('signature' or 'stamp').
+ * @param {string} asset - The asset to remove ('logo', 'signature' or 'stamp').
  */
 async function removeBranding(asset) {
   savingBranding.value = true
@@ -704,6 +724,7 @@ async function removeBranding(asset) {
     const fd = new FormData()
     fd.append(`remove_${asset}`, '1')
     const res = await tenantApi.uploadBranding(route.params.id, fd)
+    tenant.value.logo_url = res.data.tenant?.logo_url ?? null
     tenant.value.signature_url = res.data.tenant?.signature_url ?? null
     tenant.value.stamp_url = res.data.tenant?.stamp_url ?? null
   } catch (err) {

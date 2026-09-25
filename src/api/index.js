@@ -2633,12 +2633,12 @@ export const tenantApi = {
     return api.post(`${v1}/tenants/${id}/subscription`, data)
   },
   /**
-   * Uploads the tenant's invoice branding.
+   * Uploads the tenant's brand assets (logo, invoice signature/stamp images).
    * @param {string|number} id - Tenant identifier.
    * @param {FormData} formData - Multipart body with image files / remove flags.
    * @returns {Promise} Axios response with the updated tenant.
    */
-  // Multipart: signature/stamp image files, or remove_signature/remove_stamp flags.
+  // Multipart: logo/signature/stamp image files, or remove_logo/remove_signature/remove_stamp flags.
   uploadBranding(id, formData) {
     return api.post(`${v1}/tenants/${id}/branding`, formData)
   },
