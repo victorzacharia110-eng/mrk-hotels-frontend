@@ -238,6 +238,34 @@ describe('folio operations on the stay view', () => {
     expect(strip.value).not.toContain('999,999')
   })
 
+  it('keeps the current folio balance in the switcher fixed when a related folio is opened', async () => {
+    await mountDashboard()
+    // A misleading backend balance_due is exactly what made the current folio's
+    // row flip when a related bill was opened: the row followed the live ledger
+    // (220,000) while viewing the current bill but the stale balance_due
+    // (999,999) once another bill took over the panel.
+    wrapper.vm.folio.balance_due = 999999
+    await wrapper.vm.$nextTick()
+    const r = wrapper.vm.activeBar
+    const before = wrapper.vm.folioRowBalance(r)
+    expect(before).toBe(220000)
+    const relatedPayload = folioPayload()
+    relatedPayload.reservation = { ...relatedPayload.reservation, reservation_id: 502, guest_name: 'Lot 2' }
+    relatedPayload.folio = { ...relatedPayload.folio, folio_code: 'F-502' }
+    wrapper.vm.viewingFolio = relatedPayload
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    // Opening the related bill must not rewrite the current stay's figure: it
+    // still reads the current folio's OWN charges − credits (220,000), never
+    // the stale balance_due nor a balance from the opened related folio.
+    expect(wrapper.vm.folioRowBalance(r)).toBe(before)
+    const currentRow = [...document.querySelectorAll('.sv-folio-table-switch tbody tr')].find((tr) =>
+      tr.textContent.includes('F-501'),
+    )
+    expect(currentRow.textContent).toContain('220,000.00')
+    expect(currentRow.textContent).not.toContain('999,999')
+  })
+
   it('resets a viewed related folio when another stay opens or the modal closes', async () => {
     await mountDashboard()
     wrapper.vm.viewingFolio = { reservation: { reservation_id: 502 } }

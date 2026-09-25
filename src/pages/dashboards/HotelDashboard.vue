@@ -356,15 +356,11 @@
                               }}</template>
                           </td>
                           <td class="sv-folio-col-num">
-                            <template v-if="activeFolioId === folioRowId(r)">{{ balanceDisplay.text }}</template>
-                            <template v-else>TZS {{ fmtNum(folioRowBalance(r), 2) }}</template>
+                            <template v-if="ledgerHeader.guest">{{ folioRowBalanceText(r) }}</template>
                           </td>
                           <td class="sv-folio-col-num">
-                            <template v-if="activeFolioId === folioRowId(r)">
-                              <strong :class="{ 'sv-balance-negative': balanceDisplay.negative }">{{ balanceDisplay.text
-                                }}</strong>
-                            </template>
-                            <template v-else><strong>TZS {{ fmtNum(folioRowBalance(r), 2) }}</strong></template>
+                            <strong :class="{ 'sv-balance-negative': folioRowBalance(r) < 0 }">{{ folioRowBalanceText(r)
+                              }}</strong>
                           </td>
                           <td class="sv-folio-col-view">
                             <button type="button" class="sv-folio-print-btn" :disabled="printBusy || folioLoading"
@@ -2960,11 +2956,22 @@ function folioCardBalance(src, bar) {
  */
 function folioRowBalance(r) {
   if (r === activeBar.value || r?.reservation_id === activeBar.value?.id) {
-    const b = folioCardBalance(folio.value, activeBar.value)
+    // The current folio's own ledger balance (charges − credits), computed
+    // from the stay's folio alone — never from a related folio that happens
+    // to be open — so toggling between bills cannot rewrite its figure.
+    const t = currentFolioTotals.value
+    const b = t.charges - t.credits
     return Number.isFinite(b) ? b : 0
   }
   const b = Number(r?.balance_due ?? r?.balance)
   return Number.isFinite(b) ? b : 0
+}
+
+/** Formatted per-row switcher balance, mirroring the ledger footer's style. */
+function folioRowBalanceText(r) {
+  const b = folioRowBalance(r)
+  const sign = Number.isFinite(b) && b < 0 ? '- ' : ''
+  return `${sign}TZS ${fmtNum(Math.abs(b), 2)}`
 }
 
 /** Bottom-of-ledger BALANCE = TOTAL CHARGES − TOTAL PAID (negative when overpaid). */
@@ -3210,8 +3217,7 @@ function rentalSum(entries) {
  */
 /** A folio whose rows all moved away still holds only its *_out provenance
  *  book-keeping — per the Folio Operations layout it reads "NO FOLIO POSTED YET". */
-const donorEmptyFolio = computed(() => {
-  const f = ledgerFolio.value || null
+function isDonorEmptyFolio(f) {
   if (!f) return false
   const hadOutflow = (f.folio_entries || []).some((e) => String(e.type || '').endsWith('_out'))
   const hasLiveRows = (f.folio_entries || []).some((e) => !/_(out|in)$/.test(e.type || '') && e.type !== 'attachment')
@@ -3221,16 +3227,18 @@ const donorEmptyFolio = computed(() => {
     !(f.orders || []).some((o) => o.payment_status === 'billed_to_room') &&
     !(f.laundry || []).some((l) => l.payment_status === 'billed_to_room')
   )
-})
+}
 
-const folioEntries = computed(() => {
-  const f = ledgerFolio.value || null
+const donorEmptyFolio = computed(() => isDonorEmptyFolio(ledgerFolio.value))
+
+function buildLedgerEntries(src) {
+  const f = src || null
   if (!f) return []
   const fol = f.folio || {}
   // A donor whose rows all moved to another folio has only its book-keeping
   // provenance (*_out) left — it reads as "NO FOLIO POSTED YET" per the
   // Folio Operations layout.
-  if (donorEmptyFolio.value) return []
+  if (isDonorEmptyFolio(f)) return []
   const entries = []
   // The rental posts as one row PER NIGHT ("Room 101 · Rent 24/09/2026")
   // instead of a single generic "RENTAL CHARGES" line, so each night is
@@ -3331,7 +3339,7 @@ const folioEntries = computed(() => {
     const toPartner = isProvenance && e.type.endsWith('_out')
       ? moverInfo(e.source_reservation_id)
       : null
-    const fromOther = e.source_reservation_id && e.source_reservation_id !== (f.reservation?.reservation_id || ledgerFolio.value?.reservation?.reservation_id)
+    const fromOther = e.source_reservation_id && e.source_reservation_id !== f.reservation?.reservation_id
     const fromPartner = fromOther && !toPartner ? moverInfo(e.source_reservation_id) : null
     entries.push({
       key: `e${e.folio_entry_id}`,
@@ -3440,18 +3448,20 @@ const folioEntries = computed(() => {
       (Date.parse(a.time || a.date) || 0) - (Date.parse(b.time || b.date) || 0) || a.seq - b.seq,
   )
   return entries
-})
+}
+
+const folioEntries = computed(() => buildLedgerEntries(ledgerFolio.value))
 
 // Column totals for the folio ledger: charges that move the balance up and
 // credits (payments, discounts, adjustments) that move it down. `paid` is a
 // smaller, narrower figure: only money actually RECEIVED (recorded payments +
 // the booking deposit), so the "Total Paid" column can never be inflated by a
 // discount, a negative adjustment, an early-departure refund or an inclusion.
-const folioTotals = computed(() => {
+function totalsForEntries(entries) {
   let charges = 0
   let credits = 0
   let paid = 0
-  for (const e of folioEntries.value) {
+  for (const e of entries) {
     // A complimentary inclusion carries a display value but never moves the
     // balance: it shows on the ledger at its amount yet must not alter the
     // charges−credits total (or the matching balance card).
@@ -3461,7 +3471,17 @@ const folioTotals = computed(() => {
     if (e.kind === 'payment' || e.kind === 'deposit') paid += e.amount
   }
   return { charges, credits, paid }
-})
+}
+
+const folioTotals = computed(() => totalsForEntries(folioEntries.value))
+
+// The stay's OWN folio ledger totals, independent of whichever related folio
+// is being viewed. The switcher's current-folio row reads from here so its
+// figure never changes when a related bill is toggled open — it keeps showing
+// exactly the current folio's charges − credits whether the bill is being
+// viewed or not.
+const currentFolioEntries = computed(() => buildLedgerEntries(folio.value))
+const currentFolioTotals = computed(() => totalsForEntries(currentFolioEntries.value))
 
 // Housekeeping tasks for the active stay's room (Tasks tab).
 const roomTasks = ref([])
