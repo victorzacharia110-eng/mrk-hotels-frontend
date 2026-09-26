@@ -864,6 +864,19 @@ const visibleModules = computed(() => {
     if (byKey.accounting) manager.push({ key: 'day-close', to: byKey.accounting.to, icon: 'fas fa-person-running', label: t('nav.dayClose') })
     if (byKey['store-expenses']) manager.push({ key: 'expense-voucher', to: byKey['store-expenses'].to, icon: 'fas fa-file-invoice-dollar', label: t('nav.expenseVoucher') })
     if (byKey.accounting) manager.push({ key: 'income-voucher', to: byKey.accounting.to, icon: 'fas fa-sack-dollar', label: t('nav.incomeVoucher') })
+    // Review item 7: an account has to be registered before it can be picked on
+    // a no-charge order, but the registry page only had a home in the cashier
+    // sidebar — so the back office (which is where the review says creditor
+    // accounts belong) could not reach it. The page is role-guarded, so the
+    // link is offered to the roles it actually admits.
+    if (['hotel_admin', 'manager'].includes(authStore.user?.user_role)) {
+      manager.push({
+        key: 'credit-accounts',
+        to: { name: 'cashier-account-lookup' },
+        icon: 'fas fa-users',
+        label: t('cashier.nav.accountLookup'),
+      })
+    }
     if (manager.length) restaurantBar.push(subGroup('fnb-manager', 'fas fa-user-gear', t('accordion.manager'), manager))
     const rbInventory = pick(['requisitions', 'stock-counts', 'stock-adjust'])
     if (rbInventory.length) restaurantBar.push(subGroup('fnb-inventory', 'fas fa-boxes-stacked', t('accordion.inventory'), rbInventory))

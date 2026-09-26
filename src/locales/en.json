@@ -4855,11 +4855,14 @@
       "account": "Account",
       "selectAccount": "Select Account",
       "accountPlaceholder": "Search an account...",
-      "accountEmpty": "No registered account for no-charge orders yet — type the name to use it.",
-      "accountHint": "Choose from the registered credit accounts, or type a new name.",
+      "accountEmpty": "Select an account",
+      "accountHint": "Pick one of the registered credit accounts.",
       "deliveryPhone": "Mobile No",
       "expectedMinutes": "Expected (min)",
-      "deliveryAddress": "Delivery Address"
+      "deliveryAddress": "Delivery Address",
+      "accountRegistryEmpty": "No credit account is registered yet, so there is nothing to pick.",
+      "accountRegistryLink": "Register a credit account",
+      "accountRequired": "Choose the account this no-charge order belongs to."
     },
     "dineIn": {
       "title": "Dine In",

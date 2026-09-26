@@ -4841,11 +4841,14 @@
       "account": "Akaunti",
       "selectAccount": "Chagua Akaunti",
       "accountPlaceholder": "Tafuta akaunti...",
-      "accountEmpty": "Hakuna akaunti za bila malipo zilizosajiliwa bado.",
-      "accountHint": "Chagua kutoka kwa akaunti zilizosajiliwa, au andika jina jipya.",
+      "accountEmpty": "Chagua akaunti",
+      "accountHint": "Chagua mojawapo ya akaunti zilizosajiliwa za mikopo.",
       "deliveryPhone": "Nambari ya Simu",
       "expectedMinutes": "Inategemewa (dak)",
-      "deliveryAddress": "Anwani ya Uwasilishaji"
+      "deliveryAddress": "Anwani ya Uwasilishaji",
+      "accountRegistryEmpty": "Hakuna akaunti ya mikopo ilyosajiliwa bado, kwa hivyo hakuna cha kuchagua.",
+      "accountRegistryLink": "Sajili akaunti ya mikopo",
+      "accountRequired": "Chagua akaunti inayohusika na agizo hili la bure."
     },
     "dineIn": {
       "title": "Kula Ndani",

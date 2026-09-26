@@ -110,9 +110,20 @@
               :options="accountOptions"
               :placeholder="$t('cashier.order.accountPlaceholder')"
               :empty-label="$t('cashier.order.accountEmpty')"
+              :empty-as-hint="true"
+              :force-search="true"
+              :required="true"
               :disabled="busy"
             />
-            <p class="fld-hint"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.order.accountHint') }}</p>
+            <!-- Item 7: with an empty registry the picker is a dead end, so it
+                 says where to register the account and offers the link. -->
+            <p v-if="!accountOptions.length" class="fld-hint">
+              <i class="fas fa-circle-info" aria-hidden="true"></i>
+              {{ $t('cashier.order.accountRegistryEmpty') }}
+              <router-link :to="{ name: 'cashier-account-lookup' }">{{ $t('cashier.order.accountRegistryLink') }}</router-link>
+            </p>
+            <p v-else class="fld-hint"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.order.accountHint') }}</p>
+            <p v-if="accountError" class="form-error"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ accountError }}</p>
           </div>
 
           <div v-if="mode === 'dine_in'" class="fld-col">
@@ -355,6 +366,15 @@ const accountOptions = computed(() => {
   return options
 })
 
+/** Inline error for the account field, cleared as soon as one is picked. */
+const accountError = ref('')
+watch(
+  () => form.no_charge_account,
+  (value) => {
+    if (value?.trim()) accountError.value = ''
+  },
+)
+
 const total = computed(() => lines.value.reduce((sum, l) => sum + l.price * l.quantity, 0))
 
 const filteredMenu = computed(() => {
@@ -437,6 +457,12 @@ function money(value) {
 
 async function submit() {
   error.value = ''
+  // Item 7: the account is what makes a no-charge order reportable, and the
+  // API rejects a blank one with a 422 the cashier cannot act on.
+  if (props.mode === 'no_charge' && !form.no_charge_account?.trim()) {
+    accountError.value = t('cashier.order.accountRequired')
+    return
+  }
   busy.value = true
   try {
     const payload = {
