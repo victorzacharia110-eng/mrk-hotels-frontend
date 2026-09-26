@@ -3,7 +3,10 @@
 # =============================================================================
 
 [build]
-  command = "npm run build"
+  # `vite build` directly, NOT `npm run build`: the prebuild hook bumps
+  # src/version.json, so Netlify would republish a version one ahead of the
+  # one committed. The committed version is now the version that ships.
+  command = "npx vite build"
   publish = "dist"
 
 # Missing static assets must 404 — never let them fall back to index.html.
