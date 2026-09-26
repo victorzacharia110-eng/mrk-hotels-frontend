@@ -4955,7 +4955,12 @@
       "checkOut": "Tarehe ya kuondoka",
       "order": "Oda",
       "noneInHouse": "Hakuna mgeni aliye ndani kwa sasa.",
-      "newOrderFor": "Huduma ya Chumba — Chumba {room} ({guest})"
+      "newOrderFor": "Huduma ya Chumba — Chumba {room} ({guest})",
+      "none": "Hakuna huduma ya chumba bado.",
+      "all": "Zote",
+      "preparing": "Zinaandaliwa",
+      "served": "Ziko Tayari",
+      "completed": "Zimekamilika"
     },
     "delivery": {
       "addOrder": "+ Ongeza Oda ya Usafirishaji",

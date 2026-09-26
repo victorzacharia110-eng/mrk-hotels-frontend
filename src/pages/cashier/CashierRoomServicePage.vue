@@ -10,8 +10,8 @@
   <div class="sm-page">
     <div class="sm-toolbar">
       <div class="status-tabs">
-        <button v-for="tab in tabs" :key="tab.key" class="status-tab"
-          :class="{ active: activeTab === tab.key }" @click="activeTab = tab.key">
+        <button v-for="tab in tabs" :key="tab.key" class="status-tab" :class="{ active: activeTab === tab.key }"
+          @click="activeTab = tab.key">
           {{ tab.label }} <span class="n">{{ tab.count }}</span>
         </button>
       </div>
@@ -26,34 +26,35 @@
 
     <section class="panel">
       <div class="table-scroll">
-      <SkeletonLoader v-if="loading" variant="table" :count="6" :cols="7" />
-      <table class="sm-table" v-else>
-        <thead>
-          <tr>
-            <th>{{ $t('cashier.summary.order') }}</th>
-            <th>{{ $t('cashier.roomService.room') }}</th>
-            <th>{{ $t('cashier.roomService.guest') }}</th>
-            <th>{{ $t('cashier.roomService.items') }}</th>
-            <th>{{ $t('cashier.roomService.dateTime') }}</th>
-            <th>{{ $t('common.status') }}</th>
-            <th>{{ $t('cashier.summary.amount') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="order in filteredOrders" :key="order.order_id">
-            <td><strong>{{ order.order_number }}</strong></td>
-            <td><strong>{{ order.room_number || '—' }}</strong></td>
-            <td>{{ order.guest_name || '—' }}</td>
-            <td class="items-cell">{{ itemsSummary(order) }}</td>
-            <td>{{ dateTimeOf(order) }}</td>
-            <td><span class="chip" :class="statusChip(order.status)">{{ statusLabel(order.status) }}</span></td>
-            <td>{{ money(order.total_amount) }}</td>
-          </tr>
-          <tr v-if="!filteredOrders.length">
-            <td colspan="7" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.roomService.none') }}</td>
-          </tr>
-        </tbody>
-      </table>
+        <SkeletonLoader v-if="loading" variant="table" :count="6" :cols="7" />
+        <table class="sm-table" v-else>
+          <thead>
+            <tr>
+              <th>{{ $t('cashier.summary.order') }}</th>
+              <th>{{ $t('cashier.roomService.room') }}</th>
+              <th>{{ $t('cashier.roomService.guest') }}</th>
+              <th>{{ $t('cashier.roomService.items') }}</th>
+              <th>{{ $t('cashier.roomService.dateTime') }}</th>
+              <th>{{ $t('common.status') }}</th>
+              <th>{{ $t('cashier.summary.amount') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="order in filteredOrders" :key="order.order_id">
+              <td><strong>{{ order.order_number }}</strong></td>
+              <td><strong>{{ order.room_number || '—' }}</strong></td>
+              <td>{{ order.guest_name || '—' }}</td>
+              <td class="items-cell">{{ itemsSummary(order) }}</td>
+              <td>{{ dateTimeOf(order) }}</td>
+              <td><span class="chip" :class="statusChip(order.status)">{{ statusLabel(order.status) }}</span></td>
+              <td>{{ money(order.total_amount) }}</td>
+            </tr>
+            <tr v-if="!filteredOrders.length">
+              <td colspan="7" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{
+                $t('cashier.roomService.none') }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
@@ -96,7 +97,8 @@
                     </td>
                   </tr>
                   <tr v-if="!filteredGuests.length">
-                    <td colspan="4" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.roomService.noneInHouse') }}</td>
+                    <td colspan="4" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{
+                      $t('cashier.roomService.noneInHouse') }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -108,8 +110,8 @@
 
     <NewOrderModal v-if="activeGuest" mode="room_service"
       :title="$t('cashier.roomService.newOrderFor', { room: activeGuest.room_number, guest: activeGuest.guest_name })"
-      :room-number="activeGuest.room_number" :guest-name-prefill="activeGuest.guest_name"
-      @close="activeGuest = null" @created="onCreated" />
+      :room-number="activeGuest.room_number" :guest-name-prefill="activeGuest.guest_name" @close="activeGuest = null"
+      @created="onCreated" />
   </div>
 </template>
 
@@ -272,10 +274,12 @@ onMounted(() => {
 .rs-picker-backdrop {
   z-index: 1100;
 }
+
 .rs-picker-body {
   padding: 16px 18px 18px;
   overflow-y: auto;
 }
+
 .rs-picker-body .sm-search {
   margin-bottom: 12px;
 }
@@ -285,6 +289,7 @@ onMounted(() => {
 .sm-modal-head {
   pointer-events: auto;
 }
+
 .sm-modal-head .sm-btn {
   pointer-events: auto;
   cursor: pointer;
@@ -295,16 +300,19 @@ onMounted(() => {
 .rs-fade-leave-active {
   transition: opacity 0.2s ease;
 }
+
 .rs-fade-enter-active .sm-modal,
 .rs-fade-leave-active .sm-modal {
   transition:
     opacity 0.2s ease,
     transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .rs-fade-enter-from,
 .rs-fade-leave-to {
   opacity: 0;
 }
+
 .rs-fade-enter-from .sm-modal,
 .rs-fade-leave-to .sm-modal {
   opacity: 0;

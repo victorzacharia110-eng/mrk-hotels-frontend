@@ -4968,7 +4968,8 @@
       "completed": "Completed",
       "newOrder": "New Order",
       "items": "Items",
-      "dateTime": "Date / Time"
+      "dateTime": "Date / Time",
+      "none": "No room service orders yet."
 
     },
     "delivery": {
