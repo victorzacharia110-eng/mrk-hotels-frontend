@@ -28,7 +28,7 @@
             {{ $t('bookingPage.mixedRoomTypesHint') }}
           </p>
         </div>
-        <div class="form-grid">
+        <div class="form-grid search-grid">
           <div class="form-group">
             <label>{{ $t('superadmin.tenant') }}</label>
             <SearchableSelect v-model="search.hotel_id" :options="hotelOptions" :empty-label="$t('bookingPage.selectHotel')" required />
@@ -46,7 +46,7 @@
             <SearchableSelect v-model="search.room_type" :options="roomTypeOptions" :empty-label="$t('bookingPage.any')" />
           </div>
           <div class="search-actions">
-            <button class="btn btn-primary" :disabled="checking" style="width: 100%">
+            <button class="btn btn-primary" :disabled="checking">
               <i class="fas fa-magnifying-glass"></i> {{ checking ? $t('bookingPage.checking') : $t('bookingPage.check') }}
             </button>
           </div>
@@ -956,6 +956,24 @@ onMounted(loadHotels)
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
+}
+
+/* Availability search row: hotel, check-in, check-out, room type and the Check
+   button share one line (wrapping only when the card gets narrow). */
+.search-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.search-grid .form-group {
+  flex: 1 1 150px;
+}
+
+.search-grid .search-actions {
+  flex: 0 0 auto;
+  width: auto;
 }
 
 .search-actions {
