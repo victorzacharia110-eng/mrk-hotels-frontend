@@ -4962,7 +4962,14 @@
       "checkOut": "Check-out",
       "order": "Order",
       "noneInHouse": "No guests are currently checked in.",
-      "newOrderFor": "Room Service — Room {room} ({guest})"
+      "newOrderFor": "Room Service — Room {room} ({guest})",
+      "preparing": "Preparing",
+      "served": "Served",
+      "completed": "Completed",
+      "newOrder": "New Order",
+      "items": "Items",
+      "dateTime": "Date / Time"
+
     },
     "delivery": {
       "addOrder": "+ Add Delivery Order",
