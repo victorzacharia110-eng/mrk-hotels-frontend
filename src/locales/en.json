@@ -4862,7 +4862,10 @@
       "deliveryAddress": "Delivery Address",
       "accountRegistryEmpty": "No credit account is registered yet, so there is nothing to pick.",
       "accountRegistryLink": "Register a credit account",
-      "accountRequired": "Choose the account this no-charge order belongs to."
+      "accountRequired": "Choose the account this no-charge order belongs to.",
+      "servingsLeft": "Left: {qty}",
+      "stockNone": "Not tracked",
+      "stockCount": "Stock {qty} {unit}"
     },
     "dineIn": {
       "title": "Dine In",

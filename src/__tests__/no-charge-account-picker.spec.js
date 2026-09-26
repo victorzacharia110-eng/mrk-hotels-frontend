@@ -1,13 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
+import { flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import i18n from '@/locales/i18n'
 
 const store = vi.fn()
+const menuIndex = vi.fn()
 vi.mock('@/api', () => ({
   orderApi: { store: (...args) => store(...args) },
-  menuItemApi: { index: vi.fn().mockResolvedValue({ data: { data: [] } }) },
+  menuItemApi: { index: (...args) => menuIndex(...args) },
 }))
 
 vi.mock('@/pages/cashier/outlet-context', () => ({
@@ -77,6 +79,7 @@ const placeOrder = async () => {
 describe('no-charge account picker (item 7)', () => {
   beforeEach(() => {
     store.mockReset()
+    menuIndex.mockResolvedValue({ data: { data: [] } })
     pinia = createPinia()
     setActivePinia(pinia)
   })
@@ -121,6 +124,25 @@ describe('no-charge account picker (item 7)', () => {
     expect(store).toHaveBeenCalledWith(
       expect.objectContaining({ is_no_charge: true, no_charge_account: 'Uchumi Hotel' }),
     )
+  })
+
+  it('labels a recipe-tracked item as servings left, not raw units', async () => {
+    // Item 4: a drink built from a recipe has no single stock line, so the
+    // count the API reports is servings its ingredients can still cover.
+    menuIndex.mockResolvedValue({
+      data: {
+        data: [
+          { menu_item_id: 'm2', item_name: 'Signature Cocktail', category: 'Cocktails', price: 18000, department: 'restaurant', is_available: true, ingredient_count: 2, quantity_on_hand: 12 },
+          { menu_item_id: 'm3', item_name: 'Whisky', category: 'Spirits', price: 22000, department: 'restaurant', is_available: true, ingredient_count: 0, quantity_on_hand: 7, linked_item_unit: 'BTL' },
+        ],
+      },
+    })
+
+    mountModal({ mode: 'takeaway', creditAccounts: [{ name: 'Uchumi Hotel' }] })
+    await flushPromises()
+
+    expect(domText()).toContain('Left: 12')
+    expect(domText()).toContain('Stock 7 BTL')
   })
 
   it('points an empty registry at the page that registers accounts', () => {

@@ -44,8 +44,19 @@
               <button v-for="item in itemsInCat" :key="item.menu_item_id" class="cat-item"
                 :disabled="!item.is_available || item.is_in_stock === false" @click="addItem(item)">
                 <span class="cat-item-name">{{ item.item_name }}</span>
+                <!-- Review item 4: take-away, room service and delivery order
+                     screens must show the live count of the stock this item
+                     draws on. A recipe-tracked item reports the servings its
+                     ingredients can still cover, so it is labelled as such
+                     rather than as raw units. -->
                 <span v-if="item.quantity_on_hand !== null && item.quantity_on_hand !== undefined" class="cat-item-stock">
-                  <i class="fas fa-boxes-stacked" aria-hidden="true"></i> {{ item.quantity_on_hand }}
+                  <i class="fas fa-boxes-stacked" aria-hidden="true"></i>
+                  <template v-if="item.ingredient_count > 0">
+                    {{ $t('cashier.order.servingsLeft', { qty: item.quantity_on_hand }) }}
+                  </template>
+                  <template v-else>
+                    {{ $t('cashier.order.stockCount', { qty: item.quantity_on_hand, unit: item.linked_item_unit || '' }) }}
+                  </template>
                 </span>
                 <span class="cat-item-price">{{ money(item.price) }}</span>
               </button>

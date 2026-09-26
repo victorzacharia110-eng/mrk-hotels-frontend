@@ -4848,7 +4848,10 @@
       "deliveryAddress": "Anwani ya Uwasilishaji",
       "accountRegistryEmpty": "Hakuna akaunti ya mikopo ilyosajiliwa bado, kwa hivyo hakuna cha kuchagua.",
       "accountRegistryLink": "Sajili akaunti ya mikopo",
-      "accountRequired": "Chagua akaunti inayohusika na agizo hili la bure."
+      "accountRequired": "Chagua akaunti inayohusika na agizo hili la bure.",
+      "servingsLeft": "Zilizobaki: {qty}",
+      "stockNone": "Haikusajiliwi",
+      "stockCount": "Stock {qty} {unit}"
     },
     "dineIn": {
       "title": "Kula Ndani",
