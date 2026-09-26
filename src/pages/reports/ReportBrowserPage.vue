@@ -115,116 +115,21 @@
             </span>
           </div>
 
-          <div class="rb-numcols">
-            <div class="rb-report-row">
-              <span class="rb-report-row-label">{{ $t('nightAudit.totalRevenue') }}</span>
-              <strong>{{ money(report.revenue.total) }}</strong>
-            </div>
-            <div class="rb-report-row">
-              <span class="rb-report-row-label">{{ $t('nightAudit.cashInHand') }}</span>
-              <strong :class="{ 'text-red': report.cash_in_hand < 0 }">{{ money(report.cash_in_hand) }}</strong>
-            </div>
-            <div class="rb-report-row">
-              <span class="rb-report-row-label">{{ $t('nightAudit.netProfit') }}</span>
-              <strong :class="{ 'text-green': report.net_profit > 0, 'text-red': report.net_profit < 0 }">{{ money(report.net_profit) }}</strong>
-            </div>
-            <div class="rb-report-row">
-              <span class="rb-report-row-label">{{ $t('nightAudit.outstanding') }}</span>
-              <strong>{{ money(report.outstanding) }}</strong>
-            </div>
-          </div>
+          <p v-if="!report.sheet" class="rb-empty">{{ $t('nightAudit.noSheet') }}</p>
 
-          <h3 class="rb-section-title">
-            <i class="fas fa-chart-line" aria-hidden="true"></i> {{ $t('nightAudit.revenue') }}
-          </h3>
-          <div class="table-scroll">
-          <table class="rb-table">
-            <thead>
-              <tr>
-                <th>{{ $t('reportBrowser.revenueStream') }}</th>
-                <th class="num">{{ $t('reportBrowser.amount') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>{{ $t('nightAudit.rooms') }}</td>
-                <td class="num">{{ money(report.revenue.rooms) }}</td>
-              </tr>
-              <tr>
-                <td>{{ $t('nightAudit.fnb') }}</td>
-                <td class="num">{{ money(report.revenue.fnb) }}</td>
-              </tr>
-              <tr>
-                <td>{{ $t('nightAudit.laundry') }}</td>
-                <td class="num">{{ money(report.revenue.laundry) }}</td>
-              </tr>
-              <tr>
-                <td>{{ $t('nightAudit.funGames') }}</td>
-                <td class="num">{{ money(report.revenue.fun_games) }}</td>
-              </tr>
-              <tr class="rb-total">
-                <td>{{ $t('nightAudit.totalRevenue') }}</td>
-                <td class="num">{{ money(report.revenue.total) }}</td>
-              </tr>
-            </tbody>
-          </table>
-          </div>
-
-          <h3 class="rb-section-title">
-            <i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('reportBrowser.collections') }}
-          </h3>
-          <div class="table-scroll">
-          <table class="rb-table">
-            <thead>
-              <tr>
-                <th>{{ $t('reportBrowser.method') }}</th>
-                <th class="num">{{ $t('reportBrowser.amount') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(amount, method) in report.collections.by_method" :key="method">
-                <td class="capitalize">{{ method.replace('_', ' ') }}</td>
-                <td class="num">{{ money(amount) }}</td>
-              </tr>
-              <tr class="rb-total">
-                <td>{{ $t('nightAudit.totalCollected') }}</td>
-                <td class="num">{{ money(report.collections.total) }}</td>
-              </tr>
-            </tbody>
-          </table>
-          </div>
-
-          <h3 class="rb-section-title">
-            <i class="fas fa-bed" aria-hidden="true"></i> {{ $t('reportBrowser.occupancy') }}
-          </h3>
-          <div class="table-scroll">
-          <table class="rb-table">
-            <thead>
-              <tr>
-                <th>{{ $t('reportBrowser.count') }}</th>
-                <th class="num">{{ $t('reportBrowser.value') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>{{ $t('nightAudit.arrivals') }}</td>
-                <td class="num">{{ report.counts.arrivals }}</td>
-              </tr>
-              <tr>
-                <td>{{ $t('nightAudit.departures') }}</td>
-                <td class="num">{{ report.counts.departures }}</td>
-              </tr>
-              <tr>
-                <td>{{ $t('nightAudit.inHouse') }}</td>
-                <td class="num">{{ report.counts.in_house }}</td>
-              </tr>
-              <tr>
-                <td>{{ $t('nightAudit.newBookings') }}</td>
-                <td class="num">{{ report.counts.reservations_created }}</td>
-              </tr>
-            </tbody>
-          </table>
-          </div>
+          <NightAuditSheet
+            v-else
+            :sheet="report.sheet"
+            variant="screen"
+            :hotel-name="reportHotel"
+            :logo-url="reportLogo"
+            :title="activeLabel"
+            :date-label="prettyDate(filterValues[activeConfig.dateKey] || todayIso())"
+            :printed-on="printedAt"
+            :printed-by="userName"
+            :closed="report.closed"
+            :show-brand="false"
+          />
 
           <button v-if="!report.closed" type="button" class="rb-btn rb-btn-primary" :disabled="saving" @click="closeDay">
             <i class="fas fa-lock" aria-hidden="true"></i> {{ $t('nightAudit.closeDay') }}
@@ -570,147 +475,18 @@
   <!-- ══ Print-only Night Audit document ══
        Hidden on screen; the browser print build strips every piece of app
        chrome and renders this structured sheet on A4 landscape. -->
-  <div v-if="activeReport === 'night-audit' && report" class="na-sheet">
-    <div class="na-brand">
-      <div class="na-brand-left">
-        <img v-if="reportLogo" :src="reportLogo" class="na-logo" alt="" />
-        <div>
-          <div class="na-hotel">{{ reportHotel }}</div>
-          <div class="na-title">{{ activeLabel }}</div>
-        </div>
-      </div>
-      <span v-if="report.closed" class="na-closed">{{ $t('nightAudit.closed') }}</span>
-    </div>
-
-    <div class="na-meta">
-      <span>{{ $t('reportBrowser.asOnDate') }}: <b>{{ prettyDate(filterValues.businessDate || todayIso()) }}</b></span>
-      <span>{{ $t('staffDashboard.printedOn', { at: printedAt }) }}</span>
-      <span>{{ $t('staffDashboard.printedBy', { name: userName }) }}</span>
-    </div>
-
-    <table class="na-kpi">
-      <thead>
-        <tr>
-          <th>{{ $t('nightAudit.totalRevenue') }}</th>
-          <th>{{ $t('nightAudit.cashInHand') }}</th>
-          <th>{{ $t('nightAudit.netProfit') }}</th>
-          <th>{{ $t('nightAudit.outstanding') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="na-kpi-val">{{ money(report.revenue.total) }}</td>
-          <td class="na-kpi-val" :class="{ 'na-neg': report.cash_in_hand < 0 }">{{ money(report.cash_in_hand) }}</td>
-          <td class="na-kpi-val" :class="{ 'na-neg': report.net_profit < 0 }">{{ money(report.net_profit) }}</td>
-          <td class="na-kpi-val">{{ money(report.outstanding) }}</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="na-cols">
-      <section class="na-sec">
-        <h3>{{ $t('nightAudit.revenue') }}</h3>
-        <table class="na-table">
-          <thead>
-            <tr>
-              <th>{{ $t('reportBrowser.revenueStream') }}</th>
-              <th class="num">{{ $t('reportBrowser.amount') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>{{ $t('nightAudit.rooms') }}</td>
-              <td class="num">{{ money(report.revenue.rooms) }}</td>
-            </tr>
-            <tr>
-              <td>{{ $t('nightAudit.fnb') }}</td>
-              <td class="num">{{ money(report.revenue.fnb) }}</td>
-            </tr>
-            <tr>
-              <td>{{ $t('nightAudit.laundry') }}</td>
-              <td class="num">{{ money(report.revenue.laundry) }}</td>
-            </tr>
-            <tr>
-              <td>{{ $t('nightAudit.funGames') }}</td>
-              <td class="num">{{ money(report.revenue.fun_games) }}</td>
-            </tr>
-            <tr class="na-total">
-              <td>{{ $t('nightAudit.totalRevenue') }}</td>
-              <td class="num">{{ money(report.revenue.total) }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-
-      <section class="na-sec">
-        <h3>{{ $t('nightAudit.collections') }}</h3>
-        <table class="na-table">
-          <thead>
-            <tr>
-              <th>{{ $t('reportBrowser.method') }}</th>
-              <th class="num">{{ $t('reportBrowser.amount') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(amount, method) in report.collections.by_method" :key="method">
-              <td class="na-cap">{{ method.replace('_', ' ') }}</td>
-              <td class="num">{{ money(amount) }}</td>
-            </tr>
-            <tr class="na-total">
-              <td>{{ $t('nightAudit.totalCollected') }}</td>
-              <td class="num">{{ money(report.collections.total) }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-
-      <section class="na-sec">
-        <h3>{{ $t('nightAudit.occupancy') }}</h3>
-        <table class="na-table">
-          <thead>
-            <tr>
-              <th>{{ $t('reportBrowser.occupancy') }}</th>
-              <th class="num">{{ $t('reportBrowser.value') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>{{ $t('nightAudit.arrivals') }}</td>
-              <td class="num">{{ report.counts.arrivals }}</td>
-            </tr>
-            <tr>
-              <td>{{ $t('nightAudit.departures') }}</td>
-              <td class="num">{{ report.counts.departures }}</td>
-            </tr>
-            <tr>
-              <td>{{ $t('nightAudit.inHouse') }}</td>
-              <td class="num">{{ report.counts.in_house }}</td>
-            </tr>
-            <tr>
-              <td>{{ $t('nightAudit.newBookings') }}</td>
-              <td class="num">{{ report.counts.reservations_created }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-    </div>
-
-    <div class="na-sign">
-      <div>
-        <span class="na-sign-label">{{ $t('nightAudit.preparedBy') }}</span>
-        <span class="na-sign-line"></span>
-      </div>
-      <div>
-        <span class="na-sign-label">{{ $t('nightAudit.checkedBy') }}</span>
-        <span class="na-sign-line"></span>
-      </div>
-      <div>
-        <span class="na-sign-label">{{ $t('nightAudit.approvedBy') }}</span>
-        <span class="na-sign-line"></span>
-      </div>
-    </div>
-
-    <div class="na-foot">{{ reportHotel }} · {{ activeLabel }} · {{ prettyDate(filterValues.businessDate || todayIso()) }}</div>
+  <div v-if="activeReport === 'night-audit' && report && report.sheet" class="na-sheet-wrap">
+    <NightAuditSheet
+      :sheet="report.sheet"
+      variant="print"
+      :hotel-name="reportHotel"
+      :logo-url="reportLogo"
+      :title="activeLabel"
+      :date-label="prettyDate(filterValues.businessDate || todayIso())"
+      :printed-on="printedAt"
+      :printed-by="userName"
+      :closed="report.closed"
+    />
   </div>
 </template>
 
@@ -718,6 +494,7 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
+import NightAuditSheet from '@/components/reports/NightAuditSheet.vue'
 import { useAuthStore } from '@/stores/auth'
 import { nightAuditApi, guestReportApi, reportApi, hotelSettingsApi } from '@/api'
 import { exportCSV } from '@/utils/export'
@@ -1584,6 +1361,7 @@ async function loadNightAudit() {
   try {
     const res = await nightAuditApi.report({ date: filterValues.businessDate || businessDate.value })
     report.value = res.data.report
+    report.value.sheet = res.data.sheet
     report.value.closed = res.data.closed
   } catch (err) {
     error.value = err.response?.data?.message || t('common.loadError')
@@ -2258,14 +2036,14 @@ onMounted(() => {
 </style>
 
 <!--
-  Global (non-scoped) print stylesheet for the Night Audit document.
+  Global (non-scoped) stylesheet for the Night Audit document.
 
   The on-screen report shares its classes with the ReportBrowserLayout shell,
-  so the previous scoped @media rules could not reach across components and the
-  browser printed the whole web page. These rules are global on purpose: when
-  the `.na-sheet` is mounted (Night Audit with data loaded) the print build
-  hides every other DOM element with visibility and renders only the sheet on
-  A4 landscape. Every other report keeps its existing printing behaviour.
+  so scoped @media rules could never reach across components. These rules are
+  global on purpose: when the `.na-sheet` is mounted (Night Audit with data
+  loaded) the print build collapses the app chrome and prints the sheet as a
+  flowing A4-landscape document — tables repeat their headers and wrap across
+  pages like the reference PDF. Every other report keeps its own printing.
 -->
 <style>
 .na-sheet {
@@ -2278,20 +2056,8 @@ onMounted(() => {
 }
 
 @media print {
-  body:has(.na-sheet) * {
-    visibility: hidden;
-  }
-
-  .na-sheet,
-  .na-sheet * {
-    visibility: visible;
-  }
-
   .na-sheet {
     display: block;
-    position: absolute;
-    top: 0;
-    left: 0;
     width: 100%;
     margin: 0;
     padding: 0;
@@ -2487,6 +2253,67 @@ onMounted(() => {
   padding-top: 8px;
 }
 
+/* ── NightAuditSheet component ──
+   The on-screen preview is a paper-like block inside the report card; the
+   printed copy uses the same classes so both look identical. */
+.na-screen {
+  padding: 2px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.na-sec-block {
+  margin-bottom: 14px;
+}
+
+.na-sec-title {
+  margin: 16px 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #062a52;
+  border-bottom: 1px solid #062a52;
+  padding-bottom: 4px;
+  page-break-after: avoid;
+}
+
+.na-table {
+  font-size: 11.5px;
+}
+
+.na-table thead {
+  display: table-header-group;
+}
+
+.na-table tr {
+  break-inside: avoid;
+}
+
+.na-pay-method {
+  margin: 10px 0 4px;
+  font-size: 11.5px;
+  color: #062a52;
+}
+
+.na-grand-total {
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: #111;
+}
+
+.na-rows-count {
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: #475569;
+}
+
+.na-empty {
+  text-align: center;
+  color: #94a3b8;
+  font-style: italic;
+  padding: 10px !important;
+}
+
 /* ── Every other report: print only the paper content, no app chrome ──
    The header / category tree / filter toolbar live in the ReportBrowserLayout
    child component, so scoped rules could never reach them; these rules are
@@ -2525,11 +2352,6 @@ onMounted(() => {
   /* Let wide report tables span the full landscape page instead of clipping. */
   body:has(.rb-paper) .table-scroll {
     overflow-x: visible !important;
-  }
-
-  /* Night Audit has its own dedicated sheet — drop the on-screen card. */
-  body:has(.na-sheet) .rb-paper {
-    display: none !important;
   }
 }
 
@@ -2601,5 +2423,56 @@ onMounted(() => {
   letter-spacing: 0.4px;
   justify-content: center;
   gap: 6px;
+}
+
+/* ── Night Audit print: paginate the sheet in normal document flow ──
+   The reference sheet runs several pages and must keep flowing across page
+   breaks (repeating table headers, rows wrapping to the next page). The old
+   approach pinned the sheet with `position: absolute`, which some browsers
+   clip to a single printed page. Here we collapse every piece of app chrome
+   and let the sheet paginate naturally from its slot inside `.rb-paper`. */
+@media print {
+  body:has(.na-sheet) .rb-header,
+  body:has(.na-sheet) .rb-tree,
+  body:has(.na-sheet) .rb-toolbar,
+  body:has(.na-sheet) .rb-help,
+  body:has(.na-sheet) .site-header,
+  body:has(.na-sheet) .print-brand,
+  body:has(.na-sheet) .print-foot {
+    display: none !important;
+  }
+
+  body:has(.na-sheet) .rb-root,
+  body:has(.na-sheet) .rb-body,
+  body:has(.na-sheet) .rb-content {
+    display: block;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+    padding: 0;
+  }
+
+  /* Keep the paper container (it holds the print sheet) but strip its frame. */
+  body:has(.na-sheet) .rb-paper {
+    display: block !important;
+    position: static;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    border-radius: 0;
+    overflow: visible;
+    height: auto;
+  }
+
+  /* The on-screen preview card (and transient states) must not duplicate the print sheet. */
+  body:has(.na-sheet) .rb-report-card,
+  body:has(.na-sheet) .rb-loading,
+  body:has(.na-sheet) .rb-error {
+    display: none !important;
+  }
+
+  body:has(.na-sheet) .na-sheet-wrap {
+    display: block;
+  }
 }
 </style>
