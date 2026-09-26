@@ -58,7 +58,6 @@
     <div v-if="availability" class="card">
       <h2 class="card-title">
         {{ $t('home.roomsAvailable') }}
-        <span class="badge badge-green">{{ availability.available_count }} {{ availability.available_count === 1 ? $t('bookingPage.roomOne') : $t('bookingPage.roomMany') }}</span>
       </h2>
       <p v-if="availability.available_rooms?.length" class="hint muted">
         {{ $t('bookingPage.selectRoomsHint') }}
