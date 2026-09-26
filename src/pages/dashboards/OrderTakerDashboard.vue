@@ -73,22 +73,26 @@
       </div>
     </nav>
 
-    <!-- Day Close reminder (waiter pad): shown once per session when a new
-         calendar day started but the open business day wasn't closed yet.
-         Waiters can only dismiss (CANCEL); bartenders may proceed to Day Close. -->
-    <div v-if="dayCloseBanner" class="dc-banner" role="note">
-      <span class="dc-banner-text">
-        <i class="fas fa-calendar-day" aria-hidden="true"></i>
-        {{ $t('orderTaker.dayCloseReminderText', { open: dayCloseOpenLabel, today: dayCloseTodayLabel }) }}
-      </span>
-      <span class="dc-banner-actions">
-        <button v-if="canOpenDayClose" type="button" class="dc-btn ok" @click="goDayClose">
-          <i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.proceed') }}
-        </button>
-        <button type="button" class="dc-btn" @click="dismissDayCloseBanner">
-          <i class="fas fa-xmark" aria-hidden="true"></i> {{ $t('common.cancel') }}
-        </button>
-      </span>
+    <!-- Day Close reminder (login popup): shown once per session when a new
+         calendar day started but the open business day wasn't closed yet, so
+         the panel can state which date the new orders are actually filed
+         under. CONFIRM dismisses; cashier/bartender may also proceed to Day
+         Close (waiters have no Day Close access). -->
+    <div v-if="dayCloseBanner" class="dc-reminder-backdrop">
+      <div class="dc-reminder-modal" role="dialog" aria-modal="true">
+        <div class="dc-reminder-head">
+          <h3><i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.reminderTitle') }}</h3>
+        </div>
+        <p class="dc-reminder-text">{{ $t('cashier.dayClose.reminderText', { today: dayCloseOpenLabel }) }}</p>
+        <div class="dc-reminder-foot">
+          <button v-if="canOpenDayClose" type="button" class="dc-btn ok" @click="goDayClose">
+            <i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.proceed') }}
+          </button>
+          <button type="button" class="dc-btn" @click="dismissDayCloseBanner">
+            <i class="fas fa-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.confirm') }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <template v-if="activeTab === 'new'">
@@ -608,7 +612,7 @@
               <button type="button" class="open-btn ghost" @click="openTransfer(order)">
                 <i class="fas fa-right-left" aria-hidden="true"></i> {{ $t('orderTaker.transfer') }}
               </button>
-              <button v-if="!isPosRole" type="button" class="open-btn ok" @click="openMerge(order)">
+              <button type="button" class="open-btn ok" @click="openMerge(order)">
                 <i class="fas fa-merge" aria-hidden="true"></i> {{ $t('orderTaker.mergeBill') }}
               </button>
             </template>
@@ -1196,15 +1200,16 @@ const printStore = usePrintSettingsStore()
 const workingDateStore = useWorkingDateStore()
 
 // Day Close reminder — once per session when a new calendar day started but
-// the open business day wasn't closed yet. Waiters may only dismiss (CANCEL);
+// the open business day wasn't closed yet. Waiters may only CONFIRM (dismiss);
 // bartenders/cashiers can also proceed to the Day Close page.
 const dayCloseBanner = ref(false)
 const DAY_CLOSE_BANNER_KEY = 'dc_banner_dismissed'
 const canOpenDayClose = computed(() => role.value !== 'waiter')
+// The popup states the date the new orders are filed under: the OPEN business
+// date, which is still the working date until Day Close is run.
 const dayCloseOpenLabel = computed(() =>
   new Date(workingDateStore.openDate + 'T12:00:00').toLocaleDateString(),
 )
-const dayCloseTodayLabel = computed(() => new Date().toLocaleDateString())
 
 function dismissDayCloseBanner() {
   sessionStorage.setItem(DAY_CLOSE_BANNER_KEY, '1')
@@ -1234,11 +1239,11 @@ const department = ref(role.value === 'bartender' ? 'bar' : 'restaurant')
 // its own department so one side never bleeds into the other. Waiters (who
 // cover tables on both sides) keep the switch.
 const isBartender = computed(() => role.value === 'bartender')
-const fixedDept = computed(() => {
-  if (role.value === 'bartender') return 'bar'
-  if (role.value === 'cashier') return 'restaurant'
-  return '' // waiters may cover either department
-})
+// Cashiers and bartenders cover both outlets just like waiters: the pad opens
+// on the department matching their role and the Restaurant / Bar toggle stays
+// live, so either side can take a table from the other. (Only a manager-level
+// restriction would justify pinning one department here.)
+const fixedDept = computed(() => '')
 // Cashier/bartender dine-in uses the hotel's logo palette: swapping the pad's
 // amber accent for the brand blue. Waiters keep the classic gold theme.
 const isPosRole = computed(() => ['cashier', 'bartender'].includes(role.value))
@@ -4610,24 +4615,35 @@ function onKey(e) {
 }
 .dash-req-items { color: #71717a; font-weight: 600; }
 
-/* Day Close reminder banner (waiter pad) */
-.dc-banner {
+/* Day Close reminder (login popup on the order-taker pad) */
+.dc-reminder-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  background: rgba(15, 23, 42, 0.55);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 12px 14px 0;
-  padding: 10px 14px;
-  border: 1px solid #facc15;
-  background: #fffbeb;
-  color: #713f12;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
+  justify-content: center;
+  padding: 20px;
 }
-.dc-banner i { color: #d97706; }
-.dc-banner-actions { display: flex; gap: 8px; align-items: center; }
+.dc-reminder-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: min(460px, 94vw);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+.dc-reminder-head { background: #3f3f46; color: #fff; padding: 14px 18px; }
+.dc-reminder-head h3 { margin: 0; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.dc-reminder-text { margin: 0; padding: 18px; font-size: 14px; color: #334155; }
+.dc-reminder-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
 .dc-btn {
   border: 1px solid #d6d3d1;
   background: #fff;

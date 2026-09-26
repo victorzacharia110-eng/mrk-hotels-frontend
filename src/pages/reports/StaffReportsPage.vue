@@ -575,7 +575,25 @@ onMounted(loadReport)
 </style>
 
 <style>
+/* Printed staff reports keep a printable margin on every side, and the page
+   number is stamped bottom-right like the other report sheets. */
+@page {
+  size: A4 portrait;
+  margin: 14mm 12mm 18mm 12mm;
+  @bottom-right {
+    content: "Page " counter(page) " of " counter(pages);
+    font-size: 10px;
+    color: #555;
+  }
+}
+
 @media print {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
   body * {
     visibility: hidden !important;
   }
@@ -585,9 +603,9 @@ onMounted(loadReport)
     visibility: visible !important;
   }
 
+  /* Flow the report inside the @page margin box (no absolute edge-to-edge). */
   #staff-reports {
-    position: absolute;
-    inset: 0 auto auto 0;
+    position: static;
     width: 100%;
     padding: 0;
   }

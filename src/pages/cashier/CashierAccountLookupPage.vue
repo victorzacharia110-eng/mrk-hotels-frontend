@@ -26,6 +26,11 @@
             @click="switchTab('creditors')">
             <i class="fas fa-building" aria-hidden="true"></i> {{ $t('cashier.accounts.tabCreditors') }}
           </button>
+          <button type="button" class="status-tab" :class="{ active: tab === 'noCharge' }"
+            role="tab" :aria-selected="tab === 'noCharge'"
+            @click="switchTab('noCharge')">
+            <i class="fas fa-gift" aria-hidden="true"></i> {{ $t('cashier.accounts.tabNoChargeAccounts') }}
+          </button>
         </div>
         <div class="panel-head-actions">
           <div class="sm-search">
@@ -35,6 +40,9 @@
           </div>
           <button v-if="tab === 'creditors' && canManageCreditors" type="button" class="btn btn-brand" @click="openNew">
             <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('cashier.accounts.newCreditor') }}
+          </button>
+          <button v-if="tab === 'noCharge' && canManageCreditAccounts" type="button" class="btn btn-brand" @click="openNewNoCharge">
+            <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('cashier.accounts.newNoChargeAccount') }}
           </button>
         </div>
       </div>
@@ -68,7 +76,7 @@
             </tbody>
           </template>
 
-          <template v-else>
+          <template v-else-if="tab === 'creditors'">
             <thead>
               <tr>
                 <th>{{ $t('cashier.accounts.creditorName') }}</th>
@@ -113,6 +121,51 @@
               </tr>
               <tr v-if="!creditors.length && !loading">
                 <td :colspan="canManageCreditors ? 9 : 8" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.accounts.noCreditors') }}</td>
+              </tr>
+            </tbody>
+          </template>
+
+          <!-- No-charge credit accounts: the registry the counter picks from
+               when raising a no-charge ticket. -->
+          <template v-else-if="tab === 'noCharge'">
+            <thead>
+              <tr>
+                <th>{{ $t('cashier.accounts.name') }}</th>
+                <th>{{ $t('cashier.accounts.contactPerson') }}</th>
+                <th>{{ $t('cashier.accounts.mobile') }}</th>
+                <th>{{ $t('cashier.accounts.email') }}</th>
+                <th>{{ $t('cashier.accounts.notes') }}</th>
+                <th>{{ $t('common.status') }}</th>
+                <th v-if="canManageCreditAccounts">{{ $t('cashier.accounts.actions') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="account in noChargeAccounts" :key="account.credit_account_id">
+                <td><strong>{{ account.name }}</strong></td>
+                <td>{{ account.contact_name || '—' }}</td>
+                <td>{{ account.phone || '—' }}</td>
+                <td>{{ account.email || '—' }}</td>
+                <td>{{ account.notes || '—' }}</td>
+                <td>
+                  <span class="cred-badge" :class="account.is_active ? 't-bank' : 't-blocked'">
+                    {{ account.is_active ? $t('cashier.accounts.statuses.active') : $t('cashier.accounts.statuses.inactive') }}
+                  </span>
+                </td>
+                <td v-if="canManageCreditAccounts" class="cred-actions">
+                  <button type="button" class="icon-btn" :aria-label="$t('cashier.accounts.editNoChargeAccount')"
+                    @click="openEditNoCharge(account)">
+                    <i class="fas fa-pen" aria-hidden="true"></i>
+                  </button>
+                  <button type="button" class="icon-btn danger" :aria-label="$t('common.delete')"
+                    @click="removeNoChargeAccount(account)">
+                    <i class="fas fa-trash" aria-hidden="true"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="!noChargeAccounts.length && !loading">
+                <td :colspan="canManageCreditAccounts ? 7 : 6" class="empty">
+                  <i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.accounts.noNoChargeAccounts') }}
+                </td>
               </tr>
             </tbody>
           </template>
@@ -212,6 +265,65 @@
         </form>
       </div>
     </div>
+
+    <!-- No-charge credit account editor: register a named account the counter
+         can attach to a no-charge ticket. -->
+    <div v-if="noChargeModalOpen" class="sm-modal-backdrop" @click.self="noChargeModalOpen = false">
+      <div class="sm-modal" role="dialog" aria-modal="true">
+        <div class="sm-modal-head">
+          <h3>
+            <i class="fas fa-gift" aria-hidden="true"></i>
+            {{ editingNoCharge ? $t('cashier.accounts.editNoChargeAccount') : $t('cashier.accounts.newNoChargeAccount') }}
+          </h3>
+          <button type="button" class="sm-modal-close" :aria-label="$t('common.close')" @click="noChargeModalOpen = false">
+            <i class="fas fa-times" aria-hidden="true"></i>
+          </button>
+        </div>
+        <form class="cred-form" @submit.prevent="submitNoChargeAccount">
+          <div class="form-grid">
+            <label class="field field--full">
+              <span>{{ $t('cashier.accounts.accountName') }} *</span>
+              <input v-model.trim="noChargeForm.name" type="text" required maxlength="255" />
+            </label>
+            <label class="field">
+              <span>{{ $t('cashier.accounts.contactPerson') }}</span>
+              <input v-model.trim="noChargeForm.contact_name" type="text" maxlength="255" />
+            </label>
+            <label class="field">
+              <span>{{ $t('cashier.accounts.mobile') }}</span>
+              <input v-model.trim="noChargeForm.phone" type="tel" maxlength="20" />
+            </label>
+            <label class="field">
+              <span>{{ $t('cashier.accounts.email') }}</span>
+              <input v-model.trim="noChargeForm.email" type="email" maxlength="255" />
+            </label>
+            <label class="field">
+              <span>{{ $t('common.status') }}</span>
+              <select v-model="noChargeForm.is_active">
+                <option :value="true">{{ $t('cashier.accounts.statuses.active') }}</option>
+                <option :value="false">{{ $t('cashier.accounts.statuses.inactive') }}</option>
+              </select>
+            </label>
+            <label class="field field--full">
+              <span>{{ $t('cashier.accounts.notes') }}</span>
+              <input v-model.trim="noChargeForm.notes" type="text" maxlength="255" />
+            </label>
+          </div>
+
+          <p v-if="noChargeFormError" class="form-error">{{ noChargeFormError }}</p>
+
+          <div class="sm-modal-foot">
+            <button type="button" class="btn btn-secondary" @click="noChargeModalOpen = false">
+              {{ $t('common.cancel') }}
+            </button>
+            <button type="submit" class="btn btn-brand" :disabled="saving">
+              <i v-if="saving" class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+              {{ $t('common.save') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -219,7 +331,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { posApi } from '@/api'
+import { creditAccountApi, posApi } from '@/api'
 import { getCountries, loadLocationData } from '@/utils/locations'
 import { toast } from '@/utils/toast'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
@@ -233,6 +345,7 @@ const creditorTypes = ['bank', 'lending', 'leasing', 'landlord', 'contractor', '
 const tab = ref('accounts')
 const accounts = ref([])
 const creditors = ref([])
+const noChargeAccounts = ref([])
 const meta = ref({ current_page: 1, last_page: 1, total: 0, per_page: 25 })
 const loading = ref(false)
 const search = ref('')
@@ -243,13 +356,24 @@ const saving = ref(false)
 const formError = ref('')
 const form = ref(emptyForm())
 
+// No-charge credit account registry state
+const noChargeModalOpen = ref(false)
+const editingNoCharge = ref(null)
+const noChargeFormError = ref('')
+const noChargeForm = ref(emptyNoChargeForm())
+
 let debounceTimer = null
 
 const canManageCreditors = computed(() => MANAGER_ROLES.includes(authStore.user?.user_role))
+// Registering credit accounts is a level-70 write; the counters only read them.
+const CREDIT_ACCOUNT_ROLES = ['hotel_admin', 'manager', 'accountant', 'store_manager', 'owner', 'superadmin']
+const canManageCreditAccounts = computed(() => CREDIT_ACCOUNT_ROLES.includes(authStore.user?.user_role))
 
-const searchHint = computed(() => tab.value === 'accounts'
-  ? t('cashier.accounts.searchHint')
-  : t('cashier.accounts.searchCreditorsHint'))
+const searchHint = computed(() => {
+  if (tab.value === 'accounts') return t('cashier.accounts.searchHint')
+  if (tab.value === 'noCharge') return t('cashier.accounts.searchNoChargeHint')
+  return t('cashier.accounts.searchCreditorsHint')
+})
 
 function creditorTypeLabel(type) {
   return t(`cashier.accounts.creditorTypes.${type || 'other'}`)
@@ -268,6 +392,62 @@ function emptyForm() {
     credit_limit: '',
     current_balance: '',
     status: 'active',
+  }
+}
+
+function emptyNoChargeForm() {
+  return { name: '', type: 'no_charge', contact_name: '', phone: '', email: '', notes: '', is_active: true }
+}
+
+function openNewNoCharge() {
+  editingNoCharge.value = null
+  noChargeForm.value = emptyNoChargeForm()
+  noChargeFormError.value = ''
+  noChargeModalOpen.value = true
+}
+
+function openEditNoCharge(account) {
+  editingNoCharge.value = account
+  noChargeForm.value = {
+    name: account.name || '',
+    type: 'no_charge',
+    contact_name: account.contact_name || '',
+    phone: account.phone || '',
+    email: account.email || '',
+    notes: account.notes || '',
+    is_active: account.is_active !== false,
+  }
+  noChargeFormError.value = ''
+  noChargeModalOpen.value = true
+}
+
+async function submitNoChargeAccount() {
+  saving.value = true
+  noChargeFormError.value = ''
+  try {
+    if (editingNoCharge.value) {
+      await creditAccountApi.update(editingNoCharge.value.credit_account_id, noChargeForm.value)
+    } else {
+      await creditAccountApi.store(noChargeForm.value)
+    }
+    toast(t('cashier.accounts.saved'))
+    noChargeModalOpen.value = false
+    await load()
+  } catch (err) {
+    noChargeFormError.value = err.response?.data?.message || t('common.loadError')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function removeNoChargeAccount(account) {
+  if (!window.confirm(t('cashier.accounts.deleteConfirm'))) return
+  try {
+    await creditAccountApi.destroy(account.credit_account_id)
+    toast(t('common.deleteSuccess'))
+    await load()
+  } catch (err) {
+    toast(err.response?.data?.message || t('common.loadError'), 'error')
   }
 }
 
@@ -342,6 +522,15 @@ async function load() {
     if (tab.value === 'accounts') {
       const { data } = await posApi.accounts(params)
       accounts.value = data.accounts || []
+      meta.value = data.pagination || meta.value
+    } else if (tab.value === 'noCharge') {
+      const { data } = await creditAccountApi.index({
+        search: search.value.trim() || undefined,
+        type: 'no_charge',
+        per_page: meta.value.per_page,
+        page: meta.value.current_page,
+      })
+      noChargeAccounts.value = data.accounts || []
       meta.value = data.pagination || meta.value
     } else {
       const { data } = await posApi.creditors(params)

@@ -124,6 +124,26 @@
         </div>
       </div>
     </div>
+
+    <!-- Day Close reminder (login popup): a new calendar day started while the
+         open business day is still the previous one, so the inventory manager
+         is told which date new entries are actually filed under. -->
+    <div v-if="dayCloseReminder" class="dc-reminder-backdrop">
+      <div class="dc-reminder-modal" role="dialog" aria-modal="true">
+        <div class="dc-reminder-head">
+          <h3><i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.reminderTitle') }}</h3>
+        </div>
+        <p class="dc-reminder-text">{{ $t('cashier.dayClose.reminderText', { today: dayCloseOpenLabel }) }}</p>
+        <div class="dc-reminder-foot">
+          <button v-if="canProceedToDayClose" class="dc-btn ok" @click="goDayClose">
+            <i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.proceed') }}
+          </button>
+          <button class="dc-btn" @click="dismissDayCloseReminder">
+            <i class="fas fa-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.confirm') }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -133,6 +153,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notifications'
+import { useWorkingDateStore } from '@/stores/workingDate'
 import RoleBadge from '@/components/RoleBadge.vue'
 
 const route = useRoute()
@@ -140,6 +161,7 @@ const router = useRouter()
 const { t } = useI18n()
 const authStore = useAuthStore()
 const notifStore = useNotificationStore()
+const workingDateStore = useWorkingDateStore()
 const sidebarCollapsed = ref(false)
 const mobileOpen = ref(false)
 const showNotifDropdown = ref(false)
@@ -272,11 +294,46 @@ function formatNotifTime(iso) {
 
 onMounted(() => {
   notifStore.init()
+  checkDayCloseReminder()
 })
 
 onUnmounted(() => {
   notifStore.destroy()
 })
+
+// Day Close reminder: once a new calendar day starts while the open business
+// date is unchanged, the inventory manager is told which date new entries are
+// filed under. Dismissed once per session.
+const dayCloseReminder = ref(false)
+const DAY_CLOSE_REMINDER_KEY = 'dc_reminder_dismissed'
+const dayCloseOpenLabel = computed(() =>
+  new Date(workingDateStore.openDate + 'T12:00:00').toLocaleDateString(),
+)
+// The Day Close page is also mounted inside this layout, so every role that
+// reaches the inventory panel is offered PROCEED and lands on the page here.
+const DAY_CLOSE_ROLES = ['store_manager', 'cashier', 'bartender', 'hotel_admin', 'manager']
+const canProceedToDayClose = computed(() => DAY_CLOSE_ROLES.includes(authStore.user?.user_role))
+
+async function checkDayCloseReminder() {
+  await workingDateStore.ensureLoaded()
+  if (workingDateStore.needsDayClose && !sessionStorage.getItem(DAY_CLOSE_REMINDER_KEY)) {
+    dayCloseReminder.value = true
+  }
+}
+
+function dismissDayCloseReminder() {
+  sessionStorage.setItem(DAY_CLOSE_REMINDER_KEY, '1')
+  dayCloseReminder.value = false
+}
+
+function goDayClose() {
+  dismissDayCloseReminder()
+  router.push(
+    authStore.user?.user_role === 'store_manager'
+      ? { name: 'store-day-close' }
+      : { name: 'cashier-day-close' },
+  )
+}
 </script>
 
 <style>
@@ -592,4 +649,47 @@ onUnmounted(() => {
   cursor: pointer;
 }
 .notif-close:hover { background: #f1f5f9; }
+
+/* Day Close reminder (login popup) */
+.dc-reminder-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.dc-reminder-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: min(460px, 94vw);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+.dc-reminder-head { background: #3f3f46; color: #fff; padding: 14px 18px; }
+.dc-reminder-head h3 { margin: 0; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.dc-reminder-text { margin: 0; padding: 18px; font-size: 14px; color: #334155; }
+.dc-reminder-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+.dc-btn {
+  border: 1px solid #d6d3d1;
+  background: #fff;
+  color: #44403c;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.dc-btn.ok { background: #005eb8; border-color: #005eb8; color: #fff; }
+.dc-btn.ok:hover { background: #00468c; }
 </style>

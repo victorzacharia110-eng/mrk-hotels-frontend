@@ -587,6 +587,15 @@ const routes = [
         component: () => import('@/pages/superadmin/ProfilePage.vue'),
         meta: { titleKey: 'storeManager.nav.profile' },
       },
+      // The F&B business day close, shared with the cashier/bar panels: the
+      // inventory manager closes the same business date, so the store panel
+      // mounts the same page inside its own shell.
+      {
+        path: 'day-close',
+        name: 'store-day-close',
+        component: () => import('@/pages/cashier/CashierDayClosePage.vue'),
+        meta: { titleKey: 'cashier.nav.dayClose' },
+      },
     ],
   },
   // Owner-only area: their hotels and per-hotel analytics.

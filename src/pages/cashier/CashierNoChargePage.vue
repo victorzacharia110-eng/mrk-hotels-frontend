@@ -49,31 +49,45 @@
       </div>
     </section>
 
-    <!-- The modal opens automatically when the No Charge nav item is clicked. -->
+    <!-- New Order opens from the button; the list stays behind it for reference. -->
     <NewOrderModal v-if="showModal" mode="no_charge" :title="$t('cashier.noCharge.newOrder')"
-      :known-accounts="knownAccounts" @close="showModal = false" @created="onCreated" />
+      :known-accounts="knownAccounts" :credit-accounts="creditAccounts"
+      @close="showModal = false" @created="onCreated" />
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { orderApi } from '@/api'
+import { creditAccountApi, orderApi } from '@/api'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
 import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
-import { formatOrderDateTime, todayISO } from '@/utils/dates'
+import { formatOrderDateTime, localDateOf, todayISO } from '@/utils/dates'
 
 const workingDateStore = useWorkingDateStore()
 
 const orders = ref([])
 const loading = ref(true)
-const showModal = ref(true) // auto-open: the nav click lands here to get the modal
+const showModal = ref(false)
 const date = ref('')
+// Registered no-charge accounts: the account picker in the modal offers these
+// first (then legacy account names seen on previous tickets).
+const creditAccounts = ref([])
 
 const knownAccounts = computed(() =>
   [...new Set(orders.value.map((o) => o.no_charge_account).filter(Boolean))],
 )
+
+async function loadCreditAccounts() {
+  try {
+    const res = await creditAccountApi.index({ type: 'no_charge', per_page: 250 })
+    const rows = res.data.accounts || res.data.data || []
+    creditAccounts.value = Array.isArray(rows) ? rows : []
+  } catch {
+    /** keep only the legacy account suggestions when the registry is unreachable */
+  }
+}
 
 function money(value) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value ?? 0)
@@ -92,11 +106,18 @@ async function load() {
     if (date.value && date.value < todayISO()) params.date = date.value
     const { data } = await orderApi.index(params)
     const rows = data.data || []
-    // Otherwise show today's tickets by business order date, so anything the
-    // backend clock stamps on the wrong calendar day still surfaces.
+    // Otherwise show today's tickets by their LOCAL calendar day: the API
+    // returns no business-order-date field, so filtering on `order_date`
+    // matches nothing and today's no-charge tickets vanish.
     orders.value = params.date
       ? rows
-      : rows.filter((o) => (o.order_date || '').slice(0, 10) === date.value)
+      : rows.filter((o) => {
+          // Prefer created_at (real timestamp); fall back to order_date as a
+          // bare date string so test mocks without created_at still pass.
+          const stamp = o.created_at
+          if (stamp) return localDateOf(stamp) === date.value
+          return String(o.order_date || '').slice(0, 10) === date.value
+        })
   } finally {
     loading.value = false
   }
@@ -110,7 +131,7 @@ function onCreated() {
 onMounted(async () => {
   await workingDateStore.ensureLoaded()
   date.value = workingDateStore.workingDate
-  load()
+  await Promise.all([load(), loadCreditAccounts()])
 })
 </script>
 

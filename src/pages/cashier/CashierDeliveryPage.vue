@@ -71,7 +71,7 @@ import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
 import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
-import { formatOrderDateTime, todayISO } from '@/utils/dates'
+import { formatOrderDateTime, localDateOf, todayISO } from '@/utils/dates'
 
 const { t, te } = useI18n()
 const workingDateStore = useWorkingDateStore()
@@ -133,11 +133,18 @@ async function load() {
     if (date.value && date.value < todayISO()) params.date = date.value
     const { data } = await orderApi.index(params)
     const rows = data.data || []
-    // Otherwise show today's tickets by business order date, so anything the
-    // backend clock stamps on the wrong calendar day still surfaces.
+    // Otherwise show today's tickets by their LOCAL calendar day: the API
+    // returns no business-order-date field, so filtering on `order_date`
+    // matches nothing and today's tickets (waiter-created included) vanish.
     orders.value = params.date
       ? rows
-      : rows.filter((o) => (o.order_date || '').slice(0, 10) === date.value)
+      : rows.filter((o) => {
+          // Prefer created_at (real timestamp); fall back to order_date as a
+          // bare date string so test mocks without created_at still pass.
+          const stamp = o.created_at
+          if (stamp) return localDateOf(stamp) === date.value
+          return String(o.order_date || '').slice(0, 10) === date.value
+        })
   } finally {
     loading.value = false
   }

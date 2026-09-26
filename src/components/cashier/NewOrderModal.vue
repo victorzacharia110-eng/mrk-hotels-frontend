@@ -24,15 +24,35 @@
             <input v-model="search" type="search" :placeholder="$t('cashier.order.searchItems')" />
           </div>
 
+          <div class="menu-bar">
+            <div class="dept-toggle" role="group" :aria-label="$t('cashier.order.department')">
+              <button type="button" class="dept-btn" :class="{ active: dept === 'restaurant' }" @click="dept = 'restaurant'">
+                <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('cashier.order.restaurant') }}
+              </button>
+              <button type="button" class="dept-btn" :class="{ active: dept === 'bar' }" @click="dept = 'bar'">
+                <i class="fas fa-martini-glass-citrus" aria-hidden="true"></i> {{ $t('cashier.order.bar') }}
+              </button>
+            </div>
+            <span v-if="deptLoading" class="dept-loading">
+              <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> {{ $t('common.loading') }}
+            </span>
+          </div>
+
           <div class="cat-list">
             <div v-for="(itemsInCat, cat) in filteredMenu" :key="cat" class="cat-group">
               <p class="cat-title">{{ cat }}</p>
               <button v-for="item in itemsInCat" :key="item.menu_item_id" class="cat-item"
-                :disabled="!item.is_available" @click="addItem(item)">
+                :disabled="!item.is_available || item.is_in_stock === false" @click="addItem(item)">
                 <span class="cat-item-name">{{ item.item_name }}</span>
+                <span v-if="item.quantity_on_hand !== null && item.quantity_on_hand !== undefined" class="cat-item-stock">
+                  <i class="fas fa-boxes-stacked" aria-hidden="true"></i> {{ item.quantity_on_hand }}
+                </span>
                 <span class="cat-item-price">{{ money(item.price) }}</span>
               </button>
             </div>
+            <button v-if="hasMore" type="button" class="load-more" :disabled="deptLoading" @click="loadMenu(menuPage + 1)">
+              <i class="fas fa-ellipsis-h" aria-hidden="true"></i> {{ $t('cashier.order.loadMore') }}
+            </button>
             <p v-if="!Object.keys(filteredMenu).length" class="empty">{{ $t('cashier.order.noItems') }}</p>
           </div>
         </section>
@@ -84,11 +104,15 @@
 
           <div v-if="mode === 'no_charge'" class="fld-col">
             <label class="fld-label" for="no-account">{{ $t('cashier.order.selectAccount') }} *</label>
-            <input id="no-account" v-model="form.no_charge_account" class="sm-input" type="text" list="nc-accounts"
-              :placeholder="$t('cashier.order.accountPlaceholder')" />
-            <datalist id="nc-accounts">
-              <option v-for="account in knownAccounts" :key="account" :value="account" />
-            </datalist>
+            <SearchableSelect
+              id="no-account"
+              v-model="form.no_charge_account"
+              :options="accountOptions"
+              :placeholder="$t('cashier.order.accountPlaceholder')"
+              :empty-label="$t('cashier.order.accountEmpty')"
+              :disabled="busy"
+            />
+            <p class="fld-hint"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.order.accountHint') }}</p>
           </div>
 
           <div v-if="mode === 'dine_in'" class="fld-col">
@@ -182,7 +206,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { menuItemApi, orderApi } from '@/api'
 import { selectedOutlet } from '@/pages/cashier/outlet-context'
@@ -202,6 +226,9 @@ const props = defineProps({
   roomNumber: { type: String, default: null },
   guestNamePrefill: { type: String, default: '' },
   knownAccounts: { type: Array, default: () => [] },
+  // Registered F&B credit accounts (from fnb/credit-accounts) shown in the
+  // no-charge account picker ahead of the legacy hard-coded account list.
+  creditAccounts: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['close', 'created'])
 
@@ -227,6 +254,44 @@ const busy = ref(false)
 const error = ref('')
 /** Grill item waiting for its "served with" side-dish choice. */
 const accompItem = ref(null)
+
+// Department the order is stamped with, also driving which menu lists. A
+// bartender opens on the BAR menu, a cashier on the RESTAURANT menu; either
+// can flip the toggle to offer items from the other outlet.
+const dept = ref(authStore.user?.user_role === 'bartender' ? 'bar' : 'restaurant')
+const deptLoading = ref(false)
+const menuPage = ref(1)
+const menuTotal = ref(0)
+const menuPerPage = 100
+const hasMore = computed(() => menu.value.length < menuTotal.value)
+
+/** Fetches one page of menu items for the active department, appending pages. */
+async function loadMenu(page = 1) {
+  deptLoading.value = true
+  try {
+    const { data } = await menuItemApi.index({
+      department: dept.value,
+      per_page: menuPerPage,
+      page,
+    })
+    const rows = data.data || data
+    menu.value = page === 1 ? rows : [...menu.value, ...rows]
+    menuTotal.value = data.total ?? rows.length
+    menuPage.value = page
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    deptLoading.value = false
+  }
+}
+
+/** Reloads from the first page whenever the outlet toggle changes. */
+watch(dept, () => {
+  search.value = ''
+  // The ticket lines were priced against the menu they were taken from; keep
+  // them, but the freshly selected outlet drives the next picks.
+  loadMenu(1)
+})
 
 const form = reactive({
   guest_name: props.guestNamePrefill || '',
@@ -261,7 +326,7 @@ function onRoomPicked(value) {
   if (room?.guest_name) form.guest_name = room.guest_name
 }
 
-// Order type + department derived from the modal's POS mode.
+// Order type derived from the modal's POS mode; department comes from the toggle.
 const ORDER_TYPE = {
   dine_in: 'dine_in',
   takeaway: 'takeaway',
@@ -269,13 +334,26 @@ const ORDER_TYPE = {
   delivery: 'delivery',
   no_charge: 'no_charge',
 }
-const DEPARTMENT = {
-  dine_in: 'restaurant',
-  takeaway: 'restaurant',
-  room_service: 'restaurant',
-  delivery: 'restaurant',
-  no_charge: 'restaurant',
-}
+
+/** No-charge accounts to offer: registered registry entries first, then the
+    legacy hard-coded list the cashier panel used to suggest. */
+const accountOptions = computed(() => {
+  const seen = new Set()
+  const options = []
+  for (const account of props.creditAccounts) {
+    const value = account.name?.trim()
+    if (!value || seen.has(value)) continue
+    seen.add(value)
+    options.push({ value, label: value })
+  }
+  for (const value of props.knownAccounts) {
+    const name = typeof value === 'string' ? value.trim() : value?.name?.trim()
+    if (!name || seen.has(name)) continue
+    seen.add(name)
+    options.push({ value: name, label: name })
+  }
+  return options
+})
 
 const total = computed(() => lines.value.reduce((sum, l) => sum + l.price * l.quantity, 0))
 
@@ -362,7 +440,7 @@ async function submit() {
   busy.value = true
   try {
     const payload = {
-      department: DEPARTMENT[props.mode],
+      department: dept.value,
       outlet_id: selectedOutlet.value?.outlet_id || null,
       order_type: ORDER_TYPE[props.mode],
       table_number: props.tableNumber,
@@ -418,14 +496,11 @@ async function printNewOrder(order) {
 }
 
 onMounted(async () => {
+  await loadMenu(1)
   try {
-    const [menuRes, options] = await Promise.all([
-      menuItemApi.index({ per_page: 100 }),
-      orderApi.formOptions(),
-    ])
-    menu.value = menuRes.data.data || menuRes.data
-    waiters.value = options.data.waiters || []
-    inHouseRooms.value = options.data.in_house_guests || []
+    const { data } = await orderApi.formOptions()
+    waiters.value = data.waiters || []
+    inHouseRooms.value = data.in_house_guests || []
     // Snap the prefilled waiter to the exact waiter-list entry (case/spacing
     // differences between the auth profile and the waiter roster) so the order
     // resolves to a real waiter. Leaves an unmatched name as-is.
@@ -446,6 +521,16 @@ onMounted(async () => {
 @media (max-width: 800px) { .order-grid { grid-template-columns: 1fr; } }
 .order-items { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .cat-list { max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.menu-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.dept-toggle { display: inline-flex; border: 1px solid #cbd5e1; border-radius: 9px; overflow: hidden; background: #fff; }
+.dept-btn {
+  border: none; background: #fff; color: #475569; cursor: pointer;
+  font-family: inherit; font-size: 12.5px; font-weight: 600;
+  padding: 7px 14px; display: inline-flex; align-items: center; gap: 6px;
+}
+.dept-btn + .dept-btn { border-left: 1px solid #e2e8f0; }
+.dept-btn.active { background: #005eb8; color: #fff; }
+.dept-loading { font-size: 12px; color: #94a3b8; display: inline-flex; align-items: center; gap: 6px; }
 .cat-title { margin: 0 0 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; }
 .cat-item {
   display: flex; justify-content: space-between; align-items: center; gap: 10px;
@@ -455,7 +540,18 @@ onMounted(async () => {
 }
 .cat-item:hover:not(:disabled) { border-color: #005eb8; background: #e8f1fa; }
 .cat-item:disabled { opacity: 0.45; cursor: not-allowed; }
+.cat-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-item-stock {
+  color: #0f766e; font-size: 11.5px; font-weight: 600; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 4px;
+}
 .cat-item-price { color: #00468c; font-weight: 700; white-space: nowrap; }
+.load-more {
+  font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  background: #f1f5f9; border: 1px dashed #cbd5e1; color: #005eb8;
+  border-radius: 9px; padding: 9px 12px;
+}
+.load-more:disabled { opacity: 0.55; cursor: wait; }
 .order-side { display: flex; flex-direction: column; gap: 10px; }
 .fld-col { display: flex; flex-direction: column; gap: 4px; }
 .fld-row2 { display: grid; grid-template-columns: 1fr 110px; gap: 10px; }

@@ -200,7 +200,7 @@
           <h2>{{ activeLabel }}</h2>
         </div>
 
-        <p v-if="engine?.legend" class="rb-legend">
+<p v-if="engine?.legend && engine.legend.trim()" class="rb-legend">
           <i class="fas fa-circle-info" aria-hidden="true"></i> {{ engine.legend }}
         </p>
 
@@ -601,6 +601,15 @@ const categories = [
 
 const customSources = REPORTS.filter((r) => r.key !== 'custom')
 
+// The whole NO CHARGE group lists no-charge tickets by definition, so the
+// include flag is forced on for these codes (mirrored in the backend builders).
+const NO_CHARGE_REPORTS = new Set([
+  'no-charge',
+  'no-charge-menu-item-sales-summary',
+  'no-charge-menu-item-sales-detail',
+  'no-charge-sales-detail',
+])
+
 const activeReport = ref('menu-item-sales')
 const customSource = ref('menu-item-sales')
 const customCols = ref([])
@@ -943,7 +952,9 @@ async function run() {
       tax: filterValues.tax || undefined,
       discount: filterValues.discount || undefined,
       waiter_wise_sales: filterValues.waiter_wise_sales || undefined,
-      include_no_charge: filterValues.include_no_charge ? '1' : '0',
+      // A no-charge report must always include the no-charge tickets; force the
+      // flag on for the whole NO CHARGE group regardless of the filter toggle.
+      include_no_charge: NO_CHARGE_REPORTS.has(activeReport.value) || filterValues.include_no_charge ? '1' : '0',
     }
     const isCustom = activeReport.value === 'custom'
     let res

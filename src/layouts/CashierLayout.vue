@@ -234,10 +234,10 @@
         <div class="sm-modal-head">
           <h3><i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.reminderTitle') }}</h3>
         </div>
-        <p class="gate-hint">{{ $t('cashier.dayClose.reminderText', { open: dayCloseOpenLabel, today: dayCloseTodayLabel }) }}</p>
+        <p class="gate-hint">{{ $t('cashier.dayClose.reminderText', { today: dayCloseOpenLabel }) }}</p>
         <div class="sm-modal-foot">
           <button class="sm-btn sm ghost" @click="dismissDayCloseReminder">
-            <i class="fas fa-xmark" aria-hidden="true"></i> {{ $t('common.cancel') }}
+            <i class="fas fa-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.confirm') }}
           </button>
           <button class="sm-btn sm" @click="goDayClose">
             <i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.proceed') }}
@@ -363,12 +363,13 @@ async function handleLogout() {
 }
 
 // Day Close reminder: once a new calendar day starts while the open business
-// date is unchanged, remind the cashier/bartender that today's orders join the
-// open day's running orders until Day Close is run. Dismissed once per session.
+// date is unchanged, remind the cashier/bartender that the orders they enter
+// join the OPEN business day until Day Close is run. Dismissed once per session.
 const dayCloseReminder = ref(false)
 const DAY_CLOSE_REMINDER_KEY = 'dc_reminder_dismissed'
+// The reminder states the date the orders will be filed under: the open
+// business date (what the working date still resolves to).
 const dayCloseOpenLabel = computed(() => d(new Date(workingDateStore.openDate + 'T12:00:00'), 'long'))
-const dayCloseTodayLabel = computed(() => d(new Date(), 'long'))
 
 async function checkDayCloseReminder() {
   await workingDateStore.ensureLoaded()

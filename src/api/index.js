@@ -2002,6 +2002,29 @@ export const posApi = {
   },
 }
 
+/**
+ * F&B credit account registry: named no-charge accounts (and other creditor
+ * labels) cashiers and bartenders can attach to a ticket.
+ */
+export const creditAccountApi = {
+  /** Lists registered credit accounts. */
+  index(params) {
+    return api.get(`${v1}/fnb/credit-accounts`, { params })
+  },
+  /** Registers a new credit account (no_charge / creditor). */
+  store(payload) {
+    return api.post(`${v1}/fnb/credit-accounts`, payload)
+  },
+  /** Updates a registered credit account. */
+  update(id, payload) {
+    return api.put(`${v1}/fnb/credit-accounts/${id}`, payload)
+  },
+  /** Removes a registered credit account. */
+  destroy(id) {
+    return api.delete(`${v1}/fnb/credit-accounts/${id}`)
+  },
+}
+
 /** Menu item ingredients — links sellable items to tracked inventory stock. */
 export const menuItemIngredientApi = {
   index(menuItemId) {

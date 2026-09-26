@@ -94,6 +94,11 @@
                 <template v-if="canVoid(indent)">
                   <button class="rq-btn sm ghost danger-text" @click="askReason(voidRequisition, indent)"><i class="fas fa-ban"></i> {{ $t('requisitionPanel.void') }}</button>
                 </template>
+                <!-- The requester cancels their OWN requisition before the store
+                     answers it (draft or pending). Mirrors the backend rule. -->
+                <template v-if="canCancel(indent)">
+                  <button class="rq-btn sm ghost danger-text" @click="askReason(cancelRequisition, indent)"><i class="fas fa-xmark"></i> {{ $t('requisitionPanel.cancel') }}</button>
+                </template>
                 <button class="rq-btn sm ghost" @click="openDetail(indent)"><i class="fas fa-eye"></i> {{ $t('common.view') }}</button>
               </td>
             </tr>
@@ -125,6 +130,7 @@
                 :force-search="true"
                 :placeholder="$t('common.select')"
                 :empty-label="$t('requisitionPanel.noDeptItems')"
+                empty-as-hint
               />
               <input v-model.number="line.quantity" type="number" min="0.01" step="any" class="rq-input slim" />
               <button class="rq-x" @click="form.lines.splice(idx, 1)">×</button>
@@ -273,7 +279,12 @@ const role = computed(() => auth.user?.user_role)
 const isKeeper = computed(() => role.value !== 'waiter')
 const isStoreManager = computed(() => role.value === 'store_manager')
 const isManagement = computed(() => KEEPER_ROLES.includes(role.value))
-const restricted = computed(() => false)
+// A cashier/bartender raises requisitions for THEIR OWN outlet only (the same
+// rule the backend enforces when stamping department_id), so the item picker is
+// scoped to their department and the department select is hidden. Management
+// and the store keeper still choose the department themselves.
+const DEPT_SCOPED_ROLES = ['cashier', 'bartender', 'waiter']
+const restricted = computed(() => DEPT_SCOPED_ROLES.includes(role.value))
 const deptName = computed(() => auth.user?.department || '')
 
 // The store manager owns everything, so it never asks itself for items: its
@@ -339,17 +350,36 @@ const departmentOptions = computed(() =>
 
 const availableItems = computed(() => {
   if (!restricted.value) return items.value
-  const dept = auth.user?.department_id
-  return items.value.filter(
-    (i) => i.department_id === dept || (i.departments || []).some((d) => d.department_id === dept),
-  )
+  // Seeded cashiers/bartenders carry only the `department` NAME (e.g. "bar"),
+  // so match on the id when present and fall back to the name. An item
+  // registered on no department is store stock every outlet may request.
+  const deptId = myDepartmentId.value
+  const name = String(auth.user?.department || '').trim().toLowerCase()
+  return items.value.filter((i) => {
+    const links = i.departments || []
+    if (!i.department_id && !links.length) return true
+    return (
+      (deptId && (i.department_id === deptId || links.some((d) => d.department_id === deptId))) ||
+      (name && links.some((d) => String(d.name || '').trim().toLowerCase() === name))
+    )
+  })
 })
 
-/** Registered stock items, searchable, showing the current stock level. */
+/** The signed-in user's own shelf, resolved by id or by department name. */
+const myDepartmentId = computed(() => {
+  if (auth.user?.department_id) return auth.user.department_id
+  const name = String(auth.user?.department || '').trim().toLowerCase()
+  if (!name) return null
+  return departments.value.find((d) => String(d.name || '').trim().toLowerCase() === name)?.department_id || null
+})
+
+/** Registered stock items, searchable, showing the current stock level. A bar or
+ *  restaurant requester sees THEIR shelf balance (shelf_quantity_in_stock), not
+ *  the whole-store figure. */
 const itemOptions = computed(() =>
   availableItems.value.map((i) => ({
     value: i.item_id,
-    label: `${i.item_name} — ${t('requisitionPanel.inStock')}: ${Number(i.quantity_in_stock ?? 0)}`,
+    label: `${i.item_name} — ${t('requisitionPanel.inStock')}: ${Number(i.shelf_quantity_in_stock ?? i.quantity_in_stock ?? 0)}`,
   })),
 )
 
@@ -419,6 +449,12 @@ function canVoid(i) {
   // no longer recall once the requester has accepted the forwarded answer.
   return isManagement.value && ['pending', 'approved', 'forwarded', 'fulfilled'].includes(i.status)
 }
+// The requester cancels their OWN requisition while it is still theirs to
+// cancel: a draft or a sent-but-unanswered pending request. Once the store has
+// forwarded an answer the requester accepts/rejects it instead of cancelling.
+function canCancel(i) {
+  return isRequester(i) && ['draft', 'pending'].includes(i.status)
+}
 
 function loadMessage(e, fallback) {
   return e?.response?.data?.message || fallback || t('requisitionPanel.failed')
@@ -475,7 +511,7 @@ function switchTab(next) {
 function openCreate() {
   err.value = ''
   Object.assign(form, {
-    department_id: restricted.value ? auth.user?.department_id : (departments.value[0]?.department_id || null),
+    department_id: restricted.value ? myDepartmentId.value : (departments.value[0]?.department_id || null),
     notes: '',
     lines: availableItems.value.length ? [{ item_id: availableItems.value[0].item_id, quantity: 1 }] : [{ item_id: null, quantity: 1 }],
   })
@@ -488,7 +524,7 @@ function openEdit(indent) {
   editing.value = indent
   const lines = (indent.items || []).map((l) => ({ item_id: l.item_id, quantity: l.quantity }))
   Object.assign(form, {
-    department_id: indent.department_id || auth.user?.department_id,
+    department_id: indent.department_id || myDepartmentId.value,
     notes: indent.notes || '',
     lines: lines.length ? lines : [{ item_id: availableItems.value[0]?.item_id || null, quantity: 1 }],
   })
@@ -644,6 +680,15 @@ async function reject(indent, reason) {
 async function voidRequisition(indent, reason) {
   await inventoryOpsApi.voidIndent(indent.indent_id, reason)
   notice.value = t('requisitionPanel.voidedMsg')
+  await load()
+}
+
+// The requester CANCEL of their own draft/pending requisition rides the same
+// void endpoint: the backend now permits the requester to void while the request
+// is still draft or pending (before the store answers it).
+async function cancelRequisition(indent, reason) {
+  await inventoryOpsApi.voidIndent(indent.indent_id, reason)
+  notice.value = t('requisitionPanel.cancelledMsg')
   await load()
 }
 

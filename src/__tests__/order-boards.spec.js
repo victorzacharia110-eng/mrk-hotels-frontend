@@ -190,8 +190,8 @@ describe('Cashier order boards — previous orders by date', () => {
 
   it('No Charge lists only the picked date instead of dumping every ticket', async () => {
     const today = todayISO()
-    const todays = ORDER({ order_id: 3, order_number: 'NC-TODAY', order_type: 'no_charge', order_date: today })
-    const old = ORDER({ order_id: 4, order_number: 'NC-OLD', order_type: 'no_charge', order_date: addDays(today, -3) })
+    const todays = ORDER({ order_id: 3, order_number: 'NC-TODAY', order_type: 'no_charge', order_date: today, created_at: `${today}T09:00:00` })
+    const old = ORDER({ order_id: 4, order_number: 'NC-OLD', order_type: 'no_charge', order_date: addDays(today, -3), created_at: `${addDays(today, -3)}T09:00:00` })
     api.orderIndex.mockResolvedValueOnce({ data: { data: [todays, old] } })
 
     const wrapper = mount(CashierNoChargePage, { global: { plugins: [i18n] } })

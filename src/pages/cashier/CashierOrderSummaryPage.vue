@@ -70,7 +70,7 @@
             <td>{{ money(order.total_amount) }}</td>
             <td>
               <div class="row-actions">
-                <button v-if="order.status !== 'cancelled'" class="sm-btn sm" @click="openDrawer(order)"
+                <button class="sm-btn sm" @click="openDrawer(order)"
                   :title="$t('cashier.summary.viewOrder')">
                   <i class="fas fa-eye" aria-hidden="true"></i> {{ $t('cashier.summary.view') }}
                 </button>
@@ -180,15 +180,25 @@
         </div>
 
         <div v-if="transferring" class="drawer-transfer">
-          <label :for="transferTableId">{{ $t('cashier.summary.transferPlaceholder') }}</label>
-          <input :id="transferTableId" v-model.trim="transferTable" type="text" :disabled="savingTransfer"
+          <label :for="transferTargetId">{{ transferTargetLabel }}</label>
+          <SearchableSelect
+            v-if="isRoomTransfer"
+            :id="transferTargetId"
+            v-model="transferTarget"
+            :options="transferRoomOptions"
+            :placeholder="$t('cashier.summary.transferRoomPlaceholder')"
+            :empty-label="$t('cashier.summary.transferRoomEmpty')"
+            empty-as-hint
+            :disabled="savingTransfer"
+          />
+          <input v-else :id="transferTargetId" v-model.trim="transferTarget" type="text" :disabled="savingTransfer"
             :placeholder="$t('cashier.summary.transferPlaceholder')" />
-          <p class="drawer-split-hint"><i class="fas fa-right-left" aria-hidden="true"></i> {{ $t('cashier.summary.transferHint') }}</p>
+          <p class="drawer-split-hint"><i class="fas fa-right-left" aria-hidden="true"></i> {{ transferHint }}</p>
           <div class="drawer-void-actions">
             <button type="button" class="sm-btn sm ghost" :disabled="savingTransfer" @click="transferring = false">
               {{ $t('common.cancel') }}
             </button>
-            <button type="button" class="sm-btn sm primary" :disabled="savingTransfer || !transferTable"
+            <button type="button" class="sm-btn sm primary" :disabled="savingTransfer || !transferTarget"
               @click="confirmTransfer">
               <i class="fas fa-right-left" aria-hidden="true"></i> {{ savingTransfer ? $t('common.saving') : $t('cashier.summary.moveTicket') }}
             </button>
@@ -217,12 +227,16 @@
             <button v-if="canVoid(drawerOrder)" type="button" class="sm-btn sm ghost" @click="promptVoid">
               <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.summary.voidOrder') }}
             </button>
-            <button type="button" class="sm-btn sm ghost" @click="promptTransfer">
-              <i class="fas fa-right-left" aria-hidden="true"></i> {{ $t('cashier.summary.transfer') }}
-            </button>
-            <button type="button" class="sm-btn sm ghost" @click="promptSplit">
-              <i class="fas fa-scissors" aria-hidden="true"></i> {{ $t('cashier.summary.split') }}
-            </button>
+            <!-- Transfer / split only make sense for a bill sitting on a table:
+                 a take-away or delivery ticket leaves with the customer. -->
+            <template v-if="canMoveBill(drawerOrder)">
+              <button type="button" class="sm-btn sm ghost" @click="promptTransfer">
+                <i class="fas fa-right-left" aria-hidden="true"></i> {{ $t('cashier.summary.transfer') }}
+              </button>
+              <button type="button" class="sm-btn sm ghost" @click="promptSplit">
+                <i class="fas fa-scissors" aria-hidden="true"></i> {{ $t('cashier.summary.split') }}
+              </button>
+            </template>
           </template>
           <button v-if="isRunning(drawerOrder)" type="button" class="sm-btn sm primary" :disabled="splitting || transferring || voidConfirming" @click="settleFromDrawer">
             <i class="fas fa-money-bill" aria-hidden="true"></i> {{ $t('cashier.summary.settle') }}
@@ -390,9 +404,20 @@ const splitting = ref(false)
 const splitLines = ref([])
 const savingSplit = ref(false)
 const transferring = ref(false)
-const transferTable = ref('')
-const transferTableId = `transfer-table-${Date.now()}`
+const transferTarget = ref('')
+const transferTargetId = `transfer-target-${Date.now()}`
 const savingTransfer = ref(false)
+
+// A room-service ticket moves between rooms; every other bill moves between
+// tables (take-away / delivery tickets cannot be moved at all).
+const isRoomTransfer = computed(() => drawerOrder.value?.order_type === 'room_service')
+const transferRoomOptions = computed(() => roomOptions.value)
+const transferTargetLabel = computed(() =>
+  isRoomTransfer.value ? t('cashier.summary.transferRoomLabel') : t('cashier.summary.transferPlaceholder'),
+)
+const transferHint = computed(() =>
+  isRoomTransfer.value ? t('cashier.summary.transferRoomHint') : t('cashier.summary.transferHint'),
+)
 
 /** "collect" takes cash/mobile/bank; "room" posts the ticket to a folio. */
 const settleMode = ref('collect')
@@ -416,13 +441,23 @@ const needsRef = computed(() => payMethod.value === 'bank')
 const isSettled = (order) => order.status === 'completed' || order.payment_status !== 'unpaid'
 const isRunning = (order) => !['cancelled', 'merged'].includes(order.status) && !isSettled(order)
 
-// Only management may void a settled / closed bill (the reversal rewrites the
-// day's numbers); cashiers and bartenders keep voiding running tickets.
-const isManagement = computed(() => ['hotel_admin', 'manager'].includes(authStore.user?.user_role))
+// Only management and the counter roles (cashier / bartender) may void a
+// settled / closed bill — the reversal rewrites the day's numbers. Waiters keep
+// voiding running tickets only. This mirrors the backend voidOrder policy.
+const canVoidSettled = computed(() =>
+  ['hotel_admin', 'manager', 'cashier', 'bartender'].includes(authStore.user?.user_role),
+)
 
-// Void is available on any running ticket, and on settled/closed bills for
-// management only — exactly the authority the cashier & bartender panels ask.
-const canVoid = (order) => order && order.status !== 'cancelled' && (isRunning(order) || isManagement.value)
+// Void is available on any running ticket, and on settled/closed bills for the
+// counter roles above — exactly the authority the cashier & bartender panels ask.
+const canVoid = (order) => order && order.status !== 'cancelled' && (isRunning(order) || canVoidSettled.value)
+
+// Transfer / split apply to a bill that lives somewhere: a table, a room, or a
+// bar counter. Take-away and delivery tickets are not placeable, so the panel
+// hides those actions for them.
+const NON_PLACEABLE_TYPES = ['takeaway', 'delivery']
+const canMoveBill = (order) =>
+  !!order && !['cancelled', 'merged'].includes(order.status) && !NON_PLACEABLE_TYPES.includes(order.order_type)
 
 const filteredOrders = computed(() => {
   const term = search.value.trim().toLowerCase()
@@ -540,7 +575,7 @@ async function openDrawer(order) {
   splitting.value = false
   splitLines.value = []
   transferring.value = false
-  transferTable.value = ''
+  transferTarget.value = ''
   drawerOrder.value = order
   if (!order.items?.length) {
     try {
@@ -630,7 +665,7 @@ async function confirmVoid() {
   try {
     await orderApi.voidOrder(drawerOrder.value.order_id, {
       reason: voidReason.value.trim(),
-      ...(isManagement.value ? { override: true } : {}),
+      ...(canVoidSettled.value ? { override: true } : {}),
     })
     closeDrawer()
     await load()
@@ -647,15 +682,19 @@ function promptTransfer() {
   transferring.value = true
   voidConfirming.value = false
   splitting.value = false
-  transferTable.value = ''
+  transferTarget.value = ''
 }
 
 async function confirmTransfer() {
-  if (!drawerOrder.value || !transferTable.value.trim()) return
+  if (!drawerOrder.value || !transferTarget.value.trim()) return
   savingTransfer.value = true
   drawerError.value = ''
   try {
-    await orderApi.transferOrder(drawerOrder.value.order_id, { table_number: transferTable.value.trim() })
+    // Room service moves to another room; everything else moves to a table.
+    const payload = isRoomTransfer.value
+      ? { room_number: transferTarget.value.trim() }
+      : { table_number: transferTarget.value.trim() }
+    await orderApi.transferOrder(drawerOrder.value.order_id, payload)
     closeDrawer()
     await load()
     toast(t('cashier.summary.transferred'), 'success')
