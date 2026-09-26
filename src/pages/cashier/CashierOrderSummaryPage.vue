@@ -191,8 +191,21 @@
             empty-as-hint
             :disabled="savingTransfer"
           />
-          <input v-else :id="transferTargetId" v-model.trim="transferTarget" type="text" :disabled="savingTransfer"
-            :placeholder="$t('cashier.summary.transferPlaceholder')" />
+          <!-- Review: "When ORDER TYPE is of a table no the standard procedure
+               to transfer to another table should follow that of the DINE IN
+               open order page" — so this is the same searchable table picker,
+               not a free-text box that accepted any string. -->
+          <SearchableSelect
+            v-else
+            :id="transferTargetId"
+            v-model="transferTarget"
+            :options="transferTableOptions"
+            :placeholder="$t('cashier.summary.transferPlaceholder')"
+            :empty-label="$t('cashier.summary.transferTableEmpty')"
+            :empty-as-hint="true"
+            :force-search="true"
+            :disabled="savingTransfer"
+          />
           <p class="drawer-split-hint"><i class="fas fa-right-left" aria-hidden="true"></i> {{ transferHint }}</p>
           <div class="drawer-void-actions">
             <button type="button" class="sm-btn sm ghost" :disabled="savingTransfer" @click="transferring = false">
@@ -334,7 +347,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { cashierApi, orderApi, hotelSettingsApi } from '@/api'
+import { cashierApi, orderApi, hotelSettingsApi, tableApi } from '@/api'
 import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
@@ -430,6 +443,53 @@ const roomOptions = computed(() =>
     label: `${room.room_number} — ${room.guest_name || ''}`,
   })),
 )
+
+/** Active tables, loaded for the transfer picker. */
+const tables = ref([])
+
+/** Tables held by a live (running, unpaid) ticket in the list being shown —
+ *  the same "occupied" map the Dine-In board builds from its own orders. */
+const occupiedTables = computed(() => {
+  const map = new Map()
+  for (const order of orders.value) {
+    if (!order.table_number) continue
+    if (!isRunning(order)) continue
+    const key = String(order.table_number)
+    if (!map.has(key)) map.set(key, order.waiter_name || t('orderTaker.otherWaiter'))
+  }
+  return map
+})
+
+async function loadTables() {
+  try {
+    const res = await tableApi.index({ is_active: 1 })
+    const d = res.data
+    tables.value = Array.isArray(d) ? d : d?.data || []
+  } catch {
+    tables.value = []
+  }
+}
+
+/**
+ * Tables a bill can be moved to, built the way the Dine-In board builds its
+ * picker: every active table, with the ones held by another live order marked
+ * occupied so they cannot be picked by mistake. The bill's own table stays
+ * selectable (the board does the same for the waiter holding it).
+ */
+const transferTableOptions = computed(() => {
+  const current = String(drawerOrder.value?.table_number || '').trim().toLowerCase()
+  return tables.value.map((table) => {
+    const name = String(table.table_name)
+    const occupant = occupiedTables.value.get(name)
+    const isSelf = !occupant || String(occupant).toLowerCase() === current
+    const label = table.section ? `${name} · ${table.section}` : name
+    return {
+      value: name,
+      label: occupant && !isSelf ? `${label} — ${t('orderTaker.occupiedBy', { waiter: occupant })}` : label,
+      disabled: !isSelf,
+    }
+  })
+})
 
 /** A bank transfer needs the statement reference to be recorded on the till. */
 const needsRef = computed(() => payMethod.value === 'bank')
@@ -865,6 +925,7 @@ onMounted(async () => {
   await workingDateStore.ensureLoaded()
   date.value = workingDateStore.workingDate
   load()
+  loadTables()
   loadLogo()
   restorePrinter()
 })

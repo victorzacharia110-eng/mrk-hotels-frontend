@@ -5089,7 +5089,8 @@
       "roomNone": "No occupied in-house rooms right now.",
       "roomPostHint": "The amount is charged to the guest's room folio and settled at checkout.",
       "roomPostConfirm": "Post to Room",
-      "roomPosted": "Order posted to the room folio."
+      "roomPosted": "Order posted to the room folio.",
+      "transferTableEmpty": "No table is available to move this ticket to."
     },
     "printSettings": {
       "title": "Print Settings",

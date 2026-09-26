@@ -210,9 +210,10 @@
           </button>
         </div>
 
-<p v-if="engine?.legend && engine.legend.trim()" class="rb-legend">
-          <i class="fas fa-circle-info" aria-hidden="true"></i> {{ engine.legend }}
-        </p>
+        <!-- The report's `legend` is an internal note about how the query was
+             built ("... mirroring the EZEE layout"). The review asked for
+             these banners to be removed from the report view, so it is no
+             longer printed above the figures. -->
 
         <!-- ── Stock Ledger: the Ezee per-item ledger with category bands ── -->
         <div v-if="isStockLedger && stockLedger?.items?.length" class="ledger-area">
@@ -385,7 +386,7 @@
         </template>
 
         <div v-else class="rb-empty">
-          <i class="fas fa-info-circle" aria-hidden="true"></i> {{ engine.legend || $t('posReports.noDataYet') }}
+          <i class="fas fa-info-circle" aria-hidden="true"></i> {{ $t('posReports.noDataYet') }}
         </div>
       </div>
     </template>
@@ -1218,8 +1219,6 @@ function openReportWindow() {
   tfoot td { font-weight: 700; background: #eef2f7; border-top: 2px solid #062a52; }
   .num { text-align: right !important; }
   .rb-empty { color: #64748b; font-style: italic; text-align: center !important; }
-  .rb-legend { font-size: 10px; color: #475569; margin: 0 0 10px; }
-  .rb-legend i { display: none; }
 
   /* ── Ezee stock ledger (the stock-ledger report) ── */
   .ledger-area { margin-top: 2px; }
@@ -1556,19 +1555,6 @@ const money = (v) => {
 }
 .rb-chart-toggle:hover { border-color: #9db4d0; color: var(--mrk-dark, #062a52); }
 @media print { .rb-chart-toggle { display: none !important; } }
-.rb-legend {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  background: #f7fafd;
-  border: 1px solid #e6ebf2;
-  border-left: 3px solid var(--mrk-blue, #005eb8);
-  color: #475569;
-  font-size: 13px;
-  padding: 10px 14px;
-  border-radius: 6px;
-  margin: 0 0 16px;
-}
 .rb-kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
