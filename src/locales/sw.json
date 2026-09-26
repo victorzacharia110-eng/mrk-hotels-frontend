@@ -4960,7 +4960,9 @@
       "all": "Zote",
       "preparing": "Zinaandaliwa",
       "served": "Ziko Tayari",
-      "completed": "Zimekamilika"
+      "completed": "Zimekamilika",
+      "today": "Leo",
+      "dateTime": "Tarehe / Muda"
     },
     "delivery": {
       "addOrder": "+ Ongeza Oda ya Usafirishaji",
