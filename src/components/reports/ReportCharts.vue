@@ -4,15 +4,13 @@
   The report browser renders every report through one generic engine
   (columns + rows), so a report has no idea what its numbers mean. This
   component reads the same payload, works out which columns are worth
-  plotting, and draws a bar chart per metric without any charting
-  dependency — the same hand-rolled approach the room tape chart uses.
+  plotting, and draws them with Chart.js.
 
-  Rules it obeys:
-  * band rows (category / subcategory / grand total) are never charted as
-    if they were line items — they would double-count the figures;
-  * a metric is only offered when at least one real row carries a finite
-    number for it, so a text-only report renders nothing at all;
-  * money is formatted with the report's own currency formatter.
+  Chart.js is registered controller by controller rather than wholesale,
+  so the bundle only carries the bar and line pieces actually used here.
+
+  The maths lives in ./reportChartData.js so it can be tested without a
+  canvas; this file is only the drawing.
 -->
 <template>
   <section v-if="metrics.length" class="rbc" :aria-label="$t('reportBrowser.charts')">
@@ -22,19 +20,36 @@
         {{ $t('reportBrowser.charts') }}
       </h3>
 
-      <div v-if="metrics.length > 1" class="rbc-metrics" role="tablist">
-        <button
-          v-for="m in metrics"
-          :key="m.key"
-          type="button"
-          role="tab"
-          class="rbc-chip"
-          :class="{ active: m.key === activeKey }"
-          :aria-selected="m.key === activeKey"
-          @click="activeKey = m.key"
-        >
-          {{ columnLabel(m.key, m.label) }}
-        </button>
+      <div class="rbc-controls">
+        <div v-if="metrics.length > 1" class="rbc-metrics" role="tablist">
+          <button
+            v-for="m in metrics"
+            :key="m.key"
+            type="button"
+            role="tab"
+            class="rbc-chip"
+            :class="{ active: m.key === activeKey }"
+            :aria-selected="m.key === activeKey"
+            @click="activeKey = m.key"
+          >
+            {{ columnLabel(m.key, m.label) }}
+          </button>
+        </div>
+
+        <div class="rbc-types" role="group" :aria-label="$t('reportBrowser.chartStyle')">
+          <button
+            v-for="opt in TYPE_OPTIONS"
+            :key="opt.value"
+            type="button"
+            class="rbc-chip"
+            :class="{ active: chartType === opt.value }"
+            :aria-pressed="chartType === opt.value"
+            @click="chartType = opt.value"
+          >
+            <i :class="opt.icon" aria-hidden="true"></i>
+            {{ $t(opt.label) }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -45,32 +60,69 @@
       </span>
     </div>
 
-    <ul v-if="bars.length" class="rbc-bars">
-      <li v-for="b in bars" :key="b.key" class="rbc-row">
-        <span class="rbc-name" :title="b.label">{{ b.label }}</span>
-        <span class="rbc-track">
-          <span
-            class="rbc-fill"
-            :class="{ pct: activeFormat === 'pct' }"
-            :style="{ width: `${b.pct}%` }"
-          ></span>
-        </span>
-        <span class="rbc-val">{{ formatValue(b.value, activeFormat) }}</span>
-      </li>
-    </ul>
+    <div class="rbc-canvas">
+      <component :is="chartComponent" :data="chartData" :options="chartOptions" />
+    </div>
 
-    <p v-else class="rbc-empty">{{ $t('reportBrowser.chartNoData') }}</p>
+    <!--
+      The canvas is opaque to assistive tech and to anyone whose browser
+      cannot draw it, so the same figures are published as a table.
+    -->
+    <details class="rbc-figures">
+      <summary>{{ $t('reportBrowser.chartFigures') }}</summary>
+      <table class="rbc-table">
+        <thead>
+          <tr>
+            <th scope="col">{{ $t('reportBrowser.chartLabel') }}</th>
+            <th scope="col">{{ columnLabel(activeKey, activeLabel) }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="e in points" :key="e.key">
+            <th scope="row">{{ e.label }}</th>
+            <td>{{ formatValue(e.value, activeFormat) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </details>
   </section>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import {
+  Chart as ChartJS,
+  BarController,
+  BarElement,
+  LineController,
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+} from 'chart.js'
+import { Bar, Line } from 'vue-chartjs'
+
+import { buildEntries, pickLabelKey, pickMetrics, shapeEntries, suggestType } from './reportChartData'
+
+ChartJS.register(
+  BarController,
+  BarElement,
+  LineController,
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+)
 
 const props = defineProps({
   columns: { type: Array, default: () => [] },
   rows: { type: Array, default: () => [] },
-  // How many bars to draw before the tail is folded away.
+  // How many points to draw before the tail is folded away.
   limit: { type: Number, default: 12 },
   // Currency formatter supplied by the page, so the chart matches the table's
   // money format exactly instead of inventing a second one.
@@ -79,62 +131,16 @@ const props = defineProps({
 
 const { t } = useI18n()
 
-/** Column keys that read as a row's identity rather than a measurement. */
-const LABEL_HINTS = [
-  'item', 'date', 'time', 'day', 'name', 'category', 'department', 'account',
-  'user', 'staff', 'type', 'shift', 'terminal', 'table', 'room', 'guest',
-  'supplier', 'reason', 'payment', 'method', 'order_number', 'invoice',
+const TYPE_OPTIONS = [
+  { value: 'bar', icon: 'fas fa-chart-column', label: 'reportBrowser.chartBar' },
+  { value: 'line', icon: 'fas fa-chart-line', label: 'reportBrowser.chartLine' },
 ]
 
-/** Measurement keys worth plotting first, in priority order. */
-const METRIC_HINTS = [
-  'amount', 'total_amount', 'final_total', 'net_amount', 'gross', 'revenue',
-  'sales', 'value', 'cost', 'price', 'quantity', 'qty', 'count', 'margin',
-]
+const BLUE = '#1d4e89'
+const BLUE_SOFT = 'rgba(29, 78, 137, 0.18)'
 
-const num = (v) => {
-  if (v === null || v === undefined || v === '' || Array.isArray(v)) return null
-  if (typeof v === 'boolean') return null
-  if (typeof v === 'string') {
-    const cleaned = v.replace(/[^0-9.-]/g, '')
-    if (cleaned === '' || cleaned === '-' || cleaned === '.') return null
-    const n = Number(cleaned)
-    return Number.isFinite(n) ? n : null
-  }
-  const n = Number(v)
-  return Number.isFinite(n) ? n : null
-}
-
-/** Only real line items — band rows would double-count the totals. */
-const lineRows = computed(() => (props.rows || []).filter((r) => r && !r.band))
-
-const labelKey = computed(() => {
-  const cols = props.columns || []
-  const keys = cols.map((c) => String(c.key || '').toLowerCase())
-  const hinted = keys.findIndex((k) => LABEL_HINTS.some((h) => k === h || k.includes(h)))
-  return cols[hinted > -1 ? hinted : 0]?.key ?? null
-})
-
-const metrics = computed(() => {
-  const rows = lineRows.value
-  if (!rows.length) return []
-
-  const usable = (props.columns || []).filter((col) => {
-    const key = col?.key
-    if (!key || key === labelKey.value) return false
-    return rows.some((r) => num(r[key]) !== null)
-  })
-  if (!usable.length) return []
-
-  const rank = (c) => {
-    const k = String(c.key).toLowerCase()
-    const i = METRIC_HINTS.findIndex((h) => k === h || k.includes(h))
-    return i === -1 ? METRIC_HINTS.length : i
-  }
-  return usable
-    .map((c) => ({ key: c.key, label: c.label, format: c.format }))
-    .sort((a, b) => rank(a) - rank(b))
-})
+const labelKey = computed(() => pickLabelKey(props.columns))
+const metrics = computed(() => pickMetrics(props.columns, props.rows, labelKey.value))
 
 const activeKey = ref(null)
 watch(
@@ -154,33 +160,72 @@ const active = computed(() => metrics.value.find((m) => m.key === activeKey.valu
 const activeLabel = computed(() => active.value?.label || '')
 const activeFormat = computed(() => active.value?.format || '')
 
-const entries = computed(() => {
-  const key = activeKey.value
-  if (!key) return []
-  return lineRows.value
-    .map((r, i) => {
-      const value = num(r[key])
-      if (value === null) return null
-      const raw = r[labelKey.value]
-      const label =
-        raw === null || raw === undefined || raw === ''
-          ? t('reportBrowser.chartUnnamed')
-          : Array.isArray(raw)
-            ? raw.join(', ')
-            : String(raw)
-      return { key: `${key}-${i}`, label, value }
-    })
-    .filter(Boolean)
-})
+/** A date or time axis is a series over time, so it opens as a line. */
+const chartType = ref(suggestType(labelKey.value))
+watch(labelKey, (k) => { chartType.value = suggestType(k) })
+
+const chartComponent = computed(() => (chartType.value === 'line' ? Line : Bar))
+
+/** Everything plotted, in report order — the table below the chart shows this. */
+const entries = computed(() =>
+  buildEntries({
+    rows: props.rows,
+    labelKey: labelKey.value,
+    activeKey: activeKey.value,
+    unnamedLabel: t('reportBrowser.chartUnnamed'),
+  }),
+)
 
 const activeTotal = computed(() => entries.value.reduce((sum, e) => sum + e.value, 0))
 
-const bars = computed(() => {
-  const list = [...entries.value].sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
-  const top = list.slice(0, Math.max(1, props.limit))
-  const peak = top.reduce((m, e) => Math.max(m, Math.abs(e.value)), 0)
-  return top.map((e) => ({ ...e, pct: peak > 0 ? Math.max(2, (Math.abs(e.value) / peak) * 100) : 0 }))
-})
+// A line has to keep the order the report gave it, or the trend it exists to
+// show turns into a zigzag. Bars read by magnitude, so those get sorted.
+const points = computed(() =>
+  shapeEntries(entries.value, props.limit, { sort: chartType.value !== 'line' }),
+)
+
+const chartData = computed(() => ({
+  labels: points.value.map((p) => p.label),
+  datasets: [
+    {
+      label: columnLabel(activeKey.value, activeLabel.value),
+      data: points.value.map((p) => p.value),
+      backgroundColor: chartType.value === 'line' ? BLUE_SOFT : BLUE,
+      borderColor: BLUE,
+      borderWidth: chartType.value === 'line' ? 2 : 0,
+      borderRadius: chartType.value === 'line' ? 0 : 3,
+      pointRadius: chartType.value === 'line' ? 3 : 0,
+      pointBackgroundColor: BLUE,
+      fill: false,
+    },
+  ],
+}))
+
+const chartOptions = computed(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  // Bars are horizontal so a long item name stays readable.
+  indexAxis: chartType.value === 'line' ? 'x' : 'y',
+  animation: { duration: 0 },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: (ctx) => `${ctx.dataset.label}: ${formatValue(ctx.parsed.y ?? ctx.parsed.x, activeFormat.value)}`,
+      },
+    },
+  },
+  scales: {
+    x: {
+      grid: { color: '#e6ebf2' },
+      ticks: { callback: (v) => formatValue(v, activeFormat.value), maxTicksLimit: 8 },
+    },
+    y: {
+      grid: { display: chartType.value !== 'line' },
+      ticks: { autoSkip: false },
+    },
+  },
+}))
 
 function columnLabel(key, fallback) {
   const k = String(key || '').replace(/-/g, '_')
@@ -221,7 +266,14 @@ function formatValue(value, format) {
   letter-spacing: 0.02em;
   color: var(--mrk-dark, #062a52);
 }
-.rbc-metrics {
+.rbc-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.rbc-metrics,
+.rbc-types {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
@@ -236,6 +288,9 @@ function formatValue(value, format) {
   font-weight: 600;
   cursor: pointer;
   text-transform: capitalize;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 .rbc-chip:hover { border-color: #9db4d0; }
 .rbc-chip.active {
@@ -247,66 +302,39 @@ function formatValue(value, format) {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin: 12px 0 10px;
+  margin: 12px 0 6px;
 }
 .rbc-total-value {
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--mrk-dark, #062a52);
 }
 .rbc-total-label {
-  font-size: 11px;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-.rbc-bars {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.rbc-row {
-  display: grid;
-  grid-template-columns: minmax(90px, 22%) 1fr auto;
-  align-items: center;
-  gap: 10px;
-}
-.rbc-name {
-  font-size: 12px;
-  color: #334155;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.rbc-track {
-  background: #e8eef6;
-  border-radius: 999px;
-  height: 14px;
-  overflow: hidden;
-}
-.rbc-fill {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #1d4ed8, #3b82f6);
-}
-.rbc-fill.pct { background: linear-gradient(90deg, #047857, #10b981); }
-.rbc-val {
-  font-size: 12px;
-  font-weight: 700;
-  color: #0f172a;
-  white-space: nowrap;
-}
-.rbc-empty {
-  margin: 8px 0 0;
   font-size: 12px;
   color: #64748b;
 }
-/* Charts are a screen affordance — the printed sheet carries the table only. */
-@media print {
-  .rbc { display: none !important; }
+.rbc-canvas {
+  position: relative;
+  height: 260px;
 }
+.rbc-figures {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #475569;
+}
+.rbc-figures summary { cursor: pointer; }
+.rbc-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+.rbc-table th,
+.rbc-table td {
+  border-bottom: 1px solid #e6ebf2;
+  padding: 5px 8px;
+  text-align: left;
+  font-weight: 500;
+}
+.rbc-table td { text-align: right; }
+@media print { .rbc-types { display: none; } }
 </style>
