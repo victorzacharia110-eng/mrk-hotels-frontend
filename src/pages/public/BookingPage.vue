@@ -969,6 +969,7 @@ onMounted(loadHotels)
 
 .search-grid .form-group {
   flex: 1 1 150px;
+  margin-bottom: 0;
 }
 
 .search-grid .search-actions {
