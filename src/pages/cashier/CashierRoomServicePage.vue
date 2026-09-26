@@ -17,7 +17,7 @@
       </div>
       <span class="spacer"></span>
       <label class="sm-inline-label" for="rs-date">{{ $t('cashier.summary.workingDate') }}</label>
-      <OrderDateNav input-id="rs-date" v-model="date" :today="workingDateStore.workingDate"
+      <OrderDateNav input-id="rs-date" v-model="date" :today="workingToday"
         :today-label="$t('cashier.roomService.today')" @change="load" />
       <button type="button" class="sm-btn sm success" @click="togglePicker">
         <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('cashier.roomService.newOrder') }}
@@ -127,8 +127,16 @@ import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
 const { t } = useI18n()
 
 // ---- Store / board state --------------------------------------------------
+// Read through a null-safe computed: a chunk-ordering quirk in a past build
+// left this binding undefined, which white-screened the whole panel. The page
+// must always render, so it falls back to the local date.
 const workingDateStore = useWorkingDateStore()
-const date = ref(workingDateStore.workingDate || '')
+const localToday = () => {
+  const now = new Date()
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+}
+const workingToday = computed(() => workingDateStore?.workingDate || localToday())
+const date = ref(workingToday.value)
 const activeTab = ref('all')
 const orders = ref([])
 const loading = ref(true)

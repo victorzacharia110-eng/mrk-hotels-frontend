@@ -18,6 +18,8 @@ const api = vi.hoisted(() => ({
   accIndex: vi.fn(),
 }))
 
+const storeBinding = vi.hoisted(() => ({ current: undefined }))
+
 vi.mock('@/api', () => ({
   orderApi: {
     index: api.orderIndex,
@@ -209,3 +211,28 @@ describe('Cashier order boards — previous orders by date', () => {
   })
 })
 
+
+describe('Cashier Room Service board — resilience', () => {
+  it('renders even when the working-date store binding is unavailable', async () => {
+    // Regression: a chunk-ordering fault in one production build left the store
+    // binding undefined, and the panel white-screened on `.workingDate`.
+    const workingDate = storeBinding
+    vi.doMock('@/stores/workingDate', () => ({
+      useWorkingDateStore: () => workingDate.current,
+    }))
+
+    api.orderIndex.mockResolvedValueOnce({ data: { data: [] } })
+
+    const RoomService = (await import('@/pages/cashier/CashierRoomServicePage.vue')).default
+    const wrapper = mount(RoomService, { global: { plugins: [i18n] } })
+    await flushPromises()
+
+    // The board renders and falls back to the local date instead of throwing.
+    expect(wrapper.find('.date-nav').exists()).toBe(true)
+    expect(wrapper.findComponent(OrderDateNav).props('today')).toBe(todayISO())
+
+    wrapper.unmount()
+    vi.doUnmock('@/stores/workingDate')
+    vi.resetModules()
+  })
+})

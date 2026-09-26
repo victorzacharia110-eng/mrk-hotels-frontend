@@ -198,6 +198,16 @@
       <div class="rb-report-card">
         <div class="rb-report-head">
           <h2>{{ activeLabel }}</h2>
+          <button
+            v-if="engine?.wired !== false && engine?.columns?.length"
+            type="button"
+            class="rb-chart-toggle"
+            :aria-pressed="showCharts"
+            @click="showCharts = !showCharts"
+          >
+            <i class="fas fa-chart-bar" aria-hidden="true"></i>
+            {{ showCharts ? $t('reportBrowser.chartsHide') : $t('reportBrowser.chartsShow') }}
+          </button>
         </div>
 
 <p v-if="engine?.legend && engine.legend.trim()" class="rb-legend">
@@ -291,6 +301,13 @@
         </div>
 
         <template v-if="engine?.wired !== false">
+          <ReportCharts
+            v-if="showCharts && engine?.columns?.length"
+            :columns="engine.columns"
+            :rows="engine.rows"
+            :format-money="money"
+          />
+
           <div v-if="engine?.columns?.length" class="table-scroll">
             <table class="rb-table rb-table-wide">
               <thead>
@@ -380,6 +397,7 @@ import { ref, computed, reactive, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Swal from 'sweetalert2'
 import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
+import ReportCharts from '@/components/reports/ReportCharts.vue'
 import { reportApi, outletApi, departmentApi, hotelSettingsApi } from '@/api'
 import { exportCSV } from '@/utils/export'
 import { useAuthStore } from '@/stores/auth'
@@ -616,6 +634,8 @@ const customCols = ref([])
 
 const engine = ref(null)
 const loading = ref(false)
+// Charts sit above the table and can be dismissed; they are screen-only.
+const showCharts = ref(true)
 const exporting = ref(false)
 const error = ref('')
 
@@ -1519,6 +1539,23 @@ const money = (v) => {
   font-size: 18px;
   color: var(--mrk-dark, #062a52);
 }
+/* Chart toggle lives in the report head, opposite the report title. */
+.rb-chart-toggle {
+  margin-left: auto;
+  border: 1px solid #d7e0ec;
+  background: #fff;
+  color: #475569;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.rb-chart-toggle:hover { border-color: #9db4d0; color: var(--mrk-dark, #062a52); }
+@media print { .rb-chart-toggle { display: none !important; } }
 .rb-legend {
   display: flex;
   align-items: flex-start;

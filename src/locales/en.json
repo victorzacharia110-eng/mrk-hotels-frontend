@@ -2511,6 +2511,12 @@
     "helpGeneric": "This report provides the data you need for the selected filters. Choose a report from the tree on the left.",
     "totalRows": "{count} rows returned",
     "noRows": "No rows match the selected filters.",
+    "charts": "Charts",
+    "chartsShow": "Show charts",
+    "chartsHide": "Hide charts",
+    "chartTotal": "{label} total",
+    "chartNoData": "Nothing to plot for this report.",
+    "chartUnnamed": "Row",
     "colRooms": "Room revenue posted for the business date.",
     "colFnb": "Food and beverage revenue posted for the business date.",
     "colLaundry": "Laundry revenue posted for the business date.",
@@ -4971,7 +4977,6 @@
       "dateTime": "Date / Time",
       "none": "No room service orders yet.",
       "today": "Today"
-
     },
     "delivery": {
       "addOrder": "+ Add Delivery Order",
