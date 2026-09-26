@@ -452,6 +452,15 @@
         </div>
       </div>
     </Transition>
+
+    <!-- Review item 18: the staff order pad lives in this shell, so the waiter
+         and bar-tender panels get the Day Close reminder from here now that
+         the page no longer carries its own copy. -->
+    <DayCloseReminderModal
+      proceed-route="cashier-day-close"
+      :can-proceed-roles="DAY_CLOSE_ROLES"
+      :role="authStore.user?.user_role"
+    />
   </div>
 </template>
 
@@ -472,6 +481,8 @@ import { useDistribution } from '@/composables/useDistribution'
 import { useNotificationStore } from '@/stores/notifications'
 import { useNotificationSettingsStore } from '@/stores/notificationSettings'
 import NotificationSoundSettings from '@/components/notification/NotificationSoundSettings.vue'
+import DayCloseReminderModal from '@/components/cashier/DayCloseReminderModal.vue'
+import { useWorkingDateStore } from '@/stores/workingDate'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const route = useRoute()
@@ -479,6 +490,10 @@ const router = useRouter()
 const { t, locale } = useI18n()
 const authStore = useAuthStore()
 const notifStore = useNotificationStore()
+const workingDateStore = useWorkingDateStore()
+// The review's Day Close reminder lists the waiter panel too, so a waiter may
+// walk from it into Day Close; every other role may only CONFIRM.
+const DAY_CLOSE_ROLES = ['cashier', 'bartender', 'waiter', 'store_manager', 'hotel_admin', 'manager']
 
 // The signed-in user's full display name (used by the header account chip and
 // the staff drawer), falling back across every field the API may provide.
@@ -1110,6 +1125,7 @@ watch(() => authStore.user?.tenant_id, syncPresence)
 onMounted(() => {
   syncPresence()
   notifStore.init()
+  workingDateStore.initDayCloseReminder()
   // Hide the transition skeleton once the newly resolved page has mounted and
   // finished its fade-in (leave 0.25s + enter 0.25s).
   offAfterEach = router.afterEach(() => {

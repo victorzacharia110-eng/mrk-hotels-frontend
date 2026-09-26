@@ -16,6 +16,41 @@ const localToday = () => {
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
 }
 
+/**
+ * The hotel's calendar day, not the browser's.
+ *
+ * The business date rolls over at midnight in the HOTEL's timezone (the one
+ * returned by GET /fnb/day-close). A browser sitting in another zone would
+ * otherwise read the wrong day: a laptop in UTC sees the previous day until
+ * 03:00 Dar es Salaam time, so `needsDayClose` stays false and the panels
+ * default to yesterday's business date — exactly the confusion item 18 of the
+ * review is about. Before the hotel timezone is known we fall back to the
+ * browser date, and the fetch corrects it as soon as it lands.
+ */
+const dateInTimezone = (timezone) => {
+  if (!timezone) return localToday()
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date())
+    const pick = (type) => parts.find((part) => part.type === type)?.value
+    return `${pick('year')}-${pick('month')}-${pick('day')}`
+  } catch {
+    return localToday()
+  }
+}
+
+/**
+ * One sessionStorage key for the whole Day Close reminder. The three panels
+ * that show it (cashier/bar, inventory manager, staff order pad) used to keep
+ * separate keys, so a cashier sitting on the order pad got the layout modal
+ * AND the page banner stacked on top of each other.
+ */
+const DAY_CLOSE_REMINDER_KEY = 'fnb_day_close_reminder_ack'
+
 export const useWorkingDateStore = defineStore('workingDate', () => {
   const openDate = ref('')
   const timezone = ref('')
@@ -25,17 +60,40 @@ export const useWorkingDateStore = defineStore('workingDate', () => {
   const loaded = ref(false)
 
   /** The business date every cashier/bar/inventory panel should default to. */
-  const workingDate = computed(() => openDate.value || localToday())
+  const workingDate = computed(() => openDate.value || today.value)
+
+  /** The hotel's current calendar day, in the hotel's own timezone. */
+  const today = computed(() => dateInTimezone(timezone.value))
 
   /**
-   * True once the wall-clock date has moved past the open business date —
-   * i.e. a new day has started but Day Close has not been run yet. Panels
+   * True once the hotel's calendar date has moved past the open business date
+   * — i.e. a new day has started but Day Close has not been run yet. Panels
    * use this to remind staff that orders taken now still join the running
    * orders of the open (un-closed) business day.
    */
   const needsDayClose = computed(
-    () => Boolean(openDate.value) && openDate.value < localToday(),
+    () => Boolean(openDate.value) && openDate.value < today.value,
   )
+
+  /**
+   * The Day Close reminder is shared state rather than a per-component ref:
+   * exactly one modal may be on screen, no matter how many of the panels that
+   * used to render their own copy happen to be mounted together.
+   */
+  const dayCloseReminderVisible = ref(false)
+
+  /** Loads the business date, then raises the reminder if the day rolled over. */
+  async function initDayCloseReminder() {
+    await ensureLoaded()
+    if (needsDayClose.value && !sessionStorage.getItem(DAY_CLOSE_REMINDER_KEY)) {
+      dayCloseReminderVisible.value = true
+    }
+  }
+
+  function dismissDayCloseReminder() {
+    dayCloseReminderVisible.value = false
+    sessionStorage.setItem(DAY_CLOSE_REMINDER_KEY, '1')
+  }
 
   /** Fetches the open business date once; failures keep the local fallback. */
   async function ensureLoaded() {
@@ -70,7 +128,11 @@ export const useWorkingDateStore = defineStore('workingDate', () => {
     loading,
     loaded,
     workingDate,
+    today,
     needsDayClose,
+    dayCloseReminderVisible,
+    initDayCloseReminder,
+    dismissDayCloseReminder,
     ensureLoaded,
     reload,
   }

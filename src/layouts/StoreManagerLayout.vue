@@ -128,22 +128,13 @@
     <!-- Day Close reminder (login popup): a new calendar day started while the
          open business day is still the previous one, so the inventory manager
          is told which date new entries are actually filed under. -->
-    <div v-if="dayCloseReminder" class="dc-reminder-backdrop">
-      <div class="dc-reminder-modal" role="dialog" aria-modal="true">
-        <div class="dc-reminder-head">
-          <h3><i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.reminderTitle') }}</h3>
-        </div>
-        <p class="dc-reminder-text">{{ $t('cashier.dayClose.reminderText', { today: dayCloseOpenLabel }) }}</p>
-        <div class="dc-reminder-foot">
-          <button v-if="canProceedToDayClose" class="dc-btn ok" @click="goDayClose">
-            <i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.proceed') }}
-          </button>
-          <button class="dc-btn" @click="dismissDayCloseReminder">
-            <i class="fas fa-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.confirm') }}
-          </button>
-        </div>
-      </div>
-    </div>
+    <!-- Review item 18: the inventory manager closes the same business date
+         as the cashier, so this panel gets the shared Day Close reminder. -->
+    <DayCloseReminderModal
+      proceed-route="store-day-close"
+      :can-proceed-roles="DAY_CLOSE_ROLES"
+      :role="authStore.user?.user_role"
+    />
   </div>
 </template>
 
@@ -155,6 +146,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notifications'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import RoleBadge from '@/components/RoleBadge.vue'
+import DayCloseReminderModal from '@/components/cashier/DayCloseReminderModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -294,46 +286,16 @@ function formatNotifTime(iso) {
 
 onMounted(() => {
   notifStore.init()
-  checkDayCloseReminder()
+  workingDateStore.initDayCloseReminder()
 })
 
 onUnmounted(() => {
   notifStore.destroy()
 })
 
-// Day Close reminder: once a new calendar day starts while the open business
-// date is unchanged, the inventory manager is told which date new entries are
-// filed under. Dismissed once per session.
-const dayCloseReminder = ref(false)
-const DAY_CLOSE_REMINDER_KEY = 'dc_reminder_dismissed'
-const dayCloseOpenLabel = computed(() =>
-  new Date(workingDateStore.openDate + 'T12:00:00').toLocaleDateString(),
-)
-// The Day Close page is also mounted inside this layout, so every role that
-// reaches the inventory panel is offered PROCEED and lands on the page here.
-const DAY_CLOSE_ROLES = ['store_manager', 'cashier', 'bartender', 'hotel_admin', 'manager']
-const canProceedToDayClose = computed(() => DAY_CLOSE_ROLES.includes(authStore.user?.user_role))
-
-async function checkDayCloseReminder() {
-  await workingDateStore.ensureLoaded()
-  if (workingDateStore.needsDayClose && !sessionStorage.getItem(DAY_CLOSE_REMINDER_KEY)) {
-    dayCloseReminder.value = true
-  }
-}
-
-function dismissDayCloseReminder() {
-  sessionStorage.setItem(DAY_CLOSE_REMINDER_KEY, '1')
-  dayCloseReminder.value = false
-}
-
-function goDayClose() {
-  dismissDayCloseReminder()
-  router.push(
-    authStore.user?.user_role === 'store_manager'
-      ? { name: 'store-day-close' }
-      : { name: 'cashier-day-close' },
-  )
-}
+// The review lets the inventory manager proceed from the reminder into Day
+// Close; every other role on this panel may only CONFIRM.
+const DAY_CLOSE_ROLES = ['store_manager', 'cashier', 'bartender', 'waiter', 'hotel_admin', 'manager']
 </script>
 
 <style>

@@ -226,25 +226,15 @@
       </div>
     </div>
 
-    <!-- Day Close reminder: a new calendar day started but the open business
-         day has not been closed, so every order taken now still joins the
-         running orders of the open day until Day Close is run. -->
-    <div v-if="dayCloseReminder" class="sm-modal-backdrop">
-      <div class="sm-modal dc-reminder" role="dialog" aria-modal="true">
-        <div class="sm-modal-head">
-          <h3><i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.reminderTitle') }}</h3>
-        </div>
-        <p class="gate-hint">{{ $t('cashier.dayClose.reminderText', { today: dayCloseOpenLabel }) }}</p>
-        <div class="sm-modal-foot">
-          <button class="sm-btn sm ghost" @click="dismissDayCloseReminder">
-            <i class="fas fa-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.confirm') }}
-          </button>
-          <button class="sm-btn sm" @click="goDayClose">
-            <i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.proceed') }}
-          </button>
-        </div>
-      </div>
-    </div>
+    <!-- Day Close reminder (review item 18): a new calendar day started but
+         the open business day has not been closed, so every order taken now
+         still joins the running orders of the open day. The modal is shared
+         with the other panels so it can never appear twice at once. -->
+    <DayCloseReminderModal
+      proceed-route="cashier-day-close"
+      :can-proceed-roles="DAY_CLOSE_ROLES"
+      :role="authStore.user?.user_role"
+    />
   </div>
 </template>
 
@@ -258,6 +248,7 @@ import { outletApi } from '@/api'
 import { selectedOutlet } from '@/pages/cashier/outlet-context'
 import { restorePrinter } from '@/utils/printer'
 import RoleBadge from '@/components/RoleBadge.vue'
+import DayCloseReminderModal from '@/components/cashier/DayCloseReminderModal.vue'
 
 const OUTLET_KEY = 'cashier_outlet'
 
@@ -362,37 +353,14 @@ async function handleLogout() {
   router.push({ name: 'login' })
 }
 
-// Day Close reminder: once a new calendar day starts while the open business
-// date is unchanged, remind the cashier/bartender that the orders they enter
-// join the OPEN business day until Day Close is run. Dismissed once per session.
-const dayCloseReminder = ref(false)
-const DAY_CLOSE_REMINDER_KEY = 'dc_reminder_dismissed'
-// The reminder states the date the orders will be filed under: the open
-// business date (what the working date still resolves to).
-const dayCloseOpenLabel = computed(() => d(new Date(workingDateStore.openDate + 'T12:00:00'), 'long'))
-
-async function checkDayCloseReminder() {
-  await workingDateStore.ensureLoaded()
-  if (workingDateStore.needsDayClose && !sessionStorage.getItem(DAY_CLOSE_REMINDER_KEY)) {
-    dayCloseReminder.value = true
-  }
-}
-
-function dismissDayCloseReminder() {
-  sessionStorage.setItem(DAY_CLOSE_REMINDER_KEY, '1')
-  dayCloseReminder.value = false
-}
-
-function goDayClose() {
-  dismissDayCloseReminder()
-  router.push({ name: 'cashier-day-close' })
-}
+// Roles the review lets walk from the reminder into Day Close: the cashier,
+// the bar tender and the panels above them. A waiter may only CONFIRM.
+const DAY_CLOSE_ROLES = ['cashier', 'bartender', 'waiter', 'store_manager', 'hotel_admin', 'manager']
 
 onMounted(() => {
   loadOutlets()
   restorePrinter()
-  workingDateStore.ensureLoaded()
-  checkDayCloseReminder()
+  workingDateStore.initDayCloseReminder()
 })
 </script>
 

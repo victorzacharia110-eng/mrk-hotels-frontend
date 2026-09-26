@@ -388,7 +388,14 @@ const routes = [
         path: 'day-close',
         name: 'cashier-day-close',
         component: () => import('@/pages/cashier/CashierDayClosePage.vue'),
-        meta: { titleKey: 'cashier.nav.dayClose' },
+        // Review item 18 shows the waiter panel the same popup, PROCEED TO DAY
+        // CLOSE included, so a waiter is allowed in. The leaf meta overrides
+        // the parent group's list; the F&B endpoint takes level:30, which the
+        // waiter already holds.
+        meta: {
+          titleKey: 'cashier.nav.dayClose',
+          role: ['cashier', 'bartender', 'waiter', 'hotel_admin', 'manager'],
+        },
       },
       {
         path: 'reports',

@@ -73,28 +73,6 @@
       </div>
     </nav>
 
-    <!-- Day Close reminder (login popup): shown once per session when a new
-         calendar day started but the open business day wasn't closed yet, so
-         the panel can state which date the new orders are actually filed
-         under. CONFIRM dismisses; cashier/bartender may also proceed to Day
-         Close (waiters have no Day Close access). -->
-    <div v-if="dayCloseBanner" class="dc-reminder-backdrop">
-      <div class="dc-reminder-modal" role="dialog" aria-modal="true">
-        <div class="dc-reminder-head">
-          <h3><i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.reminderTitle') }}</h3>
-        </div>
-        <p class="dc-reminder-text">{{ $t('cashier.dayClose.reminderText', { today: dayCloseOpenLabel }) }}</p>
-        <div class="dc-reminder-foot">
-          <button v-if="canOpenDayClose" type="button" class="dc-btn ok" @click="goDayClose">
-            <i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.proceed') }}
-          </button>
-          <button type="button" class="dc-btn" @click="dismissDayCloseBanner">
-            <i class="fas fa-check" aria-hidden="true"></i> {{ $t('cashier.dayClose.confirm') }}
-          </button>
-        </div>
-      </div>
-    </div>
-
     <template v-if="activeTab === 'new'">
     <div class="taker-split">
       <!-- LEFT: categories + search + inline items (Ezee-style picker) -->
@@ -1173,7 +1151,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { useOrderRealtime } from '@/composables/useOrderRealtime'
@@ -1194,39 +1171,9 @@ import AccompanimentManager from '@/components/AccompanimentManager.vue'
 import { toast } from '@/utils/toast'
 
 const { t } = useI18n()
-const router = useRouter()
 const authStore = useAuthStore()
 const printStore = usePrintSettingsStore()
 const workingDateStore = useWorkingDateStore()
-
-// Day Close reminder — once per session when a new calendar day started but
-// the open business day wasn't closed yet. Waiters may only CONFIRM (dismiss);
-// bartenders/cashiers can also proceed to the Day Close page.
-const dayCloseBanner = ref(false)
-const DAY_CLOSE_BANNER_KEY = 'dc_banner_dismissed'
-const canOpenDayClose = computed(() => role.value !== 'waiter')
-// The popup states the date the new orders are filed under: the OPEN business
-// date, which is still the working date until Day Close is run.
-const dayCloseOpenLabel = computed(() =>
-  new Date(workingDateStore.openDate + 'T12:00:00').toLocaleDateString(),
-)
-
-function dismissDayCloseBanner() {
-  sessionStorage.setItem(DAY_CLOSE_BANNER_KEY, '1')
-  dayCloseBanner.value = false
-}
-
-function goDayClose() {
-  dismissDayCloseBanner()
-  router.push({ name: 'cashier-day-close' })
-}
-
-async function checkDayCloseBanner() {
-  await workingDateStore.ensureLoaded()
-  if (workingDateStore.needsDayClose && !sessionStorage.getItem(DAY_CLOSE_BANNER_KEY)) {
-    dayCloseBanner.value = true
-  }
-}
 
 // The department defaults from the staff role (bartenders start on the bar)
 // but can be switched at any time with the Restaurant / Bar toggle.
@@ -2725,7 +2672,6 @@ onMounted(async () => {
   summaryDate.value = workingDateStore.workingDate
   dashFrom.value = workingDateStore.workingDate
   dashTo.value = workingDateStore.workingDate
-  checkDayCloseBanner()
   loadMenu()
   loadTables()
   loadOpenOrders()

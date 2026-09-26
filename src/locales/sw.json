@@ -1808,6 +1808,7 @@
     "approvedMsg": "Ombi limeidhinishwa.",
     "rejectedMsg": "Ombi limekataliwa.",
     "voidedMsg": "Ombi limeghairiwa.",
+    "cancel": "Ghairi",
     "cancelledMsg": "Ombi limeghairiwa.",
     "suppliedExceeds": "Kiasi kilichotolewa hakipaswi kuzidi kiasi kilichopo.",
     "availableExceeds": "Kiasi kilichopo hakipaswi kuzidi bidhaa zilizopo kwenye ghala.",
@@ -4819,7 +4820,7 @@
       "barType": "Outlet ya baa",
       "restaurantType": "Outlet ya mkahawa"
     },
-"order": {
+    "order": {
       "searchItems": "Tafuta bidhaa...",
       "noItems": "Hakuna bidhaa zinazolingana.",
       "uncategorized": "Bila kundi",

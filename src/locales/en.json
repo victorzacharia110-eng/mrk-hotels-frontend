@@ -1811,6 +1811,7 @@
     "approvedMsg": "Requisition approved.",
     "rejectedMsg": "Requisition rejected.",
     "voidedMsg": "Requisition cancelled.",
+    "cancel": "Cancel",
     "cancelledMsg": "Requisition cancelled.",
     "suppliedExceeds": "Quantity supplied cannot exceed the quantity available.",
     "availableExceeds": "Quantity available cannot exceed the stock on hand.",
