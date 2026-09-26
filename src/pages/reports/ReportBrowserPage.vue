@@ -2301,10 +2301,31 @@ onMounted(() => {
   color: #111;
 }
 
+/* The whole sheet is one frame table: its head carries the brand and repeats
+   on every printed page (the reference document repeats the head on each
+   page), while the meta + sections live in the body and flow across pages. */
+.na-frame {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.na-frame thead {
+  display: table-header-group;
+}
+
+.na-frame-head {
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+}
+
 .na-rows-count {
   margin-top: 6px;
   font-size: 11.5px;
   color: #475569;
+  text-align: right;
+  font-weight: 700;
 }
 
 .na-empty {

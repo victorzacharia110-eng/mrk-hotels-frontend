@@ -15,21 +15,32 @@
 -->
 <template>
   <div :class="variant === 'print' ? 'na-sheet' : 'na-screen'">
-    <div v-if="showBrand" class="na-brand">
-      <div class="na-brand-left">
-        <img v-if="logoUrl" :src="logoUrl" class="na-logo" alt="" />
-        <div>
-          <div class="na-hotel">{{ hotelName }}</div>
-          <div class="na-title">{{ title }}</div>
-        </div>
-      </div>
-      <span v-if="closed" class="na-closed">Closed</span>
-    </div>
-
+    <!-- The whole document sits inside a frame table so the printed sheet can
+         repeat the brand head on every page (like the reference document);
+         the meta line sits in the body and only prints once, on page 1. -->
+    <table class="na-frame">
+      <thead>
+        <tr>
+          <th class="na-frame-head">
+            <div v-if="showBrand" class="na-brand">
+              <div class="na-brand-left">
+                <img v-if="logoUrl" :src="logoUrl" class="na-logo" alt="" />
+                <div>
+                  <div class="na-hotel">{{ hotelName }}</div>
+                  <div class="na-title">{{ title }}</div>
+                </div>
+              </div>
+              <span v-if="closed" class="na-closed">Closed</span>
+            </div>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
     <div v-if="showBrand" class="na-meta">
       <span>As On Date: <b>{{ dateLabel }}</b></span>
-      <span v-if="printedOn">Printed On: <b>{{ printedOn }}</b></span>
-      <span v-if="printedBy">Printed By: <b>{{ printedBy }}</b></span>
+      <span>Currency <b>TSh</b></span>
     </div>
 
     <!-- ══ 1 · Room Charges ══ -->
@@ -83,7 +94,7 @@
           </tr>
         </tbody>
       </table>
-      <div v-if="sheet.room_charges.total_rooms" class="na-rows-count">Total Rooms Charged: <b>{{ sheet.room_charges.total_rooms }}</b></div>
+      <div v-if="sheet.room_charges.total_rooms" class="na-rows-count">Total <b>{{ sheet.room_charges.total_rooms }}</b></div>
     </section>
 
     <!-- ══ 2 · Checked Out ══ -->
@@ -138,7 +149,7 @@
           </tr>
         </tbody>
       </table>
-      <div v-if="sheet.checked_out.count" class="na-rows-count">Total Checked Out: <b>{{ sheet.checked_out.count }}</b></div>
+      <div v-if="sheet.checked_out.count" class="na-rows-count">Total <b>{{ sheet.checked_out.count }}</b></div>
     </section>
 
     <!-- ══ 3 · Daily Sales ══ -->
@@ -218,7 +229,7 @@
             </tbody>
           </table>
         </div>
-        <div class="na-grand-total">Grand Total: <b>TSh {{ money(sheet.receipts.detail.grand_total) }}</b></div>
+        <div class="na-grand-total">Grand Total <b>TSh {{ money(sheet.receipts.detail.grand_total) }}</b></div>
       </template>
       <div v-else class="na-empty">No receipts were recorded for this date.</div>
 
@@ -489,6 +500,10 @@
         </tbody>
       </table>
     </section>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </template>
 
