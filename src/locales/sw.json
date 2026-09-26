@@ -3081,6 +3081,8 @@
     "phone": "Simu",
     "checkIn": "Kuingia",
     "checkOut": "Kutoka",
+    "checkInPastError": "Tarehe ya kuingia haiwezi kuwa nyuma. Kuhifadhi huanza kutoka leo.",
+    "checkOutRangeError": "Tarehe ya kutoka lazima iwe angalau siku moja baada ya kuingia.",
     "room": "Chumba",
     "selectRoom": "Chagua chumba",
     "specialRequests": "Maombi Maalum",

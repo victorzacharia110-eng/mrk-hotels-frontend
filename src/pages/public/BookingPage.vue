@@ -35,11 +35,11 @@
           </div>
           <div class="form-group">
             <label>{{ $t('bookingPage.checkIn') }}</label>
-            <input v-model="search.check_in" type="date" class="input" required />
+            <input v-model="search.check_in" type="date" class="input" :min="todayISO()" required />
           </div>
           <div class="form-group">
             <label>{{ $t('bookingPage.checkOut') }}</label>
-            <input v-model="search.check_out" type="date" class="input" required />
+            <input v-model="search.check_out" type="date" class="input" :min="minCheckOut" required />
           </div>
           <div class="form-group">
             <label>{{ $t('rooms.roomType') }}</label>
@@ -458,7 +458,7 @@ import { publicApi } from '@/api'
 import { normalizePhoneNumber } from '@/utils/phone'
 import { getCountryName } from '@/utils/locations'
 import { METHOD_MOBILE_MONEY, METHOD_BANK, MOBILE_MONEY_PROVIDERS, normalizePaymentAccount } from '@/utils/payments'
-import { todayISO } from '@/utils/dates'
+import { addDays, todayISO } from '@/utils/dates'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import BookingStatusTracker from '@/components/BookingStatusTracker.vue'
@@ -530,6 +530,10 @@ const search = ref({
   booking_date: todayISO(),
   room_type: '',
 })
+
+// Bookings always start today or later: the departure date picker points at
+// the day after check-in at the earliest, and past check-in dates are locked.
+const minCheckOut = computed(() => (search.value.check_in ? addDays(search.value.check_in, 1) : addDays(todayISO(), 1)))
 
 // State for a held booking awaiting payment, and for the payment attempt itself
 const pendingBooking = ref(null)
@@ -751,11 +755,21 @@ async function checkAvailability() {
   booking.value.additional_guests = []
   checking.value = true
   try {
+    // Bookings start from the current date: past check-ins and stay ranges
+    // that never reach the day after check-in are rejected before the API is
+    // called (the date inputs also grey out those dates).
+    const today = todayISO()
+    if (!search.value.check_in || search.value.check_in < today) {
+      throw new Error(t('bookingPage.checkInPastError'))
+    }
+    if (!search.value.check_out || search.value.check_out <= search.value.check_in) {
+      throw new Error(t('bookingPage.checkOutRangeError'))
+    }
     const params = { ...search.value, booking_type: booking.value.booking_type }
     const res = await publicApi.availability(params)
     availability.value = res.data
   } catch (err) {
-    error.value = err.response?.data?.message || t('bookingPage.checkAvailabilityError')
+    error.value = err.response?.data?.message || err.message || t('bookingPage.checkAvailabilityError')
   } finally {
     checking.value = false
   }
