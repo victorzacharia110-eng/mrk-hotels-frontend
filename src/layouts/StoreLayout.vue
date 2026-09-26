@@ -21,7 +21,7 @@
           </div>
           <div class="top-bar-right" v-if="!isAppMode">
             <span class="top-bar-tagline"><i class="fas fa-hotel" aria-hidden="true"></i> {{ $t('topBar.tagline')
-            }}</span>
+              }}</span>
           </div>
           <div class="top-bar-right" v-else>
             <span class="top-bar-tagline"><i class="fas fa-hotel" aria-hidden="true"></i> {{ hotelName }}</span>
@@ -205,7 +205,7 @@
                 notifStore.unreadCount }}</span>
             </button>
             <span v-else class="nav-text"><i class="fas fa-moon" aria-hidden="true"></i> {{ $t('nav.fastBooking')
-            }}</span>
+              }}</span>
           </div>
         </div>
       </nav>

@@ -5155,7 +5155,7 @@
       "standardTimeHint": "The hotel's standard time. Orders, the Day Close clock and every day's boundaries roll over at midnight in this timezone.",
       "timezoneSaved": "Standard time updated successfully.",
       "reminderTitle": "Day Close",
-      "reminderText": "The orders you enter will be saved in the : {today}.",
+      "reminderText": "The orders you enter will be saved under the business date: {today}.",
       "proceed": "Proceed to Day Close",
       "confirm": "Confirm"
     }

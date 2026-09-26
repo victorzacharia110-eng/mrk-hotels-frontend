@@ -5148,7 +5148,7 @@
       "standardTimeHint": "Saa rasmi ya hoteli. Oda, saa ya kufunga siku na mipaka ya kila siku hubadilika usiku wa manane katika eneo hili la saa.",
       "timezoneSaved": "Saa rasmi zimesasishwa kikamilifu.",
       "reminderTitle": "Funga Siku",
-      "reminderText": "Oda unazoingiza zitahifadhiwa kwenye : {today}.",
+      "reminderText": "Oda unazoingiza zitahifadhiwa chini ya tarehe ya kazi: {today}.",
       "proceed": "Endelea na Funga Siku",
       "confirm": "Thibitisha"
     }
