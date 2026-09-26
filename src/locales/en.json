@@ -4446,7 +4446,9 @@
       "severity": "Severity",
       "low": "Low",
       "reorder": "Reorder",
-      "empty": "No low stock alerts. Everything is well stocked."
+      "empty": "No low stock alerts. Everything is well stocked.",
+      "onShelves": "On Shelves",
+      "storeOnly": "Store-wide"
     },
     "settings": {
       "tabs": {

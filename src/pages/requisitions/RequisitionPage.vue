@@ -279,12 +279,14 @@ const role = computed(() => auth.user?.user_role)
 const isKeeper = computed(() => role.value !== 'waiter')
 const isStoreManager = computed(() => role.value === 'store_manager')
 const isManagement = computed(() => KEEPER_ROLES.includes(role.value))
-// A cashier/bartender raises requisitions for THEIR OWN outlet only (the same
-// rule the backend enforces when stamping department_id), so the item picker is
-// scoped to their department and the department select is hidden. Management
-// and the store keeper still choose the department themselves.
-const DEPT_SCOPED_ROLES = ['cashier', 'bartender', 'waiter']
-const restricted = computed(() => DEPT_SCOPED_ROLES.includes(role.value))
+// Per the panel review, an item registered to another department is neither
+// visible nor selectable: every mapped staff member is scoped to their own
+// shelf, back office panels included. The store keeper works the whole store,
+// so they (and the superadmin) are never scoped. Staff with no department on
+// file have no shelf to scope to and keep the full catalogue. The backend
+// enforces the same rule when it stamps department_id on the requisition.
+const UNSCOPED_ROLES = ['store_manager', 'superadmin']
+const restricted = computed(() => !UNSCOPED_ROLES.includes(role.value) && !!myDepartmentId.value)
 const deptName = computed(() => auth.user?.department || '')
 
 // The store manager owns everything, so it never asks itself for items: its

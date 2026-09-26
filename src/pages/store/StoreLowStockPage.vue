@@ -17,6 +17,7 @@
           <thead><tr>
             <th>{{ $t('inventory.itemName') }}</th><th>{{ $t('inventory.category') }}</th>
             <th>{{ $t('inventory.inStock') }}</th><th>{{ $t('inventory.reorderLevel') }}</th>
+            <th>{{ $t('storeManager.lowStock.onShelves') }}</th>
             <th>{{ $t('storeManager.lowStock.severity') }}</th><th>{{ $t('common.actions') }}</th>
           </tr></thead>
           <tbody>
@@ -25,6 +26,14 @@
               <td><span class="chip">{{ a.category }}</span></td>
               <td><span class="stock-low">{{ a.quantity_in_stock }}</span></td>
               <td>{{ a.reorder_level }}</td>
+              <!-- The QTY above is the hotel-wide truth; this traces it back to
+                   the shelf each balance actually sits on. -->
+              <td>
+                <span v-if="!(a.shelves || []).length" class="chip">{{ $t('storeManager.lowStock.storeOnly') }}</span>
+                <span v-for="s in a.shelves" :key="s.department_id" class="chip">
+                  {{ s.name }}: {{ s.quantity }}
+                </span>
+              </td>
               <td><span class="chip" :class="Number(a.quantity_in_stock) === 0 ? 'chip-red' : 'chip-amber'">
                 {{ Number(a.quantity_in_stock) === 0 ? $t('storeManager.lowStock.outOfStock') : $t('storeManager.lowStock.low') }}
               </span></td>
