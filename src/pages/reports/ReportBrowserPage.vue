@@ -374,11 +374,28 @@
         <div class="rb-report-card">
           <div class="rb-report-head">
             <h2>{{ activeLabel }}</h2>
+            <button
+              v-if="engine.columns?.length"
+              type="button"
+              class="rb-chart-toggle"
+              :aria-pressed="showEngineCharts"
+              @click="showEngineCharts = !showEngineCharts"
+            >
+              <i class="fas fa-chart-bar" aria-hidden="true"></i>
+              {{ showEngineCharts ? $t('reportBrowser.chartsHide') : $t('reportBrowser.chartsShow') }}
+            </button>
           </div>
 
           <p v-if="engine.legend" class="rb-legend">
             <i class="fas fa-circle-info" aria-hidden="true"></i> {{ engine.legend }}
           </p>
+
+          <ReportCharts
+            v-if="showEngineCharts"
+            :columns="engine.columns"
+            :rows="engine.rows"
+            :format-money="money"
+          />
 
           <div v-if="engine.summary?.length" class="rb-kpi-grid">
             <div v-for="(kpi, i) in engine.summary" :key="i" class="rb-kpi">
@@ -494,6 +511,7 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
+import ReportCharts from '@/components/reports/ReportCharts.vue'
 import NightAuditSheet from '@/components/reports/NightAuditSheet.vue'
 import { useAuthStore } from '@/stores/auth'
 import { nightAuditApi, guestReportApi, reportApi, hotelSettingsApi } from '@/api'
@@ -1217,6 +1235,8 @@ async function loadReportLogo() {
 const report = ref(null)
 const engine = ref(null)
 const loading = ref(false)
+// Charts sit above the table and can be dismissed.
+const showEngineCharts = ref(true)
 const saving = ref(false)
 const exporting = ref(false)
 const error = ref('')
@@ -1762,6 +1782,23 @@ onMounted(() => {
   font-size: 18px;
   color: var(--mrk-dark, #062a52);
 }
+/* The toggle sits opposite the report title, so the head pushes it right. */
+.rb-report-head h2 { margin-right: auto; }
+.rb-chart-toggle {
+  border: 1px solid #d7e0ec;
+  background: #fff;
+  color: #475569;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rb-chart-toggle:hover { border-color: #9db4d0; color: var(--mrk-dark, #062a52); }
+@media print { .rb-chart-toggle { display: none !important; } }
 .rb-count {
   color: #64748b;
   font-size: 12px;

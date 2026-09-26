@@ -222,3 +222,57 @@ describe('ReportCharts — chart over the wired report payload', () => {
     expect(lastChart(wrapper).datasets[0].data).toEqual([4000, 1000])
   })
 })
+
+describe('ReportCharts — the Graphs and Charts report shape', () => {
+  const TREND_COLUMNS = [
+    { key: 'date', label: 'Date' },
+    { key: 'revenue', label: 'Total Revenue', format: 'money' },
+    { key: 'fnb_sales', label: 'F&B Sales', format: 'money' },
+    { key: 'margin_per_day', label: 'F&B Margin / Day', format: 'money' },
+  ]
+
+  it('draws a date trend as a line, in the order the report gave it', () => {
+    const wrapper = mountCharts({
+      columns: TREND_COLUMNS,
+      rows: [
+        { date: '25 Sep 2026', revenue: 40000, fnb_sales: 20000, margin_per_day: 12000 },
+        { date: '26 Sep 2026', revenue: 60000, fnb_sales: 30000, margin_per_day: 18000 },
+      ],
+      formatMoney: money,
+    })
+
+    // A date label is a series over time, so it opens as a line and keeps
+    // the report's order rather than being sorted by size.
+    const lineBtn = wrapper.findAll('.rbc-types .rbc-chip').find((b) => b.text().toLowerCase().includes('line'))
+    expect(lineBtn.classes()).toContain('active')
+    expect(lastChart(wrapper).labels).toEqual(['25 Sep 2026', '26 Sep 2026'])
+  })
+
+  it('plots money and totals it', () => {
+    const wrapper = mountCharts({
+      columns: TREND_COLUMNS,
+      rows: [
+        { date: '25 Sep 2026', revenue: 40000, fnb_sales: 20000, margin_per_day: 12000 },
+        { date: '26 Sep 2026', revenue: 60000, fnb_sales: 30000, margin_per_day: 18000 },
+      ],
+      formatMoney: money,
+    })
+
+    // Revenue is the first measurement column, so it is the default metric.
+    expect(lastChart(wrapper).datasets[0].data).toEqual([40000, 60000])
+    expect(wrapper.text()).toContain('TSh 100,000')
+  })
+
+  it('can be switched to another measure on the report', async () => {
+    const wrapper = mountCharts({
+      columns: TREND_COLUMNS,
+      rows: [{ date: '26 Sep 2026', revenue: 60000, fnb_sales: 30000, margin_per_day: 18000 }],
+      formatMoney: money,
+    })
+
+    const marginChip = wrapper.findAll('.rbc-metrics .rbc-chip').find((c) => c.text().toLowerCase().includes('margin'))
+    await marginChip.trigger('click')
+
+    expect(lastChart(wrapper).datasets[0].data).toEqual([18000])
+  })
+})
