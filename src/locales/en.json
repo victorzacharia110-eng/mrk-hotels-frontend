@@ -2173,6 +2173,7 @@
     "inHouse": "In-House",
     "newBookings": "New Bookings",
     "closePrompt": "Ready to close this business day? This action cannot be undone.",
+    "closesAfterMidnight": "A business day can only be closed after midnight, once {date} has fully passed.",
     "closeDay": "Close Business Day",
     "closeConfirm": "Are you sure you want to close this business day? The data will be frozen permanently.",
     "closeSuccess": "Business day closed successfully.",

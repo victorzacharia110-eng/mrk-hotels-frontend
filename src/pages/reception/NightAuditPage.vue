@@ -24,7 +24,7 @@
       <div class="date-row">
         <div class="form-group">
           <label>{{ $t('nightAudit.businessDate') }}</label>
-          <input v-model="selectedDate" type="date" class="input" @change="load" />
+          <input v-model="selectedDate" type="date" class="input" @change="onPickDate" />
         </div>
         <div v-if="report?.closed" class="closed-badge">
           <i class="fas fa-lock"></i> {{ $t('nightAudit.closed') }}
@@ -149,7 +149,16 @@
       <!-- Close button -->
       <div v-if="!report.closed" class="card" style="padding: 20px; margin-bottom: 16px; text-align: center;">
         <p style="margin: 0 0 12px; color: #64748b;">{{ $t('nightAudit.closePrompt') }}</p>
-        <button class="btn btn-primary btn-lg" :disabled="closing" @click="openCloseConfirm">
+        <p v-if="!dateHasPassed" class="muted" style="margin: 0 0 12px;">
+          <i class="fas fa-circle-info" aria-hidden="true"></i>
+          {{ $t('nightAudit.closesAfterMidnight', { date: selectedDate }) }}
+        </p>
+        <button
+          class="btn btn-primary btn-lg"
+          :disabled="closing || !canClose"
+          :title="!dateHasPassed ? $t('nightAudit.closesAfterMidnight', { date: selectedDate }) : null"
+          @click="openCloseConfirm"
+        >
           <i class="fas fa-lock"></i>
           {{ closing ? $t('common.saving') : $t('nightAudit.closeDay') }}
         </button>
@@ -197,14 +206,50 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { nightAuditApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import { useWorkingDateStore } from '@/stores/workingDate'
 
 const { t } = useI18n()
+const workingDateStore = useWorkingDateStore()
 
-const selectedDate = ref(new Date().toISOString().slice(0, 10))
+/** The browser's own date, for the moment before the hotel timezone is known. */
+const localToday = () => {
+  const now = new Date()
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+}
+
+// The open business date is the day an audit is actually run against, and it
+// is expressed in the hotel's timezone. `toISOString()` was reading UTC here,
+// which is a day behind the hotel for part of every evening.
+const selectedDate = ref(workingDateStore.workingDate || localToday())
+
+/** Once the guest picks a date themselves, stop moving it under them. */
+const userPickedDate = ref(false)
+
+watch(
+  () => workingDateStore.workingDate,
+  (date) => {
+    if (!userPickedDate.value && date) selectedDate.value = date
+  },
+)
+
+/** The hotel's current calendar day, in the hotel's own timezone. */
+const today = computed(() => workingDateStore.today || localToday())
+
+/**
+ * A business day can only be closed once it has fully passed — the backend
+ * refuses today, and says so. Offering the button anyway just produced a 422
+ * with no way to tell what the user did wrong, so the action is disabled and
+ * the reason shown instead.
+ */
+const dateHasPassed = computed(
+  () => Boolean(selectedDate.value) && selectedDate.value < today.value,
+)
+
+const canClose = computed(() => dateHasPassed.value && !report.value?.closed)
 const report = ref(null)
 const dueOuts = ref([])
 const history = ref([])
@@ -257,7 +302,15 @@ async function confirmCloseDay() {
   }
 }
 
-onMounted(load)
+function onPickDate() {
+  userPickedDate.value = true
+  load()
+}
+
+onMounted(() => {
+  workingDateStore.ensureLoaded()
+  load()
+})
 </script>
 
 <style scoped>

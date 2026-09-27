@@ -2170,6 +2170,7 @@
     "inHouse": "Ndani ya Hoteli",
     "newBookings": "Uhifadhi Mpya",
     "closePrompt": "Uko tayari kufunga siku hii ya biashara? Kitendo hiki hakiwezi kutenduliwa.",
+    "closesAfterMidnight": "Siku ya biashara inaweza funganwa baada ya usiku, mara {date} imepita kabisa.",
     "closeDay": "Funga Siku ya Biashara",
     "closeConfirm": "Una uhakika unataka kufunga siku hii ya biashara? Data itafungwa milele.",
     "closeSuccess": "Siku ya biashara imefungwa.",
