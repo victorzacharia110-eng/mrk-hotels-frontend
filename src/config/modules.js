@@ -97,9 +97,11 @@ export const MODULES = [
   // Booking.com channel manager integration.
   { key: 'integrations/booking-com', to: '/app/integrations/booking-com', icon: 'fas fa-plug', labelKey: 'nav.bookingCom', roles: ['hotel_admin', 'manager'] },
   // QuickBooks Online accounting integration.
-  { key: 'integrations/quickbooks', to: '/app/integrations/quickbooks', icon: 'fas fa-calculator', labelKey: 'nav.quickbooks', roles: ['hotel_admin', 'manager'] },
-  // Xero accounting integration.
-  { key: 'integrations/xero', to: '/app/integrations/xero', icon: 'fas fa-chart-line', labelKey: 'nav.xero', roles: ['hotel_admin', 'manager'] },
+  // Manager review: connectivity + functionality belong to the ACCOUNTANT panel
+  // only, so these are no longer offered on the manager/administration panel.
+  { key: 'integrations/quickbooks', to: '/app/integrations/quickbooks', icon: 'fas fa-calculator', labelKey: 'nav.quickbooks', roles: ['accountant'] },
+  // Xero accounting integration. Accountant-only, per the same review item.
+  { key: 'integrations/xero', to: '/app/integrations/xero', icon: 'fas fa-chart-line', labelKey: 'nav.xero', roles: ['accountant'] },
   // Check-in override approvals.
   { key: 'overrides', to: '/app/overrides', icon: 'fas fa-user-shield', labelKey: 'nav.overrideApprovals', roles: ['hotel_admin', 'manager', 'receptionist'] },
   // Bulk data import (CSV) — administrators only, since commits write records.

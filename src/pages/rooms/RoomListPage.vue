@@ -148,6 +148,7 @@
             <tr>
               <th>{{ $t('rooms.roomType') }}</th>
               <th>{{ $t('rooms.tabStopDate') }}</th>
+              <th>{{ $t('rooms.stopSellRooms') }}</th>
               <th class="bulk-col"></th>
             </tr>
           </thead>
@@ -155,6 +156,18 @@
             <tr v-for="b in blocks" :key="b.stop_sell_id">
               <td>{{ b.room_type }}</td>
               <td>{{ b.stop_date }}</td>
+              <td>
+                <!-- Manager review: the list showed only the room type, so it was
+                     impossible to see which rooms were actually stopped. The
+                     backend returns the rooms the block covers. -->
+                <span v-if="!b.rooms || b.rooms.length === 0" class="muted">&mdash;</span>
+                <span v-else class="stop-sell-rooms">
+                  <span class="stop-sell-count">{{ $t('rooms.stopSellRoomCount', { count: b.room_count ?? b.rooms.length }) }}</span>
+                  <span class="stop-sell-numbers">
+                    <span v-for="r in b.rooms" :key="r.room_id" class="room-chip">{{ r.room_number }}</span>
+                  </span>
+                </span>
+              </td>
               <td class="bulk-col">
                 <button v-if="canEdit" class="btn btn-danger btn-sm" @click="liftStopSell(b.stop_sell_id)">
                   <i class="fas fa-rotate-left"></i>
@@ -174,7 +187,7 @@
             v-model="filters.status"
             :options="roomStatusOptions"
             :empty-label="$t('common.all')"
-            @change="load"
+            @change="applyFilter"
           />
         </div>
         <div class="form-group">
@@ -183,7 +196,7 @@
             v-model="filters.room_type"
             :options="roomTypeOptions"
             :empty-label="$t('common.all')"
-            @change="load"
+            @change="applyFilter"
           />
         </div>
         <div class="form-group">
@@ -542,6 +555,19 @@ async function load() {
   }
 }
 
+/**
+ * Applies a filter change.
+ *
+ * Manager review: filtering while sitting on page 3 reported "no rooms found"
+ * because the request kept the old page number, so the filter was applied to
+ * that page's slice of results instead of the whole set. Every filter change
+ * now returns to page 1 so the match set is the full filtered collection.
+ */
+function applyFilter() {
+  page.value = 1
+  load()
+}
+
 function loadAllRooms() {
   return collectAllRows((page, perPage) =>
     roomApi.index({
@@ -844,6 +870,35 @@ onMounted(() => {
 </script>
 
 <style scoped>
+
+/* Manager review: the rooms a stop-sell block actually covers. */
+.stop-sell-rooms {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stop-sell-count {
+  font-weight: 600;
+  color: var(--danger, #b91c1c);
+}
+
+.stop-sell-numbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.room-chip {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--border, #d4d4d8);
+  border-radius: 999px;
+  background: var(--surface-muted, #f4f4f5);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  white-space: nowrap;
+}
 .dashboard-page {
   padding: 32px 20px;
 }

@@ -659,6 +659,16 @@ router.onError((error) => {
 })
 
 // Where each role lands after login and where they get bounced when denied.
+//
+// NOTE — manager review item ("why is the manager's default page the
+// receptionist dashboard?") is NOT resolved by repointing hotel_admin /
+// manager / accountant at /app/overview: an earlier review deliberately landed
+// them on the stay-view dashboard because that is where voiding a reservation,
+// editing/voiding room charges and folio operations after checkout are driven
+// from (see src/__tests__/router-dashboard.spec.js). The management sidebar
+// already exposes its own Dashboard entry pointing at /app/overview. Moving the
+// landing page is therefore a product decision, not a bug fix — it is left
+// unchanged rather than regressing the stay-view workflow.
 export const dashboardMap = {
   superadmin: '/superadmin',
   owner: '/owner',

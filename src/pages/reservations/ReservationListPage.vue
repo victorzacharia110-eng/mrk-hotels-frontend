@@ -960,6 +960,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useWorkingDateStore } from '@/stores/workingDate'
 import { guestApi, invoiceApi, paymentApi, publicApi, reservationApi } from '@/api'
 import { saveBlob } from '@/utils/download'
 import { collectAllRows } from '@/utils/export'
@@ -988,6 +989,7 @@ import { findCountryCode, getCountryName } from '@/utils/locations'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
+const workingDateStore = useWorkingDateStore()
 const canOperate = computed(() => authStore.canOperate)
 
 // Booking and room type vocabularies shared by the filters and the form.
@@ -1044,7 +1046,19 @@ const meta = ref({
   prev_page_url: null,
   next_page_url: null,
 })
+// Manager review: the FROM/TO filters open on the business date the night audit
+// has left the hotel on, not the browser's wall-clock date, so management
+// immediately sees the current day's reservation status.
 const filters = reactive({ status: '', booking_type: '', from: '', to: '', search: '' })
+
+/** Applies the current business date to the FROM/TO range. */
+function applyBusinessDate() {
+  const day = workingDateStore.workingDate
+  if (day) {
+    filters.from = day
+    filters.to = day
+  }
+}
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
@@ -1294,8 +1308,15 @@ async function load() {
             : undefined),
       exclude_status: tab.value === 'active' ? ['checked_out', 'cancelled', 'no_show'] : undefined,
       booking_type: filters.booking_type,
-      from: filters.from,
-      to: filters.to,
+      // Manager review: FROM/TO select the days of interest, so the list shows
+      // every stay that TOUCHES that range. The old `from`/`to` pair meant
+      // "check_in >= from AND check_out <= to" (stays fully inside the range),
+      // which made the requested "both default to today" default return only
+      // single-night stays departing today and hide arrivals and in-house
+      // guests. The backend documents window_start/window_end for this overlap
+      // query, so the range is sent that way instead.
+      window_start: filters.from,
+      window_end: filters.to,
       search: filters.search,
       page: page.value,
       per_page: 15,
@@ -1322,8 +1343,8 @@ const loadAllReservations = () =>
             : undefined),
       exclude_status: tab.value === 'active' ? ['checked_out', 'cancelled', 'no_show'] : undefined,
       booking_type: filters.booking_type,
-      from: filters.from,
-      to: filters.to,
+      window_start: filters.from,
+      window_end: filters.to,
       search: filters.search,
       page,
       per_page: perPage,
@@ -1482,6 +1503,9 @@ function clearFilters() {
   filters.from = ''
   filters.to = ''
   filters.search = ''
+  // Clearing the filters returns to the business date, not to an open-ended
+  // "every reservation ever" list.
+  applyBusinessDate()
   load()
 }
 
@@ -2049,7 +2073,11 @@ async function confirmDelete() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // The business date arrives from the backend; seed the range once it is known
+  // so a night audit that has rolled the hotel forward is reflected here.
+  await workingDateStore.ensureLoaded()
+  if (!filters.from && !filters.to) applyBusinessDate()
   load()
   loadOptions()
 })

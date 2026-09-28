@@ -231,11 +231,15 @@ function pdfHeading(doc, header, title, filename) {
     if (header.tin) details.push(`TIN: ${header.tin}`)
     if (header.vrn) details.push(`VRN: ${header.vrn}`)
   }
+  // Manager review: the address/Tel/Email/TIN/VRN block sat under the company
+  // name on the left. It now sits flush right, with the company name staying on
+  // the left, which is the letterhead layout the review asked for.
+  const rightEdge = doc.internal.pageSize.width - margin
   doc.setFontSize(9)
   doc.setFont(undefined, 'normal')
   doc.setTextColor(85)
   for (const line of details) {
-    doc.text(line, margin, y)
+    doc.text(line, rightEdge, y, { align: 'right' })
     y += 4.4
   }
   doc.setTextColor(0)
