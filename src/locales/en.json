@@ -1029,7 +1029,7 @@
     "idNumber": "ID number *",
     "booking": "Booking",
     "bookingType": "Booking type",
-    "bookingDate": "Booking date",
+    "bookingDate": "Booked on",
     "roomType": "Room type",
     "anyRoomType": "Any room type",
     "noRoomsForType": "No rooms available for this room type.",
@@ -1101,7 +1101,14 @@
     "checkinExplanation": "No payment is required to check in. The outstanding balance of TZS {amount} will be collected at check-out.",
     "collectPaymentNow": "Collect payment now",
     "payAndCheckIn": "Pay & check in",
-    "checkinWithoutPayment": "Check in without payment"
+    "checkinWithoutPayment": "Check in without payment",
+    "sectionGuestInformation": "Guest information",
+    "sectionBookingDetails": "Booking details",
+    "sectionStayAndCharges": "Stay & charges",
+    "bookingReference": "Booking reference",
+    "tableNights": "Nights",
+    "occupancy": "Occupancy",
+    "nightlyRate": "Nightly rate"
   },
   "housekeeping": {
     "title": "Housekeeping",

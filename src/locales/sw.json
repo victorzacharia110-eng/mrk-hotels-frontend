@@ -1019,7 +1019,7 @@
     "firstName": "Jina la kwanza",
     "lastName": "Jina la ukoo",
     "bookingType": "Aina ya booking",
-    "bookingDate": "Tarehe ya booking",
+    "bookingDate": "Ilibookishwa",
     "roomType": "Aina ya chumba",
     "anyRoomType": "Aina yoyote ya chumba",
     "noRoomsForType": "Hakuna vyumba vinavyopatikana kwa aina hii.",
@@ -1098,7 +1098,14 @@
     "checkinExplanation": "Hakuna malipo yanayohitajika kuingia. Deni la TZS {amount} litakusanywa wakati wa kuondoka.",
     "collectPaymentNow": "Kusanya malipo sasa",
     "payAndCheckIn": "Lipa & ingia",
-    "checkinWithoutPayment": "Ingia bila malipo"
+    "checkinWithoutPayment": "Ingia bila malipo",
+    "sectionGuestInformation": "Taarifa ya mteja",
+    "sectionBookingDetails": "Maelezo ya booking",
+    "sectionStayAndCharges": "Kipindi na malipo",
+    "bookingReference": "Kumbukumbu ya booking",
+    "tableNights": "Usiku",
+    "occupancy": "Wageni",
+    "nightlyRate": "Bei ya usiku"
   },
   "housekeeping": {
     "title": "Usafi",

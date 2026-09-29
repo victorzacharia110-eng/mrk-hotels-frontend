@@ -797,66 +797,158 @@
             <i class="fas fa-xmark"></i>
           </button>
         </div>
-        <dl v-if="detail" class="detail-grid">
-          <div>
-            <dt>{{ $t('reservations.tableBookingType') }}</dt>
-            <dd>{{ bookingTypeLabel(detail.booking_type) }}</dd>
-          </div>
-          <div>
-            <dt>{{ $t('reservations.room') }}</dt>
-            <dd v-if="detail.room">
-              {{ $t('reservations.room') }} {{ detail.room.room_number }} ·
-              {{ roomTypeLabel(detail.room_type || detail.room.room_type) }}
-            </dd>
-            <dd v-else>—</dd>
-          </div>
-          <div>
-            <dt>{{ $t('reservations.tableStay') }}</dt>
-            <dd>{{ formatDate(detail.arrival_date) }} → {{ formatDate(detail.departure_date) }}</dd>
-          </div>
-          <div>
-            <dt>{{ $t('reservations.checkedInAt') }}</dt>
-            <dd>{{ formatDateTime(detail.checked_in_at) }}</dd>
-          </div>
-          <div>
-            <dt>{{ $t('reservations.checkedOutAt') }}</dt>
-            <dd>{{ formatDateTime(detail.checked_out_at) }}</dd>
-          </div>
-          <div>
-            <dt>{{ $t('reservations.checkoutReason') }}</dt>
-            <dd>{{ detail.checkout_reason || '—' }}</dd>
-          </div>
-          <div>
-            <dt>{{ $t('reservations.tableTotal') }}</dt>
-            <dd class="price">TZS {{ Number(detail.total_amount).toLocaleString() }}</dd>
-          </div>
-          <div>
-            <dt>{{ $t('reservations.roomCharges') }}</dt>
-            <dd>TZS {{ Number(detail.room_charges || 0).toLocaleString() }}</dd>
-          </div>
-          <div>
-            <dt>{{ $t('reservations.tableBalance') }}</dt>
-            <dd :class="{ due: Number(detail.balance) > 0 }">
-              TZS {{ Number(detail.balance).toLocaleString() }}
-            </dd>
-          </div>
-          <div>
-            <dt>{{ $t('reservations.bookingSource') }}</dt>
-            <dd class="capitalize">{{ bookingSourceLabel(detail.booking_source) }}</dd>
-          </div>
-          <div>
-            <dt>{{ $t('reservations.paymentsCount') }}</dt>
-            <dd>{{ (detail.payments || []).length }}</dd>
-          </div>
-          <div v-if="detail.special_requests" class="form-full">
-            <dt>{{ $t('reservations.specialRequests') }}</dt>
-            <dd>{{ detail.special_requests }}</dd>
-          </div>
-          <div v-if="detail.notes" class="form-full">
-            <dt>{{ $t('common.notes') }}</dt>
-            <dd>{{ detail.notes }}</dd>
-          </div>
-        </dl>
+        <!--
+          Manager review: "VIEW tab is very confusing, it should show guest
+          information and booking details." The modal only ever listed booking
+          and money fields, so a receptionist opening a reservation could not
+          confirm who the guest was without leaving the screen. GET
+          /reservations/{id} already returns the full guest record, so this is
+          purely a presentation fix: the same payload is now grouped into guest,
+          booking, stay and money sections.
+        -->
+        <div v-if="detail" class="detail-body">
+          <h3 class="detail-section">{{ $t('reservations.sectionGuestInformation') }}</h3>
+          <dl class="detail-grid">
+            <div>
+              <dt>{{ $t('guests.fullName') }}</dt>
+              <dd>{{ detail.guest?.full_name || detail.guest_name || '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('guests.phone') }}</dt>
+              <dd>{{ detail.guest?.phone || detail.guest_phone || '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('guests.email') }}</dt>
+              <dd>{{ detail.guest?.email || detail.guest_email || '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('guests.idType') }}</dt>
+              <dd>{{ (detail.guest?.id_type || '—').replace(/_/g, ' ') }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('guests.idNumber') }}</dt>
+              <dd>{{ detail.guest?.id_number || '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('guests.nationality') }}</dt>
+              <dd>{{ detail.guest?.nationality || '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('hotelSettings.country') }}</dt>
+              <dd>{{ detail.guest?.country || detail.country || '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('hotelSettings.city') }}</dt>
+              <dd>{{ detail.guest?.city || detail.city || '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('guests.dateOfBirth') }}</dt>
+              <dd>{{ formatDate(detail.guest?.date_of_birth) || '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('guests.vipStatus') }}</dt>
+              <dd>
+                <span v-if="detail.guest?.vip_status" class="badge badge-warning">
+                  {{ detail.guest.vip_status }}
+                </span>
+                <span v-else>—</span>
+              </dd>
+            </div>
+          </dl>
+
+          <h3 class="detail-section">{{ $t('reservations.sectionBookingDetails') }}</h3>
+          <dl class="detail-grid">
+            <div>
+              <dt>{{ $t('reservations.bookingReference') }}</dt>
+              <dd>{{ detail.booking_reference || detail.folio_code || '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('reservations.tableBookingType') }}</dt>
+              <dd>{{ bookingTypeLabel(detail.booking_type) }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('reservations.bookingSource') }}</dt>
+              <dd class="capitalize">{{ bookingSourceLabel(detail.booking_source) }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('reservations.tableStay') }}</dt>
+              <dd>{{ formatDate(detail.arrival_date) }} → {{ formatDate(detail.departure_date) }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('reservations.tableNights') }}</dt>
+              <dd>{{ detail.nights ?? detail.num_days ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('reservations.occupancy') }}</dt>
+              <dd>
+                {{ detail.num_adults }} {{ $t('reservations.adults') }} ·
+                {{ detail.num_children }} {{ $t('reservations.children') }}
+              </dd>
+            </div>
+            <div>
+              <dt>{{ $t('reservations.room') }}</dt>
+              <dd v-if="detail.room">
+                {{ $t('reservations.room') }} {{ detail.room.room_number }} ·
+                {{ roomTypeLabel(detail.room_type || detail.room.room_type) }}
+              </dd>
+              <dd v-else>—</dd>
+            </div>
+            <div>
+              <dt>{{ $t('reservations.nightlyRate') }}</dt>
+              <dd>TZS {{ Number(detail.rate || 0).toLocaleString() }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('reservations.bookingDate') }}</dt>
+              <dd>{{ formatDate(detail.booking_date) || '—' }}</dd>
+            </div>
+          </dl>
+
+          <h3 class="detail-section">{{ $t('reservations.sectionStayAndCharges') }}</h3>
+          <dl class="detail-grid">
+            <div>
+              <dt>{{ $t('reservations.checkedInAt') }}</dt>
+              <dd>{{ formatDateTime(detail.checked_in_at) }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('reservations.checkedOutAt') }}</dt>
+              <dd>{{ formatDateTime(detail.checked_out_at) }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('reservations.checkoutReason') }}</dt>
+              <dd>{{ detail.checkout_reason || '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('reservations.tableTotal') }}</dt>
+              <dd class="price">TZS {{ Number(detail.total_amount).toLocaleString() }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('reservations.roomCharges') }}</dt>
+              <dd>TZS {{ Number(detail.room_charges || 0).toLocaleString() }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('reservations.advancePayment') }}</dt>
+              <dd>TZS {{ Number(detail.advance_payment || 0).toLocaleString() }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('reservations.tableBalance') }}</dt>
+              <dd :class="{ due: Number(detail.balance) > 0 }">
+                TZS {{ Number(detail.balance).toLocaleString() }}
+              </dd>
+            </div>
+            <div>
+              <dt>{{ $t('reservations.paymentsCount') }}</dt>
+              <dd>{{ (detail.payments || []).length }}</dd>
+            </div>
+            <div v-if="detail.special_requests" class="form-full">
+              <dt>{{ $t('reservations.specialRequests') }}</dt>
+              <dd>{{ detail.special_requests }}</dd>
+            </div>
+            <div v-if="detail.notes" class="form-full">
+              <dt>{{ $t('common.notes') }}</dt>
+              <dd>{{ detail.notes }}</dd>
+            </div>
+          </dl>
+        </div>
         <div class="modal-foot">
           <button class="btn btn-secondary" :disabled="invoiceLoading" @click="downloadInvoice">
             <i class="fas fa-file-invoice"></i>
@@ -1909,9 +2001,25 @@ const isEarlyCheckout = computed(() => {
  * Opens the read-only detail modal for a reservation.
  * @param {Object} reservation - The reservation row to inspect.
  */
-function openDetail(reservation) {
+/**
+ * Opens the read-only VIEW modal.
+ *
+ * The list row is only a summary — the guest relation is not eager-loaded, so
+ * showing it directly would render the guest section blank. Fetch the full
+ * record (GET /reservations/{id} returns guest, room and payments) and fall back
+ * to the row if the fetch fails so the modal still opens.
+ * @param {Object} reservation - The reservation row to open.
+ */
+async function openDetail(reservation) {
   detail.value = reservation
   showDetail.value = true
+  try {
+    const res = await reservationApi.show(reservation.reservation_id)
+    if (showDetail.value) detail.value = res.data.reservation
+  } catch (err) {
+    // Keep the summary row rather than leaving the modal empty.
+    if (!detail.value) error.value = flattenError(err)
+  }
 }
 
 /**
@@ -2198,6 +2306,70 @@ onMounted(async () => {
 
 .capitalize {
   text-transform: capitalize;
+}
+
+/*
+  The read-only reservation modal had no styling for its definition list at
+  all — `.detail-grid` was never defined in any stylesheet — so the VIEW tab
+  rendered as an unlabelled browser-default <dl> and read as confusing noise.
+  These rules give the guest / booking / stay sections a real grid, and keep
+  full-width rows (special requests, notes) spanning the columns.
+*/
+.detail-body {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 0 4px;
+}
+
+.detail-section {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--brand);
+  margin: 18px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line, #e2e8f0);
+}
+
+.detail-section:first-child {
+  margin-top: 4px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px 16px;
+  margin: 0;
+}
+
+.detail-grid > div {
+  min-width: 0;
+}
+
+.detail-grid dt {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted, #64748b);
+  margin-bottom: 2px;
+}
+
+.detail-grid dd {
+  margin: 0;
+  color: var(--ink, #0f172a);
+  word-break: break-word;
+}
+
+.detail-grid .form-full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .price {

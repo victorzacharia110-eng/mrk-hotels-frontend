@@ -804,7 +804,11 @@ const pushRates = async () => {
     })
     rateForm.price_per_night = null
     success.value = t('rooms.ratesUpdated')
-    await loadInventory()
+    // Manager review: pushing rates only refreshed the inventory summary, so the
+    // price still shown against each room stayed stale and looked like the push
+    // had not worked until the page was reloaded. Refresh both the summary and
+    // the room list.
+    await Promise.all([loadInventory(), load()])
   } catch (err) {
     error.value = flattenError(err)
   } finally {
