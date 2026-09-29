@@ -18,45 +18,7 @@
     </div>
 
     <template v-else>
-      <!--
-        Management summary.
-
-        Manager review: "why is the manager's default page the receptionist
-        dashboard?" The stay-view grid is where voiding a reservation and folio
-        work after checkout are driven from, and management genuinely needs it,
-        so it stays. What was missing is the answer to the question: this page
-        led with a room grid and no numbers, so it read as the front desk's
-        screen whatever the sign-in said.
-
-        These figures are only fetched for the roles that report, so a
-        receptionist pays nothing for a band they never see.
-      -->
-      <section v-if="isManagement" class="mgmt-band">
-        <div class="mgmt-band-head">
-          <h2>{{ $t('stayview.todayAtAGlance') }}</h2>
-          <span v-if="mgmtLoading" class="muted">{{ $t('common.loading') }}</span>
-          <span v-else-if="mgmtError" class="mgmt-error">{{ $t('stayview.summaryUnavailable') }}</span>
-        </div>
-
-        <div v-if="!mgmtLoading && !mgmtError" class="mgmt-stats">
-          <div class="mgmt-stat">
-            <span class="mgmt-stat-label">{{ $t('stayview.occupancyToday') }}</span>
-            <strong>{{ mgmtOccupancy.rate }}%</strong>
-            <span class="muted">{{ mgmtOccupancy.occupied }} / {{ mgmtOccupancy.total }} {{ $t('stayview.rooms') }}</span>
-          </div>
-          <div class="mgmt-stat">
-            <span class="mgmt-stat-label">{{ $t('stayview.roomRevenueToday') }}</span>
-            <strong>{{ formatMoney(mgmtRevenue.room) }}</strong>
-            <span class="muted">{{ $t('stayview.accruedTonight') }}</span>
-          </div>
-          <div class="mgmt-stat">
-            <span class="mgmt-stat-label">{{ $t('stayview.totalRevenueToday') }}</span>
-            <strong>{{ formatMoney(mgmtRevenue.total) }}</strong>
-            <span class="muted">{{ mgmtRevenue.count }} {{ $t('stayview.payments') }}</span>
-          </div>
-        </div>
-      </section>
-
+      
       <!-- Toolbar: room/reservation status pills, search and assign-room shortcut -->
       <div class="sv-toolbar">
         <!-- Signed-in session chip: avatar initial + name + role badge -->
@@ -2155,7 +2117,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useNotificationStore } from '@/stores/notifications'
-import { roomApi, reservationApi, guestApi, housekeepingApi, laundryApi, invoiceApi, inventoryApi, paymentApi, companyApi, hotelSettingsApi, reportApi } from '@/api'
+import { roomApi, reservationApi, guestApi, housekeepingApi, laundryApi, invoiceApi, inventoryApi, paymentApi, companyApi, hotelSettingsApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import AlertModal from '@/components/AlertModal.vue'
 import RoleBadge from '@/components/RoleBadge.vue'
@@ -4968,63 +4930,6 @@ const canVoidReservation = computed(() => {
 // record too: after the guest leaves, every correction is management's job.
 const canManageFolioOps = computed(() => authStore.can(70))
 
-// ---- Management summary band ------------------------------------------------
-// Manager review: the default page for management read as the receptionist's.
-// The stay-view grid is still the right thing to land on — voiding a
-// reservation and folio work after checkout are driven from here — but a
-// manager opening the app first wants to know how the property is doing, not
-// which rooms are dirty. So the reporting roles get today's occupancy and
-// takings above the grid, and nobody else pays for the two requests.
-const isManagement = computed(() => authStore.can(70))
-const mgmtLoading = ref(false)
-const mgmtError = ref(false)
-const mgmtOccupancy = ref({ rate: 0, occupied: 0, total: 0 })
-const mgmtRevenue = ref({ room: 0, total: 0, count: 0 })
-
-/** Renders a figure the way the rest of this page does. */
-function formatMoney(value) {
-  return `TZS ${Number(value || 0).toLocaleString()}`
-}
-
-/** Today's occupancy and takings. Failures are swallowed: the grid below is the page. */
-async function loadManagementSummary() {
-  if (!isManagement.value) return
-
-  const today = new Date().toISOString().slice(0, 10)
-  mgmtLoading.value = true
-  mgmtError.value = false
-
-  try {
-    const [occupancy, revenue] = await Promise.all([
-      reportApi.occupancy({ from: today, to: today }),
-      reportApi.revenue({ from: today, to: today }),
-    ])
-
-    const todayRow = occupancy.data?.occupancy?.[0] || {}
-    const daily = revenue.data?.daily || []
-    const revenueToday = daily.reduce((sum, row) => sum + Number(row.total || 0), 0)
-    const paymentCount = daily.reduce((sum, row) => sum + Number(row.count || 0), 0)
-
-    // The total room count is not on the payload, so derive it from the rate:
-    // a fully empty hotel reports 0%, which would divide by zero.
-    const rate = Number(todayRow.occupancy_rate || 0)
-    const occupied = Number(todayRow.occupied_rooms || 0)
-    const total = rate > 0 ? Math.round((occupied / rate) * 100) : occupied
-
-    mgmtOccupancy.value = { rate, occupied, total }
-    mgmtRevenue.value = {
-      room: Number(revenue.data?.room_revenue || 0),
-      total: revenueToday,
-      count: paymentCount,
-    }
-  } catch {
-    // The band is a nicety above a page that already works; a failed report
-    // endpoint should not make the dashboard look broken.
-    mgmtError.value = true
-  } finally {
-    mgmtLoading.value = false
-  }
-}
 const folioLocked = computed(() => activeBar.value?.rawStatus === 'checked_out')
 
 // Housekeeping tasks follow the housekeeping module matrix.
@@ -5945,7 +5850,6 @@ let refreshTimer = null
 
 onMounted(() => {
   load()
-  loadManagementSummary()
   wireLogoAccent()
   refreshTimer = setInterval(() => load(true), 30000)
 })
@@ -6254,64 +6158,6 @@ onUnmounted(() => clearInterval(refreshTimer))
 }
 
 /* Toolbar: status pills + search + assign-room */
-/* Management summary band: sits above the stay-view toolbar, management only. */
-.mgmt-band {
-  padding: 14px 20px 16px;
-  background: #f5f8fb;
-  border-bottom: 1px solid #e3e8ee;
-}
-
-.mgmt-band-head {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.mgmt-band-head h2 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-  color: #1f2933;
-}
-
-.mgmt-error {
-  color: #b42318;
-  font-size: 13px;
-}
-
-.mgmt-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.mgmt-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 180px;
-  flex: 1 1 180px;
-  padding: 10px 14px;
-  background: #fff;
-  border: 1px solid #e3e8ee;
-  border-radius: 8px;
-}
-
-.mgmt-stat-label {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #5c6b7a;
-}
-
-.mgmt-stat strong {
-  font-size: 22px;
-  font-weight: 800;
-  color: #005eb8;
-}
-
 .sv-toolbar {
   display: flex;
   align-items: center;

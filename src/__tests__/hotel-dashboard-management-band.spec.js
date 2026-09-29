@@ -19,6 +19,7 @@ vi.mock('@/api', () => ({
   paymentApi: { index: () => Promise.resolve({ data: { data: [] } }) },
   companyApi: { index: () => Promise.resolve({ data: { data: [] } }) },
   hotelSettingsApi: { show: (...a) => settingsShow(...a) },
+  // Still mocked so a reintroduced call is observable rather than a hard failure.
   reportApi: {
     occupancy: (...a) => reportOccupancy(...a),
     revenue: (...a) => reportRevenue(...a),
@@ -43,72 +44,49 @@ function mountDashboard() {
   return mount(HotelDashboard, { global: { plugins: [pinia, i18n] } })
 }
 
-describe('HotelDashboard — management summary band', () => {
+/**
+ * The front-desk stay view used to lead management with a "Today at a glance"
+ * card band (occupancy, room revenue, total revenue) fetched only for the
+ * reporting roles. Management now land on the operational overview at
+ * /app/overview, which reports those same figures properly — so the band on
+ * this page duplicated the landing page and is gone.
+ *
+ * These tests guard the removal: the cards must not come back, and the two
+ * report requests they needed must not start again either.
+ */
+describe('HotelDashboard — no management card band', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     i18n.global.locale.value = 'en'
-    can.mockReturnValue(true)
+    can.mockReturnValue(true) // manager: passes every level check
     roomIndex.mockResolvedValue({ data: { data: [] } })
     settingsShow.mockResolvedValue({ data: { hotel: {} } })
-    reportOccupancy.mockResolvedValue({
-      data: { occupancy: [{ date: '2026-09-29', occupied_rooms: 8, occupancy_rate: 80 }] },
-    })
-    reportRevenue.mockResolvedValue({
-      data: {
-        room_revenue: 125000,
-        daily: [
-          { date: '2026-09-29', total: 90000, count: 3 },
-          { date: '2026-09-29', total: 40000, count: 2 },
-        ],
-      },
-    })
   })
 
-  it('shows today’s occupancy and takings to a manager', async () => {
-    const wrapper = mountDashboard()
-    await flushPromises()
-
-    expect(wrapper.find('.mgmt-band').exists()).toBe(true)
-    // 8 occupied at 80% implies 10 rooms.
-    expect(wrapper.text()).toContain('80%')
-    expect(wrapper.text()).toContain('8 / 10')
-    // Room revenue and payments collected are separate figures.
-    expect(wrapper.text()).toContain('125,000')
-    expect(wrapper.text()).toContain('130,000')
-  })
-
-  it('requests the summary for the reporting roles only', async () => {
-    can.mockReturnValue(false)
+  it('renders no management band for a manager', async () => {
     const wrapper = mountDashboard()
     await flushPromises()
 
     expect(wrapper.find('.mgmt-band').exists()).toBe(false)
-    // A receptionist should not pay for two extra requests on every load.
+    expect(wrapper.find('.mgmt-stats').exists()).toBe(false)
+    expect(wrapper.find('.mgmt-stat').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain(i18n.global.t('stayview.todayAtAGlance'))
+  })
+
+  it('spends no occupancy/revenue requests on a manager', async () => {
+    mountDashboard()
+    await flushPromises()
+
     expect(reportOccupancy).not.toHaveBeenCalled()
     expect(reportRevenue).not.toHaveBeenCalled()
   })
 
-  it('still renders the stay view when the reports fail', async () => {
-    reportOccupancy.mockRejectedValue(new Error('boom'))
-    reportRevenue.mockRejectedValue(new Error('boom'))
-
+  it('still renders the stay view itself, so the page is not gutted', async () => {
     const wrapper = mountDashboard()
     await flushPromises()
 
-    // The grid is the page; a failed band must not make it look broken.
-    expect(wrapper.find('.mgmt-band').exists()).toBe(true)
-    expect(wrapper.text()).toContain('Summary unavailable')
+    // The grid and toolbar are what managers keep using from here.
     expect(wrapper.find('.sv-toolbar').exists()).toBe(true)
-  })
-
-  it('does not divide by zero when the hotel is empty', async () => {
-    reportOccupancy.mockResolvedValue({
-      data: { occupancy: [{ date: '2026-09-29', occupied_rooms: 0, occupancy_rate: 0 }] },
-    })
-
-    const wrapper = mountDashboard()
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('0 / 0')
+    expect(wrapper.find('.stayview-page').exists()).toBe(true)
   })
 })
