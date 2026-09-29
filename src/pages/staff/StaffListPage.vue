@@ -774,7 +774,12 @@ async function load() {
     // should not fail the page — the assignment is optional anyway.
     try {
       const outletRes = await outletApi.index()
-      outlets.value = outletRes.data.data || outletRes.data || []
+      // /outlets answers `{ outlets: [...] }`, not the usual `{ data: [...] }`,
+      // so the payload is unwrapped defensively. Assigning the raw response
+      // object here left `outlets` an object and crashed the options computed
+      // on its `.map`.
+      const payload = outletRes.data?.data ?? outletRes.data?.outlets ?? outletRes.data
+      outlets.value = Array.isArray(payload) ? payload : []
     } catch {
       outlets.value = []
     }
