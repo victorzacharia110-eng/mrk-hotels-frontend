@@ -922,7 +922,19 @@
     "ratesUpdated": "Rates updated for the selected room type.",
     "stopSellPlaced": "Stop-sell block placed.",
     "stopSellLifted": "Stop-sell block lifted.",
-    "statusUpdated": "Room {number} status updated."
+    "statusUpdated": "Room {number} status updated.",
+    "stopSellRoom": "Room",
+    "stopSellPickRoom": "Select room(s)",
+    "stopSellEndDate": "Until (optional)",
+    "stopSellReason": "Reason",
+    "stopSellReasonHint": "e.g. Renovation",
+    "stopSellFrom": "Calendar from",
+    "stopSellTo": "Calendar to",
+    "stopSellStopped": "Stopped",
+    "stopSellSellable": "Sellable",
+    "stopSellNights": "Nights",
+    "stopSellNoRooms": "No rooms to show.",
+    "stopSellWholeType": "All {type}"
   },
   "guests": {
     "title": "Guests",

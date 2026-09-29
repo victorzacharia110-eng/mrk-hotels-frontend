@@ -922,7 +922,19 @@
     "ratesUpdated": "Bei zimesahihishwa kwa aina ya chumba iliyochaguliwa.",
     "stopSellPlaced": "Zuio la mauzo limewekwa.",
     "stopSellLifted": "Zuio la mauzo limeondolewa.",
-    "statusUpdated": "Hali ya chumba {number} imesahihishwa."
+    "statusUpdated": "Hali ya chumba {number} imesahihishwa.",
+    "stopSellRoom": "Chumba",
+    "stopSellPickRoom": "Chagua chumba",
+    "stopSellEndDate": "Hadi (hiari)",
+    "stopSellReason": "Sababu",
+    "stopSellReasonHint": "mfano: Urembo",
+    "stopSellFrom": "Kalenda kutoka",
+    "stopSellTo": "Kalenda hadi",
+    "stopSellStopped": "Imesimama",
+    "stopSellSellable": "Inauzwa",
+    "stopSellNights": "Usiku",
+    "stopSellNoRooms": "Hakuna chumba cha kuonyesha.",
+    "stopSellWholeType": "Zote {type}"
   },
   "guests": {
     "title": "Wageni",

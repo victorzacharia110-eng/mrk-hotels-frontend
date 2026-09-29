@@ -120,20 +120,61 @@
     <div v-else-if="activeTab === 'stop-sell'">
       <div class="card">
         <div class="filter-grid">
+          <!--
+            Manager review: "It is not possible to stop sell a specific room,
+            for example room 5", "the color is too similar to the others, I do
+            not see which one is highlighted", and "stop sell from 15 to 20 would
+            be difficult."
+
+            The target is now a specific room (or several) rather than only a
+            type, and the block spans an inclusive range. The calendar below is
+            the primary view: a cell is filled only for rooms that are actually
+            stopped on that night, so a stopped room is unmistakable.
+          -->
           <div class="form-group">
-            <label>{{ $t('rooms.roomType') }}</label>
-            <select v-model="stopForm.room_type" class="input">
-              <option v-for="type in roomTypeOptions" :key="type.value" :value="type.value">
-                {{ type.label }}
-              </option>
-            </select>
+            <label>{{ $t('rooms.stopSellRoom') }}</label>
+            <div class="stop-pick">
+              <SearchableSelect
+                v-model="stopForm.pick"
+                :options="roomPickerOptions"
+                :placeholder="$t('rooms.stopSellPickRoom')"
+              />
+              <button
+                type="button"
+                class="btn btn-secondary"
+                :disabled="!canEdit || !stopForm.pick"
+                @click="addStopRoom"
+              >
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+            <div v-if="stopForm.room_id.length" class="stop-chips">
+              <span v-for="id in stopForm.room_id" :key="id" class="room-chip">
+                {{ roomLabel(id) }}
+                <button type="button" class="chip-x" :disabled="!canEdit" @click="removeStopRoom(id)">
+                  <i class="fas fa-xmark"></i>
+                </button>
+              </span>
+            </div>
           </div>
           <div class="form-group">
             <label>{{ $t('rooms.tabStopDate') }}</label>
-            <input v-model="stopForm.stop_date" type="date" class="input" />
+            <input v-model="stopForm.start_date" type="date" class="input" />
+          </div>
+          <div class="form-group">
+            <label>{{ $t('rooms.stopSellEndDate') }}</label>
+            <input v-model="stopForm.end_date" type="date" class="input" />
+          </div>
+          <div class="form-group">
+            <label>{{ $t('rooms.stopSellReason') }}</label>
+            <input v-model="stopForm.reason" type="text" class="input" :placeholder="$t('rooms.stopSellReasonHint')" />
           </div>
           <div class="filter-actions">
-            <button class="btn btn-primary" :disabled="!canEdit || !stopForm.room_type || !stopForm.stop_date" @click="placeStopSell">
+            <button
+              class="btn btn-primary"
+              :disabled="!canEdit || !stopForm.room_id.length || !stopForm.start_date"
+              @click="placeStopSell"
+            >
               <i class="fas fa-ban"></i> {{ $t('rooms.tabPlaceStopSell') }}
             </button>
           </div>
@@ -141,33 +182,83 @@
         <p class="muted">{{ $t('rooms.tabStopSellHint') }}</p>
       </div>
 
-      <div v-if="blocksLoading" class="alert alert-info">{{ $t('rooms.loading') }}</div>
-      <div v-else-if="blocks.length" class="table-scroll">
+      <!-- ─── Stop-sell calendar ──────────────────────────────────────────── -->
+      <div class="card">
+        <div class="filter-bar">
+          <div class="filter-grid">
+            <div class="form-group">
+              <label>{{ $t('rooms.stopSellFrom') }}</label>
+              <input v-model="calFrom" type="date" class="input" @change="loadBlocks" />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('rooms.stopSellTo') }}</label>
+              <input v-model="calTo" type="date" class="input" @change="loadBlocks" />
+            </div>
+          </div>
+          <p class="muted">
+            <span class="cal-key cal-key-stopped"></span> {{ $t('rooms.stopSellStopped') }}
+            <span class="cal-key cal-key-free"></span> {{ $t('rooms.stopSellSellable') }}
+          </p>
+        </div>
+
+        <div v-if="blocksLoading" class="alert alert-info">{{ $t('rooms.loading') }}</div>
+        <div v-else-if="calRooms.length" class="table-scroll">
+          <table class="table stop-sell-calendar">
+            <thead>
+              <tr>
+                <th class="cal-room-col">{{ $t('rooms.stopSellRoom') }}</th>
+                <th v-for="d in calDays" :key="d" :class="{ today: d === todayIso }">{{ formatDayLabel(d) }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="r in calRooms" :key="r.room_id">
+                <td class="cal-room-col">
+                  <strong>{{ r.room_number }}</strong>
+                  <span class="muted">{{ r.room_type }}</span>
+                </td>
+                <td
+                  v-for="d in calDays"
+                  :key="d"
+                  class="cal-cell"
+                  :class="isStoppedOn(r.room_id, d) ? 'cal-stopped' : 'cal-free'"
+                  :title="`${r.room_number} · ${formatDayLabel(d)}`"
+                >
+                  <i v-if="isStoppedOn(r.room_id, d)" class="fas fa-ban"></i>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-else class="alert alert-info">{{ $t('rooms.stopSellNoRooms') }}</div>
+      </div>
+
+      <div v-if="blocks.length" class="table-scroll">
         <table class="table">
           <thead>
             <tr>
-              <th>{{ $t('rooms.roomType') }}</th>
+              <th>{{ $t('rooms.stopSellRoom') }}</th>
               <th>{{ $t('rooms.tabStopDate') }}</th>
-              <th>{{ $t('rooms.stopSellRooms') }}</th>
+              <th>{{ $t('rooms.stopSellNights') }}</th>
+              <th>{{ $t('rooms.stopSellReason') }}</th>
               <th class="bulk-col"></th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="b in blocks" :key="b.stop_sell_id">
-              <td>{{ b.room_type }}</td>
+              <td>
+                <strong>{{ b.room_number || $t('rooms.stopSellWholeType', { type: b.room_type }) }}</strong>
+                <span class="muted">{{ b.room_type }}</span>
+              </td>
               <td>{{ b.stop_date }}</td>
               <td>
-                <!-- Manager review: the list showed only the room type, so it was
-                     impossible to see which rooms were actually stopped. The
-                     backend returns the rooms the block covers. -->
-                <span v-if="!b.rooms || b.rooms.length === 0" class="muted">&mdash;</span>
-                <span v-else class="stop-sell-rooms">
-                  <span class="stop-sell-count">{{ $t('rooms.stopSellRoomCount', { count: b.room_count ?? b.rooms.length }) }}</span>
-                  <span class="stop-sell-numbers">
-                    <span v-for="r in b.rooms" :key="r.room_id" class="room-chip">{{ r.room_number }}</span>
-                  </span>
+                <!-- A range is shown as "from → to" so a multi-night block is
+                     legible at a glance instead of looking like a single night. -->
+                <span v-if="b.stop_end_date && b.stop_end_date !== b.stop_date">
+                  {{ b.stop_date }} &rarr; {{ b.stop_end_date }}
                 </span>
+                <span v-else>{{ b.stop_date }}</span>
               </td>
+              <td>{{ b.reason || '—' }}</td>
               <td class="bulk-col">
                 <button v-if="canEdit" class="btn btn-danger btn-sm" @click="liftStopSell(b.stop_sell_id)">
                   <i class="fas fa-rotate-left"></i>
@@ -816,15 +907,92 @@ const pushRates = async () => {
   }
 }
 
-// STOP-SELL: blocks per room type + date; lift by stop_sell_id.
+// STOP-SELL: blocks per room over a date range; lift by stop_sell_id.
 const blocks = ref([])
 const blocksLoading = ref(false)
-const stopForm = reactive({ room_type: 'single', stop_date: '' })
+const stopForm = reactive({ pick: '', room_id: [], start_date: '', end_date: '', reason: '' })
+
+// The calendar window. Two weeks is enough to see a range block without the
+// grid becoming unreadably wide.
+const calFrom = ref(todayIso())
+const calTo = ref(todayIso(13))
+
+/** Every room of the hotel, for the picker and as the calendar's rows. */
+const calRooms = ref([])
+
+/** Nights shown as calendar columns, inclusive of both ends. */
+const calDays = computed(() => {
+  const days = []
+  const start = new Date(`${calFrom.value}T00:00:00`)
+  const end = new Date(`${calTo.value}T00:00:00`)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return days
+
+  for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    days.push(toIso(d))
+  }
+
+  return days
+})
+
+/**
+ * Which room is stopped on which night, as `room_id -> Set(isoDate)`.
+ *
+ * The backend returns an expanded `nights` list per block, so a range block is
+ * already one entry per night and needs no client-side date arithmetic.
+ */
+const stoppedMap = computed(() => {
+  const map = new Map()
+  for (const b of blocks.value) {
+    const roomId = b.room_id
+    // A type-level block (no room_id) is resolved through the calendar rows.
+    const targets = roomId
+      ? [roomId]
+      : calRooms.value.filter((r) => r.room_type === b.room_type).map((r) => r.room_id)
+
+    for (const target of targets) {
+      if (!map.has(target)) map.set(target, new Set())
+      const set = map.get(target)
+      for (const night of b.nights ?? [b.stop_date]) set.add(night)
+    }
+  }
+
+  return map
+})
+
+const isStoppedOn = (roomId, isoDate) => Boolean(stoppedMap.value.get(roomId)?.has(isoDate))
+
+/** Rooms offered in the stop-sell picker; already-picked rooms are hidden. */
+const roomPickerOptions = computed(() =>
+  calRooms.value
+    .filter((r) => !stopForm.room_id.includes(r.room_id))
+    .map((r) => ({ value: r.room_id, label: `${r.room_number} · ${r.room_type}` })),
+)
+
+const roomLabel = (roomId) =>
+  calRooms.value.find((r) => r.room_id === roomId)?.room_number ?? roomId
+
+/**
+ * Adds the picked room to the pending block.
+ *
+ * SearchableSelect is single-select, so rooms are added one at a time to a chip
+ * list rather than through a multi-select. Re-adding is a no-op.
+ */
+const addStopRoom = () => {
+  if (!stopForm.pick || stopForm.room_id.includes(stopForm.pick)) return
+  stopForm.room_id.push(stopForm.pick)
+  stopForm.pick = ''
+}
+
+const removeStopRoom = (roomId) => {
+  stopForm.room_id = stopForm.room_id.filter((id) => id !== roomId)
+}
 
 const loadBlocks = async () => {
   blocksLoading.value = true
   try {
-    const res = await roomApi.stopSell()
+    // Ask only for the calendar window: the endpoint returns blocks that overlap
+    // it, so a range starting before the window is still drawn.
+    const res = await roomApi.stopSell({ from_date: calFrom.value, to_date: calTo.value })
     blocks.value = res.data?.blocks ?? []
   } catch (err) {
     error.value = flattenError(err)
@@ -833,14 +1001,39 @@ const loadBlocks = async () => {
   }
 }
 
+/** Loads the room list once for the picker and the calendar's rows. */
+const loadCalendarRooms = async () => {
+  try {
+    const res = await roomApi.index({ per_page: 100 })
+    const rows = res.data?.data ?? []
+    calRooms.value = rows.map((r) => ({
+      room_id: r.room_id,
+      room_number: r.room_number,
+      room_type: r.room_type,
+    }))
+  } catch (err) {
+    error.value = flattenError(err)
+  }
+}
+
 const placeStopSell = async () => {
-  if (!stopForm.room_type || !stopForm.stop_date) return
+  if (!stopForm.room_id.length || !stopForm.start_date) return
   try {
     await roomApi.storeStopSell({
-      room_type: stopForm.room_type,
-      dates: [stopForm.stop_date],
+      room_ids: stopForm.room_id,
+      start_date: stopForm.start_date,
+      // Omitting end_date blocks a single night; sending it equal to the start
+      // would be equivalent, so only send a real range.
+      ...(stopForm.end_date && stopForm.end_date !== stopForm.start_date
+        ? { end_date: stopForm.end_date }
+        : {}),
+      reason: stopForm.reason || undefined,
     })
-    stopForm.stop_date = ''
+    stopForm.pick = ''
+    stopForm.room_id = []
+    stopForm.start_date = ''
+    stopForm.end_date = ''
+    stopForm.reason = ''
     success.value = t('rooms.stopSellPlaced')
     await Promise.all([loadBlocks(), loadInventory()])
   } catch (err) {
@@ -863,7 +1056,33 @@ const liftStopSell = async (id) => {
 function switchTab(key) {
   activeTab.value = key
   if (key === 'inventory' && !invSummary.value.length) loadInventory()
-  if (key === 'stop-sell' && !blocks.value.length) loadBlocks()
+  if (key === 'stop-sell') {
+    // The calendar needs both the rooms and the blocks in the window.
+    if (!calRooms.value.length) loadCalendarRooms()
+    if (!blocks.value.length) loadBlocks()
+  }
+}
+
+/** ISO date for a Date, in local time (toISOString would shift the day). */
+function toIso(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+/** Today, or today shifted by `offsetDays`, as an ISO date. */
+function todayIso(offsetDays = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() + offsetDays)
+  return toIso(d)
+}
+
+/** Short weekday + day number, for the calendar header. */
+function formatDayLabel(isoDate) {
+  const d = new Date(`${isoDate}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return isoDate
+  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })
 }
 
 onMounted(() => {
@@ -874,6 +1093,114 @@ onMounted(() => {
 </script>
 
 <style scoped>
+
+/*
+  Manager review: "the color is too similar to the others, I do not see which one
+  is highlighted" and "how to see a calendar of stop sell".
+
+  The calendar is the fix: a stopped room/night is a solid, high-contrast red
+  cell with an icon, while a sellable one is a plain pale cell. A block is either
+  fully stopped or not stopped at all, so the two states must be trivially
+  distinguishable rather than distinguished by a subtle tint.
+*/
+.stop-sell-calendar {
+  table-layout: fixed;
+}
+
+.stop-sell-calendar .cal-room-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--card, #fff);
+  min-width: 110px;
+  text-align: left;
+}
+
+.stop-sell-calendar .cal-room-col .muted {
+  display: block;
+  font-size: 11px;
+}
+
+.cal-cell {
+  text-align: center;
+  height: 34px;
+  padding: 0 !important;
+}
+
+.cal-stopped {
+  background: #dc2626 !important;
+  color: #fff;
+  box-shadow: inset 0 0 0 1px #991b1b;
+}
+
+.cal-free {
+  background: #f1f5f9;
+}
+
+.cal-free:hover {
+  background: #e2e8f0;
+}
+
+.stop-sell-calendar th.today {
+  box-shadow: inset 0 -3px 0 var(--brand, #0d9488);
+}
+
+.cal-key {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  margin: 0 4px 0 12px;
+  vertical-align: -1px;
+}
+
+.cal-key-stopped {
+  background: #dc2626;
+  box-shadow: inset 0 0 0 1px #991b1b;
+}
+
+.cal-key-free {
+  background: #f1f5f9;
+  box-shadow: inset 0 0 0 1px #cbd5e1;
+}
+
+.stop-pick {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.stop-pick > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.stop-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.stop-chips .room-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chip-x {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.chip-x:hover {
+  opacity: 1;
+}
 
 /* Manager review: the rooms a stop-sell block actually covers. */
 .stop-sell-rooms {
