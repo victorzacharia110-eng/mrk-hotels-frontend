@@ -273,6 +273,27 @@
               <label>{{ $t('menu.available') }}</label>
               <SearchableSelect v-model="form.is_available" :options="formAvailabilityOptions" />
             </div>
+            <fieldset class="form-full printer-settings">
+              <legend>{{ $t('menu.printerSettings') }}</legend>
+              <p class="muted">{{ $t('menu.printerSettingsHint') }}</p>
+              <label class="checkbox-row">
+                <input v-model="form.print_on_receipt" type="checkbox" />
+                <span>{{ $t('menu.printOnReceipt') }}</span>
+              </label>
+              <label class="checkbox-row">
+                <input v-model="form.print_on_order" type="checkbox" />
+                <span>{{ $t('menu.printOnOrder') }}</span>
+              </label>
+              <div class="form-group">
+                <label>{{ $t('menu.printerStation') }}</label>
+                <SearchableSelect
+                  v-model="form.printer_station"
+                  :options="printerStationOptions"
+                  :disabled="!form.print_on_order"
+                />
+                <p v-if="!form.print_on_order" class="muted">{{ $t('menu.printerStationOffHint') }}</p>
+              </div>
+            </fieldset>
             <div class="form-group form-full">
               <label>{{ $t('menu.description') }}</label>
               <textarea v-model="form.description" rows="2" class="textarea"></textarea>
@@ -568,7 +589,21 @@ const form = reactive({
   cost: null,
   description: '',
   is_available: true,
+  // Manager review item 4, PRINTER SETTINGS. A and B are the two print
+  // switches; C is which physical printer receives the order ticket. `printer_station`
+  // is deliberately not derived from `department`: that is the free-text service
+  // line (a spa or laundry service has one too), so it cannot answer which
+  // printer. Defaults match every item's behaviour before the setting existed.
+  print_on_receipt: true,
+  print_on_order: true,
+  printer_station: 'kitchen',
 })
+
+/** Printer destinations offered for a menu item's order ticket. */
+const printerStationOptions = computed(() => [
+  { value: 'kitchen', label: t('menu.printerKitchen') },
+  { value: 'bar', label: t('menu.printerBar') },
+])
 
 // Registered inventory items offered in the "sync to stock" picker so a
 // beverage menu item's live quantity can gate waiter orders (best-effort).
@@ -682,6 +717,9 @@ function resetForm() {
   form.cost = null
   form.description = ''
   form.is_available = true
+  form.print_on_receipt = true
+  form.print_on_order = true
+  form.printer_station = 'kitchen'
 }
 
 /** Opens the create-item modal with a fresh form. */
@@ -706,6 +744,11 @@ function openEdit(item) {
   form.cost = item.cost
   form.description = item.description || ''
   form.is_available = !!item.is_available
+  // Older payloads predate the printer settings, so fall back to the same
+  // defaults the columns carry rather than leaving the form blank.
+  form.print_on_receipt = item.print_on_receipt !== false
+  form.print_on_order = item.print_on_order !== false
+  form.printer_station = item.printer_station || 'kitchen'
   showModal.value = true
   loadCategories(form.department)
   loadInventoryOptions()
@@ -1229,6 +1272,33 @@ onMounted(load)
 
 .form-full {
   grid-column: 1 / -1;
+}
+
+/* Manager review item 4: the printer settings sit together because they are one
+   decision — whether a ticket is produced, and which printer produces it. */
+.printer-settings {
+  border: 1px solid var(--border, #dfe3e8);
+  border-radius: 6px;
+  padding: 12px 14px 14px;
+  margin: 4px 0 0;
+}
+
+.printer-settings legend {
+  font-weight: 600;
+  padding: 0 6px;
+}
+
+.printer-settings .form-group {
+  margin-top: 12px;
+  max-width: 320px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  cursor: pointer;
 }
 
 .modal-foot {

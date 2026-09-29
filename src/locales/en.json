@@ -1305,7 +1305,15 @@
     "subCategoriesCount": "sub-categories",
     "subCategoriesHint": "Items inside this category, so one category can hold several groups.",
     "subCategoryName": "Sub-category name, e.g. Soup",
-    "subCategoriesEmpty": "No sub-categories yet. Items can sit directly on the category."
+    "subCategoriesEmpty": "No sub-categories yet. Items can sit directly on the category.",
+    "printerSettings": "Printer Settings",
+    "printerSettingsHint": "Controls where this item is printed. Sending a ticket to the bar printer does not put the item in bar sales — it only chooses which printer the order comes out of.",
+    "printOnReceipt": "Print on receipt",
+    "printOnOrder": "Print on order",
+    "printerStation": "Order printer",
+    "printerKitchen": "Kitchen printer",
+    "printerBar": "Bar printer",
+    "printerStationOffHint": "Turn on \"Print on order\" to choose a printer."
   },
   "outlets": {
     "title": "POS Outlets",

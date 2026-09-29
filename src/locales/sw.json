@@ -1302,7 +1302,15 @@
     "subCategoriesCount": "sub-categories",
     "subCategoriesHint": "Items inside this category, so one category can hold several groups.",
     "subCategoryName": "Sub-category name, e.g. Soup",
-    "subCategoriesEmpty": "No sub-categories yet. Items can sit directly on the category."
+    "subCategoriesEmpty": "No sub-categories yet. Items can sit directly on the category.",
+    "printerSettings": "Mipangilio ya Printa",
+    "printerSettingsHint": "Inadhibiti mahali hili kitemu kitakapochapishwa. Kutuma kipeperushi kwa printa ya baa hakubadilishi kuwa bidhaa za baa — inachagua tu printa ipitishayo agizo.",
+    "printOnReceipt": "Chapisha kwenye risiti",
+    "printOnOrder": "Chapisha kwenye agizo",
+    "printerStation": "Printa ya agizo",
+    "printerKitchen": "Printa ya jikini",
+    "printerBar": "Printa ya baa",
+    "printerStationOffHint": "Washa \"Chapisha kwenye agizo\" ili kuchagua printa."
   },
   "outlets": {
     "title": "Sehemu za Kuuzia (POS)",
