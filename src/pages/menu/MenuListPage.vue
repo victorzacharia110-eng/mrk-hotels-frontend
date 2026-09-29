@@ -442,10 +442,35 @@
 
               <ul v-if="subCategoriesFor(c.category_id).length" class="sub-list">
                 <li v-for="sub in subCategoriesFor(c.category_id)" :key="sub.sub_category_id">
-                  <span>
+                  <form
+                    v-if="editingSubCategoryId === sub.sub_category_id"
+                    class="cat-edit-name"
+                    @submit.prevent="saveSubCategoryRename(sub)"
+                  >
+                    <input v-model="subEditName" type="text" class="input" maxlength="100" autofocus />
+                  </form>
+                  <span v-else>
                     {{ sub.name }}
                     <span class="muted">· {{ sub.item_count }} {{ $t('menu.itemsCount') }}</span>
                   </span>
+                  <button
+                    v-if="editingSubCategoryId !== sub.sub_category_id"
+                    type="button"
+                    class="icon-btn"
+                    :title="$t('menu.renameCategory')"
+                    @click="startSubCategoryRename(sub)"
+                  >
+                    <i class="fas fa-pen"></i>
+                  </button>
+                  <button
+                    v-else
+                    type="button"
+                    class="icon-btn"
+                    :title="$t('common.save')"
+                    @click="saveSubCategoryRename(sub)"
+                  >
+                    <i class="fas fa-check"></i>
+                  </button>
                   <button
                     type="button"
                     class="icon-btn danger"
@@ -890,6 +915,9 @@ async function saveCategoryRename(c) {
 const expandedCategoryId = ref(null)
 const subCategories = ref([])
 const subCategoryName = ref('')
+// Sub-categories rename inline, exactly like categories do one level up.
+const editingSubCategoryId = ref(null)
+const subEditName = ref('')
 
 /** The sub-categories of one category, for the open panel. */
 function subCategoriesFor(categoryId) {
@@ -905,6 +933,7 @@ async function toggleSubCategories(c) {
 
   expandedCategoryId.value = c.category_id
   subCategoryName.value = ''
+  editingSubCategoryId.value = null
 
   try {
     const res = await menuSubCategoryApi.index({ category_id: c.category_id })
@@ -927,6 +956,40 @@ async function addSubCategory(c) {
     // The category row shows a sub-category count, so refresh it.
     await loadCategories(catDept.value)
   } catch (err) {
+    categoryError.value = flattenError(err)
+  }
+}
+
+/** Starts an inline rename of a sub-category. */
+function startSubCategoryRename(sub) {
+  editingSubCategoryId.value = sub.sub_category_id
+  subEditName.value = sub.name
+}
+
+/**
+ * Persists an inline sub-category rename. The row is patched in place from the
+ * API's own response rather than from the typed text, so a name the server
+ * squished or rejected cannot drift from what is actually stored.
+ */
+async function saveSubCategoryRename(sub) {
+  const name = subEditName.value.trim()
+  if (!name || name === sub.name) {
+    editingSubCategoryId.value = null
+    return
+  }
+
+  categoryError.value = ''
+  try {
+    const res = await menuSubCategoryApi.update(sub.sub_category_id, { name })
+    const saved = res.data?.sub_category
+    if (saved) {
+      const row = subCategories.value.find((s) => s.sub_category_id === sub.sub_category_id)
+      if (row) Object.assign(row, saved)
+    }
+    editingSubCategoryId.value = null
+    categoryNotice.value = t('menu.subCategoryRenamed')
+  } catch (err) {
+    // Stay in edit mode on failure so the typed name is not lost.
     categoryError.value = flattenError(err)
   }
 }
@@ -1277,6 +1340,14 @@ onMounted(load)
   padding: 6px 0;
   border-top: 1px solid #f0f0f0;
   font-size: 14px;
+}
+
+/* The name (or its rename form) takes the slack so the pen and trash stay
+   grouped at the right edge instead of drifting apart across the row. */
+.sub-list li > span,
+.sub-list li > .cat-edit-name {
+  flex: 1;
+  min-width: 0;
 }
 
 .icon-btn.is-open {

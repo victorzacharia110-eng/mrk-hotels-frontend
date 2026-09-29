@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 import i18n from '@/locales/i18n'
 
 const list = vi.fn()
 const store = vi.fn()
+const subUpdate = vi.fn()
 const destroy = vi.fn()
 const reorder = vi.fn()
 const categoryUpdate = vi.fn()
@@ -23,7 +25,7 @@ vi.mock('@/api', () => ({
   menuSubCategoryApi: {
     index: (...a) => subIndex(...a),
     store: (...a) => store(...a),
-    update: () => {},
+    update: (...a) => subUpdate(...a),
     destroy: (...a) => destroy(...a),
   },
   inventoryApi: { index: (...a) => inventoryList(...a), categories: () => {} },
@@ -60,6 +62,19 @@ async function openModal(wrapper) {
 /** The layer-group button that reveals a category's sub-categories. */
 function subToggle(wrapper) {
   return wrapper.findAll('button').find((b) => b.html().includes('fa-layer-group'))
+}
+
+/** A sub-category row's button, picked by the icon it renders. */
+function subRowButton(wrapper, icon) {
+  return wrapper.findAll('.sub-list button').find((b) => b.html().includes(icon))
+}
+
+/** Opens the category modal and expands the sub-category panel. */
+async function openSubPanel(wrapper) {
+  await openModal(wrapper)
+  const toggle = subToggle(wrapper)
+  await toggle.trigger('click')
+  await flushPromises()
 }
 
 describe('MenuListPage — sub-categories', () => {
@@ -126,7 +141,8 @@ describe('MenuListPage — sub-categories', () => {
     await toggle.trigger('click')
     await flushPromises()
 
-    const remove = wrapper.find('.sub-list button')
+    // The row also has a rename button, so the delete is picked by its icon.
+    const remove = subRowButton(wrapper, 'fa-trash')
     await remove.trigger('click')
     await flushPromises()
 
@@ -147,5 +163,107 @@ describe('MenuListPage — sub-categories', () => {
     await flushPromises()
 
     expect(store).not.toHaveBeenCalled()
+  })
+
+  it('renames a sub-category inline', async () => {
+    subIndex.mockResolvedValue({
+      data: { data: [{ sub_category_id: 'sub-1', category_id: 'cat-1', name: 'Soup', item_count: 2 }] },
+    })
+    subUpdate.mockResolvedValue({
+      data: { sub_category: { sub_category_id: 'sub-1', category_id: 'cat-1', name: 'Broths', item_count: 2 } },
+    })
+
+    const wrapper = mount(MenuListPage, { global: { plugins: [i18n] } })
+    await flushPromises()
+    await openSubPanel(wrapper)
+
+    const pen = subRowButton(wrapper, 'fa-pen')
+    expect(pen).toBeTruthy()
+    await pen.trigger('click')
+    await nextTick()
+
+    const input = wrapper.find('.sub-list .cat-edit-name input')
+    expect(input.element.value).toBe('Soup')
+    await input.setValue('Broths')
+    await wrapper.find('.sub-list form.cat-edit-name').trigger('submit')
+    await flushPromises()
+
+    expect(subUpdate).toHaveBeenCalledWith('sub-1', { name: 'Broths' })
+    expect(wrapper.text()).toContain('Broths')
+    expect(wrapper.text()).not.toContain('Soup')
+  })
+
+  it('shows the name the server stored, not the one that was typed', async () => {
+    // The API squishes whitespace, so the response is the source of truth.
+    subIndex.mockResolvedValue({
+      data: { data: [{ sub_category_id: 'sub-1', category_id: 'cat-1', name: 'Soup', item_count: 2 }] },
+    })
+    subUpdate.mockResolvedValue({
+      data: { sub_category: { sub_category_id: 'sub-1', category_id: 'cat-1', name: 'Clear  Broths', item_count: 2 } },
+    })
+
+    const wrapper = mount(MenuListPage, { global: { plugins: [i18n] } })
+    await flushPromises()
+    await openSubPanel(wrapper)
+
+    await subRowButton(wrapper, 'fa-pen').trigger('click')
+    await nextTick()
+    await wrapper.find('.sub-list .cat-edit-name input').setValue('  Clear  Broths  ')
+    await wrapper.find('.sub-list form.cat-edit-name').trigger('submit')
+    await flushPromises()
+
+    expect(subUpdate).toHaveBeenCalledWith('sub-1', { name: 'Clear  Broths' })
+    expect(wrapper.text()).toContain('Clear  Broths')
+  })
+
+  it('keeps the edit box open with the typed name when the rename fails', async () => {
+    subIndex.mockResolvedValue({
+      data: { data: [{ sub_category_id: 'sub-1', category_id: 'cat-1', name: 'Soup', item_count: 2 }] },
+    })
+    subUpdate.mockRejectedValue({ response: { data: { message: 'That name is already taken.' } } })
+    // A genuinely different name, so the unchanged-name short-circuit does not
+    // fire and the failure path is actually reached.
+
+    const wrapper = mount(MenuListPage, { global: { plugins: [i18n] } })
+    await flushPromises()
+    await openSubPanel(wrapper)
+
+    await subRowButton(wrapper, 'fa-pen').trigger('click')
+    await nextTick()
+    await wrapper.find('.sub-list .cat-edit-name input').setValue('Broths')
+    await wrapper.find('.sub-list form.cat-edit-name').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('already taken')
+    const input = wrapper.find('.sub-list .cat-edit-name input')
+    expect(input.exists()).toBe(true)
+    expect(input.element.value).toBe('Broths')
+    // The rejected name never replaces what is on the server.
+    expect(wrapper.text()).not.toContain('>Broths<')
+  })
+
+  it('does not call the API when the rename is unchanged or blank', async () => {
+    subIndex.mockResolvedValue({
+      data: { data: [{ sub_category_id: 'sub-1', category_id: 'cat-1', name: 'Soup', item_count: 2 }] },
+    })
+
+    const wrapper = mount(MenuListPage, { global: { plugins: [i18n] } })
+    await flushPromises()
+    await openSubPanel(wrapper)
+
+    // Re-submitting the same name closes the box without a pointless write.
+    await subRowButton(wrapper, 'fa-pen').trigger('click')
+    await nextTick()
+    await wrapper.find('.sub-list form.cat-edit-name').trigger('submit')
+    await flushPromises()
+
+    // Then a blank name likewise never reaches the API.
+    await subRowButton(wrapper, 'fa-pen').trigger('click')
+    await nextTick()
+    await wrapper.find('.sub-list .cat-edit-name input').setValue('   ')
+    await wrapper.find('.sub-list form.cat-edit-name').trigger('submit')
+    await flushPromises()
+
+    expect(subUpdate).not.toHaveBeenCalled()
   })
 })

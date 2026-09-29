@@ -1272,6 +1272,7 @@
     "itemsCount": "items",
     "categoriesEmpty": "No categories yet. Create one here, or simply type a new category on an item and it will be added automatically.",
     "categoryCreated": "Category created.",
+    "subCategoryRenamed": "Sub-category renamed.",
     "categoryRenamed": "Category renamed (items updated).",
     "categoryDeleted": "Category deleted — linked items were kept.",
     "deleteCategory": "Delete",

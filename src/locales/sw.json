@@ -1269,6 +1269,7 @@
     "itemsCount": "bidhaa",
     "categoriesEmpty": "Hakuna kategoria bado. Unda moja hapa, au andika tu kategoria mpya kwenye bidhaa na itaongezwa moja kwa moja.",
     "categoryCreated": "Kategoria imeundwa.",
+    "subCategoryRenamed": "Ndogo ya kategoria imebadilishwa jina.",
     "categoryRenamed": "Kategoria imebadilishwa jina (bidhaa zimesahihishwa).",
     "categoryDeleted": "Kategoria imefutwa — bidhaa zilibakishwa.",
     "deleteCategory": "Futa",
