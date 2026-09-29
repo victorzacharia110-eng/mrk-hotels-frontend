@@ -326,6 +326,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { hotelSettingsApi } from '@/api'
+import { invalidateOfficialHeader } from '@/utils/officialHeader'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -535,8 +536,11 @@ async function save() {
     const res = await hotelSettingsApi.update(payload)
     hydrate(res.data?.hotel || {})
     success.value = t('hotelSettings.saved')
-    // The letterhead is cached for the session, so the profile has to be
-    // refetched for panels to pick up the new name/address.
+    // Exports cache the letterhead for the session, so the cache has to be
+    // dropped here or a renamed hotel keeps printing its old name on every
+    // PDF and CSV until the browser restarts.
+    invalidateOfficialHeader()
+    // Panels read the name/address off the profile, so that has to be refetched.
     await authStore.fetchProfile()
   } catch (err) {
     error.value = flattenError(err)

@@ -60,7 +60,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { hotelSettingsApi } from '@/api'
+import { getOfficialHeader as useOfficialHeader } from '@/utils/officialHeader'
 import { exportCSV, exportExcel, exportPDF } from '@/utils/export'
 
 const props = defineProps({
@@ -82,34 +82,9 @@ const busyLabel = ref('')
 const error = ref('')
 const trigger = ref(null)
 
-// Official hotel details printed above the exported table (fetched once).
-let officialHeader = null
-let headerPromise = null
-async function getOfficialHeader() {
-  if (officialHeader) return officialHeader
-  if (headerPromise) return headerPromise
-  headerPromise = hotelSettingsApi
-    .show()
-    .then((res) => {
-      const h = res.data?.hotel || res.data?.data || {}
-      officialHeader = {
-        name: h.hotel_name || '',
-        address: h.address || '',
-        city: h.city || '',
-        country: h.country || '',
-        phone: h.phone || '',
-        email: h.email || '',
-        tin: h.tin || '',
-        vrn: h.vrn || '',
-      }
-      return officialHeader
-    })
-    .catch(() => {
-      officialHeader = {}
-      return officialHeader
-    })
-  return headerPromise
-}
+// Official hotel details printed above the exported table. Cached in a shared
+// module so saving new hotel details can invalidate it — see invalidateOfficialHeader.
+const { getOfficialHeader } = useOfficialHeader()
 
 /**
  * Toggles the menu and moves focus to the first item on open so keyboard

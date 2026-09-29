@@ -107,6 +107,24 @@ describe('HotelSettingsPage', () => {
     expect(JSON.parse(body.get('payment_accounts'))).toEqual({})
   })
 
+  it('drops the cached export letterhead after a save', async () => {
+    // The bug this covers: exports cached the hotel name for the session, so a
+    // renamed hotel kept printing the old name on every PDF until a hard reload.
+    show.mockResolvedValue({ data: { hotel: { hotel_name: 'Old Name' } } })
+    const { getOfficialHeader } = await import('@/utils/officialHeader')
+    expect((await getOfficialHeader()).name).toBe('Old Name')
+
+    update.mockResolvedValue({ data: { hotel: { hotel_name: 'New Name', address: 'Plot 5' } } })
+    const wrapper = mountPage()
+    await flushPromises()
+    wrapper.vm.form.hotel_name = 'New Name'
+    await wrapper.vm.save()
+    await flushPromises()
+
+    show.mockResolvedValue({ data: { hotel: { hotel_name: 'New Name' } } })
+    expect((await getOfficialHeader()).name).toBe('New Name')
+  })
+
   it('removes the logo through the delete endpoint', async () => {
     show.mockResolvedValue({ data: { hotel: { ...HOTEL, logo_url: 'https://cdn/logo.png' } } })
     const wrapper = mountPage()
