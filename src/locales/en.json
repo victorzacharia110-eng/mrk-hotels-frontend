@@ -711,6 +711,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
+    "frontDesk": "Front Desk",
     "profile": "My Profile",
     "portal": "Portal",
     "menuToggle": "Toggle navigation menu",

@@ -115,7 +115,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { dashboardMap } from '@/router'
+import { resolveLanding } from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
 import { useHoliday } from '@/composables/useHoliday'
@@ -233,7 +233,7 @@ async function handleLogin() {
     } else if (authStore.user?.user_role === 'owner') {
       router.push('/owner')
     } else {
-      router.push(dashboardMap[authStore.user?.user_role] || '/app')
+      router.push(resolveLanding(authStore))
     }
     if (data?.password_rotated) {
       showToast(`${t('auth.passwordRotated')} ${data.default_password}`)
@@ -313,7 +313,7 @@ async function submitPin() {
     } else if (authStore.user?.user_role === 'owner') {
       router.push('/owner')
     } else {
-      router.push(dashboardMap[authStore.user?.user_role] || '/app')
+      router.push(resolveLanding(authStore))
     }
   } catch (e) {
     if (e.response?.data?.message) {

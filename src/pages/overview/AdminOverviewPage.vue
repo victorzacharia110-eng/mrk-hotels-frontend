@@ -1097,7 +1097,7 @@ function dismissCurrentAlert() {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .house-strip {
     grid-template-columns: 1fr;
     gap: 10px;
@@ -1243,7 +1243,27 @@ function dismissCurrentAlert() {
   margin-top: 20px;
 }
 
-@media (max-width: 768px) {
+/* Tablets: 768px is the iPad portrait width. Four stat cards and three house
+   chips across 768px leave each one too narrow to read, so tablets drop to two
+   columns and keep the phone layout for genuinely narrow screens only. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .dashboard-page {
+    padding: 24px 18px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .house-strip {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (max-width: 767px) {
   .dashboard-page {
     padding: 20px 16px;
   }
@@ -1641,7 +1661,7 @@ function dismissCurrentAlert() {
   color: #1e293b;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .sv-bar-row {
     grid-template-columns: 1fr;
     gap: 6px;

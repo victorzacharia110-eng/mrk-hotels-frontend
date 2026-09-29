@@ -471,7 +471,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import RoleBadge from '@/components/RoleBadge.vue'
 import { publicApi } from '@/api'
-import { MODULES } from '@/config/modules'
+import { MODULES, moduleLabelKey } from '@/config/modules'
 import { clearOwnerHotel, ownerHotelId, ownerHotelName } from '@/utils/ownerView'
 import { useHoliday } from '@/composables/useHoliday'
 import HolidayDecor from '@/components/HolidayDecor.vue'
@@ -654,9 +654,12 @@ function accordionGroup(key, icon, labelKey, children) {
 
 /** Navigation modules the current user is allowed to see, with localised labels. */
 const visibleModules = computed(() => {
+  // Owners browse with hotel_admin-level visibility, so the label has to be
+  // chosen from the role that actually drives the access matrix.
+  const labelRole = authStore.user?.user_role === 'owner' ? 'hotel_admin' : authStore.user?.user_role
   const allowed = MODULES.filter((item) => authStore.canAccess(item)).map((item) => ({
     ...item,
-    label: t(item.labelKey),
+    label: t(moduleLabelKey(item, labelRole)),
   }))
 
   // Expand the flat "night audit" module into an accordion group holding the
@@ -2342,7 +2345,7 @@ function formatNotifTime(iso) {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .top-bar {
     display: none;
   }
@@ -2417,7 +2420,41 @@ function formatNotifTime(iso) {
   }
 }
 
-@media (min-width: 769px) {
+/* Tablets: 768px is the classic iPad portrait width, so the phone treatment
+   above stops at 767px and this tier takes over. The header keeps the top bar,
+   the brand and the staff drawer button — what a tablet actually needs — while
+   the secondary actions drop their text so the row cannot overflow. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .top-bar-left span:not(:first-child) {
+    display: none;
+  }
+
+  .search-bar {
+    display: none;
+  }
+
+  .header-actions .action-label {
+    display: none;
+  }
+
+  .header-actions .action-link {
+    gap: 0;
+  }
+
+  .header-actions {
+    gap: 4px;
+  }
+
+  .main-header-inner {
+    gap: 10px;
+  }
+
+  .logo-text {
+    font-size: 18px;
+  }
+}
+
+@media (min-width: 768px) {
   .mobile-dropdown {
     display: none !important;
   }

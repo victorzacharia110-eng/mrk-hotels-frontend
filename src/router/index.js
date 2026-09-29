@@ -665,21 +665,18 @@ router.onError((error) => {
 
 // Where each role lands after login and where they get bounced when denied.
 //
-// NOTE — manager review item ("why is the manager's default page the
-// receptionist dashboard?") is NOT resolved by repointing hotel_admin /
-// manager / accountant at /app/overview: an earlier review deliberately landed
-// them on the stay-view dashboard because that is where voiding a reservation,
-// editing/voiding room charges and folio operations after checkout are driven
-// from (see src/__tests__/router-dashboard.spec.js). The management sidebar
-// already exposes its own Dashboard entry pointing at /app/overview. Moving the
-// landing page is therefore a product decision, not a bug fix — it is left
-// unchanged rather than regressing the stay-view workflow.
+// Management (hotel_admin / manager / accountant) lands on the operational
+// overview, which is the reporting panel they are actually accountable for.
+// The front-desk stay view at /app stays available to them through the drawer
+// entry labelled "Front desk", because that is still where voiding a
+// reservation, editing/voiding room charges and folio operations after checkout
+// are driven from. Receptionists and every other role keep their own landing.
 export const dashboardMap = {
   superadmin: '/superadmin',
   owner: '/owner',
-  hotel_admin: '/app',
-  manager: '/app',
-  accountant: '/app',
+  hotel_admin: '/app/overview',
+  manager: '/app/overview',
+  accountant: '/app/overview',
   receptionist: '/app',
   store_manager: '/store-manager',
   procurement_officer: '/app',
@@ -689,6 +686,35 @@ export const dashboardMap = {
   bartender: '/cashier',
   cashier: '/cashier',
   staff: '/app',
+}
+
+// The roles that are given the reporting overview as their landing page.
+export const MANAGEMENT_ROLES = ['hotel_admin', 'manager', 'accountant']
+
+/**
+ * Resolves the page a user should actually land on.
+ *
+ * `dashboardMap` states the intent, but the overview is a subscription-gated
+ * module: a tenant whose negotiated features exclude `overview` is refused
+ * entry by the module guard, which then redirects the denied user back to
+ * `dashboardMap[role]` — the very page that refused them. Pointing the landing
+ * at a gated page therefore loops forever on tenants without the feature, so
+ * the overview is only chosen when this user can genuinely open it, and the
+ * front-desk board is the fallback.
+ *
+ * @param {object} authStore - The auth store, used for role and module access.
+ * @returns {string} An absolute path into the panel.
+ */
+export function resolveLanding(authStore) {
+  const role = authStore?.user?.user_role
+  const preferred = dashboardMap[role]
+
+  if (!preferred) return '/app'
+  if (preferred !== '/app/overview') return preferred
+
+  const overview = moduleByKey('overview')
+
+  return overview && authStore?.canAccess?.(overview) ? preferred : '/app'
 }
 
 /**
@@ -715,8 +741,9 @@ router.beforeEach(async (to) => {
   // Signed-in users can't visit guest-only pages; send them to their dashboard.
   if (to.meta.guest && token) {
     // Role-based redirect takes priority (superadmin, owner always go to their panels).
-    const role = authStore.user?.user_role
-    if (role && dashboardMap[role]) return dashboardMap[role]
+    if (authStore.user?.user_role && dashboardMap[authStore.user.user_role]) {
+      return resolveLanding(authStore)
+    }
     // Self-service customers (registered via portal) go to /portal panel.
     if (authStore.user?.tenant?.self_service) return '/portal'
     return { path: '/app' }
@@ -753,7 +780,7 @@ router.beforeEach(async (to) => {
     if (to.meta.role) {
       const allowed = Array.isArray(to.meta.role) ? to.meta.role : [to.meta.role]
       if (!allowed.includes(authStore.user?.user_role)) {
-        return dashboardMap[authStore.user?.user_role] || '/'
+        return resolveLanding(authStore)
       }
     }
 
@@ -764,9 +791,12 @@ router.beforeEach(async (to) => {
     }
 
     // Module-guarded pages check the module's role/permission allow-list.
+    // Redirects to the resolved landing, not the raw role map: the map can name
+    // a feature-gated page this user cannot open, and redirecting there would
+    // be denied and bounced straight back.
     const module = to.meta.module ? moduleByKey(to.meta.module) : null
     if (module && !authStore.canAccess(module)) {
-      return authStore.isSuperadmin ? '/superadmin' : (dashboardMap[authStore.user?.user_role] || '/app')
+      return authStore.isSuperadmin ? '/superadmin' : resolveLanding(authStore)
     }
 
     // Order takers (waiter/bartender) have no business on the stay-view dashboard —

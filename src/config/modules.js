@@ -11,11 +11,13 @@
 // orders and receptionists could see procurement pages; explicit role lists
 // keep each panel to what its staff actually need.
 export const MODULES = [
-  // Landing dashboard (reception stay-view). Management lands on the overview
-  // dashboard after sign-in, but still may open the board to audit stays and
-  // to perform the management-only folio rewrites (edit/void of the frozen
-  // room-charge rows and of closed folios).
-  { key: 'dashboard', to: '/app', icon: 'fas fa-gauge-high', labelKey: 'nav.dashboard', roles: ['receptionist', 'housekeeping', 'procurement_officer', 'staff', 'kitchen', 'waiter', 'bartender', 'hotel_admin', 'manager', 'accountant'] },
+  // Front-desk stay-view board. Everyone who signs in lands somewhere, and
+  // management now lands on the overview instead, so for those roles this entry
+  // is labelled "Front Desk" (see altLabelKey) — pointing at their own home page
+  // with the word "Dashboard" next to a separate "Overview" entry is just
+  // confusing. It stays the place where voiding a reservation, editing/voiding
+  // room charges and post-checkout folio work happen, so management keeps it.
+  { key: 'dashboard', to: '/app', icon: 'fas fa-gauge-high', labelKey: 'nav.dashboard', altLabelKey: 'nav.frontDesk', altRoles: ['hotel_admin', 'manager', 'accountant'], roles: ['receptionist', 'housekeeping', 'procurement_officer', 'staff', 'kitchen', 'waiter', 'bartender', 'hotel_admin', 'manager', 'accountant'] },
   // Read-only operational dashboard for management.
   { key: 'overview', to: '/app/overview', icon: 'fas fa-chart-simple', labelKey: 'overview.title', roles: ['hotel_admin', 'manager', 'accountant'], feature: 'overview' },
   // Reservations management.
@@ -145,4 +147,21 @@ export function moduleByKey(key) {
  */
 export function moduleByPath(path) {
   return MODULES.find((m) => m.to === path)
+}
+
+/**
+ * Picks the translation key a module should be labelled with for a role.
+ *
+ * Most modules have one label, but a module can carry an `altLabelKey` used
+ * only by the roles in `altRoles`. The front-desk board is the case that
+ * matters: management land on the overview, so calling the stay view
+ * "Dashboard" there reads as a second home page rather than as the front desk.
+ *
+ * @param {object} module - Module config from @/config/modules.
+ * @param {string} role - The viewer's user_role.
+ * @returns {string} A translation key.
+ */
+export function moduleLabelKey(module, role) {
+  if (module?.altLabelKey && module.altRoles?.includes(role)) return module.altLabelKey
+  return module?.labelKey
 }
