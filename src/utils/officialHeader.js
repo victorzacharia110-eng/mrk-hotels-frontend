@@ -36,8 +36,15 @@ export async function getOfficialHeader() {
   if (officialHeader) return officialHeader
   if (headerPromise) return headerPromise
 
-  headerPromise = hotelSettingsApi
-    .show()
+  // The API call is started from inside a `.then()` on purpose. Touching
+  // `hotelSettingsApi.show()` directly throws synchronously if the client is
+  // missing or the module is mocked without it, and a synchronous throw escapes
+  // the promise chain before `.catch()` can ever see it -- which surfaced as
+  // unhandled rejections in every test that mounts a component carrying a
+  // TableExportButton. Wrapping it converts that into an ordinary rejection the
+  // catch below handles, so a failed header never breaks the export.
+  headerPromise = Promise.resolve()
+    .then(() => hotelSettingsApi.show())
     .then((res) => {
       const h = res.data?.hotel || res.data?.data || {}
       officialHeader = {

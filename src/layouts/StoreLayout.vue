@@ -859,7 +859,12 @@ const visibleModules = computed(() => {
     // restaurant. It now sits in the ADMINISTRATION sub-menu of the FRONT DESK
     // dropdown so management can reach it from where the other back-office
     // front-desk tools live.
-    const administration = pick(['staff', 'hotel-settings', 'activity-log-report', 'overrides', 'imports', 'pos-reports', 'integrations/booking-com', 'integrations/quickbooks', 'integrations/xero'])
+    //
+    // The key moved here is `reports` (nav.reportBrowser -> /app/reports), not
+    // `pos-reports` (nav.posReports -> /app/pos-report-browser). Those are two
+    // separate modules with confusingly similar names; an earlier pass moved the
+    // wrong one and left the Report Browser behind in the restaurant submenu.
+    const administration = pick(['staff', 'hotel-settings', 'activity-log-report', 'overrides', 'imports', 'reports', 'integrations/booking-com', 'integrations/quickbooks', 'integrations/xero'])
     if (administration.length) frontDesk.push(subGroup('front-administration', 'fas fa-user-tie', t('accordion.administration'), administration))
     if (byKey['requisitions']) frontDesk.push(link('requisitions', t('nav.requisitions')))
     if (byKey.messages) frontDesk.push(link('messages', t('nav.messages')))
@@ -871,7 +876,10 @@ const visibleModules = computed(() => {
     const restaurantBar = []
     const ordering = pick(['take-order', 'orders'])
     if (ordering.length) restaurantBar.push(subGroup('fnb-ordering', 'fas fa-cash-register', t('accordion.ordering'), ordering))
-    const manager = pick(['menu', 'outlets', 'reports', 'staff-reports', 'item-lookup', 'shift', 'devices'])
+    // `reports` (the Report Browser) is deliberately absent: it belongs to the
+    // FRONT DESK administration submenu above, per the manager review. POS
+    // Reports stays here as the department-scoped F&B browser.
+    const manager = pick(['menu', 'outlets', 'staff-reports', 'pos-reports', 'item-lookup', 'shift', 'devices'])
     // Day Close / Expense Voucher / Income Voucher are the accounting
     // workbench (day close report) and the store expense (voucher) ledger.
     if (byKey.accounting) manager.push({ key: 'day-close', to: byKey.accounting.to, icon: 'fas fa-person-running', label: t('nav.dayClose') })

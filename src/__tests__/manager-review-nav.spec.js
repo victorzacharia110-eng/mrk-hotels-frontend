@@ -34,7 +34,7 @@ describe('manager review navigation', () => {
   it('still exposes the Report Browser to management', () => {
     // Moving it from the restaurant section to the front desk must not lock
     // management out of it.
-    const mod = moduleByKey('pos-reports')
+    const mod = moduleByKey('reports')
     expect(mod).toBeDefined()
     expect(mod.roles).toContain('manager')
     expect(mod.roles).toContain('hotel_admin')
@@ -44,19 +44,49 @@ describe('manager review navigation', () => {
     // Review item 1: "Relocate REPORT BROWSER from RESTAURANT to the FRONT DESK
     // dropdown ADMINISTRATION MENU." StoreLayout builds both groups with a
     // `pick([...])` call, so the placement is asserted against the source.
+    //
+    // The module named by the review is `reports`, which renders the label
+    // "Report Browser" and routes to /app/reports. It is NOT `pos-reports`
+    // ("POS Reports", /app/pos-report-browser) -- a previous pass moved that
+    // one by mistake, and this test is what let it through.
     const source = readFileSync(layoutPath, 'utf8')
 
     const administrationLine = source
       .split('\n')
       .find((line) => line.includes('const administration = pick('))
     expect(administrationLine, 'front-desk administration pick').toBeDefined()
-    expect(administrationLine).toContain("'pos-reports'")
+    expect(administrationLine).toContain("'reports'")
 
     const managerLine = source
       .split('\n')
       .find((line) => line.includes("subGroup('fnb-manager'") === false && line.includes('const manager = pick('))
     expect(managerLine, 'restaurant manager pick').toBeDefined()
-    expect(managerLine).not.toContain("'pos-reports'")
+    expect(managerLine).not.toContain("'reports',")
+  })
+
+  it('keeps POS Reports in the restaurant section', () => {
+    // The review only asked for the Report Browser to move. POS Reports is a
+    // separate department-scoped F&B browser and stays under the restaurant.
+    const source = readFileSync(layoutPath, 'utf8')
+
+    const administrationLine = source
+      .split('\n')
+      .find((line) => line.includes('const administration = pick('))
+    expect(administrationLine).not.toContain("'pos-reports'")
+
+    const managerLine = source
+      .split('\n')
+      .find((line) => line.includes("subGroup('fnb-manager'") === false && line.includes('const manager = pick('))
+    expect(managerLine).toContain("'pos-reports'")
+  })
+
+  it('does not confuse the Report Browser with POS Reports', () => {
+    // Guards the specific mix-up: the two modules must stay distinct in both
+    // label and destination, because that similarity is what caused the bug.
+    expect(moduleByKey('reports').to).toBe('/app/reports')
+    expect(moduleByKey('pos-reports').to).toBe('/app/pos-report-browser')
+    expect(en.nav.reportBrowser).toBe('Report Browser')
+    expect(en.nav.posReports).toBe('POS Reports')
   })
 
   it('labels the former "Staff Report" as "Summary Report"', () => {
