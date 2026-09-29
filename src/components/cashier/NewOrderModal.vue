@@ -511,13 +511,20 @@ async function submit() {
 
 /**
  * Prints the placed order according to the Cloud Print Settings:
+ *  - a food ticket for the kitchen the moment the order is placed;
  *  - a receipt/guest check on save when "printOnSave" is on;
  *  - a guest check when the order is not settled (left open on a table).
+ *
+ * The two are gated separately: a manager may want the kitchen cooking straight
+ * away while the guest is still ordering drinks at the table, which means the
+ * ticket goes out with "print on save" off.
  */
 async function printNewOrder(order) {
   if (!order) return
-  const printGuestCheck = printStore.printOnSave || printStore.printGuestCheckWhenUnsettled
-  if (!printGuestCheck) return
+  const wantFoodTicket = printStore.printFoodTicketOnOrder
+  const wantGuestCheck = printStore.printOnSave || printStore.printGuestCheckWhenUnsettled
+  if (!wantFoodTicket && !wantGuestCheck) return
+
   let full = order
   if (!full.items?.length) {
     try {
@@ -527,9 +534,26 @@ async function printNewOrder(order) {
       /* still print with whatever items we have */
     }
   }
-  const lines = displayLines(full, 'receipt', {})
-  const sent = await printStore.print(lines)
-  if (!sent) toast(t('orderTaker.noPrinter'), 'error')
+
+  // The order carries the service line it was placed against, which is what
+  // decides which printer the kitchen ticket lands on.
+  let ticketSent = true
+  if (wantFoodTicket) {
+    ticketSent = await printStore.printFoodTicket(
+      displayLines(full, 'kot', {}),
+      full.department || order.department,
+    )
+  }
+
+  let checkSent = true
+  if (wantGuestCheck) {
+    checkSent = await printStore.print(displayLines(full, 'receipt', {}))
+  }
+
+  // A food ticket that never printed means the kitchen never heard about the
+  // order, so that failure is the one worth shouting about; a missed guest
+  // check is an annoyance by comparison.
+  if (!ticketSent || !checkSent) toast(t('orderTaker.noPrinter'), 'error')
 }
 
 onMounted(async () => {

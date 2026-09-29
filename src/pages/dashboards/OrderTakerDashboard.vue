@@ -2583,6 +2583,35 @@ function removeLine(line) {
   orderLines.value = orderLines.value.filter((l) => (l.key || l.menu_item_id) !== (line.key || line.menu_item_id))
 }
 
+/**
+ * Sends a food ticket for a brand-new order, routed to the printer configured
+ * for the service line the order was placed against.
+ *
+ * The "print a food ticket on order" flag defaults to on in the store, and the
+ * manager's choice is obeyed either way — a waiter turning it off is not
+ * second-guessed here.
+ */
+async function printNewOrderTicket(order) {
+  if (!order || !printStore.printFoodTicketOnOrder) return
+  await printStore.printFoodTicket(displayLines(order, 'kot', {}), order.department || department.value)
+}
+
+/**
+ * Sends a food ticket for items appended to an order that is already with the
+ * kitchen, carrying ONLY the new lines.
+ *
+ * Off by default: most kitchens reprint the whole ticket instead, and a
+ * per-item ticket on a busy service is noise rather than help.
+ */
+async function printAddedItemsTicket(order, addedLines) {
+  if (!order || !printStore.printFoodTicketOnItemAdded) return
+  if (!addedLines.length) return
+  await printStore.printFoodTicket(
+    displayLines({ ...order, items: addedLines }, 'kot', {}),
+    order.department || department.value,
+  )
+}
+
 /** Sends the ticket to the kitchen/bar. For a fresh order it creates one; for
  *  a table the waiter already opened (continueOrderId) it appends the new
  *  lines to that same order so nothing is ever duplicated. */
@@ -2615,6 +2644,9 @@ async function sendOrder() {
         const res = await orderApi.addItems(continueOrderId.value, { items: itemsPayload })
         const number = res.data?.order?.order_number || ''
         sentToast.value = t('orderTaker.sent', { number })
+        // Only the lines just added go on this ticket. Reprinting the whole
+        // order would tell the kitchen to cook everything twice.
+        await printAddedItemsTicket(res.data?.order, newLines)
       }
       orderLines.value = []
       form.value.notes = ''
@@ -2630,6 +2662,7 @@ async function sendOrder() {
       })
       const number = res.data?.order?.order_number || ''
       sentToast.value = t('orderTaker.sent', { number })
+      await printNewOrderTicket(res.data?.order)
       orderLines.value = []
       form.value = { table_number: '', covers: 0, order_type: defaultOrderType(), notes: '' }
     }
