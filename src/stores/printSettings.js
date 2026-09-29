@@ -26,6 +26,24 @@ const DEFAULTS = {
   printOnSettle: true,
   // Print a receipt when an order is voided / cancelled.
   printOnVoid: false,
+  // Print a food ticket when an order is placed. Separate from the receipt
+  // because the kitchen/bar needs it the moment the order lands, while the
+  // guest may not settle for hours.
+  printFoodTicketOnOrder: true,
+  // Print a food ticket when a single item is added to an order that was
+  // already placed. Off by default: most kitchens reprint the whole ticket.
+  printFoodTicketOnItemAdded: false,
+  // Named printer profiles a food ticket can be routed to. Each is either the
+  // USB printer attached to this machine ('serial', at most one at a time) or a
+  // bridge agent on another machine ('network'). Ids are stable so a route
+  // pointing at a deleted printer degrades to the till printer instead of
+  // silently dropping the ticket.
+  ticketPrinters: [],
+  // Which printer each service line's tickets go to, by profile id.
+  departmentRouting: {},
+  // Profile used when a service line has no route of its own, or its route
+  // points at a printer that has since been deleted.
+  defaultTicketPrinterId: "",
   // How the till printer is reached: 'serial' (Web Serial/USB on this machine)
   // or 'network' (a local bridge agent forwarding to the printer).
   transport: "serial",
@@ -52,6 +70,11 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
   const printGuestCheckWhenUnsettled = computed(() => settings.value.printGuestCheckWhenUnsettled);
   const printOnSettle = computed(() => settings.value.printOnSettle);
   const printOnVoid = computed(() => settings.value.printOnVoid);
+  const printFoodTicketOnOrder = computed(() => settings.value.printFoodTicketOnOrder);
+  const printFoodTicketOnItemAdded = computed(() => settings.value.printFoodTicketOnItemAdded);
+  const ticketPrinters = computed(() => settings.value.ticketPrinters);
+  const departmentRouting = computed(() => settings.value.departmentRouting);
+  const defaultTicketPrinterId = computed(() => settings.value.defaultTicketPrinterId);
   const transport = computed(() => settings.value.transport);
   const endpoint = computed(() => settings.value.endpoint);
 
@@ -91,16 +114,88 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
     return printToPrinter(lines, { ...opts, transport: "serial" });
   }
 
+  /**
+   * The printer a service line's food tickets should go to.
+   *
+   * A route whose printer has been deleted falls back to the default profile
+   * rather than to nothing: a mis-typed ticket still gets in front of the
+   * kitchen, which beats it vanishing into a drawer.
+   */
+  function resolveTicketPrinter(department) {
+    const printers = settings.value.ticketPrinters;
+    const byId = new Map(printers.map((p) => [p.id, p]));
+    const routed = settings.value.departmentRouting?.[department];
+    return (
+      byId.get(routed) ||
+      byId.get(settings.value.defaultTicketPrinterId) ||
+      null
+    );
+  }
+
+  /**
+   * Adds a named printer profile and returns its id.
+   *
+   * The id is generated here rather than by the caller so a profile can be
+   * created from the settings form without it having to think about
+   * collisions with ids already stored.
+   */
+  function addTicketPrinter(printer) {
+    const id = `tp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+    saveSettings({ ticketPrinters: [...settings.value.ticketPrinters, { id, ...printer }] });
+    return id;
+  }
+
+  /**
+   * Removes a profile and clears any route that pointed at it, so the routing
+   * map never references a printer that no longer exists.
+   */
+  function removeTicketPrinter(id) {
+    saveSettings({
+      ticketPrinters: settings.value.ticketPrinters.filter((p) => p.id !== id),
+      departmentRouting: Object.fromEntries(
+        Object.entries(settings.value.departmentRouting || {}).filter(
+          ([, printerId]) => printerId !== id,
+        ),
+      ),
+      defaultTicketPrinterId:
+        settings.value.defaultTicketPrinterId === id
+          ? ""
+          : settings.value.defaultTicketPrinterId,
+    });
+  }
+
+  /**
+   * Sends a food ticket to the printer routed for a service line.
+   *
+   * With no profile configured for the line, the ticket goes to the till
+   * printer: that is the one printer known to exist, and a single till printing
+   * a kitchen ticket is still better than a dropped order.
+   */
+  async function printFoodTicket(lines, department, opts = {}) {
+    const profile = resolveTicketPrinter(department);
+    if (!profile) return print(lines, opts);
+    return printToPrinter(lines, { ...opts, transport: profile.transport, endpoint: profile.endpoint });
+  }
+
   return {
     settings,
     printOnSave,
     printGuestCheckWhenUnsettled,
     printOnSettle,
     printOnVoid,
+    printFoodTicketOnOrder,
+    printFoodTicketOnItemAdded,
+    ticketPrinters,
+    departmentRouting,
+    defaultTicketPrinterId,
     transport,
     endpoint,
     saveSettings,
     reset,
     print,
+    resolveTicketPrinter,
+    addTicketPrinter,
+    removeTicketPrinter,
+    printFoodTicket,
   };
 });

@@ -40,8 +40,10 @@ export const MODULES = [
   // its Kitchen Board instead, and the waiter's Restaurant & Bar section is
   // Take Order + Issue Reports only (see the panel review).
   { key: 'orders', to: '/app/orders', icon: 'fas fa-utensils', labelKey: 'nav.orders', roles: ['hotel_admin', 'manager', 'bartender', 'staff'], feature: 'orders' },
-  // Single-click kitchen board for the cooks.
-  { key: 'kitchen-board', to: '/app/kitchen', icon: 'fas fa-fire-burner', labelKey: 'nav.kitchenBoard', roles: ['kitchen'], feature: 'orders' },
+  // Single-click kitchen board for the cooks. Managers and admins are on it
+  // too: a chef's account is often a manager account, and being unable to see
+  // the pass because of a role mismatch is not a useful restriction.
+  { key: 'kitchen-board', to: '/app/kitchen', icon: 'fas fa-fire-burner', labelKey: 'nav.kitchenBoard', roles: ['kitchen', 'hotel_admin', 'manager'], feature: 'orders' },
   // Touch-POS order pad (restaurant/bar toggle) for the service teams. Not part
   // of the kitchen panel (see the panel review).
   { key: 'take-order', to: '/app/take-order', icon: 'fas fa-cash-register', labelKey: 'nav.takeOrder', roles: ['hotel_admin', 'manager', 'waiter', 'bartender', 'staff'], feature: 'orders' },

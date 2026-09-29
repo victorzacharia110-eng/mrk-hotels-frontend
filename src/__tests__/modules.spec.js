@@ -70,6 +70,15 @@ describe('module config', () => {
       expect(mod.roles).toContain('waiter')
     })
 
+    it('lets a manager reach the kitchen board', () => {
+      // A chef's account is often a manager account; the pass should not be
+      // hidden from them because of a role mismatch.
+      const mod = moduleByKey('kitchen-board');
+      expect(mod.roles).toContain('kitchen');
+      expect(mod.roles).toContain('manager');
+      expect(mod.roles).toContain('hotel_admin');
+    });
+
     it('menu stays off the kitchen panel', () => {
       const mod = moduleByKey('menu')
       expect(mod.roles).not.toContain('kitchen')

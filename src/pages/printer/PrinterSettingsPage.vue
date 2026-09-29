@@ -59,6 +59,104 @@
         <p class="muted">{{ $t('printer.how4') }}</p>
       </div>
     </section>
+
+    <section class="panel">
+      <h2>{{ $t('printer.whenTitle') }}</h2>
+      <p class="muted">{{ $t('printer.whenHint') }}</p>
+
+      <label v-for="toggle in toggles" :key="toggle.key" class="toggle">
+        <input
+          type="checkbox"
+          :checked="settings[toggle.key]"
+          @change="setFlag(toggle.key, $event.target.checked)"
+        />
+        <span>
+          <strong>{{ $t(toggle.label) }}</strong>
+          <span class="muted block">{{ $t(toggle.hint) }}</span>
+        </span>
+      </label>
+    </section>
+
+    <section class="panel">
+      <h2>{{ $t('printer.ticketTitle') }}</h2>
+      <p class="muted">{{ $t('printer.ticketHint') }}</p>
+
+      <div v-if="!ticketPrinters.length" class="notice">
+        <i class="fas fa-circle-info"></i> {{ $t('printer.noTicketPrinters') }}
+      </div>
+
+      <table v-else class="route-table">
+        <thead>
+          <tr>
+            <th>{{ $t('printer.serviceLine') }}</th>
+            <th>{{ $t('printer.ticketPrinter') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="line in serviceLines" :key="line">
+            <td>{{ line }}</td>
+            <td>
+              <select
+                class="form-control"
+                :value="routingFor(line)"
+                @change="setRoute(line, $event.target.value)"
+              >
+                <option value="">{{ $t('printer.useDefault') }}</option>
+                <option v-for="p in ticketPrinters" :key="p.id" :value="p.id">{{ p.name }}</option>
+              </select>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="add-row">
+        <input
+          v-model="newPrinter.name"
+          class="form-control"
+          :placeholder="$t('printer.printerName')"
+        />
+        <select v-model="newPrinter.transport" class="form-control">
+          <option value="serial">{{ $t('printer.thisMachine') }}</option>
+          <option value="network">{{ $t('printer.networkBridge') }}</option>
+        </select>
+        <input
+          v-if="newPrinter.transport === 'network'"
+          v-model="newPrinter.endpoint"
+          class="form-control"
+          placeholder="http://100.x.y.z:9720"
+        />
+        <button class="btn btn-primary" :disabled="!newPrinter.name" @click="addPrinter">
+          <i class="fas fa-plus"></i> {{ $t('common.add') }}
+        </button>
+      </div>
+
+      <ul v-if="ticketPrinters.length" class="printer-list">
+        <li v-for="p in ticketPrinters" :key="p.id">
+          <span>
+            <strong>{{ p.name }}</strong>
+            <span class="muted"> — {{ p.transport === 'network' ? p.endpoint : $t('printer.thisMachine') }}</span>
+          </span>
+          <button class="btn btn-danger btn-sm" @click="removeTicketPrinter(p.id)">
+            <i class="fas fa-trash"></i>
+          </button>
+        </li>
+      </ul>
+
+      <label class="toggle default-row">
+        <span>
+          <strong>{{ $t('printer.defaultTicketPrinter') }}</strong>
+          <span class="muted block">{{ $t('printer.defaultTicketPrinterHint') }}</span>
+        </span>
+        <select
+          class="form-control"
+          :value="defaultTicketPrinterId"
+          @change="setDefault($event.target.value)"
+        >
+          <option value="">{{ $t('printer.tillPrinter') }}</option>
+          <option v-for="p in ticketPrinters" :key="p.id" :value="p.id">{{ p.name }}</option>
+        </select>
+      </label>
+    </section>
   </div>
 </template>
 
@@ -67,6 +165,56 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { printerState, printerSupported, connectPrinter, disconnectPrinter, restorePrinter, printToPrinter } from '@/utils/printer'
 import { testPrintLines } from '@/utils/receipts'
+import { usePrintSettingsStore } from '@/stores/printSettings'
+
+const {
+  settings,
+  ticketPrinters,
+  departmentRouting,
+  defaultTicketPrinterId,
+  saveSettings,
+  addTicketPrinter,
+  removeTicketPrinter,
+} = usePrintSettingsStore()
+
+// Seeded from the two service lines that existed before service lines became
+// free text; the menu API is the source of truth for the full list.
+const serviceLines = ['restaurant', 'bar']
+const newPrinter = ref({ name: '', transport: 'serial', endpoint: '' })
+
+const toggles = [
+  { key: 'printOnSave', label: 'printer.printOnSave', hint: 'printer.printOnSaveHint' },
+  { key: 'printGuestCheckWhenUnsettled', label: 'printer.printGuestCheckWhenUnsettled', hint: 'printer.printGuestCheckWhenUnsettledHint' },
+  { key: 'printOnSettle', label: 'printer.printOnSettle', hint: 'printer.printOnSettleHint' },
+  { key: 'printOnVoid', label: 'printer.printOnVoid', hint: 'printer.printOnVoidHint' },
+  { key: 'printFoodTicketOnOrder', label: 'printer.printFoodTicketOnOrder', hint: 'printer.printFoodTicketOnOrderHint' },
+  { key: 'printFoodTicketOnItemAdded', label: 'printer.printFoodTicketOnItemAdded', hint: 'printer.printFoodTicketOnItemAddedHint' },
+]
+
+function setFlag(key, value) {
+  saveSettings({ [key]: value })
+}
+
+function routingFor(line) {
+  return departmentRouting[line] || ''
+}
+
+function setRoute(line, printerId) {
+  saveSettings({ departmentRouting: { ...departmentRouting, [line]: printerId } })
+}
+
+function setDefault(printerId) {
+  saveSettings({ defaultTicketPrinterId: printerId })
+}
+
+function addPrinter() {
+  addTicketPrinter({
+    name: newPrinter.value.name.trim(),
+    transport: newPrinter.value.transport,
+    endpoint: newPrinter.value.transport === 'network' ? newPrinter.value.endpoint.trim() : '',
+  })
+  newPrinter.value = { name: '', transport: 'serial', endpoint: '' }
+}
 
 const { t } = useI18n()
 
@@ -134,4 +282,23 @@ onMounted(restorePrinter)
 
 .hints { border-top: 1px solid #ececec; padding-top: 14px; }
 .hints ol { margin: 8px 0 10px; padding-left: 20px; line-height: 1.7; font-size: 14px; }
+
+.panel { margin-top: 20px; }
+.panel h2 { font-size: 17px; font-weight: 700; margin: 0 0 4px; }
+.block { display: block; }
+
+.toggle { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+.toggle:last-child { border-bottom: 0; }
+.default-row { justify-content: space-between; align-items: center; margin-top: 14px; }
+.default-row .form-control { max-width: 260px; }
+
+.route-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+.route-table th, .route-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #f0f0f0; }
+
+.add-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.add-row .form-control { flex: 1 1 160px; }
+
+.printer-list { list-style: none; padding: 0; margin: 14px 0 0; }
+.printer-list li { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
 </style>
