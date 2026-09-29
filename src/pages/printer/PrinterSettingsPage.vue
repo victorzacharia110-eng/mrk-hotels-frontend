@@ -166,6 +166,7 @@ import { useI18n } from 'vue-i18n'
 import { printerState, printerSupported, connectPrinter, disconnectPrinter, restorePrinter, printToPrinter } from '@/utils/printer'
 import { testPrintLines } from '@/utils/receipts'
 import { usePrintSettingsStore } from '@/stores/printSettings'
+import { menuCategoryApi } from '@/api'
 
 const {
   settings,
@@ -177,9 +178,24 @@ const {
   removeTicketPrinter,
 } = usePrintSettingsStore()
 
-// Seeded from the two service lines that existed before service lines became
-// free text; the menu API is the source of truth for the full list.
-const serviceLines = ['restaurant', 'bar']
+// Service lines used to be a fixed restaurant/bar pair; `department` is now
+// free text, so the list is read from the service lines the hotel's own menu
+// categories are filed under. These are exactly the values an order carries,
+// which is what the routing keys are matched against.
+const serviceLines = ref(['restaurant', 'bar'])
+async function loadServiceLines() {
+  try {
+    const res = await menuCategoryApi.index()
+    const categories = res.data?.data || []
+    const lines = [...new Set(categories.map((c) => String(c.department || '').trim()).filter(Boolean))]
+    // A line already routed to a printer stays listed even if its last category
+    // was removed, so a configured route cannot vanish out of the UI.
+    const routed = Object.keys(departmentRouting || {})
+    if (lines.length) serviceLines.value = [...new Set([...lines, ...routed])]
+  } catch {
+    /* keep the defaults; the page still works with the two original lines */
+  }
+}
 const newPrinter = ref({ name: '', transport: 'serial', endpoint: '' })
 
 const toggles = [
@@ -260,7 +276,10 @@ async function test() {
   }
 }
 
-onMounted(restorePrinter)
+onMounted(() => {
+  restorePrinter()
+  loadServiceLines()
+})
 </script>
 
 <style scoped>
