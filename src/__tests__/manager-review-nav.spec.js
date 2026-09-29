@@ -15,17 +15,21 @@ const layoutPath = resolve(
  * Manager panel review — navigation and labelling fixes.
  */
 describe('manager review navigation', () => {
-  it('keeps Xero and QuickBooks on the accountant panel only', () => {
-    // "From the administration menu on the manager panel please remove
-    //  XERO | QUICKBOOKS; the functionality should remain solely on ACCOUNTANT."
-    for (const key of ['integrations/quickbooks', 'integrations/xero']) {
+  // Each key is its own named case: `expect(received, message)` is not valid in
+  // vitest, and the message argument was being discarded, so a failure could not
+  // say which integration it was talking about.
+  it.each(['integrations/quickbooks', 'integrations/xero'])(
+    'keeps %s on the accountant panel only',
+    (key) => {
+      // "From the administration menu on the manager panel please remove
+      //  XERO | QUICKBOOKS; the functionality should remain solely on ACCOUNTANT."
       const mod = moduleByKey(key)
-      expect(mod, key).toBeDefined()
-      expect(mod.roles, key).toEqual(['accountant'])
-      expect(mod.roles, key).not.toContain('manager')
-      expect(mod.roles, key).not.toContain('hotel_admin')
-    }
-  })
+      expect(mod).toBeDefined()
+      expect(mod.roles).toEqual(['accountant'])
+      expect(mod.roles).not.toContain('manager')
+      expect(mod.roles).not.toContain('hotel_admin')
+    },
+  )
 
   it('still exposes the Report Browser to management', () => {
     // Moving it from the restaurant section to the front desk must not lock
