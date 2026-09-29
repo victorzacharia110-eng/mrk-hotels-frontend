@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { dashboardMap, resolveLanding, MANAGEMENT_ROLES } from '@/router'
-import { moduleByKey, moduleLabelKey } from '@/config/modules'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
+import { moduleByKey } from '@/config/modules'
 
 /**
  * Builds a stand-in for the auth store. Only the two members resolveLanding
@@ -103,32 +106,69 @@ describe('resolveLanding', () => {
   })
 })
 
-describe('front-desk entry label', () => {
-  const frontDesk = moduleByKey('dashboard')
+const layoutPath = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '../layouts/StoreLayout.vue',
+)
 
-  it('calls the front-desk board "Front Desk" for management', () => {
-    // Management now land on the overview, so a second entry called
-    // "Dashboard" reads as a duplicate home page instead of the front desk.
-    expect(frontDesk.to).toBe('/app')
+/**
+ * The management branch of visibleModules, as source text.
+ *
+ * The regression this guards is a *rendering* one: the `dashboard` module was
+ * open to management and correctly labelled, but the management branch never
+ * pushed it, so a manager had no sidebar route to /app at all. Asserting the
+ * module's roles and labelKey passed happily while the entry was absent. These
+ * tests therefore read what the branch actually emits.
+ */
+function managementFrontDeskBlock() {
+  const source = readFileSync(layoutPath, 'utf8')
+  const start = source.indexOf('const frontDesk = []')
+  const end = source.indexOf("accordionGroup('front-desk'", start)
+  expect(start, 'management frontDesk array').toBeGreaterThan(-1)
+  expect(end, 'front-desk accordion').toBeGreaterThan(start)
+  return source.slice(start, end)
+}
+
+describe('front-desk board in the management sidebar', () => {
+  const block = managementFrontDeskBlock()
+  const board = moduleByKey('dashboard')
+
+  it('keeps the stay board reachable for management in the access matrix', () => {
+    expect(board.to).toBe('/app')
     for (const role of MANAGEMENT_ROLES) {
-      expect(moduleLabelKey(frontDesk, role)).toBe('nav.frontDesk')
+      expect(board.roles).toContain(role)
     }
   })
 
-  it('still calls it "Dashboard" for the staff who work it', () => {
-    for (const role of ['receptionist', 'housekeeping', 'waiter', 'bartender', 'kitchen']) {
-      expect(moduleLabelKey(frontDesk, role)).toBe('nav.dashboard')
-    }
+  it('emits the stay board as the first child of the FRONT DESK dropdown', () => {
+    // Nesting it is what distinguishes it from the overview DASHBOARD above.
+    expect(block).toContain('byKey.dashboard')
+    expect(block).toContain("label: t('nav.dashboard')")
+    expect(block.indexOf('byKey.dashboard')).toBeLessThan(block.indexOf("link('reservations'"))
   })
 
-  it('keeps the front desk open to management', () => {
-    for (const role of MANAGEMENT_ROLES) {
-      expect(frontDesk.roles).toContain(role)
-    }
+  it('routes that child at /app, not the overview', () => {
+    expect(block).toContain('to: byKey.dashboard.to')
   })
 
-  it('leaves every other module with a single label', () => {
+  it('leaves the overview as the single top-level DASHBOARD entry', () => {
+    // The landing page stays a lone item above the accordions, not a child.
+    const source = readFileSync(layoutPath, 'utf8')
+    expect(source).toContain("out.push({ ...byKey.overview, label: t('nav.dashboard') })")
+    expect(block).not.toContain('byKey.overview')
+  })
+
+  it('uses one label per module, so no role needs a relabelled variant', () => {
+    // The altLabelKey mechanism existed only to call this board "Front Desk"
+    // for management. It is gone: the entry is built explicitly and nested.
+    expect(board.altLabelKey).toBeUndefined()
+    expect(board.altRoles).toBeUndefined()
+    expect(board.labelKey).toBe('nav.dashboard')
+  })
+
+  it('leaves the overview module with its own label', () => {
     const overview = moduleByKey('overview')
-    expect(moduleLabelKey(overview, 'manager')).toBe(overview.labelKey)
+    expect(overview.labelKey).toBe('overview.title')
+    expect(overview.roles).toEqual(MANAGEMENT_ROLES)
   })
 })

@@ -471,7 +471,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import RoleBadge from '@/components/RoleBadge.vue'
 import { publicApi } from '@/api'
-import { MODULES, moduleLabelKey } from '@/config/modules'
+import { MODULES } from '@/config/modules'
 import { clearOwnerHotel, ownerHotelId, ownerHotelName } from '@/utils/ownerView'
 import { useHoliday } from '@/composables/useHoliday'
 import HolidayDecor from '@/components/HolidayDecor.vue'
@@ -654,12 +654,9 @@ function accordionGroup(key, icon, labelKey, children) {
 
 /** Navigation modules the current user is allowed to see, with localised labels. */
 const visibleModules = computed(() => {
-  // Owners browse with hotel_admin-level visibility, so the label has to be
-  // chosen from the role that actually drives the access matrix.
-  const labelRole = authStore.user?.user_role === 'owner' ? 'hotel_admin' : authStore.user?.user_role
   const allowed = MODULES.filter((item) => authStore.canAccess(item)).map((item) => ({
     ...item,
-    label: t(moduleLabelKey(item, labelRole)),
+    label: t(item.labelKey),
   }))
 
   // Expand the flat "night audit" module into an accordion group holding the
@@ -832,6 +829,15 @@ const visibleModules = computed(() => {
 
     // 2. FRONT DESK.
     const frontDesk = []
+    // The front-desk stay board itself, first in its own dropdown. Management
+    // land on the overview, so without this there was no sidebar route at all
+    // into /app for a manager — the module was open to the role but never
+    // emitted here. Labelled "Dashboard" because that is what the board is
+    // called for the staff who work it; nesting it under FRONT DESK is what
+    // keeps it distinct from the overview DASHBOARD entry above.
+    if (byKey.dashboard) {
+      frontDesk.push({ key: 'front-desk-dashboard', to: byKey.dashboard.to, icon: byKey.dashboard.icon, label: t('nav.dashboard') })
+    }
     if (byKey.reservations) frontDesk.push(link('reservations', t('nav.reservations')))
     if (byKey.rooms) frontDesk.push(link('rooms', t('nav.rooms')))
     if (byKey.rooms) frontDesk.push({ key: 'rates', to: '/app/rooms', icon: 'fas fa-tags', label: t('nav.rates') })
