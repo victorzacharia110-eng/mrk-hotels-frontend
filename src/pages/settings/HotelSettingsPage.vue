@@ -424,7 +424,7 @@ function hydrate(hotel) {
   form.vrn = merged.vrn || ''
   form.timezone = merged.timezone || 'Africa/Dar_es_Salaam'
   form.payment_methods = Array.isArray(merged.payment_methods) ? [...merged.payment_methods] : []
-  form.payment_accounts = { ...(merged.payment_accounts || {}) }
+  form.payment_accounts = { ...merged.payment_accounts }
   logoUrl.value = merged.logo_url || ''
   logoFile.value = null
 }
@@ -471,7 +471,7 @@ function accountNumber(provider) {
  * @param {string} value New value.
  */
 function setAccount(provider, field, value) {
-  const current = { ...(form.payment_accounts[provider] || {}) }
+  const current = { ...form.payment_accounts[provider] }
   const trimmed = value.trim()
   if (trimmed === '') {
     delete current[field]
