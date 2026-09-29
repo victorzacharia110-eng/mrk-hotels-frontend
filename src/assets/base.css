@@ -568,7 +568,7 @@ button {
   transform: translateY(-8px);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .container {
     padding: 0 16px;
   }
@@ -712,7 +712,7 @@ button {
   margin-top: 20px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .dashboard-page {
     padding: 20px 16px;
   }
@@ -724,5 +724,24 @@ button {
 
   .grid-2 {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Tablets: 768px is the classic iPad portrait width, so the phone treatment
+   starts at 767px. Without this band a tablet drops straight from the full
+   layout to the phone one, with no middle step. These are the shared page
+   primitives; pages carry their own band for their own grids. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .page-head {
+    flex-direction: row;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .kpi-grid,
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

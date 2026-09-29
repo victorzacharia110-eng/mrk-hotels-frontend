@@ -331,7 +331,7 @@ async function handleLogout() {
   border-radius: 2px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .sa-sidebar {
     position: fixed;
     left: -280px;

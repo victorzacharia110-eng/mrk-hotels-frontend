@@ -341,5 +341,15 @@ onMounted(() => {
 .text-green { color: #16A34A !important; }
 .capitalize { text-transform: capitalize; }
 .table-scroll .table { min-width: 560px; }
-@media (max-width: 768px) { .dashboard-page { padding: 20px 16px; } .page-head { flex-direction: column; align-items: flex-start; } .date-row { flex-direction: column; align-items: stretch; } }
+/* Tablets: 768px is the classic iPad portrait width, so the phone
+   treatment below starts at 767px. Without this band a tablet drops
+   straight from the full form to a single column. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .date-row,
+  .page-head {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 767px) { .dashboard-page { padding: 20px 16px; } .page-head { flex-direction: column; align-items: flex-start; } .date-row { flex-direction: column; align-items: stretch; } }
 </style>

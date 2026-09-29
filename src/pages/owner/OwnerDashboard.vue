@@ -427,7 +427,16 @@ function dismissCurrentAlert() {
   display: block;
 }
 
-@media (max-width: 768px) {
+/* Tablets: 768px is the classic iPad portrait width, so the phone
+   treatment below starts at 767px. Without this band a tablet drops
+   straight from the full form to a single column. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .stat-card {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 767px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
@@ -542,7 +551,17 @@ function dismissCurrentAlert() {
   }
 }
 
-@media (max-width: 768px) {
+/* Tablets: 768px is the classic iPad portrait width, so the phone
+   treatment below starts at 767px. Without this band a tablet drops
+   straight from the full form to a single column. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .sv-bar-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+}
+
+@media (max-width: 767px) {
   .sv-bar-row {
     grid-template-columns: 1fr;
     gap: 6px;

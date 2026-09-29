@@ -346,7 +346,20 @@ onMounted(async () => {
 .btn-danger-mini { background: #fee2e2; color: #b91c1c; border: none; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
 .btn-danger-mini:hover { background: #fecaca; }
 @media (max-width: 992px) { .two-col { grid-template-columns: 1fr; } }
-@media (max-width: 768px) {
+/* Tablets: 768px is the classic iPad portrait width, so the phone
+   treatment below starts at 767px. Without this band a tablet drops
+   straight from the full form to a single column. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .page-head {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 767px) {
   .dashboard-page { padding: 20px 16px; }
   .page-head { flex-direction: column; align-items: flex-start; }
   .form-grid { grid-template-columns: 1fr; }

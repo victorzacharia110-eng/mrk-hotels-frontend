@@ -577,7 +577,18 @@ onMounted(load)
   display: block;
 }
 
-@media (max-width: 768px) {
+/* Tablets: 768px is the classic iPad portrait width, so the phone
+   treatment below starts at 767px. Without this band a tablet drops
+   straight from the full form to a single column. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .dash-grid,
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+}
+
+@media (max-width: 767px) {
   .dashboard-page {
     padding: 20px 16px;
   }

@@ -137,7 +137,17 @@ watch([from, to], load)
 .action-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: #eef4ff; color: #005EB8; border-radius: 999px; font-size: 12px; font-weight: 600; }
 .action-detail { margin-left: 8px; font-size: 12px; color: #64748b; text-transform: capitalize; }
 .table-scroll .table { min-width: 780px; }
-@media (max-width: 768px) {
+/* Tablets: 768px is the classic iPad portrait width, so the phone
+   treatment below starts at 767px. Without this band a tablet drops
+   straight from the full form to a single column. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .filter-row,
+  .page-head {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 767px) {
   .dashboard-page { padding: 20px 16px; }
   .page-head { flex-direction: column; align-items: flex-start; }
   .filter-row { flex-direction: column; align-items: stretch; }

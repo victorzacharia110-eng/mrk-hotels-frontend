@@ -305,5 +305,18 @@ onMounted(load)
 .form-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 16px; }
 .form-full { grid-column: 1 / -1; }
 .modal-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-@media (max-width: 768px) { .dashboard-page { padding: 20px 16px; } .page-head { flex-direction: column; align-items: flex-start; } .filter-grid { grid-template-columns: 1fr; } }
+/* Tablets: 768px is the classic iPad portrait width, so the phone
+   treatment below starts at 767px. Without this band a tablet drops
+   straight from the full form to a single column. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .filter-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .page-head {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 767px) { .dashboard-page { padding: 20px 16px; } .page-head { flex-direction: column; align-items: flex-start; } .filter-grid { grid-template-columns: 1fr; } }
 </style>

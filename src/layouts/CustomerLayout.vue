@@ -253,7 +253,7 @@ async function handleLogout() {
 
 .sa-content { padding: 24px; flex: 1; }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .sa-sidebar { transform: translateX(-100%); transition: transform 0.2s; }
   .sa-sidebar.mobile-open { transform: translateX(0); }
   .sa-main { margin-left: 0 !important; }

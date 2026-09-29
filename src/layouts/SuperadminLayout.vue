@@ -375,7 +375,7 @@ async function handleLogout() {
   transition: all 0.3s;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .sa-sidebar-overlay {
     display: block;
     pointer-events: none;
@@ -428,7 +428,7 @@ async function handleLogout() {
   }
 }
 
-@media (min-width: 769px) {
+@media (min-width: 768px) {
   .sa-hamburger {
     display: none !important;
   }

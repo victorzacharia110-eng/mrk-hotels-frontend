@@ -320,7 +320,17 @@ onMounted(async () => {
 .row-index { font-weight: 700; color: #64748b; }
 .problem-list { margin: 0; padding-left: 18px; color: #b91c1c; font-size: 13px; }
 .commit-ok { display: flex; align-items: center; gap: 8px; color: #177a3b; font-weight: 700; margin-top: 16px; }
-@media (max-width: 768px) {
+/* Tablets: 768px is the classic iPad portrait width, so the phone
+   treatment below starts at 767px. Without this band a tablet drops
+   straight from the full form to a single column. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .page-head,
+  .upload-row {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 767px) {
   .dashboard-page { padding: 20px 16px; }
   .page-head { flex-direction: column; align-items: flex-start; }
   .upload-row { flex-direction: column; align-items: stretch; }

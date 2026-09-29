@@ -197,7 +197,20 @@ async function lookup() {
   margin: 0;
 }
 
-@media (max-width: 768px) {
+/* Tablets: 768px is the classic iPad portrait width, so the phone
+   treatment below starts at 767px. Without this band a tablet drops
+   straight from the full form to a single column. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .tracker-line {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tracker-form {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 767px) {
   .tracker-form {
     flex-direction: column;
   }

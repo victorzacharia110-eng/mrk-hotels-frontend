@@ -108,7 +108,16 @@ async function download() {
   min-width: 220px;
 }
 
-@media (max-width: 768px) {
+/* Tablets: 768px is the classic iPad portrait width, so the phone
+   treatment below starts at 767px. Without this band a tablet drops
+   straight from the full form to a single column. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .invoice-form {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 767px) {
   .invoice-form {
     flex-direction: column;
   }

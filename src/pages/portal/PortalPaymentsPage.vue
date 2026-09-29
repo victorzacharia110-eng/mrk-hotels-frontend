@@ -421,7 +421,21 @@ onMounted(fetchPayments)
 .spinner { width: 32px; height: 32px; border: 3px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-@media (max-width: 768px) {
+/* Tablets: 768px is the classic iPad portrait width, so the phone
+   treatment below starts at 767px. Without this band a tablet drops
+   straight from the full form to a single column. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .method-selector,
+  .summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .filters-bar {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 767px) {
   .summary-grid { grid-template-columns: 1fr; }
   .filters-bar { flex-direction: column; }
   .method-selector { grid-template-columns: 1fr; }

@@ -744,7 +744,16 @@ onUnmounted(() => {
 }
 
 /* ---- Responsive: phones / small tablets ---- */
-@media (max-width: 768px) {
+/* Tablets: 768px is the classic iPad portrait width, so the phone
+   treatment below starts at 767px. Without this band a tablet drops
+   straight from the full form to a single column. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .open-head {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 767px) {
   .taker-page {
     padding: 8px 10px 20px;
     gap: 10px;
