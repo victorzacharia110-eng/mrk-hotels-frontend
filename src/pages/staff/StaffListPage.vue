@@ -279,6 +279,15 @@
               />
             </div>
             <div class="form-group">
+              <label>{{ $t('staff.outlet') }}</label>
+              <SearchableSelect
+                v-model="form.outlet_id"
+                :options="outletOptions"
+                :empty-label="$t('staff.outletNone')"
+              />
+              <small class="muted">{{ $t('staff.outletHint') }}</small>
+            </div>
+            <div class="form-group">
               <label>{{ $t('staff.position') }}</label>
               <SearchableSelect
                 v-model="form.position"
@@ -498,7 +507,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { userApi } from '@/api'
+import { userApi, outletApi } from '@/api'
 import PhoneInput from '@/components/PhoneInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
@@ -548,6 +557,14 @@ const departmentOptions = computed(() =>
     value: department,
     label: t(`common.departments.${department}`),
   })),
+)
+
+// The venues a staff member can be assigned to. Loaded once with the page:
+// a person cannot be sent to an outlet that does not exist, and the list is
+// short enough that it does not need a search.
+const outlets = ref([])
+const outletOptions = computed(() =>
+  outlets.value.map((o) => ({ value: o.outlet_id, label: o.name }))
 )
 
 const positionOptions = computed(() =>
@@ -623,6 +640,9 @@ const form = reactive({
   country_code: 'TZ',
   user_role: 'receptionist',
   department: 'administration',
+  // The venue this person works in. Empty means unrestricted — right for
+  // reception and management, wrong for a cashier who only works the bar.
+  outlet_id: '',
   position: '',
   id_type: '',
   id_number: '',
@@ -644,6 +664,7 @@ function resetForm() {
   form.country_code = 'TZ'
   form.user_role = 'receptionist'
   form.department = 'administration'
+  form.outlet_id = ''
   form.position = ''
   form.id_type = ''
   form.id_number = ''
@@ -748,6 +769,15 @@ async function load() {
     })
     users.value = res.data.data || []
     meta.value = res.data
+
+    // Outlets are for the form's picker, not the table, so a failure here
+    // should not fail the page — the assignment is optional anyway.
+    try {
+      const outletRes = await outletApi.index()
+      outlets.value = outletRes.data.data || outletRes.data || []
+    } catch {
+      outlets.value = []
+    }
   } catch (err) {
     error.value = err.response?.data?.message || t('staff.loadError')
   } finally {
@@ -840,6 +870,7 @@ function openEdit(user) {
   form.country_code = user.country_code || 'TZ'
   form.user_role = user.user_role
   form.department = user.department
+  form.outlet_id = user.outlet_id || ''
   form.position = user.position || ''
   form.id_type = user.id_type || ''
   form.id_number = user.id_number || ''
@@ -978,6 +1009,7 @@ function buildPayload() {
   fd.append('country_code', form.country_code)
   fd.append('user_role', form.user_role)
   fd.append('department', form.department)
+  fd.append('outlet_id', form.outlet_id)
   fd.append('position', form.position)
   fd.append('id_type', form.id_type)
   fd.append('id_number', form.id_number)

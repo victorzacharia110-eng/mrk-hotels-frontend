@@ -1299,7 +1299,12 @@
     "syncedTo": "Synced to stock:",
     "outOfStock": "Out of stock",
     "searchItems": "Search registered items...",
-    "none": "None"
+    "none": "None",
+    "subCategories": "Sub-categories",
+    "subCategoriesCount": "sub-categories",
+    "subCategoriesHint": "Items inside this category, so one category can hold several groups.",
+    "subCategoryName": "Sub-category name, e.g. Soup",
+    "subCategoriesEmpty": "No sub-categories yet. Items can sit directly on the category."
   },
   "outlets": {
     "title": "POS Outlets",
@@ -2125,7 +2130,10 @@
     "copyPin": "Copy PIN",
     "pinCopied": "PIN copied.",
     "sharePinNote": "Share this PIN with the staff member.",
-    "togglePinVisibility": "Toggle PIN visibility"
+    "togglePinVisibility": "Toggle PIN visibility",
+    "outlet": "Outlet they work in",
+    "outletNone": "All outlets (unrestricted)",
+    "outletHint": "Assigning an outlet scopes their POS reports to that venue, so they read the bar's takings rather than the whole hotel's. Leave unset for reception and management."
   },
   "bookingRequisitions": {
     "title": "Booking Requests",

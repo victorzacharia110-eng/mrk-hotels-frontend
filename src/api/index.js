@@ -1474,6 +1474,22 @@ export const menuItemApi = {
 }
 
 /** Managed restaurant/bar menu categories (buttons the point-of-sale shows). */
+/** Menu sub-categories: the second level, the items inside a category. */
+export const menuSubCategoryApi = {
+  index(params) {
+    return api.get(`${v1}/menu-sub-categories`, { params })
+  },
+  store(data) {
+    return api.post(`${v1}/menu-sub-categories`, data)
+  },
+  update(id, data) {
+    return api.put(`${v1}/menu-sub-categories/${id}`, data)
+  },
+  destroy(id) {
+    return api.delete(`${v1}/menu-sub-categories/${id}`)
+  },
+}
+
 export const menuCategoryApi = {
   /**
    * Lists menu categories for a department, ordered by sort_order.

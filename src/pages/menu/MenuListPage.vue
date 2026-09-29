@@ -369,6 +369,9 @@
             <div v-else class="cat-name">
               <strong>{{ c.name }}</strong>
               <span class="muted">· {{ c.item_count }} {{ $t('menu.itemsCount') }}</span>
+              <span v-if="c.sub_category_count" class="muted">
+                · {{ c.sub_category_count }} {{ $t('menu.subCategoriesCount') }}
+              </span>
             </div>
 
             <div class="cat-actions">
@@ -393,6 +396,15 @@
               <button
                 type="button"
                 class="icon-btn"
+                :class="{ 'is-open': expandedCategoryId === c.category_id }"
+                :title="$t('menu.subCategories')"
+                @click="toggleSubCategories(c)"
+              >
+                <i class="fas fa-layer-group"></i>
+              </button>
+              <button
+                type="button"
+                class="icon-btn"
                 :title="c.is_active ? $t('menu.hideCategory') : $t('menu.showCategory')"
                 @click="toggleCategory(c)"
               >
@@ -406,6 +418,45 @@
               >
                 <i class="fas fa-trash-can"></i>
               </button>
+            </div>
+
+            <!-- The second level: items inside this category. -->
+            <div v-if="expandedCategoryId === c.category_id" class="sub-panel">
+              <div class="sub-head">
+                <strong>{{ $t('menu.subCategories') }}</strong>
+                <span class="muted">{{ $t('menu.subCategoriesHint') }}</span>
+              </div>
+
+              <form class="sub-add" @submit.prevent="addSubCategory(c)">
+                <input
+                  v-model="subCategoryName"
+                  type="text"
+                  class="input"
+                  maxlength="100"
+                  :placeholder="$t('menu.subCategoryName')"
+                />
+                <button type="submit" class="btn btn-primary" :disabled="!subCategoryName.trim()">
+                  <i class="fas fa-plus"></i> {{ $t('common.add') }}
+                </button>
+              </form>
+
+              <ul v-if="subCategoriesFor(c.category_id).length" class="sub-list">
+                <li v-for="sub in subCategoriesFor(c.category_id)" :key="sub.sub_category_id">
+                  <span>
+                    {{ sub.name }}
+                    <span class="muted">· {{ sub.item_count }} {{ $t('menu.itemsCount') }}</span>
+                  </span>
+                  <button
+                    type="button"
+                    class="icon-btn danger"
+                    :title="$t('common.delete')"
+                    @click="deleteSubCategory(sub)"
+                  >
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </li>
+              </ul>
+              <p v-else class="muted">{{ $t('menu.subCategoriesEmpty') }}</p>
             </div>
           </li>
         </ul>
@@ -434,7 +485,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { menuItemApi, menuCategoryApi, inventoryApi } from '@/api'
+import { menuItemApi, menuCategoryApi, menuSubCategoryApi, inventoryApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
@@ -830,6 +881,70 @@ async function saveCategoryRename(c) {
   }
 }
 
+// ---- Sub-categories: the second level of the menu hierarchy ---------------
+// A category is a service line and a sub-category is what sits inside it, so
+// "Starters" can hold "Soup" and "Salads" instead of every item needing its
+// own category. Loaded per expanded category rather than up front: most
+// categories have none and there is no need to ask for them until someone
+// actually looks.
+const expandedCategoryId = ref(null)
+const subCategories = ref([])
+const subCategoryName = ref('')
+
+/** The sub-categories of one category, for the open panel. */
+function subCategoriesFor(categoryId) {
+  return subCategories.value.filter((sub) => sub.category_id === categoryId)
+}
+
+/** Opens a category's sub-categories, or closes it if it is already open. */
+async function toggleSubCategories(c) {
+  if (expandedCategoryId.value === c.category_id) {
+    expandedCategoryId.value = null
+    return
+  }
+
+  expandedCategoryId.value = c.category_id
+  subCategoryName.value = ''
+
+  try {
+    const res = await menuSubCategoryApi.index({ category_id: c.category_id })
+    subCategories.value = res.data.data || res.data || []
+  } catch (err) {
+    categoryError.value = flattenError(err)
+  }
+}
+
+/** Creates a sub-category under the open category and clears the input. */
+async function addSubCategory(c) {
+  const name = subCategoryName.value.trim()
+  if (!name) return
+
+  categoryError.value = ''
+  try {
+    const res = await menuSubCategoryApi.store({ category_id: c.category_id, name })
+    subCategories.value.push(res.data.sub_category)
+    subCategoryName.value = ''
+    // The category row shows a sub-category count, so refresh it.
+    await loadCategories(catDept.value)
+  } catch (err) {
+    categoryError.value = flattenError(err)
+  }
+}
+
+/**
+ * Deletes a sub-category. Its items stay on the menu and fall back to having no
+ * sub-category, so nothing is lost by tidying the hierarchy.
+ */
+async function deleteSubCategory(sub) {
+  categoryError.value = ''
+  try {
+    await menuSubCategoryApi.destroy(sub.sub_category_id)
+    subCategories.value = subCategories.value.filter((s) => s.sub_category_id !== sub.sub_category_id)
+  } catch (err) {
+    categoryError.value = flattenError(err)
+  }
+}
+
 /** Shows/hides a category (hidden tags stop appearing on the POS). */
 async function toggleCategory(c) {
   categoryError.value = ''
@@ -1117,6 +1232,56 @@ onMounted(load)
 
 .cat-row.cat-inactive {
   opacity: 0.55;
+}
+
+/* The sub-category panel sits under its category row and spans its width. */
+.sub-panel {
+  margin: 6px 0 2px 34px;
+  padding: 10px 12px;
+  border: 1px dashed #d4d4d4;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.sub-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.sub-add {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.sub-add .input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sub-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sub-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-top: 1px solid #f0f0f0;
+  font-size: 14px;
+}
+
+.icon-btn.is-open {
+  background: #005eb8;
+  color: #fff;
 }
 
 .cat-move {

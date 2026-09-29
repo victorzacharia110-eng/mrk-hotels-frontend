@@ -1296,7 +1296,12 @@
     "syncedTo": "Imeunganishwa na stoo:",
     "outOfStock": "Imekwisha",
     "searchItems": "Tafuta bidhaa zilizosajiliwa...",
-    "none": "Hakuna"
+    "none": "Hakuna",
+    "subCategories": "Sub-categories",
+    "subCategoriesCount": "sub-categories",
+    "subCategoriesHint": "Items inside this category, so one category can hold several groups.",
+    "subCategoryName": "Sub-category name, e.g. Soup",
+    "subCategoriesEmpty": "No sub-categories yet. Items can sit directly on the category."
   },
   "outlets": {
     "title": "Sehemu za Kuuzia (POS)",
@@ -2122,7 +2127,10 @@
     "copyPin": "Nakili PIN",
     "pinCopied": "PIN imenakiliwa.",
     "sharePinNote": "Shirikisha PIN hii na mfanyakazi.",
-    "togglePinVisibility": "Onyesha/ficha PIN"
+    "togglePinVisibility": "Onyesha/ficha PIN",
+    "outlet": "Outlet they work in",
+    "outletNone": "All outlets (unrestricted)",
+    "outletHint": "Assigning an outlet scopes their POS reports to that venue, so they read the bar's takings rather than the whole hotel's. Leave unset for reception and management."
   },
   "bookingRequisitions": {
     "title": "Maombi ya Uhifadhi",
