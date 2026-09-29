@@ -236,7 +236,7 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import AccompanimentManager from '@/components/AccompanimentManager.vue'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { useAuthStore } from '@/stores/auth'
-import { displayLines } from '@/utils/receipts'
+import { orderPrintLines } from '@/utils/orderPrint'
 import { isGrillMenuItem, canManageAccompaniments } from '@/utils/menuAccompaniment'
 import { useAccompaniments } from '@/composables/useAccompaniments'
 import { toast } from '@/utils/toast'
@@ -540,14 +540,14 @@ async function printNewOrder(order) {
   let ticketSent = true
   if (wantFoodTicket) {
     ticketSent = await printStore.printFoodTicket(
-      displayLines(full, 'kot', {}),
+      await orderPrintLines(full, 'kot', {}),
       full.department || order.department,
     )
   }
 
   let checkSent = true
   if (wantGuestCheck) {
-    checkSent = await printStore.print(displayLines(full, 'receipt', {}))
+    checkSent = await printStore.print(await orderPrintLines(full, 'receipt', {}))
   }
 
   // A food ticket that never printed means the kitchen never heard about the

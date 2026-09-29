@@ -359,7 +359,7 @@ import { useOrderRealtime } from '@/composables/useOrderRealtime'
 import { PAYMENT_METHODS } from '@/utils/payments'
 import { restorePrinter, printerState, connectPrinter, printerSupported } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
-import { displayLines } from '@/utils/receipts'
+import { orderPrintLines } from '@/utils/orderPrint'
 import { formatOrderDateTime, localDateOf, todayISO } from '@/utils/dates'
 import { toast } from '@/utils/toast'
 
@@ -884,7 +884,7 @@ async function doPrint(order, kind) {
   // treats the reprinted ticket as live work.
   const closed = ['completed', 'cancelled'].includes(order.status)
   const opts = kind === 'kot' ? { hotel, reprinted: true, closed } : { hotel }
-  const sent = await printStore.print(displayLines(order, kind, opts), { logo: logoUrl.value })
+  const sent = await printStore.print(await orderPrintLines(order, kind, opts), { logo: logoUrl.value })
   if (!sent) toast(printerState.reason || t('printer.noPrinter'), 'error')
 }
 

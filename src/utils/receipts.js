@@ -50,15 +50,85 @@ function friendlyLabel(code, map = {}) {
 }
 
 /**
+ * Centres one line of text inside the printer's width without ever exceeding it.
+ *
+ * A 42-column ESC/POS printer wraps a 43rd character onto a second line, which
+ * on a centred header looks like a printer fault. A long hotel name or address
+ * is therefore wrapped on word boundaries into several centred rows rather than
+ * allowed to spill. A double-width row only has half the columns, so `size 2`
+ * halves the budget too.
+ *
+ * @param {string} text  The line of text.
+ * @param {number} [size]  Row size; 2 means double-width.
+ * @returns {string[]} The rows, each already padded to the width.
+ */
+function centeredRows(text, size = 1) {
+  const limit = size === 2 ? Math.floor(WIDTH / 2) : WIDTH
+  const value = String(text ?? '').trim()
+  if (!value) return []
+  if (value.length <= limit) return [padLine(value, 'center', limit)]
+
+  const rows = []
+  let current = ''
+  for (const word of value.split(/\s+/).filter(Boolean)) {
+    // A single word longer than the paper (a long TIN, a URL) cannot be broken
+    // on a space, so it is chunked rather than dropped.
+    const pieces = word.length <= limit ? [word] : word.match(new RegExp(`.{1,${limit}}`, 'g')) || []
+    for (const piece of pieces) {
+      if (current && current.length + 1 + piece.length > limit) {
+        rows.push(current)
+        current = piece
+      } else {
+        current = current ? `${current} ${piece}` : piece
+      }
+    }
+  }
+  if (current) rows.push(current)
+  return rows.map((r) => padLine(r, 'center', limit))
+}
+
+/**
+ * The hotel letterhead rows that sit at the top of a printed document.
+ *
+ * Every field the manager saved in Hotel Settings gets a line, because the
+ * letterhead is the point: a guest checks the TIN/VRN off a receipt, and the
+ * kitchen needs the phone to reach the floor. Fields the hotel has not filled
+ * in are dropped rather than printed blank, and a hotel with no saved details
+ * still gets a brand name so the paper is never headerless.
+ *
+ * @param {object} [header]  Hotel details: name, address, city, phone, email, tin, vrn.
+ * @param {string} [fallbackName]  Brand name used when the header carries no name.
+ * @returns {Array<Array<string|boolean|number>>} The letterhead rows.
+ */
+export function letterheadLines(header = {}, fallbackName = 'MRK HOTELS') {
+  const name = header.name || fallbackName || ''
+  const where = [header.address, header.city].filter(Boolean).join(', ')
+  const contact = [header.phone, header.email].filter(Boolean).join('  ')
+  const taxId = (label, value) => (value ? `${label}: ${value}` : '')
+  const taxIds = [taxId('TIN', header.tin), taxId('VRN', header.vrn)].filter(Boolean).join('  ')
+
+  const rows = []
+  // The hotel name is the only double-width row, matching how the brand line
+  // has always been printed; the details below it stay single-width so a long
+  // address gets the full 42 columns.
+  for (const row of centeredRows(name, 2)) rows.push([row, true, 2])
+  for (const text of [where, contact, taxIds]) {
+    for (const row of centeredRows(text, 1)) rows.push([row])
+  }
+  return rows
+}
+
+/**
  * Lines for a guest receipt — a compact bill that fits small receipt paper.
  * Rows are [text, bold?, size?] where size 2 = double-width double-height.
  *
- * Layout mirrors the reference till receipt: brand header, Receipt, Table /
+ * Layout mirrors the reference till receipt: letterhead, Receipt, Table /
  * Guest / Waiter, dated, then a Qty·Item·Amount column, Bill Amount / Total
  * Tax / Total Discount / Total / Paid / Due, Thank you and Prepared By.
  *
  * @param {object} order  Order (must carry items) with optional `_payment`.
- * @param {object} [opts]  Options: `hotel` (brand name) — defaults to MRK HOTELS.
+ * @param {object} [opts]  Options: `letterhead` (saved hotel details) and
+ *   `hotel` (brand-name fallback) — defaults to MRK HOTELS.
  * @returns {Array<Array<string|boolean|number>>} The receipt rows.
  */
 export function orderReceiptLines(order, opts = {}) {
@@ -67,7 +137,7 @@ export function orderReceiptLines(order, opts = {}) {
   const due = Math.max(0, total - paid)
 
   const lines = [
-    [opts.hotel || 'MRK HOTELS', true, 2],
+    ...letterheadLines(opts.letterhead, opts.hotel),
     [padLine('Receipt', 'center', 21), false, 2],
     [String(order.order_number || ''), false, 2],
     [''],
@@ -123,26 +193,40 @@ export function orderReceiptLines(order, opts = {}) {
 /**
  * Lines for a kitchen order ticket (no totals).
  *
+ * The hotel name and phone ride along at the top: tickets from several hotels
+ * can share a kitchen pass, and when an item is wrong the kitchen needs to know
+ * which floor to call. Tax IDs are left off — the kitchen has no use for them.
+ *
  * @param {object} order  Order (must carry items).
+ * @param {object} [opts]  Options: `letterhead` (saved hotel details), `hotel`
+ *   (brand-name fallback), `reprinted`, `closed`.
  * @returns {Array<Array<string|boolean|number>>} [text, bold?, size?] rows.
  */
 export function kitchenTicketLines(order, opts = {}) {
-  const lines = [
+  const header = opts.letterhead || {}
+  const lines = []
+  for (const row of centeredRows(header.name || opts.hotel || 'MRK HOTELS', 2)) lines.push([row, true, 2])
+  for (const row of centeredRows(header.phone ? `Tel: ${header.phone}` : '', 1)) lines.push([row])
+  lines.push(
     ['KITCHEN ORDER TICKET', true, 2],
     [String(order.order_number || ''), false, 2],
     [`Table: ${order.table_number || order.room_number || '-'}   Waiter: ${order.waiter_name || '-'}`],
     [`Type: ${order.order_type || 'dine_in'}   Covers: ${order.covers ?? '-'}`],
     [''],
-  ]
+  )
 
   // A reprint must never be mistaken for the original ticket: stamp the
-  // watermark across the top of the paper, right after the header, so even a
-  // quick scan shows this KOT already went to the kitchen before. Reprinting
-  // a CLOSED order additionally says so — the kitchen must not treat a closed
-  // ticket as live work.
+  // watermark across the top of the paper, directly under the ticket title and
+  // above the order number, so even a quick scan shows this KOT already went to
+  // the kitchen before. Reprinting a CLOSED order additionally says so — the
+  // kitchen must not treat a closed ticket as live work. The position is
+  // computed rather than fixed because the letterhead length varies by hotel.
   if (opts.reprinted) {
-    const mark = opts.closed ? '*** CLOSED ORDER — REPRINT ***' : '*** REPRINTED ***'
-    lines.splice(1, 0, [padLine(mark, 'center', WIDTH), true, 2])
+    // These marks are printed double-width, which leaves 21 columns on 42-column
+    // paper, so the wording is kept short enough not to wrap.
+    const mark = opts.closed ? '* CLOSED ORDER *' : '* REPRINTED *'
+    const titleIdx = lines.findIndex((l) => String(l[0]).trim() === 'KITCHEN ORDER TICKET')
+    lines.splice(titleIdx + 1, 0, [padLine(mark, 'center', Math.floor(WIDTH / 2)), true, 2])
   }
 
   for (const item of order.items || []) {

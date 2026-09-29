@@ -1163,7 +1163,7 @@ import { PAYMENT_METHODS } from '@/utils/payments'
 import { restorePrinter } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { useNotificationSettingsStore } from '@/stores/notificationSettings'
-import { displayLines } from '@/utils/receipts'
+import { orderPrintLines } from '@/utils/orderPrint'
 import { formatOrderDateTime, formatDateDMY } from '@/utils/dates'
 import { isGrillMenuItem, canManageAccompaniments } from '@/utils/menuAccompaniment'
 import { useAccompaniments } from '@/composables/useAccompaniments'
@@ -1306,7 +1306,7 @@ async function confirmVoid() {
     // Cloud Print Settings: print a void receipt when an order is cancelled.
     if (printStore.printOnVoid) {
       const hotel = authStore.user?.tenant?.hotel_name || 'MRK Hotels'
-      if (!(await printStore.print(displayLines({ ...order, _payment: undefined }, 'receipt', { hotel })))) {
+      if (!(await printStore.print(await orderPrintLines({ ...order, _payment: undefined }, 'receipt', { hotel })))) {
         toast(t('orderTaker.noPrinter'), 'error')
       }
     }
@@ -1367,7 +1367,7 @@ async function printTicket(order, kind) {
   const hotel = authStore.user?.tenant?.hotel_name || 'MRK Hotels'
   const closed = ['completed', 'cancelled'].includes(order.status)
   const opts = kind === 'kot' ? { hotel, reprinted: true, closed } : { hotel }
-  const sent = await printStore.print(displayLines(order, kind, opts))
+  const sent = await printStore.print(await orderPrintLines(order, kind, opts))
   if (!sent) toast(t('orderTaker.noPrinter'), 'error')
 }
 
@@ -1713,7 +1713,7 @@ async function advanceOrder(order, status) {
     // Cloud Print Settings: print a void receipt when an order is cancelled.
     if (status === 'cancelled' && printStore.printOnVoid && order) {
       const hotel = authStore.user?.tenant?.hotel_name || 'MRK Hotels'
-      if (!(await printStore.print(displayLines(order, 'receipt', { hotel })))) {
+      if (!(await printStore.print(await orderPrintLines(order, 'receipt', { hotel })))) {
         toast(t('orderTaker.noPrinter'), 'error')
       }
     }
@@ -1877,7 +1877,7 @@ async function pay(method) {
     // Silent till printing — no browser dialog.
     if (printStore.printOnSettle) {
       const hotel = authStore.user?.tenant?.hotel_name || 'MRK Hotels'
-      if (!(await printStore.print(displayLines(order, 'receipt', { hotel })))) {
+      if (!(await printStore.print(await orderPrintLines(order, 'receipt', { hotel })))) {
         toast(t('orderTaker.noPrinter'), 'error')
       }
     }
@@ -1912,7 +1912,7 @@ async function printReceipt() {
   const order = receipt.value?.order
   if (!order) return
   const hotel = authStore.user?.tenant?.hotel_name || 'MRK Hotels'
-  const sent = await printStore.print(displayLines(order, 'receipt', { hotel }))
+  const sent = await printStore.print(await orderPrintLines(order, 'receipt', { hotel }))
   if (!sent) toast(t('orderTaker.noPrinter'), 'error')
 }
 
@@ -2593,7 +2593,7 @@ function removeLine(line) {
  */
 async function printNewOrderTicket(order) {
   if (!order || !printStore.printFoodTicketOnOrder) return
-  await printStore.printFoodTicket(displayLines(order, 'kot', {}), order.department || department.value)
+  await printStore.printFoodTicket(await orderPrintLines(order, 'kot', {}), order.department || department.value)
 }
 
 /**
@@ -2607,7 +2607,7 @@ async function printAddedItemsTicket(order, addedLines) {
   if (!order || !printStore.printFoodTicketOnItemAdded) return
   if (!addedLines.length) return
   await printStore.printFoodTicket(
-    displayLines({ ...order, items: addedLines }, 'kot', {}),
+    await orderPrintLines({ ...order, items: addedLines }, 'kot', {}),
     order.department || department.value,
   )
 }

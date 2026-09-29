@@ -50,8 +50,11 @@ describe('receipt line widths', () => {
 
   it('receipt shows the reference layout markers', () => {
     const lines = orderReceiptLines(order, { hotel: 'Brand Hotel' })
-    expect(lines[0][0]).toBe('Brand Hotel')
-    expect(lines[2][0]).toBe('ORD-MGH-2026-00144')
+    // The brand line is centred inside the double-width budget, so the text is
+    // padded — the receipt must name the hotel, not print its exact position.
+    expect(lines[0][0].trim()).toBe('Brand Hotel')
+    const orderNumberIdx = lines.findIndex((l) => String(l[0]).includes('ORD-MGH-2026-00144'))
+    expect(lines[orderNumberIdx][0]).toBe('ORD-MGH-2026-00144')
     const text = lines.map((l) => l[0]).join('\n')
     expect(text).toContain('Receipt')
     expect(text).toContain('Qty  Item')
@@ -116,7 +119,10 @@ describe('receipt line widths', () => {
   it('reprinted KOT is watermarked REPRINTED under the header', () => {
     const lines = kitchenTicketLines(order, { reprinted: true })
     const text = lines.map((l) => l[0]).join('\n')
-    expect(lines[0][0]).toBe('KITCHEN ORDER TICKET')
+    // The hotel name is now the first row, so the ticket title is looked up
+    // rather than pinned to an index that the letterhead moved.
+    const titleIdx = lines.findIndex((l) => String(l[0]).trim() === 'KITCHEN ORDER TICKET')
+    expect(titleIdx).toBeGreaterThanOrEqual(0)
     expect(text).toContain('REPRINTED')
     expect(text.indexOf('REPRINTED')).toBeGreaterThanOrEqual(0)
     // the watermark must appear after the header yet before the order number

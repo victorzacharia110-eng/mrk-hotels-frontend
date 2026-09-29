@@ -50,6 +50,7 @@ const api = vi.hoisted(() => ({
   items: vi.fn(),
   tables: vi.fn(),
   reports: vi.fn(),
+  hotelShow: vi.fn(),
 }))
 
 vi.mock('@/api', () => ({
@@ -58,6 +59,7 @@ vi.mock('@/api', () => ({
   menuAccompanimentApi: { index: vi.fn().mockResolvedValue({ data: { data: [] } }) },
   waiterApi: { index: vi.fn().mockResolvedValue({ data: { data: [] } }) },
   fbDayCloseApi: { index: vi.fn().mockRejectedValue(new Error('offline')) },
+  hotelSettingsApi: { show: api.hotelShow },
   orderItemApi: { destroy: vi.fn() },
   paymentApi: { index: vi.fn().mockResolvedValue({ data: { data: [] } }) },
   roomApi: { index: vi.fn().mockResolvedValue({ data: { data: [] } }) },
@@ -88,6 +90,15 @@ const ORDER = (over = {}) => ({
 /** The ESC/POS rows handed to the transport, flattened to plain text. */
 function printedText(callIndex = 0) {
   return printToPrinter.mock.calls[callIndex][0].map((row) => String(row[0])).join('\n')
+}
+
+/**
+ * Whether a print job contains a row with this exact text, ignoring the
+ * centring padding. The letterhead shifts the ticket title off index 0, so
+ * call sites look for the row rather than assume a position.
+ */
+function printedRow(index, text) {
+  return printToPrinter.mock.calls[index][0].some((row) => String(row[0]).trim() === text)
 }
 
 beforeEach(() => {
@@ -121,6 +132,10 @@ beforeEach(() => {
   api.index.mockResolvedValue({ data: { data: [] } })
   api.tables.mockResolvedValue({ data: { data: [{ table_id: 1, table_name: '4', section: 'restaurant', is_active: 1 }] } })
   api.reports.mockResolvedValue({ data: { data: [] } })
+  // Printed documents resolve the hotel's saved letterhead; this hotel has one.
+  api.hotelShow.mockResolvedValue({
+    data: { hotel: { hotel_name: 'MRK Grand Hotel', phone: '+255 700 000 111' } },
+  })
 })
 
 describe('food ticket on order — cashier new-order modal', () => {
@@ -197,8 +212,7 @@ describe('food ticket on order — cashier new-order modal', () => {
     await placeOrder()
 
     expect(printToPrinter).toHaveBeenCalledTimes(1)
-    const text = printedText()
-    expect(text).not.toContain('KITCHEN ORDER TICKET')
+    expect(printedText()).not.toContain('KITCHEN ORDER TICKET')
   })
 
   it('prints both a kitchen ticket and a guest check when both flags are on', async () => {
@@ -208,8 +222,8 @@ describe('food ticket on order — cashier new-order modal', () => {
     await placeOrder()
 
     expect(printToPrinter).toHaveBeenCalledTimes(2)
-    const all = printToPrinter.mock.calls.map((c) => String(c[0][0][0]))
-    expect(all).toContain('KITCHEN ORDER TICKET')
+    expect(printedRow(0, 'KITCHEN ORDER TICKET')).toBe(true)
+    expect(printedRow(1, 'KITCHEN ORDER TICKET')).toBe(false)
   })
 })
 
