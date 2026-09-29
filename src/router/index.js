@@ -28,6 +28,11 @@ const hotelChildren = [
   { path: 'reservations', name: 'hotel-reservations', component: () => import('@/pages/reservations/ReservationListPage.vue'), meta: { module: 'reservations' } },
   // Manage rooms and their statuses.
   { path: 'rooms', name: 'hotel-rooms', component: () => import('@/pages/rooms/RoomListPage.vue'), meta: { module: 'rooms' } },
+  // The hotel's own registered business details (name, address, tax IDs,
+  // payment accounts). Manager review: this had an API and translations but no
+  // page or route, so the details could not be edited from the panel. Writing is
+  // gated to level 80 by the backend; the page shows read-only below that.
+  { path: 'settings/hotel', name: 'hotel-settings', component: () => import('@/pages/settings/HotelSettingsPage.vue'), meta: { module: 'hotel-settings' } },
   // Manage guest records.
   { path: 'guests', name: 'hotel-guests', component: () => import('@/pages/guests/GuestListPage.vue'), meta: { module: 'guests' } },
   // List and confirm payments.

@@ -850,7 +850,7 @@ const visibleModules = computed(() => {
     // restaurant. It now sits in the ADMINISTRATION sub-menu of the FRONT DESK
     // dropdown so management can reach it from where the other back-office
     // front-desk tools live.
-    const administration = pick(['staff', 'activity-log-report', 'overrides', 'imports', 'pos-reports', 'integrations/booking-com', 'integrations/quickbooks', 'integrations/xero'])
+    const administration = pick(['staff', 'hotel-settings', 'activity-log-report', 'overrides', 'imports', 'pos-reports', 'integrations/booking-com', 'integrations/quickbooks', 'integrations/xero'])
     if (administration.length) frontDesk.push(subGroup('front-administration', 'fas fa-user-tie', t('accordion.administration'), administration))
     if (byKey['requisitions']) frontDesk.push(link('requisitions', t('nav.requisitions')))
     if (byKey.messages) frontDesk.push(link('messages', t('nav.messages')))
@@ -923,7 +923,7 @@ const visibleModules = computed(() => {
     },
     {
       key: 'group-admin', icon: 'fas fa-user-tie', labelKey: 'accordion.administration',
-      keys: ['staff', 'accounting', 'printer', 'imports', 'integrations/booking-com', 'integrations/quickbooks', 'integrations/xero'],
+      keys: ['staff', 'hotel-settings', 'accounting', 'printer', 'imports', 'integrations/booking-com', 'integrations/quickbooks', 'integrations/xero'],
     },
     {
       key: 'group-reports', icon: 'fas fa-chart-line', labelKey: 'accordion.reports',

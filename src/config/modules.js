@@ -102,6 +102,10 @@ export const MODULES = [
   { key: 'integrations/quickbooks', to: '/app/integrations/quickbooks', icon: 'fas fa-calculator', labelKey: 'nav.quickbooks', roles: ['accountant'] },
   // Xero accounting integration. Accountant-only, per the same review item.
   { key: 'integrations/xero', to: '/app/integrations/xero', icon: 'fas fa-chart-line', labelKey: 'nav.xero', roles: ['accountant'] },
+  // The hotel's own registered business details — name, address, tax IDs and
+  // payment accounts. These print on invoices, receipts and every export, so the
+  // manager needs one place to change them.
+  { key: 'hotel-settings', to: '/app/settings/hotel', icon: 'fas fa-building-circle-check', labelKey: 'hotelSettings.title', roles: ['hotel_admin', 'manager', 'accountant', 'receptionist'] },
   // Check-in override approvals.
   { key: 'overrides', to: '/app/overrides', icon: 'fas fa-user-shield', labelKey: 'nav.overrideApprovals', roles: ['hotel_admin', 'manager', 'receptionist'] },
   // Bulk data import (CSV) — administrators only, since commits write records.
