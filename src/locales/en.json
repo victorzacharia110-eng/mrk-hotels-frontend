@@ -4071,7 +4071,15 @@
     "remainingCredit": "Remaining credit",
     "searchCompany": "Search company or creditor…",
     "searchRoom": "Search room…",
-    "selectCreditorCompany": "Select a creditor company"
+    "selectCreditorCompany": "Select a creditor company",
+    "todayAtAGlance": "Today at a glance",
+    "summaryUnavailable": "Summary unavailable",
+    "occupancyToday": "Occupancy today",
+    "roomRevenueToday": "Room revenue today",
+    "accruedTonight": "Accrued for nights occupied",
+    "totalRevenueToday": "Payments collected today",
+    "rooms": "rooms",
+    "payments": "payments"
   },
   "orderTaker": {
     "title": "Take Order",

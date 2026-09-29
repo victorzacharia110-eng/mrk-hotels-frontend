@@ -4054,7 +4054,15 @@
     "dotRuleGuest": "Mgeni aliyesajiliwa ndiye mgeni wa sasa",
     "dotRuleClear": "Hakuna mgeni aliyesajiliwa anayefunika leo",
     "dotLegendTitle": "Jinsi nukta nyekundu na kijani zinavyoundwa",
-    "dotLegendDesc": "Nyekundu = mgeni amesajiliwa na leo iko ndani ya dirisha la kukaa kwake. Kijani = chumba kiko wazi leo. Bluu = chumba kinasafishwa, njano = ni chafu, kijivu = matengenezo. Ukaguzi unaanzia juu hadi chini — ✓ maana sheria inashikilia kwa chumba hiki, ✗ maana haishikilii."
+    "dotLegendDesc": "Nyekundu = mgeni amesajiliwa na leo iko ndani ya dirisha la kukaa kwake. Kijani = chumba kiko wazi leo. Bluu = chumba kinasafishwa, njano = ni chafu, kijivu = matengenezo. Ukaguzi unaanzia juu hadi chini — ✓ maana sheria inashikilia kwa chumba hiki, ✗ maana haishikilii.",
+    "todayAtAGlance": "Today at a glance",
+    "summaryUnavailable": "Summary unavailable",
+    "occupancyToday": "Occupancy today",
+    "roomRevenueToday": "Room revenue today",
+    "accruedTonight": "Accrued for nights occupied",
+    "totalRevenueToday": "Payments collected today",
+    "rooms": "rooms",
+    "payments": "payments"
   },
   "orderTaker": {
     "title": "Chukua Oda",
