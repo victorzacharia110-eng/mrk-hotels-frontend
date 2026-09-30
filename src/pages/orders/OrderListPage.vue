@@ -570,6 +570,7 @@ import AccompanimentManager from '@/components/AccompanimentManager.vue'
 import { PAYMENT_METHODS } from '@/utils/payments'
 import { isGrillMenuItem, canManageAccompaniments, lockedAccompanimentDepartment } from '@/utils/menuAccompaniment'
 import { useAccompaniments } from '@/composables/useAccompaniments'
+import { selectedOutlet } from '@/composables/useOutletContext'
 import { collectAllRows } from '@/utils/export'
 
 const { t } = useI18n()
@@ -1041,6 +1042,7 @@ async function save() {
   try {
     const res = await orderApi.store({
       department: form.department,
+      outlet_id: selectedOutlet.value?.outlet_id || null,
       order_type: form.order_type,
       waiter_name: form.waiter_name,
       table_number: form.table_number,

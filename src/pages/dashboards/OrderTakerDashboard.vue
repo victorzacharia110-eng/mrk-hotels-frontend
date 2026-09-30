@@ -1168,6 +1168,7 @@ import { hasPrintableLines } from '@/utils/receipts'
 import { formatOrderDateTime, formatDateDMY } from '@/utils/dates'
 import { isGrillMenuItem, canManageAccompaniments } from '@/utils/menuAccompaniment'
 import { useAccompaniments } from '@/composables/useAccompaniments'
+import { selectedOutlet } from '@/composables/useOutletContext'
 import AccompanimentManager from '@/components/AccompanimentManager.vue'
 import { toast } from '@/utils/toast'
 
@@ -2662,6 +2663,15 @@ async function sendOrder() {
     } else {
       const res = await orderApi.store({
         department: department.value,
+        // The review's worked example is this screen: "when a waiter wants to be
+        // served through one the bar counter how does he/she gets to select
+        // which counter or OUTLET to work with cause when a waiter selects a
+        // menu item such as drinks category which stock report or what outlets
+        // gets to deduct the drink taken out of the stock?" So the ticket has to
+        // say which counter it is for, otherwise the drink comes off whichever
+        // shelf the service line happens to name instead of the one the waiter
+        // is standing behind.
+        outlet_id: selectedOutlet.value?.outlet_id || null,
         table_number: form.value.table_number || null,
         covers: form.value.covers || null,
         waiter_name: waiterName.value,

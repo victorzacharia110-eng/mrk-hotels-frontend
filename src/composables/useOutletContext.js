@@ -113,3 +113,11 @@ export function useOutletContext() {
     roleCanSelectOutlet,
   }
 }
+
+/**
+ * The refs are also exported directly, because the order screens only need to
+ * read the current selection and stamping a ticket is not a "use this context"
+ * moment -- it is a single read at submit time. They are the same refs the
+ * function above hands out, so there is still only one selection per session.
+ */
+export { outlets, selectedOutlet, hasOutlet, hasChoice, loaded, outletId }
