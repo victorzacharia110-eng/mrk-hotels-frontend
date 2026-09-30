@@ -940,7 +940,8 @@
     "stopSellSetNight": "Click to stop sell this night",
     "stopSellLiftNight": "Click to lift the stop-sell on this night",
     "stopSellNightsCount": "{count} night(s)",
-    "stopSellSetTheseNights": "Stop sell these nights"
+    "stopSellSetTheseNights": "Stop sell these nights",
+    "stopSellBlockUnreadable": "{count} stop-sell block(s) could not be read and are not shown. Those rooms may be blocked even though the calendar shows them as free — check the block list or tell an administrator."
   },
   "guests": {
     "title": "Guests",

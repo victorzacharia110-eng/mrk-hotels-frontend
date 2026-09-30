@@ -90,6 +90,35 @@ describe('RoomListPage stop-sell calendar', () => {
     stopSell.mockReset().mockResolvedValue({ data: { blocks: [block()] } })
   })
 
+  it('says so when a block could not be read', async () => {
+    // A block the server cannot read is left off the grid. Without this the
+    // room would read as sellable while actually being blocked, which is the
+    // one mistake this screen must not make.
+    stopSell.mockResolvedValue({
+      data: {
+        blocks: [block()],
+        warnings: [{ stop_sell_id: 'b2', reason: 'This block could not be read and is not shown on the calendar.' }],
+      },
+    })
+    const wrapper = build()
+    await flushPromises()
+    await openTab(wrapper, 'stop-sell')
+
+    expect(wrapper.find('.alert-warning').exists()).toBe(true)
+    expect(wrapper.find('.alert-warning').text()).toContain('1')
+    // The rooms that did load are still drawn.
+    expect(wrapper.findAll('.cal-cell').length).toBeGreaterThan(0)
+  })
+
+  it('shows no warning banner when everything loaded', async () => {
+    stopSell.mockResolvedValue({ data: { blocks: [block()], warnings: [] } })
+    const wrapper = build()
+    await flushPromises()
+    await openTab(wrapper, 'stop-sell')
+
+    expect(wrapper.find('.alert-warning').exists()).toBe(false)
+  })
+
   it('asks for the calendar window rather than every block', async () => {
     const wrapper = build()
     await flushPromises()

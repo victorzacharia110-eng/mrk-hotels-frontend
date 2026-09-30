@@ -250,6 +250,11 @@
           {{ $t('rooms.stopSellCalendarHint') }}
         </p>
 
+        <div v-if="blockWarnings.length" class="alert alert-warning">
+          <i class="fas fa-triangle-exclamation"></i>
+          {{ $t('rooms.stopSellBlockUnreadable', { count: blockWarnings.length }) }}
+        </div>
+
         <div v-if="blocksLoading" class="alert alert-info">{{ $t('rooms.loading') }}</div>
         <div v-else-if="calRooms.length" class="table-scroll">
           <table class="table stop-sell-calendar">
@@ -970,6 +975,15 @@ const blocks = ref([])
 const blocksLoading = ref(false)
 const stopForm = reactive({ pick: '', room_id: [], start_date: '', end_date: '', reason: '' })
 
+/**
+ * Blocks the server could not read, so the page can admit them.
+ *
+ * Empty in normal operation. When it is not, a room that is genuinely blocked
+ * would otherwise look sellable on the grid and to the booking check, which is
+ * the one mistake this screen must not make.
+ */
+const blockWarnings = ref([])
+
 // The calendar window. Two weeks is enough to see a range block without the
 // grid becoming unreadably wide.
 const calFrom = ref(todayIso())
@@ -1052,6 +1066,9 @@ const loadBlocks = async () => {
     // it, so a range starting before the window is still drawn.
     const res = await roomApi.stopSell({ from_date: calFrom.value, to_date: calTo.value })
     blocks.value = res.data?.blocks ?? []
+    // A block the server could not read is left off the grid. Saying so beats a
+    // room quietly reading as sellable when it is actually blocked.
+    blockWarnings.value = res.data?.warnings ?? []
   } catch (err) {
     error.value = flattenError(err)
   } finally {

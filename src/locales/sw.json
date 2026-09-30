@@ -940,7 +940,8 @@
     "stopSellSetNight": "Bofya kusitisha usiuzi usiku huu",
     "stopSellLiftNight": "Bofya kuondoa kusitishwa kuuza usiku huu",
     "stopSellNightsCount": "usiku {count}",
-    "stopSellSetTheseNights": "Sitisha kuuza usiku hawa"
+    "stopSellSetTheseNights": "Sitisha kuuza usiku hawa",
+    "stopSellBlockUnreadable": "Bloki {count} za kusitisha kuuza hazikuweza kusomwa na hazionekani. Majengo hayo yanaweza yamezuiwa hata kalenda inaonyesha kuwa ya huria — angalia orodha ya bloki au wasiliana na msimamizi."
   },
   "guests": {
     "title": "Wageni",
