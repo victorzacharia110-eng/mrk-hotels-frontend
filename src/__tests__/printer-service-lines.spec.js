@@ -58,9 +58,20 @@ async function mountPage() {
   return wrapper
 }
 
-/** The first cell of every service-line row in the routing table. */
+/**
+ * The first cell of every service-line row in the routing table.
+ *
+ * Scoped to the FIRST table: the page also carries a pass-routing table (the
+ * kitchen and bar printers), so reading every table would mix the two and make
+ * this assert on rows it is not about.
+ */
 function renderedLines(wrapper) {
-  return wrapper.findAll('table tbody tr').map((tr) => tr.findAll('td')[0].text())
+  return wrapper.findAll('table')[0].findAll('tbody tr').map((tr) => tr.findAll('td')[0].text())
+}
+
+/** The first cell of every pass row in the pass-routing table. */
+function renderedPasses(wrapper) {
+  return wrapper.findAll('table')[1].findAll('tbody tr').map((tr) => tr.findAll('td')[0].text())
 }
 
 describe('PrinterSettingsPage — service lines', () => {
@@ -117,6 +128,44 @@ describe('PrinterSettingsPage — service lines', () => {
     const lines = renderedLines(wrapper)
     expect(lines).toContain('KITCHEN')
     expect(lines).toContain('restaurant')
+  })
+
+  it('offers a routing row for each printer pass a menu item can be filed under', async () => {
+    // Manager review item 4 lets a menu item choose KITCHEN or BAR as the printer
+    // that receives its order ticket. That choice is only honoured if there is
+    // somewhere to point it, so the passes need rows of their own -- distinct
+    // from the service lines, which are a different axis entirely.
+    const wrapper = await mountPage()
+
+    expect(renderedPasses(wrapper)).toEqual(['Kitchen pass', 'Bar pass'])
+  })
+
+  it('saves the pass a printer is routed to', async () => {
+    const store = usePrintSettingsStore()
+    const bar = store.addTicketPrinter({ name: 'Bar', transport: 'network', endpoint: 'http://10.0.0.6:9720' })
+
+    const wrapper = await mountPage()
+    const barRow = wrapper.findAll('table')[1].findAll('tbody tr').find((tr) => tr.text().includes('Bar pass'))
+    await barRow.find('select').setValue(bar)
+
+    expect(store.stationRouting.bar).toBe(bar)
+  })
+
+  it('leaves a pass following the service line until it is set', async () => {
+    const store = usePrintSettingsStore()
+    const kitchen = store.addTicketPrinter({ name: 'Kitchen 2', transport: 'network', endpoint: 'http://10.0.0.7:9720' })
+
+    const wrapper = await mountPage()
+    const kitchenRow = wrapper.findAll('table')[1].findAll('tbody tr').find((tr) => tr.text().includes('Kitchen pass'))
+    // Unset means "use the service line's printer", so it is stored as an
+    // absent key rather than as an empty printer id.
+    expect(kitchenRow.find('select').element.value).toBe('')
+
+    await kitchenRow.find('select').setValue(kitchen)
+    expect(store.stationRouting.kitchen).toBe(kitchen)
+
+    await kitchenRow.find('select').setValue('')
+    expect(store.stationRouting.kitchen).toBeUndefined()
   })
 
   it('routes a food ticket for a dynamically discovered line', async () => {

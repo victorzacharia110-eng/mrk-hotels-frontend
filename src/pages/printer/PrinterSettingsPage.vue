@@ -109,6 +109,31 @@
         </tbody>
       </table>
 
+      <table v-if="ticketPrinters.length" class="route-table">
+        <thead>
+          <tr>
+            <th>{{ $t('printer.passTitle') }}</th>
+            <th>{{ $t('printer.ticketPrinter') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="station in STATIONS" :key="station.id">
+            <td>{{ $t(station.labelKey) }}</td>
+            <td>
+              <select
+                class="form-control"
+                :value="stationRouteFor(station.id)"
+                @change="setStationRoute(station.id, $event.target.value)"
+              >
+                <option value="">{{ $t('printer.followServiceLine') }}</option>
+                <option v-for="p in ticketPrinters" :key="p.id" :value="p.id">{{ p.name }}</option>
+              </select>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="muted">{{ $t('printer.passHint') }}</p>
+
       <div class="add-row">
         <input
           v-model="newPrinter.name"
@@ -172,6 +197,7 @@ const {
   settings,
   ticketPrinters,
   departmentRouting,
+  stationRouting,
   defaultTicketPrinterId,
   saveSettings,
   addTicketPrinter,
@@ -196,6 +222,14 @@ async function loadServiceLines() {
     /* keep the defaults; the page still works with the two original lines */
   }
 }
+// The physical passes a menu item can be filed under. These are the only two
+// values the API accepts for printer_station, so they are written out rather
+// than derived: the point is that a pass is a printer, not a service line.
+const STATIONS = [
+  { id: 'kitchen', labelKey: 'printer.stationKitchen' },
+  { id: 'bar', labelKey: 'printer.stationBar' },
+]
+
 const newPrinter = ref({ name: '', transport: 'serial', endpoint: '' })
 
 const toggles = [
@@ -217,6 +251,19 @@ function routingFor(line) {
 
 function setRoute(line, printerId) {
   saveSettings({ departmentRouting: { ...departmentRouting, [line]: printerId } })
+}
+
+function stationRouteFor(station) {
+  return stationRouting?.[station] || ''
+}
+
+function setStationRoute(station, printerId) {
+  // Left blank means "follow the service line's printer", which is why an
+  // empty value is written as an absent key rather than as ''.
+  const next = { ...stationRouting }
+  if (printerId) next[station] = printerId
+  else delete next[station]
+  saveSettings({ stationRouting: next })
 }
 
 function setDefault(printerId) {

@@ -540,17 +540,17 @@ async function printNewOrder(order) {
   // decides which printer the kitchen ticket lands on. Each pass prints its own
   // ticket, so a drink filed under the bar printer does not ride into the
   // kitchen (manager review item 4).
-  let ticketSent = true
+  // Only a pass that was tried and refused is a failure. An order with nothing
+  // to cook or pour (every line switched off "print on order") is not a printer
+  // problem and must stay silent.
+  let ticketFailed = false
   if (wantFoodTicket) {
-    const sent = await printStore.printFoodTicketsByStation(
+    const { failed } = await printStore.printFoodTicketsByStation(
       (station) => orderPrintLines(full, 'kot', { station }),
       full.department || order.department,
       { hasLinesFor: (station) => hasPrintableLines(full, 'kot', { station }) },
     )
-    // An order with nothing to cook or pour (every line switched off "print on
-    // order") is not a printer failure, so it must not raise the no-printer
-    // toast the way a refused job does.
-    ticketSent = sent.length > 0
+    ticketFailed = failed.length > 0
   }
 
   let checkSent = true
@@ -561,7 +561,7 @@ async function printNewOrder(order) {
   // A food ticket that never printed means the kitchen never heard about the
   // order, so that failure is the one worth shouting about; a missed guest
   // check is an annoyance by comparison.
-  if (!ticketSent || !checkSent) toast(t('orderTaker.noPrinter'), 'error')
+  if (ticketFailed || !checkSent) toast(t('orderTaker.noPrinter'), 'error')
 }
 
 onMounted(async () => {

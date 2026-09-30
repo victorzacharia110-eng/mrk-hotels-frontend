@@ -146,9 +146,10 @@ describe('print settings — routing each line to its own pass', () => {
   it('prints one ticket per pass and skips the pass with no lines', async () => {
     const store = usePrintSettingsStore()
 
-    const sent = await store.printFoodTicketsByStation(build(kitchenLines, []), 'restaurant', { hasLinesFor: has(true, false) })
+    const result = await store.printFoodTicketsByStation(build(kitchenLines, []), 'restaurant', { hasLinesFor: has(true, false) })
 
-    expect(sent).toEqual(['kitchen'])
+    expect(result.attempted).toEqual(['kitchen'])
+    expect(result.failed).toEqual([])
     expect(printToPrinter).toHaveBeenCalledTimes(1)
     expect(printToPrinter.mock.calls[0][0]).toBe(kitchenLines)
   })
@@ -156,9 +157,10 @@ describe('print settings — routing each line to its own pass', () => {
   it('sends both passes when the order holds food and drinks', async () => {
     const store = usePrintSettingsStore()
 
-    const sent = await store.printFoodTicketsByStation(build(kitchenLines, barLines), 'restaurant', { hasLinesFor: has(true, true) })
+    const result = await store.printFoodTicketsByStation(build(kitchenLines, barLines), 'restaurant', { hasLinesFor: has(true, true) })
 
-    expect(sent).toEqual(['kitchen', 'bar'])
+    expect(result.attempted).toEqual(['kitchen', 'bar'])
+    expect(result.failed).toEqual([])
     expect(printToPrinter).toHaveBeenCalledTimes(2)
     expect(printToPrinter.mock.calls[0][0]).toBe(kitchenLines)
     expect(printToPrinter.mock.calls[1][0]).toBe(barLines)
@@ -169,10 +171,62 @@ describe('print settings — routing each line to its own pass', () => {
 
     // Not a printer failure: there was simply nothing to cook or pour, and a
     // blank slip in the kitchen reads as a real ticket for nothing.
-    const sent = await store.printFoodTicketsByStation(build([], []), 'restaurant', { hasLinesFor: has(false, false) })
+    const result = await store.printFoodTicketsByStation(build([], []), 'restaurant', { hasLinesFor: has(false, false) })
 
-    expect(sent).toEqual([])
+    // Nothing attempted and nothing failed: the manager is not told the printer
+    // is broken when the order simply had no ticket to send.
+    expect(result.attempted).toEqual([])
+    expect(result.failed).toEqual([])
     expect(printToPrinter).not.toHaveBeenCalled()
+  })
+
+  it('reports a refused print instead of calling it delivered', async () => {
+    const store = usePrintSettingsStore()
+    // The printer takes the job but the write fails: the manager has to hear
+    // about it, because the kitchen never heard about the order.
+    printToPrinter.mockResolvedValueOnce(false)
+
+    const result = await store.printFoodTicketsByStation(build(kitchenLines, []), 'restaurant', { hasLinesFor: has(true, false) })
+
+    expect(result.attempted).toEqual(['kitchen'])
+    expect(result.failed).toEqual(['kitchen'])
+  })
+
+  it('one dead printer does not cost the other pass its ticket', async () => {
+    const store = usePrintSettingsStore()
+    // A broken kitchen printer used to throw out of the loop before the bar
+    // ticket was built, so drinks on a mixed order went missing exactly when
+    // the kitchen was already in trouble.
+    printToPrinter.mockImplementationOnce(() => Promise.reject(new Error('kitchen offline')))
+
+    const result = await store.printFoodTicketsByStation(build(kitchenLines, barLines), 'restaurant', { hasLinesFor: has(true, true) })
+
+    expect(result.failed).toEqual(['kitchen'])
+    expect(result.attempted).toEqual(['kitchen', 'bar'])
+    // The bar ticket still went out.
+    expect(printToPrinter).toHaveBeenCalledTimes(2)
+    expect(printToPrinter.mock.calls[1][0]).toBe(barLines)
+  })
+
+  it('deleting a printer clears the station routes that pointed at it', () => {
+    const store = usePrintSettingsStore()
+    store.saveSettings({
+      ticketPrinters: [
+        { id: 'p-kitchen', transport: 'serial', endpoint: '' },
+        { id: 'p-bar', transport: 'network', endpoint: 'http://10.0.0.9:9720' },
+      ],
+      departmentRouting: { restaurant: 'p-kitchen' },
+      stationRouting: { bar: 'p-bar' },
+    })
+
+    store.removeTicketPrinter('p-bar')
+
+    // The station map points at the same profiles, so it has to be cleaned up
+    // too -- otherwise the settings screen keeps offering a printer that is
+    // gone.
+    expect(store.stationRouting.bar).toBeUndefined()
+    expect(store.departmentRouting.bar).toBeUndefined()
+    expect(store.departmentRouting.restaurant).toBe('p-kitchen')
   })
 
   it('a station route beats the service line route', async () => {

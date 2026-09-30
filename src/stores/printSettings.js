@@ -78,6 +78,10 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
   const printFoodTicketOnItemAdded = computed(() => settings.value.printFoodTicketOnItemAdded);
   const ticketPrinters = computed(() => settings.value.ticketPrinters);
   const departmentRouting = computed(() => settings.value.departmentRouting);
+  // Exposed because the settings screen edits the pass routes. Without this the
+  // page had no way to read the current mapping, so the pass table rendered
+  // blank and saving wrote a fresh map over the top of the old one.
+  const stationRouting = computed(() => settings.value.stationRouting || {});
   const defaultTicketPrinterId = computed(() => settings.value.defaultTicketPrinterId);
   const transport = computed(() => settings.value.transport);
   const endpoint = computed(() => settings.value.endpoint);
@@ -167,6 +171,15 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
           ([, printerId]) => printerId !== id,
         ),
       ),
+      // The station routes point at the same profiles, so they have to be
+      // cleared here too. A dangling entry was survivable -- resolution skips
+      // an unknown id and falls back -- but it left the settings screen showing
+      // a printer that no longer exists.
+      stationRouting: Object.fromEntries(
+        Object.entries(settings.value.stationRouting || {}).filter(
+          ([, printerId]) => printerId !== id,
+        ),
+      ),
       defaultTicketPrinterId:
         settings.value.defaultTicketPrinterId === id
           ? ""
@@ -201,19 +214,29 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
    * the manager has switched off, so the kitchen ticket carries only food and
    * the bar ticket only drinks.
    *
-   * Returns the passes that printed, so the caller can tell the difference
-   * between "nothing was routed" and "the printer refused the job".
+   * Returns which passes were tried and which refused the job, so the caller
+   * can tell "this order had nothing to cook or pour" apart from "the printer
+   * did not take it". The two used to be indistinguishable: every pass that was
+   * attempted was reported as printed, so a refused job looked like a success
+   * and nothing was ever reported to the manager.
+   *
+   * One dead printer no longer costs the other pass its ticket. A broken kitchen
+   * printer used to throw out of the loop before the bar ticket was built, so
+   * drinks on an order with food went missing exactly when the kitchen was
+   * already in trouble.
    *
    * @param {(station: string) => Promise<Array>} buildLines  Builds the rows for a pass.
    * @param {string} department  Service line the order was rung in.
    * @param {object} [opts]  Passed through to the print call, plus an optional
    *   `hasLinesFor(station)` predicate deciding whether a pass has anything to
    *   print at all.
-   * @returns {Promise<string[]>} The stations that printed.
+   * @returns {Promise<{attempted: string[], failed: string[]}>} Passes tried, and
+   *   those that failed to print.
    */
   async function printFoodTicketsByStation(buildLines, department, opts = {}) {
     const { hasLinesFor, ...rest } = opts;
-    const sent = [];
+    const attempted = [];
+    const failed = [];
     for (const station of ['kitchen', 'bar']) {
       // A pass with no lines for this order must not send a blank ticket: an
       // empty slip in the kitchen reads as a real ticket for nothing. The test
@@ -222,10 +245,19 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
       // therefore never look empty.
       if (hasLinesFor && !hasLinesFor(station)) continue;
       const lines = await buildLines(station);
-      await printFoodTicket(lines, department, { ...rest, station });
-      sent.push(station);
+      attempted.push(station);
+      try {
+        // `printFoodTicket` reports whether the job was actually taken. That
+        // answer used to be discarded, which is what made a refused print look
+        // like a delivered one.
+        const ok = await printFoodTicket(lines, department, { ...rest, station });
+        if (!ok) failed.push(station);
+      } catch {
+        // Keep going: the other pass still has a ticket that must go out.
+        failed.push(station);
+      }
     }
-    return sent;
+    return { attempted, failed };
   }
 
   return {
@@ -238,6 +270,7 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
     printFoodTicketOnItemAdded,
     ticketPrinters,
     departmentRouting,
+    stationRouting,
     defaultTicketPrinterId,
     transport,
     endpoint,

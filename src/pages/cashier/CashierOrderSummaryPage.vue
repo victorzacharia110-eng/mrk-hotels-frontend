@@ -889,12 +889,12 @@ async function doPrint(order, kind) {
     // A reprint of a mixed order has to reach both passes, and a reprint of an
     // order whose lines are all switched off has nothing to reprint, so it is
     // not treated as a printer failure.
-    const sent = await printStore.printFoodTicketsByStation(
+    const { failed } = await printStore.printFoodTicketsByStation(
       (station) => orderPrintLines(order, 'kot', { ...opts, station }),
       order.department,
       { logo: logoUrl.value, hasLinesFor: (station) => hasPrintableLines(order, 'kot', { station }) },
     )
-    if (sent.length === 0) toast(t('printer.noPrinter'), 'error')
+    if (failed.length > 0) toast(printerState.reason || t('printer.noPrinter'), 'error')
     return
   }
   const sent = await printStore.print(await orderPrintLines(order, kind, opts), { logo: logoUrl.value })
