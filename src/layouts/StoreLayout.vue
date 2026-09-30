@@ -792,6 +792,7 @@ const visibleModules = computed(() => {
     const admin = pick(['reports', 'activity-log-report', 'overrides'])
     if (admin.length) out.push(accordionGroup('reception-admin', 'fas fa-user-tie', 'accordion.administration', admin))
 
+    if (byKey['panel-review']) out.push(byKey['panel-review'])
     if (byKey.profile) out.push(byKey.profile)
 
     return out
@@ -813,6 +814,8 @@ const visibleModules = computed(() => {
     const comm = pick(['messages', 'statuses'])
     if (comm.length) out.push(accordionGroup('housekeeping-comms', 'fas fa-comments', 'accordion.communication', comm))
 
+    if (byKey['panel-review']) out.push(byKey['panel-review'])
+
     return out
   }
 
@@ -831,6 +834,8 @@ const visibleModules = computed(() => {
     const comm = pick(['messages', 'statuses'])
     if (comm.length) out.push(accordionGroup('kitchen-comms', 'fas fa-comments', 'accordion.communication', comm))
 
+    if (byKey['panel-review']) out.push(byKey['panel-review'])
+
     return out
   }
 
@@ -848,6 +853,8 @@ const visibleModules = computed(() => {
 
     const comm = pick(['messages', 'statuses'])
     if (comm.length) out.push(accordionGroup('waiter-comms', 'fas fa-comments', 'accordion.communication', comm))
+
+    if (byKey['panel-review']) out.push(byKey['panel-review'])
 
     return out
   }
@@ -965,6 +972,8 @@ const visibleModules = computed(() => {
     // 5. COMMUNICATION — top-level accordion for the whole panel.
     const communication = pick(['messages', 'statuses'])
     if (communication.length) out.push(accordionGroup('communication', 'fas fa-comments', 'accordion.communication', communication))
+
+    if (byKey['panel-review']) out.push(byKey['panel-review'])
 
     return out
   }

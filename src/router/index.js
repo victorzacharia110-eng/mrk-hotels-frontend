@@ -33,6 +33,10 @@ const hotelChildren = [
   // page or route, so the details could not be edited from the panel. Writing is
   // gated to level 80 by the backend; the page shows read-only below that.
   { path: 'settings/hotel', name: 'hotel-settings', component: () => import('@/pages/settings/HotelSettingsPage.vue'), meta: { module: 'hotel-settings' } },
+  // The manager panel review answered in full: what the review asked, what was
+  // wrong, what changed and where to see it. Open to every role, because a
+  // receptionist chasing a review point is as entitled to read it as a manager.
+  { path: 'panel-review', name: 'panel-review', component: () => import('@/pages/overview/PanelReviewPage.vue'), meta: { module: 'panel-review' } },
   // Manage guest records.
   { path: 'guests', name: 'hotel-guests', component: () => import('@/pages/guests/GuestListPage.vue'), meta: { module: 'guests' } },
   // List and confirm payments.
