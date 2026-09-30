@@ -557,11 +557,15 @@ export const roomApi = {
     return api.put(`${v1}/rooms/rates`, data)
   },
   /**
-   * Current stop-sell blocks (STOPSELD tab).
+   * Stop-sell blocks, narrowed to the window the calendar is showing.
+   *
+   * The window must actually be sent. Asking for "every block ever" instead
+   * loads years of history to paint two weeks, and the server 500s on it.
+   * @param {object} [params] - { from_date, to_date, room_type, room_id, per_page }.
    * @returns {Promise} Axios response with the blocks list.
    */
-  stopSell() {
-    return api.get(`${v1}/rooms/stop-sell`)
+  stopSell(params = {}) {
+    return api.get(`${v1}/rooms/stop-sell`, { params })
   },
   /**
    * Places stop-sell blocks for a room type across dates (STOPSELD tab).
