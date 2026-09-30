@@ -244,13 +244,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useWorkingDateStore } from '@/stores/workingDate'
-import { outletApi } from '@/api'
 import { selectedOutlet } from '@/pages/cashier/outlet-context'
+import { useOutletContext } from '@/composables/useOutletContext'
 import { restorePrinter } from '@/utils/printer'
 import RoleBadge from '@/components/RoleBadge.vue'
 import DayCloseReminderModal from '@/components/cashier/DayCloseReminderModal.vue'
-
-const OUTLET_KEY = 'cashier_outlet'
 
 const route = useRoute()
 const router = useRouter()
@@ -258,7 +256,9 @@ const { t, d } = useI18n()
 const authStore = useAuthStore()
 const workingDateStore = useWorkingDateStore()
 
-const outlets = ref([])
+// The panel and the POS now share one outlet selection, so this layout reads
+// the same list rather than keeping a private copy that could disagree with it.
+const { outlets, loadOutlets: loadOutletList, selectOutlet } = useOutletContext()
 const gateOpen = ref(false)
 const sidebarCollapsed = ref(false)
 const mobileOpen = ref(false)
@@ -329,18 +329,14 @@ function isActive(to) {
   return route.path.startsWith(to)
 }
 
-/** Loads outlets and re-applies the persisted selection. */
+/** Loads outlets and opens the gate when the cashier has not picked one. */
 async function loadOutlets() {
-  const { data } = await outletApi.index()
-  outlets.value = data.outlets || []
-  const savedId = sessionStorage.getItem(OUTLET_KEY)
-  selectedOutlet.value = outlets.value.find((o) => o.outlet_id === savedId) || null
+  await loadOutletList()
   if (!selectedOutlet.value) gateOpen.value = true
 }
 
 function chooseOutlet(outlet) {
-  selectedOutlet.value = outlet
-  sessionStorage.setItem(OUTLET_KEY, outlet.outlet_id)
+  selectOutlet(outlet)
   gateOpen.value = false
 }
 

@@ -1,11 +1,13 @@
 /**
  * Outlet selection context shared between the cashier layout (which writes
  * it) and POS pages (which read it when stamping orders).
+ *
+ * The state now lives in useOutletContext so the rest of the panel can share
+ * the same selection; this module re-exports the very same refs so the cashier
+ * and order screens keep reading one value rather than two.
  */
-import { ref, computed } from 'vue'
+import { useOutletContext } from '@/composables/useOutletContext'
 
-/** Currently selected outlet object ({ outlet_id, name, type }) or null. */
-export const selectedOutlet = ref(null)
+const { selectedOutlet, hasOutlet } = useOutletContext()
 
-/** True once an outlet has been picked for this session. */
-export const hasOutlet = computed(() => selectedOutlet.value !== null)
+export { selectedOutlet, hasOutlet }

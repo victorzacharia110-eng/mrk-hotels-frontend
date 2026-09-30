@@ -56,6 +56,28 @@
           </div>
 
           <div class="header-actions">
+            <!--
+              Outlet picker. The manager review asks for this on the panel, not
+              just in the till: "all users even management except receptionist get
+              to select which outlet would they use in order to perform their
+              activities", with a property running two stores as the example.
+              Hidden when there is nothing to choose between, so a single-outlet
+              property is not shown a control that does nothing.
+            -->
+            <div v-if="showOutletPicker" class="outlet-picker">
+              <label class="visually-hidden" for="active-outlet">{{ $t('outlet.switchLabel') }}</label>
+              <i class="fas fa-store outlet-picker-icon" aria-hidden="true"></i>
+              <select
+                id="active-outlet"
+                class="outlet-picker-select"
+                :value="selectedOutlet?.outlet_id || ''"
+                @change="onOutletChange($event.target.value)"
+              >
+                <option value="">{{ $t('outlet.choosePlaceholder') }}</option>
+                <option v-for="o in outlets" :key="o.outlet_id" :value="o.outlet_id">{{ o.name }}</option>
+              </select>
+            </div>
+
             <router-link v-if="isAppMode" :to="{ name: 'hotel-profile' }" class="header-account"
               @click="navOpen = false" :aria-label="$t('nav.profile')">
               <span class="header-account-avatar" aria-hidden="true">{{ accountInitials }}</span>
@@ -483,6 +505,7 @@ import { useNotificationSettingsStore } from '@/stores/notificationSettings'
 import NotificationSoundSettings from '@/components/notification/NotificationSoundSettings.vue'
 import DayCloseReminderModal from '@/components/cashier/DayCloseReminderModal.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
+import { useOutletContext } from '@/composables/useOutletContext'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const route = useRoute()
@@ -559,6 +582,27 @@ const openSubAcc = ref('')
 // Mode detection: whether the header renders the hotel app (/app) or the
 // public directory, and which root the logo should link to.
 const isAppMode = computed(() => route.path.startsWith('/app'))
+
+// Outlet selection, shared with the POS so one pick covers the whole panel.
+// Reception is excluded by the review, and the picker stays hidden until there
+// is a genuine choice to make.
+const {
+  outlets,
+  selectedOutlet,
+  hasChoice,
+  loadOutlets: loadOutletList,
+  selectOutlet,
+  roleCanSelectOutlet,
+} = useOutletContext()
+
+const showOutletPicker = computed(
+  () => isAppMode.value && authStore.isAuthenticated && hasChoice.value && roleCanSelectOutlet(authStore.user?.user_role),
+)
+
+/** Activates the chosen outlet for the rest of the session. */
+function onOutletChange(outletId) {
+  selectOutlet(outlets.value.find((o) => o.outlet_id === outletId) || null)
+}
 const isDirectory = computed(() => route.name === 'public-home')
 
 const homeLink = computed(() => (isAppMode.value ? '/app' : '/'))
@@ -1158,6 +1202,9 @@ watch(() => authStore.user?.tenant_id, syncPresence)
 
 onMounted(() => {
   syncPresence()
+  // Fetched once here so the header can decide whether to show the picker; the
+  // cashier layout reuses the same loaded list rather than requesting it again.
+  if (isAppMode.value) loadOutletList()
   notifStore.init()
   workingDateStore.initDayCloseReminder()
   // Hide the transition skeleton once the newly resolved page has mounted and
@@ -1374,6 +1421,38 @@ function formatNotifTime(iso) {
   display: flex;
   align-items: center;
   gap: 20px;
+}
+
+/* Outlet picker. Sits in the header row with the account chip so the working
+   outlet is visible from every back-office screen, which is the whole point:
+   the review's complaint is having to guess which store you are working in. */
+.outlet-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-color, #d9dee7);
+  border-radius: 999px;
+  background: var(--surface, #fff);
+}
+
+.outlet-picker-icon {
+  color: var(--primary-color, #0f6f5c);
+  font-size: 0.9rem;
+}
+
+.outlet-picker-select {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  max-width: 180px;
+  cursor: pointer;
+}
+
+.outlet-picker-select:focus-visible {
+  outline: 2px solid var(--primary-color, #0f6f5c);
+  outline-offset: 2px;
 }
 
 .action-link {
