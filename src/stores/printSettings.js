@@ -41,6 +41,10 @@ const DEFAULTS = {
   ticketPrinters: [],
   // Which printer each service line's tickets go to, by profile id.
   departmentRouting: {},
+  // Which printer each PHYSICAL pass (manager review item 4) goes to, by profile
+  // id. A menu item's `printer_station` picks the pass; this picks the printer
+  // on that pass. Falls back to the service line's route, then the default.
+  stationRouting: {},
   // Profile used when a service line has no route of its own, or its route
   // points at a printer that has since been deleted.
   defaultTicketPrinterId: "",
@@ -121,12 +125,18 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
    * rather than to nothing: a mis-typed ticket still gets in front of the
    * kitchen, which beats it vanishing into a drawer.
    */
-  function resolveTicketPrinter(department) {
+  function resolveTicketPrinter(department, station) {
     const printers = settings.value.ticketPrinters;
     const byId = new Map(printers.map((p) => [p.id, p]));
-    const routed = settings.value.departmentRouting?.[department];
+    // The station's own route wins, then the service line's, then the default.
+    // A route pointing at a deleted printer is skipped rather than honoured,
+    // so a mis-typed ticket still gets in front of somebody.
+    const routed = station
+      ? settings.value.stationRouting?.[station]
+      : settings.value.departmentRouting?.[department];
+    const lineRouted = settings.value.departmentRouting?.[department];
     return (
-      byId.get(routed) ||
+      byId.get(routed) || byId.get(lineRouted) ||
       byId.get(settings.value.defaultTicketPrinterId) ||
       null
     );
@@ -170,11 +180,52 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
    * With no profile configured for the line, the ticket goes to the till
    * printer: that is the one printer known to exist, and a single till printing
    * a kitchen ticket is still better than a dropped order.
+   *
+   * `station` narrows the routing to a physical pass ('kitchen' | 'bar'), which
+   * is how a menu item's `printer_station` reaches the right machine when the
+   * hotel runs a separate bar printer.
    */
   async function printFoodTicket(lines, department, opts = {}) {
-    const profile = resolveTicketPrinter(department);
-    if (!profile) return print(lines, opts);
-    return printToPrinter(lines, { ...opts, transport: profile.transport, endpoint: profile.endpoint });
+    const { station, ...rest } = opts;
+    const profile = resolveTicketPrinter(department, station);
+    if (!profile) return print(lines, rest);
+    return printToPrinter(lines, { ...rest, transport: profile.transport, endpoint: profile.endpoint });
+  }
+
+  /**
+   * Sends one order's tickets, split by the printer each line is filed under.
+   *
+   * A single order routinely holds both food and drinks, so a ticket that is
+   * printed in one piece sends drinks to the kitchen pass. This walks the passes
+   * that actually have lines and prints one ticket per pass, skipping any pass
+   * the manager has switched off, so the kitchen ticket carries only food and
+   * the bar ticket only drinks.
+   *
+   * Returns the passes that printed, so the caller can tell the difference
+   * between "nothing was routed" and "the printer refused the job".
+   *
+   * @param {(station: string) => Promise<Array>} buildLines  Builds the rows for a pass.
+   * @param {string} department  Service line the order was rung in.
+   * @param {object} [opts]  Passed through to the print call, plus an optional
+   *   `hasLinesFor(station)` predicate deciding whether a pass has anything to
+   *   print at all.
+   * @returns {Promise<string[]>} The stations that printed.
+   */
+  async function printFoodTicketsByStation(buildLines, department, opts = {}) {
+    const { hasLinesFor, ...rest } = opts;
+    const sent = [];
+    for (const station of ['kitchen', 'bar']) {
+      // A pass with no lines for this order must not send a blank ticket: an
+      // empty slip in the kitchen reads as a real ticket for nothing. The test
+      // is on the ORDER's lines, not the built rows, because a formatted
+      // ticket always carries the letterhead and order number and would
+      // therefore never look empty.
+      if (hasLinesFor && !hasLinesFor(station)) continue;
+      const lines = await buildLines(station);
+      await printFoodTicket(lines, department, { ...rest, station });
+      sent.push(station);
+    }
+    return sent;
   }
 
   return {
@@ -197,5 +248,6 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
     addTicketPrinter,
     removeTicketPrinter,
     printFoodTicket,
+    printFoodTicketsByStation,
   };
 });

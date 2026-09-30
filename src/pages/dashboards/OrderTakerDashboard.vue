@@ -1164,6 +1164,7 @@ import { restorePrinter } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { useNotificationSettingsStore } from '@/stores/notificationSettings'
 import { orderPrintLines } from '@/utils/orderPrint'
+import { hasPrintableLines } from '@/utils/receipts'
 import { formatOrderDateTime, formatDateDMY } from '@/utils/dates'
 import { isGrillMenuItem, canManageAccompaniments } from '@/utils/menuAccompaniment'
 import { useAccompaniments } from '@/composables/useAccompaniments'
@@ -2593,7 +2594,13 @@ function removeLine(line) {
  */
 async function printNewOrderTicket(order) {
   if (!order || !printStore.printFoodTicketOnOrder) return
-  await printStore.printFoodTicket(await orderPrintLines(order, 'kot', {}), order.department || department.value)
+  // One ticket per pass, so a drink filed under the bar printer does not ride
+  // into the kitchen (manager review item 4).
+  await printStore.printFoodTicketsByStation(
+    (station) => orderPrintLines(order, 'kot', { station }),
+    order.department || department.value,
+    { hasLinesFor: (station) => hasPrintableLines(order, 'kot', { station }) },
+  )
 }
 
 /**
@@ -2606,9 +2613,11 @@ async function printNewOrderTicket(order) {
 async function printAddedItemsTicket(order, addedLines) {
   if (!order || !printStore.printFoodTicketOnItemAdded) return
   if (!addedLines.length) return
-  await printStore.printFoodTicket(
-    await orderPrintLines({ ...order, items: addedLines }, 'kot', {}),
+  const added = { ...order, items: addedLines }
+  await printStore.printFoodTicketsByStation(
+    (station) => orderPrintLines(added, 'kot', { station }),
     order.department || department.value,
+    { hasLinesFor: (station) => hasPrintableLines(added, 'kot', { station }) },
   )
 }
 

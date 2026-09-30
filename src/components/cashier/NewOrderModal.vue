@@ -237,6 +237,7 @@ import AccompanimentManager from '@/components/AccompanimentManager.vue'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { useAuthStore } from '@/stores/auth'
 import { orderPrintLines } from '@/utils/orderPrint'
+import { hasPrintableLines } from '@/utils/receipts'
 import { isGrillMenuItem, canManageAccompaniments } from '@/utils/menuAccompaniment'
 import { useAccompaniments } from '@/composables/useAccompaniments'
 import { toast } from '@/utils/toast'
@@ -536,13 +537,20 @@ async function printNewOrder(order) {
   }
 
   // The order carries the service line it was placed against, which is what
-  // decides which printer the kitchen ticket lands on.
+  // decides which printer the kitchen ticket lands on. Each pass prints its own
+  // ticket, so a drink filed under the bar printer does not ride into the
+  // kitchen (manager review item 4).
   let ticketSent = true
   if (wantFoodTicket) {
-    ticketSent = await printStore.printFoodTicket(
-      await orderPrintLines(full, 'kot', {}),
+    const sent = await printStore.printFoodTicketsByStation(
+      (station) => orderPrintLines(full, 'kot', { station }),
       full.department || order.department,
+      { hasLinesFor: (station) => hasPrintableLines(full, 'kot', { station }) },
     )
+    // An order with nothing to cook or pour (every line switched off "print on
+    // order") is not a printer failure, so it must not raise the no-printer
+    // toast the way a refused job does.
+    ticketSent = sent.length > 0
   }
 
   let checkSent = true

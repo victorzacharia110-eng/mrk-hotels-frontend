@@ -130,6 +130,10 @@ export function letterheadLines(header = {}, fallbackName = 'MRK HOTELS') {
  * @param {object} [opts]  Options: `letterhead` (saved hotel details) and
  *   `hotel` (brand-name fallback) — defaults to MRK HOTELS.
  * @returns {Array<Array<string|boolean|number>>} The receipt rows.
+ *
+ * Note that a line switched off "print on receipt" is dropped from the itemised
+ * list but its money still counts towards the totals below, so the bill adds up
+ * to what the guest was charged.
  */
 export function orderReceiptLines(order, opts = {}) {
   const total = Number(order.total_amount ?? 0)
@@ -150,7 +154,7 @@ export function orderReceiptLines(order, opts = {}) {
     [divider()],
   ]
 
-  for (const item of order.items || []) {
+  for (const item of linesForPrintJob(order, 'receipt')) {
     const qty = item.quantity ?? 1
     lines.push([itemRow(`${qty} x ${item.item_name}`, money(item.subtotal ?? 0))])
     // Multi-quantity lines also show the unit price so a guest can verify the
@@ -191,6 +195,51 @@ export function orderReceiptLines(order, opts = {}) {
 }
 
 /**
+ * Which of an order's lines belong on a given print job.
+ *
+ * Manager review item 4: every menu item carries two switches and a printer
+ * choice, set when the item is registered.
+ *   - `print_on_receipt` false  -> the line is left off the guest's bill (an
+ *     item sold for the room account, or a complimentary line the cashier
+ *     settles verbally). The money still counts towards the total.
+ *   - `print_on_order` false   -> the line never reaches a kitchen or bar
+ *     ticket, because nothing has to be cooked or poured.
+ *   - `printer_station`        -> which pass a printable line is sent to.
+ *
+ * A line with no such fields is one rung in before these settings existed, or a
+ * dish whose menu record has since been deleted. Those are treated as "print
+ * everywhere, kitchen pass" so an old ticket can never quietly lose a line the
+ * guest actually ordered.
+ *
+ * @param {object} order  Order (must carry items).
+ * @param {string} kind   'receipt' | 'kot'.
+ * @param {object} [opts]  Options: `station` limits a KOT to 'kitchen'|'bar'.
+ * @returns {Array<object>} The lines to print.
+ */
+export function linesForPrintJob(order, kind, opts = {}) {
+  const items = order?.items || []
+  if (kind === 'receipt') {
+    return items.filter((item) => item.print_on_receipt !== false)
+  }
+  const printable = items.filter((item) => item.print_on_order !== false)
+  if (!opts.station) return printable
+  return printable.filter((item) => (item.printer_station || 'kitchen') === opts.station)
+}
+
+/**
+ * True when an order has at least one line for a print job, so the caller can
+ * skip opening a printer for a document that would be blank.
+ *
+ * @param {object} order  Order (must carry items).
+ * @param {string} kind   'receipt' | 'kot'.
+ * @param {object} [opts]  Passed to linesForPrintJob.
+ * @returns {boolean} Whether anything would print.
+ */
+export function hasPrintableLines(order, kind, opts = {}) {
+  return linesForPrintJob(order, kind, opts).length > 0
+}
+
+/**
  * Lines for a kitchen order ticket (no totals).
  *
  * The hotel name and phone ride along at the top: tickets from several hotels
@@ -199,7 +248,7 @@ export function orderReceiptLines(order, opts = {}) {
  *
  * @param {object} order  Order (must carry items).
  * @param {object} [opts]  Options: `letterhead` (saved hotel details), `hotel`
- *   (brand-name fallback), `reprinted`, `closed`.
+ *   (brand-name fallback), `reprinted`, `closed`, `station`.
  * @returns {Array<Array<string|boolean|number>>} [text, bold?, size?] rows.
  */
 export function kitchenTicketLines(order, opts = {}) {
@@ -208,7 +257,7 @@ export function kitchenTicketLines(order, opts = {}) {
   for (const row of centeredRows(header.name || opts.hotel || 'MRK HOTELS', 2)) lines.push([row, true, 2])
   for (const row of centeredRows(header.phone ? `Tel: ${header.phone}` : '', 1)) lines.push([row])
   lines.push(
-    ['KITCHEN ORDER TICKET', true, 2],
+    [opts.station === 'bar' ? 'BAR ORDER TICKET' : 'KITCHEN ORDER TICKET', true, 2],
     [String(order.order_number || ''), false, 2],
     [`Table: ${order.table_number || order.room_number || '-'}   Waiter: ${order.waiter_name || '-'}`],
     [`Type: ${order.order_type || 'dine_in'}   Covers: ${order.covers ?? '-'}`],
@@ -225,11 +274,12 @@ export function kitchenTicketLines(order, opts = {}) {
     // These marks are printed double-width, which leaves 21 columns on 42-column
     // paper, so the wording is kept short enough not to wrap.
     const mark = opts.closed ? '* CLOSED ORDER *' : '* REPRINTED *'
-    const titleIdx = lines.findIndex((l) => String(l[0]).trim() === 'KITCHEN ORDER TICKET')
+    const title = opts.station === 'bar' ? 'BAR ORDER TICKET' : 'KITCHEN ORDER TICKET'
+    const titleIdx = lines.findIndex((l) => String(l[0]).trim() === title)
     lines.splice(titleIdx + 1, 0, [padLine(mark, 'center', Math.floor(WIDTH / 2)), true, 2])
   }
 
-  for (const item of order.items || []) {
+  for (const item of linesForPrintJob(order, 'kot', opts)) {
     const qty = item.quantity ?? 1
     const note = item.notes ? `  (${item.notes})` : ''
     lines.push([`${qty} x ${item.item_name}${note}`])

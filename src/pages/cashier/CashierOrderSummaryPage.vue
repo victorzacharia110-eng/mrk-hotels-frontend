@@ -360,6 +360,7 @@ import { PAYMENT_METHODS } from '@/utils/payments'
 import { restorePrinter, printerState, connectPrinter, printerSupported } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { orderPrintLines } from '@/utils/orderPrint'
+import { hasPrintableLines } from '@/utils/receipts'
 import { formatOrderDateTime, localDateOf, todayISO } from '@/utils/dates'
 import { toast } from '@/utils/toast'
 
@@ -884,6 +885,18 @@ async function doPrint(order, kind) {
   // treats the reprinted ticket as live work.
   const closed = ['completed', 'cancelled'].includes(order.status)
   const opts = kind === 'kot' ? { hotel, reprinted: true, closed } : { hotel }
+  if (kind === 'kot') {
+    // A reprint of a mixed order has to reach both passes, and a reprint of an
+    // order whose lines are all switched off has nothing to reprint, so it is
+    // not treated as a printer failure.
+    const sent = await printStore.printFoodTicketsByStation(
+      (station) => orderPrintLines(order, 'kot', { ...opts, station }),
+      order.department,
+      { logo: logoUrl.value, hasLinesFor: (station) => hasPrintableLines(order, 'kot', { station }) },
+    )
+    if (sent.length === 0) toast(t('printer.noPrinter'), 'error')
+    return
+  }
   const sent = await printStore.print(await orderPrintLines(order, kind, opts), { logo: logoUrl.value })
   if (!sent) toast(printerState.reason || t('printer.noPrinter'), 'error')
 }

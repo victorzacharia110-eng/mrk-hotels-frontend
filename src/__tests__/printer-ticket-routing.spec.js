@@ -125,3 +125,90 @@ describe('print settings — routing food tickets to a service line', () => {
     expect(store.defaultTicketPrinterId).toBe('')
   })
 })
+
+describe('print settings — routing each line to its own pass', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    localStorage.clear()
+    printToPrinter.mockClear()
+    printerSupported.mockReturnValue(true)
+    printToPrinter.mockResolvedValue(true)
+  })
+
+  const kitchenLines = [['KITCHEN ORDER TICKET'], ['1 x Mchemsho']]
+  const barLines = [['BAR ORDER TICKET'], ['2 x Kilimanjaro']]
+
+  /** Builds the rows a pass would print, and says which passes have content. */
+  const build = (kitchen, bar) => async (station) =>
+    station === 'kitchen' ? kitchen : bar
+  const has = (kitchen, bar) => (station) => station === 'kitchen' ? kitchen : bar
+
+  it('prints one ticket per pass and skips the pass with no lines', async () => {
+    const store = usePrintSettingsStore()
+
+    const sent = await store.printFoodTicketsByStation(build(kitchenLines, []), 'restaurant', { hasLinesFor: has(true, false) })
+
+    expect(sent).toEqual(['kitchen'])
+    expect(printToPrinter).toHaveBeenCalledTimes(1)
+    expect(printToPrinter.mock.calls[0][0]).toBe(kitchenLines)
+  })
+
+  it('sends both passes when the order holds food and drinks', async () => {
+    const store = usePrintSettingsStore()
+
+    const sent = await store.printFoodTicketsByStation(build(kitchenLines, barLines), 'restaurant', { hasLinesFor: has(true, true) })
+
+    expect(sent).toEqual(['kitchen', 'bar'])
+    expect(printToPrinter).toHaveBeenCalledTimes(2)
+    expect(printToPrinter.mock.calls[0][0]).toBe(kitchenLines)
+    expect(printToPrinter.mock.calls[1][0]).toBe(barLines)
+  })
+
+  it('sends nothing when every line is switched off print-on-order', async () => {
+    const store = usePrintSettingsStore()
+
+    // Not a printer failure: there was simply nothing to cook or pour, and a
+    // blank slip in the kitchen reads as a real ticket for nothing.
+    const sent = await store.printFoodTicketsByStation(build([], []), 'restaurant', { hasLinesFor: has(false, false) })
+
+    expect(sent).toEqual([])
+    expect(printToPrinter).not.toHaveBeenCalled()
+  })
+
+  it('a station route beats the service line route', async () => {
+    const store = usePrintSettingsStore()
+    store.saveSettings({
+      ticketPrinters: [
+        { id: 'p-kitchen', transport: 'serial', endpoint: '' },
+        { id: 'p-bar', transport: 'network', endpoint: 'http://10.0.0.9:9720' },
+        { id: 'p-default', transport: 'serial', endpoint: '' },
+      ],
+      departmentRouting: { restaurant: 'p-kitchen' },
+      stationRouting: { bar: 'p-bar' },
+      defaultTicketPrinterId: 'p-default',
+    })
+
+    await store.printFoodTicketsByStation(build(kitchenLines, barLines), 'restaurant', { hasLinesFor: has(true, true) })
+
+    // The kitchen ticket went to the restaurant route; the bar ticket used its
+    // own station route and therefore the network bridge agent.
+    const [kitchenCall, barCall] = printToPrinter.mock.calls
+    expect(kitchenCall[1].endpoint).toBe('')
+    expect(barCall[1].transport).toBe('network')
+    expect(barCall[1].endpoint).toBe('http://10.0.0.9:9720')
+  })
+
+  it('a station route pointing at a deleted printer falls back, never drops', async () => {
+    const store = usePrintSettingsStore()
+    store.saveSettings({
+      ticketPrinters: [{ id: 'p-default', transport: 'serial', endpoint: '' }],
+      stationRouting: { bar: 'p-removed' },
+      defaultTicketPrinterId: 'p-default',
+    })
+
+    await store.printFoodTicketsByStation(build(kitchenLines, barLines), 'restaurant', { hasLinesFor: has(true, true) })
+
+    // Both passes still printed rather than the bar ticket vanishing.
+    expect(printToPrinter).toHaveBeenCalledTimes(2)
+  })
+})
