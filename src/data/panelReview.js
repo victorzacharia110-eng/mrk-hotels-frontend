@@ -288,11 +288,11 @@ export const REVIEW_GROUPS = [
         ref: 'Rooms 6',
         ask: 'Use a calendar with the rooms down the side, as on the receptionist dashboard, to set a stop sell covering several days.',
         problem:
-          'Setting a stop sell over several days means moving through the days one at a time, and it is hard to see at a glance which rooms are stopped across a range.',
+          'The calendar showed the rooms down the side, but it could only be looked at. Setting a stop sell for several days still meant using the boxes above it and entering the dates by hand.',
         solution:
-          'Not yet built. This is a layout change rather than a fault, and it is the one point in this section still outstanding.',
-        status: 'open',
-        where: 'Will appear on Front Desk → Rooms → Stop sell when it is done.',
+          'The calendar is now the way you set it. Click the first night and then the last night of the run and the whole stretch is blocked in one go, and you can drag across the nights instead of clicking twice. Clicking a night that is already blocked removes it, so stopping a room by mistake is undone by pointing at that same night. Stopped nights are red and nights you have just chosen are blue, so a new choice is never mistaken for an existing block.',
+        status: 'done',
+        where: 'Front Desk → Rooms → Stop sell, on the calendar grid.',
       },
     ],
   },

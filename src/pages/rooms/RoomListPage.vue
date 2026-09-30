@@ -198,8 +198,57 @@
           <p class="muted">
             <span class="cal-key cal-key-stopped"></span> {{ $t('rooms.stopSellStopped') }}
             <span class="cal-key cal-key-free"></span> {{ $t('rooms.stopSellSellable') }}
+            <span class="cal-key cal-key-picked"></span> {{ $t('rooms.stopSellPicked') }}
           </p>
         </div>
+
+        <!--
+          Manager review: "You can set [a] calendar dashboard with rooms in rows
+          on the left side like the one in the receptionist dashboard to easily
+          set STOP SELL if it covers more than one day."
+
+          So the grid is now the thing you set stop-sell from, not just a
+          picture of it: click the first night, click the last, and the range is
+          placed. Dragging across the nights works too, because a manager
+          pointing at a bar on the calendar does not stop at a cell boundary.
+
+          A click on an already-stopped cell lifts that night instead, which is
+          the reversal of the same gesture — no separate "delete" step to
+          discover.
+        -->
+        <div v-if="calPick.roomId" class="cal-pick-bar">
+          <div>
+            <strong>{{ roomLabel(calPick.roomId) }}</strong>
+            <span class="muted">
+              {{ formatDayLabel(calPick.start) }} → {{ formatDayLabel(calPick.end) }}
+              · {{ $t('rooms.stopSellNightsCount', { count: calPickNights }) }}
+            </span>
+          </div>
+          <div class="cal-pick-actions">
+            <input
+              v-model="calPickReason"
+              type="text"
+              class="input"
+              :placeholder="$t('rooms.stopSellReasonHint')"
+              :aria-label="$t('rooms.stopSellReason')"
+            />
+            <button
+              type="button"
+              class="btn btn-primary"
+              :disabled="!canEdit || placingPick"
+              @click="placePick"
+            >
+              <i class="fas fa-ban"></i>
+              {{ $t('rooms.stopSellSetTheseNights') }}
+            </button>
+            <button type="button" class="btn btn-secondary" @click="clearPick">
+              {{ $t('common.cancel') }}
+            </button>
+          </div>
+        </div>
+        <p v-else-if="canEdit" class="muted cal-hint">
+          {{ $t('rooms.stopSellCalendarHint') }}
+        </p>
 
         <div v-if="blocksLoading" class="alert alert-info">{{ $t('rooms.loading') }}</div>
         <div v-else-if="calRooms.length" class="table-scroll">
@@ -220,8 +269,17 @@
                   v-for="d in calDays"
                   :key="d"
                   class="cal-cell"
-                  :class="isStoppedOn(r.room_id, d) ? 'cal-stopped' : 'cal-free'"
-                  :title="`${r.room_number} · ${formatDayLabel(d)}`"
+                  :class="cellClass(r.room_id, d)"
+                  :title="cellTitle(r.room_id, d)"
+                  :role="canEdit ? 'button' : null"
+                  :tabindex="canEdit ? 0 : null"
+                  @click="onCellClick(r.room_id, d)"
+                  @mouseenter="onCellEnter(r.room_id, d)"
+                  @mousedown="onCellDown(r.room_id, d)"
+                  @mouseup="dragging = false"
+                  @mouseleave="dragging = false"
+                  @keydown.enter.prevent="onCellClick(r.room_id, d)"
+                  @keydown.space.prevent="onCellClick(r.room_id, d)"
                 >
                   <i v-if="isStoppedOn(r.room_id, d)" class="fas fa-ban"></i>
                 </td>
@@ -1041,6 +1099,147 @@ const placeStopSell = async () => {
   }
 }
 
+// ─── Setting stop-sell from the calendar grid ───────────────────────────────
+//
+// The range a manager has picked but not yet confirmed, in the same room the
+// gesture started in. Dates are ISO so they compare as plain strings, which is
+// all a range needs.
+const calPick = ref({ roomId: null, start: '', end: '' })
+const calPickReason = ref('')
+const placingPick = ref(false)
+
+/** True while a drag is in progress, so a click never doubles as a drag start. */
+const dragging = ref(false)
+
+/** Nights in the pending range, so the bar can say "3 nights" before saving. */
+const calPickNights = computed(() => {
+  if (!calPick.value.start || !calPick.value.end) return 0
+  return Math.round((Date.parse(`${calPick.value.end}T00:00:00`) - Date.parse(`${calPick.value.start}T00:00:00`)) / 86400000) + 1
+})
+
+/** True when `iso` falls inside the pending range for its room. */
+const isPicked = (roomId, iso) =>
+  Boolean(calPick.value.roomId) &&
+  calPick.value.roomId === roomId &&
+  iso >= calPick.value.start &&
+  iso <= calPick.value.end
+
+/**
+ * Cell appearance. Stopped wins over pending so an existing block is never
+ * hidden behind a selection, and a pending night is only ever drawn on a cell
+ * that is not already stopped.
+ */
+const cellClass = (roomId, iso) => {
+  if (isStoppedOn(roomId, iso)) return 'cal-stopped'
+  if (isPicked(roomId, iso)) return 'cal-picked'
+  return 'cal-free'
+}
+
+const cellTitle = (roomId, iso) => {
+  const when = `${roomLabel(roomId)} · ${formatDayLabel(iso)}`
+  if (isStoppedOn(roomId, iso)) return `${when} — ${t('rooms.stopSellLiftNight')}`
+  if (isPicked(roomId, iso)) return `${when} — ${t('rooms.stopSellPicked')}`
+  return `${when} — ${t('rooms.stopSellSetNight')}`
+}
+
+/** Drops a pending range, so a stray click never strands a half-made block. */
+const clearPick = () => {
+  calPick.value = { roomId: null, start: '', end: '' }
+  calPickReason.value = ''
+}
+
+/**
+ * A click either starts a range, closes one, or lifts a stopped night.
+ *
+ * Tapping a night that is already stopped lifts it: the same gesture undoes
+ * the block, so a manager who stops a room by mistake can undo it by pointing
+ * at it again rather than hunting for the block in the table below.
+ */
+const onCellClick = async (roomId, iso) => {
+  if (!canEdit.value) return
+  if (isStoppedOn(roomId, iso)) {
+    await liftNight(roomId, iso)
+    return
+  }
+  const pick = calPick.value
+  // A different room, or no range in progress: start again from this night.
+  if (pick.roomId !== roomId || !pick.start) {
+    calPick.value = { roomId, start: iso, end: iso }
+    return
+  }
+  // Same room, second click: close the range, in whichever order it was clicked.
+  calPick.value = { roomId, start: iso < pick.start ? iso : pick.start, end: iso > pick.start ? iso : pick.start }
+}
+
+/** Extends a range while dragging, but only within the row the drag began in. */
+const onCellEnter = (roomId, iso) => {
+  if (!dragging.value || !canEdit.value) return
+  const pick = calPick.value
+  if (pick.roomId !== roomId || !pick.start || isStoppedOn(roomId, iso)) return
+  calPick.value = {
+    roomId,
+    start: iso < pick.start ? iso : pick.start,
+    end: iso > pick.start ? iso : pick.start,
+  }
+}
+
+/** Pressing a free night both starts a range and arms the drag. */
+const onCellDown = (roomId, iso) => {
+  if (!canEdit.value) return
+  if (isStoppedOn(roomId, iso)) return
+  const pick = calPick.value
+  if (pick.roomId !== roomId || !pick.start) {
+    calPick.value = { roomId, start: iso, end: iso }
+    dragging.value = true
+  }
+}
+
+/**
+ * Lifts every block covering one night on one room.
+ *
+ * A night can be covered by a room block or by a whole-type block, so both are
+ * lifted — otherwise the cell would stay red and the manager would think the
+ * lift had failed.
+ */
+const liftNight = async (roomId, iso) => {
+  const room = calRooms.value.find((r) => r.room_id === roomId)
+  const covering = blocks.value.filter(
+    (b) =>
+      b.nights?.includes(iso) &&
+      (b.room_id === roomId || (!b.room_id && room && b.room_type === room.room_type)),
+  )
+  if (!covering.length) return
+  try {
+    await Promise.all(covering.map((b) => roomApi.destroyStopSell(b.stop_sell_id)))
+    success.value = t('rooms.stopSellLifted')
+    await Promise.all([loadBlocks(), loadInventory()])
+  } catch (err) {
+    error.value = flattenError(err)
+  }
+}
+
+/** Saves the pending range as a single block, then clears it. */
+const placePick = async () => {
+  const { roomId, start, end } = calPick.value
+  if (!roomId || !start) return
+  placingPick.value = true
+  try {
+    await roomApi.storeStopSell({
+      room_ids: [roomId],
+      start_date: start,
+      ...(end && end !== start ? { end_date: end } : {}),
+      reason: calPickReason.value || undefined,
+    })
+    clearPick()
+    success.value = t('rooms.stopSellPlaced')
+    await Promise.all([loadBlocks(), loadInventory()])
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    placingPick.value = false
+  }
+}
+
 const liftStopSell = async (id) => {
   try {
     await roomApi.destroyStopSell(id)
@@ -1141,8 +1340,66 @@ onMounted(() => {
   background: #e2e8f0;
 }
 
+/* Manager review item 6: the calendar has to be clickable. A pending night is
+   drawn in the brand colour and outlined, so it reads as "chosen" without
+   looking like the danger red of an actual stop-sell. A stopped cell also takes
+   the pointer, since clicking it lifts the night. */
+.cal-cell[role='button'] {
+  cursor: pointer;
+}
+
+.cal-picked {
+  background: var(--brand-light);
+  box-shadow: inset 0 0 0 2px var(--brand);
+}
+
+.stop-sell-calendar .cal-stopped:hover {
+  background: #b91c1c !important;
+}
+
+.cal-key-picked {
+  background: var(--brand-light);
+  box-shadow: inset 0 0 0 2px var(--brand);
+}
+
+/* The confirmation strip. It sits directly under the grid controls so the
+   pending nights and the button that saves them are read together. */
+.cal-pick-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 12px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--brand);
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: var(--brand-light);
+}
+
+.cal-pick-bar .muted {
+  display: block;
+  font-size: 12px;
+}
+
+.cal-pick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.cal-pick-actions .input {
+  min-width: 180px;
+}
+
+.cal-hint {
+  margin: 12px 0;
+}
+
 .stop-sell-calendar th.today {
-  box-shadow: inset 0 -3px 0 var(--brand, #0d9488);
+  box-shadow: inset 0 -3px 0 var(--brand);
 }
 
 .cal-key {

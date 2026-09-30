@@ -48,12 +48,15 @@ describe('panel review record', () => {
     expect(counts.done + counts.partial + counts.open).toBe(counts.total)
   })
 
-  it('does not claim the stop-sell calendar is finished', () => {
-    // Rooms 6 asks for a calendar layout across several days. It is not built,
-    // so it stays visible as open. If someone builds it, this test is the
-    // reminder to update the status rather than leave a stale claim.
-    const calendar = items.find((i) => i.ask.includes('calendar'))
-    expect(calendar?.status).toBe('open')
+  it('claims the stop-sell calendar as finished only because it is', () => {
+    // Rooms 6 asked for a calendar that can *set* a multi-day block. The page
+    // says done, so the range-selection the page claims has to exist — a review
+    // that reads as complete when it is not is what costs trust. The behaviour
+    // itself is covered in room-list-stop-sell-calendar.spec.js.
+    const source = read('pages/rooms/RoomListPage.vue')
+    expect(items.find((i) => i.ask.includes('calendar'))?.status).toBe('done')
+    expect(source).toContain('storeStopSell')
+    expect(source).toContain('cal-pick-bar')
   })
 })
 

@@ -934,7 +934,13 @@
     "stopSellSellable": "Inauzwa",
     "stopSellNights": "Usiku",
     "stopSellNoRooms": "Hakuna chumba cha kuonyesha.",
-    "stopSellWholeType": "Zote {type}"
+    "stopSellWholeType": "Zote {type}",
+    "stopSellPicked": "Imechaguliwa",
+    "stopSellCalendarHint": "Bofya usiku mmoja kuchagua, kisha bofya usiku mwingine kuchagua usiku wote. Unaweza pia kuvuta kalamu juu ya usiku. Kufungua usiku tayari lililositishwa kunafuta.",
+    "stopSellSetNight": "Bofya kusitisha usiuzi usiku huu",
+    "stopSellLiftNight": "Bofya kuondoa kusitishwa kuuza usiku huu",
+    "stopSellNightsCount": "usiku {count}",
+    "stopSellSetTheseNights": "Sitisha kuuza usiku hawa"
   },
   "guests": {
     "title": "Wageni",

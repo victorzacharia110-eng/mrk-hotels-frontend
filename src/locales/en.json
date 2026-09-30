@@ -934,7 +934,13 @@
     "stopSellSellable": "Sellable",
     "stopSellNights": "Nights",
     "stopSellNoRooms": "No rooms to show.",
-    "stopSellWholeType": "All {type}"
+    "stopSellWholeType": "All {type}",
+    "stopSellPicked": "Chosen",
+    "stopSellCalendarHint": "Click a night to choose it, then click another night to choose the whole run. You can also drag across the nights. Clicking a night that is already stopped lifts it.",
+    "stopSellSetNight": "Click to stop sell this night",
+    "stopSellLiftNight": "Click to lift the stop-sell on this night",
+    "stopSellNightsCount": "{count} night(s)",
+    "stopSellSetTheseNights": "Stop sell these nights"
   },
   "guests": {
     "title": "Guests",

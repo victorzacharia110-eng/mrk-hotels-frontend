@@ -22,6 +22,7 @@ vi.mock('@/api', () => ({
 }))
 
 const RoomListPage = (await import('@/pages/rooms/RoomListPage.vue')).default
+const authModule = await import('@/stores/auth')
 
 const ROOMS = [
   { room_id: 'r1', room_number: '101', room_type: 'single', price_per_night: 50000, status: 'available' },
@@ -51,10 +52,19 @@ function block(overrides = {}) {
   }
 }
 
-function build() {
+/**
+ * Mounts the page. `canEdit` is the 80-level permission that makes the calendar
+ * cells live, so a manager is signed in by default; pass a receptionist to test
+ * the read-only view.
+ */
+function build(user = { user_role: 'hotel_admin' }) {
+  const pinia = createPinia()
+  setActivePinia(pinia)
+  const { useAuthStore } = authModule
+  useAuthStore().user = user
   return mount(RoomListPage, {
     global: {
-      plugins: [createPinia(), i18n],
+      plugins: [pinia, i18n],
       stubs: { SearchableSelect: true, TableExportButton: true, DeleteConfirmModal: true },
     },
   })
@@ -72,7 +82,6 @@ async function openTab(wrapper, key) {
  */
 describe('RoomListPage stop-sell calendar', () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
     index.mockReset().mockResolvedValue(roomsPage())
     inventory.mockReset().mockResolvedValue({ data: { types: [], rooms: [] } })
     updateRates.mockReset().mockResolvedValue({ data: {} })
@@ -202,6 +211,203 @@ describe('RoomListPage stop-sell calendar', () => {
 
     expect(wrapper.vm.stopForm.room_id).toEqual([])
     expect(wrapper.vm.stopForm.start_date).toBe('')
+  })
+
+  /**
+   * Manager review item 6: "You can set [a] calendar dashboard with rooms in
+   * rows on the left side like the one in the receptionist dashboard to easily
+   * set STOP SELL if it covers more than one day."
+   *
+   * The grid already had rooms in rows, but it was only a picture of the stop-
+   * sell — setting a block still meant using the form above it. These hold the
+   * calendar as a way of working: click the first night, click the last, and
+   * the run becomes one block.
+   */
+
+  /** Opens the tab over a fixed six-night window and returns the rows. */
+  async function calendar() {
+    const wrapper = build()
+    await flushPromises()
+    await openTab(wrapper, 'stop-sell')
+    wrapper.vm.calFrom = '2026-10-15'
+    wrapper.vm.calTo = '2026-10-20'
+    await wrapper.vm.loadBlocks()
+    await flushPromises()
+    return wrapper
+  }
+
+  /** The calendar row for a room number. */
+  function rowFor(wrapper, roomNumber) {
+    return wrapper.findAll('tbody tr').find((r) => r.text().includes(roomNumber))
+  }
+
+  it('places one range block from two clicks on a row', async () => {
+    const wrapper = await calendar()
+
+    const cells = rowFor(wrapper, '102').findAll('.cal-cell')
+    await cells[0].trigger('click') // 15th
+    await cells[3].trigger('click') // 18th
+
+    // The pending range is stated before anything is saved, so the manager can
+    // see the nights they just chose.
+    expect(wrapper.find('.cal-pick-bar').text()).toContain('4')
+
+    await wrapper.find('.cal-pick-bar .btn-primary').trigger('click')
+    await flushPromises()
+
+    // One block covering the run — not one block per night.
+    expect(storeStopSell).toHaveBeenCalledTimes(1)
+    expect(storeStopSell).toHaveBeenCalledWith({
+      room_ids: ['r2'],
+      start_date: '2026-10-15',
+      end_date: '2026-10-18',
+    })
+  })
+
+  it('sends no end_date when only one night is chosen', async () => {
+    const wrapper = await calendar()
+
+    await rowFor(wrapper, '102').findAll('.cal-cell')[2].trigger('click')
+    await wrapper.find('.cal-pick-bar .btn-primary').trigger('click')
+    await flushPromises()
+
+    const body = storeStopSell.mock.calls[0][0]
+    expect(body.start_date).toBe('2026-10-17')
+    expect(body).not.toHaveProperty('end_date')
+  })
+
+  it('extends the range while dragging across the nights', async () => {
+    const wrapper = await calendar()
+
+    const cells = rowFor(wrapper, '102').findAll('.cal-cell')
+    await cells[1].trigger('mousedown')
+    await cells[4].trigger('mouseenter') // dragged over
+
+    await wrapper.find('.cal-pick-bar .btn-primary').trigger('click')
+    await flushPromises()
+
+    // A manager pointing at a bar on the calendar does not stop at a cell edge.
+    expect(storeStopSell.mock.calls[0][0]).toMatchObject({
+      start_date: '2026-10-16',
+      end_date: '2026-10-19',
+    })
+  })
+
+  it('keeps a drag inside the row it started in', async () => {
+    const wrapper = await calendar()
+
+    await rowFor(wrapper, '102').findAll('.cal-cell')[1].trigger('mousedown')
+    // Wandering over another room's nights must not quietly block them too.
+    await rowFor(wrapper, '201').findAll('.cal-cell')[5].trigger('mouseenter')
+
+    await wrapper.find('.cal-pick-bar .btn-primary').trigger('click')
+    await flushPromises()
+
+    expect(storeStopSell.mock.calls[0][0].room_ids).toEqual(['r2'])
+  })
+
+  it('orders the range when the later night is clicked first', async () => {
+    const wrapper = await calendar()
+
+    const cells = rowFor(wrapper, '102').findAll('.cal-cell')
+    await cells[4].trigger('click')
+    await cells[1].trigger('click')
+
+    await wrapper.find('.cal-pick-bar .btn-primary').trigger('click')
+    await flushPromises()
+
+    // Clicking backwards must not send a negative range.
+    expect(storeStopSell.mock.calls[0][0]).toMatchObject({
+      start_date: '2026-10-16',
+      end_date: '2026-10-19',
+    })
+  })
+
+  it('lifts a stopped night by clicking it again', async () => {
+    const wrapper = await calendar()
+
+    // Block b1 covers 101 on the 15th–17th.
+    await rowFor(wrapper, '101').findAll('.cal-cell')[2].trigger('click')
+    await flushPromises()
+
+    // Undo is the same gesture as doing it, so there is no separate "delete"
+    // step to discover.
+    expect(destroyStopSell).toHaveBeenCalledWith('b1')
+    expect(storeStopSell).not.toHaveBeenCalled()
+  })
+
+  it('lifts a whole-type block so the night really clears', async () => {
+    stopSell.mockResolvedValue({
+      data: {
+        blocks: [block({ room_id: null, room_number: null, is_whole_type: true, room_type: 'single', nights: ['2026-10-16'] })],
+      },
+    })
+    const wrapper = await calendar()
+
+    // The block belongs to no single room, so lifting it must still happen —
+    // otherwise the cell stays red and the manager thinks it failed.
+    await rowFor(wrapper, '102').findAll('.cal-cell')[1].trigger('click')
+    await flushPromises()
+
+    expect(destroyStopSell).toHaveBeenCalledWith('b1')
+  })
+
+  it('will not select a night that is already stopped', async () => {
+    const wrapper = await calendar()
+
+    const cells = rowFor(wrapper, '101').findAll('.cal-cell')
+    const stopped = cells[2]
+    expect(stopped.classes()).toContain('cal-stopped')
+
+    // Choosing a free night elsewhere on the row must not disguise the block.
+    await cells[5].trigger('click')
+    expect(stopped.classes()).toContain('cal-stopped')
+    expect(stopped.classes()).not.toContain('cal-picked')
+
+    await wrapper.find('.cal-pick-bar .btn-primary').trigger('click')
+    await flushPromises()
+    // The saved range skips the already-stopped night rather than overlapping it.
+    expect(storeStopSell.mock.calls[0][0]).toMatchObject({ start_date: '2026-10-20' })
+  })
+
+  it('marks a pending night apart from a stopped one', async () => {
+    const wrapper = await calendar()
+
+    const cells = rowFor(wrapper, '102').findAll('.cal-cell')
+    await cells[0].trigger('click')
+    await cells[1].trigger('click')
+
+    const cls = (i) => cells[i].classes()
+    // Chosen nights carry the brand colour; 101's blocked nights stay danger red.
+    expect(cls(0)).toContain('cal-picked')
+    expect(cls(1)).toContain('cal-picked')
+    expect(cls(2)).toContain('cal-free')
+  })
+
+  it('discards a pending range when cancelled', async () => {
+    const wrapper = await calendar()
+
+    await rowFor(wrapper, '102').findAll('.cal-cell')[0].trigger('click')
+    expect(wrapper.find('.cal-pick-bar').exists()).toBe(true)
+
+    await wrapper.find('.cal-pick-actions .btn-secondary').trigger('click')
+    expect(wrapper.find('.cal-pick-bar').exists()).toBe(false)
+    expect(storeStopSell).not.toHaveBeenCalled()
+  })
+
+  it('leaves the calendar read-only for a role that cannot edit', async () => {
+    const wrapper = build({ user_role: 'receptionist' })
+    await flushPromises()
+    await openTab(wrapper, 'stop-sell')
+    wrapper.vm.calFrom = '2026-10-15'
+    wrapper.vm.calTo = '2026-10-20'
+    await wrapper.vm.loadBlocks()
+    await flushPromises()
+
+    // A receptionist can see the picture but must not be able to change it.
+    await rowFor(wrapper, '102').findAll('.cal-cell')[0].trigger('click')
+    expect(wrapper.find('.cal-pick-bar').exists()).toBe(false)
+    expect(storeStopSell).not.toHaveBeenCalled()
   })
 
   it('removes a queued room without touching the others', async () => {
