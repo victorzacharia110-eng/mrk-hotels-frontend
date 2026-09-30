@@ -1313,7 +1313,13 @@
     "printerStation": "Order printer",
     "printerKitchen": "Kitchen printer",
     "printerBar": "Bar printer",
-    "printerStationOffHint": "Turn on \"Print on order\" to choose a printer."
+    "printerStationOffHint": "Turn on \"Print on order\" to choose a printer.",
+    "categoryRequiredHint": "Required. Items are grouped by category, so this cannot be left empty.",
+    "categoryRequired": "Choose a category for this item.",
+    "subCategoryRequiredHint": "Required. Pick the group inside the category, e.g. Soup under Food.",
+    "subCategoryRequired": "Choose a sub-category for this item.",
+    "pickSubCategory": "Choose a sub-category",
+    "pickCategoryFirst": "Choose a category first"
   },
   "outlets": {
     "title": "POS Outlets",
@@ -1386,7 +1392,12 @@
     "networkBridge": "Network bridge agent",
     "defaultTicketPrinter": "Default ticket printer",
     "defaultTicketPrinterHint": "Used for service lines with no route of their own.",
-    "tillPrinter": "The till printer"
+    "tillPrinter": "The till printer",
+    "passTitle": "Printer pass",
+    "passHint": "Where an item's order ticket goes. A menu item files itself under Kitchen or Bar, and a pass left on “follow the service line” uses that service line's printer above.",
+    "stationKitchen": "Kitchen pass",
+    "stationBar": "Bar pass",
+    "followServiceLine": "Follow the service line"
   },
   "orders": {
     "title": "F&B Orders",
@@ -5547,5 +5558,9 @@
     "positiveAmount": "The amount must be greater than zero.",
     "phoneInvalid": "Enter a valid phone number for the selected country.",
     "phoneTooLong": "This number is too long for the selected country."
+  },
+  "outlet": {
+    "switchLabel": "Outlet to work in",
+    "choosePlaceholder": "Choose an outlet"
   }
 }

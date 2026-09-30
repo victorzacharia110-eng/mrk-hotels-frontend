@@ -246,13 +246,25 @@
               <p class="muted">{{ $t('menu.syncToStockHint') }}</p>
             </div>
             <div class="form-group">
-              <label>{{ $t('menu.category') }}</label>
+              <label>{{ $t('menu.category') }} *</label>
               <SearchableSelect
                 v-model="form.category"
                 :options="formCategoryOptions"
                 :placeholder="$t('menu.namePlaceholder')"
                 force-search
               />
+              <p class="muted">{{ $t('menu.categoryRequiredHint') }}</p>
+            </div>
+            <div class="form-group">
+              <label>{{ $t('menu.subCategory') }} *</label>
+              <SearchableSelect
+                v-model="form.sub_category_id"
+                :options="formSubCategoryOptions"
+                :empty-label="form.category ? $t('menu.pickSubCategory') : $t('menu.pickCategoryFirst')"
+                :disabled="!form.category"
+                @change="onFormSubCategoryChange"
+              />
+              <p class="muted">{{ $t('menu.subCategoryRequiredHint') }}</p>
             </div>
             <div class="form-group">
               <label>{{ $t('menu.priceTzs') }}</label>
@@ -583,6 +595,10 @@ const modalError = ref('')
 const form = reactive({
   item_name: '',
   category: '',
+  // The review requires a category AND a sub-category on every registered item,
+  // so the sub-category is part of the form rather than only something the
+  // category manager can set afterwards.
+  sub_category_id: '',
   department: 'restaurant',
   inventory_item_id: '',
   price: null,
@@ -711,6 +727,8 @@ function resetForm() {
   editingId.value = null
   form.item_name = ''
   form.category = ''
+  form.sub_category = ''
+  form.sub_category_id = ''
   form.department = 'restaurant'
   form.inventory_item_id = ''
   form.price = null
@@ -729,6 +747,7 @@ function openCreate() {
   showModal.value = true
   loadCategories(form.department)
   loadInventoryOptions()
+  loadFormSubCategories()
 }
 
 /** Opens the edit modal pre-filled with the selected item. */
@@ -738,6 +757,8 @@ function openEdit(item) {
   editingId.value = item.menu_item_id
   form.item_name = item.item_name
   form.category = item.category || ''
+  form.sub_category = item.sub_category || ''
+  form.sub_category_id = item.sub_category_id || ''
   form.department = item.department
   form.inventory_item_id = item.inventory_item_id || ''
   form.price = item.price
@@ -752,6 +773,7 @@ function openEdit(item) {
   showModal.value = true
   loadCategories(form.department)
   loadInventoryOptions()
+  loadFormSubCategories()
 }
 
 /** Closes the create/edit modal. */
@@ -765,6 +787,17 @@ async function save() {
   saving.value = true
   try {
     const payload = { ...form, inventory_item_id: form.inventory_item_id || null }
+    // The review makes these a must-select on registration. Checked here as well
+    // as on the API so the manager is told what is missing while looking at the
+    // form, rather than a field-level 422 far below it.
+    if (!String(form.category).trim()) {
+      modalError.value = t('menu.categoryRequired')
+      return
+    }
+    if (!form.sub_category_id) {
+      modalError.value = t('menu.subCategoryRequired')
+      return
+    }
     if (editing.value) {
       await menuItemApi.update(editingId.value, payload)
       success.value = t('menu.updated')
@@ -865,10 +898,46 @@ const formCategoryOptions = computed(() =>
   categoryOptions.value.map((c) => ({ value: c.name, label: c.name })),
 )
 
+/**
+ * Sub-categories offered for the category currently chosen on the form.
+ *
+ * A sub-category belongs to exactly one category, so the list is narrowed to
+ * the chosen one. A typed-ahead category that does not exist yet has no
+ * sub-categories, which is why the picker also accepts a new name: a manager
+ * filing a first item under a brand-new category is not forced to leave.
+ */
+const formSubCategoryOptions = computed(() => {
+  const category = categoryOptions.value.find((c) => c.name === form.category)
+  if (!category) return []
+  return subCategories.value
+    .filter((sub) => sub.category_id === category.category_id)
+    .map((sub) => ({ value: sub.sub_category_id, label: sub.name }))
+})
+
+/** Mirrors the chosen sub-category's name for the API's legacy text column. */
+function onFormSubCategoryChange(id) {
+  const sub = subCategories.value.find((s) => s.sub_category_id === id)
+  form.sub_category = sub ? sub.name : ''
+}
+
 /** Searchable-dropdown options for the filter bar (any relevant department). */
 const filtersCategoryOptions = computed(() =>
   filterCategoryOptions.value.map((c) => ({ value: c.name, label: c.name })),
 )
+
+/**
+ * Pulls every sub-category so the item form's picker can narrow them to the
+ * chosen category. Deliberately does not clobber an in-progress category edit:
+ * on failure the previously loaded list stays usable.
+ */
+async function loadFormSubCategories() {
+  try {
+    const res = await menuSubCategoryApi.index()
+    subCategories.value = res.data.data || res.data || []
+  } catch {
+    // Leave whatever is already loaded; the picker degrades to free text.
+  }
+}
 
 /** Pulls the ordered category list for a department (best-effort). */
 async function loadCategories(dept = catDept.value) {

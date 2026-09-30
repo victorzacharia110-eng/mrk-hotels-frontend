@@ -1310,7 +1310,13 @@
     "printerStation": "Printa ya agizo",
     "printerKitchen": "Printa ya jikini",
     "printerBar": "Printa ya baa",
-    "printerStationOffHint": "Washa \"Chapisha kwenye agizo\" ili kuchagua printa."
+    "printerStationOffHint": "Washa \"Chapisha kwenye agizo\" ili kuchagua printa.",
+    "categoryRequiredHint": "Inahitajika. Vitu vimegroupishwa kwa kategoria, kwa hivii hii haiwezi kuwa tupu.",
+    "categoryRequired": "Chagua kategoria ya kitu hiki.",
+    "subCategoryRequiredHint": "Inahitajika. Chagua kundi ndogo ndani ya kategoria, kwa mfano Nyanya chini ya Chakula.",
+    "subCategoryRequired": "Chagua kategoria ndogo ya kitu hiki.",
+    "pickSubCategory": "Chagua kategoria ndogo",
+    "pickCategoryFirst": "Chagua kategoria kwanza"
   },
   "outlets": {
     "title": "Sehemu za Kuuzia (POS)",
@@ -1383,7 +1389,12 @@
     "networkBridge": "Network bridge agent",
     "defaultTicketPrinter": "Default ticket printer",
     "defaultTicketPrinterHint": "Used for service lines with no route of their own.",
-    "tillPrinter": "The till printer"
+    "tillPrinter": "The till printer",
+    "passTitle": "Kituo cha printa",
+    "passHint": "Mahali agizo la kitu hiki hupeleka. Kitu cha menyu kinasajiliwa chini ya Jikofu au Bar, na kituo kilichobakiwa “fuata mstari wa huduma” hutumia printa ya mstari huo hapo juu.",
+    "stationKitchen": "Kituo cha jikofu",
+    "stationBar": "Kituo cha bar",
+    "followServiceLine": "Fuata mstari wa huduma"
   },
   "orders": {
     "title": "Maagizo ya Chakula",
@@ -5501,5 +5512,9 @@
     "positiveAmount": "Kiasi lazima kiwe kikubwa kuliko sifuri.",
     "phoneInvalid": "Weka namba ya simu sahihi kwa nchi uliyochagua.",
     "phoneTooLong": "Namba hii ni ndefu kupita kiasi kwa nchi uliyochagua."
+  },
+  "outlet": {
+    "switchLabel": "Kituo cha kufanya kazi",
+    "choosePlaceholder": "Chagua kituo"
   }
 }
