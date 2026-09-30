@@ -453,6 +453,15 @@ button {
     overflow-y: auto;
   }
 
+  /* A checked-in reservation can offer five actions at once. Left to size
+     itself the pinned column would take most of a phone screen, so it is capped
+     and the buttons wrap instead: narrower, and taller, rather than narrow but
+     leaving no room for the data the row is about. Scoped to the body cell so
+     the header above it is not capped to the same width. */
+  .table-pinned tbody td.actions-col {
+    max-width: 150px;
+  }
+
   /* Icon-only actions, so the pinned column stays narrow enough to be worth
      pinning. The labels come back as a tooltip and to screen readers. */
   .table-pinned .btn-label {
