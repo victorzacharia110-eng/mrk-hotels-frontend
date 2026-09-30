@@ -285,6 +285,7 @@ import { useBulkSelection } from '@/composables/useBulkSelection'
 import { formatCategory } from '@/utils/format'
 import { useCategoriesStore } from '@/stores/categories'
 import { useAuthStore } from '@/stores/auth'
+import { selectedOutlet } from '@/composables/useOutletContext'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -534,6 +535,7 @@ async function saveAdjustment() {
       type: adjustForm.type,
       quantity: Math.abs(adjustForm.quantity),
       notes: adjustForm.reason,
+      outlet_id: selectedOutlet.value?.outlet_id || undefined,
     })
     adjusting.value = null
     await load()

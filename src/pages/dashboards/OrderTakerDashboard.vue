@@ -1498,6 +1498,13 @@ watch([summarySearch, summaryStatus, summarySort], () => {
   summaryPage.value = 1
 })
 
+// Changing outlet changes which shelf the drinks figures come from, so the
+// menu has to be re-read. Leaving the old figures up would show the waiter a
+// stock level from the counter they just walked away from.
+watch(() => selectedOutlet.value?.outlet_id, () => {
+  if (activeTab.value === 'new') loadMenu()
+})
+
 /** Switches to the order-summary tab and refreshes the waiter's tickets. */
 function switchToSummary() {
   activeTab.value = 'summary'
@@ -2701,7 +2708,16 @@ async function sendOrder() {
 async function loadMenu() {
   menuLoading.value = true
   try {
-    const params = { department: department.value, is_available: 1, per_page: 100 }
+    // The outlet is sent as well as the service line, and the API prefers it.
+    // The stock figure beside each drink has to be the one this counter will be
+    // charged against, otherwise the waiter sees a number the order will not
+    // enforce -- the pool bar would be quoted the main bar's bottles.
+    const params = {
+      department: department.value,
+      outlet_id: selectedOutlet.value?.outlet_id || undefined,
+      is_available: 1,
+      per_page: 100,
+    }
     const first = await menuItemApi.index({ ...params, page: 1 })
     const rows = [...(Array.isArray(first.data) ? first.data : first.data?.data || [])]
     const lastPage = first.data?.meta?.last_page || first.data?.last_page || 1

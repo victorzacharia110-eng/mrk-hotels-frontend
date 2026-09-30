@@ -541,7 +541,13 @@ function openEdit(indent) {
 
 async function save(forStatus) {
   const payloadStatus = forStatus || null
+  const isEdit = modal.value === 'edit' && editing.value
   const payload = {
+    // A new request is raised against the outlet its lines were read from, so
+    // it does not land on a different outlet's stock. An edit keeps the shelf
+    // it already has: re-sending the current outlet would drag an old request
+    // onto whichever outlet happens to be selected now.
+    outlet_id: isEdit ? null : (selectedOutlet.value?.outlet_id || null),
     department_id: form.department_id,
     notes: form.notes,
     items: form.lines.filter((l) => l.item_id && l.quantity > 0),

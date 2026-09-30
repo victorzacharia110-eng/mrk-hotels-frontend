@@ -927,8 +927,15 @@ const loadAllOrders = () =>
 async function loadMenu() {
   try {
     menuItems.value =
-      (await menuItemApi.index({ is_available: true, department: form.department, per_page: 100 }))
-        .data.data || []
+      (await menuItemApi.index({
+        is_available: true,
+        department: form.department,
+        // Preferred by the API over the service line, so the stock figure shown
+        // is the outlet's own shelf rather than the shelf the service line
+        // happens to name.
+        outlet_id: selectedOutlet.value?.outlet_id || undefined,
+        per_page: 100,
+      })).data.data || []
   } catch {
     // ignore
   }

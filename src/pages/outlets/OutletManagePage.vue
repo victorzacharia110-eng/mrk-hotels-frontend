@@ -33,6 +33,7 @@
           <tr>
             <th scope="col">{{ $t('outlets.name') }}</th>
             <th scope="col">{{ $t('outlets.type') }}</th>
+            <th scope="col">{{ $t('outlets.stockShelf') }}</th>
             <th scope="col">{{ $t('common.status') }}</th>
             <th v-if="canEdit" scope="col">{{ $t('common.actions') }}</th>
           </tr>
@@ -43,6 +44,16 @@
               <strong>{{ outlet.name }}</strong>
             </td>
             <td class="capitalize">{{ typeLabel(outlet.type) }}</td>
+            <td>
+              <!--
+                An outlet's stock IS this shelf, so it has to be visible here and
+                not buried in an API call. A blank cell means the outlet reads
+                whatever the service line names instead, which is the situation
+                the review complained about.
+              -->
+              <span v-if="outlet.stock_department">{{ outlet.stock_department.name }}</span>
+              <span v-else class="muted">{{ $t('outlets.noStockShelf') }}</span>
+            </td>
             <td>
               <span class="badge" :class="outlet.is_active ? 'badge-green' : 'badge-red'">
                 {{ outlet.is_active ? $t('outlets.statusActive') : $t('outlets.statusInactive') }}
@@ -63,7 +74,7 @@
             </td>
           </tr>
           <tr v-if="!outlets.length && !loading">
-            <td colspan="4" class="muted">{{ $t('outlets.empty') }}</td>
+            <td :colspan="canEdit ? 5 : 4" class="muted">{{ $t('outlets.empty') }}</td>
           </tr>
         </tbody>
       </table>
@@ -90,6 +101,20 @@
             <div class="form-group">
               <label>{{ $t('outlets.type') }}</label>
               <SearchableSelect v-model="form.type" :options="typeOptions" />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('outlets.stockShelf') }}</label>
+              <SearchableSelect
+                v-model="form.stock_department_id"
+                :options="departmentOptions"
+                :placeholder="$t('outlets.noStockShelf')"
+              />
+              <div v-if="form.stock_department_id" class="shelf-clear">
+                <button type="button" class="btn btn-sm btn-secondary" @click="clearStockShelf">
+                  {{ $t('outlets.clearStockShelf') }}
+                </button>
+              </div>
+              <small class="hint">{{ $t('outlets.stockShelfHint') }}</small>
             </div>
           </div>
           <div class="modal-foot">
@@ -120,7 +145,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { outletApi } from '@/api'
+import { outletApi, departmentApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 
@@ -134,11 +159,34 @@ const canEdit = computed(() =>
 const typeOptions = computed(() => [
   { value: 'restaurant', label: t('outlets.typeRestaurant') },
   { value: 'bar', label: t('outlets.typeBar') },
+  { value: 'laundry', label: t('outlets.typeLaundry') },
+  { value: 'swimming', label: t('outlets.typeSwimming') },
+  { value: 'spa', label: t('outlets.typeSpa') },
+  { value: 'kitchen', label: t('outlets.typeKitchen') },
+  { value: 'store', label: t('outlets.typeStore') },
+  { value: 'other', label: t('outlets.typeOther') },
 ])
 
 function typeLabel(type) {
-  return type === 'bar' ? t('outlets.typeBar') : t('outlets.typeRestaurant')
+  const found = typeOptions.value.find((o) => o.value === type)
+  return found ? found.label : t('outlets.typeOther')
 }
+
+/**
+ * The shelves an outlet can be given.
+ *
+ * The shelf currently serving an outlet is still offered even when it belongs
+ * to another venue, so the select shows the truth about where the stock is
+ * rather than hiding a link the manager needs to correct.
+ */
+const departmentOptions = computed(() =>
+  departments.value.map((d) => ({
+    value: d.department_id,
+    label: d.name,
+  })),
+)
+
+const departments = ref([])
 
 const outlets = ref([])
 const loading = ref(false)
@@ -150,7 +198,7 @@ const editing = ref(false)
 const editingId = ref(null)
 const saving = ref(false)
 const modalError = ref('')
-const form = reactive({ name: '', type: 'restaurant' })
+const form = reactive({ name: '', type: 'restaurant', stock_department_id: '' })
 
 const showDelete = ref(false)
 const pendingDelete = ref(null)
@@ -169,12 +217,28 @@ async function load() {
   }
 }
 
+/**
+ * Loads the shelves the shelf picker offers.
+ *
+ * Failure is not surfaced: the outlet is still fully editable without it, and a
+ * stock sheet that would not load must not block somebody from renaming a bar.
+ */
+async function loadDepartments() {
+  try {
+    const res = await departmentApi.index()
+    departments.value = res.data.data || res.data.departments || []
+  } catch {
+    departments.value = []
+  }
+}
+
 function openCreate() {
   modalError.value = ''
   editing.value = false
   editingId.value = null
   form.name = ''
   form.type = 'restaurant'
+  form.stock_department_id = ''
   showModal.value = true
 }
 
@@ -184,7 +248,13 @@ function openEdit(outlet) {
   editingId.value = outlet.outlet_id
   form.name = outlet.name
   form.type = outlet.type || 'restaurant'
+  form.stock_department_id = outlet.stock_department?.department_id || ''
   showModal.value = true
+}
+
+/** Detaches the outlet from its shelf, so it falls back to the service line. */
+function clearStockShelf() {
+  form.stock_department_id = ''
 }
 
 function closeModal() {
@@ -198,10 +268,19 @@ async function save() {
   saving.value = true
   try {
     if (editing.value) {
-      await outletApi.update(editingId.value, form)
+      // An empty shelf is sent as an explicit null so the outlet is detached.
+      // Omitting the field would be read as "not touched" and leave a
+      // mis-pointed outlet stuck on the wrong shelf.
+      await outletApi.update(editingId.value, {
+        ...form,
+        stock_department_id: form.stock_department_id || null,
+      })
       success.value = t('outlets.updateSuccess')
     } else {
-      await outletApi.store(form)
+      await outletApi.store({
+        ...form,
+        stock_department_id: form.stock_department_id || null,
+      })
       success.value = t('outlets.createSuccess')
     }
     showModal.value = false
@@ -256,10 +335,23 @@ function flattenError(err) {
     : err.response?.data?.message || t('common.actionFailed')
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  loadDepartments()
+})
 </script>
 
 <style scoped>
+.shelf-clear {
+  margin-top: 6px;
+}
+
+.hint {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 4px 0 0;
+}
+
 .dashboard-page {
   padding: 32px 20px;
 }

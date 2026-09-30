@@ -1340,7 +1340,17 @@
     "deleteMessage": "Futa sehemu {name}? Maagizo yaliyowekwa tayari yanahifadhiwa, lakini hii inaiondoa kabisa.",
     "deleteTitle": "Futa Sehemu",
     "deleteConfirmLabel": "Futa Sehemu",
-    "empty": "Hakuna sehemu bado. Unda moja — cashier anahitaji sehemu kabla ya kupokea maagizo."
+    "empty": "Hakuna sehemu bado. Unda moja — cashier anahitaji sehemu kabla ya kupokea maagizo.",
+    "typeLaundry": "Uzinzi",
+    "typeSwimming": "Bwoka",
+    "typeSpa": "Spa",
+    "typeKitchen": "Jikofu",
+    "typeStore": "Duka",
+    "typeOther": "Nyingine",
+    "stockShelf": "Rafi ya Stock",
+    "stockShelfHint": "Stock inayotumika kwa maagizo katika sehemu hii inatoka kwenye rafi hii, na maombi yake yanasoma rafi hii. Acha tupu kurudi kwenye service line.",
+    "noStockShelf": "Hakuna rafi",
+    "clearStockShelf": "Futa rafi"
   },
   "printer": {
     "title": "Uunganisho wa Printa",

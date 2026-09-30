@@ -1343,7 +1343,17 @@
     "deleteMessage": "Delete the outlet {name}? Orders already placed are kept, but this removes the outlet permanently.",
     "deleteTitle": "Delete Outlet",
     "deleteConfirmLabel": "Delete Outlet",
-    "empty": "No outlets yet. Create one — cashiers need an outlet before taking orders."
+    "empty": "No outlets yet. Create one — cashiers need an outlet before taking orders.",
+    "typeLaundry": "Laundry",
+    "typeSwimming": "Swimming Pool",
+    "typeSpa": "Spa",
+    "typeKitchen": "Kitchen",
+    "typeStore": "Store",
+    "typeOther": "Other",
+    "stockShelf": "Stock Shelf",
+    "stockShelfHint": "Stock deducted for orders at this outlet comes off this shelf, and its requisitions read it. Leave empty to fall back to the service line.",
+    "noStockShelf": "No shelf set",
+    "clearStockShelf": "Clear shelf"
   },
   "printer": {
     "title": "Printer Connection",

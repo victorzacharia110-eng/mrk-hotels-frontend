@@ -96,6 +96,7 @@ import { formatCategory } from '@/utils/format'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useCategoriesStore } from '@/stores/categories'
 import '@/pages/store/store-shared.css'
+import { selectedOutlet } from '@/composables/useOutletContext'
 
 const { t } = useI18n()
 
@@ -156,6 +157,7 @@ async function saveAdjustment() {
       type: adjustForm.type,
       quantity: Math.abs(adjustForm.quantity),
       notes: adjustForm.reason,
+      outlet_id: selectedOutlet.value?.outlet_id || undefined,
     })
     adjusting.value = null
     success.value = t('inventory.adjusted')
