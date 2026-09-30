@@ -259,13 +259,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { inventoryOpsApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import CalendarInput from '@/components/CalendarInput.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
+import { selectedOutlet } from '@/composables/useOutletContext'
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -467,8 +468,13 @@ async function loadItems() {
     const all = []
     let page = 1
     let last = 1
+    // "Each outlet has its own requisition", so the request is raised against
+    // the outlet the user picked: the picker then reads that outlet's own shelf
+    // quantities rather than the shelf on the staff record, which is what makes
+    // two bar counters ask for stock separately.
+    const outletId = selectedOutlet.value?.outlet_id || undefined
     do {
-      const res = await inventoryOpsApi.requisitionItems({ per_page: 100, page })
+      const res = await inventoryOpsApi.requisitionItems({ per_page: 100, page, outlet_id: outletId })
       const pageItems = res.data?.data || res.data || []
       if (Array.isArray(pageItems)) all.push(...pageItems)
       last = res.data?.last_page ?? 1
@@ -727,6 +733,12 @@ onMounted(async () => {
   loadItems()
   loadDepartments()
 })
+
+// Switching outlet changes which shelf this page is asking about, so the item
+// list has to be re-read. Otherwise the numbers on screen would still be the
+// outlet the user just left, which is how two bars end up requisitioning from
+// each other's stock without anybody noticing.
+watch(() => selectedOutlet.value?.outlet_id, loadItems)
 </script>
 
 <style scoped>
