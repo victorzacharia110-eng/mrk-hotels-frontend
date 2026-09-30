@@ -279,6 +279,10 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  /* Lets the action row drop onto its own line on a narrow screen instead of
+     competing with the heading for the same width. */
+  flex-wrap: wrap;
+  gap: 12px;
   margin-bottom: 20px;
 }
 
@@ -681,6 +685,15 @@ button {
 .head-actions {
   display: flex;
   gap: 10px;
+  /* These rows must wrap. A flex row defaults to nowrap, so the buttons keep
+     their intrinsic width past the edge of the screen, and because `html` and
+     `body` clip horizontal overflow there is nothing to scroll back to. The
+     last button in the row is then not off-screen, it is simply gone: on a
+     360px phone the rooms page put four buttons in 451px of space and the
+     export button, being last, vanished. */
+  flex-wrap: wrap;
+  /* Wrapped rows stay right-aligned, level with the heading. */
+  justify-content: flex-end;
 }
 
 .kpi-grid {
