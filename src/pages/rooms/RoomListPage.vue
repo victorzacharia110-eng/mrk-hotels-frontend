@@ -374,8 +374,8 @@
     <div v-if="loading" class="alert alert-info">{{ $t('rooms.loading') }}</div>
 
     <!-- Room table; shows the current guest under the room number when occupied -->
-    <div v-else class="table-scroll">
-      <table class="table">
+    <div v-else class="table-scroll is-pinned">
+      <table class="table table-pinned">
         <thead>
           <tr>
             <th scope="col" class="bulk-col">
@@ -388,13 +388,13 @@
                 @change="bulk.toggleAll()"
               />
             </th>
-            <th scope="col">{{ $t('rooms.tableRoom') }}</th>
+            <th scope="col" class="pin-col">{{ $t('rooms.tableRoom') }}</th>
             <th scope="col">{{ $t('rooms.tableType') }}</th>
             <th scope="col">{{ $t('rooms.floor') }}</th>
             <th scope="col">{{ $t('rooms.tableRate') }}</th>
             <th scope="col">{{ $t('rooms.tableCapacity') }}</th>
             <th scope="col">{{ $t('rooms.status') }}</th>
-            <th scope="col">{{ $t('common.actions') }}</th>
+            <th scope="col" class="actions-col">{{ $t('common.actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -407,7 +407,7 @@
                 @change="bulk.toggle(room.room_id)"
               />
             </td>
-            <td>
+            <td class="pin-col">
               <strong>{{ room.room_number }}</strong>
               <div v-if="room.current_reservation" class="muted">
                 {{ room.current_reservation.guest_name }}
@@ -425,20 +425,37 @@
             <td>
               <span class="badge" :class="statusBadge(room.status)">{{ room.status }}</span>
             </td>
-            <td>
+            <td class="actions-col">
               <div class="actions">
-                <button v-if="canEdit" class="btn btn-sm btn-secondary" @click="openEdit(room)">
-                  <i class="fas fa-pen"></i> {{ $t('common.edit') }}
+                <button
+                  v-if="canEdit"
+                  class="btn btn-sm btn-secondary"
+                  :title="$t('common.edit')"
+                  :aria-label="$t('common.edit')"
+                  @click="openEdit(room)"
+                >
+                  <i class="fas fa-pen" aria-hidden="true"></i>
+                  <span class="btn-label">{{ $t('common.edit') }}</span>
                 </button>
                 <button
                   v-if="canEdit && room.status !== 'occupied'"
                   class="btn btn-sm btn-secondary"
+                  :title="$t('rooms.status')"
+                  :aria-label="$t('rooms.status')"
                   @click="openStatus(room)"
                 >
-                  <i class="fas fa-arrows-rotate"></i> {{ $t('rooms.status') }}
+                  <i class="fas fa-arrows-rotate" aria-hidden="true"></i>
+                  <span class="btn-label">{{ $t('rooms.status') }}</span>
                 </button>
-                <button v-if="canEdit" class="btn btn-sm btn-danger" @click="remove(room)">
-                  <i class="fas fa-trash"></i>
+                <button
+                  v-if="canEdit"
+                  class="btn btn-sm btn-danger"
+                  :title="$t('common.delete')"
+                  :aria-label="$t('common.delete')"
+                  @click="remove(room)"
+                >
+                  <i class="fas fa-trash" aria-hidden="true"></i>
+                  <span class="btn-label">{{ $t('common.delete') }}</span>
                 </button>
               </div>
             </td>

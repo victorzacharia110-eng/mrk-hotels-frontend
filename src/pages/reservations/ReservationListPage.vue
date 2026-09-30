@@ -115,11 +115,11 @@
     <div v-if="loading" class="alert alert-info">{{ $t('reservations.loading') }}</div>
 
     <!-- Reservation table; row actions depend on the reservation lifecycle status -->
-    <div v-else class="table-scroll">
-      <table class="table">
+    <div v-else class="table-scroll is-pinned">
+      <table class="table table-pinned">
         <thead>
           <tr>
-            <th scope="col">{{ $t('reservations.guest') }}</th>
+            <th scope="col" class="pin-col">{{ $t('reservations.guest') }}</th>
             <th scope="col">{{ $t('reservations.tableBookingType') }}</th>
             <th scope="col">{{ $t('reservations.room') }}</th>
             <th scope="col">{{ $t('reservations.tableStay') }}</th>
@@ -127,12 +127,12 @@
             <th scope="col">{{ $t('reservations.tableTotal') }}</th>
             <th scope="col">{{ $t('reservations.tableBalance') }}</th>
             <th scope="col">{{ $t('reservations.status') }}</th>
-            <th scope="col">{{ $t('common.actions') }}</th>
+            <th scope="col" class="actions-col">{{ $t('common.actions') }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="r in reservations" :key="r.reservation_id">
-            <td>
+            <td class="pin-col">
               <strong>{{ r.guest_name }}</strong>
               <div class="sub">{{ formatPhoneGaps(r.guest_phone) || r.guest_email || '—' }}</div>
               <div v-if="r.city || r.country" class="sub">
@@ -189,45 +189,68 @@
                 r.status.replace('_', ' ')
               }}</span>
             </td>
-            <td>
+            <td class="actions-col">
               <div class="actions">
-                <button class="btn btn-sm btn-secondary" @click="openDetail(r)">
-                  <i class="fas fa-eye"></i> {{ $t('common.view') }}
+                <button
+                  class="btn btn-sm btn-secondary"
+                  :title="$t('common.view')"
+                  :aria-label="$t('common.view')"
+                  @click="openDetail(r)"
+                >
+                  <i class="fas fa-eye" aria-hidden="true"></i>
+                  <span class="btn-label">{{ $t('common.view') }}</span>
                 </button>
                 <button
                   v-if="['pending', 'confirmed'].includes(r.status) && canOperate"
                   class="btn btn-sm btn-success"
+                  :title="$t('reservations.checkIn')"
+                  :aria-label="$t('reservations.checkIn')"
                   @click="openCheckin(r)"
                 >
-                  <i class="fas fa-right-to-bracket"></i> {{ $t('reservations.checkIn') }}
+                  <i class="fas fa-right-to-bracket" aria-hidden="true"></i>
+                  <span class="btn-label">{{ $t('reservations.checkIn') }}</span>
                 </button>
                 <button
                   v-if="r.status === 'checked_in' && canOperate"
                   class="btn btn-sm btn-primary"
+                  :title="$t('reservations.checkOut')"
+                  :aria-label="$t('reservations.checkOut')"
                   @click="openCheckout(r)"
                 >
-                  <i class="fas fa-right-from-bracket"></i> {{ $t('reservations.checkOut') }}
+                  <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+                  <span class="btn-label">{{ $t('reservations.checkOut') }}</span>
                 </button>
                 <button
                   v-if="r.status === 'confirmed' && canOperate"
                   class="btn btn-sm btn-secondary"
+                  :title="$t('reservations.noShow')"
+                  :aria-label="$t('reservations.noShow')"
                   @click="noShow(r)"
                 >
-                  {{ $t('reservations.noShow') }}
+                  <!-- No icon before, so this one had nowhere to collapse to on
+                       a small screen and would have lost its label entirely. -->
+                  <i class="fas fa-user-clock" aria-hidden="true"></i>
+                  <span class="btn-label">{{ $t('reservations.noShow') }}</span>
                 </button>
                 <button
                   v-if="['pending', 'confirmed'].includes(r.status) && canOperate"
                   class="btn btn-sm btn-danger"
+                  :title="$t('common.cancel')"
+                  :aria-label="$t('common.cancel')"
                   @click="cancel(r)"
                 >
-                  <i class="fas fa-ban"></i> {{ $t('common.cancel') }}
+                  <i class="fas fa-ban" aria-hidden="true"></i>
+                  <span class="btn-label">{{ $t('common.cancel') }}</span>
                 </button>
                 <button
                   v-if="['checked_out', 'cancelled'].includes(r.status) && canOperate"
                   class="btn btn-sm btn-danger"
+                  :title="$t('reservations.deletePermanent')"
+                  :aria-label="$t('reservations.deletePermanent')"
                   @click="openDelete(r)"
                 >
-                  <i class="fas fa-trash-can"></i> {{ $t('reservations.deletePermanent') }}
+                  <i class="fas fa-trash-can" aria-hidden="true"></i>
+                  <span class="btn-label">{{ $t('reservations.deletePermanent') }}</span>
                 </button>
               </div>
             </td>

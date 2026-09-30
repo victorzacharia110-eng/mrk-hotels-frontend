@@ -376,6 +376,97 @@ button {
   background: #fafafa;
 }
 
+/* ─── Wide tables that stay usable on a phone ────────────────────────────────
+   A table with eight or nine columns has to scroll sideways on a small screen,
+   and a plain scroll hides two things that matter: the column headers, so you
+   stop knowing what a figure means, and the row's buttons, which sit in the last
+   column and so are the first thing pushed off the edge.
+
+   This is opt-in, applied per table with `table-pinned`, and it pins three
+   things at once:
+     - the header row, so the labels stay put;
+     - the first column, so you always know which row you are looking at;
+     - the actions column, so the buttons are always on screen.
+
+   The header can only pin to something that scrolls vertically, so on small
+   screens the wrapper is given a height and scrolls in both directions. Without
+   that the header would silently not stick, because `overflow-x: auto` also
+   makes the wrapper a vertical scroll container that never actually scrolls.
+   -------------------------------------------------------------------------- */
+.table-scroll.is-pinned {
+  /* A faint edge and an opaque ground, so the panel reads as something that
+     scrolls rather than as a table that was cut off at the edge of the page. */
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.table-pinned thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+/* The identity column. Stays left while the middle of the row scrolls under. */
+.table-pinned .pin-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  /* Opaque, or the columns scrolling underneath show straight through it. */
+  background: var(--card);
+  /* Capped, and allowed to wrap: a long guest name must not widen the pinned
+     column until there is no room left for the data it labels. */
+  min-width: 130px;
+  max-width: 200px;
+}
+
+/* The actions column, pinned to the right. This is the fix for buttons that
+   were hidden: whatever else is scrolled off, these stay reachable. */
+.table-pinned .actions-col {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: var(--card);
+  /* A soft shadow on the inner edge, so the pinned column reads as sitting on
+     top of the scrolled content rather than as part of it. */
+  box-shadow: -8px 0 8px -8px rgba(0, 0, 0, 0.25);
+}
+
+.table-pinned thead th.pin-col,
+.table-pinned thead th.actions-col {
+  z-index: 4;
+  background: #f9f9f9;
+  max-width: none;
+}
+
+/* Row hover paints the row, but a transparent pinned cell would let the hover
+   show through the pinned column and break the illusion it is floating. */
+.table-pinned tbody tr:hover .pin-col,
+.table-pinned tbody tr:hover .actions-col {
+  background: #fafafa;
+}
+
+@media (max-width: 900px) {
+  /* The wrapper scrolls vertically here, which is what lets the header pin. */
+  .table-scroll.is-pinned {
+    max-height: 72vh;
+    overflow-y: auto;
+  }
+
+  /* Icon-only actions, so the pinned column stays narrow enough to be worth
+     pinning. The labels come back as a tooltip and to screen readers. */
+  .table-pinned .btn-label {
+    display: none;
+  }
+
+  .table-pinned .actions .btn {
+    /* Keep a comfortable tap target once the text is gone. */
+    min-width: 40px;
+    justify-content: center;
+    padding: 8px 10px;
+  }
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
