@@ -62,7 +62,7 @@
             v-model="filters.vip"
             :options="vipFilterOptions"
             :empty-label="$t('common.all')"
-            @change="load"
+            @change="searchImmediately"
           />
         </div>
         <div class="form-group">
@@ -324,6 +324,7 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { todayISO } from '@/utils/dates'
 import { collectAllRows } from '@/utils/export'
+import { useListSearch } from '@/composables/useListSearch'
 import { findCountryCode } from '@/utils/locations'
 import { formatPhoneNational, normalizePhoneNumber } from '@/utils/phone'
 import { bindLiveValidation, collectErrors, email, isBlank, phone, required } from '@/utils/formValidation'
@@ -368,6 +369,12 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 
+// Coalesces the search boxes' keystrokes into one request and keeps a slow
+// earlier response from overwriting a newer one. The review reported the
+// nationality box as "not working" with the endpoint behaving correctly, and
+// this is where the fault was.
+const { runSearch: searchNow, runNow: searchImmediately } = useListSearch(load)
+
 // Create/edit modal state and its form model.
 const showModal = ref(false)
 const editing = ref(false)
@@ -404,9 +411,15 @@ const form = reactive({
 
 /**
  * Fetches the current page of guests applying the active filters.
+ *
+ * `isCurrent` is false when a newer search has since been issued, in which case
+ * this response is discarded: typing a term fires several requests, and the one
+ * for a half-typed term must not be the one left on screen.
+ *
+ * @param {() => boolean} [isCurrent]  Whether this is still the newest request.
  * @returns {Promise<void>}
  */
-async function load() {
+async function load(isCurrent = () => true) {
   loading.value = true
   error.value = ''
   try {
@@ -417,12 +430,14 @@ async function load() {
       page: page.value,
       per_page: 15,
     })
+    if (!isCurrent()) return
     guests.value = res.data.data || []
     meta.value = res.data
   } catch (err) {
+    if (!isCurrent()) return
     error.value = err.response?.data?.message || t('guests.loadError')
   } finally {
-    loading.value = false
+    if (isCurrent()) loading.value = false
   }
 }
 
@@ -457,9 +472,16 @@ function clearFilters() {
 }
 
 /** Search-as-you-type handler: resets to page 1 and reloads on each input. */
+/**
+ * Search handler for the free-text and nationality boxes.
+ *
+ * The page is reset to the first page first, since a filter applied while on
+ * page 3 would otherwise look for results on a page the filtered set may not
+ * have -- the same confusion the review raised about the room page.
+ */
 function triggerSearch() {
   page.value = 1
-  load()
+  searchNow()
 }
 
 /** Restores the guest form to its empty default state. */
