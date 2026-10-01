@@ -405,6 +405,30 @@ button {
   background: var(--card);
 }
 
+/* `.table` clips itself to its rounded corners with `overflow: hidden`, and that
+   quietly makes every table a scroll container in its own right. A sticky header
+   inside one then pins to the table's own top edge and rides away with the rows
+   instead of staying in view, so the rule above silently did nothing. The
+   wrapper carries the border and radius for these tables, so the table does not
+   need to clip itself. */
+.table.table-pinned {
+  overflow: visible;
+  /* The wrapper draws the frame for these tables, so the table drops its own
+     border and radius; keeping both meant two frames and, with the clip gone,
+     square header corners sitting over the wrapper's rounded ones. */
+  border: none;
+  border-radius: 0;
+}
+
+/* Match the header's top corners to the wrapper's frame. */
+.table-pinned thead th:first-child {
+  border-top-left-radius: var(--radius);
+}
+
+.table-pinned thead th:last-child {
+  border-top-right-radius: var(--radius);
+}
+
 .table-pinned thead th {
   position: sticky;
   top: 0;

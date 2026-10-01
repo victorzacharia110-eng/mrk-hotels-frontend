@@ -256,7 +256,7 @@
         </div>
 
         <div v-if="blocksLoading" class="alert alert-info">{{ $t('rooms.loading') }}</div>
-        <div v-else-if="calRooms.length" class="table-scroll">
+        <div v-else-if="calRooms.length" class="table-scroll cal-scroll">
           <table class="table stop-sell-calendar">
             <thead>
               <tr>
@@ -1338,6 +1338,9 @@ onMounted(() => {
 */
 .stop-sell-calendar {
   table-layout: fixed;
+  /* Same trap as `.table`: clipping to the rounded corners makes the table a
+     scroll container, which stops the day header sticking. */
+  overflow: visible;
 }
 
 .stop-sell-calendar .cal-room-col {
@@ -1347,6 +1350,34 @@ onMounted(() => {
   background: var(--card, #fff);
   min-width: 110px;
   text-align: left;
+}
+
+/* The calendar scrolls in both directions, and the day header has to stay put.
+   Without it, reaching room 30 scrolls the dates off the top of the grid and
+   every row below becomes unreadable: you can see that a room is stopped, but
+   not on which night, which is the only thing that matters here.
+
+   A sticky header needs something to pin to, and `overflow-x: auto` on its own
+   makes this wrapper a vertical scroller that never scrolls, so the height is
+   set explicitly and the grid scrolls inside its own box. */
+.table-scroll.cal-scroll {
+  max-height: 62vh;
+  overflow-y: auto;
+}
+
+.stop-sell-calendar thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f9f9f9;
+}
+
+/* The "Room" cell sits on both pinned axes, so it has to out-rank the day
+   headers it overlaps. It also joins the header's grey band, otherwise the
+   corner reads as a gap in it. */
+.stop-sell-calendar thead th.cal-room-col {
+  z-index: 3;
+  background: #f9f9f9;
 }
 
 .stop-sell-calendar .cal-room-col .muted {

@@ -97,6 +97,12 @@ function build(component, user = { user_role: 'hotel_admin' }) {
 }
 
 const css = readFileSync(resolve(process.cwd(), 'src/assets/base.css'), 'utf8')
+// The stop-sell calendar is a different table in a different file, and its grid
+// has the same pinning requirement with one less axis.
+const roomPageSrc = readFileSync(
+  resolve(process.cwd(), 'src/pages/rooms/RoomListPage.vue'),
+  'utf8',
+)
 
 describe('Wide tables stay usable when the screen is small', () => {
   beforeEach(() => {
@@ -150,6 +156,44 @@ describe('Wide tables stay usable when the screen is small', () => {
       expect(row.find('td.actions-col').exists()).toBe(true)
       wrapper.unmount()
     }
+  })
+
+  it('does not let a table clip itself out of its own sticky header', () => {
+    // `.table` rounds its corners with `overflow: hidden`, which silently makes
+    // every table a scroll container. A sticky header inside one then pins to
+    // the table's own top edge and rides away with the rows: measured in a real
+    // browser, the header drifted -700px on both tables before this was fixed,
+    // even though the sticky rule itself was present and correct.
+    const pinned = css.match(/\.table\.table-pinned\s*\{([^}]*)\}/)
+    expect(pinned).toBeTruthy()
+    expect(pinned[1]).toMatch(/overflow:\s*visible/)
+
+    // The clip is what drew the table's own frame, so the wrapper has to be the
+    // only frame, or the two edges sit on top of each other.
+    expect(pinned[1]).toMatch(/border:\s*none/)
+
+    const corner = css.match(/\.table-pinned thead th:first-child\s*\{([^}]*)\}/)
+    expect(corner).toBeTruthy()
+    expect(corner[1]).toMatch(/border-top-left-radius:\s*var\(--radius\)/)
+  })
+
+  it('gives the stop-sell calendar a header that stays put', () => {
+    // Same trap: the calendar is a `.table`, so it needs the same escape.
+    const cal = roomPageSrc.match(/\.stop-sell-calendar\s*\{([^}]*)\}/)
+    expect(cal).toBeTruthy()
+    expect(cal[1]).toMatch(/overflow:\s*visible/)
+    expect(cal[1]).toMatch(/table-layout:\s*fixed/)
+
+    // A sticky header needs something to pin to, so the calendar box is given a
+    // height of its own and scrolls inside it.
+    const scroll = roomPageSrc.match(/\.table-scroll\.cal-scroll\s*\{([^}]*)\}/)
+    expect(scroll).toBeTruthy()
+    expect(scroll[1]).toMatch(/max-height:/)
+    expect(scroll[1]).toMatch(/overflow-y:\s*auto/)
+
+    // The room column already pinned horizontally and must out-rank the day
+    // headers, or it slides underneath them.
+    expect(roomPageSrc).toMatch(/\.stop-sell-calendar thead th\.cal-room-col\s*\{[^}]*z-index:\s*3/)
   })
 
   it('actually sticks the header, the pinned columns and the actions', () => {
