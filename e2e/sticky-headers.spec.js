@@ -39,6 +39,27 @@ test.beforeEach(async ({ page }) => {
  * columns ended up relative to the box they are pinned inside.
  */
 async function geometry(page, wrapper) {
+  // Guard: never measure layout before the sticky rules are live. The dev server
+  // (the default `webServer` here) streams CSS as separate modules, so `load` can
+  // fire while the rules are still in flight and a correct column reads as
+  // unpinned. Waiting keeps every assertion below about rendered layout.
+  await page.waitForFunction(
+    (sel) => {
+      const box = document.querySelector(sel)
+      const table = box?.querySelector('table')
+      const actions = table?.querySelector('tbody tr .actions-col')
+      const corner = table?.querySelector('thead th.pin-col')
+      return (
+        !!actions &&
+        !!corner &&
+        getComputedStyle(actions).position === 'sticky' &&
+        getComputedStyle(corner).position === 'sticky'
+      )
+    },
+    wrapper,
+    { timeout: 10_000 },
+  )
+
   return page.evaluate((sel) => {
     const box = document.querySelector(sel)
     if (!box) return { error: `no ${sel} on this page` }
@@ -65,18 +86,30 @@ async function geometry(page, wrapper) {
           const cornerRect = corner.getBoundingClientRect()
           const midRect = midHead.getBoundingClientRect()
 
+          // Compare against the scrollport, not the border box. The border box
+          // returned by getBoundingClientRect() includes the scrollbar, and these
+          // grids are tall enough to always have a vertical one. A `right: 0`
+          // sticky cell lines up with the *content* edge, so measuring against
+          // `boxRect.right` reads a full scrollbar width of "not pinned" on a
+          // column that is pinned perfectly. That made this test fail for the
+          // wrong reason on any platform with classic scrollbars.
+          const viewLeft = boxRect.left + box.clientLeft
+          const viewTop = boxRect.top + box.clientTop
+          const viewRight = viewLeft + box.clientWidth
+          const viewBottom = viewTop + box.clientHeight
+
           resolve({
             scrolledVertically: box.scrollTop > 0,
             scrolledHorizontally: box.scrollLeft > 0,
             // Sticky on both axes at once: the corner sits at the top-left of the
             // grid no matter which way the table was scrolled.
             cornerAtTopLeft:
-              Math.abs(cornerRect.top - boxRect.top) < 3 &&
-              Math.abs(cornerRect.left - boxRect.left) < 3,
-            cornerVisible: cornerRect.bottom > boxRect.top && cornerRect.top < boxRect.bottom,
-            midHeaderVisible: midRect.bottom > boxRect.top && midRect.top < boxRect.bottom,
-            firstColumnPinnedLeft: Math.abs(pinRect.left - boxRect.left) < 3,
-            lastColumnPinnedRight: Math.abs(actRect.right - boxRect.right) < 3,
+              Math.abs(cornerRect.top - viewTop) < 3 &&
+              Math.abs(cornerRect.left - viewLeft) < 3,
+            cornerVisible: cornerRect.bottom > viewTop && cornerRect.top < viewBottom,
+            midHeaderVisible: midRect.bottom > viewTop && midRect.top < viewBottom,
+            firstColumnPinnedLeft: Math.abs(pinRect.left - viewLeft) < 3,
+            lastColumnPinnedRight: Math.abs(actRect.right - viewRight) < 3,
             cornerAboveBody: Number(getComputedStyle(corner).zIndex) >= 4,
           })
         })
@@ -140,6 +173,10 @@ test('stop-sell calendar: the day header stays put when you scroll to lower room
 
     box.scrollTop = 500
     const boxRect = box.getBoundingClientRect()
+    // Same scrollport reasoning as `geometry()`: the border box includes the
+    // vertical scrollbar, a sticky cell lines up with the content edge.
+    const viewLeft = boxRect.left + box.clientLeft
+    const viewTop = boxRect.top + box.clientTop
     const headRect = head.getBoundingClientRect()
     const roomCell = table.querySelector('tbody tr td.cal-room-col').getBoundingClientRect()
     const rows = table.querySelectorAll('tbody tr').length
@@ -147,9 +184,9 @@ test('stop-sell calendar: the day header stays put when you scroll to lower room
     return {
       rows,
       scrolledVertically: box.scrollTop > 0,
-      headerVisible: headRect.bottom > boxRect.top && headRect.top < boxRect.bottom,
-      headerAtTopOfBox: Math.abs(headRect.top - boxRect.top) < 3,
-      roomColumnPinnedLeft: Math.abs(roomCell.left - boxRect.left) < 3,
+      headerVisible: headRect.bottom > viewTop && headRect.top < viewTop + box.clientHeight,
+      headerAtTopOfBox: Math.abs(headRect.top - viewTop) < 3,
+      roomColumnPinnedLeft: Math.abs(roomCell.left - viewLeft) < 3,
     }
   })
 
