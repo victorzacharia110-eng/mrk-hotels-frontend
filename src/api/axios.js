@@ -2,10 +2,10 @@
  * Shared axios instance for every API call.
  *
  * The base URL comes from VITE_API_URL and falls back to the local Laravel
- * dev server. The request interceptor stamps the bearer token and the owner's
- * tenant context (X-Tenant-ID) on outgoing calls; the response interceptor
- * flattens Laravel pagination metadata onto the payload and forces a re-login
- * when the session has expired (401).
+ * dev server. The request interceptor stamps the bearer token, the owner's
+ * tenant context (X-Tenant-ID) and the current UI language (Accept-Language) on
+ * outgoing calls; the response interceptor flattens Laravel pagination metadata
+ * onto the payload and forces a re-login when the session has expired (401).
  */
 
 import axios from 'axios'
@@ -30,6 +30,12 @@ api.interceptors.request.use((config) => {
   if (ownerHotel) {
     config.headers['X-Tenant-ID'] = ownerHotel
   }
+  // Which language this screen is in, so the API can send menu items back in the
+  // same one. Read per request rather than captured once, because the user can
+  // flip the language switch without a page reload and the next menu fetch has
+  // to follow. `localStorage` is the same key i18n.js persists the choice under.
+  const locale = localStorage.getItem('locale') || 'en'
+  config.headers['Accept-Language'] = locale
   // Let the browser set the boundary for multipart uploads.
   if (config.data instanceof FormData) {
     delete config.headers['Content-Type']

@@ -1322,6 +1322,13 @@
     "categoryRequired": "Chagua kategoria ya kitu hiki.",
     "subCategoryRequiredHint": "Inahitajika. Chagua kundi ndogo ndani ya kategoria, kwa mfano Nyanya chini ya Chakula.",
     "subCategoryRequired": "Chagua kategoria ndogo ya kitu hiki.",
+    "subCategory": "Kundi dogo",
+    "addSubCategory": "Ongeza kundi dogo",
+    "itemNameSw": "Jina la bidhaa (Kiswahili)",
+    "itemNameSwPlaceholder": "kwa mfano Nduma za nyama",
+    "descriptionSw": "Maelezo (Kiswahili)",
+    "descriptionSwPlaceholder": "Acha tupu ili kuonyesha maelezo ya Kiingereza kwenye screen ya Kiswahili.",
+    "translationHint": "Si lazima. Acha tupu na jina la Kiingereza litatumika kwenye screen ya Kiswahili.",
     "pickSubCategory": "Chagua kategoria ndogo",
     "pickCategoryFirst": "Chagua kategoria kwanza"
   },

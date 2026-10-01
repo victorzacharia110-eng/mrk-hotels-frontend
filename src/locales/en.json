@@ -1325,6 +1325,13 @@
     "categoryRequired": "Choose a category for this item.",
     "subCategoryRequiredHint": "Required. Pick the group inside the category, e.g. Soup under Food.",
     "subCategoryRequired": "Choose a sub-category for this item.",
+    "subCategory": "Sub-category",
+    "addSubCategory": "Add a sub-category",
+    "itemNameSw": "Item name (Kiswahili)",
+    "itemNameSwPlaceholder": "e.g. Nduma za nyama",
+    "descriptionSw": "Description (Kiswahili)",
+    "descriptionSwPlaceholder": "Leave blank to show the English text on a Kiswahili screen.",
+    "translationHint": "Optional. Leave blank and the English name is used on a Kiswahili screen.",
     "pickSubCategory": "Choose a sub-category",
     "pickCategoryFirst": "Choose a category first"
   },

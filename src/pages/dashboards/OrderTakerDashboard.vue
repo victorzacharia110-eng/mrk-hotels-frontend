@@ -9,7 +9,10 @@
   or settling - those stay with the manager on the orders module.
 -->
 <template>
-  <div class="taker-page" :class="{ 'pos-theme': isPosRole }">
+  <div
+    class="taker-page"
+    :class="{ 'pos-theme': isPosRole, 'taker-fixed': activeTab === 'new' }"
+  >
     <!-- One-place tabs: dashboard, take a new order or work the open ones (single tap) -->
     <nav class="pos-tabs">
       <button
@@ -92,13 +95,22 @@
             />
           </div>
           <div v-if="menuLoading" class="cat-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></div>
-          <div v-else-if="categories.length" class="cat-grid">
+          <!--
+            A horizontal rail, not a grid. As a grid the category list grew
+            downward and pushed the food cards off the bottom of the pad, so
+            reaching the last department meant scrolling past everything else.
+            A rail keeps every category on one line, so switching department is
+            a sideways swipe and the food list below never moves.
+          -->
+          <div v-else-if="categories.length" class="cat-rail" role="tablist">
             <button
               v-for="cat in categories"
               :key="cat"
               type="button"
+              role="tab"
               class="cat-btn"
               :class="{ active: activeCategory === cat }"
+              :aria-selected="activeCategory === cat"
               @click="openCategory(cat)"
             >
               {{ cat }}
@@ -125,7 +137,7 @@
               :disabled="item.is_in_stock === false"
               @click="addItem(item)"
             >
-              <span class="cat-item-name">{{ item.item_name }}</span>
+              <span class="cat-item-name">{{ dishName(item) }}</span>
               <span class="cat-item-price">TZS {{ money(item.price) }}</span>
               <span v-if="item.is_in_stock === false" class="cat-item-oos">
                 {{ $t('orderTaker.outOfStock') }}
@@ -138,8 +150,20 @@
           </div>
           <p v-else class="cat-empty">{{ $t('orderTaker.emptyCategory') }}</p>
         </div>
+      </div>
 
-        <!-- Dine-in table map: which tables are free vs occupied (and by whom) -->
+      <!-- RIGHT: the selected order panel, like the Ezee order book -->
+      <div class="ts-right">
+        <!--
+          Dine-in table map: which tables are free vs occupied (and by whom).
+
+          This used to sit at the BOTTOM of the left column, underneath the food
+          cards. The food list grows with the menu, so the further down it was,
+          the further down the tables were, and assigning a table meant scrolling
+          past the entire menu every time. It now leads the right rail and is
+          sticky, so it is on screen at the same place no matter how long the
+          order or the food list gets.
+        -->
         <div class="table-map" v-if="servingTables.length">
           <div class="cat-panel-head">
             <i class="fas fa-chair" aria-hidden="true"></i> {{ $t('orderTaker.tablesLabel') }}
@@ -165,14 +189,8 @@
               <span v-else class="table-chip-free">{{ $t('orderTaker.tableFree') }}</span>
             </button>
           </div>
-          <p v-if="!servingTables.length" class="map-empty">
-            {{ isBartender ? $t('orderTaker.barCounterHint') : $t('orderTaker.noTables') }}
-          </p>
         </div>
-      </div>
 
-      <!-- RIGHT: the selected order panel, like the Ezee order book -->
-      <div class="ts-right">
         <!-- Order header: No, waiter, diners, VIP, transaction type -->
         <header class="order-header">
           <div class="oh-field">
@@ -523,7 +541,7 @@
               :class="{ 'item-done': item.status === 'served' }"
             >
               <span class="item-line-text">
-                {{ item.quantity }}× {{ item.item_name }}<template v-if="item.accompaniment"> · {{ item.accompaniment }}</template>
+                {{ item.quantity }}× {{ dishName(item) }}<template v-if="item.accompaniment"> · {{ item.accompaniment }}</template>
               </span>
               <span class="item-status-pill" :class="statusBadge(item.status)">{{ statusLabel(item.status) }}</span>
               <button
@@ -531,7 +549,7 @@
                 type="button"
                 class="item-advance"
                 :disabled="advancingItem === item.order_item_id"
-                :aria-label="$t('orderTaker.itemTo', { item: item.item_name, status: statusLabel(nextItemStatus(item)) })"
+                :aria-label="$t('orderTaker.itemTo', { item: dishName(item), status: statusLabel(nextItemStatus(item)) })"
                 @click="advanceItem(order, item)"
               >
                 <i class="fas" :class="nextItemStatus(item) === 'served' ? 'fa-utensils' : 'fa-bell-concierge'" aria-hidden="true"></i>
@@ -755,7 +773,7 @@
                       <ul class="summary-items">
                         <li v-for="item in order.items || []" :key="item.order_item_id">
                           <span class="item-line-text">
-                            {{ item.quantity }}× {{ item.item_name }}<template v-if="item.accompaniment"> · {{ item.accompaniment }}</template>
+                            {{ item.quantity }}× {{ dishName(item) }}<template v-if="item.accompaniment"> · {{ item.accompaniment }}</template>
                           </span>
                           <span class="summary-item-amount">TZS {{ money(item.subtotal ?? Number(item.unit_price || 0) * Number(item.quantity || 1)) }}</span>
                         </li>
@@ -1340,7 +1358,7 @@ async function advanceItem(order, item) {
   advancingItem.value = item.order_item_id
   try {
     await orderApi.markItemStatus(order.order_id, item.order_item_id, next)
-    sentToast.value = t('orderTaker.itemAdvanced', { item: item.item_name, status: statusLabel(next) })
+    sentToast.value = t('orderTaker.itemAdvanced', { item: dishName(item), status: statusLabel(next) })
     setTimeout(() => (sentToast.value = ''), 3000)
     await loadOpenOrders()
     loadDeptOrders()
@@ -2392,6 +2410,7 @@ const searchResults = computed(() => {
   if (!q) return []
   return availableMenu.value.filter(
     (item) =>
+      (item.item_name_display || item.item_name || '').toLowerCase().includes(q) ||
       item.item_name.toLowerCase().includes(q) ||
       (item.category || '').toLowerCase().includes(q),
   )
@@ -2435,6 +2454,23 @@ function money(value) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
+}
+
+/**
+ * The dish name to show on this screen.
+ *
+ * `item_name_display` is resolved by the API from the `Accept-Language` header
+ * this client sends (see `src/api/axios.js`), so a waiter on a Kiswahili device
+ * reads Kiswahili dish names on an otherwise Kiswahili screen. The fallback to
+ * the raw `item_name` covers an older payload or a cached response.
+ *
+ * Only ever for DISPLAY. Anything written back to the API — the order line's
+ * `item_name` — keeps the English `item_name`, because that string is what the
+ * kitchen ticket, the stock report and the sales figures are keyed on, and it
+ * must not change because someone turned the screen language over.
+ */
+function dishName(item) {
+  return item?.item_name_display || item?.item_name || ''
 }
 
 /** Formats a plain number (no currency) with thousands separators. */
@@ -2513,11 +2549,11 @@ function accompanimentLabel(value) {
  */
 function addItem(item) {
   if (item.is_in_stock === false) {
-    toast(t('orderTaker.outOfStockToast', { name: item.item_name }), 'error')
+    toast(t('orderTaker.outOfStockToast', { name: dishName(item) }), 'error')
     return
   }
   if (syncedStockExhausted(item)) {
-    toast(t('orderTaker.outOfStockToast', { name: item.item_name }), 'error')
+    toast(t('orderTaker.outOfStockToast', { name: dishName(item) }), 'error')
     return
   }
   if (isGrillItem(item)) {
@@ -2557,8 +2593,8 @@ function commitItem(item, accompaniment) {
       key,
       menu_item_id: item.menu_item_id,
       item_name: accompaniment
-        ? `${item.item_name} · ${accompanimentLabel(accompaniment)}`
-        : item.item_name,
+        ? `${dishName(item)} · ${accompanimentLabel(accompaniment)}`
+        : dishName(item),
       accompaniment,
       unit_price: Number(item.price),
       quantity: 1,
@@ -2822,11 +2858,77 @@ function onKey(e) {
   top: 12px;
 }
 
+/*
+ * The order-taking tab fills the window instead of growing the page.
+ *
+ * This is the fix for "the contents are getting larger and it becomes difficult
+ * to assign the tables, you must scroll down". On a page that scrolls, the food
+ * list and the table cards are both on the same single column of content, so
+ * making the menu longer pushes everything else further away and the waiter
+ * scrolls to reach a table on every ticket. Pinning the tab to the viewport and
+ * giving each region its own scroll area means the categories, the food and the
+ * tables are all on screen at once, permanently, and only the food list moves.
+ *
+ * Scoped to the 'new' tab on purpose: the dashboard, open-orders and summary
+ * tabs are reports, they are read by scrolling, and forcing them into a
+ * viewport-height box would be the wrong trade.
+ */
+.taker-page.taker-fixed {
+  height: 100vh;
+  overflow: hidden;
+}
+.taker-page.taker-fixed .taker-split {
+  /* Fill the height left over under the tab strip, and let the columns shrink
+     below their content height — without `min-height: 0` a flex/grid child
+     refuses to shrink and the page scrolls anyway, which is the bug. */
+  flex: 1 1 auto;
+  min-height: 0;
+  align-items: stretch;
+}
+.taker-page.taker-fixed .ts-left,
+.taker-page.taker-fixed .ts-right {
+  min-height: 0;
+  height: 100%;
+}
+/* The order side scrolls as one piece so the sticky table map has something to
+   stick inside. */
+.taker-page.taker-fixed .ts-right {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* The picker side does not scroll; the food box below the rail does. */
+.taker-page.taker-fixed .ts-left {
+  overflow: hidden;
+}
+
+/*
+ * The table map leads the right rail and stays put while the order scrolls under
+ * it, so a table is always one tap away and never below the fold.
+ */
+.ts-right .table-map {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+/* Below the sticky map the order content needs to be able to pass under it
+   without the map's own background showing through. */
+.taker-page.taker-fixed .table-map {
+  max-height: 42vh;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .inline-items {
   background: #fff;
   border: 1px solid #d4d4d8;
   border-radius: 10px;
   overflow: hidden;
+  /* Column layout so the food grid below can take the leftover height and scroll
+     inside it, instead of the whole page growing. */
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 .inline-items-head {
   display: flex;
@@ -2841,7 +2943,22 @@ function onKey(e) {
 }
 .inline-items-head strong { text-transform: uppercase; letter-spacing: 0.03em; }
 .inline-items-head .line-remove { color: #fff; background: none; border: none; font-size: 16px; cursor: pointer; }
-.inline-grid { max-height: none; }
+/*
+ * The food list is the one region that scrolls vertically.
+ *
+ * It was `max-height: none` on purpose at one point, which meant the list simply
+ * grew and pushed the page taller — the reason reaching the tables meant
+ * scrolling. Now it takes whatever height is left between the category rail and
+ * the bottom of the window and scrolls inside that, so the rail above it and the
+ * table cards to the right never move.
+ */
+.inline-grid {
+  max-height: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 
 .cat-btn.active {
   background: var(--pad-accent);
@@ -2863,6 +2980,13 @@ function onKey(e) {
   max-height: 520px;
   overflow-y: auto;
   padding-right: 4px;
+}
+/* Inside the viewport-height layout the map is capped by 42vh rather than a flat
+   520px, so the grid takes the space left inside it and scrolls there. */
+.taker-page.taker-fixed .table-map-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
 }
 .table-chip {
   display: flex;
@@ -2936,6 +3060,38 @@ function onKey(e) {
 @media (max-width: 820px) {
   .taker-split { grid-template-columns: 1fr; }
   .ts-right { position: static; }
+
+  /*
+   * Hand the scrolling back to the page on a phone.
+   *
+   * The viewport-height layout is a pad-on-a-counter arrangement: it needs real
+   * width for the food grid and the right rail side by side, and it assumes
+   * there is height to spare. Stacked on a phone it would leave the food box a
+   * few centimetres tall, so below this width everything goes back to being one
+   * normally scrolling page.
+   */
+  .taker-page.taker-fixed {
+    height: auto;
+    overflow: visible;
+  }
+  .taker-page.taker-fixed .taker-split,
+  .taker-page.taker-fixed .ts-left,
+  .taker-page.taker-fixed .ts-right {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+  .taker-page.taker-fixed .inline-grid {
+    /* Uncapped again: on a phone the food list is the page. */
+    max-height: none;
+    overflow-y: visible;
+  }
+  .taker-page.taker-fixed .table-map {
+    max-height: none;
+  }
+  .ts-right .table-map {
+    position: static;
+  }
 }
 
 /* ---- Order header ---- */
@@ -3435,10 +3591,37 @@ function onKey(e) {
   background: #fff;
 }
 
-.cat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+/*
+ * The category rail: every department on one line, scrolled sideways.
+ *
+ * As a wrapping grid this list grew downward and took the food cards off the
+ * bottom of the pad with it. A single non-wrapping row keeps all of them
+ * reachable with a sideways swipe, and because the rail is pinned above the food
+ * box the categories stay on screen while the food below is scrolled.
+ */
+.cat-rail {
+  display: flex;
   gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Room for the lift-on-hover shadow, which would otherwise be clipped by the
+     rail's own overflow box. */
+  padding: 4px 2px 8px;
+  margin: -4px -2px 0;
+  scrollbar-width: thin;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.cat-rail .cat-btn {
+  flex: 0 0 auto;
+  /* Categories are words, and the words vary from "Soup" to
+     "Cold Beverages"; a fixed width clipped the long ones. */
+  min-width: 132px;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  scroll-snap-align: start;
 }
 
 .cat-btn {
@@ -4450,9 +4633,10 @@ function onKey(e) {
     font-size: 16px;
   }
 
-  .cat-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 8px;
+  /* Narrow enough to read comfortably: smaller chips so more fit per swipe. */
+  .cat-rail .cat-btn {
+    min-width: 112px;
+    font-size: 13px;
   }
 
   .cat-btn {

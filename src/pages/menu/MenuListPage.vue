@@ -222,6 +222,16 @@
               <label>{{ $t('menu.itemName') }}</label>
               <input v-model="form.item_name" type="text" class="input" required />
             </div>
+            <div class="form-group form-full">
+              <label>{{ $t('menu.itemNameSw') }}</label>
+              <input
+                v-model="form.item_name_sw"
+                type="text"
+                class="input"
+                :placeholder="$t('menu.itemNameSwPlaceholder')"
+              />
+              <p class="muted">{{ $t('menu.translationHint') }}</p>
+            </div>
             <div class="form-group">
               <label>{{ $t('common.department') }} *</label>
               <SearchableSelect v-model="form.department" :options="departmentOptions" required />
@@ -265,6 +275,22 @@
                 @change="onFormSubCategoryChange"
               />
               <p class="muted">{{ $t('menu.subCategoryRequiredHint') }}</p>
+              <!--
+                The sub-category used to be reachable only from the "Manage
+                categories" button in the page header, which is what made it look
+                like the second level did not exist. This puts the way to create
+                one directly under the box that needs it: pick a category, and
+                the button becomes the next step rather than a hunt.
+              -->
+              <button
+                type="button"
+                class="btn btn-link sub-add-inline"
+                :disabled="!form.category"
+                :title="form.category ? '' : $t('menu.pickCategoryFirst')"
+                @click="openCategoriesFromItemForm"
+              >
+                <i class="fas fa-plus"></i> {{ $t('menu.addSubCategory') }}
+              </button>
             </div>
             <div class="form-group">
               <label>{{ $t('menu.priceTzs') }}</label>
@@ -309,6 +335,15 @@
             <div class="form-group form-full">
               <label>{{ $t('menu.description') }}</label>
               <textarea v-model="form.description" rows="2" class="textarea"></textarea>
+            </div>
+            <div class="form-group form-full">
+              <label>{{ $t('menu.descriptionSw') }}</label>
+              <textarea
+                v-model="form.description_sw"
+                rows="2"
+                class="textarea"
+                :placeholder="$t('menu.descriptionSwPlaceholder')"
+              ></textarea>
             </div>
           </div>
           <div class="modal-foot">
@@ -594,6 +629,12 @@ const saving = ref(false)
 const modalError = ref('')
 const form = reactive({
   item_name: '',
+  // The Kiswahili name and description. Optional, and deliberately separate
+  // from the English pair rather than a single field with a language toggle:
+  // the English text is the one that identifies the item on the receipt, the
+  // stock report and the kitchen ticket, so it must never be a field that can
+  // be switched away and lost. Blank Kiswahili falls back to English on read.
+  item_name_sw: '',
   category: '',
   // The review requires a category AND a sub-category on every registered item,
   // so the sub-category is part of the form rather than only something the
@@ -604,6 +645,7 @@ const form = reactive({
   price: null,
   cost: null,
   description: '',
+  description_sw: '',
   is_available: true,
   // Manager review item 4, PRINTER SETTINGS. A and B are the two print
   // switches; C is which physical printer receives the order ticket. `printer_station`
@@ -726,6 +768,7 @@ function resetForm() {
   editing.value = false
   editingId.value = null
   form.item_name = ''
+  form.item_name_sw = ''
   form.category = ''
   form.sub_category = ''
   form.sub_category_id = ''
@@ -734,6 +777,7 @@ function resetForm() {
   form.price = null
   form.cost = null
   form.description = ''
+  form.description_sw = ''
   form.is_available = true
   form.print_on_receipt = true
   form.print_on_order = true
@@ -756,6 +800,7 @@ function openEdit(item) {
   editing.value = true
   editingId.value = item.menu_item_id
   form.item_name = item.item_name
+  form.item_name_sw = item.item_name_sw || ''
   form.category = item.category || ''
   form.sub_category = item.sub_category || ''
   form.sub_category_id = item.sub_category_id || ''
@@ -764,6 +809,7 @@ function openEdit(item) {
   form.price = item.price
   form.cost = item.cost
   form.description = item.description || ''
+  form.description_sw = item.description_sw || ''
   form.is_available = !!item.is_available
   // Older payloads predate the printer settings, so fall back to the same
   // defaults the columns carry rather than leaving the form blank.
@@ -786,7 +832,15 @@ async function save() {
   modalError.value = ''
   saving.value = true
   try {
-    const payload = { ...form, inventory_item_id: form.inventory_item_id || null }
+    const payload = {
+      ...form,
+      inventory_item_id: form.inventory_item_id || null,
+      // An untouched translation goes over as null, not ''. The read path treats
+      // blank as "fall back to English" either way, but a real NULL is what the
+      // column is meant to hold and what a translation-gap report counts.
+      item_name_sw: form.item_name_sw.trim() || null,
+      description_sw: form.description_sw.trim() || null,
+    }
     // The review makes these a must-select on registration. Checked here as well
     // as on the API so the manager is told what is missing while looking at the
     // form, rather than a field-level 422 far below it.
@@ -965,6 +1019,25 @@ function openCategories() {
 function closeCategories() {
   showCategoryModal.value = false
   editingCategoryId.value = null
+  // When the manager was opened from the add/edit item form, a sub-category may
+  // have just been created behind it. Refresh that form's dropdown so the new
+  // one can be picked straight away — otherwise the sub-category exists but the
+  // box they are looking at does not offer it, which is the same "it does not
+  // exist" confusion the inline button was added to remove.
+  if (showModal.value) {
+    loadFormSubCategories()
+  }
+}
+
+/**
+ * Opens the category manager from inside the add/edit item form.
+ *
+ * The item modal stays open behind it, and closing the manager returns the
+ * manager to the form they came from rather than dumping them back on the list
+ * with a half-filled item discarded.
+ */
+function openCategoriesFromItemForm() {
+  openCategories()
 }
 
 /** Switches the manager's department tab and reloads its tags. */
@@ -1211,6 +1284,43 @@ onMounted(load)
 .head-actions {
   display: flex;
   gap: 10px;
+}
+
+/*
+ * The inline "add a sub-category" control under the sub-category box.
+ *
+ * `btn-link` renders as bare underlined text, which disappears against the form
+ * and reads as another hint rather than as the way to create a missing
+ * sub-category. This gives it a real control shape: a bordered chip, aligned
+ * left under its own field, and clearly disabled until a category is chosen so
+ * the order of the two steps is obvious.
+ */
+.sub-add-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: 1px dashed #b4b4bc;
+  border-radius: 8px;
+  background: #f7f7f9;
+  color: #005eb8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sub-add-inline:hover:not(:disabled) {
+  border-color: #005eb8;
+  background: #eef5fd;
+  text-decoration: none;
+}
+
+.sub-add-inline:disabled {
+  color: #9a9aa2;
+  border-color: #dcdce1;
+  background: #fbfbfc;
+  cursor: not-allowed;
 }
 
 .filter-bar {

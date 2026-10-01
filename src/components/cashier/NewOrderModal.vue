@@ -43,7 +43,7 @@
               <p class="cat-title">{{ cat }}</p>
               <button v-for="item in itemsInCat" :key="item.menu_item_id" class="cat-item"
                 :disabled="!item.is_available || item.is_in_stock === false" @click="addItem(item)">
-                <span class="cat-item-name">{{ item.item_name }}</span>
+                <span class="cat-item-name">{{ dishName(item) }}</span>
                 <!-- Review item 4: take-away, room service and delivery order
                      screens must show the live count of the stock this item
                      draws on. A recipe-tracked item reports the servings its
@@ -393,7 +393,7 @@ const filteredMenu = computed(() => {
   const term = search.value.trim().toLowerCase()
   const groups = {}
   for (const item of menu.value) {
-    if (term && !`${item.item_name} ${item.category || ''}`.toLowerCase().includes(term)) continue
+    if (term && !`${dishName(item)} ${item.item_name} ${item.category || ''}`.toLowerCase().includes(term)) continue
     const key = item.category || t('cashier.order.uncategorized')
     ;(groups[key] ||= []).push(item)
   }
@@ -448,8 +448,8 @@ function commitItem(item, accompaniment) {
     key,
     menu_item_id: item.menu_item_id,
     name: accompaniment
-      ? `${item.item_name} · ${accompanimentLabel(accompaniment)}`
-      : item.item_name,
+      ? `${dishName(item)} · ${accompanimentLabel(accompaniment)}`
+      : dishName(item),
     accompaniment,
     price: Number(item.price),
     quantity: 1,
@@ -461,6 +461,21 @@ function inc(idx) {
 }
 function dec(idx) {
   if (lines.value[idx].quantity > 1) lines.value[idx].quantity -= 1
+}
+
+/**
+ * The dish name to show on this screen.
+ *
+ * `item_name_display` is resolved by the API from the `Accept-Language` header
+ * this client sends, so a cashier on a Kiswahili till reads Kiswahili dish
+ * names. Falls back to the raw `item_name` for an older or cached payload.
+ *
+ * Display only: the order is submitted with `menu_item_id` and the API resolves
+ * the authoritative name itself, so translating what is shown here cannot change
+ * what the kitchen ticket or the sales report records.
+ */
+function dishName(item) {
+  return item?.item_name_display || item?.item_name || ''
 }
 
 function money(value) {
