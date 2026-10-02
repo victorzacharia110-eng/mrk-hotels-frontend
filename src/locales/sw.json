@@ -1994,6 +1994,11 @@
     "rejectReason": "Sababu ya kukataa (si lazima):",
     "rejected": "Imekataliwa",
     "voided": "Imetengwa",
+    "voidAction": "VOID",
+    "duplicateItem": "Bidhaa hii tayari ipo kwenye oda hii ya ununuzi.",
+    "displayStatusPending": "PENDING",
+    "displayStatusReceived": "RECEIVED",
+    "displayStatusVoid": "VOID",
     "receiveGoods": "Pokea bidhaa",
     "voidConfirm": "Tenga oda ya ununuzi {reference}? Mtoa huduma hatalipwa tena dhidi ya oda hii.",
     "voidReason": "Sababu ya kutenga (inahitajika):",
@@ -4428,7 +4433,8 @@
       "production": "Uzalishaji",
       "goodsReturns": "Marejesho",
       "backOffice": "Ofisi ya Nyuma",
-      "stockAdjust": "Marekebisho ya Akiba"
+      "stockAdjust": "Marekebisho ya Akiba",
+      "items": "Bidhaa"
     },
     "dashboard": {
       "totalItems": "Bidhaa ghala",

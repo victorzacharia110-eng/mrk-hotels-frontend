@@ -445,6 +445,14 @@ const routes = [
         component: () => import('@/pages/store/StoreInventoryPage.vue'),
         meta: { titleKey: 'storeManager.nav.inventory' },
       },
+      // Dedicated ITEMS list (same register as inventory, surfaced under the
+      // Back Office dropdown per the panel review).
+      {
+        path: 'items',
+        name: 'store-items',
+        component: () => import('@/pages/store/StoreInventoryPage.vue'),
+        meta: { titleKey: 'storeManager.nav.items' },
+      },
       // Supplier directory.
       {
         path: 'suppliers',

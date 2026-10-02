@@ -8,7 +8,7 @@
     <!-- KPI cards -->
     <section class="kpi-grid">
       <template v-if="loading">
-        <div v-for="n in 5" :key="'kpi-' + n" class="sk sk-kpi" style="height: 62px"></div>
+        <div v-for="n in 3" :key="'kpi-' + n" class="sk sk-kpi" style="height: 62px"></div>
       </template>
       <template v-else>
         <div class="kpi-card">
@@ -17,26 +17,18 @@
         </div>
         <div class="kpi-card">
           <span class="kpi-icon red"><i class="fas fa-triangle-exclamation"></i></span>
-          <div><strong>{{ lowStock.length }}</strong><small>{{ $t('storeManager.dashboard.lowStock') }}</small></div>
+          <div><strong>{{ stats.lowStock }}</strong><small>{{ $t('storeManager.dashboard.lowStock') }}</small></div>
         </div>
         <div class="kpi-card">
           <span class="kpi-icon amber"><i class="fas fa-file-signature"></i></span>
           <div><strong>{{ stats.pendingRequisitions }}</strong><small>{{ $t('storeManager.dashboard.pendingRequisitions') }}</small></div>
-        </div>
-        <div class="kpi-card">
-          <span class="kpi-icon green"><i class="fas fa-file-invoice"></i></span>
-          <div><strong>{{ stats.openOrders }}</strong><small>{{ $t('storeManager.dashboard.openPurchaseOrders') }}</small></div>
-        </div>
-        <div class="kpi-card">
-          <span class="kpi-icon navy"><i class="fas fa-coins"></i></span>
-          <div><strong>{{ curCode() }} {{ stats.stockValue.toLocaleString() }}</strong><small>{{ $t('storeManager.dashboard.stockValue') }}</small></div>
         </div>
       </template>
     </section>
 
     <!-- Quick actions -->
     <section class="quick-actions">
-      <router-link :to="{ name: 'store-inventory', query: { create: '1' } }" class="qa-btn"><i class="fas fa-plus"></i> {{ $t('storeManager.dashboard.newItem') }}</router-link>
+      <router-link :to="{ name: 'store-items', query: { create: '1' } }" class="qa-btn"><i class="fas fa-plus"></i> {{ $t('storeManager.dashboard.newItem') }}</router-link>
       <router-link :to="{ name: 'store-requisitions', query: { create: '1' } }" class="qa-btn"><i class="fas fa-file-signature"></i> {{ $t('storeManager.dashboard.newRequisition') }}</router-link>
       <router-link :to="{ name: 'store-goods-received', query: { create: '1' } }" class="qa-btn"><i class="fas fa-clipboard-check"></i> {{ $t('storeManager.dashboard.recordGrn') }}</router-link>
       <router-link :to="{ name: 'store-suppliers', query: { create: '1' } }" class="qa-btn"><i class="fas fa-truck"></i> {{ $t('storeManager.dashboard.newSupplier') }}</router-link>
@@ -99,14 +91,13 @@
       <div class="table-scroll">
         <SkeletonLoader v-if="loading" variant="table" :count="4" :cols="5" />
         <table class="sm-table" v-else-if="recentGrns.length">
-        <thead><tr><th>{{ $t('goodsReceived.number') }}</th><th>{{ $t('goodsReceived.purchaseOrder') }}</th><th>{{ $t('goodsReceived.supplier') }}</th><th>{{ $t('goodsReceived.receivedDate') }}</th><th>{{ $t('goodsReceived.inspection') }}</th></tr></thead>
+        <thead><tr><th>{{ $t('goodsReceived.number') }}</th><th>{{ $t('goodsReceived.purchaseOrder') }}</th><th>{{ $t('goodsReceived.supplier') }}</th><th>{{ $t('goodsReceived.receivedDate') }}</th></tr></thead>
         <tbody>
           <tr v-for="grn in recentGrns" :key="grn.grn_id">
             <td><strong>{{ grn.grn_number }}</strong></td>
             <td>{{ grn.purchase_order?.po_number || '-' }}</td>
             <td>{{ grn.supplier?.supplier_name || '-' }}</td>
             <td>{{ formatDate(grn.received_date) }}</td>
-            <td><span class="chip" :class="grn.inspection_status">{{ grn.inspection_status }}</span></td>
           </tr>
         </tbody>
       </table>
@@ -118,31 +109,29 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { inventoryApi, purchaseRequisitionApi, purchaseOrderApi, goodsReceivedNoteApi } from '@/api'
+import { inventoryApi, purchaseRequisitionApi, goodsReceivedNoteApi } from '@/api'
 import { useStockRealtime } from '@/composables/useStockRealtime'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import '@/pages/store/store-shared.css'
-
-import { useTenantCurrency } from '@/utils/currency'
-
-const { curCode } = useTenantCurrency()
 
 const loading = ref(true)
 const items = ref([])
 const lowStockAlerts = ref([])
 const requisitions = ref([])
-const orders = ref([])
 const grns = ref([])
 
+// Counts come from the API pagination totals so the KPI cards always report the
+// real number even when the table only carries the first page of rows.
+const totals = ref({ items: 0, lowStock: 0, pendingRequisitions: 0 })
+
 const lowStock = computed(() => lowStockAlerts.value.slice(0, 8))
-const pendingReqs = computed(() => requisitions.value.filter((r) => r.status === 'pending').slice(0, 8))
-const recentGrns = computed(() => grns.value.slice(0, 8))
+const pendingReqs = computed(() => requisitions.value.slice(0, 8))
+const recentGrns = computed(() => grns.value.slice(0, 3))
 
 const stats = computed(() => ({
-  totalItems: items.value.length,
-  pendingRequisitions: pendingReqs.value.length,
-  openOrders: orders.value.filter((o) => ['pending', 'manager_approved', 'approved'].includes(o.status)).length,
-  stockValue: items.value.reduce((sum, i) => sum + Number(i.quantity_in_stock || 0) * Number(i.unit_cost || 0), 0),
+  totalItems: totals.value.items,
+  lowStock: totals.value.lowStock,
+  pendingRequisitions: totals.value.pendingRequisitions,
 }))
 
 function formatDate(d) {
@@ -151,20 +140,27 @@ function formatDate(d) {
 }
 
 async function loadDashboard() {
-  const [inv, req, po, grn] = await Promise.allSettled([
+  const [inv, low, req, grn] = await Promise.allSettled([
     inventoryApi.index({ per_page: 100 }),
-    purchaseRequisitionApi.index({ per_page: 50 }),
-    purchaseOrderApi.index({ per_page: 50 }),
-    goodsReceivedNoteApi.index({ per_page: 10 }),
+    inventoryApi.index({ low_stock: 1, per_page: 1 }),
+    purchaseRequisitionApi.index({ status: 'pending', per_page: 8 }),
+    goodsReceivedNoteApi.index({ per_page: 3 }),
   ])
   if (inv.status === 'fulfilled') {
     items.value = inv.value.data.data || inv.value.data || []
+    totals.value.items = inv.value.data.meta?.total ?? items.value.length
     // Derive the alerts from the full inventory list so the IN STOCK column
     // always shows the real quantity on hand, not a possibly stale aggregate.
     lowStockAlerts.value = items.value.filter((i) => Number(i.quantity_in_stock || 0) <= Number(i.reorder_level || 0))
   }
-  if (req.status === 'fulfilled') requisitions.value = req.value.data.data || req.value.data || []
-  if (po.status === 'fulfilled') orders.value = po.value.data.data || po.value.data || []
+  // The low-stock KPI is the server total, not the length of the capped table.
+  totals.value.lowStock = low.status === 'fulfilled'
+    ? (low.value.data.meta?.total ?? lowStockAlerts.value.length)
+    : lowStockAlerts.value.length
+  if (req.status === 'fulfilled') {
+    requisitions.value = req.value.data.data || req.value.data || []
+    totals.value.pendingRequisitions = req.value.data.meta?.total ?? requisitions.value.length
+  }
   if (grn.status === 'fulfilled') grns.value = grn.value.data.data || grn.value.data || []
 }
 

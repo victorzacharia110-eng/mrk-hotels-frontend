@@ -8,19 +8,13 @@
 <template>
   <div class="sm-page">
     <div class="sm-toolbar">
-      <div class="sm-search"><i class="fas fa-magnifying-glass"></i><input v-model="q" type="text" :placeholder="$t('common.search')" /></div>
-      <select v-if="statuses.length" v-model="status" class="sm-select"><option value="">{{ $t('common.status') }}</option><option v-for="s in statuses" :key="s" :value="s">{{ s }}</option></select>
+      <div class="sm-search"><i class="fas fa-magnifying-glass"></i><input v-model="q" type="text" :placeholder="$t('purchaseOrders.searchPlaceholder')" @input="scheduleSearch" /></div>
       <CalendarInput v-model="dateFilter" style="max-width: 150px" @change="load(1)" />
       <select v-model="statusFilter" class="sm-select" @change="load(1)">
         <option value="">{{ $t('common.allStatuses') }}</option>
-        <option value="pending">{{ $t('common.pending') }}</option>
-        <option value="manager_approved">{{ $t('purchaseOrders.managerApproved') }}</option>
-        <option value="approved">{{ $t('common.approved') }}</option>
-        <option value="partially_received">{{ $t('purchaseOrders.partiallyReceived') }}</option>
-        <option value="received">{{ $t('purchaseOrders.received') }}</option>
-        <option value="cancelled">{{ $t('common.cancelled') }}</option>
-        <option value="rejected">{{ $t('purchaseOrders.rejected') }}</option>
-        <option value="voided">{{ $t('purchaseOrders.voided') }}</option>
+        <option value="pending">{{ $t('purchaseOrders.displayStatusPending') }}</option>
+        <option value="received">{{ $t('purchaseOrders.displayStatusReceived') }}</option>
+        <option value="void">{{ $t('purchaseOrders.displayStatusVoid') }}</option>
       </select>
       <span class="spacer"></span>
       <button class="sm-btn" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('purchaseOrders.create') }}</button>
@@ -43,18 +37,16 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="po in paged" :key="po.po_id">
+            <tr v-for="po in orders" :key="po.po_id">
               <td><strong>{{ po.po_number }}</strong></td>
               <td>{{ po.supplier?.supplier_name || '-' }}</td>
               <td>{{ (po.items || []).length }}</td>
               <td>{{ curCode() }} {{ Number(po.total_amount || 0).toLocaleString() }}</td>
               <td>{{ formatDate(po.delivery_date) }}</td>
-              <td><span class="chip" :class="po.status">{{ po.status.replaceAll('_', ' ') }}</span></td>
+              <td><span class="chip" :class="po.status">{{ poStatusLabel(po.status) }}</span></td>
               <td>
                 <div class="row-actions">
                   <button class="sm-btn sm ghost" @click="openDetail(po)"><i class="fas fa-eye"></i></button>
-                  <button v-if="po.status === 'pending'" class="sm-btn sm success" @click="managerApprove(po)" :title="$t('purchaseOrders.managerApprove')"><i class="fas fa-check"></i></button>
-                  <button v-if="['pending', 'manager_approved', 'approved'].includes(po.status)" class="sm-btn sm danger" @click="cancel(po)" :title="$t('common.cancel')"><i class="fas fa-ban"></i></button>
                 </div>
               </td>
             </tr>
@@ -119,7 +111,7 @@
                 </template>
               </SearchableSelect>
               <input v-model.number="item.quantity" type="number" min="1" class="sm-input" :placeholder="$t('inventory.quantity')" required />
-              <select v-model="item.unit" class="sm-input">
+              <select v-model="item.unit" class="sm-input" @change="onUnitChange(item)">
                 <option v-for="u in unitOptionsFor(item)" :key="u" :value="u">{{ u }}</option>
               </select>
               <input v-model.number="item.unit_price" type="number" min="0" step="0.01" class="sm-input" :placeholder="$t('inventory.unitCost', { currency: curCode() })" required />
@@ -148,14 +140,14 @@
           <div class="detail-actions">
             <button class="sm-btn sm ghost" @click="printDetail"><i class="fas fa-print"></i> {{ $t('common.print') }}</button>
             <button v-if="canEdit" class="sm-btn sm ghost" @click="startEdit"><i class="fas fa-pen"></i> {{ $t('common.edit') }}</button>
-            <button v-if="['approved', 'partially_received', 'manager_approved'].includes(detail.status)" class="sm-btn sm primary" @click="receiveGoods"><i class="fas fa-box-open"></i> {{ $t('purchaseOrders.receiveGoods') }}</button>
+            <button v-if="['pending', 'approved', 'partially_received', 'manager_approved'].includes(detail.status)" class="sm-btn sm primary" @click="receiveGoods"><i class="fas fa-box-open"></i> {{ $t('purchaseOrders.receiveGoods') }}</button>
             <button v-if="detail.supplier?.email" class="sm-btn sm ghost" @click="emailSupplier"><i class="fas fa-envelope"></i> {{ $t('common.email') }}</button>
-            <button v-if="canVoid" class="sm-btn sm danger" @click="voidPo"><i class="fas fa-trash"></i> {{ $t('purchaseOrders.voided') }}</button>
+            <button v-if="canVoid" class="sm-btn sm danger" @click="voidPo"><i class="fas fa-trash"></i> {{ $t('purchaseOrders.voidAction') }}</button>
           </div>
-          <p v-if="detail.void_reason" class="void-note"><i class="fas fa-circle-info"></i> voided by {{ detail.voided_by }}: {{ detail.void_reason }}</p>
+          <p v-if="detail.void_reason" class="void-note"><i class="fas fa-circle-info"></i> voided by {{ detail.voided_by_name || detail.voided_by }}: {{ detail.void_reason }}</p>
           <p v-if="detail.rejection_reason" class="void-note"><i class="fas fa-circle-info"></i> rejected: {{ detail.rejection_reason }}</p>
           <p><strong>{{ $t('goodsReceived.supplier') }}:</strong> {{ detail.supplier?.supplier_name || '-' }}</p>
-          <p><strong>{{ $t('common.status') }}:</strong> <span class="chip" :class="detail.status">{{ detail.status.replaceAll('_', ' ') }}</span></p>
+          <p><strong>{{ $t('common.status') }}:</strong> <span class="chip" :class="detail.status">{{ poStatusLabel(detail.status) }}</span></p>
           <p v-if="detail.delivery_date"><strong>{{ $t('purchaseOrders.deliveryDate') }}:</strong> {{ formatDate(detail.delivery_date) }}</p>
           <p v-if="detail.delivery_address"><strong>{{ $t('purchaseOrders.deliveryAddress') }}:</strong> {{ detail.delivery_address }}</p>
           <p v-if="detail.notes"><strong>{{ $t('common.notes') }}:</strong> {{ detail.notes }}</p>
@@ -184,7 +176,7 @@
           <tr><td><strong>{{ $t('goodsReceived.supplier') }}</strong></td><td>{{ printData.supplier?.supplier_name || '-' }}</td></tr>
           <tr><td><strong>{{ $t('purchaseOrders.deliveryDate') }}</strong></td><td>{{ formatDate(printData.delivery_date) }}</td></tr>
           <tr v-if="printData.delivery_address"><td><strong>{{ $t('purchaseOrders.deliveryAddress') }}</strong></td><td>{{ printData.delivery_address }}</td></tr>
-          <tr><td><strong>{{ $t('common.status') }}</strong></td><td>{{ printData.status.replaceAll('_', ' ') }}</td></tr>
+          <tr><td><strong>{{ $t('common.status') }}</strong></td><td>{{ poStatusLabel(printData.status) }}</td></tr>
         </tbody>
       </table>
       <table class="print-table">
@@ -209,9 +201,8 @@ import { useRouter } from 'vue-router'
 import { purchaseOrderApi, purchaseRequisitionApi, supplierApi, inventoryApi } from '@/api'
 import CalendarInput from '@/components/CalendarInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
-import { useClientTable } from '@/composables/useClientTable.js'
 import { useWorkingDateStore } from '@/stores/workingDate'
-import { saveBlob } from '@/utils/download'
+import { useAuthStore } from '@/stores/auth'
 
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -221,8 +212,10 @@ const { t } = useI18n()
 const workingDateStore = useWorkingDateStore()
 const router = useRouter()
 
+const auth = useAuthStore()
 const orders = ref([])
-const { q, status, statuses, paged } = useClientTable(orders, { pageSize: 15, searchFields: ['po_number', 'supplier_name', 'status'] })
+const q = ref('')
+let searchTimer = null
 const suppliers = ref([])
 const approvedReqs = ref([])
 const inventoryItems = ref([])
@@ -230,7 +223,7 @@ const meta = ref({ current_page: 1, last_page: 1 })
 const loading = ref(false)
 const saving = ref(false)
 const statusFilter = ref('')
-const dateFilter = ref(todayStr())
+const dateFilter = ref('')
 const showForm = ref(false)
 const detail = ref(null)
 const editingId = ref(null)
@@ -249,7 +242,25 @@ function clampMinToday(d) {
 const form = reactive({ supplier_id: '', pr_id: '', delivery_date: todayStr(), payment_terms: '', delivery_address: '', notes: '', items: [emptyItem()] })
 
 function emptyItem() {
-  return { item_id: '', item_name: '', description: '', quantity: null, unit: '', si_units: [], unit_price: null }
+  return { item_id: '', item_name: '', description: '', quantity: null, unit: '', si_units: [], si_factors: {}, base_unit: '', base_cost: 0, unit_price: null }
+}
+
+/**
+ * Purchase orders show only three display states per the panel review:
+ * PENDING, RECEIVED and VOID. Legacy workflow statuses are collapsed onto the
+ * closest display state instead of leaking the raw snake_case value.
+ */
+function poStatusLabel(status) {
+  if (!status) return '-'
+  if (['received', 'partially_received'].includes(status)) return t('purchaseOrders.displayStatusReceived')
+  if (['voided', 'cancelled', 'rejected'].includes(status)) return t('purchaseOrders.displayStatusVoid')
+  return t('purchaseOrders.displayStatusPending')
+}
+
+/** Debounced server-side search so typing does not fire a request per key. */
+function scheduleSearch() {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => load(1), 300)
 }
 
 // Registered inventory items are the only orderable lines; picking one also
@@ -276,17 +287,45 @@ function unitOptionsFor(item) {
   return STANDARD_UNITS
 }
 
+/** Normalises an item's stored SI units into select labels plus a factor map. */
+function normalizeSiUnits(found) {
+  const names = []
+  const factors = {}
+  for (const raw of found?.si_units || []) {
+    const name = typeof raw === 'string' ? raw : raw?.unit
+    if (!name) continue
+    names.push(name)
+    factors[name] = Number(typeof raw === 'string' ? 1 : raw?.factor ?? 1) || 1
+  }
+  return { names, factors }
+}
+
 /** Applies a picked registered item to a PO line (id, name, units + default). */
 function onPickItem(line, hit) {
   const id = hit?.value ?? hit
   const found = inventoryItems.value.find((i) => String(i.item_id) === String(id))
+  const duplicated = found && form.items.some((l) => l !== line && String(l.item_id) === String(found.item_id))
+  formError.value = duplicated ? t('purchaseOrders.duplicateItem') : ''
   line.item_id = id ?? ''
   line.item_name = found?.item_name || ''
-  line.si_units = (found?.si_units || [])
-    .map((u) => (typeof u === 'string' ? u : u?.unit))
-    .filter(Boolean)
+  const { names, factors } = normalizeSiUnits(found)
+  line.si_units = names
+  line.si_factors = factors
+  line.base_unit = found?.unit || ''
+  line.base_cost = Number(found?.unit_cost || 0)
   if (found?.unit) line.unit = found.unit
-  if (found?.unit_cost) line.unit_price = Number(found.unit_cost)
+  if (line.base_cost) line.unit_price = line.base_cost
+}
+
+/**
+ * When the line switch comes in a larger SI unit (e.g. CARTON on an item
+ * priced per BTL) the inherited unit price must scale by the unit factor so a
+ * CARTON line is not charged the per-bottle price.
+ */
+function onUnitChange(line) {
+  if (!line.base_cost) return
+  const factor = Number(line.si_factors?.[line.unit] ?? 1) || 1
+  line.unit_price = Math.round(line.base_cost * factor * 100) / 100
 }
 
 const poTotal = computed(() =>
@@ -299,8 +338,8 @@ const emptyText = computed(() => {
   return t('purchaseOrders.empty')
 })
 
-const canEdit = computed(() => detail.value && ['pending', 'manager_approved'].includes(detail.value.status))
-const canVoid = computed(() => detail.value && ['pending', 'manager_approved', 'approved'].includes(detail.value.status) && !detail.value.voided_by)
+const canEdit = computed(() => detail.value && ['pending', 'manager_approved', 'approved'].includes(detail.value.status))
+const canVoid = computed(() => auth.can(80) && detail.value && ['pending', 'manager_approved', 'approved'].includes(detail.value.status) && !detail.value.voided_by)
 
 function formatDate(d) {
   if (!d) return '-'
@@ -311,7 +350,8 @@ async function load(page = meta.value.current_page) {
   loading.value = true
   try {
     const params = { page, per_page: 20 }
-    if (statusFilter.value) params.status = statusFilter.value
+    if (statusFilter.value) params.status_group = statusFilter.value
+    if (q.value.trim()) params.search = q.value.trim()
     if (dateFilter.value) params.date = dateFilter.value
     const res = await purchaseOrderApi.index(params)
     orders.value = res.data.data || res.data || []
@@ -363,21 +403,20 @@ async function startEdit() {
     delivery_address: po.delivery_address || '',
     notes: po.notes || '',
     items: (po.items || []).map((item) => {
-      const line = {
+      const catalog = inventoryItems.value.find((i) => String(i.item_id) === String(item.item_id))
+      const { names, factors } = normalizeSiUnits(catalog)
+      return {
         item_id: item.item_id || '',
         item_name: item.item_name,
         description: item.description || '',
         quantity: item.quantity,
-        unit: item.unit || '',
-        si_units: [],
+        unit: item.unit || catalog?.unit || '',
+        si_units: names,
+        si_factors: factors,
+        base_unit: catalog?.unit || '',
+        base_cost: Number(catalog?.unit_cost || 0),
         unit_price: item.unit_price,
       }
-      const catalog = inventoryItems.value.find((i) => String(i.item_id) === String(item.item_id))
-      if (catalog) {
-        line.si_units = (catalog.si_units || []).map((u) => (typeof u === 'string' ? u : u?.unit)).filter(Boolean)
-        if (!line.unit) line.unit = catalog.unit
-      }
-      return line
     }),
   })
   if (form.items.length === 0) form.items.push(emptyItem())
@@ -421,32 +460,16 @@ async function save() {
   }
 }
 
-async function managerApprove(po) {
-  if (!window.confirm(t('purchaseOrders.managerApproveConfirm', { reference: po.po_number }))) return
-  await purchaseOrderApi.managerApprove(po.po_id)
-  await load()
-}
-
-async function cancel(po) {
-  if (!window.confirm(t('purchaseOrders.cancelConfirm', { reference: po.po_number }))) return
-  await purchaseOrderApi.cancel(po.po_id)
-  await load()
-}
-
 async function openDetail(po) {
   const res = await purchaseOrderApi.show(po.po_id)
   detail.value = res.data.purchase_order || res.data.data || res.data
 }
 
-async function printDetail() {
-  const po = detail.value
-  try {
-    const res = await purchaseOrderApi.printPdf(po.po_id)
-    const match = (res.headers['content-disposition'] || '').match(/filename="?([^"]+)/)
-    saveBlob(res.data, match ? match[1] : `PurchaseOrder-${po.po_number}.pdf`)
-  } catch {
-    window.alert(t('purchaseOrders.printError'))
-  }
+// Opens the browser print dialog against the hidden printable document, so
+// staff can send the PO to any printer (matching the Goods Received page).
+function printDetail() {
+  printData.value = detail.value
+  setTimeout(() => window.print(), 50)
 }
 
 function receiveGoods() {

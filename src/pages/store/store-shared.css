@@ -75,7 +75,7 @@
   -webkit-overflow-scrolling: touch;
   padding-inline: 18px;
 }
-.table-scroll > .sm-table { min-width: 680px; }
+.table-scroll > .sm-table { min-width: 760px; }
 /* Bare section headings inside cards. */
 .panel > h3 { margin: 0 0 12px; font-size: 15px; color: var(--mrk-charcoal); display: flex; align-items: center; gap: 8px; }
 .panel > h3 i { color: var(--mrk-blue); }
@@ -202,7 +202,7 @@
      and let body/head/foot contribute only their inner spacing. */
   padding: 0 20px 20px;
 }
-.sm-modal.wide { max-width: 760px; }
+.sm-modal.wide { max-width: 1120px; }
 .sm-modal-head {
   display: flex; align-items: center; justify-content: space-between;
   margin: 0 -20px;

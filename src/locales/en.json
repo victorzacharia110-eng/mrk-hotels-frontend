@@ -1994,6 +1994,11 @@
     "rejectReason": "Reason for rejection (optional):",
     "rejected": "Rejected",
     "voided": "Voided",
+    "voidAction": "VOID",
+    "duplicateItem": "That item is already on this purchase order.",
+    "displayStatusPending": "PENDING",
+    "displayStatusReceived": "RECEIVED",
+    "displayStatusVoid": "VOID",
     "receiveGoods": "Receive goods",
     "voidConfirm": "Void purchase order {reference}? The supplier can no longer be paid against this order.",
     "voidReason": "Reason for voiding (required):",
@@ -4428,7 +4433,8 @@
       "production": "Production",
       "goodsReturns": "Goods Returns",
       "backOffice": "Back Office",
-      "stockAdjust": "Stock Adjustment"
+      "stockAdjust": "Stock Adjustment",
+      "items": "Items"
     },
     "dashboard": {
       "totalItems": "Stock items",

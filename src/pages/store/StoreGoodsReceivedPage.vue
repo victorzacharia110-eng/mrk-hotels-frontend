@@ -75,7 +75,6 @@
               <th>{{ $t('goodsReceived.receivedDate') }}</th>
               <th>{{ $t('goodsReceived.deliveryNote') }}</th>
               <th>{{ $t('goodsReceived.attachments') }}</th>
-              <th>{{ $t('goodsReceived.inspection') }}</th>
               <th>{{ $t('common.actions') }}</th>
             </tr>
           </thead>
@@ -92,7 +91,6 @@
                 </span>
                 <span v-else>-</span>
               </td>
-              <td><span class="chip" :class="grn.inspection_status">{{ grn.inspection_status }}</span></td>
               <td>
                 <div class="row-actions">
                   <button class="sm-btn sm ghost" @click="openDetail(grn)"><i class="fas fa-eye"></i></button>
@@ -125,15 +123,6 @@
               <select v-model="form.po_id" class="sm-select" style="width:100%" :disabled="!!editingGrnId" @change="loadPoItems">
                 <option value="" disabled>{{ $t('common.select') }}</option>
                 <option v-for="po in poOptions" :key="po.po_id" :value="po.po_id">{{ po.po_number }} — {{ po.supplier?.supplier_name || '' }}</option>
-              </select>
-            </div>
-            <div class="form-field">
-              <label>{{ $t('goodsReceived.inspection') }}</label>
-              <select v-model="form.inspection_status" class="sm-select" style="width:100%">
-                <option value="pending">{{ $t('common.pending') }}</option>
-                <option value="passed">{{ $t('goodsReceived.passed') }}</option>
-                <option value="partial">{{ $t('goodsReceived.partial') }}</option>
-                <option value="failed">{{ $t('goodsReceived.failed') }}</option>
               </select>
             </div>
             <div class="form-field"><label>{{ $t('goodsReceived.receivedDate') }}</label><CalendarInput v-model="form.received_date" :min="todayStr" /></div>
@@ -174,7 +163,7 @@
                 <td>{{ item.item_name }}</td>
                 <td>{{ item.unit || '-' }}</td>
                 <td>{{ item.quantity_ordered }}</td>
-                <td><input v-model.number="item.quantity_received" type="number" min="0" :max="item.quantity_ordered" class="sm-input" style="width:80px" required /></td>
+                <td><input v-model.number="item.quantity_received" type="number" min="0" class="sm-input" style="width:80px" required /></td>
                 <td><input v-model.number="item.quantity_rejected" type="number" min="0" class="sm-input" style="width:70px" /></td>
                 <td>{{ curCode() }} {{ formatMoney(item.unit_price) }}</td>
                 <td><input v-model.number="item.unit_cost" type="number" min="0" step="0.01" class="sm-input" style="width:90px" :placeholder="String(formatMoney(item.unit_price))" /></td>
@@ -225,7 +214,6 @@
           <p v-if="!detail.voided_by && !sameDay(detail.received_date)" class="hint-note"><i class="fas fa-triangle-exclamation"></i> {{ $t('goodsReceived.businessDayNote') }}</p>
           <p><strong>{{ $t('goodsReceived.purchaseOrder') }}:</strong> {{ detail.purchase_order?.po_number || '-' }}</p>
           <p><strong>{{ $t('goodsReceived.supplier') }}:</strong> {{ detail.supplier?.supplier_name || '-' }}</p>
-          <p><strong>{{ $t('goodsReceived.inspection') }}:</strong> <span class="chip" :class="detail.inspection_status">{{ detail.inspection_status }}</span></p>
           <p v-if="detail.delivery_note_number"><strong>{{ $t('goodsReceived.deliveryNote') }}:</strong> {{ detail.delivery_note_number }}</p>
           <p v-if="detail.notes"><strong>{{ $t('common.notes') }}:</strong> {{ detail.notes }}</p>
 
@@ -480,7 +468,7 @@ async function openCreate() {
   try {
     const res = await purchaseOrderApi.index({ per_page: 100 })
     const all = res.data.data || res.data || []
-    poOptions.value = all.filter((po) => ['approved', 'partially_received'].includes(po.status))
+    poOptions.value = all.filter((po) => ['pending', 'manager_approved', 'approved', 'partially_received', 'received'].includes(po.status))
   } catch {
     poOptions.value = []
   }

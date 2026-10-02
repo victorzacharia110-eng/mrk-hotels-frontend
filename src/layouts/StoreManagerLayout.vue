@@ -208,6 +208,7 @@ const navItems = [
     icon: 'fas fa-address-book',
     labelKey: 'storeManager.nav.backOffice',
     children: [
+      { to: '/store-manager/items', icon: 'fas fa-boxes-stacked', labelKey: 'storeManager.nav.items' },
       { to: '/store-manager/suppliers', icon: 'fas fa-truck-ramp-box', labelKey: 'storeManager.nav.suppliers' },
     ],
   },
