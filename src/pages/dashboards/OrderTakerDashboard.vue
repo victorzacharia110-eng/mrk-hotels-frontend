@@ -117,12 +117,53 @@
             </button>
           </div>
           <p v-else class="cat-empty">{{ $t('orderTaker.noCategories') }}</p>
+
+          <!--
+            The second level. The menu is two levels deep — Drinks is the service
+            line a waiter picks, Cocktails and Spirits sit inside it — so once a
+            service line is open its sub-categories get their own rail, just above
+            the food they filter. "All" is preselected, which is what makes
+            tapping a category show its food immediately; the chips only narrow
+            it. It is hidden while searching, because a search deliberately
+            ignores the category and speaks for itself.
+          -->
+          <div
+            v-if="activeCategory && !searchQuery && subCategories.length > 1"
+            class="sub-rail"
+            role="tablist"
+            :aria-label="$t('orderTaker.subCategories')"
+          >
+            <button
+              type="button"
+              role="tab"
+              class="sub-btn"
+              :class="{ active: !activeSubCategory }"
+              :aria-selected="!activeSubCategory"
+              @click="openSubCategory('')"
+            >
+              {{ $t('orderTaker.allItems') }}
+            </button>
+            <button
+              v-for="sub in subCategories"
+              :key="sub"
+              type="button"
+              role="tab"
+              class="sub-btn"
+              :class="{ active: activeSubCategory === sub }"
+              :aria-selected="activeSubCategory === sub"
+              @click="openSubCategory(sub)"
+            >
+              {{ sub }}
+            </button>
+          </div>
         </div>
 
         <!-- Inline items for the active category / search result (non-blocking) -->
         <div v-if="activeCategory || searchQuery" class="inline-items">
           <header class="inline-items-head">
-            <strong>{{ searchQuery ? $t('orderTaker.searchTitle') : activeCategory }}</strong>
+            <strong v-if="searchQuery">{{ $t('orderTaker.searchTitle') }}</strong>
+            <strong v-else-if="activeSubCategory">{{ activeCategory }} · {{ activeSubCategory }}</strong>
+            <strong v-else>{{ activeCategory }}</strong>
             <button type="button" class="line-remove" :title="$t('orderTaker.close')" @click="closeCategory">
               <i class="fas fa-times" aria-hidden="true"></i>
             </button>
@@ -1228,6 +1269,9 @@ function switchDepartment(dept) {
   if (fixedDept.value && dept !== fixedDept.value) return
   department.value = dept
   activeCategory.value = ''
+  // The other department has its own service lines and sub-categories, so a
+  // sub-category picked on this side would be meaningless there.
+  activeSubCategory.value = ''
   orderLines.value = []
   form.value = { table_number: '', covers: 0, order_type: defaultOrderType(), notes: '' }
   loadMenu()
@@ -2379,6 +2423,11 @@ async function removeLocation(loc) {
 const menu = ref([])
 const menuLoading = ref(true)
 const activeCategory = ref('')
+/**
+ * The sub-category currently narrowing the food list. Empty means "All", which
+ * is the state a category opens in, so a service line is one tap from its food.
+ */
+const activeSubCategory = ref('')
 
 /** All available items of this department. */
 const availableMenu = computed(() => menu.value.filter((item) => item.is_available))
@@ -2398,7 +2447,30 @@ const categories = computed(() => {
 /** Items shown in the popup for the active category. */
 const categoryItems = computed(() => {
   if (!activeCategory.value) return []
-  return availableMenu.value.filter((item) => item.category === activeCategory.value)
+  const inCategory = availableMenu.value.filter((item) => item.category === activeCategory.value)
+  // No sub-category picked means "everything in this category", so tapping a
+  // service line shows its food straight away and the sub-category row narrows
+  // it. Items that were never given a sub-category stay reachable under All.
+  if (!activeSubCategory.value) return inCategory
+  return inCategory.filter((item) => item.sub_category === activeSubCategory.value)
+})
+
+/**
+ * The second level: the sub-categories inside the active category, in the order
+ * the menu defines. Empty until a service line is picked, which is the point —
+ * the waiter meets categories first and only then the things inside one.
+ */
+const subCategories = computed(() => {
+  if (!activeCategory.value) return []
+  const seen = new Map()
+  availableMenu.value.forEach((item) => {
+    if (item.category !== activeCategory.value) return
+    if (!item.sub_category || seen.has(item.sub_category)) return
+    seen.set(item.sub_category, item.sub_category_order || 0)
+  })
+  return [...seen.entries()]
+    .sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]))
+    .map(([name]) => name)
 })
 
 // Universal search: lets the waiter look up an item (or category) across the
@@ -2488,12 +2560,26 @@ function setPage(p) {
 /** Opens the popup listing the items of a category (and clears any search). */
 function openCategory(cat) {
   activeCategory.value = cat
+  // Switching service line starts back at "All": a sub-category that exists
+  // under Cocktails says nothing about Beer, and keeping it would silently show
+  // an empty food list.
+  activeSubCategory.value = ''
+  searchQuery.value = ''
+}
+
+/**
+ * Narrows the food list to one sub-category of the active category. Passing an
+ * empty string is the "All" chip.
+ */
+function openSubCategory(sub) {
+  activeSubCategory.value = activeSubCategory.value === sub ? '' : sub
   searchQuery.value = ''
 }
 
 /** Closes the category popup and clears any active search. */
 function closeCategory() {
   activeCategory.value = ''
+  activeSubCategory.value = ''
   searchQuery.value = ''
 }
 
@@ -2940,6 +3026,9 @@ function onKey(e) {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* Takes whatever height the category and sub-category rails leave behind, and
+     is the part that gives way when the column runs short. */
+  flex: 1 1 auto;
 }
 .inline-items-head {
   display: flex;
@@ -3560,6 +3649,11 @@ function onKey(e) {
   border: 1px solid #d4d4d8;
   border-radius: 10px;
   padding: 12px 14px;
+  /* The panel is the fixed part of the column: the category rail and, once a
+     service line is open, the sub-category rail. Both must keep their natural
+     height, otherwise the food list below is what gets squeezed — and the food
+     list is the only part that can afford to shrink, because it scrolls. */
+  flex: 0 0 auto;
 }
 
 .cat-panel-head {
@@ -3633,6 +3727,51 @@ function onKey(e) {
   overflow: hidden;
   text-overflow: ellipsis;
   scroll-snap-align: start;
+}
+
+/*
+   The sub-category rail. Same sideways-scroll idea as the category rail, and it
+   sits directly under it so the path from service line to food reads top to
+   bottom: Drinks, then Cocktails, then the drinks themselves.
+
+   Deliberately quieter than `.cat-btn`: the service line is the decision, the
+   sub-categories are a refinement on top of it, and the food is the point. These
+   are pills rather than big buttons so a whole service line's worth of them
+   still fits one line, and a separator above marks them as a second level
+   instead of a continuation of the first.
+*/
+.sub-rail {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 2px 6px;
+  margin: 4px -2px -2px;
+  border-top: 1px solid #e4e4e7;
+  scrollbar-width: thin;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.sub-rail .sub-btn {
+  flex: 0 0 auto;
+  border: 1px solid #d4d4d8;
+  background: #fafafa;
+  color: #3f3f46;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  scroll-snap-align: start;
+}
+.sub-rail .sub-btn:hover {
+  border-color: var(--pad-accent);
+}
+.sub-rail .sub-btn.active {
+  background: var(--pad-accent);
+  border-color: var(--pad-accent);
+  color: #fff;
 }
 
 .cat-btn {
@@ -4648,6 +4787,11 @@ function onKey(e) {
   .cat-rail .cat-btn {
     min-width: 112px;
     font-size: 13px;
+  }
+
+  .sub-rail .sub-btn {
+    padding: 4px 10px;
+    font-size: 12px;
   }
 
   .cat-btn {
