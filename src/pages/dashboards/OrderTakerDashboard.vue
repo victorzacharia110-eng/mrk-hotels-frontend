@@ -3758,7 +3758,10 @@ function onKey(e) {
   background: #fafafa;
   color: #3f3f46;
   border-radius: 999px;
-  padding: 5px 12px;
+  /* Padding is kept tight on purpose. A pill is chrome all the way round, so on
+     a short word like "All" a roomy horizontal padding leaves most of the chip
+     empty and it reads as a card far longer than the word inside it. */
+  padding: 5px 9px;
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
