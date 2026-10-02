@@ -164,6 +164,10 @@
                   <button class="btn btn-sm btn-secondary" @click="toggleAvailability(item)">
                     {{ item.is_available ? $t('menu.disable') : $t('menu.enable') }}
                   </button>
+                  <button class="btn btn-sm btn-secondary" @click="openHistory(item)"
+                    :title="$t('menuAudit.history')" :aria-label="$t('menuAudit.history')">
+                    <i class="fas fa-clock-rotate-left"></i>
+                  </button>
                   <button class="btn btn-sm btn-secondary" @click="openEdit(item)">
                     <i class="fas fa-pen"></i>
                   </button>
@@ -571,6 +575,14 @@
       :busy="deleting"
       @confirm="bulkDelete"
     />
+
+    <!-- Who changed this dish, when, and what they changed -->
+    <MenuHistoryDrawer
+      v-model="showHistory"
+      entity-type="menu_item"
+      :entity-id="historyItemId"
+      :title="historyItemName"
+    />
   </div>
 </template>
 
@@ -583,6 +595,7 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import AccompanimentManager from '@/components/AccompanimentManager.vue'
+import MenuHistoryDrawer from '@/components/MenuHistoryDrawer.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 import { collectAllRows } from '@/utils/export'
 
@@ -798,6 +811,19 @@ function openCreate() {
   loadCategories(form.department)
   loadInventoryOptions()
   loadFormSubCategories()
+}
+
+// The history drawer reads its own record, so opening it needs nothing but the
+// id -- a name is only for the heading.
+const showHistory = ref(false)
+const historyItemId = ref('')
+const historyItemName = ref('')
+
+/** Opens the "who changed this" panel for one item. */
+function openHistory(item) {
+  historyItemId.value = item.menu_item_id
+  historyItemName.value = item.item_name
+  showHistory.value = true
 }
 
 /** Opens the edit modal pre-filled with the selected item. */

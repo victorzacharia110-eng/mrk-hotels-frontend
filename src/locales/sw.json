@@ -779,7 +779,8 @@
     "backOffice": "Ofisi ya Nyuma",
     "dayClose": "Funga Siku",
     "expenseVoucher": "Voja ya Gharama",
-    "incomeVoucher": "Voja ya Mapato"
+    "incomeVoucher": "Voja ya Mapato",
+    "menuActivity": "Shughuli za Menyu"
   },
   "import": {
     "title": "Ingiza Data",
@@ -5562,5 +5563,40 @@
   "outlet": {
     "switchLabel": "Kituo cha kufanya kazi",
     "choosePlaceholder": "Chagua kituo"
+  },
+  "menuAudit": {
+    "title": "Shughuli za Menyu",
+    "subtitle": "Kila mabadiliko yaliyofanywa kwenye menyu ya hoteli hii, na aliyeyafanya.",
+    "history": "Historia ya Mabadiliko",
+    "changed": "Ilibadilika",
+    "create": "Iliumwa",
+    "update": "Ilibadilika",
+    "delete": "Imefutwa",
+    "allRecordTypes": "Aina zote za rekodi",
+    "lastEditedBy": "Mabadiliko ya mwisho yaliyofanywa na {name}",
+    "formerStaff": "Mfanyakazi wa zamani",
+    "noHistory": "Hakuna mabadiliko yaliyorekodiwa kwa hii bado.",
+    "noActivity": "Hakuna shughuli ya menyu inayolingana na vichujio hivi.",
+    "noFieldDetail": "Hakuna maelezo ya sehemu iliyorekodiwa.",
+    "empty": "(tupu)",
+    "loadError": "Imeshindikana kupakia shughuli za menyu.",
+    "entities": {
+      "menu_item": "Kipengee cha menyu",
+      "menu_category": "Kategoria",
+      "menu_sub_category": "Ndogo-kategoria",
+      "menu_accompaniment": "Kitandishi"
+    },
+    "fields": {
+      "name": "Jina",
+      "description": "Maelezo",
+      "price": "Bei",
+      "cost": "Gharama",
+      "available": "Inapatikana",
+      "department": "Idari",
+      "category": "Kategoria",
+      "subCategory": "Ndogo-kategoria",
+      "sortOrder": "Ompangilio",
+      "active": "Inafanya kazi"
+    }
   }
 }

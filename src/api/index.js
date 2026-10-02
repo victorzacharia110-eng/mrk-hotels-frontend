@@ -1539,6 +1539,38 @@ export const menuCategoryApi = {
 }
 
 /**
+ * Who changed the menu, and when.
+ *
+ * The menu controllers have always written an audit row on every create, update
+ * and delete; these two endpoints are the read side of that trail. They sit
+ * behind the same gate as the menu writes (level 30 + menu.manage), so anyone
+ * who can change the menu can see who changed it, and a waiter gets nothing.
+ *
+ * Unlike `reportApi.auditLogs`, which is the platform-wide log for accountants
+ * and above, these only ever return menu rows.
+ */
+export const menuAuditApi = {
+  /**
+   * Who did what across the whole menu, newest first.
+   * @param {object} params - entity_type, entity_id, action, user_id, from, to, page, per_page.
+   * @returns {Promise} Axios response with a paginated list of audit rows.
+   */
+  index(params) {
+    return api.get(`${v1}/menu-audit`, { params })
+  },
+  /**
+   * The whole history of a single menu record, newest first.
+   * @param {string} entityType - menu_item | menu_category | menu_sub_category | menu_accompaniment.
+   * @param {string} entityId - The record's uuid.
+   * @param {object} params - action, per_page.
+   * @returns {Promise} Axios response with the rows for that record (not paginated).
+   */
+  entity(entityType, entityId, params) {
+    return api.get(`${v1}/menu-audit/${entityType}/${entityId}`, { params })
+  },
+}
+
+/**
  * Registered "served with" accompaniments (wali, ugali, chips...) the hotel
  * offers next to grill-style mains. Per department: the restaurant and the bar
  * keep separate lists. Previously a hard-coded front-end list; now a per-hotel

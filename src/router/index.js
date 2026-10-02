@@ -77,6 +77,9 @@ const hotelChildren = [
   { path: 'statuses', name: 'hotel-statuses', component: () => import('@/pages/statuses/StatusesPage.vue'), meta: { module: 'statuses' } },
   // Menu item management.
   { path: 'menu', name: 'hotel-menu', component: () => import('@/pages/menu/MenuListPage.vue'), meta: { module: 'menu' } },
+  // Who changed the menu, and when. Guarded by the same `menu` module as the page
+  // above, so the two can never drift apart and a waiter is turned away from both.
+  { path: 'menu/activity', name: 'hotel-menu-activity', component: () => import('@/pages/menu/MenuActivityPage.vue'), meta: { module: 'menu' } },
   // POS outlets (restaurant/bar) cashiers pick from after login.
   { path: 'outlets', name: 'hotel-outlets', component: () => import('@/pages/outlets/OutletManagePage.vue'), meta: { module: 'outlets' } },
   // Till printer connection (Web Serial ESC/POS thermal printing).

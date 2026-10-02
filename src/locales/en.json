@@ -779,7 +779,8 @@
     "backOffice": "Back Office",
     "dayClose": "Day Close",
     "expenseVoucher": "Expense Voucher",
-    "incomeVoucher": "Income Voucher"
+    "incomeVoucher": "Income Voucher",
+    "menuActivity": "Menu Activity"
   },
   "import": {
     "title": "Import Data",
@@ -5608,5 +5609,40 @@
   "outlet": {
     "switchLabel": "Outlet to work in",
     "choosePlaceholder": "Choose an outlet"
+  },
+  "menuAudit": {
+    "title": "Menu activity",
+    "subtitle": "Every change made to this hotel's menu, and who made it.",
+    "history": "Edit history",
+    "changed": "Changed",
+    "create": "Created",
+    "update": "Changed",
+    "delete": "Deleted",
+    "allRecordTypes": "All record types",
+    "lastEditedBy": "Last edited by {name}",
+    "formerStaff": "A former staff member",
+    "noHistory": "No changes recorded for this yet.",
+    "noActivity": "No menu activity matches these filters.",
+    "noFieldDetail": "No field detail recorded.",
+    "empty": "(empty)",
+    "loadError": "Could not load the menu activity.",
+    "entities": {
+      "menu_item": "Menu item",
+      "menu_category": "Category",
+      "menu_sub_category": "Sub-category",
+      "menu_accompaniment": "Accompaniment"
+    },
+    "fields": {
+      "name": "Name",
+      "description": "Description",
+      "price": "Price",
+      "cost": "Cost",
+      "available": "Available",
+      "department": "Department",
+      "category": "Category",
+      "subCategory": "Sub-category",
+      "sortOrder": "Sort order",
+      "active": "Active"
+    }
   }
 }

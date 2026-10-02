@@ -97,6 +97,17 @@ describe('module config', () => {
       expect(mod.roles).not.toContain('housekeeping')
     })
 
+    it('the menu activity trail follows the menu it belongs to', () => {
+      // Same gate as the menu itself. A separate role list here would be the one
+      // place allowed to drift, and drift means either hiding the trail from a
+      // cashier who needs it or exposing it to a waiter who does not.
+      const menu = moduleByKey('menu')
+      const activity = moduleByKey('menu-activity')
+
+      expect(activity.roles).toEqual(menu.roles)
+      expect(activity.to).toBe('/app/menu/activity')
+    })
+
     it('laundry requires manage_laundry permission', () => {
       const mod = moduleByKey('laundry')
       expect(mod.permission).toBe('manage_laundry')

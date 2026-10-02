@@ -59,6 +59,10 @@ export const MODULES = [
   // Cashiers and bartenders run a till on their own department and maintain the
   // menu from here, so they reach this page alongside the back-office roles.
   { key: 'menu', to: '/app/menu', icon: 'fas fa-book-open', labelKey: 'nav.menu', roles: ['hotel_admin', 'manager', 'cashier', 'bartender'], feature: 'menu' },
+  // Who changed the menu, and when. Same roles as the menu above on purpose: the
+  // trail is only useful to the people who can change the menu, and duplicating
+  // that list is the only thing to keep in step.
+  { key: 'menu-activity', to: '/app/menu/activity', icon: 'fas fa-clock-rotate-left', labelKey: 'nav.menuActivity', roles: ['hotel_admin', 'manager', 'cashier', 'bartender'], feature: 'menu' },
   // POS outlets (restaurant/bar) cashiers work from.
   { key: 'outlets', to: '/app/outlets', icon: 'fas fa-store', labelKey: 'nav.outlets', roles: ['hotel_admin', 'manager'] },
   // Till printer connection for direct thermal printing.
