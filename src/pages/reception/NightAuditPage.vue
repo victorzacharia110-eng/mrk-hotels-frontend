@@ -24,12 +24,68 @@
       <div class="date-row">
         <div class="form-group">
           <label>{{ $t('nightAudit.businessDate') }}</label>
-          <input v-model="selectedDate" type="date" class="input" @change="onPickDate" />
+          <!-- max=today: the backend refuses a future business date outright, and
+               an unconstrained picker only offers a dead end. Today itself stays
+               selectable, because previewing today's figures is allowed. -->
+          <input
+            v-model="selectedDate"
+            type="date"
+            class="input"
+            :max="today"
+            @change="onPickDate"
+          />
         </div>
+        <!-- Yesterday is closable but today is not, so on a normal evening the
+             page opens on a day that cannot be closed. This is the way out of
+             that without having to know the date picker is the answer. -->
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="!yesterday || selectedDate === yesterday"
+          @click="goToDate(yesterday)"
+        >
+          <i class="fas fa-arrow-left" aria-hidden="true"></i>
+          {{ $t('nightAudit.runPreviousDay') }}
+        </button>
         <div v-if="report?.closed" class="closed-badge">
           <i class="fas fa-lock"></i> {{ $t('nightAudit.closed') }}
         </div>
       </div>
+    </div>
+
+    <!-- Booking debt that no longer blocks anything. Listed because hiding it
+         would only trade one silent failure for another: these are guests who
+         never arrived and whose bookings were never resolved. -->
+    <div v-if="staleArrivals.count" class="alert alert-info stale-panel">
+      <p class="stale-title">
+        <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+        {{ $t('nightAudit.staleArrivalsTitle', { count: staleArrivals.count }) }}
+      </p>
+      <ul class="stale-list">
+        <li v-for="item in staleArrivals.items" :key="item.reservation_id">
+          <span class="stale-name">{{ item.guest_name }}</span>
+          <span class="stale-meta">
+            {{ $t('nightAudit.staleArrivalRoom', { room: item.room_number || '—' }) }}
+            · {{ $t('nightAudit.staleArrivalDate', { date: item.check_in_date }) }}
+          </span>
+        </li>
+      </ul>
+      <p class="stale-note">{{ $t('nightAudit.staleArrivalsNote') }}</p>
+    </div>
+
+    <!-- A missed audit is invisible otherwise: the page just opens on today with
+         the close button disabled, which reads as "come back after midnight"
+         rather than "yesterday never got done". -->
+    <div v-if="missedDays.length" class="alert alert-warning missed-banner">
+      <p class="missed-title">
+        <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+        {{ $t('nightAudit.missedDaysTitle', { count: missedDays.length }) }}
+      </p>
+      <p class="missed-dates">{{ missedDays.join(', ') }}</p>
+      <button type="button" class="btn btn-primary" @click="goToDate(oldestMissedDay)">
+        <i class="fas fa-lock-open" aria-hidden="true"></i>
+        {{ $t('nightAudit.openMissedDay', { date: oldestMissedDay }) }}
+      </button>
     </div>
 
     <div v-if="loading" class="alert alert-info">{{ $t('common.loading') }}</div>
@@ -249,10 +305,48 @@ const dateHasPassed = computed(
   () => Boolean(selectedDate.value) && selectedDate.value < today.value,
 )
 
+/** The calendar day before the hotel's today, as YYYY-MM-DD. */
+const yesterday = computed(() => shiftDay(today.value, -1))
+
+/** Moves a YYYY-MM-DD string by whole days. Noon avoids DST edges. */
+function shiftDay(iso, days) {
+  if (!iso) return ''
+  const d = new Date(`${iso}T12:00:00`)
+  if (Number.isNaN(d.getTime())) return ''
+  d.setDate(d.getDate() + days)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+const closedDates = computed(
+  () => new Set(history.value.map((d) => d.close_date)),
+)
+
+/**
+ * Passed business days that were never closed, newest first.
+ *
+ * Walks back from yesterday and stops at the first day that *was* closed, so the
+ * result is only the open run of days rather than every gap ever — a hotel that
+ * closed nothing in March should not still be showing March. Capped so a history
+ * that has never been closed cannot spin through thousands of days.
+ */
+const missedDays = computed(() => {
+  const missed = []
+  let cursor = yesterday.value
+  for (let i = 0; i < 90 && cursor && !closedDates.value.has(cursor); i += 1) {
+    missed.push(cursor)
+    cursor = shiftDay(cursor, -1)
+  }
+  return missed
+})
+
+/** The day to close first: the oldest still missing, keeping the run in order. */
+const oldestMissedDay = computed(() => missedDays.value[missedDays.value.length - 1] || '')
+
 const canClose = computed(() => dateHasPassed.value && !report.value?.closed)
 const report = ref(null)
 const dueOuts = ref([])
 const history = ref([])
+const staleArrivals = ref({ count: 0, items: [] })
 const loading = ref(false)
 const closing = ref(false)
 const showClose = ref(false)
@@ -275,6 +369,7 @@ async function load() {
     report.value.closed = reportRes.data.closed
     dueOuts.value = reportRes.data.due_outs || []
     history.value = historyRes.data.day_closes || []
+    staleArrivals.value = reportRes.data.stale_arrivals || { count: 0, items: [] }
   } catch (err) {
     error.value = err.response?.data?.message || t('common.loadError')
   } finally {
@@ -307,6 +402,13 @@ function onPickDate() {
   load()
 }
 
+/** Jumps to a specific business day, e.g. from the missed-audit banner. */
+function goToDate(date) {
+  if (!date) return
+  selectedDate.value = date
+  onPickDate()
+}
+
 onMounted(() => {
   workingDateStore.ensureLoaded()
   load()
@@ -333,6 +435,18 @@ onMounted(() => {
 .dueout-name { font-weight: 700; color: #062A52; }
 .dueout-room { font-size: 12px; color: #64748b; }
 .dueout-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 13px; color: #475569; }
+.stale-panel { margin-bottom: 16px; }
+.stale-title { margin: 0 0 8px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.stale-list { margin: 0 0 10px; padding-left: 18px; font-size: 13px; }
+.stale-list li { margin-bottom: 4px; }
+.stale-name { font-weight: 600; }
+.stale-meta { opacity: 0.75; }
+.stale-note { margin: 0; font-size: 12px; opacity: 0.8; }
+.missed-banner { margin-bottom: 16px; }
+.missed-title { margin: 0 0 6px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+/* The dates are the actionable part of the warning, so they are listed rather
+   than summarised away into "yesterday". */
+.missed-dates { margin: 0 0 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; word-break: break-word; }
 .dueout-bal { font-weight: 600; }
 .dueout-badge { white-space: nowrap; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
 .badge-due { background: #fef3c7; color: #92400e; }

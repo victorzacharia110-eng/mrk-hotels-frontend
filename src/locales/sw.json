@@ -2335,7 +2335,14 @@
     "history": "Historia ya Kufunga",
     "date": "Tarehe",
     "closedBy": "Imefungwa na",
-    "noHistory": "Hakuna siku zilizofungwa bado."
+    "noHistory": "Hakuna siku zilizofungwa bado.",
+    "runPreviousDay": "Fanya siku iliyotangulia",
+    "missedDaysTitle": "Ukaguzi wa usiku haukuwa kufanywa kwa siku {count} | Ukaguzi wa usiku haukuwa kufanywa kwa siku {count}",
+    "openMissedDay": "Fungua {date}",
+    "staleArrivalsTitle": "Miaka {count} bado haijasahihiwa | Miaka {count} bado haijasahihiwa",
+    "staleArrivalRoom": "Chumba {room}",
+    "staleArrivalDate": "ilizotarajiwa {date}",
+    "staleArrivalsNote": "Wageni hawa hawakuja na hakushughulikiwa. Hawatengenezi tena kufunga siku, lakini bado wanahitaji kufutwa au kuwekwa alama ya kuacha."
   },
   "distribution": {
     "title": "Kumbukumbu za Chaneli",

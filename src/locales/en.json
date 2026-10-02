@@ -2338,7 +2338,14 @@
     "history": "Close History",
     "date": "Date",
     "closedBy": "Closed By",
-    "noHistory": "No closed days yet."
+    "noHistory": "No closed days yet.",
+    "runPreviousDay": "Run previous day",
+    "missedDaysTitle": "The night audit was never run for {count} day | The night audit was never run for {count} days",
+    "openMissedDay": "Open {date}",
+    "staleArrivalsTitle": "{count} older booking still unresolved | {count} older bookings still unresolved",
+    "staleArrivalRoom": "Room {room}",
+    "staleArrivalDate": "due {date}",
+    "staleArrivalsNote": "These guests never arrived and were never resolved. They no longer block closing a day, but they still need cancelling or marking no-show."
   },
   "distribution": {
     "title": "Channel Logs",

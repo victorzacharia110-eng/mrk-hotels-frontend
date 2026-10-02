@@ -566,6 +566,14 @@ button {
   color: #1f6ea8;
 }
 
+/* A condition that needs attention but is not an error: something is unfinished
+   rather than wrong. Lived in here so pages stop redefining it. */
+.alert-warning {
+  background: #fff6e5;
+  color: #8a5a00;
+  border: 1px solid #f0b429;
+}
+
 /* Transient toast stack (fixed top-right, see src/utils/toast.js). */
 .app-toast-container {
   position: fixed;
