@@ -3117,27 +3117,6 @@
     "searchUpcoming": "Tafuta wageni wanaokuja...",
     "noDetails": "Hakuna maelezo."
   },
-  "panelReview": {
-    "title": "Mapitizi ya Mapendeleo ya Msimamizi — kilichobadilika",
-    "intro": "Kumbukumbu ya masuala yaliyoibuliwa katika mapitizi ya msimamizi: tatizo lilikuwa nini, kilichobadilika, na unaona matokeo yake wapi kwenye skrini. Kilichobaki hakijajaliwa kimeorodheshwa kama kimebaki, ili mwonesho uwe kamili kila wakati.",
-    "howToRead": "Kila hoja inaeleza kilichokuwa kibaya, kilichobadilika, na unaangalia wapi. “Unapoona” ni skrini ndani ya mfumo huu — huhitaji maarifa ya kitehnolojia.",
-    "countTotal": "Hoja zilizoibuliwa",
-    "countDone": "Imekamilika",
-    "countPartial": "Imekamilika kwa sehemu",
-    "countOpen": "Inabaki",
-    "searchLabel": "Tafuta",
-    "searchPlaceholder": "mfano: stock, outlet, printer, guest",
-    "statusLabel": "Onyesha",
-    "statusAll": "Hoja zote",
-    "status_done": "Imekamilika",
-    "status_partial": "Imekamilika kwa sehemu",
-    "status_open": "Inabaki",
-    "noMatches": "Hakuna hoja inayolingana na utafutaji huo.",
-    "asked": "Alichotaka mapitizi",
-    "problem": "Kilichokuwa kibaya",
-    "change": "Kilichobadilika",
-    "where": "Unakoona"
-  },
   "profile": {
     "title": "Wasifu Wangu",
     "account": "Akaunti",

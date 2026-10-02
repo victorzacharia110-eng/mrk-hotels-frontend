@@ -3131,27 +3131,6 @@
     "searchUpcoming": "Search upcoming guests...",
     "noDetails": "No details available."
   },
-  "panelReview": {
-    "title": "Manager Panel Review — what was changed",
-    "intro": "The record of the points raised in the manager panel review: what the problem was, what was changed, and where on screen you can see the result. Anything not yet built is listed as open, so the picture is always complete.",
-    "howToRead": "Each point says what was wrong, what changed, and where to look. “Where to see it” is a screen in this software — no technical knowledge is needed.",
-    "countTotal": "Points raised",
-    "countDone": "Done",
-    "countPartial": "Partly done",
-    "countOpen": "Still to do",
-    "searchLabel": "Search",
-    "searchPlaceholder": "e.g. stock, outlet, printer, guest",
-    "statusLabel": "Show",
-    "statusAll": "All points",
-    "status_done": "Done",
-    "status_partial": "Partly done",
-    "status_open": "Still to do",
-    "noMatches": "No points match that search.",
-    "asked": "What the review asked",
-    "problem": "What was wrong",
-    "change": "What was changed",
-    "where": "Where to see it"
-  },
   "profile": {
     "title": "My Profile",
     "account": "Account",
