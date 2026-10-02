@@ -456,3 +456,171 @@ describe('NightAuditPage — layout, auto-dismiss and consequences', () => {
     expect(chips[1].text()).toContain('2026-09-24')
   })
 })
+
+describe('NightAuditPage — gaps in the record and double bookings', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    history.mockResolvedValue({ data: { day_closes: [] } })
+    close.mockResolvedValue({ data: {} })
+  })
+
+  function todayIso() {
+    const now = new Date()
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+  }
+
+  function shift(iso, days) {
+    const d = new Date(`${iso}T12:00:00`)
+    d.setDate(d.getDate() + days)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+
+  const open = (extra = {}) =>
+    report.mockResolvedValue({ data: { report: REPORT_OPEN, closed: false, due_outs: [], ...extra } })
+
+  const gapPanel = (w) => w.find('.gap-panel')
+  const dupPanel = (w) => w.find('.duplicate-panel')
+
+  it('flags days skipped between two closed days', async () => {
+    // The real shape of the record: closed the 22nd, then jumped to the 24th,
+    // so the 23rd was skipped rather than left pending.
+    history.mockResolvedValue({
+      data: {
+        day_closes: [
+          { close_date: shift(todayIso(), -8) },
+          { close_date: shift(todayIso(), -11) },
+        ],
+      },
+    })
+    open()
+    const wrapper = await mountPage()
+
+    expect(gapPanel(wrapper).exists()).toBe(true)
+    expect(gapPanel(wrapper).text()).toContain(shift(todayIso(), -10))
+    expect(gapPanel(wrapper).text()).toContain(shift(todayIso(), -9))
+  })
+
+  it('says a gap makes the reports incomplete', async () => {
+    history.mockResolvedValue({
+      data: {
+        day_closes: [
+          { close_date: shift(todayIso(), -8) },
+          { close_date: shift(todayIso(), -11) },
+        ],
+      },
+    })
+    open()
+    const wrapper = await mountPage()
+
+    expect(gapPanel(wrapper).text().toLowerCase()).toContain('incomplete')
+  })
+
+  it('stays quiet when the closed run has no holes', async () => {
+    history.mockResolvedValue({
+      data: {
+        day_closes: [
+          { close_date: shift(todayIso(), -8) },
+          { close_date: shift(todayIso(), -9) },
+          { close_date: shift(todayIso(), -10) },
+        ],
+      },
+    })
+    open()
+    const wrapper = await mountPage()
+
+    expect(gapPanel(wrapper).exists()).toBe(false)
+  })
+
+  it('stays quiet with a single closed day', async () => {
+    // One day cannot enclose a gap.
+    history.mockResolvedValue({ data: { day_closes: [{ close_date: shift(todayIso(), -8) }] } })
+    open()
+    const wrapper = await mountPage()
+
+    expect(gapPanel(wrapper).exists()).toBe(false)
+  })
+
+  it('flags two bookings competing for one room on one date', async () => {
+    open({
+      stale_arrivals: {
+        count: 2,
+        items: [
+          { reservation_id: 'R-1', guest_name: 'Russo Brothers', room_number: '216', check_in_date: '2026-09-24' },
+          { reservation_id: 'R-2', guest_name: 'Russo Brothers', room_number: '216', check_in_date: '2026-09-24' },
+        ],
+      },
+    })
+    const wrapper = await mountPage()
+
+    expect(dupPanel(wrapper).exists()).toBe(true)
+    const text = dupPanel(wrapper).text()
+    expect(text).toContain('216')
+    expect(text).toContain('2026-09-24')
+    expect(text).toContain('2 bookings')
+  })
+
+  it('groups each contested room separately', async () => {
+    open({
+      stale_arrivals: {
+        count: 3,
+        items: [
+          { reservation_id: 'R-1', guest_name: 'Russo Brothers', room_number: '216', check_in_date: '2026-09-24' },
+          { reservation_id: 'R-2', guest_name: 'Russo Brothers', room_number: '216', check_in_date: '2026-09-24' },
+          { reservation_id: 'R-3', guest_name: 'Emanuel Mallya', room_number: '116', check_in_date: '2026-09-21' },
+          { reservation_id: 'R-4', guest_name: 'Emanuel Mallya', room_number: '116', check_in_date: '2026-09-21' },
+        ],
+      },
+    })
+    const wrapper = await mountPage()
+
+    expect(dupPanel(wrapper).findAll('li')).toHaveLength(2)
+  })
+
+  it('does not treat the same room on different dates as a clash', async () => {
+    // One guest legitimately occupies 116 across two nights. Grouping on room
+    // alone would report this as a double booking and cry wolf on real stays.
+    open({
+      stale_arrivals: {
+        count: 2,
+        items: [
+          { reservation_id: 'R-1', guest_name: 'Emanuel Mallya', room_number: '116', check_in_date: '2026-09-21' },
+          { reservation_id: 'R-2', guest_name: 'Emanuel Mallya', room_number: '116', check_in_date: '2026-09-23' },
+        ],
+      },
+    })
+    const wrapper = await mountPage()
+
+    expect(dupPanel(wrapper).exists()).toBe(false)
+  })
+
+  it('does not treat two different rooms as a clash', async () => {
+    open({
+      stale_arrivals: {
+        count: 2,
+        items: [
+          { reservation_id: 'R-1', guest_name: 'Emanuel Mallya', room_number: '116', check_in_date: '2026-09-21' },
+          { reservation_id: 'R-2', guest_name: 'Russo Sisters', room_number: '117', check_in_date: '2026-09-21' },
+        ],
+      },
+    })
+    const wrapper = await mountPage()
+
+    expect(dupPanel(wrapper).exists()).toBe(false)
+  })
+
+  it('says the clash could mean a double charge', async () => {
+    open({
+      stale_arrivals: {
+        count: 2,
+        items: [
+          { reservation_id: 'R-1', guest_name: 'Russo Brothers', room_number: '216', check_in_date: '2026-09-24' },
+          { reservation_id: 'R-2', guest_name: 'Russo Brothers', room_number: '216', check_in_date: '2026-09-24' },
+        ],
+      },
+    })
+    const wrapper = await mountPage()
+
+    expect(dupPanel(wrapper).text().toLowerCase()).toContain('charged twice')
+  })
+})

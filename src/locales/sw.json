@@ -2348,7 +2348,12 @@
     "warnLeavesGap": "Hii bado itaacha siku {count} isiyofungwa kati yao: {dates. Fungua hizo pia kama kipindi kinahitaji kuwa kamili.",
     "warnOtherDaysOpen": "Siku za biashara {count} bado hazijafungwa: {dates}. Kufunga {date} sasa hakufungi hizo.",
     "warnStaleRemain": "Miaka {count} bado itabaki haijasahihiwa baada ya kufunga hiki. Hii inasahihisha siku inayofungwa pekee.",
-    "warnOneWay": "Kufunga siku ni cha kudumu. Takwimu zinalofungwa na ukaguzi wa usiku hauwezi kuendeshwa tena kwa siku hiyo."
+    "warnOneWay": "Kufunga siku ni cha kudumu. Takwimu zinalofungwa na ukaguzi wa usiku hauwezi kuendeshwa tena kwa siku hiyo.",
+    "duplicateRoomsTitle": "Chumba {count} kimewekewa mara mbili kwa tarehe same | Vyumba {count} vimewekewa mara mbili kwa tarehe same",
+    "duplicateRoomCount": "Miaka {count}",
+    "duplicateRoomsNote": "Kila moja ni booking hai ya moja kwa moja. Angalia kama chumba kilizouzwa mara mbili au mteja alilipwa mara mbili — hakuna kingine kinachoonyesha.",
+    "historyGapTitle": "Siku {count} ndani ya kipindi ulichofunga haikukaguliwa | Siku {count} ndani ya kipindi ulichofunga hazikukaguliwa",
+    "historyGapNote": "Hizi ziko kati ya siku ulizofunga tayari, kwa hivyo zilirukwa badala ya kubaki wazi. Ripoti zinazohusika na kipindi hiki hazikamiliki."
   },
   "distribution": {
     "title": "Kumbukumbu za Chaneli",

@@ -53,6 +53,40 @@
       </div>
     </div>
 
+    <!-- Double bookings are the most expensive thing on this page: two live
+         records for one room on one date means either the room was sold twice or
+         the guest was charged twice. Nothing else in the panel shows this. -->
+    <div v-if="duplicateRoomBookings.length" class="alert alert-error duplicate-panel">
+      <p class="duplicate-title">
+        <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
+        {{ $t('nightAudit.duplicateRoomsTitle', { count: duplicateRoomBookings.length }) }}
+      </p>
+      <ul class="duplicate-list">
+        <li v-for="group in duplicateRoomBookings" :key="`${group[0].room_number}-${group[0].check_in_date}`">
+          <span class="duplicate-room">
+            {{ $t('nightAudit.staleArrivalRoom', { room: group[0].room_number }) }}
+          </span>
+          <span class="duplicate-date">{{ group[0].check_in_date }}</span>
+          <span class="duplicate-names">{{ group.map((i) => i.guest_name).join(', ') }}</span>
+          <span class="duplicate-count">
+            {{ $t('nightAudit.duplicateRoomCount', { count: group.length }) }}
+          </span>
+        </li>
+      </ul>
+      <p class="duplicate-note">{{ $t('nightAudit.duplicateRoomsNote') }}</p>
+    </div>
+
+    <!-- A hole in the middle of the closed record. Distinct from the missed-days
+         banner: those days are not done yet, these were skipped over. -->
+    <div v-if="historyGaps.length" class="alert alert-warning gap-panel">
+      <p class="gap-title">
+        <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+        {{ $t('nightAudit.historyGapTitle', { count: historyGaps.length }) }}
+      </p>
+      <p class="gap-dates">{{ historyGaps.join(', ') }}</p>
+      <p class="gap-note">{{ $t('nightAudit.historyGapNote') }}</p>
+    </div>
+
     <!-- Booking debt that no longer blocks anything. Listed because hiding it
          would only trade one silent failure for another: these are guests who
          never arrived and whose bookings were never resolved. -->
@@ -344,6 +378,53 @@ const missedDays = computed(() => {
   return missed
 })
 
+/**
+ * Days that were never audited but sit BETWEEN two closed days.
+ *
+ * `missedDays` only walks back from yesterday, so it stops at the first closed
+ * day. That is the right behaviour for "what have I not done yet" but it is
+ * blind to a hole punched in the middle of the record: the hotel closed the
+ * 17th, then the 22nd, and nothing in between was ever run. Month-to-date
+ * reports spanning that window are quietly incomplete, so it is surfaced
+ * separately instead of being mistaken for a finished run.
+ */
+const historyGaps = computed(() => {
+  const dates = history.value.map((d) => d.close_date).filter(Boolean)
+  if (dates.length < 2) return []
+
+  const oldest = dates[dates.length - 1]
+  const newest = dates[0]
+  const out = []
+  let cursor = shiftDay(oldest, 1)
+
+  for (let i = 0; i < 90 && cursor && cursor < newest; i += 1) {
+    if (!closedDates.value.has(cursor)) out.push(cursor)
+    cursor = shiftDay(cursor, 1)
+  }
+
+  return out
+})
+
+/**
+ * Unresolved bookings competing for the same room on the same date.
+ *
+ * These are separate live records, not a display artefact — two of them really
+ * did get created. Either the room was sold twice or the guest was charged
+ * twice, and neither is visible anywhere else in the panel.
+ */
+const duplicateRoomBookings = computed(() => {
+  const groups = new Map()
+
+  for (const item of staleArrivals.value.items || []) {
+    if (!item.room_number || !item.check_in_date) continue
+    const key = `${item.room_number}|${item.check_in_date}`
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(item)
+  }
+
+  return [...groups.values()].filter((group) => group.length > 1)
+})
+
 /** The most recent closed business day, or null if none has ever closed. */
 const lastClosedDate = computed(() => history.value[0]?.close_date || null)
 
@@ -525,6 +606,19 @@ onMounted(() => {
 .dueout-name { font-weight: 700; color: #062A52; }
 .dueout-room { font-size: 12px; color: #64748b; }
 .dueout-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 13px; color: #475569; }
+.duplicate-panel, .gap-panel { margin-bottom: 16px; }
+.duplicate-title, .gap-title { margin: 0 0 8px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.duplicate-list { margin: 0 0 10px; padding-left: 18px; font-size: 13px; display: grid; gap: 7px; }
+.duplicate-list li { margin-bottom: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.duplicate-room { font-weight: 700; }
+.duplicate-date { background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(150, 40, 27, 0.25); color: #96281b; border-radius: 999px; padding: 2px 10px; font-size: 12px; white-space: nowrap; }
+.duplicate-names { opacity: 0.85; }
+.duplicate-count { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
+.duplicate-note, .gap-note { margin: 0; font-size: 12px; opacity: 0.85; }
+.gap-dates {
+  margin: 0 0 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px; word-break: break-word;
+}
 .stale-panel { margin-bottom: 16px; }
 .stale-title { margin: 0 0 8px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
 .stale-list { margin: 0 0 10px; padding-left: 18px; font-size: 13px; display: grid; gap: 7px; }

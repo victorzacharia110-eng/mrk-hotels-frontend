@@ -2351,7 +2351,12 @@
     "warnLeavesGap": "This will still leave {count} unclosed day between them: {dates}. Close those too if the period needs to be complete.",
     "warnOtherDaysOpen": "{count} later business day is still open: {dates}. Closing {date} now does not close them.",
     "warnStaleRemain": "{count} older booking will still be unresolved after this close. This only settles the day being closed.",
-    "warnOneWay": "Closing a day is permanent. The figures are frozen and the night audit cannot be run for that date again."
+    "warnOneWay": "Closing a day is permanent. The figures are frozen and the night audit cannot be run for that date again.",
+    "duplicateRoomsTitle": "{count} room is double-booked for the same date | {count} rooms are double-booked for the same date",
+    "duplicateRoomCount": "{count} bookings",
+    "duplicateRoomsNote": "Each one is a separate live booking. Check whether the room was sold twice or the guest was charged twice — neither is visible anywhere else.",
+    "historyGapTitle": "{count} day inside your closed range was never audited | {count} days inside your closed range were never audited",
+    "historyGapNote": "These sit between days you have already closed, so they were skipped rather than left pending. Reports spanning them will be incomplete."
   },
   "distribution": {
     "title": "Channel Logs",
