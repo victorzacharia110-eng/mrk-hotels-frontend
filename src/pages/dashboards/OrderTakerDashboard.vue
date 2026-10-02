@@ -2874,7 +2874,18 @@ function onKey(e) {
  * viewport-height box would be the wrong trade.
  */
 .taker-page.taker-fixed {
-  height: 100vh;
+  /* Fill the panel's own scroll container, NOT the viewport. The app shell is
+     100vh with a header above `#main-content`, so `100vh` here overran the real
+     budget by the height of that header: the pad stopped 122px short of the
+     fold and, because the overflow was hidden with no way to scroll to it, the
+     Send order button sat below the bottom of the window and could not be
+     clicked at all. `100%` resolves against `#main-content`, which is the
+     flex leftover and already the thing that scrolls.
+     `min-height: 0` matters just as much: the base rule asks for `min-height:
+     100vh`, and a min-height wins over `height`, so without this the page is
+     still clamped to a full viewport tall and overflows the container again. */
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 .taker-page.taker-fixed .taker-split {

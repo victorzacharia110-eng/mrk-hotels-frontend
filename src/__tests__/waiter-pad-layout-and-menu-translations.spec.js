@@ -22,20 +22,25 @@ const sw = JSON.parse(read('src/locales/sw.json'))
 
 /** Pulls a CSS rule body out of a `<style>` block by selector. */
 function rule(css, selector) {
+  // Comments are stripped first. They live inside the braces here, and these
+  // bodies are written to explain *why* a value is what it is — so a rule that
+  // mentions `min-height: 100vh` in its prose would otherwise satisfy an
+  // assertion about `height: 100vh` and pass without the CSS ever saying it.
+  const source = css.replace(/\/\*[\s\S]*?\*\//g, '')
   // The brace is required so a selector that is only one entry in a group
   // (`.a,\n.b {`) does not match when the caller means the standalone rule.
-  const at = css.search(new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{`))
+  const at = source.search(new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{`))
   expect(at, `selector ${selector} not found`).toBeGreaterThan(-1)
-  const open = css.indexOf('{', at)
+  const open = source.indexOf('{', at)
   let depth = 0
-  for (let i = open; i < css.length; i += 1) {
-    if (css[i] === '{') depth += 1
-    if (css[i] === '}') {
+  for (let i = open; i < source.length; i += 1) {
+    if (source[i] === '{') depth += 1
+    if (source[i] === '}') {
       depth -= 1
-      if (depth === 0) return css.slice(open + 1, i)
+      if (depth === 0) return source.slice(open + 1, i)
     }
   }
-  return css.slice(open + 1)
+  return source.slice(open + 1)
 }
 
 const styles = pad.slice(pad.indexOf('<style'))
@@ -46,8 +51,26 @@ describe('waiter pad: the page itself does not scroll while taking an order', ()
     // the height lock has to be conditional rather than on the page always.
     expect(pad).toMatch(/:class="\{ 'pos-theme': isPosRole, 'taker-fixed': activeTab === 'new' \}"/)
     const fixed = rule(styles, '.taker-page.taker-fixed')
-    expect(fixed).toMatch(/height:\s*100vh/)
     expect(fixed).toMatch(/overflow:\s*hidden/)
+  })
+
+  it('fills the panel it is given, not the whole viewport', () => {
+    // This used to ask for `height: 100vh` and the assertion above guarded it.
+    // That was the bug: the app shell is 100vh with a header above
+    // `#main-content`, so a viewport-tall pad overran its container by the
+    // height of that header, and since the overflow was hidden with nothing to
+    // scroll, the Send order button ended up below the bottom of the window and
+    // could not be clicked. `100%` resolves against `#main-content`, which is
+    // the flex leftover and already the scroll container.
+    const fixed = rule(styles, '.taker-page.taker-fixed')
+    expect(fixed).toMatch(/height:\s*100%/)
+    expect(fixed).not.toMatch(/height:\s*100vh/)
+
+    // `min-height: 0` is not optional. The base rule asks for
+    // `min-height: 100vh`, and a min-height beats a height, so without this the
+    // page is clamped back to a full viewport tall no matter what `height` says.
+    expect(rule(styles, '.taker-page')).toMatch(/min-height:\s*100vh/)
+    expect(fixed).toMatch(/min-height:\s*0/)
   })
 
   it('releases the height lock on a narrow screen', () => {
