@@ -85,6 +85,12 @@ test('the chips appear inside the category and narrow its food', async ({ page }
   await page.locator('.sub-rail .sub-btn', { hasText: 'Cocktails' }).click()
   await expect(page.locator('.sub-rail .sub-btn', { hasText: 'Cocktails' })).toHaveClass(/active/)
   await expect(page.locator('.inline-items-head strong')).toContainText('Cocktails')
+  // Exactly the sub-category, nothing else. This heading used to read
+  // `Drinks · Cocktails`, which spent a spaced separator and a repeat of the
+  // parent on a line that already sits under the category rail — where `Drinks`
+  // is the highlighted chip a few pixels above. Asserted exactly, so neither
+  // the separator nor the redundant parent can quietly come back.
+  await expect(page.locator('.inline-items-head strong')).toHaveText('Cocktails')
 
   const cocktails = await dishes(page)
   expect(cocktails.length, 'Cocktails must have its own food').toBeGreaterThan(0)

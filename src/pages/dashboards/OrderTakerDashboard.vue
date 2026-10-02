@@ -162,7 +162,7 @@
         <div v-if="activeCategory || searchQuery" class="inline-items">
           <header class="inline-items-head">
             <strong v-if="searchQuery">{{ $t('orderTaker.searchTitle') }}</strong>
-            <strong v-else-if="activeSubCategory">{{ activeCategory }} · {{ activeSubCategory }}</strong>
+            <strong v-else-if="activeSubCategory">{{ activeSubCategory }}</strong>
             <strong v-else>{{ activeCategory }}</strong>
             <button type="button" class="line-remove" :title="$t('orderTaker.close')" @click="closeCategory">
               <i class="fas fa-times" aria-hidden="true"></i>
