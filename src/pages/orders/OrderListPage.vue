@@ -145,7 +145,7 @@
               </button>
             </td>
             <td>
-              <span class="price">TZS {{ Number(order.total_amount).toLocaleString() }}</span>
+              <span class="price">{{ curCode() }} {{ Number(order.total_amount).toLocaleString() }}</span>
             </td>
             <td>
               <span class="badge" :class="statusBadge(order.status)">{{
@@ -451,7 +451,7 @@
         </div>
         <p class="muted">
           {{ payOrder.order_number }} ·
-          <span class="price">TZS {{ Number(payOrder.total_amount).toLocaleString() }}</span>
+          <span class="price">{{ curCode() }} {{ Number(payOrder.total_amount).toLocaleString() }}</span>
         </p>
         <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
         <form @submit.prevent="pay">
@@ -511,9 +511,9 @@
                   </span>
                 </td>
                 <td>{{ item.quantity }}</td>
-                <td>TZS {{ Number(item.unit_price).toLocaleString() }}</td>
+                <td>{{ curCode() }} {{ Number(item.unit_price).toLocaleString() }}</td>
                 <td>
-                  <span class="price">TZS {{ Number(item.subtotal).toLocaleString() }}</span>
+                  <span class="price">{{ curCode() }} {{ Number(item.subtotal).toLocaleString() }}</span>
                 </td>
                 <td>
                   <span class="badge" :class="itemStatusBadge(item.status)">{{
@@ -547,7 +547,7 @@
                   <strong>{{ $t('orders.total') }}</strong>
                 </td>
                 <td>
-                  <span class="price">TZS {{ Number(detail.total_amount).toLocaleString() }}</span>
+                  <span class="price">{{ curCode() }} {{ Number(detail.total_amount).toLocaleString() }}</span>
                 </td>
                 <td></td>
               </tr>
@@ -572,6 +572,10 @@ import { isGrillMenuItem, canManageAccompaniments, lockedAccompanimentDepartment
 import { useAccompaniments } from '@/composables/useAccompaniments'
 import { selectedOutlet } from '@/composables/useOutletContext'
 import { collectAllRows } from '@/utils/export'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -696,7 +700,7 @@ const menuItemOptions = computed(() =>
     .filter((mi) => !formCategory.value || mi.category === formCategory.value)
     .map((mi) => ({
       value: mi.menu_item_id,
-      label: `${mi.item_name} · TZS ${Number(mi.price).toLocaleString()}`,
+      label: `${mi.item_name} · ${curCode()} ${Number(mi.price).toLocaleString()}`,
     })),
 )
 

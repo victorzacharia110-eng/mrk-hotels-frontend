@@ -281,7 +281,7 @@
               <tr v-if="deletePreview.payments_count > 0">
                 <td><i class="fas fa-credit-card"></i> {{ $t('guests.deleteImpactPayments') }}</td>
                 <td class="text-right">
-                  {{ deletePreview.payments_count }} · TZS {{ Number(deletePreview.payments_total).toLocaleString() }}
+                  {{ deletePreview.payments_count }} · {{ curCode() }} {{ Number(deletePreview.payments_total).toLocaleString() }}
                 </td>
               </tr>
               <tr v-if="deletePreview.invoices_count > 0">
@@ -328,6 +328,10 @@ import { useListSearch } from '@/composables/useListSearch'
 import { findCountryCode } from '@/utils/locations'
 import { formatPhoneNational, normalizePhoneNumber } from '@/utils/phone'
 import { bindLiveValidation, collectErrors, email, isBlank, phone, required } from '@/utils/formValidation'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()

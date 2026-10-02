@@ -46,7 +46,7 @@
               <th>{{ $t('inventory.category') }}</th>
               <th>{{ $t('inventory.inStock') }}</th>
               <th>{{ $t('inventory.reorderLevel') }}</th>
-              <th>{{ $t('inventory.unitCost') }}</th>
+              <th>{{ $t('inventory.unitCost', { currency: curCode() }) }}</th>
               <th>{{ $t('inventory.supplier') }}</th>
               <th>{{ $t('common.actions') }}</th>
             </tr>
@@ -58,7 +58,7 @@
               <td><span class="chip">{{ formatCategory(item.category) }}</span></td>
               <td><span :class="isLow(item) ? 'stock-low' : 'stock-ok'">{{ item.quantity_in_stock }}</span></td>
               <td>{{ item.reorder_level }}</td>
-              <td>TZS {{ Number(item.unit_cost || 0).toLocaleString() }}</td>
+              <td>{{ curCode() }} {{ Number(item.unit_cost || 0).toLocaleString() }}</td>
               <td>{{ item.supplier || '-' }}</td>
               <td>
                 <div class="row-actions">
@@ -170,7 +170,7 @@
             </div>
             <div class="form-field" v-if="!editing"><label>{{ $t('inventory.openingStock') }}</label><input v-model.number="form.quantity_in_stock" type="number" min="0" class="sm-input" /></div>
             <div class="form-field"><label>{{ $t('inventory.reorderLevel') }}</label><input v-model.number="form.reorder_level" type="number" min="0" class="sm-input" /></div>
-            <div class="form-field"><label>{{ $t('inventory.unitCost') }}</label><input v-model.number="form.unit_cost" type="number" min="0" step="0.01" class="sm-input" /></div>
+            <div class="form-field"><label>{{ $t('inventory.unitCost', { currency: curCode() }) }}</label><input v-model.number="form.unit_cost" type="number" min="0" step="0.01" class="sm-input" /></div>
             <div class="form-field">
               <label>{{ $t('inventory.supplier') }}</label>
               <select v-model="form.supplier" class="sm-select" style="width:100%">
@@ -286,6 +286,10 @@ import { formatCategory } from '@/utils/format'
 import { useCategoriesStore } from '@/stores/categories'
 import { useAuthStore } from '@/stores/auth'
 import { selectedOutlet } from '@/composables/useOutletContext'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const route = useRoute()
 const { t } = useI18n()

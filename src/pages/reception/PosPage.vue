@@ -29,7 +29,7 @@
             <select v-else v-model="form.reservation_id" class="input" required>
               <option :value="null" disabled>{{ $t('receptionPanel.chooseHouseGuest') }}</option>
               <option v-for="r in inHouse" :key="r.reservation_id" :value="r.reservation_id">
-                {{ r.guest_name }} · {{ r.room?.room_number || r.room_number || '' }} · TZS {{ r.balance_due }}
+                {{ r.guest_name }} · {{ r.room?.room_number || r.room_number || '' }} · {{ curCode() }} {{ r.balance_due }}
               </option>
             </select>
           </div>
@@ -38,7 +38,7 @@
             <input v-model="form.description" type="text" class="input" :placeholder="$t('receptionPanel.chargeDescriptionPlaceholder')" required />
           </div>
           <div class="form-group">
-            <label>{{ $t('receptionPanel.amountTzs') }} *</label>
+            <label>{{ $t('receptionPanel.amountTzs', { currency: curCode() }) }} *</label>
             <input v-model.number="form.amount" type="number" min="0" step="0.01" class="input" required />
           </div>
           <button class="btn btn-primary" :disabled="saving" type="submit">
@@ -67,6 +67,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { reservationApi } from '@/api'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 

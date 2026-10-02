@@ -14,7 +14,7 @@
             <p class="muted">{{ currentPlan?.description }}</p>
           </div>
           <div class="current-plan-price">
-            <span class="price-amount">TZS {{ (currentPlan?.price_monthly || 0).toLocaleString() }}</span>
+            <span class="price-amount">{{ curCode() }} {{ (currentPlan?.price_monthly || 0).toLocaleString() }}</span>
             <span class="price-period">/month</span>
           </div>
         </div>
@@ -58,7 +58,7 @@
           <div v-if="plan.slug === tenant?.subscription_plan" class="current-badge">Current Plan</div>
           <h3>{{ plan.label }}</h3>
           <div class="plan-price">
-            <span class="plan-price-value">TZS {{ plan.price_monthly.toLocaleString() }}</span>
+            <span class="plan-price-value">{{ curCode() }} {{ plan.price_monthly.toLocaleString() }}</span>
             <span class="plan-price-period">/month</span>
           </div>
           <p class="plan-desc">{{ plan.description }}</p>
@@ -89,6 +89,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { planApi, portalSubscriptionApi } from '@/api'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const authStore = useAuthStore()
 const loading = ref(true)

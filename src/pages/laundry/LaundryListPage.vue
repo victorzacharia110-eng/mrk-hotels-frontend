@@ -151,7 +151,7 @@
               </div>
             </td>
             <td>
-              <span class="price">TZS {{ Number(order.total_charge).toLocaleString() }}</span>
+              <span class="price">{{ curCode() }} {{ Number(order.total_charge).toLocaleString() }}</span>
             </td>
             <td>{{ order.attendant?.full_name || '-' }}</td>
             <td>
@@ -344,7 +344,7 @@
           </div>
           <p v-if="form.items.length" class="muted">
             {{
-              $t('laundry.estimatedCharge', { amount: Number(estimatedCharge).toLocaleString() })
+              $t('laundry.estimatedCharge', { currency: curCode(), amount: Number(estimatedCharge).toLocaleString() })
             }}
           </p>
 
@@ -443,7 +443,7 @@
         <p class="settle-order">
           <strong>{{ settleOrder?.order_number }}</strong>
           · {{ settleOrder?.guest_name || '-' }} ·
-          <span class="price">TZS {{ Number(settleOrder?.total_charge || 0).toLocaleString() }}</span>
+          <span class="price">{{ curCode() }} {{ Number(settleOrder?.total_charge || 0).toLocaleString() }}</span>
         </p>
         <p class="muted">{{ $t('laundry.settleChoice') }}</p>
 
@@ -496,6 +496,10 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()

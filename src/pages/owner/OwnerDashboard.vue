@@ -35,7 +35,7 @@
           <span class="sv-row-label"><i class="fas fa-dollar-sign"></i> {{ $t('owner.revenue30d') }}</span>
           <div class="sv-track">
             <div class="sv-bar bar-green" :style="{ width: pctOf(data.revenue_30_days, data.revenue_total) + '%' }">
-              <span class="sv-bar-label">TZS {{ data.revenue_30_days.toLocaleString() }}</span>
+              <span class="sv-bar-label">{{ curCode() }} {{ data.revenue_30_days.toLocaleString() }}</span>
             </div>
           </div>
         </div>
@@ -87,7 +87,7 @@
           <div class="stat-card">
             <div class="stat-icon revenue"><i class="fas fa-dollar-sign"></i></div>
             <div>
-              <span class="stat-value">TZS {{ data.revenue_30_days.toLocaleString() }}</span
+              <span class="stat-value">{{ curCode() }} {{ data.revenue_30_days.toLocaleString() }}</span
               ><span class="stat-label">{{ $t('owner.revenue30d') }}</span>
             </div>
           </div>
@@ -143,8 +143,8 @@
                   <th scope="col">{{ $t('owner.occupancy') }}</th>
                   <th scope="col">{{ $t('owner.guestsInHouse') }}</th>
                   <th scope="col">{{ $t('owner.activeReservations') }}</th>
-                  <th scope="col" class="num">TZS · {{ $t('owner.revenue30d') }}</th>
-                  <th scope="col" class="num">TZS · {{ $t('owner.revenueTotal') }}</th>
+                  <th scope="col" class="num">{{ curCode() }} · {{ $t('owner.revenue30d') }}</th>
+                  <th scope="col" class="num">{{ curCode() }} · {{ $t('owner.revenueTotal') }}</th>
                   <th scope="col">{{ $t('owner.actions') }}</th>
                 </tr>
               </thead>
@@ -204,6 +204,10 @@ import { useNotificationStore } from '@/stores/notifications'
 import TableExportButton from '@/components/TableExportButton.vue'
 import AlertModal from '@/components/AlertModal.vue'
 import { setOwnerHotel } from '@/utils/ownerView'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const router = useRouter()
 const { t } = useI18n()
@@ -270,7 +274,7 @@ const alertDetails = computed(() => {
   const d = currentAlert.value.data
   const details = []
   if (d.guest_name) details.push({ label: t('guests.guestName'), value: d.guest_name })
-  if (d.amount) details.push({ label: t('payments.amount'), value: `TZS ${Number(d.amount).toLocaleString()}` })
+  if (d.amount) details.push({ label: t('payments.amount'), value: `${curCode()} ${Number(d.amount).toLocaleString()}` })
   if (d.provider) details.push({ label: t('payments.provider'), value: d.provider })
   if (d.requested_by) details.push({ label: 'Requested by', value: d.requested_by })
   if (d.ordered_by) details.push({ label: 'Ordered by', value: d.ordered_by })

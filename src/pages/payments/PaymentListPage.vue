@@ -134,7 +134,7 @@
             </td>
             <td>{{ p.paid_by || '-' }}</td>
             <td>
-              <span class="price">TZS {{ Number(p.amount).toLocaleString() }}</span>
+              <span class="price">{{ curCode() }} {{ Number(p.amount).toLocaleString() }}</span>
             </td>
             <td>
               <span class="provider-cell" :class="{ 'is-bank': p.payment_method === 'bank' }">
@@ -240,7 +240,7 @@
               />
             </div>
             <div class="form-group">
-              <label>{{ $t('payments.amountTzs') }}</label>
+              <label>{{ $t('payments.amountTzs', { currency: curCode() }) }}</label>
               <input
                 v-model.number="form.amount"
                 type="number"
@@ -306,6 +306,10 @@ import { collectAllRows } from '@/utils/export'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import ProviderLogo from '@/components/ProviderLogo.vue'
 import { METHOD_CASH, PAYMENT_METHODS, requiresProvider } from '@/utils/payments'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -395,7 +399,7 @@ const paymentMethodOptions = computed(() =>
 const reservationOptions = computed(() =>
   reservations.value.map((reservation) => ({
     value: reservation.reservation_id,
-    label: `${reservation.guest_name} · TZS ${Number(reservation.balance).toLocaleString()} ${t('payments.balance')}`,
+    label: `${reservation.guest_name} · ${curCode()} ${Number(reservation.balance).toLocaleString()} ${t('payments.balance')}`,
   })),
 )
 
@@ -539,7 +543,7 @@ async function save() {
 async function refund(payment) {
   if (
     !window.confirm(
-      t('payments.refundConfirm', { amount: Number(payment.amount).toLocaleString() }),
+      t('payments.refundConfirm', { currency: curCode(), amount: Number(payment.amount).toLocaleString() }),
     )
   )
     return
@@ -589,7 +593,7 @@ async function rejectPayment(payment) {
 async function remove(payment) {
   if (
     !window.confirm(
-      t('payments.deleteConfirm', { amount: Number(payment.amount).toLocaleString() }),
+      t('payments.deleteConfirm', { currency: curCode(), amount: Number(payment.amount).toLocaleString() }),
     )
   )
     return

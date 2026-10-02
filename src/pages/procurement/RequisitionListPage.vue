@@ -108,7 +108,7 @@
               </button>
             </td>
             <td>
-              <span class="price">TZS {{ Number(pr.total_amount).toLocaleString() }}</span>
+              <span class="price">{{ curCode() }} {{ Number(pr.total_amount).toLocaleString() }}</span>
             </td>
             <td>
               <span class="badge" :class="priorityBadge(pr.priority)">{{ pr.priority }}</span>
@@ -241,7 +241,7 @@
                 />
               </div>
               <div class="form-group">
-                <label>{{ $t('requisitions.estPrice') }}</label>
+                <label>{{ $t('requisitions.estPrice', { currency: curCode() }) }}</label>
                 <input
                   v-model.number="item.estimated_price"
                   type="number"
@@ -334,9 +334,9 @@
                 </td>
                 <td>{{ item.quantity }}</td>
                 <td>{{ item.unit || '-' }}</td>
-                <td>TZS {{ Number(item.estimated_price).toLocaleString() }}</td>
+                <td>{{ curCode() }} {{ Number(item.estimated_price).toLocaleString() }}</td>
                 <td>
-                  <span class="price">TZS {{ Number(item.subtotal).toLocaleString() }}</span>
+                  <span class="price">{{ curCode() }} {{ Number(item.subtotal).toLocaleString() }}</span>
                 </td>
               </tr>
             </tbody>
@@ -355,6 +355,10 @@ import { useI18n } from 'vue-i18n'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { collectAllRows } from '@/utils/export'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 

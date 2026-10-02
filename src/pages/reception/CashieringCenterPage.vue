@@ -130,7 +130,7 @@
             <select v-model="form.reservation_id" class="input" @change="form.company_id = null">
               <option :value="null">{{ $t('cashiering.selectGuest') }}</option>
               <option v-for="r in reservations" :key="r.reservation_id" :value="r.reservation_id">
-                {{ r.guest_name }} · {{ r.room?.room_number || r.room_number || '' }} · TZS {{ r.balance_due ?? r.balance ?? 0 }}
+                {{ r.guest_name }} · {{ r.room?.room_number || r.room_number || '' }} · {{ curCode() }} {{ r.balance_due ?? r.balance ?? 0 }}
               </option>
             </select>
           </div>
@@ -144,7 +144,7 @@
             </select>
           </div>
           <div class="form-group">
-            <label>{{ $t('payments.amountTzs') }}</label>
+            <label>{{ $t('payments.amountTzs', { currency: curCode() }) }}</label>
             <input v-model.number="form.amount" type="number" min="0" class="input" />
           </div>
           <div class="form-group">
@@ -185,6 +185,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { companyApi, paymentApi, reservationApi } from '@/api'
 import { METHOD_CASH, requiresProvider, providersFor } from '@/utils/payments'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 
@@ -229,7 +233,7 @@ const totals = computed(() => {
 
 const total = computed(() => Object.values(totals.value).reduce((a, b) => a + b, 0))
 
-const fmt = (n) => 'TZS ' + Number(n || 0).toLocaleString()
+const fmt = (n) => `${curCode()} ` + Number(n || 0).toLocaleString()
 
 function methodLabel(m) {
   const found = methodOptions.find((o) => o.value === m)

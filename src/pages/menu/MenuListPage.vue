@@ -139,9 +139,9 @@
             <td>{{ item.category || '-' }}</td>
             <td class="capitalize">{{ item.department }}</td>
             <td>
-              <span class="price">TZS {{ Number(item.price).toLocaleString() }}</span>
+              <span class="price">{{ curCode() }} {{ Number(item.price).toLocaleString() }}</span>
             </td>
-            <td>TZS {{ Number(item.cost || 0).toLocaleString() }}</td>
+            <td>{{ curCode() }} {{ Number(item.cost || 0).toLocaleString() }}</td>
             <td>
               <span v-if="Number(item.cost) > 0">{{ margin(item) }}%</span>
               <span v-else>-</span>
@@ -297,7 +297,7 @@
               </button>
             </div>
             <div class="form-group">
-              <label>{{ $t('menu.priceTzs') }}</label>
+              <label>{{ $t('menu.priceTzs', { currency: curCode() }) }}</label>
               <input
                 v-model.number="form.price"
                 type="number"
@@ -308,7 +308,7 @@
               />
             </div>
             <div class="form-group">
-              <label>{{ $t('menu.cost') }}</label>
+              <label>{{ $t('menu.cost', { currency: curCode() }) }}</label>
               <input v-model.number="form.cost" type="number" min="0" step="0.01" class="input" />
             </div>
             <div class="form-group">
@@ -599,6 +599,10 @@ import AccompanimentManager from '@/components/AccompanimentManager.vue'
 import MenuHistoryDrawer from '@/components/MenuHistoryDrawer.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 import { collectAllRows } from '@/utils/export'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()

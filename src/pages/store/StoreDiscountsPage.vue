@@ -25,7 +25,7 @@
             <tr v-for="d in paged" :key="d.id">
               <td class="bulk-col"><input type="checkbox" :checked="bulk.isSelected(d.id)" @change="bulk.toggle(d.id)" /></td>
               <td><strong>{{ d.code }}</strong></td>
-              <td><span class="chip">{{ d.percentage != null ? '%' : 'TZS' }}</span></td>
+              <td><span class="chip">{{ d.percentage != null ? '%' : curCode() }}</span></td>
               <td>{{ d.percentage != null ? d.percentage + '%' : Number(d.amount || 0).toLocaleString() }}</td>
               <td>{{ d.expires_at ? new Date(d.expires_at).toLocaleDateString() : '—' }}</td>
               <td><span class="chip" :class="d.active ? 'chip-green' : 'chip-red'">{{ d.active ? $t('common.active') : $t('common.inactive') }}</span></td>
@@ -46,7 +46,7 @@
         <div class="sm-modal-head"><h3>{{ $t('storeManager.discounts.add') }}</h3><button class="x" @click="showForm = false">×</button></div>
         <label class="fld"><span>{{ $t('storeManager.discounts.code') }}</span><input v-model="form.code" class="sm-input" /></label>
         <label class="fld"><span>{{ $t('storeManager.discounts.type') }}</span>
-          <select v-model="form.kind" class="sm-select"><option value="percentage">%</option><option value="amount">TZS</option></select>
+          <select v-model="form.kind" class="sm-select"><option value="percentage">%</option><option value="amount">{{ curCode() }}</option></select>
         </label>
         <label class="fld"><span>{{ $t('storeManager.discounts.value') }}</span><input v-model.number="form.value" type="number" min="0" class="sm-input" /></label>
         <label class="fld"><span>{{ $t('storeManager.discounts.expires') }}</span><input v-model="form.expires_at" type="date" class="sm-input" /></label>
@@ -76,6 +76,9 @@ import PaginationBar from '@/components/store/PaginationBar.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const discounts = ref([])

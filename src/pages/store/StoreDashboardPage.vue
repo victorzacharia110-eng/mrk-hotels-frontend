@@ -29,7 +29,7 @@
         </div>
         <div class="kpi-card">
           <span class="kpi-icon navy"><i class="fas fa-coins"></i></span>
-          <div><strong>TZS {{ stats.stockValue.toLocaleString() }}</strong><small>{{ $t('storeManager.dashboard.stockValue') }}</small></div>
+          <div><strong>{{ curCode() }} {{ stats.stockValue.toLocaleString() }}</strong><small>{{ $t('storeManager.dashboard.stockValue') }}</small></div>
         </div>
       </template>
     </section>
@@ -122,6 +122,10 @@ import { inventoryApi, purchaseRequisitionApi, purchaseOrderApi, goodsReceivedNo
 import { useStockRealtime } from '@/composables/useStockRealtime'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import '@/pages/store/store-shared.css'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const loading = ref(true)
 const items = ref([])

@@ -197,7 +197,7 @@
         <div class="modal-body">
           <p class="muted" style="margin-top: 0;">{{ $t('receptionPanel.receiveFrom', { company: postingsCompany?.name || '' }) }}</p>
           <div class="form-group">
-            <label>{{ $t('receptionPanel.settleAmount') }} *</label>
+            <label>{{ $t('receptionPanel.settleAmount', { currency: curCode() }) }} *</label>
             <input v-model.number="receiveForm.amount" type="number" min="0.01" step="0.01" class="input" />
           </div>
           <div class="form-group">
@@ -311,6 +311,7 @@
 </template>
 
 <script setup>
+
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { companyApi } from '@/api'
@@ -320,6 +321,9 @@ import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import { loadLocationData, getCountryName } from '@/utils/locations'
 import { validatePhoneNumber } from '@/utils/phone'
 import { METHOD_CASH, requiresProvider, providersFor } from '@/utils/payments'
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -330,7 +334,7 @@ const error = ref('')
 function tsh(value) {
   const n = Number(value)
   if (Number.isNaN(n)) return '—'
-  return `TZS ${n.toLocaleString()}`
+  return `${curCode()} ${n.toLocaleString()}`
 }
 
 function isoDate(daysAgo = 0) {

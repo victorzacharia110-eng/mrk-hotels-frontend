@@ -38,9 +38,9 @@
         <section class="card">
           <h2>Charges</h2>
           <dl class="details-list">
-            <div class="detail"><dt>Total</dt><dd>TZS {{ Number(booking.total_amount || 0).toLocaleString() }}</dd></div>
-            <div class="detail"><dt>Paid</dt><dd>TZS {{ Number(booking.advance_payment || 0).toLocaleString() }}</dd></div>
-            <div class="detail detail--balance"><dt>Balance Due</dt><dd>TZS {{ Number(booking.balance || 0).toLocaleString() }}</dd></div>
+            <div class="detail"><dt>Total</dt><dd>{{ curCode() }} {{ Number(booking.total_amount || 0).toLocaleString() }}</dd></div>
+            <div class="detail"><dt>Paid</dt><dd>{{ curCode() }} {{ Number(booking.advance_payment || 0).toLocaleString() }}</dd></div>
+            <div class="detail detail--balance"><dt>Balance Due</dt><dd>{{ curCode() }} {{ Number(booking.balance || 0).toLocaleString() }}</dd></div>
           </dl>
         </section>
       </div>
@@ -66,6 +66,10 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { guestPortalApi } from '@/api'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const router = useRouter()
 const loading = ref(true)

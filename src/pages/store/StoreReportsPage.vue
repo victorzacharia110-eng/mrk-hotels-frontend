@@ -105,6 +105,7 @@
 </template>
 
 <script setup>
+
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
@@ -115,6 +116,9 @@ import { useCategoriesStore } from '@/stores/categories'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { printToPrinter, restorePrinter, buildReportLines } from '@/utils/printer'
 import '@/pages/store/store-shared.css'
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const workingDateStore = useWorkingDateStore()
@@ -137,7 +141,7 @@ const REPORT_CONFIG = {
       { field: 'received', label: 'Received', num: true },
       { field: 'issued', label: 'Issued', num: true },
       { field: 'closing_stock', label: 'Closing', num: true },
-      { field: 'closing_value', label: 'Closing value (TZS)', num: true, money: true },
+      { field: 'closing_value', label: `Closing value (${curCode()})`, num: true, money: true },
     ],
     totals: ['received_value', 'issued_value', 'closing_value'],
   },
@@ -175,8 +179,8 @@ const REPORT_CONFIG = {
       { field: 'department', label: 'Department' },
       { field: 'closing_stock', label: 'Qty on hand', num: true },
       { field: 'unit', label: 'Unit' },
-      { field: 'unit_cost', label: 'Unit cost (TZS)', num: true, money: true },
-      { field: 'closing_value', label: 'Value (TZS)', num: true, money: true },
+      { field: 'unit_cost', label: `Unit cost (${curCode()})`, num: true, money: true },
+      { field: 'closing_value', label: `Value (${curCode()})`, num: true, money: true },
     ],
     totals: ['closing_value'],
   },
@@ -188,7 +192,7 @@ const REPORT_CONFIG = {
       { field: 'date', label: 'Date' },
       { field: 'reason', label: 'Reason' },
       { field: 'quantity', label: 'Qty', num: true },
-      { field: 'value', label: 'Value (TZS)', num: true, money: true },
+      { field: 'value', label: `Value (${curCode()})`, num: true, money: true },
       { field: 'status', label: 'Status' },
     ],
     totals: ['quantity', 'value'],
@@ -203,8 +207,8 @@ const REPORT_CONFIG = {
       { field: 'department', label: 'Department' },
       { field: 'quantity', label: 'Qty', num: true },
       { field: 'direction', label: 'Direction' },
-      { field: 'unit_cost', label: 'Unit cost (TZS)', num: true, money: true },
-      { field: 'value', label: 'Value (TZS)', num: true, money: true },
+      { field: 'unit_cost', label: `Unit cost (${curCode()})`, num: true, money: true },
+      { field: 'value', label: `Value (${curCode()})`, num: true, money: true },
       { field: 'recorded_by', label: 'Recorded by' },
     ],
     totals: ['value'],

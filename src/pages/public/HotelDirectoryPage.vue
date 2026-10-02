@@ -45,7 +45,7 @@
         <div class="hotel-card-foot">
           <p class="price">
             <template v-if="hotel.starting_price">
-              {{ $t('home.from') }} <strong>TZS {{ hotel.starting_price.toLocaleString() }}</strong> {{
+              {{ $t('home.from') }} <strong>{{ curCode() }} {{ hotel.starting_price.toLocaleString() }}</strong> {{
                 $t('home.perNight') }}
             </template>
             <template v-else>{{ $t('home.noRooms') }}</template>
@@ -79,6 +79,10 @@ import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import BookingStatusTracker from '@/components/BookingStatusTracker.vue'
 import InvoiceDownloadCard from '@/components/InvoiceDownloadCard.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const route = useRoute()

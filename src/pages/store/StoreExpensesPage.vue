@@ -13,7 +13,7 @@
         @change="load(1)"
       />
       <span class="spacer"></span>
-      <div class="kpi-inline"><span>{{ $t('storeManager.expenses.total') }}:</span> <strong>TZS {{ total.toLocaleString() }}</strong></div>
+      <div class="kpi-inline"><span>{{ $t('storeManager.expenses.total') }}:</span> <strong>{{ curCode() }} {{ total.toLocaleString() }}</strong></div>
       <button v-if="bulk.selectedCount > 0" class="sm-btn danger" @click="showBulkDelete = true"><i class="fas fa-trash"></i> {{ $t('common.deleteSelected') }} ({{ bulk.selectedCount }})</button>
       <button class="sm-btn" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('storeManager.expenses.add') }}</button>
     </div>
@@ -35,7 +35,7 @@
               <td>{{ fmtDate(e.created_at || e.date) }}</td>
               <td>{{ e.description }}</td>
               <td><span class="chip">{{ e.category }}</span></td>
-              <td><strong>TZS {{ Number(e.amount || 0).toLocaleString() }}</strong></td>
+              <td><strong>{{ curCode() }} {{ Number(e.amount || 0).toLocaleString() }}</strong></td>
               <td><button class="sm-btn sm danger" @click="remove(e)"><i class="fas fa-trash"></i></button></td>
             </tr>
           </tbody>
@@ -82,6 +82,10 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useCategoriesStore } from '@/stores/categories'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 import '@/pages/store/store-shared.css'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const expenses = ref([])

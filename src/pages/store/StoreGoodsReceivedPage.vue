@@ -176,7 +176,7 @@
                 <td>{{ item.quantity_ordered }}</td>
                 <td><input v-model.number="item.quantity_received" type="number" min="0" :max="item.quantity_ordered" class="sm-input" style="width:80px" required /></td>
                 <td><input v-model.number="item.quantity_rejected" type="number" min="0" class="sm-input" style="width:70px" /></td>
-                <td>TZS {{ formatMoney(item.unit_price) }}</td>
+                <td>{{ curCode() }} {{ formatMoney(item.unit_price) }}</td>
                 <td><input v-model.number="item.unit_cost" type="number" min="0" step="0.01" class="sm-input" style="width:90px" :placeholder="String(formatMoney(item.unit_price))" /></td>
                 <td>
                   <span v-if="priceDiff(item)" class="price-diff" :class="priceDiff(item) !== 0 ? (priceDiff(item) > 0 ? 'up' : 'down') : ''">
@@ -190,7 +190,7 @@
             <tfoot>
               <tr>
                 <td colspan="7" style="text-align:right"><strong>{{ $t('goodsReceived.total') }}</strong></td>
-                <td colspan="2"><strong>TZS {{ formatMoney(formTotal) }}</strong></td>
+                <td colspan="2"><strong>{{ curCode() }} {{ formatMoney(formTotal) }}</strong></td>
               </tr>
             </tfoot>
           </table>
@@ -262,8 +262,8 @@
                 <td>{{ item.quantity_ordered ?? '-' }}</td>
                 <td>{{ item.quantity_received }}</td>
                 <td>{{ item.quantity_rejected || 0 }}</td>
-                <td>TZS {{ formatMoney(item.unit_price) }}</td>
-                <td>TZS {{ formatMoney(item.unit_cost) }}</td>
+                <td>{{ curCode() }} {{ formatMoney(item.unit_price) }}</td>
+                <td>{{ curCode() }} {{ formatMoney(item.unit_cost) }}</td>
                 <td>
                   <span v-if="item.price_difference != null && item.price_difference !== ''" class="price-diff" :class="diffClass(item.price_difference)">
                     {{ item.price_difference > 0 ? '+' : '' }}{{ formatMoney(item.price_difference) }}
@@ -276,7 +276,7 @@
             <tfoot>
               <tr>
                 <td colspan="8" style="text-align:right"><strong>{{ $t('goodsReceived.total') }}</strong></td>
-                <td><strong>TZS {{ formatMoney(detailTotal) }}</strong></td>
+                <td><strong>{{ curCode() }} {{ formatMoney(detailTotal) }}</strong></td>
               </tr>
             </tfoot>
           </table>
@@ -311,7 +311,7 @@
         <tfoot>
           <tr>
             <td colspan="7" style="text-align:right"><strong>{{ $t('goodsReceived.total') }}</strong></td>
-            <td><strong>TZS {{ formatMoney(printTotal) }}</strong></td>
+            <td><strong>{{ curCode() }} {{ formatMoney(printTotal) }}</strong></td>
           </tr>
         </tfoot>
       </table>
@@ -327,6 +327,10 @@ import { goodsReceivedNoteApi, purchaseOrderApi, storeApi } from '@/api'
 import CalendarInput from '@/components/CalendarInput.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
 import { useWorkingDateStore } from '@/stores/workingDate'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const route = useRoute()
 const router = useRouter()

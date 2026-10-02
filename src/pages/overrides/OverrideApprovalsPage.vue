@@ -35,7 +35,7 @@
             <input v-model="form.reservation_id" type="text" class="input" :placeholder="$t('overrides.reservationIdPlaceholder')" />
           </div>
           <div class="form-group">
-            <label>{{ $t('overrides.balanceDue') }}<span class="req">*</span></label>
+            <label>{{ $t('overrides.balanceDue', { currency: curCode() }) }}<span class="req">*</span></label>
             <input v-model.number="form.balance_due" type="number" min="0" step="0.01" class="input" required :placeholder="$t('overrides.balanceDuePlaceholder')" />
           </div>
           <div class="form-group">
@@ -102,7 +102,7 @@
           <thead>
             <tr>
               <th>{{ $t('overrides.guestName') }}</th>
-              <th>{{ $t('overrides.balance') }}</th>
+              <th>{{ $t('overrides.balance', { currency: curCode() }) }}</th>
               <th>{{ $t('overrides.createdBy') }}</th>
               <th>{{ $t('overrides.remainingTime') }}</th>
               <th>{{ $t('common.actions') }}</th>
@@ -114,7 +114,7 @@
                 <strong>{{ o.guest_name }}</strong>
                 <div v-if="o.notes" class="sub">{{ o.notes }}</div>
               </td>
-              <td>TZS {{ Number(o.balance_due || 0).toLocaleString() }}</td>
+              <td>{{ curCode() }} {{ Number(o.balance_due || 0).toLocaleString() }}</td>
               <td>{{ o.created_by?.full_name || '—' }}</td>
               <td>
                 <span v-if="o.expires_at" :class="getExpiryClass(o.expires_at)">
@@ -156,7 +156,7 @@
           <thead>
             <tr>
               <th>{{ $t('overrides.guestName') }}</th>
-              <th>{{ $t('overrides.balance') }}</th>
+              <th>{{ $t('overrides.balance', { currency: curCode() }) }}</th>
               <th>{{ $t('overrides.status') }}</th>
               <th>{{ $t('overrides.createdAt') }}</th>
               <th>{{ $t('overrides.expiresAt') }}</th>
@@ -169,7 +169,7 @@
                 <strong>{{ o.guest_name }}</strong>
                 <div v-if="o.notes" class="sub">{{ o.notes }}</div>
               </td>
-              <td>TZS {{ Number(o.balance_due || 0).toLocaleString() }}</td>
+              <td>{{ curCode() }} {{ Number(o.balance_due || 0).toLocaleString() }}</td>
               <td>
                 <span class="badge" :class="statusBadge(o.status)">
                   {{ $t(`overrides.${o.status}`) }}
@@ -192,6 +192,10 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { checkinOverrideApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()

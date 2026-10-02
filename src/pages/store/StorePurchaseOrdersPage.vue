@@ -47,7 +47,7 @@
               <td><strong>{{ po.po_number }}</strong></td>
               <td>{{ po.supplier?.supplier_name || '-' }}</td>
               <td>{{ (po.items || []).length }}</td>
-              <td>TZS {{ Number(po.total_amount || 0).toLocaleString() }}</td>
+              <td>{{ curCode() }} {{ Number(po.total_amount || 0).toLocaleString() }}</td>
               <td>{{ formatDate(po.delivery_date) }}</td>
               <td><span class="chip" :class="po.status">{{ po.status.replaceAll('_', ' ') }}</span></td>
               <td>
@@ -115,19 +115,19 @@
                 @change="onPickItem(item, $event)"
               >
                 <template #option="{ option }">
-                  <span>{{ option.label }} <small class="muted">{{ option.category }} · TZS {{ Number(option.unit_cost || 0).toLocaleString() }}</small></span>
+                  <span>{{ option.label }} <small class="muted">{{ option.category }} · {{ curCode() }} {{ Number(option.unit_cost || 0).toLocaleString() }}</small></span>
                 </template>
               </SearchableSelect>
               <input v-model.number="item.quantity" type="number" min="1" class="sm-input" :placeholder="$t('inventory.quantity')" required />
               <select v-model="item.unit" class="sm-input">
                 <option v-for="u in unitOptionsFor(item)" :key="u" :value="u">{{ u }}</option>
               </select>
-              <input v-model.number="item.unit_price" type="number" min="0" step="0.01" class="sm-input" :placeholder="$t('inventory.unitCost')" required />
+              <input v-model.number="item.unit_price" type="number" min="0" step="0.01" class="sm-input" :placeholder="$t('inventory.unitCost', { currency: curCode() })" required />
               <button type="button" class="sm-btn sm danger" @click="form.items.splice(idx, 1)" :disabled="form.items.length === 1"><i class="fas fa-trash"></i></button>
             </div>
           </div>
 
-          <p class="po-total"><strong>{{ $t('purchaseOrders.total') }}: TZS {{ poTotal.toLocaleString() }}</strong></p>
+          <p class="po-total"><strong>{{ $t('purchaseOrders.total') }}: {{ curCode() }} {{ poTotal.toLocaleString() }}</strong></p>
           <p v-if="formError" class="form-error">{{ formError }}</p>
           <div class="sm-modal-foot">
             <button type="button" class="sm-btn ghost" @click="closeForm">{{ $t('common.cancel') }}</button>
@@ -161,17 +161,17 @@
           <p v-if="detail.notes"><strong>{{ $t('common.notes') }}:</strong> {{ detail.notes }}</p>
           <div class="table-scroll">
         <table class="sm-table">
-            <thead><tr><th>{{ $t('inventory.itemName') }}</th><th>{{ $t('common.unit') }}</th><th>{{ $t('inventory.quantity') }}</th><th>{{ $t('inventory.unitCost') }}</th><th>{{ $t('purchaseOrders.total') }}</th></tr></thead>
+            <thead><tr><th>{{ $t('inventory.itemName') }}</th><th>{{ $t('common.unit') }}</th><th>{{ $t('inventory.quantity') }}</th><th>{{ $t('inventory.unitCost', { currency: curCode() }) }}</th><th>{{ $t('purchaseOrders.total') }}</th></tr></thead>
             <tbody>
               <tr v-for="(item, i) in detail.items || []" :key="i">
                 <td>{{ item.item_name }}</td><td>{{ item.unit || '-' }}</td><td>{{ item.quantity }}</td>
-                <td>TZS {{ Number(item.unit_price || 0).toLocaleString() }}</td>
-                <td>TZS {{ (Number(item.quantity || 0) * Number(item.unit_price || 0)).toLocaleString() }}</td>
+                <td>{{ curCode() }} {{ Number(item.unit_price || 0).toLocaleString() }}</td>
+                <td>{{ curCode() }} {{ (Number(item.quantity || 0) * Number(item.unit_price || 0)).toLocaleString() }}</td>
               </tr>
             </tbody>
           </table>
       </div>
-          <p class="po-total"><strong>{{ $t('purchaseOrders.total') }}: TZS {{ Number(detail.total_amount || 0).toLocaleString() }}</strong></p>
+          <p class="po-total"><strong>{{ $t('purchaseOrders.total') }}: {{ curCode() }} {{ Number(detail.total_amount || 0).toLocaleString() }}</strong></p>
         </div>
       </div>
     </div>
@@ -188,7 +188,7 @@
         </tbody>
       </table>
       <table class="print-table">
-        <thead><tr><th>{{ $t('inventory.itemName') }}</th><th>{{ $t('common.unit') }}</th><th>{{ $t('inventory.quantity') }}</th><th>{{ $t('inventory.unitCost') }}</th><th>{{ $t('purchaseOrders.total') }}</th></tr></thead>
+        <thead><tr><th>{{ $t('inventory.itemName') }}</th><th>{{ $t('common.unit') }}</th><th>{{ $t('inventory.quantity') }}</th><th>{{ $t('inventory.unitCost', { currency: curCode() }) }}</th><th>{{ $t('purchaseOrders.total') }}</th></tr></thead>
         <tbody>
           <tr v-for="(item, i) in printData.items || []" :key="i">
             <td>{{ item.item_name }}</td><td>{{ item.unit || '-' }}</td><td>{{ item.quantity }}</td>
@@ -212,6 +212,10 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { saveBlob } from '@/utils/download'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const workingDateStore = useWorkingDateStore()

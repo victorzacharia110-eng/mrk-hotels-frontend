@@ -148,13 +148,18 @@
 </template>
 
 <script setup>
+
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { menuItemApi, cashierApi, menuItemIngredientApi } from '@/api/index.js'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
-const money = (v) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'TZS' }).format(v || 0)
+const money = (v) =>
+  `${curCode()} ${new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(Number(v) || 0)}`
 
 /* ── Menu items ────────────────────────────────────────── */
 const menuItems = ref([])

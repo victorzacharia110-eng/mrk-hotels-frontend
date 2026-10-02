@@ -89,7 +89,7 @@
               </button>
             </td>
             <td>
-              <span class="price">TZS {{ Number(po.total_amount).toLocaleString() }}</span>
+              <span class="price">{{ curCode() }} {{ Number(po.total_amount).toLocaleString() }}</span>
             </td>
             <td>{{ po.delivery_date || '-' }}</td>
             <td>
@@ -223,7 +223,7 @@
                 />
               </div>
               <div class="form-group">
-                <label>{{ $t('purchaseOrders.unitPrice') }}</label>
+                <label>{{ $t('purchaseOrders.unitPrice', { currency: curCode() }) }}</label>
                 <input v-model.number="item.unit_price" type="number" min="0" step="0.01" class="input" required />
               </div>
               <div class="form-group item-remove">
@@ -283,10 +283,10 @@
                 </td>
                 <td>{{ item.quantity }}</td>
                 <td>{{ item.unit || '-' }}</td>
-                <td>TZS {{ Number(item.unit_price).toLocaleString() }}</td>
+                <td>{{ curCode() }} {{ Number(item.unit_price).toLocaleString() }}</td>
                 <td>{{ item.quantity_received }}</td>
                 <td>
-                  <span class="price">TZS {{ Number(item.subtotal).toLocaleString() }}</span>
+                  <span class="price">{{ curCode() }} {{ Number(item.subtotal).toLocaleString() }}</span>
                 </td>
               </tr>
             </tbody>
@@ -307,6 +307,10 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { collectAllRows } from '@/utils/export'
 import { useWorkingDateStore } from '@/stores/workingDate'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 

@@ -12,9 +12,9 @@
     <!-- Summary -->
     <SkeletonLoader v-if="loading" variant="kpi" :count="3" class="sk-summary" />
     <div class="summary-grid" v-else-if="summary">
-      <div class="summary-card"><span class="label">Total Charges</span><span class="value">TZS {{ Number(summary.total_charges).toLocaleString() }}</span></div>
-      <div class="summary-card"><span class="label">Total Paid</span><span class="value value--green">TZS {{ Number(summary.total_payments).toLocaleString() }}</span></div>
-      <div class="summary-card summary-card--balance"><span class="label">Balance Due</span><span class="value" :class="{ 'value--red': summary.balance > 0 }">TZS {{ Number(summary.balance).toLocaleString() }}</span></div>
+      <div class="summary-card"><span class="label">Total Charges</span><span class="value">{{ curCode() }} {{ Number(summary.total_charges).toLocaleString() }}</span></div>
+      <div class="summary-card"><span class="label">Total Paid</span><span class="value value--green">{{ curCode() }} {{ Number(summary.total_payments).toLocaleString() }}</span></div>
+      <div class="summary-card summary-card--balance"><span class="label">Balance Due</span><span class="value" :class="{ 'value--red': summary.balance > 0 }">{{ curCode() }} {{ Number(summary.balance).toLocaleString() }}</span></div>
     </div>
 
     <!-- Line items -->
@@ -27,7 +27,7 @@
             <td>{{ item.description }}</td>
             <td><span class="type-pill" :class="`type-pill--${item.type}`">{{ item.type }}</span></td>
             <td class="amount-col" :class="{ negative: item.type === 'payment' }">
-              {{ item.type === 'payment' ? '−' : '' }} TZS {{ Number(item.amount).toLocaleString() }}
+              {{ item.type === 'payment' ? '−' : '' }} {{ curCode() }} {{ Number(item.amount).toLocaleString() }}
             </td>
           </tr>
         </tbody>
@@ -45,6 +45,10 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { guestPortalApi } from '@/api'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const router = useRouter()
 const loading = ref(true)

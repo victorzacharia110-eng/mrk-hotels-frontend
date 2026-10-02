@@ -70,14 +70,14 @@
         <div class="stat-card">
           <div class="stat-icon revenue"><i class="fas fa-dollar-sign"></i></div>
           <div>
-            <span class="stat-value">TZS {{ hotel.revenue_30_days.toLocaleString() }}</span
+            <span class="stat-value">{{ curCode() }} {{ hotel.revenue_30_days.toLocaleString() }}</span
             ><span class="stat-label">{{ $t('owner.revenue30d') }}</span>
           </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon total"><i class="fas fa-sack-dollar"></i></div>
           <div>
-            <span class="stat-value">TZS {{ hotel.revenue_total.toLocaleString() }}</span
+            <span class="stat-value">{{ curCode() }} {{ hotel.revenue_total.toLocaleString() }}</span
             ><span class="stat-label">{{ $t('owner.revenueTotal') }}</span>
           </div>
         </div>
@@ -91,6 +91,10 @@ import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { ownerApi } from '@/api'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const route = useRoute()
 const { t } = useI18n()

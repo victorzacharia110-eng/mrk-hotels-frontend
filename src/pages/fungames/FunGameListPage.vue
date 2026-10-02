@@ -127,7 +127,7 @@
             <td>{{ order.booking_date || '-' }}</td>
             <td>{{ order.arrival_time || '-' }}</td>
             <td>
-              <span class="price">TZS {{ Number(order.total_charge).toLocaleString() }}</span>
+              <span class="price">{{ curCode() }} {{ Number(order.total_charge).toLocaleString() }}</span>
             </td>
             <td>
               <span class="badge" :class="statusBadge(order.status)">{{
@@ -285,6 +285,10 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()

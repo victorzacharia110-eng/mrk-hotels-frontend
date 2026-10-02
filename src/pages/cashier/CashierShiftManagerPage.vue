@@ -26,9 +26,9 @@
             </button>
           </div>
           <div class="shift-stats">
-            <div class="stat"><span>{{ $t('cashier.shift.openingFloat') }}</span><strong>TZS {{ fmtNum(current.opening_float) }}</strong></div>
-            <div class="stat"><span>{{ $t('cashier.shift.sales') }}</span><strong>TZS {{ fmtNum(current.sales_total) }}</strong></div>
-            <div class="stat"><span>{{ $t('cashier.shift.expected') }}</span><strong>TZS {{ fmtNum(current.expected_amount) }}</strong></div>
+            <div class="stat"><span>{{ $t('cashier.shift.openingFloat') }}</span><strong>{{ curCode() }} {{ fmtNum(current.opening_float) }}</strong></div>
+            <div class="stat"><span>{{ $t('cashier.shift.sales') }}</span><strong>{{ curCode() }} {{ fmtNum(current.sales_total) }}</strong></div>
+            <div class="stat"><span>{{ $t('cashier.shift.expected') }}</span><strong>{{ curCode() }} {{ fmtNum(current.expected_amount) }}</strong></div>
             <div class="stat"><span>{{ $t('cashier.shift.openedBy') }}</span><strong>{{ current.opened_by_name || '—' }}</strong></div>
             <div class="stat"><span>{{ $t('cashier.shift.openedAt') }}</span><strong>{{ fmtTime(current.opened_at) }}</strong></div>
           </div>
@@ -105,7 +105,7 @@
         <div class="float-row">
           <span class="fld-label">{{ $t('cashier.shift.floatLabel') }}</span>
           <div class="amount-wrap">
-            <span class="currency">TZS</span>
+            <span class="currency">{{ curCode() }}</span>
             <input v-model.number="floatAmount" class="sm-input" type="number" min="0" step="any" />
           </div>
         </div>
@@ -128,6 +128,10 @@ import { useAuthStore } from '@/stores/auth'
 import { posApi } from '@/api'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import '@/pages/store/store-shared.css'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()

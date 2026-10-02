@@ -123,7 +123,7 @@
             </div>
 
             <p class="open-total">
-              {{ $t('orderTaker.orderTotal') }}: <strong>TZS {{ money(order.total_amount) }}</strong>
+              {{ $t('orderTaker.orderTotal') }}: <strong>{{ curCode() }} {{ money(order.total_amount) }}</strong>
               · <span :class="order.payment_status === 'unpaid' ? 'pay-unpaid' : 'pay-ok'">{{ order.payment_status }}</span>
             </p>
           </article>
@@ -157,7 +157,7 @@
               <td><strong>{{ order.order_number }}</strong></td>
               <td>{{ order.table_number || order.room_number || '—' }}</td>
               <td class="col-qty">{{ itemCount(order) }}</td>
-              <td class="col-amount"><strong>TZS {{ money(order.total_amount) }}</strong></td>
+              <td class="col-amount"><strong>{{ curCode() }} {{ money(order.total_amount) }}</strong></td>
               <td>{{ timeOf(order.settled_at || order.created_at) }}</td>
               <td>{{ order.waiter_name || '—' }}</td>
             </tr>
@@ -176,6 +176,10 @@ import { useOrderRealtime } from '@/composables/useOrderRealtime'
 import { useNotificationSettingsStore } from '@/stores/notificationSettings'
 import CalendarInput from '@/components/CalendarInput.vue'
 import NotificationSoundSettings from '@/components/notification/NotificationSoundSettings.vue'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 

@@ -148,12 +148,16 @@
 </template>
 
 <script setup>
+
 import { ref, computed, onMounted } from 'vue'
 import { nightAuditApi, reservationApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 
@@ -227,7 +231,7 @@ function recalc() {
 }
 
 function fmtMoney(v) {
-  return v != null ? `TZS ${Number(v).toLocaleString(undefined, { minimumFractionDigits: 0 })}` : '—'
+  return v != null ? `${curCode()} ${Number(v).toLocaleString(undefined, { minimumFractionDigits: 0 })}` : '—'
 }
 
 function resetForm() {

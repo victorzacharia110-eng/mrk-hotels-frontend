@@ -24,7 +24,7 @@
               <td class="bulk-col"><input type="checkbox" :checked="bulk.isSelected(c.id)" @change="bulk.toggle(c.id)" /></td>
               <td><strong>{{ c.name }}</strong></td><td>{{ c.phone || '-' }}</td><td>{{ c.email || '-' }}</td>
               <td>{{ c.purchases_count ?? 0 }}</td>
-              <td>TZS {{ Number(c.total_spent || 0).toLocaleString() }}</td>
+              <td>{{ curCode() }} {{ Number(c.total_spent || 0).toLocaleString() }}</td>
               <td><div class="row-actions">
                 <button class="sm-btn sm ghost" @click="openEdit(c)"><i class="fas fa-pen"></i></button>
                 <button class="sm-btn sm danger" @click="remove(c)"><i class="fas fa-trash"></i></button>
@@ -69,6 +69,10 @@ import { storeApi } from '../../api'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const customers = ref([])

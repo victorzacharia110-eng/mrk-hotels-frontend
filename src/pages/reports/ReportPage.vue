@@ -155,8 +155,8 @@
       </template>
 
         <div class="ledger-totals card">
-          <span>{{ $t('reports.totalOpeningValue') }}: <strong>TZS {{ fmtMoney(stockData.totals.opening_value) }}</strong></span>
-          <span>{{ $t('reports.totalClosingValue') }}: <strong>TZS {{ fmtMoney(stockData.totals.closing_value) }}</strong></span>
+          <span>{{ $t('reports.totalOpeningValue') }}: <strong>{{ curCode() }} {{ fmtMoney(stockData.totals.opening_value) }}</strong></span>
+          <span>{{ $t('reports.totalClosingValue') }}: <strong>{{ curCode() }} {{ fmtMoney(stockData.totals.closing_value) }}</strong></span>
         </div>
       </div>
     </template>
@@ -235,7 +235,7 @@
         </div>
         <div v-if="invTotalsText" class="ledger-totals">
           <span v-for="tot in invTotalsText" :key="tot.label">
-            {{ tot.label }}: <strong>TZS {{ tot.value }}</strong>
+            {{ tot.label }}: <strong>{{ curCode() }} {{ tot.value }}</strong>
           </span>
         </div>
       </div>
@@ -323,7 +323,7 @@
       <template v-else-if="fnbData.orders_total !== undefined">
         <div class="stat-grid">
           <div class="stat-card"><span class="stat-label">{{ $t('reports.fnbOrders') }}</span><span class="stat-value">{{ fnbData.orders_total }}</span></div>
-          <div class="stat-card"><span class="stat-label">{{ $t('reports.fnbRevenue') }}</span><span class="stat-value">TZS {{ fmtMoney(fnbData.revenue_total) }}</span></div>
+          <div class="stat-card"><span class="stat-label">{{ $t('reports.fnbRevenue') }}</span><span class="stat-value">{{ curCode() }} {{ fmtMoney(fnbData.revenue_total) }}</span></div>
           <div class="stat-card"><span class="stat-label">{{ $t('reports.fnbCovers') }}</span><span class="stat-value">{{ fnbData.covers_total }}</span></div>
         </div>
 
@@ -332,7 +332,7 @@
             <h2><i class="fas fa-utensils"></i> {{ $t('reports.deptSplit') }}</h2>
             <div v-for="(stats, dept) in fnbData.by_department" :key="dept" class="method-row">
               <span>{{ $t('orders.' + dept) }}</span>
-              <strong>{{ stats.orders }} · TZS {{ fmtMoney(stats.revenue) }}</strong>
+              <strong>{{ stats.orders }} · {{ curCode() }} {{ fmtMoney(stats.revenue) }}</strong>
             </div>
           </div>
 
@@ -417,19 +417,19 @@
           </div>
           <div class="stat-card">
             <span class="stat-label">{{ $t('reports.roomRevenuePeriod') }}</span>
-            <span class="stat-value">TZS {{ fmtMoney(revenue.room_revenue) }}</span>
+            <span class="stat-value">{{ curCode() }} {{ fmtMoney(revenue.room_revenue) }}</span>
           </div>
           <div class="stat-card">
             <span class="stat-label">{{ $t('reports.adr') }}</span>
-            <span class="stat-value">TZS {{ fmtMoney(revenue.adr) }}</span>
+            <span class="stat-value">{{ curCode() }} {{ fmtMoney(revenue.adr) }}</span>
           </div>
           <div class="stat-card">
             <span class="stat-label">{{ $t('reports.revpar') }}</span>
-            <span class="stat-value">TZS {{ fmtMoney(revenue.revpar) }}</span>
+            <span class="stat-value">{{ curCode() }} {{ fmtMoney(revenue.revpar) }}</span>
           </div>
           <div class="stat-card">
             <span class="stat-label">{{ $t('reports.revenuePeriod') }}</span>
-            <span class="stat-value">TZS {{ fmtMoney(revenue.total) }}</span>
+            <span class="stat-value">{{ curCode() }} {{ fmtMoney(revenue.total) }}</span>
           </div>
         </div>
 
@@ -465,7 +465,7 @@
             <div v-if="revenue.by_method && Object.keys(revenue.by_method).length" class="method-list">
               <div v-for="(amount, method) in revenue.by_method" :key="method" class="method-row">
                 <span class="capitalize">{{ method.replace('_', ' ') }}</span>
-                <span class="price">TZS {{ Number(amount).toLocaleString() }}</span>
+                <span class="price">{{ curCode() }} {{ Number(amount).toLocaleString() }}</span>
               </div>
             </div>
             <div v-else class="muted">{{ $t('reports.noRevenue') }}</div>
@@ -594,6 +594,10 @@ import { fmtLedgerMoney, fmtQty, unitSuffix, fmtLedgerDateTime, ledgerTypeLabel,
 import { collectAllRows, exportCSV } from '@/utils/export'
 import { useAuthStore } from '@/stores/auth'
 
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
+
 const { t } = useI18n()
 const authStore = useAuthStore()
 const reportHotel = computed(() => authStore.user?.tenant?.hotel_name || 'MRK Hotels')
@@ -668,7 +672,7 @@ async function loadStockLedger() {
   }
 }
 
-/** Formats TZS amounts with thousands separators. */
+/** Formats amounts with thousands separators, prefixed by the tenant currency. */
 function fmtMoney(value) {
   return Number(value || 0).toLocaleString('en-TZ', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
@@ -712,7 +716,7 @@ const INV_TEMPLATES = [
       { field: 'received', label: 'Received', num: true },
       { field: 'issued', label: 'Issued', num: true },
       { field: 'closing_stock', label: 'Closing', num: true },
-      { field: 'closing_value', label: 'Closing value (TZS)', num: true, money: true },
+      { field: 'closing_value', label: `Closing value (${curCode()})`, num: true, money: true },
     ],
     totals: ['received_value', 'issued_value', 'closing_value'],
   },
@@ -726,8 +730,8 @@ const INV_TEMPLATES = [
       { field: 'category', label: 'Category' },
       { field: 'closing_stock', label: 'Qty on hand', num: true },
       { field: 'unit', label: 'Unit' },
-      { field: 'unit_cost', label: 'Unit cost (TZS)', num: true, money: true },
-      { field: 'closing_value', label: 'Value (TZS)', num: true, money: true },
+      { field: 'unit_cost', label: `Unit cost (${curCode()})`, num: true, money: true },
+      { field: 'closing_value', label: `Value (${curCode()})`, num: true, money: true },
     ],
     totals: ['closing_value'],
   },
@@ -743,7 +747,7 @@ const INV_TEMPLATES = [
       { field: 'in_stock', label: 'In stock', num: true },
       { field: 'reorder_level', label: 'Reorder level', num: true },
       { field: 'shortfall', label: 'Shortfall', num: true },
-      { field: 'restock_cost', label: 'Restock cost (TZS)', num: true, money: true },
+      { field: 'restock_cost', label: `Restock cost (${curCode()})`, num: true, money: true },
       { field: 'supplier', label: 'Supplier' },
     ],
     totals: ['restock_cost'],
@@ -760,7 +764,7 @@ const INV_TEMPLATES = [
       { field: 'transaction', label: 'Transaction' },
       { field: 'quantity', label: 'Qty', num: true },
       { field: 'balance_after', label: 'Balance after', num: true },
-      { field: 'value', label: 'Value (TZS)', num: true, money: true },
+      { field: 'value', label: `Value (${curCode()})`, num: true, money: true },
       { field: 'recorded_by', label: 'Recorded by' },
     ],
   },
@@ -774,7 +778,7 @@ const INV_TEMPLATES = [
       { field: 'count', label: 'Count', num: true },
       { field: 'qty_in', label: 'Qty in', num: true },
       { field: 'qty_out', label: 'Qty out', num: true },
-      { field: 'value', label: 'Value (TZS)', num: true, money: true },
+      { field: 'value', label: `Value (${curCode()})`, num: true, money: true },
     ],
   },
   {
@@ -787,7 +791,7 @@ const INV_TEMPLATES = [
       { field: 'date', label: 'Date' },
       { field: 'supplier', label: 'Supplier' },
       { field: 'status', label: 'Status' },
-      { field: 'total_amount', label: 'Amount (TZS)', num: true, money: true },
+      { field: 'total_amount', label: `Amount (${curCode()})`, num: true, money: true },
     ],
     totals: ['total_amount'],
   },
@@ -801,7 +805,7 @@ const INV_TEMPLATES = [
       { field: 'date', label: 'Date' },
       { field: 'supplier', label: 'Supplier' },
       { field: 'items_count', label: 'Lines', num: true },
-      { field: 'total_amount', label: 'Amount (TZS)', num: true, money: true },
+      { field: 'total_amount', label: `Amount (${curCode()})`, num: true, money: true },
     ],
     totals: ['total_amount'],
   },
@@ -934,7 +938,7 @@ const INV_TEMPLATES = [
       { field: 'date', label: 'Date' },
       { field: 'reason', label: 'Reason' },
       { field: 'quantity', label: 'Qty', num: true },
-      { field: 'value', label: 'Value (TZS)', num: true, money: true },
+      { field: 'value', label: `Value (${curCode()})`, num: true, money: true },
       { field: 'status', label: 'Status' },
     ],
     totals: ['quantity', 'value'],
@@ -949,7 +953,7 @@ const INV_TEMPLATES = [
       { field: 'unit', label: 'Unit' },
       { field: 'reference_type', label: 'Transaction' },
       { field: 'quantity', label: 'Qty out', num: true },
-      { field: 'value', label: 'Value (TZS)', num: true, money: true },
+      { field: 'value', label: `Value (${curCode()})`, num: true, money: true },
     ],
     totals: ['value'],
   },
@@ -975,10 +979,10 @@ const INV_TEMPLATES = [
     cols: [
       { field: 'grn_number', label: 'GRN number' },
       { field: 'received_date', label: 'Received' },
-      { field: 'taxable_value', label: 'Taxable (TZS)', num: true, money: true },
+      { field: 'taxable_value', label: `Taxable (${curCode()})`, num: true, money: true },
       { field: 'vat_percent', label: 'VAT %', num: true },
-      { field: 'vat_amount', label: 'VAT (TZS)', num: true, money: true },
-      { field: 'total_with_vat', label: 'Total incl. VAT (TZS)', num: true, money: true },
+      { field: 'vat_amount', label: `VAT (${curCode()})`, num: true, money: true },
+      { field: 'total_with_vat', label: `Total incl. VAT (${curCode()})`, num: true, money: true },
     ],
     totals: ['taxable_value', 'vat_amount', 'total_with_vat'],
   },
@@ -1022,7 +1026,7 @@ const invRows = computed(() => {
 /** Column definitions for the active template. */
 const invCols = computed(() => invConfig.value?.cols || [])
 
-/** Totals footer entries (money keys formatted as TZS, plain numbers raw). */
+/** Totals footer entries (money keys carry the currency, plain numbers raw). */
 const invTotalsText = computed(() => {
   const totals = invData.value?.totals || {}
   const moneyKeys = new Set(invConfig.value.cols?.filter((c) => c.money).map((c) => c.field) || [])

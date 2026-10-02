@@ -31,7 +31,7 @@
               <td><strong>{{ order.order_number }}</strong></td>
               <td>{{ order.table_number || order.room_number || '—' }}</td>
               <td><span class="type-badge">{{ typeLabel(order.order_type) }}</span></td>
-              <td class="num">TZS {{ fmtNum(order.total_amount) }}</td>
+              <td class="num">{{ curCode() }} {{ fmtNum(order.total_amount) }}</td>
               <td>{{ fmtTime(order.frozen_at) }}</td>
               <td>{{ order.frozen_by_name || '—' }}</td>
               <td class="right">
@@ -65,6 +65,10 @@ import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cashierApi } from '@/api'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 

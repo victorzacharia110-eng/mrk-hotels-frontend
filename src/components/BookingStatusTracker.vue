@@ -33,8 +33,8 @@
         <span class="badge" :class="statusBadge(result.status)">{{ statusLabel(result.status) }}</span>
       </p>
       <div v-if="result.quoted_amount !== null" class="tracker-line">
-        <span>{{ $t('bookingRequisitions.quotedAmount') }}</span>
-        <strong>TZS {{ Number(result.quoted_amount).toLocaleString() }}</strong>
+        <span>{{ $t('bookingRequisitions.quotedAmount', { currency: curCode() }) }}</span>
+        <strong>{{ curCode() }} {{ Number(result.quoted_amount).toLocaleString() }}</strong>
       </div>
       <div v-if="result.hotel_notes" class="tracker-line">
         <span>{{ $t('bookingRequisitions.hotelNotes') }}</span>
@@ -58,6 +58,10 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { publicApi } from '@/api'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 

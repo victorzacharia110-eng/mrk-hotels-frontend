@@ -179,7 +179,7 @@
               @click="addItem(item)"
             >
               <span class="cat-item-name">{{ dishName(item) }}</span>
-              <span class="cat-item-price">TZS {{ money(item.price) }}</span>
+              <span class="cat-item-price">{{ curCode() }} {{ money(item.price) }}</span>
               <span v-if="item.is_in_stock === false" class="cat-item-oos">
                 {{ $t('orderTaker.outOfStock') }}
               </span>
@@ -319,7 +319,7 @@
           </button>
           <div class="total-bar">
             <span>{{ $t('orderTaker.total') }}</span>
-            <strong>TZS {{ money(grandTotal) }}</strong>
+            <strong>{{ curCode() }} {{ money(grandTotal) }}</strong>
           </div>
           <button type="button" class="pager-btn" :disabled="page >= pageCount" @click="setPage(pageCount)">
             {{ $t('orderTaker.pageEnd') }} <i class="fas fa-angles-right" aria-hidden="true"></i>
@@ -363,7 +363,7 @@
             <div class="summary-kpi kpi-stock-items">
               <span class="sk-label"><i class="fas fa-boxes-stacked" aria-hidden="true"></i> {{ $t('staffDashboard.stockTitle') }}</span>
               <strong>{{ dashboard.stock?.items ?? 0 }}</strong>
-              <span class="sk-sub">{{ $t('staffDashboard.stockOnHand') }}: {{ num(dashboard.stock?.on_hand) }} · {{ $t('staffDashboard.stockValue') }}: TZS {{ money(dashboard.stock?.value) }}</span>
+              <span class="sk-sub">{{ $t('staffDashboard.stockOnHand') }}: {{ num(dashboard.stock?.on_hand) }} · {{ $t('staffDashboard.stockValue') }}: {{ curCode() }} {{ money(dashboard.stock?.value) }}</span>
             </div>
             <div class="summary-kpi kpi-low">
               <span class="sk-label">{{ $t('staffDashboard.lowStock') }}</span>
@@ -377,8 +377,8 @@
             </div>
             <div class="summary-kpi kpi-revenue">
               <span class="sk-label">{{ $t('staffDashboard.salesRevenue') }}</span>
-              <strong>TZS {{ money(dashboard.sales?.revenue) }}</strong>
-              <span class="sk-sub">{{ $t('staffDashboard.salesAverage') }}: TZS {{ money(dashboard.sales?.average) }}</span>
+              <strong>{{ curCode() }} {{ money(dashboard.sales?.revenue) }}</strong>
+              <span class="sk-sub">{{ $t('staffDashboard.salesAverage') }}: {{ curCode() }} {{ money(dashboard.sales?.average) }}</span>
             </div>
           </div>
 
@@ -427,7 +427,7 @@
                     <tr v-for="(row, i) in dashboard.fast_moving" :key="i">
                       <td>{{ row.item_name }}</td>
                       <td class="col-qty">{{ row.qty }}</td>
-                      <td class="col-amount">TZS {{ money(row.revenue) }}</td>
+                      <td class="col-amount">{{ curCode() }} {{ money(row.revenue) }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -597,7 +597,7 @@
               </button>
             </li>
           </ul>
-          <p class="open-total">{{ $t('orderTaker.orderTotal') }}: <strong>TZS {{ money(order.total_amount) }}</strong>
+          <p class="open-total">{{ $t('orderTaker.orderTotal') }}: <strong>{{ curCode() }} {{ money(order.total_amount) }}</strong>
             · <span :class="order.payment_status === 'unpaid' ? 'pay-unpaid' : 'pay-ok'">{{ paymentLabel(order.payment_status) }}</span>
             <span v-if="order.settlement_mode" class="settle-tag" :title="$t('waiterPanel.settlementMode')">
               <i class="fas fa-wallet" aria-hidden="true"></i> {{ order.settlement_mode }}
@@ -724,7 +724,7 @@
           </div>
           <div class="summary-kpi kpi-total">
             <span class="sk-label">{{ isSummaryToday ? $t('orderTaker.summaryTotalToday') : $t('orderTaker.summaryTotalFor', { date: summaryDate }) }}</span>
-            <strong>TZS {{ money(summaryTotal) }}</strong>
+            <strong>{{ curCode() }} {{ money(summaryTotal) }}</strong>
           </div>
         </div>
 
@@ -788,7 +788,7 @@
                       </span>
                       <span v-else>—</span>
                     </td>
-                    <td class="col-amount"><strong>TZS {{ money(order.total_amount) }}</strong></td>
+                    <td class="col-amount"><strong>{{ curCode() }} {{ money(order.total_amount) }}</strong></td>
                     <td class="summ-actions">
                       <button
                         type="button"
@@ -816,7 +816,7 @@
                           <span class="item-line-text">
                             {{ item.quantity }}× {{ dishName(item) }}<template v-if="item.accompaniment"> · {{ item.accompaniment }}</template>
                           </span>
-                          <span class="summary-item-amount">TZS {{ money(item.subtotal ?? Number(item.unit_price || 0) * Number(item.quantity || 1)) }}</span>
+                          <span class="summary-item-amount">{{ curCode() }} {{ money(item.subtotal ?? Number(item.unit_price || 0) * Number(item.quantity || 1)) }}</span>
                         </li>
                         <li v-if="!(order.items || []).length" class="cat-empty">{{ $t('orderTaker.summaryNoItems') }}</li>
                       </ul>
@@ -843,7 +843,7 @@
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </header>
-            <p class="accomp-hint">TZS {{ money(payOrder.total_amount) }}</p>
+            <p class="accomp-hint">{{ curCode() }} {{ money(payOrder.total_amount) }}</p>
             <div class="accomp-grid">
               <button
                 v-for="method in paymentMethodOptions"
@@ -877,6 +877,7 @@
             <p class="accomp-hint">{{ $t('orderTaker.voidHint') }}</p>
             <p class="void-summary">
               {{ $t('orderTaker.voidSummary', {
+  currency: curCode(),
                 table: voidTarget.table_number || voidTarget.room_number || '—',
                 total: money(voidTarget.total_amount),
               }) }}
@@ -939,7 +940,7 @@
                     <label class="split-line">
                       <input type="checkbox" :value="line.order_item_id" v-model="splitSelected" :disabled="billSaving" />
                       <span class="split-desc">{{ line.quantity }}× {{ line.item_name }}<template v-if="line.accompaniment"> · {{ line.accompaniment }}</template></span>
-                      <span class="split-amt">TZS {{ money(line.subtotal ?? line.unit_price * line.quantity) }}</span>
+                      <span class="split-amt">{{ curCode() }} {{ money(line.subtotal ?? line.unit_price * line.quantity) }}</span>
                     </label>
                   </li>
                 </ul>
@@ -962,7 +963,7 @@
               <div class="bill-side">
                 <div class="bill-side-head">
                   <strong>{{ $t('orderTaker.billTo') }}</strong>
-                  <span class="bill-dest-count">{{ $t('orderTaker.splitSummary', { count: splitSelected.length, total: money(splitTotal) }) }}</span>
+                  <span class="bill-dest-count">{{ $t('orderTaker.splitSummary', { currency: curCode(), count: splitSelected.length, total: money(splitTotal) }) }}</span>
                 </div>
                 <div class="bill-dests">
                   <label
@@ -1030,7 +1031,7 @@
                 </div>
                 <hr />
               </div>
-              <p class="rc-total">TZS {{ money(receipt.total) }}</p>
+              <p class="rc-total">{{ curCode() }} {{ money(receipt.total) }}</p>
               <p class="rc-line">{{ $t('paymentFields.method') }}: {{ methodLabel(receipt.method) }}</p>
               <p class="rc-line">{{ $t('orderTaker.receiptRef') }}: {{ receipt.transaction_reference }}</p>
               <p class="rc-line">{{ $t('orderTaker.receiptBy') }}: {{ receipt.collected_by }}</p>
@@ -1230,6 +1231,10 @@ import { useAccompaniments } from '@/composables/useAccompaniments'
 import { selectedOutlet } from '@/composables/useOutletContext'
 import AccompanimentManager from '@/components/AccompanimentManager.vue'
 import { toast } from '@/utils/toast'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()

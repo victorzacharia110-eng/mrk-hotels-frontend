@@ -145,7 +145,7 @@
             <tbody>
               <tr v-for="(item, i) in detail.items || []" :key="i">
                 <td>{{ item.item_name }}</td><td>{{ item.quantity }}</td><td>{{ item.unit || '-' }}</td>
-                <td>{{ item.estimated_price ? 'TZS ' + Number(item.estimated_price).toLocaleString() : '-' }}</td>
+                <td>{{ item.estimated_price ? `${curCode()} ` + Number(item.estimated_price).toLocaleString() : '-' }}</td>
               </tr>
             </tbody>
           </table>
@@ -158,6 +158,7 @@
 </template>
 
 <script setup>
+
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -165,6 +166,9 @@ import { inventoryOpsApi, purchaseRequisitionApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const route = useRoute()
 const { t } = useI18n()

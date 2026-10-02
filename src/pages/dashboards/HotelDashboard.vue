@@ -182,7 +182,7 @@
           <template v-if="barTip.rawStatus === 'checked_in'">{{ $t('stayview.balanceDue') }}</template>
           <template v-else>{{ barTip.paymentPending ? $t('stayview.paymentPending') : $t('stayview.paymentPaid')
             }}</template>
-          <strong v-if="barTip.paymentPending"> · TZS {{ barTip.balance }}</strong>
+          <strong v-if="barTip.paymentPending"> · {{ curCode() }} {{ barTip.balance }}</strong>
         </span>
       </div>
     </div>
@@ -265,7 +265,7 @@
             <div class="sv-hk-item-meta">
               <span><i class="fas fa-layer-group" aria-hidden="true"></i> {{ order.items_count ?? 0 }} {{
                 $t('laundry.items') }}</span>
-              <span><i class="fas fa-coins" aria-hidden="true"></i> TZS {{ fmtNum(order.total_charge) }}</span>
+              <span><i class="fas fa-coins" aria-hidden="true"></i> {{ curCode() }} {{ fmtNum(order.total_charge) }}</span>
               <span v-if="order.attendant?.full_name"><i class="fas fa-user-gear" aria-hidden="true"></i> {{
                 order.attendant.full_name }}</span>
             </div>
@@ -399,11 +399,11 @@
                 <div class="sv-panel-cards">
                   <div class="sv-panel-card">
                     <span>{{ $t('stayview.totalRoomCharges') }}</span>
-                    <strong>TZS {{ fmtNum(folioTotals.charges, 2) }}</strong>
+                    <strong>{{ curCode() }} {{ fmtNum(folioTotals.charges, 2) }}</strong>
                   </div>
                   <div class="sv-panel-card">
                     <span>{{ $t('stayview.totalPaid') }}</span>
-                    <strong>TZS {{ fmtNum(folioTotals.paid, 2) }}</strong>
+                    <strong>{{ curCode() }} {{ fmtNum(folioTotals.paid, 2) }}</strong>
                   </div>
                   <div class="sv-panel-card" :class="activeBar.paymentPending ? 'pay-pending' : 'pay-ok'">
                     <span>{{ $t('stayview.balance') }}</span>
@@ -448,7 +448,7 @@
                             </span>
                           </td>
                           <td>{{ e.user }}</td>
-                          <td class="num">{{ e.credit ? '−' : '' }}TZS {{ fmtNum(e.amount, 2) }}</td>
+                          <td class="num">{{ e.credit ? '−' : '' }}{{ curCode() }} {{ fmtNum(e.amount, 2) }}</td>
                           <td class="sv-cell-actions">
                             <button type="button" class="sv-icon-link" :title="$t('folio.view')" @click="viewEntry(e)">
                               <i data-testid="sv-entry-view" class="fas fa-eye" aria-hidden="true"></i>
@@ -493,12 +493,12 @@
                       <tfoot v-if="folioEntries.length">
                         <tr class="sv-folio-total">
                           <td colspan="4">{{ $t('folio.totalCharges') }}</td>
-                          <td class="num"><strong>TZS {{ fmtNum(folioTotals.charges, 2) }}</strong></td>
+                          <td class="num"><strong>{{ curCode() }} {{ fmtNum(folioTotals.charges, 2) }}</strong></td>
                           <td></td>
                         </tr>
                         <tr class="sv-folio-total">
                           <td colspan="4">{{ $t('folio.totalPaid') }}</td>
-                          <td class="num"><strong>TZS {{ fmtNum(folioTotals.paid, 2) }}</strong></td>
+                          <td class="num"><strong>{{ curCode() }} {{ fmtNum(folioTotals.paid, 2) }}</strong></td>
                           <td></td>
                         </tr>
                         <tr class="sv-folio-total sv-folio-balance">
@@ -568,12 +568,12 @@
                 <div class="sv-panel-cards">
                   <div class="sv-panel-card">
                     <span>{{ $t('stayview.totalRoomCharges') }}</span>
-                    <strong>TZS {{ fmtNum((folio?.folio?.total_amount ?? 0) + (folio?.folio?.room_charges ?? 0), 2)
+                    <strong>{{ curCode() }} {{ fmtNum((folio?.folio?.total_amount ?? 0) + (folio?.folio?.room_charges ?? 0), 2)
                       }}</strong>
                   </div>
                   <div class="sv-panel-card">
                     <span>{{ $t('stayview.totalPaid') }}</span>
-                    <strong>TZS {{ fmtNum(folio?.reservation?.advance_payment ?? 0, 2) }}</strong>
+                    <strong>{{ curCode() }} {{ fmtNum(folio?.reservation?.advance_payment ?? 0, 2) }}</strong>
                   </div>
                   <div class="sv-panel-card">
                     <span>{{ $t('folio.balance') }}</span>
@@ -595,14 +595,14 @@
                       <tr v-for="(n, i) in chargeNights" :key="i">
                         <td>{{ n.date }}</td>
                         <td>{{ n.day }}</td>
-                        <td class="num">TZS {{ fmtNum(n.rate, 2) }}</td>
-                        <td class="num">TZS {{ fmtNum(n.rate, 2) }}</td>
+                        <td class="num">{{ curCode() }} {{ fmtNum(n.rate, 2) }}</td>
+                        <td class="num">{{ curCode() }} {{ fmtNum(n.rate, 2) }}</td>
                       </tr>
                     </tbody>
                     <tfoot>
                       <tr>
                         <td colspan="3">{{ $t('stayview.nightTotal') }}</td>
-                        <td class="num"><strong>TZS {{ fmtNum(nightTotal, 2) }}</strong></td>
+                        <td class="num"><strong>{{ curCode() }} {{ fmtNum(nightTotal, 2) }}</strong></td>
                       </tr>
                     </tfoot>
                   </table>
@@ -877,7 +877,7 @@
                       class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentErrors.company_id }}</span>
                 </div>
                 <label class="sv-field">
-                  <span>{{ $t('stayview.paymentAmount') }}</span>
+                  <span>{{ $t('stayview.paymentAmount', { currency: curCode() }) }}</span>
                   <input v-model.number="paymentForm.amount" type="number" min="0" step="0.01" class="input"
                     data-field="amount" :class="{ 'sv-input-error': paymentErrors.amount }" required />
                   <span v-if="paymentErrors.amount" class="sv-field-msg" role="alert"><i
@@ -886,15 +886,15 @@
                 <div v-if="creditorCompany" class="sv-credit-panel">
                   <div class="sv-credit-row">
                     <span class="muted">{{ $t('stayview.availableCredit') }}</span>
-                    <strong>TZS {{ fmtNum(creditorAvailable, 2) }}</strong>
+                    <strong>{{ curCode() }} {{ fmtNum(creditorAvailable, 2) }}</strong>
                   </div>
                   <div class="sv-credit-row">
                     <span class="muted">{{ $t('stayview.currentBalance') }}</span>
-                    <strong>TZS {{ fmtNum(creditorBalance, 2) }}</strong>
+                    <strong>{{ curCode() }} {{ fmtNum(creditorBalance, 2) }}</strong>
                   </div>
                   <div class="sv-credit-row" :class="{ 'sv-credit-over': creditExceeded }">
                     <span class="muted">{{ $t('stayview.remainingCredit') }}</span>
-                    <strong>TZS {{ fmtNum(creditorRemaining, 2) }}</strong>
+                    <strong>{{ curCode() }} {{ fmtNum(creditorRemaining, 2) }}</strong>
                   </div>
                   <p v-if="creditExceeded" class="sv-credit-alert" role="alert">
                     <i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ $t('stayview.creditExceeded') }}
@@ -904,7 +904,7 @@
 
               <template v-else>
                 <label class="sv-field">
-                  <span>{{ $t('stayview.paymentAmount') }}</span>
+                  <span>{{ $t('stayview.paymentAmount', { currency: curCode() }) }}</span>
                   <input v-model.number="paymentForm.amount" type="number" min="0" step="0.01" class="input"
                     data-field="amount" :class="{ 'sv-input-error': paymentErrors.amount }" required />
                   <span v-if="paymentErrors.amount" class="sv-field-msg" role="alert"><i
@@ -959,7 +959,7 @@
             </div>
             <div class="sv-modal-body sv-pay-edit-page">
               <label class="sv-field">
-                <span>{{ $t('stayview.paymentEditAmount') }}</span>
+                <span>{{ $t('stayview.paymentEditAmount', { currency: curCode() }) }}</span>
                 <input v-model.number="paymentEditForm.amount" type="number" min="0" step="0.01" class="input"
                   data-field="amount" :class="{ 'sv-input-error': paymentEditErrors.amount }" required />
                 <span v-if="paymentEditErrors.amount" class="sv-field-msg" role="alert"><i
@@ -1043,21 +1043,21 @@
                   <tbody>
                     <tr>
                       <td>{{ $t('stayview.totalRoomCharges') }}</td>
-                      <td class="num">TZS {{ fmtNum(invoiceBreakdown.roomCharges, 2) }}</td>
+                      <td class="num">{{ curCode() }} {{ fmtNum(invoiceBreakdown.roomCharges, 2) }}</td>
                     </tr>
                     <tr>
                       <td>{{ $t('stayview.totalPaid') }}</td>
-                      <td class="num">TZS {{ fmtNum(invoiceBreakdown.paid, 2) }}</td>
+                      <td class="num">{{ curCode() }} {{ fmtNum(invoiceBreakdown.paid, 2) }}</td>
                     </tr>
                     <tr v-if="invoiceBreakdown.refund > 0" class="sv-refund-pos">
                       <td>{{ $t('stayview.refundLine') }}</td>
-                      <td class="num">− TZS {{ fmtNum(invoiceBreakdown.refund, 2) }}</td>
+                      <td class="num">− {{ curCode() }} {{ fmtNum(invoiceBreakdown.refund, 2) }}</td>
                     </tr>
                   </tbody>
                   <tfoot>
                     <tr>
                       <td>{{ $t('stayview.balance') }}</td>
-                      <td class="num">TZS {{ fmtNum(invoiceBreakdown.net, 2) }}</td>
+                      <td class="num">{{ curCode() }} {{ fmtNum(invoiceBreakdown.net, 2) }}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -1208,7 +1208,7 @@
                     class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ chargeErrors.description }}</span>
               </label>
               <label class="sv-field">
-                <span>{{ $t('stayview.paymentAmount') }}</span>
+                <span>{{ $t('stayview.paymentAmount', { currency: curCode() }) }}</span>
                 <input v-model.number="chargeForm.amount" type="number" min="0" step="0.01" class="input"
                   data-field="amount" :class="{ 'sv-input-error': chargeErrors.amount }" required />
                 <span v-if="chargeErrors.amount" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation"
@@ -1249,7 +1249,7 @@
             <div class="sv-modal-body">
               <template v-if="folioOp === 'discount'">
                 <label class="sv-field">
-                  <span>{{ $t('stayview.discountAmount') }}</span>
+                  <span>{{ $t('stayview.discountAmount', { currency: curCode() }) }}</span>
                   <input v-model.number="folioOpForm.amount" type="number" min="0" step="0.01" class="input"
                     data-field="amount" required />
                 </label>
@@ -1261,7 +1261,7 @@
               </template>
               <template v-else-if="folioOp === 'adjustment'">
                 <label class="sv-field">
-                  <span>{{ $t('stayview.adjustmentAmount') }}</span>
+                  <span>{{ $t('stayview.adjustmentAmount', { currency: curCode() }) }}</span>
                   <input v-model.number="folioOpForm.amount" type="number" step="0.01" class="input" data-field="amount"
                     placeholder="+… / −…" required />
                 </label>
@@ -1279,9 +1279,9 @@
                     maxlength="255" />
                 </label>
                 <label class="sv-field">
-                  <span>{{ $t('stayview.adjustmentAmount') }}</span>
+                  <span>{{ $t('stayview.adjustmentAmount', { currency: curCode() }) }}</span>
                   <input v-model.number="folioOpForm.amount" type="number" min="0" step="0.01" class="input"
-                    data-field="amount" :placeholder="$t('stayview.inclusionAmountHint')" />
+                    data-field="amount" :placeholder="$t('stayview.inclusionAmountHint', { currency: curCode() })" />
                 </label>
                 <p class="sv-cap sv-note">{{ $t('stayview.inclusionHint') }}</p>
               </template>
@@ -1320,7 +1320,7 @@
                           <span class="sv-cap">{{ formatDateDMY(e.date) }} · {{ e.particular }}</span>
                           <span class="sv-cap sv-muted">{{ e.description }}</span>
                         </span>
-                        <strong class="num">{{ e.credit ? '−' : '' }}TZS {{ fmtNum(e.amount, 2) }}</strong>
+                        <strong class="num">{{ e.credit ? '−' : '' }}{{ curCode() }} {{ fmtNum(e.amount, 2) }}</strong>
                       </label>
                     </div>
                   </div>
@@ -1375,8 +1375,9 @@
                           <span class="sv-cap sv-muted">{{ tt.room_number || '—' }} · {{ (tt.status || '').replace('_',
                             ' ') }}</span>
                         </span>
-                        <span class="sv-cap num">{{ tt.balance_due !== undefined && tt.balance_due !== null ? 'TZS ' +
-                          fmtNum(tt.balance_due, 0) : '' }}</span>
+                        <span class="sv-cap num">{{ tt.balance_due !== undefined && tt.balance_due !== null
+                          ? `${curCode()} ${fmtNum(tt.balance_due, 0)}`
+                          : '' }}</span>
                       </label>
                     </div>
                   </div>
@@ -1384,7 +1385,7 @@
 
                 <div v-if="moveSelected.length" class="sv-move-summary">
                   <span>{{ $t('stayview.selectedOpsTotal') }}:
-                    <strong>TZS {{ fmtNum(moveSelectedTotal, 2) }}</strong>
+                    <strong>{{ curCode() }} {{ fmtNum(moveSelectedTotal, 2) }}</strong>
                   </span>
                   <span v-if="moveTargetObj" class="sv-cap">
                     <i class="fas fa-arrow-right" aria-hidden="true"></i>
@@ -1542,14 +1543,14 @@
                         <td>{{ it.item_name }}</td>
                         <td>{{ it.category || '—' }}</td>
                         <td class="num">{{ it.quantity }}</td>
-                        <td class="num">TZS {{ fmtNum(it.subtotal, 2) }}</td>
+                        <td class="num">{{ curCode() }} {{ fmtNum(it.subtotal, 2) }}</td>
                       </tr>
                     </tbody>
                   </table>
                   <div class="sv-receipt-totals">
                     <div class="sv-receipt-total-row">
                       <span>{{ $t('folio.billAmount') }}</span>
-                      <strong>TZS {{ fmtNum(viewEntryReceipt.billAmount ?? viewEntryReceipt.amount, 2) }}</strong>
+                      <strong>{{ curCode() }} {{ fmtNum(viewEntryReceipt.billAmount ?? viewEntryReceipt.amount, 2) }}</strong>
                     </div>
                     <div class="sv-receipt-total-row">
                       <span>{{ $t('folio.tax') }}</span>
@@ -1557,7 +1558,7 @@
                     </div>
                     <div class="sv-receipt-total-row sv-receipt-total-pay">
                       <span>{{ $t('folio.totalPayable') }}</span>
-                      <strong>TZS {{ fmtNum(viewEntryReceipt.amount, 2) }}</strong>
+                      <strong>{{ curCode() }} {{ fmtNum(viewEntryReceipt.amount, 2) }}</strong>
                     </div>
                   </div>
                 </div>
@@ -1582,7 +1583,7 @@
                 <div class="sv-detail-row">
                   <span class="sv-cap muted">{{ $t('folio.amount') }}</span>
                   <strong :class="folioView?.credit ? 'sv-amount-credit' : 'sv-amount-charge'">
-                    {{ folioView?.credit ? '−' : '' }}TZS {{ fmtNum(folioView?.amount ?? 0, 2) }}
+                    {{ folioView?.credit ? '−' : '' }}{{ curCode() }} {{ fmtNum(folioView?.amount ?? 0, 2) }}
                   </strong>
                 </div>
               </div>
@@ -1763,6 +1764,7 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.total') }}<em class="sv-auto"> · {{ $t('reservations.autoTotal', {
+  currency: curCode(),
                     amount:
                       bookingNights && bookingNights > 0 ? formatPrice(bookingNights * bookingRate) : 0 })
                       }}</em></span>
@@ -1969,7 +1971,7 @@
             <div class="sv-modal-body">
               <div class="sv-modal-row">
                 <i class="fas fa-layer-group" aria-hidden="true"></i>
-                <span>{{ roomTypeLabel(roomModal.room_type) }} · TZS {{ formatPrice(roomModal.price_per_night) }}</span>
+                <span>{{ roomTypeLabel(roomModal.room_type) }} · {{ curCode() }} {{ formatPrice(roomModal.price_per_night) }}</span>
               </div>
               <header class="sv-dot-rules-head">
                 <i class="fas fa-circle-info" aria-hidden="true"></i>
@@ -2145,6 +2147,10 @@ import {
 } from '@/utils/formValidation'
 import { useCategoriesStore } from '@/stores/categories'
 
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
+
 const { t, te } = useI18n()
 const notifStore = useNotificationStore()
 
@@ -2194,7 +2200,7 @@ const alertDetails = computed(() => {
   const details = []
   if (d.guest_name) details.push({ label: t('guests.guestName'), value: d.guest_name })
   if (d.amount)
-    details.push({ label: t('payments.amount'), value: `TZS ${Number(d.amount).toLocaleString()}` })
+    details.push({ label: t('payments.amount'), value: `${curCode()} ${Number(d.amount).toLocaleString()}` })
   if (d.provider) details.push({ label: t('payments.provider'), value: d.provider })
   return details
 })
@@ -2727,7 +2733,7 @@ function closeBarModal() {
 
 /**
  * Formats a numeric amount with thousands separators. Pass decimals > 0 for
- * money that must read like a till slip (e.g. TZS 540,000.00).
+ * money that must read like a till slip (e.g. KES 540,000.00).
  */
 function fmtNum(n, decimals = 0) {
   const value = Number(n || 0)
@@ -2958,7 +2964,7 @@ function folioCardBalance(src, bar) {
  * Balance a folio switch-row should show, independent of which folio is being
  * viewed. The current-folio row (the bar) carries no `balance_due` itself, so
  * its figure must come from the loaded stay folio — otherwise opening a
- * related folio would blank the current one to TZS 0.00 exactly as the review
+ * related folio would blank the current one to 0.00 exactly as the review
  * reported. Related rows prefer the folio's OWN ledger balance once it is (or
  * has been) loaded: the backend header `balance_due` on a split/cut target
  * reads 0 (its formula counts the post-split room_charges), while the real
@@ -2997,20 +3003,20 @@ function folioRowBalance(r) {
 function folioRowBalanceText(r) {
   const b = folioRowBalance(r)
   const sign = Number.isFinite(b) && b < 0 ? '- ' : ''
-  return `${sign}TZS ${fmtNum(Math.abs(b), 2)}`
+  return `${sign}${curCode()} ${fmtNum(Math.abs(b), 2)}`
 }
 
 /** Bottom-of-ledger BALANCE = TOTAL CHARGES − TOTAL PAID (negative when overpaid). */
 const ledgerBalance = computed(() => {
   const b = folioTotals.value.charges - folioTotals.value.credits
   const negative = b < 0
-  return { negative, text: `${negative ? '- ' : ''}TZS ${fmtNum(Math.abs(b), 2)}` }
+  return { negative, text: `${negative ? '- ' : ''}${curCode()} ${fmtNum(Math.abs(b), 2)}` }
 })
 
 /** Balance text per the Folio Operations layout. The current folio's figure
  *  must match the balance due obtained in the ledger footer below, so both
  *  read the same charges − credits total. When paid exceeds charges the
- *  figure prints as "- TZS x" (negative reading), mirrored by the tfoot. */
+ *  figure prints as "- KES x" (negative reading), mirrored by the tfoot. */
 const balanceDisplay = computed(() => ledgerBalance.value)
 
 /** Shows the stay's own folio (or reloads the toggled one) from a chip click. */
@@ -3133,7 +3139,7 @@ const bookingGrid = computed(() => {
     { label: t('stayview.reference'), value: show(src.booking_reference || src.reference) },
     { label: t('stayview.company'), value: show(src.company_name) },
     { label: t('reservations.businessSource'), value: show(String(src.business_source || '').replace('_', ' ')) },
-    { label: t('stayview.rate'), value: `TZS ${fmtNum(src.rate ?? src.room?.price_per_night ?? 0, 2)}` },
+    { label: t('stayview.rate'), value: `${curCode()} ${fmtNum(src.rate ?? src.room?.price_per_night ?? 0, 2)}` },
     { label: t('stayview.room'), value: show(roomName || src.roomNumber) },
     {
       label: t('stayview.arrival'),
@@ -3146,9 +3152,9 @@ const bookingGrid = computed(() => {
     { label: t('reservations.nights'), value: show(src.nights ?? src.num_days ?? '') },
     { label: t('reservations.adultsLabel'), value: show(src.num_adults ?? '') },
     { label: t('reservations.childrenLabel'), value: show(src.num_children ?? '') },
-    { label: t('stayview.total'), value: `TZS ${fmtNum(src.total_amount ?? src.total ?? 0, 2)}` },
-    { label: t('stayview.advancePaid'), value: `TZS ${fmtNum(src.advance_payment ?? src.advance ?? 0, 2)}` },
-    { label: t('stayview.balance'), value: `TZS ${fmtNum(src.balance_due ?? src.balance ?? 0, 2)}` },
+    { label: t('stayview.total'), value: `${curCode()} ${fmtNum(src.total_amount ?? src.total ?? 0, 2)}` },
+    { label: t('stayview.advancePaid'), value: `${curCode()} ${fmtNum(src.advance_payment ?? src.advance ?? 0, 2)}` },
+    { label: t('stayview.balance'), value: `${curCode()} ${fmtNum(src.balance_due ?? src.balance ?? 0, 2)}` },
   ]
 })
 
@@ -4218,7 +4224,7 @@ async function submitFolioOp() {
 /** Voids a persisted ledger entry (reverses its effect on the balance). */
 async function voidFolioEntry(e) {
   if (!e?.entryId || actionBusy.value) return
-  if (!window.confirm(`${t('folio.void')} · ${e.description} — TZS ${fmtNum(e.amount)}?`)) return
+  if (!window.confirm(`${t('folio.void')} · ${e.description} — ${curCode()} ${fmtNum(e.amount)}?`)) return
   await runStayAction(() => reservationApi.folioEntryVoid(e.entryId))
 }
 
@@ -4325,7 +4331,7 @@ const amendSnapshot = ref({})
 const roomMoveOptions = computed(() =>
   rooms.value.map((room) => ({
     value: room.room_id,
-    label: `${room.room_number} · ${roomTypeLabel(room.room_type)} · TZS ${formatPrice(room.price_per_night)}`,
+    label: `${room.room_number} · ${roomTypeLabel(room.room_type)} · ${curCode()} ${formatPrice(room.price_per_night)}`,
   })),
 )
 
@@ -4521,14 +4527,14 @@ function printEntryInvoice(e) {
       <tr>
         <td>${esc(e.description || e.particular || '')}</td>
         <td>${esc(formatDateDMY(e.date || e.posted_at))}</td>
-        <td class="num">${op}TZS ${fmtNum(e.amount, 2)}</td>
+        <td class="num">${op}${curCode()} ${fmtNum(e.amount, 2)}</td>
         <td class="num">${balance}</td>
       </tr>
     </tbody>
     <tfoot>
       <tr class="tot">
         <td colspan="2">${esc(t('stayview.printEntryInvoiceTotal'))}</td>
-        <td colspan="2" class="num big">${op}TZS ${fmtNum(e.amount, 2)}</td>
+        <td colspan="2" class="num big">${op}${curCode()} ${fmtNum(e.amount, 2)}</td>
       </tr>
     </tfoot>
   </table>
@@ -4792,19 +4798,19 @@ function printInvoiceBreakdown() {
         <td>${esc(r.date || '—')}</td>
         <td>${esc(r.particular)}</td>
         <td>${esc(r.description)}</td>
-        <td class="num ${r.credit ? 'credit' : ''}">${r.muted ? '—' : (r.credit ? '− ' : '') + 'TZS ' + esc(fmtNum(Math.abs(r.amount), 2))}</td>
+        <td class="num ${r.credit ? 'credit' : ''}">${r.muted ? '—' : (r.credit ? '− ' : '') + `${curCode()} ` + esc(fmtNum(Math.abs(r.amount), 2))}</td>
       </tr>`,
     )
     .join('')
 
   const summary = []
-  summary.push(`<tr class="tot"><td colspan="3">${esc(t('stayview.totalRoomCharges'))}</td><td class="num">TZS ${esc(fmtNum(b.roomCharges, 2))}</td></tr>`)
-  summary.push(`<tr><td colspan="3">${esc(t('stayview.totalPaid'))}</td><td class="num">TZS ${esc(fmtNum(b.paid, 2))}</td></tr>`)
+  summary.push(`<tr class="tot"><td colspan="3">${esc(t('stayview.totalRoomCharges'))}</td><td class="num">${curCode()} ${esc(fmtNum(b.roomCharges, 2))}</td></tr>`)
+  summary.push(`<tr><td colspan="3">${esc(t('stayview.totalPaid'))}</td><td class="num">${curCode()} ${esc(fmtNum(b.paid, 2))}</td></tr>`)
   if (b.refund > 0) {
-    summary.push(`<tr><td colspan="3">${esc(t('stayview.refundLine'))}</td><td class="num credit">− TZS ${esc(fmtNum(b.refund, 2))}</td></tr>`)
+    summary.push(`<tr><td colspan="3">${esc(t('stayview.refundLine'))}</td><td class="num credit">− ${curCode()} ${esc(fmtNum(b.refund, 2))}</td></tr>`)
   }
   const stillOwing = b.net > 0
-  summary.push(`<tr class="balance"><td colspan="3">${esc(t('stayview.balance'))}</td><td class="num big">${stillOwing ? '' : '− '}TZS ${esc(fmtNum(Math.abs(b.net), 2))}</td></tr>`)
+  summary.push(`<tr class="balance"><td colspan="3">${esc(t('stayview.balance'))}</td><td class="num big">${stillOwing ? '' : '− '}${curCode()} ${esc(fmtNum(Math.abs(b.net), 2))}</td></tr>`)
 
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>${esc(t('stayview.printInvoiceBreakdownTitle'))} · ${esc(header.code)}</title>

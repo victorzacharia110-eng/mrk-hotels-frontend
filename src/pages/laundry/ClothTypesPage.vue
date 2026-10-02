@@ -58,10 +58,10 @@
         <tbody>
           <tr v-for="cloth in clothTypes" :key="cloth.cloth_type_id">
             <td><strong>{{ cloth.name }}</strong></td>
-            <td><span class="price">TZS {{ Number(cloth.wash_price).toLocaleString() }}</span></td>
-            <td><span class="price">TZS {{ Number(cloth.iron_price).toLocaleString() }}</span></td>
+            <td><span class="price">{{ curCode() }} {{ Number(cloth.wash_price).toLocaleString() }}</span></td>
+            <td><span class="price">{{ curCode() }} {{ Number(cloth.iron_price).toLocaleString() }}</span></td>
             <td>
-              <span class="price">TZS {{ Number(cloth.dry_clean_price).toLocaleString() }}</span>
+              <span class="price">{{ curCode() }} {{ Number(cloth.dry_clean_price).toLocaleString() }}</span>
             </td>
             <td>
               <span class="badge" :class="cloth.is_active ? 'badge-green' : 'badge-gray'">{{
@@ -170,6 +170,10 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { clothTypeApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()

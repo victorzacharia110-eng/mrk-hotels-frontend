@@ -125,7 +125,7 @@
             <td class="capitalize">{{ r.booking_type }}</td>
             <td>
               <span v-if="r.quoted_amount" class="price"
-                >TZS {{ Number(r.quoted_amount).toLocaleString() }}</span
+                >{{ curCode() }} {{ Number(r.quoted_amount).toLocaleString() }}</span
               >
               <span v-else class="muted">-</span>
               <div v-if="r.hotel_notes" class="muted">{{ r.hotel_notes }}</div>
@@ -236,7 +236,7 @@
           </div>
           <!-- Quoted amount is only relevant when quoting or confirming -->
           <div v-if="['quoted', 'confirmed'].includes(respondForm.status)" class="form-group">
-            <label>{{ $t('bookingRequisitions.quotedAmount') }}</label>
+            <label>{{ $t('bookingRequisitions.quotedAmount', { currency: curCode() }) }}</label>
             <input
               v-model.number="respondForm.quoted_amount"
               type="number"
@@ -282,6 +282,10 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 

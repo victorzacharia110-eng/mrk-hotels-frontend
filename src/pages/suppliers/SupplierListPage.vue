@@ -118,7 +118,7 @@
             <td class="capitalize">{{ s.category.replace('_', ' ') }}</td>
             <td>{{ s.payment_terms || '-' }}</td>
             <td>
-              <span class="price">TZS {{ Number(s.current_balance || 0).toLocaleString() }}</span>
+              <span class="price">{{ curCode() }} {{ Number(s.current_balance || 0).toLocaleString() }}</span>
             </td>
             <td>{{ stars(s.rating) }}</td>
             <td>
@@ -208,7 +208,7 @@
               />
             </div>
             <div class="form-group">
-              <label>{{ $t('suppliers.creditLimit') }}</label>
+              <label>{{ $t('suppliers.creditLimit', { currency: curCode() }) }}</label>
               <input
                 v-model.number="form.credit_limit"
                 type="number"
@@ -277,6 +277,10 @@ import { useCategoriesStore } from '@/stores/categories'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 import { collectAllRows } from '@/utils/export'
 import { normalizePhoneNumber } from '@/utils/phone'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()

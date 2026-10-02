@@ -103,7 +103,7 @@
             </select>
           </div>
           <div class="form-group">
-            <label>{{ $t('rooms.pricePerNightTZS') }}</label>
+            <label>{{ $t('rooms.pricePerNightTZS', { currency: curCode() }) }}</label>
             <input v-model.number="rateForm.price_per_night" type="number" min="0" class="input" />
           </div>
           <div class="filter-actions">
@@ -419,7 +419,7 @@
             <td class="capitalize">{{ room.room_type }}</td>
             <td>{{ $t('rooms.floor') }} {{ room.floor ?? '-' }}</td>
             <td>
-              <span class="price">TZS {{ Number(room.price_per_night).toLocaleString() }}</span>
+              <span class="price">{{ curCode() }} {{ Number(room.price_per_night).toLocaleString() }}</span>
             </td>
             <td>{{ room.max_occupancy ?? 1 }}</td>
             <td>
@@ -519,7 +519,7 @@
               <input v-model.number="form.floor" type="number" min="0" class="input" />
             </div>
             <div class="form-group">
-              <label>{{ $t('rooms.pricePerNightTZS') }} *</label>
+              <label>{{ $t('rooms.pricePerNightTZS', { currency: curCode() }) }} *</label>
               <input
                 v-model.number="form.price_per_night"
                 type="number"
@@ -619,6 +619,10 @@ import TableExportButton from '@/components/TableExportButton.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 import { collectAllRows } from '@/utils/export'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()

@@ -8,19 +8,19 @@
       </div>
       <div class="kpi">
         <span class="kpi-label">{{ $t('storeManager.register.openingFloat') }}</span>
-        <span class="kpi-value">TZS {{ Number(register?.opening_float || 0).toLocaleString() }}</span>
+        <span class="kpi-value">{{ curCode() }} {{ Number(register?.opening_float || 0).toLocaleString() }}</span>
       </div>
       <div class="kpi">
         <span class="kpi-label">{{ $t('storeManager.register.currentCash') }}</span>
-        <span class="kpi-value">TZS {{ Number(register?.current_cash || 0).toLocaleString() }}</span>
+        <span class="kpi-value">{{ curCode() }} {{ Number(register?.current_cash || 0).toLocaleString() }}</span>
       </div>
       <div class="kpi">
         <span class="kpi-label">{{ $t('storeManager.register.cashExpenses') }}</span>
-        <span class="kpi-value warn">TZS {{ Number(liveExpensesTotal).toLocaleString() }}</span>
+        <span class="kpi-value warn">{{ curCode() }} {{ Number(liveExpensesTotal).toLocaleString() }}</span>
       </div>
       <div class="kpi">
         <span class="kpi-label">{{ $t('storeManager.register.remainingFloat') }}</span>
-        <span class="kpi-value">TZS {{ Number(remainingFloat).toLocaleString() }}</span>
+        <span class="kpi-value">{{ curCode() }} {{ Number(remainingFloat).toLocaleString() }}</span>
       </div>
     </div>
     <!-- Cash expenses drawn against the open float: visible as soon as the
@@ -38,13 +38,13 @@
               <td>{{ fmt(e.created_at || e.date) }}</td>
               <td>{{ e.description }}</td>
               <td><span class="chip">{{ e.category }}</span></td>
-              <td><strong>TZS {{ Number(e.amount || 0).toLocaleString() }}</strong></td>
+              <td><strong>{{ curCode() }} {{ Number(e.amount || 0).toLocaleString() }}</strong></td>
             </tr>
           </tbody>
           <tfoot>
             <tr>
               <td colspan="3" style="text-align:right"><strong>{{ $t('storeManager.expenses.total') }}</strong></td>
-              <td><strong>TZS {{ Number(liveExpensesTotal).toLocaleString() }}</strong></td>
+              <td><strong>{{ curCode() }} {{ Number(liveExpensesTotal).toLocaleString() }}</strong></td>
             </tr>
           </tfoot>
         </table>
@@ -100,7 +100,7 @@
     <div v-if="showClose" class="sm-modal-backdrop" @click.self="showClose = false">
       <div class="sm-modal">
         <div class="sm-modal-head"><h3>{{ $t('storeManager.register.close') }}</h3><button class="x" @click="showClose = false">×</button></div>
-        <p class="float-summary">{{ $t('storeManager.register.remainingFloat') }}: <strong>TZS {{ Number(remainingFloat).toLocaleString() }}</strong></p>
+        <p class="float-summary">{{ $t('storeManager.register.remainingFloat') }}: <strong>{{ curCode() }} {{ Number(remainingFloat).toLocaleString() }}</strong></p>
         <label class="fld"><span>{{ $t('storeManager.register.counted') }}</span><input v-model.number="countedCash" type="number" min="0" class="sm-input" /></label>
         <p v-if="formError" class="sm-error">{{ formError }}</p>
         <div class="sm-modal-foot">
@@ -119,6 +119,10 @@ import { storeApi } from '../../api'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
 import '@/pages/store/store-shared.css'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const register = ref(null)

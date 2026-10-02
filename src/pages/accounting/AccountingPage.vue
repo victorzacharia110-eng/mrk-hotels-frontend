@@ -366,10 +366,14 @@
 </template>
 
 <script setup>
+
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { accountingApi } from '@/api'
 import TableExportButton from '@/components/TableExportButton.vue'
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 
@@ -427,7 +431,7 @@ const dayCloseRows = computed(() => {
 
 const dayCloseExportColumns = [
   { key: 'source', label: 'Item' },
-  { key: 'amount', label: 'Amount (TZS)' },
+  { key: 'amount', label: `Amount (${curCode()})` },
 ]
 
 /** Returns today's date as an ISO string (YYYY-MM-DD). */
@@ -435,9 +439,9 @@ function today() {
   return new Date().toISOString().slice(0, 10)
 }
 
-/** Formats a numeric value as a TZS currency string for display. */
+/** Formats a numeric value in the tenant currency for display. */
 function money(value) {
-  return `TZS ${Number(value || 0).toLocaleString()}`
+  return `${curCode()} ${Number(value || 0).toLocaleString()}`
 }
 
 /** Formats an ISO date/time into a dd/mm/yyyy hh:mm string. */

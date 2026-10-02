@@ -301,11 +301,15 @@
 </template>
 
 <script setup>
+
 import { ref, computed, watch, onMounted } from 'vue'
 import { nightAuditApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const workingDateStore = useWorkingDateStore()
@@ -502,7 +506,7 @@ const error = ref('')
 const success = ref('')
 
 function fmtMoney(v) {
-  return v != null ? `TZS ${Number(v).toLocaleString()}` : '—'
+  return v != null ? `${curCode()} ${Number(v).toLocaleString()}` : '—'
 }
 
 async function load() {

@@ -65,7 +65,7 @@
           </div>
           <div class="rp-kpi">
             <span class="rk-label">{{ $t('staffDashboard.salesRevenue') }}</span>
-            <strong>TZS {{ money(dashboard.sales?.revenue) }}</strong>
+            <strong>{{ curCode() }} {{ money(dashboard.sales?.revenue) }}</strong>
           </div>
           <div class="rp-kpi">
             <span class="rk-label">{{ $t('staffDashboard.salesCovers') }}</span>
@@ -73,7 +73,7 @@
           </div>
           <div class="rp-kpi">
             <span class="rk-label">{{ $t('staffDashboard.salesAverage') }}</span>
-            <strong>TZS {{ money(dashboard.sales?.average) }}</strong>
+            <strong>{{ curCode() }} {{ money(dashboard.sales?.average) }}</strong>
           </div>
         </div>
 
@@ -89,7 +89,7 @@
             <tr v-for="row in dashboard.sales.daily" :key="row.date">
               <td>{{ row.date }}</td>
               <td>{{ row.orders }}</td>
-              <td class="num">TZS {{ money(row.revenue) }}</td>
+              <td class="num">{{ curCode() }} {{ money(row.revenue) }}</td>
             </tr>
           </tbody>
         </table>
@@ -110,7 +110,7 @@
             <tr v-for="row in dashboard.fast_moving" :key="row.item_name">
               <td>{{ row.item_name }}</td>
               <td class="num">{{ row.qty }}</td>
-              <td class="num">TZS {{ money(row.revenue) }}</td>
+              <td class="num">{{ curCode() }} {{ money(row.revenue) }}</td>
             </tr>
           </tbody>
         </table>
@@ -130,7 +130,7 @@
           </div>
           <div class="rp-kpi">
             <span class="rk-label">{{ $t('staffDashboard.stockValue') }}</span>
-            <strong>TZS {{ money(dashboard.stock?.value) }}</strong>
+            <strong>{{ curCode() }} {{ money(dashboard.stock?.value) }}</strong>
           </div>
           <div class="rp-kpi" :class="{ 'kpi-alert': (dashboard.stock?.low_stock_count ?? 0) > 0 }">
             <span class="rk-label">{{ $t('staffDashboard.lowStockCount') }}</span>
@@ -202,6 +202,10 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { reportApi } from '@/api'
 import CalendarInput from '@/components/CalendarInput.vue'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const authStore = useAuthStore()
 const { d, t } = useI18n()

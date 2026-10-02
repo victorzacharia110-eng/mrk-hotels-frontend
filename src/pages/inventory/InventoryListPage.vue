@@ -107,7 +107,7 @@
               <strong>{{ Number(item.quantity_in_stock).toLocaleString() }}</strong>
             </td>
             <td>{{ Number(item.reorder_level).toLocaleString() }}</td>
-            <td>TZS {{ Number(item.unit_cost).toLocaleString() }}</td>
+            <td>{{ curCode() }} {{ Number(item.unit_cost).toLocaleString() }}</td>
             <td>{{ item.supplier || '-' }}</td>
             <td>
               <span class="badge" :class="stockBadge(item.status)">{{
@@ -271,7 +271,7 @@
               />
             </div>
             <div class="form-group">
-              <label>{{ $t('inventory.unitCost') }}</label>
+              <label>{{ $t('inventory.unitCost', { currency: curCode() }) }}</label>
               <input
                 v-model.number="form.unit_cost"
                 type="number"
@@ -449,6 +449,10 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { useCategoriesStore } from '@/stores/categories'
 import { selectedOutlet } from '@/composables/useOutletContext'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()

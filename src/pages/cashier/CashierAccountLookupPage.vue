@@ -328,6 +328,7 @@
 </template>
 
 <script setup>
+
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -335,6 +336,9 @@ import { creditAccountApi, posApi } from '@/api'
 import { getCountries, loadLocationData } from '@/utils/locations'
 import { toast } from '@/utils/toast'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -576,7 +580,7 @@ function countryName(code) {
 function fmtBalance(balance) {
   if (balance == null) return '—'
   const sign = Number(balance) < 0 ? '-' : ''
-  return `${sign}TZS ${Math.abs(Number(balance)).toLocaleString()}`
+  return `${sign}${curCode()} ${Math.abs(Number(balance)).toLocaleString()}`
 }
 
 function balanceClass(balance) {

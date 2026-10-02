@@ -304,7 +304,7 @@
               <span v-if="r.guest_phone" class="sv-popover-sub">{{ r.guest_phone }}</span>
               <span v-if="r.room" class="sv-popover-sub">{{ $t('reservations.room') }} {{ r.room.room_number }} · {{ r.room_type || r.room.room_type }}</span>
               <span class="sv-popover-sub">{{ formatDate(r.arrival_date) }} → {{ formatDate(r.departure_date) }} · {{ r.num_days || r.nights }} {{ $t('reservations.nights') }}</span>
-              <span class="sv-popover-sub" :class="{ due: Number(r.balance) > 0 }">TZS {{ Number(r.balance).toLocaleString() }}</span>
+              <span class="sv-popover-sub" :class="{ due: Number(r.balance) > 0 }">{{ curCode() }} {{ Number(r.balance).toLocaleString() }}</span>
             </div>
             <button class="btn btn-sm btn-primary" @click="checkOut(r)"><i class="fas fa-right-from-bracket"></i> {{ $t('overview.checkOut') }}</button>
           </div>
@@ -432,6 +432,10 @@ import { useNotificationStore } from '@/stores/notifications'
 import { reportApi, reservationApi, housekeepingApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import AlertModal from '@/components/AlertModal.vue'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const authStore = useAuthStore()
 const notifStore = useNotificationStore()
@@ -649,7 +653,7 @@ const fnb = computed(() => {
 
 /** Renders a money figure with thousands separators. */
 function formatMoney(value) {
-  return `TZS ${Number(value || 0).toLocaleString()}`
+  return `${curCode()} ${Number(value || 0).toLocaleString()}`
 }
 
 /** Share of the room stock a housekeeping bucket represents, for its bar. */
@@ -872,7 +876,7 @@ const alertDetails = computed(() => {
   const d = currentAlert.value.data
   const details = []
   if (d.guest_name) details.push({ label: t('guests.guestName'), value: d.guest_name })
-  if (d.amount) details.push({ label: t('payments.amount'), value: `TZS ${Number(d.amount).toLocaleString()}` })
+  if (d.amount) details.push({ label: t('payments.amount'), value: `${curCode()} ${Number(d.amount).toLocaleString()}` })
   if (d.provider) details.push({ label: t('payments.provider'), value: d.provider })
   if (d.requested_by) details.push({ label: 'Requested by', value: d.requested_by })
   if (d.ordered_by) details.push({ label: 'Ordered by', value: d.ordered_by })

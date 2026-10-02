@@ -99,9 +99,13 @@
 </template>
 
 <script setup>
+
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { paymentApi, nightAuditApi } from '@/api'
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 
@@ -113,7 +117,7 @@ const loading = ref(false)
 const success = ref('')
 const error = ref('')
 
-const fmt = (n) => 'TZS ' + Number(n || 0).toLocaleString()
+const fmt = (n) => `${curCode()} ` + Number(n || 0).toLocaleString()
 
 const cashReceived = computed(() => cashPayments.value.reduce((s, p) => s + Number(p.amount || 0), 0))
 const cashTransactions = computed(() => transactions.value.reduce((s, txn) => s + Math.abs(Number(txn.total_amount || 0)), 0))

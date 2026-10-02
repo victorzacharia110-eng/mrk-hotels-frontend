@@ -99,7 +99,7 @@
           </label>
           <h3>{{ roomTypeLabel(room.room_type) }}</h3>
           <p class="muted">{{ $t('rooms.floor') }} {{ room.floor }} &middot; {{ $t('bookingPage.upTo') }} {{ room.max_occupancy }}</p>
-          <p class="room-price">TZS {{ room.price_per_night.toLocaleString() }} {{ $t('home.perNight') }}</p>
+          <p class="room-price">{{ curCode() }} {{ room.price_per_night.toLocaleString() }} {{ $t('home.perNight') }}</p>
         </article>
       </div>
       <p v-else-if="availability.available_rooms?.length" class="muted">{{ $t('common.noResults') }}</p>
@@ -216,17 +216,16 @@
               {{ $t('bookingPage.nightsCount', { nights: previewNights }) }}</span
             >
             <span
-              >TZS
-              {{ ((Number(r.price_per_night) || 0) * previewNights).toLocaleString() }}</span
+              >{{ curCode() }} {{ ((Number(r.price_per_night) || 0) * previewNights).toLocaleString() }}</span
             >
           </div>
           <div v-if="serviceFeePercent > 0" class="price-row price-fee">
             <span>{{ $t('bookingPage.serviceFee', { percent: serviceFeePercent }) }}</span>
-            <span>TZS {{ serviceFee.toLocaleString() }}</span>
+            <span>{{ curCode() }} {{ serviceFee.toLocaleString() }}</span>
           </div>
           <div class="price-row price-total">
             <span>{{ $t('bookingPage.estimatedTotal') }}</span>
-            <span><strong>TZS {{ estimatedTotal.toLocaleString() }}</strong></span>
+            <span><strong>{{ curCode() }} {{ estimatedTotal.toLocaleString() }}</strong></span>
           </div>
         </div>
 
@@ -285,10 +284,10 @@
         >
           <span
             >{{ $t('bookingPage.room') }} {{ i + 1 }} ·
-            TZS {{ Number(line.rate_per_night).toLocaleString() }} ×
+            {{ curCode() }} {{ Number(line.rate_per_night).toLocaleString() }} ×
             {{ $t('bookingPage.nightsCount', { nights: line.nights }) }}</span
           >
-          <span>TZS {{ Number(line.subtotal).toLocaleString() }}</span>
+          <span>{{ curCode() }} {{ Number(line.subtotal).toLocaleString() }}</span>
         </div>
         <div class="price-row price-fee">
           <span>{{
@@ -296,20 +295,20 @@
               percent: pendingBooking.price_breakdown.service_fee_percent,
             })
           }}</span>
-          <span>TZS {{ Number(pendingBooking.price_breakdown.service_fee).toLocaleString() }}</span>
+          <span>{{ curCode() }} {{ Number(pendingBooking.price_breakdown.service_fee).toLocaleString() }}</span>
         </div>
         <div class="price-row price-total">
           <span>{{ $t('bookingPage.totalDue') }}</span>
           <span
             ><strong
-              >TZS {{ Number(pendingBooking.price_breakdown.total).toLocaleString() }}</strong
+              >{{ curCode() }} {{ Number(pendingBooking.price_breakdown.total).toLocaleString() }}</strong
             ></span
           >
         </div>
       </div>
       <p v-else class="room-price payment-total">
         {{ $t('bookingPage.totalDue') }}
-        <strong>TZS {{ pendingBooking.total_amount.toLocaleString() }}</strong>
+        <strong>{{ curCode() }} {{ pendingBooking.total_amount.toLocaleString() }}</strong>
       </p>
       <form @submit.prevent="payBooking">
         <PaymentMethodSelect
@@ -465,6 +464,10 @@ import PhoneInput from '@/components/PhoneInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useRoomBrowser } from '@/composables/useRoomBrowser'
 
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
+
 const route = useRoute()
 const { t } = useI18n()
 const hotels = ref([])
@@ -613,7 +616,7 @@ const bankAccount = computed(() => {
 
 /** Total due in a guest-friendly thousand-separated form. */
 const formattedAmount = computed(() =>
-  pendingBooking.value?.total_amount != null ? `TZS ${Number(pendingBooking.value.total_amount).toLocaleString()}` : '',
+  pendingBooking.value?.total_amount != null ? `${curCode()} ${Number(pendingBooking.value.total_amount).toLocaleString()}` : '',
 )
 
 // The whole booking being built: guest details, chosen rooms and any additional guests

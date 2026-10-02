@@ -56,7 +56,7 @@
         <div class="stat-card">
           <div class="stat-icon revenue"><i class="fas fa-dollar-sign"></i></div>
           <div>
-            <span class="stat-value">TZS {{ data.revenue_last_30_days.toLocaleString() }}</span
+            <span class="stat-value">{{ curCode() }} {{ data.revenue_last_30_days.toLocaleString() }}</span
             ><span class="stat-label">{{ $t('superadmin.gmv30d') }}</span>
           </div>
         </div>
@@ -233,6 +233,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { superadminReportApi } from '@/api'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const data = ref(null)

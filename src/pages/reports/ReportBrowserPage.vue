@@ -514,6 +514,7 @@ import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
 import ReportCharts from '@/components/reports/ReportCharts.vue'
 import NightAuditSheet from '@/components/reports/NightAuditSheet.vue'
 import { useAuthStore } from '@/stores/auth'
+import { currencyCode } from '@/utils/currency'
 import { nightAuditApi, guestReportApi, reportApi, hotelSettingsApi } from '@/api'
 import { exportCSV } from '@/utils/export'
 
@@ -1215,7 +1216,7 @@ function reportHasConfig(key) {
 
 /* ── State ── */
 const businessDate = ref(new Date().toISOString().slice(0, 10))
-const currency = ref('TZS')
+const currency = ref(currencyCode(useAuthStore()))
 
 /* ── Branding for the printable Night Audit document ── */
 const reportHotel = computed(() => authStore.user?.tenant?.hotel_name || 'MRK Hotels')

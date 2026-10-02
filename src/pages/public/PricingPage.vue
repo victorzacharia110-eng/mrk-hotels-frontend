@@ -26,7 +26,7 @@
           <h2>{{ plan.label }}</h2>
           <p class="pricing-desc">{{ plan.description }}</p>
           <div class="pricing-amount">
-            <span class="pricing-currency">TZS</span>
+            <span class="pricing-currency">{{ curCode() }}</span>
             <span class="pricing-value">{{ Number(plan.price_monthly).toLocaleString() }}</span>
             <span class="pricing-period">/month</span>
           </div>
@@ -113,6 +113,9 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { planApi } from '@/api'
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const plans = ref({})
 const featureLabels = ref({})

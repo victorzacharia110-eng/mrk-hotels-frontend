@@ -64,7 +64,7 @@
       </div>
       <div class="stat-card">
         <p class="stat-label">{{ $t('superadmin.revenue30d') }}</p>
-        <p class="stat-value">TZS {{ (analytics?.revenue_30_days ?? 0).toLocaleString() }}</p>
+        <p class="stat-value">{{ curCode() }} {{ (analytics?.revenue_30_days ?? 0).toLocaleString() }}</p>
       </div>
     </div>
 
@@ -131,7 +131,7 @@
       </form>
       <div v-if="effectiveMonthlyPrice !== null" class="negotiated-price">
         <span class="negotiated-price-label">{{ $t('superadmin.effectiveMonthlyPrice') }}:</span>
-        <strong>TZS {{ effectiveMonthlyPrice.toLocaleString() }}/mo</strong>
+        <strong>{{ curCode() }} {{ effectiveMonthlyPrice.toLocaleString() }}/mo</strong>
         <span class="negotiated-price-note">{{ $t('superadmin.negotiationHint') }}</span>
       </div>
     </div>
@@ -359,6 +359,10 @@ import {
 } from '@/utils/payments'
 import ProviderLogo from '@/components/ProviderLogo.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const route = useRoute()
 const { t } = useI18n()

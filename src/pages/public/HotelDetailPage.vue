@@ -67,7 +67,7 @@
             <span class="badge" :class="statusBadge(room.status)">{{ room.status }}</span>
             <h3>{{ roomTypeLabel(room.room_type) }}</h3>
             <p class="muted">{{ $t('hotelDetail.capacity', { count: room.max_occupancy }) }}</p>
-            <p class="room-price">TZS {{ room.price_per_night.toLocaleString() }} {{ $t('home.perNight') }}</p>
+            <p class="room-price">{{ curCode() }} {{ room.price_per_night.toLocaleString() }} {{ $t('home.perNight') }}</p>
           </article>
         </div>
         <p v-else-if="rooms.length" class="muted">{{ $t('common.noResults') }}</p>
@@ -97,6 +97,10 @@ import { useRoute } from 'vue-router'
 import { publicApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useRoomBrowser } from '@/composables/useRoomBrowser'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const route = useRoute()
 const { t } = useI18n()

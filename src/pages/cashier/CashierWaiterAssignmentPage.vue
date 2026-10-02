@@ -339,12 +339,16 @@
 </template>
 
 <script setup>
+
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { cashierApi, tableApi, orderApi } from '@/api'
 import { initEcho, getEcho } from '@/plugins/echo'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -395,7 +399,7 @@ function fmtTime(iso) {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 function fmtMoney(v) {
-  return v != null ? `TZS ${Number(v).toLocaleString()}` : '—'
+  return v != null ? `${curCode()} ${Number(v).toLocaleString()}` : '—'
 }
 function initials(name) {
   return (name || '').split(' ').filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('')

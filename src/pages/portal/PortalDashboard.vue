@@ -49,7 +49,7 @@
         <div class="kpi-card">
           <div class="kpi-icon kpi-icon--amber"><i class="fas fa-money-bill"></i></div>
           <div class="kpi-body">
-            <span class="kpi-value">TZS {{ formatAmount(analytics.revenue?.last_30_days) }}</span>
+            <span class="kpi-value">{{ curCode() }} {{ formatAmount(analytics.revenue?.last_30_days) }}</span>
             <span class="kpi-label">Revenue (30d)</span>
             <span v-if="analytics.revenue?.trend" class="kpi-sub" :class="analytics.revenue.trend > 0 ? 'trend-up' : 'trend-down'">
               <i :class="analytics.revenue.trend > 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
@@ -65,7 +65,7 @@
         <div class="chart">
           <div v-for="(item, i) in analytics.monthly_revenue" :key="i" class="chart-bar-wrap">
             <div class="chart-bar" :style="{ height: barHeight(item.amount) + '%' }">
-              <span class="chart-value">TZS {{ formatAmount(item.amount) }}</span>
+              <span class="chart-value">{{ curCode() }} {{ formatAmount(item.amount) }}</span>
             </div>
             <span class="chart-label">{{ item.month.split(' ')[0] }}</span>
           </div>
@@ -129,6 +129,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { hotelSettingsApi, portalAnalyticsApi } from '@/api'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const authStore = useAuthStore()
 const loading = ref(true)

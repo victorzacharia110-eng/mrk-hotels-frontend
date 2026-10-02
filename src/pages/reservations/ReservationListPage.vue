@@ -173,15 +173,14 @@
               </div>
             </td>
             <td>
-              <span class="price">TZS {{ Number(r.total_amount).toLocaleString() }}</span>
+              <span class="price">{{ curCode() }} {{ Number(r.total_amount).toLocaleString() }}</span>
             </td>
             <td>
               <span :class="{ due: Number(r.balance_due ?? r.balance) > 0 }">
-                TZS {{ Number(r.balance_due ?? r.balance).toLocaleString() }}
+                {{ curCode() }} {{ Number(r.balance_due ?? r.balance).toLocaleString() }}
               </span>
               <div v-if="Number(r.room_charges) > 0" class="sub">
-                <i class="fas fa-receipt"></i> {{ $t('reservations.roomCharges') }} TZS
-                {{ Number(r.room_charges).toLocaleString() }}
+                <i class="fas fa-receipt"></i> {{ $t('reservations.roomCharges') }} {{ curCode() }} {{ Number(r.room_charges).toLocaleString() }}
               </div>
             </td>
             <td>
@@ -524,7 +523,7 @@
                   {{ $t('bookingPage.upTo') }} {{ room.max_occupancy }}
                 </p>
                 <p class="room-price">
-                  TZS {{ Number(room.price_per_night).toLocaleString() }} /
+                  {{ curCode() }} {{ Number(room.price_per_night).toLocaleString() }} /
                   {{ $t('home.perNight') }}
                 </p>
               </article>
@@ -570,15 +569,15 @@
             <h3>{{ $t('reservations.payment') }}</h3>
             <div class="form-grid">
               <div class="form-group">
-                <label>{{ $t('reservations.totalAmount') }}</label>
+                <label>{{ $t('reservations.totalAmount', { currency: curCode() }) }}</label>
                 <input v-model.number="form.total_amount" type="number" min="0" class="input" :class="{ 'input-error': formErrors.total_amount }" />
                 <span v-if="formErrors.total_amount" class="msg-error" role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ formErrors.total_amount }}</span>
                 <small v-if="computedTotal" class="hint">
-                  {{ $t('reservations.autoTotal', { amount: computedTotal.toLocaleString() }) }}
+                  {{ $t('reservations.autoTotal', { currency: curCode(), amount: computedTotal.toLocaleString() }) }}
                 </small>
               </div>
               <div class="form-group">
-                <label>{{ $t('reservations.amountPaidNow') }}</label>
+                <label>{{ $t('reservations.amountPaidNow', { currency: curCode() }) }}</label>
                 <input
                   v-model.number="form.amount_paid"
                   type="number"
@@ -650,19 +649,19 @@
           <div v-if="checkoutBalance > 0" class="balance-box">
             <div class="balance-row">
               <span>{{ $t('reservations.roomRate') }}</span>
-              <span>TZS {{ Number(checkoutTarget?.total_amount || 0).toLocaleString() }}</span>
+              <span>{{ curCode() }} {{ Number(checkoutTarget?.total_amount || 0).toLocaleString() }}</span>
             </div>
             <div class="balance-row">
               <span>{{ $t('reservations.roomCharges') }}</span>
-              <span>TZS {{ Number(checkoutTarget?.room_charges || 0).toLocaleString() }}</span>
+              <span>{{ curCode() }} {{ Number(checkoutTarget?.room_charges || 0).toLocaleString() }}</span>
             </div>
             <div class="balance-row">
               <span>{{ $t('reservations.advancePaid') }}</span>
-              <span>- TZS {{ Number(checkoutTarget?.advance_payment || 0).toLocaleString() }}</span>
+              <span>- {{ curCode() }} {{ Number(checkoutTarget?.advance_payment || 0).toLocaleString() }}</span>
             </div>
             <div class="balance-row total">
               <span>{{ $t('reservations.balanceDue') }}</span>
-              <span>TZS {{ checkoutBalance.toLocaleString() }}</span>
+              <span>{{ curCode() }} {{ checkoutBalance.toLocaleString() }}</span>
             </div>
             <small class="hint">{{ $t('reservations.settleBeforeCheckout') }}</small>
           </div>
@@ -677,7 +676,7 @@
               />
             </div>
             <div class="form-group">
-              <label>{{ $t('reservations.settlementAmount') }}<span class="req">*</span></label>
+              <label>{{ $t('reservations.settlementAmount', { currency: curCode() }) }}<span class="req">*</span></label>
               <input
                 v-model.number="checkoutAmount"
                 type="number"
@@ -728,21 +727,21 @@
 
         <div v-if="checkinBalanceDue > 0" class="alert alert-info" style="margin-bottom: 12px;">
           <i class="fas fa-circle-info"></i>
-          {{ $t('reservations.checkinExplanation', { amount: checkinBalanceDue.toLocaleString() }) }}
+          {{ $t('reservations.checkinExplanation', { currency: curCode(), amount: checkinBalanceDue.toLocaleString() }) }}
         </div>
 
         <div class="balance-box">
           <div class="balance-row">
             <span>{{ $t('reservations.tableTotal') }}</span>
-            <span>TZS {{ Number(checkinTarget?.total_amount || 0).toLocaleString() }}</span>
+            <span>{{ curCode() }} {{ Number(checkinTarget?.total_amount || 0).toLocaleString() }}</span>
           </div>
           <div class="balance-row">
             <span>{{ $t('reservations.advancePaid') || 'Paid' }}</span>
-            <span>TZS {{ Number(checkinTarget?.advance_payment || 0).toLocaleString() }}</span>
+            <span>{{ curCode() }} {{ Number(checkinTarget?.advance_payment || 0).toLocaleString() }}</span>
           </div>
           <div class="balance-row total" v-if="checkinBalanceDue > 0">
             <span>{{ $t('reservations.outstanding') }}</span>
-            <span class="danger">TZS {{ Number(checkinBalanceDue).toLocaleString() }}</span>
+            <span class="danger">{{ curCode() }} {{ Number(checkinBalanceDue).toLocaleString() }}</span>
           </div>
         </div>
 
@@ -750,7 +749,7 @@
           <!-- Optional: collect the outstanding balance right at check-in -->
           <template v-if="showCheckinPayment">
             <div class="form-group">
-              <label>{{ $t('reservations.settlementAmount') }}<span class="req">*</span></label>
+              <label>{{ $t('reservations.settlementAmount', { currency: curCode() }) }}<span class="req">*</span></label>
               <input
                 v-model.number="checkinPaymentAmount"
                 type="number"
@@ -918,7 +917,7 @@
             </div>
             <div>
               <dt>{{ $t('reservations.nightlyRate') }}</dt>
-              <dd>TZS {{ Number(detail.rate || 0).toLocaleString() }}</dd>
+              <dd>{{ curCode() }} {{ Number(detail.rate || 0).toLocaleString() }}</dd>
             </div>
             <div>
               <dt>{{ $t('reservations.bookingDate') }}</dt>
@@ -942,20 +941,20 @@
             </div>
             <div>
               <dt>{{ $t('reservations.tableTotal') }}</dt>
-              <dd class="price">TZS {{ Number(detail.total_amount).toLocaleString() }}</dd>
+              <dd class="price">{{ curCode() }} {{ Number(detail.total_amount).toLocaleString() }}</dd>
             </div>
             <div>
               <dt>{{ $t('reservations.roomCharges') }}</dt>
-              <dd>TZS {{ Number(detail.room_charges || 0).toLocaleString() }}</dd>
+              <dd>{{ curCode() }} {{ Number(detail.room_charges || 0).toLocaleString() }}</dd>
             </div>
             <div>
-              <dt>{{ $t('reservations.advancePayment') }}</dt>
-              <dd>TZS {{ Number(detail.advance_payment || 0).toLocaleString() }}</dd>
+              <dt>{{ $t('reservations.advancePayment', { currency: curCode() }) }}</dt>
+              <dd>{{ curCode() }} {{ Number(detail.advance_payment || 0).toLocaleString() }}</dd>
             </div>
             <div>
               <dt>{{ $t('reservations.tableBalance') }}</dt>
               <dd :class="{ due: Number(detail.balance) > 0 }">
-                TZS {{ Number(detail.balance).toLocaleString() }}
+                {{ curCode() }} {{ Number(detail.balance).toLocaleString() }}
               </dd>
             </div>
             <div>
@@ -1021,19 +1020,19 @@
               <tr v-if="deletePreview.payments_count > 0">
                 <td><i class="fas fa-credit-card"></i> {{ $t('reservations.deleteImpactPayments') }}</td>
                 <td class="text-right">
-                  {{ deletePreview.payments_count }} · TZS {{ Number(deletePreview.payments_total).toLocaleString() }}
+                  {{ deletePreview.payments_count }} · {{ curCode() }} {{ Number(deletePreview.payments_total).toLocaleString() }}
                 </td>
               </tr>
               <tr v-if="deletePreview.orders_count > 0">
                 <td><i class="fas fa-utensils"></i> {{ $t('reservations.deleteImpactOrders') }}</td>
                 <td class="text-right">
-                  {{ deletePreview.orders_count }} · TZS {{ Number(deletePreview.orders_total).toLocaleString() }}
+                  {{ deletePreview.orders_count }} · {{ curCode() }} {{ Number(deletePreview.orders_total).toLocaleString() }}
                 </td>
               </tr>
               <tr v-if="deletePreview.laundry_count > 0">
                 <td><i class="fas fa-shirt"></i> {{ $t('reservations.deleteImpactLaundry') }}</td>
                 <td class="text-right">
-                  {{ deletePreview.laundry_count }} · TZS {{ Number(deletePreview.laundry_total).toLocaleString() }}
+                  {{ deletePreview.laundry_count }} · {{ curCode() }} {{ Number(deletePreview.laundry_total).toLocaleString() }}
                 </td>
               </tr>
             </tbody>
@@ -1101,6 +1100,10 @@ import {
 } from '@/utils/formValidation'
 import { METHOD_CASH, PAYMENT_METHODS, requiresProvider, providersFor } from '@/utils/payments'
 import { findCountryCode, getCountryName } from '@/utils/locations'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()

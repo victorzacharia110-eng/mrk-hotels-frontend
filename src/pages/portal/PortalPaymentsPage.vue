@@ -16,21 +16,21 @@
       <div class="summary-card">
         <div class="summary-icon summary-icon--green"><i class="fas fa-check-circle"></i></div>
         <div>
-          <span class="summary-value">TZS {{ totalPaid.toLocaleString() }}</span>
+          <span class="summary-value">{{ curCode() }} {{ totalPaid.toLocaleString() }}</span>
           <span class="summary-label">Total Paid</span>
         </div>
       </div>
       <div class="summary-card">
         <div class="summary-icon summary-icon--amber"><i class="fas fa-clock"></i></div>
         <div>
-          <span class="summary-value">TZS {{ totalPending.toLocaleString() }}</span>
+          <span class="summary-value">{{ curCode() }} {{ totalPending.toLocaleString() }}</span>
           <span class="summary-label">Pending</span>
         </div>
       </div>
       <div class="summary-card">
         <div class="summary-icon summary-icon--blue"><i class="fas fa-calendar"></i></div>
         <div>
-          <span class="summary-value">TZS {{ monthlyTotal.toLocaleString() }}</span>
+          <span class="summary-value">{{ curCode() }} {{ monthlyTotal.toLocaleString() }}</span>
           <span class="summary-label">This Month</span>
         </div>
       </div>
@@ -81,7 +81,7 @@
                     <i :class="methodIcon(p.payment_method)"></i> {{ p.payment_method || '—' }}
                   </span>
                 </td>
-                <td class="amount-cell">TZS {{ Number(p.amount || 0).toLocaleString() }}</td>
+                <td class="amount-cell">{{ curCode() }} {{ Number(p.amount || 0).toLocaleString() }}</td>
                 <td>
                   <span class="status-pill" :class="`status-pill--${p.status}`">{{ p.status }}</span>
                 </td>
@@ -116,7 +116,7 @@
 
         <form v-if="!paySuccess" @submit.prevent="initiatePayment" class="auth-form">
           <div class="input-group">
-            <label>Amount (TZS)</label>
+            <label>Amount (${curCode()})</label>
             <input v-model.number="payForm.amount" type="number" class="auth-input" required min="100" placeholder="Enter amount" />
           </div>
 
@@ -220,6 +220,10 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { portalPaymentApi } from '@/api'
+
+import { useTenantCurrency } from '@/utils/currency'
+
+const { curCode } = useTenantCurrency()
 
 const payments = ref([])
 const loading = ref(true)
