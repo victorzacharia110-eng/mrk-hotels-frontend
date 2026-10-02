@@ -102,6 +102,52 @@ test('the chips appear inside the category and narrow its food', async ({ page }
   expect((await dishes(page)).length).toBe(allCount)
 })
 
+test('the food cards are sized to their labels, not to a grid column', async ({ page }) => {
+  // The food cards were laid out as a `minmax(170px, 1fr)` grid, which forces
+  // every card on a row to the width of the widest one. A short label therefore
+  // sat in a box far longer than the text inside it, which read as a stretched
+  // pill rather than a dish. They are content-sized now, and this is here to
+  // stop a fixed column width quietly coming back.
+  await useBar(page)
+  await openCategory(page, 'Drinks')
+  await page.locator('.sub-rail .sub-btn', { hasText: 'All' }).click()
+  await expect(page.locator('.cat-item').first()).toBeVisible()
+
+  const cards = await page.evaluate(() => {
+    return [...document.querySelectorAll('.inline-grid .cat-item')].map((el) => {
+      const range = document.createRange()
+      range.selectNodeContents(el)
+      return {
+        name: el.querySelector('.cat-item-name')?.textContent.trim(),
+        cardWidth: Math.round(el.getBoundingClientRect().width),
+        // A range over the contents measures the text itself, so the difference
+        // is the card's own padding and border — the chrome, nothing else.
+        textWidth: Math.round(range.getBoundingClientRect().width),
+      }
+    })
+  })
+
+  expect(cards.length, 'Beverages and the rest must have food to measure').toBeGreaterThan(3)
+
+  const widths = cards.map((c) => c.cardWidth)
+  const narrowest = Math.min(...widths)
+  const widest = Math.max(...widths)
+
+  // Equal-width columns would make this zero. Real labels differ in length, so
+  // content-sized cards have to differ in width too.
+  expect(
+    widest - narrowest,
+    `every card is ${narrowest}px wide, so they are still on fixed columns`,
+  ).toBeGreaterThan(30)
+
+  // The real complaint: a card much wider than its own text. Padding and
+  // borders are 26px, so anything past ~40px of slack is the grid talking.
+  for (const c of cards) {
+    const slack = c.cardWidth - c.textWidth
+    expect(slack, `"${c.name}" is ${slack}px wider than its text`).toBeLessThan(45)
+  }
+})
+
 test('switching department drops a sub-category that no longer applies', async ({ page }) => {
   await useBar(page)
   await openCategory(page, 'Drinks')

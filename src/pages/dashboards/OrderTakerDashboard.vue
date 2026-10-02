@@ -3876,9 +3876,20 @@ function onKey(e) {
   gap: 12px;
 }
 
+/* The food list. Cards are sized to their own text, not to the column.
+
+   This was a grid of `minmax(170px, 1fr)`, which quietly forces every card to
+   the same width as the widest one on the row — so a card reading "Water" sat
+   in a 225px box with most of it empty, and looked far longer than the text
+   inside it. Wrapping flex with content-sized cards lets each one end where its
+   longest line ends, so the card is the label and nothing more. `align-content:
+   flex-start` keeps the wrapped rows at their natural height instead of
+   stretching them to fill the box, and the list still scrolls vertically inside
+   `.inline-grid` however many items there are. */
 .cat-pop-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
   gap: 10px;
   padding: 16px;
   overflow-y: auto;
@@ -3896,6 +3907,12 @@ function onKey(e) {
   cursor: pointer;
   text-align: left;
   transition: transform 0.12s, border-color 0.12s;
+  /* Hug the text instead of filling a grid cell. `max-width` keeps a long dish
+     name from pushing a card past the panel, in which case the name wraps
+     inside the card rather than the card overflowing. */
+  flex: 0 1 auto;
+  width: max-content;
+  max-width: 100%;
 }
 
 .cat-item:hover {
