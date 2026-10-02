@@ -79,10 +79,22 @@ describe('module config', () => {
       expect(mod.roles).toContain('hotel_admin');
     });
 
-    it('menu stays off the kitchen panel', () => {
+        it('menu stays off the kitchen panel', () => {
       const mod = moduleByKey('menu')
       expect(mod.roles).not.toContain('kitchen')
       expect(mod.roles).toContain('manager')
+    })
+
+    it('menu reaches the cashiers and bartenders who maintain it', () => {
+      // They run a till on their own department and are the ones who notice a
+      // dish missing or a group in the wrong place, so they can fix it rather
+      // than report it. Must stay in step with CanManageMenu on the API.
+      const mod = moduleByKey('menu')
+      expect(mod.roles).toContain('cashier')
+      expect(mod.roles).toContain('bartender')
+      // Still not a page for anyone who does not work a till.
+      expect(mod.roles).not.toContain('waiter')
+      expect(mod.roles).not.toContain('housekeeping')
     })
 
     it('laundry requires manage_laundry permission', () => {

@@ -591,8 +591,14 @@ const authStore = useAuthStore()
 
 // Permission gate: the menu is owned by admins, managers and kitchen
 // (back-office work, unlike floor operations which exclude those roles).
+// Cashiers and bartenders are in too — they work a till on their own
+// department all day and are the ones who notice a dish missing or a group
+// in the wrong place, so they can fix it rather than report it. Must stay in
+// step with CanManageMenu and the `level:30` on the menu write routes.
 const canEdit = computed(() =>
-  ['hotel_admin', 'manager', 'kitchen'].includes(authStore.user?.user_role),
+  ['hotel_admin', 'manager', 'kitchen', 'cashier', 'bartender'].includes(
+    authStore.user?.user_role,
+  ),
 )
 
 // Options for the availability field in the create/edit form.

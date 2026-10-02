@@ -56,7 +56,9 @@ export const MODULES = [
   // Ephemeral staff statuses, open to everyone.
   { key: 'statuses', to: '/app/statuses', icon: 'fas fa-circle-dot', labelKey: 'nav.statuses', roles: [], feature: 'statuses' },
   // Menu item management. Not part of the kitchen panel (see the panel review).
-  { key: 'menu', to: '/app/menu', icon: 'fas fa-book-open', labelKey: 'nav.menu', roles: ['hotel_admin', 'manager'], feature: 'menu' },
+  // Cashiers and bartenders run a till on their own department and maintain the
+  // menu from here, so they reach this page alongside the back-office roles.
+  { key: 'menu', to: '/app/menu', icon: 'fas fa-book-open', labelKey: 'nav.menu', roles: ['hotel_admin', 'manager', 'cashier', 'bartender'], feature: 'menu' },
   // POS outlets (restaurant/bar) cashiers work from.
   { key: 'outlets', to: '/app/outlets', icon: 'fas fa-store', labelKey: 'nav.outlets', roles: ['hotel_admin', 'manager'] },
   // Till printer connection for direct thermal printing.
