@@ -87,6 +87,16 @@
             <i class="fas fa-flask" aria-hidden="true"></i>
             <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.ingredients') }}</span>
           </router-link>
+          <!-- Cashiers were given menu management so they could fix a wrong dish
+               or price themselves, but nothing in this panel pointed at it: the
+               menu page lives in StoreLayout, so from the till it was only
+               reachable by typing the URL. Sits next to Ingredients because that
+               is the third level of the same tree. -->
+          <router-link v-if="canManageMenu" :to="{ name: 'hotel-menu' }" class="pos-nav-link"
+            :class="{ active: isActive('/app/menu') }" @click="mobileOpen = false">
+            <i class="fas fa-book-open" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.menu') }}</span>
+          </router-link>
           <router-link :to="{ name: 'cashier-shift-manager' }" class="pos-nav-link"
             :class="{ active: isActive('/cashier/shift-manager') }" @click="mobileOpen = false">
             <i class="fas fa-cash-register" aria-hidden="true"></i>
@@ -244,6 +254,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useWorkingDateStore } from '@/stores/workingDate'
+import { canManageMenu as canManageMenuFor } from '@/utils/menuAccess'
 import { selectedOutlet } from '@/pages/cashier/outlet-context'
 import { useOutletContext } from '@/composables/useOutletContext'
 import { restorePrinter } from '@/utils/printer'
@@ -254,6 +265,10 @@ const route = useRoute()
 const router = useRouter()
 const { t, d } = useI18n()
 const authStore = useAuthStore()
+
+// Same gate the menu page itself uses, so the link can never be offered to a role
+// that page would turn away.
+const canManageMenu = computed(() => canManageMenuFor(authStore.user))
 const workingDateStore = useWorkingDateStore()
 
 // The panel and the POS now share one outlet selection, so this layout reads

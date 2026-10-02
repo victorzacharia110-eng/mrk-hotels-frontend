@@ -4897,7 +4897,8 @@
       "messages": "Messages",
       "statuses": "Status",
       "summaryReport": "Summary Report",
-      "dayClose": "Day Close"
+      "dayClose": "Day Close",
+      "menu": "Menu"
     },
     "shift": {
       "title": "Shift Manager",

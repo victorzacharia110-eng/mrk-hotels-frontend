@@ -591,6 +591,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { menuItemApi, menuCategoryApi, menuSubCategoryApi, inventoryApi } from '@/api'
+import { canManageMenu } from '@/utils/menuAccess'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
@@ -602,17 +603,10 @@ import { collectAllRows } from '@/utils/export'
 const { t } = useI18n()
 const authStore = useAuthStore()
 
-// Permission gate: the menu is owned by admins, managers and kitchen
-// (back-office work, unlike floor operations which exclude those roles).
-// Cashiers and bartenders are in too — they work a till on their own
-// department all day and are the ones who notice a dish missing or a group
-// in the wrong place, so they can fix it rather than report it. Must stay in
-// step with CanManageMenu and the `level:30` on the menu write routes.
-const canEdit = computed(() =>
-  ['hotel_admin', 'manager', 'kitchen', 'cashier', 'bartender'].includes(
-    authStore.user?.user_role,
-  ),
-)
+// Permission gate. The reasoning behind the role list lives with it in
+// utils/menuAccess.js, which the cashier panel also reads so its link can never
+// point at a page this would refuse to open.
+const canEdit = computed(() => canManageMenu(authStore.user))
 
 // Options for the availability field in the create/edit form.
 const formAvailabilityOptions = computed(() => [
