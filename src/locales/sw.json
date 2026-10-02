@@ -992,7 +992,10 @@
     "idType": "Aina ya kitambulisho *",
     "idNumber": "Namba ya kitambulisho *",
     "dateOfBirth": "Tarehe ya kuzaliwa",
-    "vipStatus": "Hali ya VIP"
+    "vipStatus": "Hali ya VIP",
+    "typeDriverLicense": "Leseni ya kuuendesha",
+    "typeNationalId": "Kitambulisho cha Taifa",
+    "typePassport": "Pasapoti"
   },
   "reservations": {
     "title": "Uhifadhi",
@@ -2350,7 +2353,10 @@
     "duplicateRoomCount": "Miaka {count}",
     "duplicateRoomsNote": "Kila moja ni booking hai ya moja kwa moja. Angalia kama chumba kilizouzwa mara mbili au mteja alilipwa mara mbili — hakuna kingine kinachoonyesha.",
     "historyGapTitle": "Siku {count} ndani ya kipindi ulichofunga haikukaguliwa | Siku {count} ndani ya kipindi ulichofunga hazikukaguliwa",
-    "historyGapNote": "Hizi ziko kati ya siku ulizofunga tayari, kwa hivyo zilirukwa badala ya kubaki wazi. Ripoti zinazohusika na kipindi hiki hazikamiliki."
+    "historyGapNote": "Hizi ziko kati ya siku ulizofunga tayari, kwa hivyo zilirukwa badala ya kubaki wazi. Ripoti zinazohusika na kipindi hiki hazikamiliki.",
+    "guestSearch": "Tafuta Mgeni",
+    "guestSearchPlaceholder": "Tafuta mgeni kwa jina, simu au chumba…",
+    "noGuestsFound": "Hakuna makazi yaliyoendelea. Makazi yaliyoingia, yaliyothibitishwa au yanasubiri pekee ndiyo yanaweza kupokea miamala."
   },
   "distribution": {
     "title": "Kumbukumbu za Chaneli",
@@ -2742,7 +2748,18 @@
     "voidReservationHelp1": "Ripoti hii inaorodhesha mahali vilivyobatilishwa kwa kipindi kilichochaguliwa.",
     "openWindow": "Fungua kwenye dirisha jipya",
     "openWindowBlocked": "Dirisha la ripoti lilezuliwa na kivinjari chako. Ruhusu pop-ups kwa tovuti hii ili kufungua ripoti kwenye dirisha jipya.",
-    "openWindowEmpty": "Hakuna cha kuonyesha kwenye dirisha jipya bado — endesha ripoti kwanza."
+    "openWindowEmpty": "Hakuna cha kuonyesha kwenye dirisha jipya bado — endesha ripoti kwanza.",
+    "chartBar": "Vipande",
+    "chartFigures": "Onyesha takwimu",
+    "chartLabel": "Safu",
+    "chartLine": "Mstari",
+    "chartNoData": "Hakuna kinachochorwa kwa ripoti hii.",
+    "chartStyle": "Mtindo wa chati",
+    "chartTotal": "Jumla ya {label}",
+    "chartUnnamed": "Safu",
+    "charts": "Chati",
+    "chartsHide": "Ficha chati",
+    "chartsShow": "Onyesha chati"
   },
   "reportColumns": {
     "booking_reference": "Namba ya Rekodi",
@@ -4110,7 +4127,16 @@
     "dotLegendTitle": "Jinsi nukta nyekundu na kijani zinavyoundwa",
     "dotLegendDesc": "Nyekundu = mgeni amesajiliwa na leo iko ndani ya dirisha la kukaa kwake. Kijani = chumba kiko wazi leo. Bluu = chumba kinasafishwa, njano = ni chafu, kijivu = matengenezo. Ukaguzi unaanzia juu hadi chini — ✓ maana sheria inashikilia kwa chumba hiki, ✗ maana haishikilii.",
     "rooms": "rooms",
-    "payments": "payments"
+    "payments": "payments",
+    "availableCredit": "Salio linalopatikana",
+    "collectPayment": "Kusanya malipo",
+    "creditExceeded": "Malipo yazidi salio lililobaki la mteja.",
+    "creditorCompany": "Kampuni ya mteja",
+    "currentBalance": "Salio la sasa",
+    "postToCreditors": "Weka kwa wateja",
+    "remainingCredit": "Salio lililobaki",
+    "searchCompany": "Tafuta kampuni au mteja…",
+    "selectCreditorCompany": "Chagua kampuni ya mteja"
   },
   "orderTaker": {
     "title": "Chukua Oda",
@@ -4584,7 +4610,9 @@
       "severity": "Ukali",
       "low": "Ndogo",
       "reorder": "Agiza",
-      "empty": "Hakuna tahadhari za akiba. Kila kitu kiko sawa."
+      "empty": "Hakuna tahadhari za akiba. Kila kitu kiko sawa.",
+      "onShelves": "Kwenye Rafuni",
+      "storeOnly": "Duka nzima"
     },
     "settings": {
       "tabs": {
@@ -5112,7 +5140,9 @@
       "served": "Ziko Tayari",
       "completed": "Zimekamilika",
       "today": "Leo",
-      "dateTime": "Tarehe / Muda"
+      "dateTime": "Tarehe / Muda",
+      "items": "Bidhaa",
+      "newOrder": "Agizo Jipya"
     },
     "delivery": {
       "addOrder": "+ Ongeza Oda ya Usafirishaji",
@@ -5459,7 +5489,13 @@
     "typeLaundry": "Dobi",
     "typeMiniBar": "Mini-baa",
     "typeRestaurant": "Mgahawa",
-    "typeShop": "Duka"
+    "typeShop": "Duka",
+    "city": "Jiji",
+    "corporateDirectory": "Wateja wa Kampuni",
+    "corporateDirectorySubtitle": "Kampuni ambazo mapokezi yanaweza kuzirekodi kama chanzo cha wageni.",
+    "hotelProfile": "Wasifu wa hoteli",
+    "noCompanies": "Hakuna kampuni bado zilizorekodiwa.",
+    "searchCompanies": "Tafuta kampuni…"
   },
   "folio": {
     "auditTrail": "Rekodi ya miamala",
@@ -5504,7 +5540,28 @@
     "cutIn": "Kukatwa Ndani",
     "void": "Tengua",
     "download": "Pakua",
-    "remove": "Ondoa"
+    "remove": "Ondoa",
+    "billAmount": "KIASI CHA BILI",
+    "category": "KATEGORIA",
+    "guestName": "Jina la mgeni",
+    "itemName": "JINA LA BIDHAA",
+    "no": "NAMBARI/CODE YA FOLIO",
+    "noFolioPosted": "HAJAJAWEKA FOLIO BADO",
+    "orderNo": "Namba ya agizo",
+    "qty": "IDADI",
+    "receipt": "Risiti",
+    "receiptNo": "Namba ya risiti",
+    "refund": "Marejesho",
+    "room": "Chumba",
+    "roomNo": "Namba ya chumba",
+    "serviceTable": "Namba ya kituo/mezza",
+    "tax": "KODI",
+    "time": "MUDA",
+    "totalPayable": "JUMLA INAYOPASWA KULIPWA",
+    "transferFrom": "Uhamisho kutoka kwa {guest}",
+    "view": "Ona",
+    "viewHint": "Onyesho la kusoma pekee. Shughuli hii haiwezi kubadilishwa hapa.",
+    "viewTitle": "Muingizo wa folio"
   },
   "receptionMenu": {
     "bookingRequests": "Maombi ya Kuhifadhi",

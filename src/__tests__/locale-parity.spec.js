@@ -60,83 +60,14 @@ const missingInSw = [...EN].filter((k) => !SW.has(k)).sort()
 const missingInEn = [...SW].filter((k) => !EN.has(k)).sort()
 
 /**
- * Swahili strings still to write. Grouped by section because that is how they
- * get translated — a translator works a screen, not a flat list of keys.
+ * Swahili strings still to write. Empty: both files now hold the same 5,335
+ * keys, so there is no gap left to paper over.
  *
- * These are all pre-existing gaps, not new ones. When adding a key here instead
- * of adding it to sw.json, ask why: the point of this file is to catch new keys
- * landing in one file only.
+ * Do not add a key here instead of adding it to sw.json. The point of this
+ * file is to catch a key landing in one locale and not the other; a new entry
+ * here would be that same bug, written down as a decision.
  */
-const KNOWN_MISSING_IN_SW = new Set([
-  // folio — guest bill print and folio screens (21)
-  'folio.billAmount',
-  'folio.category',
-  'folio.guestName',
-  'folio.itemName',
-  'folio.no',
-  'folio.noFolioPosted',
-  'folio.orderNo',
-  'folio.qty',
-  'folio.receipt',
-  'folio.receiptNo',
-  'folio.refund',
-  'folio.room',
-  'folio.roomNo',
-  'folio.serviceTable',
-  'folio.tax',
-  'folio.time',
-  'folio.totalPayable',
-  'folio.transferFrom',
-  'folio.view',
-  'folio.viewHint',
-  'folio.viewTitle',
-  // reportBrowser — POS report browser (11)
-  'reportBrowser.chartBar',
-  'reportBrowser.chartFigures',
-  'reportBrowser.chartLabel',
-  'reportBrowser.chartLine',
-  'reportBrowser.chartNoData',
-  'reportBrowser.chartStyle',
-  'reportBrowser.chartTotal',
-  'reportBrowser.chartUnnamed',
-  'reportBrowser.charts',
-  'reportBrowser.chartsHide',
-  'reportBrowser.chartsShow',
-  // stayview — hotel dashboard and creditors (9)
-  'stayview.availableCredit',
-  'stayview.collectPayment',
-  'stayview.creditExceeded',
-  'stayview.creditorCompany',
-  'stayview.currentBalance',
-  'stayview.postToCreditors',
-  'stayview.remainingCredit',
-  'stayview.searchCompany',
-  'stayview.selectCreditorCompany',
-  // receptionPanel — front desk (6)
-  'receptionPanel.city',
-  'receptionPanel.corporateDirectory',
-  'receptionPanel.corporateDirectorySubtitle',
-  'receptionPanel.hotelProfile',
-  'receptionPanel.noCompanies',
-  'receptionPanel.searchCompanies',
-  // nightAudit — night audit guest search (3)
-  'nightAudit.guestSearch',
-  'nightAudit.guestSearchPlaceholder',
-  'nightAudit.noGuestsFound',
-  // guests — ID document types (3)
-  'guests.typeDriverLicense',
-  'guests.typeNationalId',
-  'guests.typePassport',
-  // storeManager — stock (2)
-  'storeManager.lowStock.onShelves',
-  'storeManager.lowStock.storeOnly',
-  // cashier — room service (2)
-  'cashier.roomService.items',
-  'cashier.roomService.newOrder',
-])
-
-/** Swahili-only keys. Empty: every string Swahili uses also exists in English. */
-const KNOWN_MISSING_IN_EN = new Set()
+const KNOWN_MISSING_IN_SW = new Set()
 
 describe('locale parity', () => {
   it('reads both locale files', () => {
@@ -144,42 +75,14 @@ describe('locale parity', () => {
     expect(SW.size).toBeGreaterThan(1000)
   })
 
-  it('has no Swahili string English lacks', () => {
-    // The direction that hurts most in practice: English is the fallback, so a
-    // Swahili-only key shows a receptionist a raw dotted key in the language
-    // they read. Anything added here is a key the API can reach but English
-    // cannot render — check the caller before allowing one.
-    expect(missingInEn).toEqual([...KNOWN_MISSING_IN_EN].sort())
-  })
-
-  it('has not grown the Swahili gap since the last translation pass', () => {
-    const added = missingInSw.filter((k) => !KNOWN_MISSING_IN_SW.has(k))
-    const healed = [...KNOWN_MISSING_IN_SW].filter((k) => !missingInSw.includes(k))
-    const retired = [...KNOWN_MISSING_IN_SW].filter((k) => !EN.has(k))
-
-    // Thrown rather than asserted with a message, because vitest's expect takes
-    // only one argument and a failing diff alone does not say which of the
-    // three directions went wrong or what to do about it.
-    if (added.length) {
-      throw new Error(
-        `${added.length} key(s) exist in en but not sw: ${added.join(', ')}\n` +
-          'Add them to sw.json, not to the baseline — that is the bug this test exists to catch.',
-      )
-    }
-    if (healed.length) {
-      throw new Error(
-        `${healed.length} baseline key(s) now exist in sw: ${healed.join(', ')}\n` +
-          'Delete them from KNOWN_MISSING_IN_SW so the baseline shrinks.',
-      )
-    }
-    if (retired.length) {
-      throw new Error(
-        `${retired.length} baseline key(s) no longer exist in en.json: ${retired.join(', ')}\n` +
-          'Delete them from KNOWN_MISSING_IN_SW.',
-      )
-    }
-
-    expect({ added, healed, retired }).toEqual({ added: [], healed: [], retired: [] })
+  it('has no key in one locale that the other lacks', () => {
+    // Both directions break the UI the same way — vue-i18n falls back silently
+    // and the user reads a raw dotted key — so this is one statement rather
+    // than two, and it stays one statement when the next locale is added.
+    expect({
+      missingFromSw: missingInSw,
+      missingFromEn: missingInEn,
+    }).toEqual({ missingFromSw: [], missingFromEn: [] })
   })
 
   it('has a baseline entry for every known gap and no others', () => {
