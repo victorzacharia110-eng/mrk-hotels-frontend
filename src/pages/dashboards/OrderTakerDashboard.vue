@@ -274,11 +274,12 @@
           </button>
         </header>
 
-        <!-- Order lines table: Qty / Item / Price / Amount -->
+        <!-- Order lines table: Table / Qty / Item / Price / Amount -->
         <div class="lines-wrap">
           <table class="lines-table">
             <thead>
               <tr>
+                <th class="col-table">{{ $t('orderTaker.table') }}</th>
                 <th class="col-qty">{{ $t('orderTaker.qty') }}</th>
                 <th>{{ $t('orderTaker.item') }}</th>
                 <th class="col-price">{{ $t('orderTaker.price') }}</th>
@@ -288,6 +289,13 @@
             </thead>
             <tbody>
               <tr v-for="line in pagedLines" :key="line.key || line.menu_item_id">
+                <td class="col-table">
+                  <span v-if="form.table_number" class="line-table">
+                    <i class="fas fa-chair line-table-icon" aria-hidden="true"></i>
+                    {{ form.table_number }}
+                  </span>
+                  <span v-else class="line-table is-unset" :title="$t('orderTaker.selectTable')">—</span>
+                </td>
                 <td class="col-qty">
                   <div class="qty-step">
                     <button type="button" :disabled="line.quantity <= 1" @click="stepQty(line, -1)">-</button>
@@ -305,7 +313,7 @@
                 </td>
               </tr>
               <tr v-if="!orderLines.length">
-                <td colspan="5" class="empty-cell">{{ $t('orderTaker.empty') }}</td>
+                <td colspan="6" class="empty-cell">{{ $t('orderTaker.empty') }}</td>
               </tr>
             </tbody>
           </table>
@@ -3506,10 +3514,32 @@ function onKey(e) {
   border-bottom: none;
 }
 
+.col-table { width: 140px; }
 .col-qty { width: 150px; }
 .col-price,
 .col-amount { width: 130px; text-align: right; }
 .col-x { width: 44px; }
+
+/* The order's selected table, repeated per row so the destination is readable
+   next to each line. A dash means no table is picked yet, which blocks sending. */
+.line-table {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.line-table-icon {
+  color: #71717a;
+  font-size: 12px;
+}
+
+.line-table.is-unset {
+  color: #a1a1aa;
+  font-weight: 400;
+  cursor: help;
+}
 
 .qty-step {
   display: inline-flex;
@@ -4790,7 +4820,7 @@ function onKey(e) {
   }
 
   .lines-table {
-    min-width: 480px;
+    min-width: 620px;
   }
 
   .pager-row {
