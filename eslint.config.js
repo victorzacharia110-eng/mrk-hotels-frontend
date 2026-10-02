@@ -48,6 +48,27 @@ export default defineConfig([
   {
     ...pluginVitest.configs.recommended,
     files: ['src/**/__tests__/*'],
+    // Tests run in Node, not the browser. Without this, any spec that reads a
+    // file off disk — process.cwd() to locate src/, which is how the
+    // locale-parity and CSS-reading specs work — trips no-undef and fails lint
+    // for code that is perfectly correct.
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+
+  {
+    // Standalone node scripts kept alongside the e2e suite. They are not specs,
+    // so the playwright block above does not match them, and they have always
+    // been linted as if they were browser code.
+    files: ['e2e/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
   },
 
   ...pluginOxlint.buildFromOxlintConfigFile('.oxlintrc.json'),

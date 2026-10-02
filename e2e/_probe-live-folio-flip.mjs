@@ -30,7 +30,7 @@ page.on('response', async (res) => {
       const j = await res.json()
       const rid = j?.reservation?.reservation_id ?? (u.match(/\/(\d+)\/folio/) || [])[1]
       folioPayloads.set(String(rid), j)
-    } catch {}
+    } catch { /* best effort: the probe reports what it did reach */ }
   }
 })
 
@@ -60,7 +60,7 @@ try {
     try {
       await ref.waitFor({ state: 'visible', timeout: 12000 })
       openedCode = ((await ref.locator('strong').textContent()) || '').trim()
-    } catch {}
+    } catch { /* best effort: the probe reports what it did reach */ }
     switcher = page.locator('.sv-folio-switch')
     try {
       await switcher.waitFor({ state: 'visible', timeout: 6000 })
@@ -168,7 +168,6 @@ try {
   await snapshot('BEFORE-current')
 
   // Dump the current folio's raw payload + the ledger DOM rows.
-  const curRid = ((await page.locator('.sv-folio-ref').textContent()) || '')
   console.log('\n=== Raw folio() payloads captured ===')
   for (const [rid, j] of folioPayloads) console.log('  ', JSON.stringify(summarize(rid, j)))
   const ledgerRows = await page.locator('table.sv-folio-table tbody tr').count()

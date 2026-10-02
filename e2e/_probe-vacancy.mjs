@@ -11,7 +11,7 @@ await page.getByRole('button', { name: /sign in/i }).click()
 await page.waitForURL(/\/app$/, { timeout: 30000 })
 await page.goto(TARGET + '/app')
 
-for (const i = 0; i < 5; i++) {
+for (let i = 0; i < 5; i++) {
   const close = page.locator('.alert-modal-close,.notification-modal-close').first()
   if (!(await close.isVisible().catch(() => false))) break
   await close.click(); await page.waitForTimeout(300)
@@ -23,7 +23,6 @@ const bars = page.locator('.sv-bar')
 await bars.first().waitFor({ state: 'visible', timeout: 20000 }).catch(() => {})
 await page.waitForTimeout(2500)
 
-const buttons = page.locator('.sv-room-cell, .sv-room-cell button')
 const data = await page.locator('.sv-board-body .sv-room-track').evaluateAll((rows) =>
   rows.map((r) => {
     const num = r.querySelector('.sv-room-cell')?.textContent?.trim().match(/\d+/)?.[0]

@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import { signIn } from './helpers.js'
-import { openBoard, dismissAlerts, barFor } from './stay-workflow-helpers.js'
+import { openBoard, dismissAlerts } from './stay-workflow-helpers.js'
 
 test('probe room 114 board (settled, post-gate, today+tomorrow cells)', async ({ page }) => {
   await signIn(page, { email: 'reception@mrkhotels.test', password: 'password' })

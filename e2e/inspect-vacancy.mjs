@@ -1,5 +1,4 @@
 import { chromium } from '@playwright/test'
-import { isoKey } from '../e2e/helpers.js'
 
 const TARGET = 'http://localhost:5173'
 
@@ -27,15 +26,7 @@ const result = await page.evaluate(() => {
     const roomNum = (roomText.match(/(\d+)/) || [])[1]
     const track = tr.querySelector('.sv-room-track') || tr
     const cells = Array.from(track.querySelectorAll('.sv-cell-bg'))
-    const which = ['day-today', 'day-tomorrow']
     const dayInfo = cells.map((c, i) => ({ i, cls: c.className }))
-    const hasBarToday = !!track.querySelector('.sv-bar[data-today]') ||
-      Array.from(track.querySelectorAll('.sv-bar')).some((b) => {
-        const ga = b.style.gridArea
-        const m = /(\d+)\s*\/\s*(\d+)\s*\/\s*\w+\s*\/\s*span\s+(\d+)/.exec(ga || '')
-        if (!m) return false
-        return Number(m[2]) <= 3 && Number(m[2]) + Number(m[3]) - 1 >= 4
-      })
     out.push({ room: roomNum, cells: dayInfo.map((c) => c.cls), bars: Array.from(track.querySelectorAll('.sv-bar')).map((b) => ({ t: b.innerText.trim(), ga: b.style.gridArea, cls: b.className })) })
   }
   return out
@@ -46,7 +37,6 @@ for (const row of result) {
   const c0 = row.cells[0] || ''
   const c1 = row.cells[1] || ''
   const todayVacant = c0.includes('vacant') && c1.includes('vacant')
-  const barToday = row.bars.some((b) => b.ga && !b.ga.includes('100'))
   console.log(
     `${row.room}  today=${todayVacant ? 'VACANT' : 'OCCUPIED'}  [cells=${c0} | ${c1}]  bars=${row.bars.length ? row.bars.map((b) => `${b.t}:${b.ga}`).join(' · ') : 'none'}`,
   )
