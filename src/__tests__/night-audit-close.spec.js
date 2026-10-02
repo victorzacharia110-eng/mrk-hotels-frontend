@@ -1,6 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
 import i18n from '@/locales/i18n'
 
 const close = vi.fn()
@@ -299,5 +302,157 @@ describe('NightAuditPage — unresolved older bookings', () => {
 
     expect(panel(wrapper).exists()).toBe(false)
     expect(wrapper.find('.dashboard-page').exists()).toBe(true)
+  })
+})
+
+describe('NightAuditPage — layout, auto-dismiss and consequences', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    history.mockResolvedValue({ data: { day_closes: [] } })
+    close.mockResolvedValue({ data: {} })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    document.querySelectorAll('.confirm-modal').forEach((n) => n.remove())
+  })
+
+  function todayIso() {
+    const now = new Date()
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+  }
+
+  function shift(iso, days) {
+    const d = new Date(`${iso}T12:00:00`)
+    d.setDate(d.getDate() + days)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+
+  const open = (closed = false, extra = {}) =>
+    report.mockResolvedValue({ data: { report: REPORT_OPEN, closed, due_outs: [], ...extra } })
+
+  it('aligns the jump button with the date input', async () => {
+    // jsdom has no layout, so alignment is asserted on the source: .form-group
+    // ships margin-bottom: 16px, and flex `align-items: end` aligns to the
+    // margin box, which floated the button above the input it sits beside.
+    const source = readFileSync(
+      resolve(dirname(fileURLToPath(import.meta.url)), '../pages/reception/NightAuditPage.vue'),
+      'utf8',
+    )
+
+    expect(source).toMatch(/\.date-field\s*\{\s*margin-bottom:\s*0;/)
+    expect(source).toMatch(/\.date-row\s*\{[^}]*align-items:\s*end;/)
+  })
+
+  it('keeps the jump button inside the same row as the date field', async () => {
+    const wrapper = await mountPage()
+    const row = wrapper.find('.date-row')
+
+    expect(row.find('.date-field').exists()).toBe(true)
+    expect(row.text()).toContain('previous day')
+  })
+
+  it('dismisses the confirm dialog on its own', async () => {
+    const wrapper = await mountPage()
+    await wrapper.find('input[type="date"]').setValue(shift(todayIso(), -1))
+    await flushPromises()
+    await closeButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(document.querySelector('.confirm-modal')).not.toBeNull()
+
+    vi.advanceTimersByTime(13000)
+    await flushPromises()
+
+    expect(document.querySelector('.confirm-modal')).toBeNull()
+  })
+
+  it('does not dismiss the dialog while the close is running', async () => {
+    // A dialog vanishing out from under an in-flight request would leave the
+    // user with no feedback at all.
+    let release
+    close.mockImplementation(() => new Promise((r) => { release = r }))
+
+    const wrapper = await mountPage()
+    await wrapper.find('input[type="date"]').setValue(shift(todayIso(), -1))
+    await flushPromises()
+    await closeButton(wrapper).trigger('click')
+    await flushPromises()
+
+    const confirm = confirmButton()
+    confirm.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushPromises()
+
+    vi.advanceTimersByTime(13000)
+    await flushPromises()
+
+    expect(document.querySelector('.confirm-modal')).not.toBeNull()
+
+    release({ data: {} })
+    await flushPromises()
+  })
+
+  it('warns before closing a day out of order', async () => {
+    history.mockResolvedValue({ data: { day_closes: [{ close_date: shift(todayIso(), -2) }] } })
+    open()
+    const wrapper = await mountPage()
+    await wrapper.find('input[type="date"]').setValue(shift(todayIso(), -5))
+    await flushPromises()
+
+    const text = wrapper.find('.close-warnings').text()
+    expect(text).toContain(shift(todayIso(), -5))
+    expect(text).toContain(shift(todayIso(), -2))
+  })
+
+  it('names the days that stay open behind an out-of-order close', async () => {
+    // Closing the 5th when the 2nd is the latest close leaves 3rd and 4th open.
+    history.mockResolvedValue({ data: { day_closes: [{ close_date: shift(todayIso(), -2) }] } })
+    open()
+    const wrapper = await mountPage()
+    await wrapper.find('input[type="date"]').setValue(shift(todayIso(), -5))
+    await flushPromises()
+
+    const text = wrapper.find('.close-warnings').text()
+    expect(text).toContain(shift(todayIso(), -4))
+    expect(text).toContain(shift(todayIso(), -3))
+  })
+
+  it('says the close is permanent', async () => {
+    open()
+    const wrapper = await mountPage()
+    await wrapper.find('input[type="date"]').setValue(shift(todayIso(), -1))
+    await flushPromises()
+
+    expect(wrapper.find('.close-warnings').text().toLowerCase()).toContain('permanent')
+  })
+
+  it('repeats the top consequence inside the confirm dialog', async () => {
+    history.mockResolvedValue({ data: { day_closes: [{ close_date: shift(todayIso(), -2) }] } })
+    open()
+    const wrapper = await mountPage()
+    await wrapper.find('input[type="date"]').setValue(shift(todayIso(), -5))
+    await flushPromises()
+    await closeButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(document.querySelector('.confirm-modal-message').textContent)
+      .toContain(shift(todayIso(), -5))
+  })
+
+  it('separates room and date in the stale list', async () => {
+    open(false, {
+      stale_arrivals: {
+        count: 1,
+        items: [{ reservation_id: 'R-1', guest_name: 'Russo Brothers', room_number: '216', check_in_date: '2026-09-24' }],
+      },
+    })
+    const wrapper = await mountPage()
+
+    const chips = wrapper.findAll('.stale-list li .stale-chip')
+    expect(chips).toHaveLength(2)
+    expect(chips[0].text()).toContain('216')
+    expect(chips[1].text()).toContain('2026-09-24')
   })
 })

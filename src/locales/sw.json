@@ -126,7 +126,8 @@
     "createSuccess": "Imeundwa.",
     "deleteSuccess": "Imeondolewa.",
     "loadError": "Imeshindikana kupakia.",
-    "updateSuccess": "Imesasishwa."
+    "updateSuccess": "Imesasishwa.",
+    "autoClosesIn": "Itafunga yenyewe kwa sekunde {seconds}"
   },
   "laundry": {
     "title": "Dobi",
@@ -2342,7 +2343,12 @@
     "staleArrivalsTitle": "Miaka {count} bado haijasahihiwa | Miaka {count} bado haijasahihiwa",
     "staleArrivalRoom": "Chumba {room}",
     "staleArrivalDate": "ilizotarajiwa {date}",
-    "staleArrivalsNote": "Wageni hawa hawakuja na hakushughulikiwa. Hawatengenezi tena kufunga siku, lakini bado wanahitaji kufutwa au kuwekwa alama ya kuacha."
+    "staleArrivalsNote": "Wageni hawa hawakuja na hakushughulikiwa. Hawatengenezi tena kufunga siku, lakini bado wanahitaji kufutwa au kuwekwa alama ya kuacha.",
+    "warnOutOfOrder": "Una fungua {date}, lakini {last} imefungwa tayari. Siku hazihitaji kufungwa kwa mpangilio, kwa hivyo inaruhusiwa — lakini ripoti zitaonekana bila mpangilio.",
+    "warnLeavesGap": "Hii bado itaacha siku {count} isiyofungwa kati yao: {dates. Fungua hizo pia kama kipindi kinahitaji kuwa kamili.",
+    "warnOtherDaysOpen": "Siku za biashara {count} bado hazijafungwa: {dates}. Kufunga {date} sasa hakufungi hizo.",
+    "warnStaleRemain": "Miaka {count} bado itabaki haijasahihiwa baada ya kufunga hiki. Hii inasahihisha siku inayofungwa pekee.",
+    "warnOneWay": "Kufunga siku ni cha kudumu. Takwimu zinalofungwa na ukaguzi wa usiku hauwezi kuendeshwa tena kwa siku hiyo."
   },
   "distribution": {
     "title": "Kumbukumbu za Chaneli",

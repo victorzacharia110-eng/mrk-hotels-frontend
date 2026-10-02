@@ -22,7 +22,7 @@
     <!-- Date picker -->
     <div class="card" style="padding: 16px 20px; margin-bottom: 16px;">
       <div class="date-row">
-        <div class="form-group">
+        <div class="form-group date-field">
           <label>{{ $t('nightAudit.businessDate') }}</label>
           <!-- max=today: the backend refuses a future business date outright, and
                an unconstrained picker only offers a dead end. Today itself stays
@@ -64,10 +64,8 @@
       <ul class="stale-list">
         <li v-for="item in staleArrivals.items" :key="item.reservation_id">
           <span class="stale-name">{{ item.guest_name }}</span>
-          <span class="stale-meta">
-            {{ $t('nightAudit.staleArrivalRoom', { room: item.room_number || '—' }) }}
-            · {{ $t('nightAudit.staleArrivalDate', { date: item.check_in_date }) }}
-          </span>
+          <span class="stale-chip">{{ $t('nightAudit.staleArrivalRoom', { room: item.room_number || '—' }) }}</span>
+          <span class="stale-chip">{{ $t('nightAudit.staleArrivalDate', { date: item.check_in_date }) }}</span>
         </li>
       </ul>
       <p class="stale-note">{{ $t('nightAudit.staleArrivalsNote') }}</p>
@@ -209,6 +207,12 @@
           <i class="fas fa-circle-info" aria-hidden="true"></i>
           {{ $t('nightAudit.closesAfterMidnight', { date: selectedDate }) }}
         </p>
+        <ul v-if="closeWarnings.length" class="close-warnings">
+          <li v-for="w in closeWarnings" :key="w.key" :class="['close-warning', `close-warning--${w.level}`]">
+            <i :class="w.level === 'danger' ? 'fas fa-circle-exclamation' : 'fas fa-triangle-exclamation'" aria-hidden="true"></i>
+            <span>{{ $t(w.key, w.params) }}</span>
+          </li>
+        </ul>
         <button
           class="btn btn-primary btn-lg"
           :disabled="closing || !canClose"
@@ -224,8 +228,9 @@
     <ConfirmModal
       :show="showClose"
       :title="t('nightAudit.closeDay')"
-      :body="t('nightAudit.closeConfirm')"
+      :body="closeConfirmBody"
       :busy="closing"
+      :auto-close-ms="CLOSE_MODAL_MS"
       :confirm-label="t('nightAudit.closeDay')"
       @confirm="confirmCloseDay"
       @cancel="showClose = false"
@@ -339,6 +344,68 @@ const missedDays = computed(() => {
   return missed
 })
 
+/** The most recent closed business day, or null if none has ever closed. */
+const lastClosedDate = computed(() => history.value[0]?.close_date || null)
+
+/**
+ * Passed days between two dates that were never closed, oldest first.
+ *
+ * Used to tell the user that closing out of order will not tidy the gap behind
+ * it — the days in between stay open, and they are the ones a month-end report
+ * will be missing.
+ */
+function unclosedBetween(fromIso, toIso) {
+  const out = []
+  let cursor = shiftDay(fromIso, 1)
+  for (let i = 0; i < 90 && cursor && cursor <= toIso; i += 1) {
+    if (!closedDates.value.has(cursor)) out.push(cursor)
+    cursor = shiftDay(cursor, 1)
+  }
+  return out
+}
+
+/**
+ * What closing this day will and will not settle.
+ *
+ * The close is a one-way door — it freezes a snapshot and the API then refuses
+ * to do it again — so the consequences are stated before the button is pressed
+ * rather than discovered afterwards. Warnings are ordered by how much they
+ * change what the user is about to do.
+ */
+const closeWarnings = computed(() => {
+  const out = []
+  const date = selectedDate.value
+  const last = lastClosedDate.value
+
+  if (last && date < last) {
+    out.push({ level: 'danger', key: 'nightAudit.warnOutOfOrder', params: { date, last } })
+
+    const gap = unclosedBetween(date, last)
+    if (gap.length) {
+      out.push({ level: 'danger', key: 'nightAudit.warnLeavesGap', params: { count: gap.length, dates: gap.join(', ') } })
+    }
+  }
+
+  if (missedDays.value.length) {
+    out.push({
+      level: 'warning',
+      key: 'nightAudit.warnOtherDaysOpen',
+      params: { count: missedDays.value.length, dates: missedDays.value.join(', ') },
+    })
+  }
+
+  if (staleArrivals.value.count) {
+    out.push({ level: 'warning', key: 'nightAudit.warnStaleRemain', params: { count: staleArrivals.value.count } })
+  }
+
+  out.push({ level: 'info', key: 'nightAudit.warnOneWay' })
+
+  return out
+})
+
+/** The single most serious warning, echoed inside the confirm modal. */
+const topCloseWarning = computed(() => closeWarnings.value.find((w) => w.level === 'danger') || null)
+
 /** The day to close first: the oldest still missing, keeping the run in order. */
 const oldestMissedDay = computed(() => missedDays.value[missedDays.value.length - 1] || '')
 
@@ -376,6 +443,14 @@ async function load() {
     loading.value = false
   }
 }
+
+/** How long the confirm dialog waits before dismissing itself. */
+const CLOSE_MODAL_MS = 12000
+
+const closeConfirmBody = computed(() => {
+  const base = t('nightAudit.closeConfirm')
+  return topCloseWarning.value ? `${base} ${t(topCloseWarning.value.key, topCloseWarning.value.params)}` : base
+})
 
 function openCloseConfirm() {
   error.value = ''
@@ -421,6 +496,21 @@ onMounted(() => {
 .page-head h1 { font-size: 28px; font-weight: 800; }
 .muted { color: #757575; font-size: 12px; margin-top: 2px; }
 .date-row { display: flex; align-items: end; gap: 16px; }
+/* .form-group carries margin-bottom: 16px and flex `align-items: end` aligns to
+   the margin box, not the border box — so the jump button used to sit 16px above
+   the input it belongs beside. Dropping the margin here restores true baseline
+   alignment; the row's own gap keeps the spacing. */
+.date-field { margin-bottom: 0; }
+/* The close card is centred, but a list of consequences has to be scannable. */
+.close-warnings { list-style: none; margin: 0 0 14px; padding: 0; text-align: left; display: grid; gap: 8px; }
+.close-warning {
+  display: flex; align-items: flex-start; gap: 8px; text-align: left;
+  font-size: 13px; line-height: 1.45; padding: 9px 12px; border-radius: 8px;
+}
+.close-warning i { margin-top: 2px; flex-shrink: 0; }
+.close-warning--danger { background: #fdecea; color: #96281b; }
+.close-warning--warning { background: #fff6e5; color: #8a5a00; }
+.close-warning--info { background: #eaf4ff; color: #1f6ea8; }
 .closed-badge { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: #dcfce7; color: #166534; border-radius: 8px; font-weight: 600; font-size: 13px; }
 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
 .kpi { display: flex; flex-direction: column; gap: 4px; }
@@ -437,10 +527,15 @@ onMounted(() => {
 .dueout-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 13px; color: #475569; }
 .stale-panel { margin-bottom: 16px; }
 .stale-title { margin: 0 0 8px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-.stale-list { margin: 0 0 10px; padding-left: 18px; font-size: 13px; }
-.stale-list li { margin-bottom: 4px; }
-.stale-name { font-weight: 600; }
-.stale-meta { opacity: 0.75; }
+.stale-list { margin: 0 0 10px; padding-left: 18px; font-size: 13px; display: grid; gap: 7px; }
+.stale-list li { margin-bottom: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.stale-name { font-weight: 600; min-width: 150px; }
+/* Chips rather than dot separators: "Room 116" and a date are different kinds
+   of fact, and running them together with a middot made both hard to scan. */
+.stale-chip {
+  background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(31, 110, 168, 0.25);
+  color: #1f6ea8; border-radius: 999px; padding: 2px 10px; font-size: 12px; white-space: nowrap;
+}
 .stale-note { margin: 0; font-size: 12px; opacity: 0.8; }
 .missed-banner { margin-bottom: 16px; }
 .missed-title { margin: 0 0 6px; font-weight: 700; display: flex; align-items: center; gap: 8px; }

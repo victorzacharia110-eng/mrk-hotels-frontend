@@ -10,6 +10,9 @@
     cancelLabel  — Optional override for the cancel button text.
     danger     — Renders the confirm button with a destructive style.
     busy       — Disables the confirm button while an async action runs.
+    autoCloseMs — Optional. Milliseconds before the dialog dismisses itself.
+                  0 (default) disables it, so dialogs that guard a destructive
+                  or financial action keep waiting for a deliberate answer.
     type       — 'danger' | 'info' (controls the icon accent).
   Events:
     confirm    — Emitted when the user confirms.
@@ -31,6 +34,7 @@
           </div>
           <div class="confirm-modal-body">
             <p class="confirm-modal-message">{{ body }}</p>
+            <p v-if="remaining !== null" class="confirm-modal-hint">{{ t('common.autoClosesIn', { seconds: remaining }) }}</p>
           </div>
           <div class="confirm-modal-foot">
             <button class="btn btn-secondary" @click="onCancel" :disabled="busy">{{ cancelLabelText }}</button>
@@ -47,7 +51,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
@@ -58,6 +62,7 @@ const props = defineProps({
   cancelLabel: { type: String, default: '' },
   danger: { type: Boolean, default: false },
   busy: { type: Boolean, default: false },
+  autoCloseMs: { type: Number, default: 0 },
 })
 
 const emit = defineEmits(['confirm', 'cancel'])
@@ -78,6 +83,54 @@ function onCancel() {
   if (props.busy) return
   emit('cancel')
 }
+
+/*
+  Opt-in self-dismissal.
+
+  Only ever armed when `autoCloseMs` is set, so the delete and payment dialogs
+  that use this component are unaffected: dismissing a confirmation without
+  answering it is fine, but it must never happen to a dialog nobody opted into.
+
+  Two rules keep it honest. The timer is stopped while `busy`, so a dialog can
+  never vanish out from under a request that is already running. And it restarts
+  from the top each time the dialog opens rather than resuming a stale one.
+*/
+const remaining = ref(null)
+let ticker = null
+
+function stopTicker() {
+  if (ticker) clearInterval(ticker)
+  ticker = null
+  remaining.value = null
+}
+
+function startTicker() {
+  stopTicker()
+  if (!props.autoCloseMs || props.busy) return
+
+  let left = Math.ceil(props.autoCloseMs / 1000)
+  remaining.value = left
+  ticker = setInterval(() => {
+    left -= 1
+    if (left <= 0) {
+      stopTicker()
+      onCancel()
+      return
+    }
+    remaining.value = left
+  }, 1000)
+}
+
+watch(
+  () => [props.show, props.autoCloseMs, props.busy],
+  ([show]) => {
+    if (show && !props.busy) startTicker()
+    else stopTicker()
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(stopTicker)
 </script>
 
 <style scoped>
@@ -165,6 +218,12 @@ function onCancel() {
   font-size: 14px;
   color: #334155;
   line-height: 1.5;
+}
+
+.confirm-modal-hint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: #64748b;
 }
 
 .confirm-modal-foot {
