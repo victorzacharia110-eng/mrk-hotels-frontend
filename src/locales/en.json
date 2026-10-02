@@ -5117,6 +5117,7 @@
       "status": {
         "pending": "Pending",
         "in_progress": "In Progress",
+        "processing": "Processing",
         "preparing": "Preparing",
         "ready": "Ready",
         "served": "Ready",
