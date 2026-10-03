@@ -729,6 +729,14 @@ export const reservationApi = {
     return api.post(`${v1}/reservations/${id}/cancel`)
   },
   /**
+   * Cancels several rooms of one booking party in a single action.
+   * @param {Array<string|number>} reservationIds - Reservation ids to cancel.
+   * @returns {Promise} Axios response confirming the cancellations.
+   */
+  cancelGroup(reservationIds) {
+    return api.post(`${v1}/reservations/cancel-group`, { reservation_ids: reservationIds })
+  },
+  /**
    * Hard-deletes a reservation; extra data can carry the reason.
    * @param {string|number} id - Reservation identifier.
    * @param {object} data - Optional deletion payload.

@@ -332,3 +332,46 @@ describe('food ticket on the waiter order-taker panel', () => {
     expect(printToPrinter).not.toHaveBeenCalled()
   })
 })
+
+describe('waiter order-taker panel: the red row X clears its food card', () => {
+  /**
+   * Adds one menu tile, then taps the red X at the end of the order-lines row.
+   *
+   * A footgun here is the OTHER red X with the same class: the one in the
+   * food-list header (`closeCategory`). It hides the list but keeps the line, so
+   * if the selector ever matched it instead, the card would still read as
+   * selected and this test would catch that.
+   */
+  async function addThenRemove() {
+    useAuthStore().user = { full_name: 'LYDIA MANASE', user_role: 'waiter' }
+    const wrapper = mount(OrderTakerDashboard, { global: { plugins: [i18n] } })
+    await flushPromises()
+    const search = wrapper.find('.cat-search')
+    search.element.value = 'ugali'
+    await search.trigger('input')
+    await nextTick()
+    await wrapper.find('.cat-item').trigger('click')
+    await nextTick()
+    const before = {
+      onOrder: wrapper.findAll('.cat-item.on-order').length,
+      badges: wrapper.findAll('.cat-item-qty').length,
+      rows: wrapper.findAll('.lines-table tbody tr').length,
+    }
+    await wrapper.find('.lines-table .line-remove').trigger('click')
+    await nextTick()
+    const after = {
+      onOrder: wrapper.findAll('.cat-item.on-order').length,
+      badges: wrapper.findAll('.cat-item-qty').length,
+    }
+    wrapper.unmount()
+    return { before, after }
+  }
+
+  it('deselects the card and drops its ×N badge without a refresh', async () => {
+    const { before, after } = await addThenRemove()
+
+    expect(before).toEqual({ onOrder: 1, badges: 1, rows: 1 })
+    expect(after.onOrder).toBe(0)
+    expect(after.badges).toBe(0)
+  })
+})

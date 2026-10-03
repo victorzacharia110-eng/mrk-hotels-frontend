@@ -134,6 +134,10 @@
           <tr v-for="r in reservations" :key="r.reservation_id">
             <td class="pin-col">
               <strong>{{ r.guest_name }}</strong>
+              <span v-if="r.group?.rooms?.length > 1" class="badge badge-purple group-badge">
+                <i class="fas fa-people-group"></i>
+                {{ $t('reservations.groupBadge', { count: r.group.rooms.length }) }}
+              </span>
               <div class="sub">{{ formatPhoneGaps(r.guest_phone) || r.guest_email || '—' }}</div>
               <div v-if="r.city || r.country" class="sub">
                 <i class="fas fa-location-dot"></i>
@@ -146,6 +150,7 @@
             <td>
               <span v-if="r.room">
                 {{ $t('reservations.room') }} {{ r.room.room_number }}
+                <span v-if="r.is_primary" class="badge badge-yellow">{{ $t('reservations.primaryRoom') }}</span>
                 <div class="sub capitalize">
                   {{ roomTypeLabel(r.room_type || r.room.room_type) }}
                 </div>
@@ -532,6 +537,18 @@
             <p v-if="selectedRooms.length" class="hint selected-summary">
               <strong>{{ $t('bookingPage.selectedRooms') }}:</strong> {{ selectedRooms.length }}
             </p>
+
+            <!-- Multi-room party: name the booker's own room. It defaults to
+                 the first room picked and can be changed before saving. -->
+            <div v-if="selectedRooms.length > 1" class="form-group primary-room-pick">
+              <label>{{ $t('reservations.primaryRoomLabel') }}</label>
+              <SearchableSelect
+                v-model="form.primary_room_id"
+                :options="primaryRoomOptions"
+                :placeholder="$t('reservations.primaryRoomPlaceholder')"
+              />
+              <small class="hint">{{ $t('reservations.primaryRoomHint') }}</small>
+            </div>
             <p v-if="roomsSource.length" class="hint room-browser-count">
               {{
                 $t('bookingPage.showingRooms', {
@@ -925,6 +942,23 @@
             </div>
           </dl>
 
+          <!-- The other rooms travelling with this booking, when it is a party. -->
+          <template v-if="detail.group?.rooms?.length > 1">
+            <h3 class="detail-section">
+              <i class="fas fa-people-group"></i>
+              {{ $t('reservations.groupBadge', { count: detail.group.rooms.length }) }}
+            </h3>
+            <ul class="group-room-list">
+              <li v-for="room in detail.group.rooms" :key="room.reservation_id">
+                <span>
+                  {{ $t('reservations.room') }} {{ room.room_number }}
+                  <span v-if="room.is_primary" class="badge badge-yellow">{{ $t('reservations.primaryRoom') }}</span>
+                </span>
+                <span class="muted">{{ room.guest_name }} · {{ room.status.replace('_', ' ') }}</span>
+              </li>
+            </ul>
+          </template>
+
           <h3 class="detail-section">{{ $t('reservations.sectionStayAndCharges') }}</h3>
           <dl class="detail-grid">
             <div>
@@ -1067,6 +1101,15 @@
         </div>
       </div>
     </div>
+
+    <!-- Cancel dialog: a standalone room or a whole/subset of a group. -->
+    <CancelReservationModal
+      :show="showCancel"
+      :reservation="cancelTarget"
+      :busy="cancelling"
+      @cancel="showCancel = false"
+      @confirm="confirmCancel"
+    />
   </div>
 </template>
 
@@ -1079,6 +1122,7 @@ import { guestApi, invoiceApi, paymentApi, publicApi, reservationApi } from '@/a
 import { saveBlob } from '@/utils/download'
 import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import CancelReservationModal from '@/components/CancelReservationModal.vue'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
@@ -1206,6 +1250,9 @@ function blankForm() {
     booking_date: todayISO(),
     room_type: '',
     selected_rooms: [],
+    // For a multi-room party: the booker's own room (defaults to the first
+    // selected). Ignored for a single-room booking.
+    primary_room_id: '',
     booking_source: 'walk_in',
     check_in_date: todayISO(),
     check_out_date: addDays(todayISO(), 1),
@@ -1246,6 +1293,7 @@ const reservationComparable = [
   'booking_date',
   'room_type',
   'selected_rooms',
+  'primary_room_id',
   'booking_source',
   'check_in_date',
   'check_out_date',
@@ -1259,6 +1307,14 @@ const reservationComparable = [
 ]
 
 const selectedRooms = computed(() => form.selected_rooms)
+
+// Choices for the "booker's own room" picker on a multi-room booking.
+const primaryRoomOptions = computed(() =>
+  form.selected_rooms.map((room) => ({
+    value: room.room_id,
+    label: `${t('reservations.room')} ${room.room_number}`,
+  })),
+)
 
 // Search/sort/paginate the available rooms client-side; selections live in
 // form.selected_rooms (keyed by room_id) so they survive paging/sorting.
@@ -1297,9 +1353,14 @@ function isRoomSelected(roomId) {
  * @param {Object} room - The availability room card that was clicked.
  */
 function toggleRoom(room) {
-  const index = form.selected_rooms.findIndex((room) => room.room_id === room.room_id)
+  const index = form.selected_rooms.findIndex((selected) => selected.room_id === room.room_id)
   if (index >= 0) {
     form.selected_rooms.splice(index, 1)
+    // The booker's room just left the party: hand the role to the first
+    // remaining room (or clear it when nothing is selected).
+    if (form.primary_room_id === room.room_id) {
+      form.primary_room_id = form.selected_rooms[0]?.room_id || ''
+    }
   } else {
     form.selected_rooms.push({
       room_id: room.room_id,
@@ -1309,6 +1370,8 @@ function toggleRoom(room) {
       price_per_night: Number(room.price_per_night),
       max_occupancy: room.max_occupancy,
     })
+    // The first room picked becomes the booker's room by default.
+    if (!form.primary_room_id) form.primary_room_id = room.room_id
   }
   computeTotal()
 }
@@ -1701,6 +1764,7 @@ async function checkAvailability() {
   checking.value = true
   availability.value = null
   form.selected_rooms = []
+  form.primary_room_id = ''
   try {
     const res = await publicApi.availability({
       hotel_id: hotelId,
@@ -1792,56 +1856,63 @@ async function save() {
 
   saving.value = true
   const nights = Number(form.num_days)
-  // A deposit taken at the desk is spread evenly across the booked rooms.
-  const perRoomPay =
-    roomsToBook.length > 1 && form.amount_paid > 0
-      ? Math.floor(form.amount_paid / roomsToBook.length)
-      : form.amount_paid
+
+  // Guest and stay details are identical for every room in the party; the
+  // per-room fields (room, rate, total) are added per branch below.
+  const basePayload = {
+    guest_id: form.guest_id || undefined,
+    first_name: form.first_name,
+    last_name: form.last_name,
+    guest_phone: normalizePhoneNumber(form.guest_phone, form.country_code || 'TZ'),
+    guest_email: form.guest_email || undefined,
+    country: form.country || undefined,
+    country_code: form.country_code || undefined,
+    city: form.city || undefined,
+    booking_type: form.booking_type,
+    booking_date: form.booking_date || undefined,
+    check_in_date: form.check_in_date,
+    check_out_date: form.check_out_date || undefined,
+    num_days: form.num_days || undefined,
+    num_adults: form.num_adults,
+    num_children: form.num_children,
+    booking_source: form.booking_source,
+    special_requests: form.special_requests || undefined,
+    id_type: form.id_type || undefined,
+    id_number: form.id_number || undefined,
+  }
 
   try {
-    let lastMessage = ''
-    for (let i = 0; i < roomsToBook.length; i++) {
-      const room = roomsToBook[i]
+    let reservation = null
+
+    if (roomsToBook.length > 1) {
+      // A party of rooms is created in one grouped request; the backend prices
+      // each room from its own rate and flags the booker's room as primary.
       const res = await reservationApi.store({
+        ...basePayload,
+        room_selections: roomsToBook.map((room) => ({
+          room_id: room.room_id,
+          room_number: room.room_number,
+        })),
+        primary_room_id: form.primary_room_id || roomsToBook[0].room_id,
+      })
+      reservation = res.data.reservation
+      success.value = res.data.message || t('reservations.createSuccessMany')
+    } else {
+      const room = roomsToBook[0]
+      const res = await reservationApi.store({
+        ...basePayload,
         room_id: room.room_id,
         room_type: room.room_type || undefined,
-        guest_id: form.guest_id || undefined,
-        first_name: form.first_name,
-        last_name: form.last_name,
-        guest_phone: normalizePhoneNumber(form.guest_phone, form.country_code || 'TZ'),
-        guest_email: form.guest_email || undefined,
-        country: form.country || undefined,
-        country_code: form.country_code || undefined,
-        city: form.city || undefined,
-        booking_type: form.booking_type,
-        booking_date: form.booking_date || undefined,
-        check_in_date: form.check_in_date,
-        check_out_date: form.check_out_date || undefined,
-        num_days: form.num_days || undefined,
-        num_adults: form.num_adults,
-        num_children: form.num_children,
         total_amount: nights > 0 ? Math.round(nights * room.price_per_night) : undefined,
-        booking_source: form.booking_source,
-        special_requests: form.special_requests || undefined,
-        id_type: form.id_type || undefined,
-        id_number: form.id_number || undefined,
       })
-      lastMessage = res.data.message || ''
-      const reservation = res.data.reservation
-
-      if (form.amount_paid > 0) {
-        const amount =
-          i === roomsToBook.length - 1
-            ? form.amount_paid - perRoomPay * (roomsToBook.length - 1)
-            : perRoomPay
-        if (amount > 0) await recordPayment(reservation, amount)
-      }
+      reservation = res.data.reservation
+      success.value = res.data.message || t('reservations.createSuccess')
     }
 
-    success.value =
-      roomsToBook.length > 1
-        ? t('reservations.createSuccessMany')
-        : lastMessage || t('reservations.createSuccess')
+    // The deposit is taken once, against the booker's reservation.
+    if (form.amount_paid > 0 && reservation) {
+      await recordPayment(reservation, form.amount_paid)
+    }
 
     showModal.value = false
     await Promise.all([load(), loadOptions()])
@@ -2125,14 +2196,42 @@ async function runAction(reservation, action, message, confirmMessage) {
   }
 }
 
-// Per-row lifecycle actions, all funnelled through the shared runAction helper.
-const cancel = (reservation) =>
-  runAction(
-    reservation,
-    reservationApi.cancel,
-    t('reservations.cancelled'),
-    t('reservations.confirmCancel', { name: reservation.guest_name }),
-  )
+// Cancellation goes through a modal so a grouped booking can cancel some or
+// all of its rooms in one go; a standalone room keeps a plain confirmation.
+const showCancel = ref(false)
+const cancelTarget = ref(null)
+const cancelling = ref(false)
+
+/** Opens the cancel dialog for a reservation (standalone or grouped). */
+function cancel(reservation) {
+  cancelTarget.value = reservation
+  showCancel.value = true
+}
+
+/**
+ * Confirms cancellation. Standalone rooms hit the single endpoint; grouped
+ * bookings hit cancel-group with the chosen reservation ids.
+ * @param {{mode: string, reservationIds: Array<string|number>}} payload
+ */
+async function confirmCancel(payload) {
+  error.value = ''
+  cancelling.value = true
+  try {
+    const res =
+      payload.mode === 'single'
+        ? await reservationApi.cancel(payload.reservationIds[0])
+        : await reservationApi.cancelGroup(payload.reservationIds)
+    success.value = res.data.message || t('reservations.cancelled')
+    showCancel.value = false
+    showDetail.value = false
+    await load()
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    cancelling.value = false
+  }
+}
+
 const noShow = (reservation) =>
   runAction(
     reservation,

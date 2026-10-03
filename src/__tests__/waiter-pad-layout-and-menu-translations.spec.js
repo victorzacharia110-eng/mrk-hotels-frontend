@@ -119,6 +119,16 @@ describe('waiter pad: categories scroll sideways, food scrolls down', () => {
     // height rather than being sized by its content.
     expect(rule(styles, '.inline-items')).toMatch(/display:\s*flex/)
   })
+
+  it('shows the selected-card state from the order, not a stuck touch hover', () => {
+    // `.cat-item:hover` used to apply unconditionally. On a tablet the browser
+    // leaves :hover stuck on the last-tapped card, so deleting that item's line
+    // cleared the `.on-order` class but the card kept the accent border and
+    // still looked selected until the page was refreshed. Hover feedback is now
+    // gated to hover-capable pointers.
+    expect(styles).toMatch(/@media\s*\(hover:\s*hover\)\s*\{[\s\S]*?\.cat-item:hover\s*\{/)
+    expect(styles).toMatch(/@media\s*\(hover:\s*hover\)\s*\{[\s\S]*?\.cat-item\.out-of-stock:hover\s*\{/)
+  })
 })
 
 describe('waiter pad: the table cards are on the right and stay put', () => {
@@ -149,6 +159,15 @@ describe('waiter pad: the table cards are on the right and stay put', () => {
   it('lets the map scroll internally instead of growing past the window', () => {
     expect(rule(styles, '.taker-page.taker-fixed .table-map')).toMatch(/max-height:\s*42vh/)
     expect(rule(styles, '.taker-page.taker-fixed .table-map-grid')).toMatch(/overflow-y|min-height:\s*0/)
+  })
+
+  it('keeps the order sections full-height so long tickets scroll, not clip', () => {
+    // The rail is a bounded flex column. With the default `flex-shrink: 1` the
+    // order-lines card shrank and, since it hides its overflow, every line past
+    // the first few was clipped with nothing to scroll — orders looked cut off.
+    expect(rule(styles, '.taker-page.taker-fixed .ts-right > *')).toMatch(/flex-shrink:\s*0/)
+    // The rail must still own the scrolling for that to help.
+    expect(styles).toMatch(/\.taker-page\.taker-fixed \.ts-right\s*\{[^}]*overflow-y:\s*auto/)
   })
 
   it('stops being sticky on a narrow screen, where it would overlap', () => {

@@ -2112,6 +2112,15 @@
     <!-- Dashboard alert modal for urgent notifications -->
     <AlertModal v-if="currentAlert" :show="true" :title="currentAlert.title" :body="currentAlert.body"
       :details="alertDetails" :timestamp="currentAlert.created_at" :type="alertType" @dismiss="dismissCurrentAlert" />
+
+    <!-- Cancel dialog: a standalone room or a whole/subset of a group. -->
+    <CancelReservationModal
+      :show="showCancel"
+      :reservation="cancelTarget"
+      :busy="actionBusy"
+      @cancel="showCancel = false"
+      @confirm="confirmCancel"
+    />
   </div>
 </template>
 
@@ -2122,6 +2131,7 @@ import { useNotificationStore } from '@/stores/notifications'
 import { roomApi, reservationApi, guestApi, housekeepingApi, laundryApi, invoiceApi, inventoryApi, paymentApi, companyApi, hotelSettingsApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import AlertModal from '@/components/AlertModal.vue'
+import CancelReservationModal from '@/components/CancelReservationModal.vue'
 import RoleBadge from '@/components/RoleBadge.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
@@ -3615,9 +3625,30 @@ function doCheckOut(bar) {
   runAction(() => reservationApi.checkOut(bar.id, {}))
 }
 
-/** Cancels the booking (pending/confirmed bars). */
+// Cancellation dialog state. A standalone room confirms inline; a grouped
+// booking lists its rooms so the desk can cancel some or all of them.
+const showCancel = ref(false)
+const cancelTarget = ref(null)
+
+/** Opens the cancel dialog for a booking (standalone or grouped). */
 function doCancel(bar) {
-  runAction(() => reservationApi.cancel(bar.id))
+  cancelTarget.value =
+    reservations.value.find((r) => r.reservation_id === bar.id) || {
+      reservation_id: bar.id,
+      guest_name: bar.guest_name,
+      room: bar.room,
+    }
+  showCancel.value = true
+}
+
+/** Runs the cancellation chosen in the dialog against the right endpoint. */
+async function confirmCancel(payload) {
+  await runAction(() =>
+    payload.mode === 'single'
+      ? reservationApi.cancel(payload.reservationIds[0])
+      : reservationApi.cancelGroup(payload.reservationIds),
+  )
+  showCancel.value = false
 }
 
 /* ---------------- Stay-view sub-actions (keep the modal open) ---------------- */
@@ -4815,8 +4846,8 @@ function printInvoiceBreakdown() {
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>${esc(t('stayview.printInvoiceBreakdownTitle'))} · ${esc(header.code)}</title>
 <style>
-  @page { size: A4 portrait; margin: 12mm; }
-  body { font-family: Arial, Helvetica, sans-serif; margin: 0; color: #111; font-size: 12px; line-height: 1.5; }
+  @page { size: A4 portrait; margin: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; margin: 0; color: #111; font-size: 12px; line-height: 1.5; padding: 14mm; }
   .band { height: 8px; background: #062a52; }
   .accent { height: 3px; background: #005eb8; }
   .h { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 16px 0 12px; border-bottom: 3px double #062a52; }
@@ -4839,7 +4870,7 @@ function printInvoiceBreakdown() {
   tr.muted td { color: #94a3b8; }
   tbody tr:nth-child(even) td { background: #f8fafc; }
   .summary tr td { background: #f1f5f9; font-weight: 700; border-top: 1px solid #cbd5e1; }
-  .summary .balance td { background: #eef4ff; border-top: 2px solid #062a52; font-weight: 800; }
+  .summary .balance td { background: #fff; border-top: 2px solid #062a52; font-weight: 800; }
   .summary .balance td.big { font-size: 15px; color: #005eb8; }
   .issued { margin-top: 22px; font-size: 11px; color: #94a3b8; }
   .foot { margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 10px; color: #94a3b8; letter-spacing: .4px; }

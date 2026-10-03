@@ -3006,6 +3006,18 @@ function onKey(e) {
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+/*
+ * Every section keeps its full height so the rail overflows and scrolls.
+ *
+ * Without this the sections flex-shrink into the bounded rail and, because the
+ * order-lines card hides its overflow, each row past the first handful is
+ * clipped with no scrollbar to reach it — a ticket with four or more lines
+ * looked truncated. `flex-shrink: 0` lets the rail grow past its box instead,
+ * which is what turns its `overflow-y: auto` into a real scroll area.
+ */
+.taker-page.taker-fixed .ts-right > * {
+  flex-shrink: 0;
+}
 /* The picker side does not scroll; the food box below the rail does. */
 .taker-page.taker-fixed .ts-left {
   overflow: hidden;
@@ -3950,9 +3962,25 @@ function onKey(e) {
   max-width: 100%;
 }
 
-.cat-item:hover {
-  transform: translateY(-2px);
-  border-color: var(--pad-accent);
+/*
+ * Hover feedback only where a real hover-capable pointer exists.
+ *
+ * On the touch POS the browser leaves `:hover` stuck on the last-tapped card.
+ * Deleting that item's line then cleared `.on-order` but the card kept the
+ * accent border from the stuck hover, so it still looked selected until the
+ * page was refreshed. Gating the rule to `hover: hover` keeps the visual
+ * selection honest on tablets.
+ */
+@media (hover: hover) {
+  .cat-item:hover {
+    transform: translateY(-2px);
+    border-color: var(--pad-accent);
+  }
+
+  .cat-item.out-of-stock:hover {
+    transform: none;
+    border-color: #d4d4d8;
+  }
 }
 
 .cat-item.on-order {
@@ -3966,11 +3994,6 @@ function onKey(e) {
   border-color: #d4d4d8;
   cursor: not-allowed;
   opacity: 0.85;
-}
-
-.cat-item.out-of-stock:hover {
-  transform: none;
-  border-color: #d4d4d8;
 }
 
 .cat-item-name {

@@ -579,6 +579,8 @@ describe('folio operations on the stay view', () => {
     expect(html).toContain('Check in') // dated particulars block
     expect(html).toContain('Check out')
     expect(html).toContain('Balance') // totals row labelled like Folio Operations
+    expect(html).toContain('padding: 14mm') // printed sheet keeps its page padding
+    expect(html).toContain('@page { size: A4 portrait; margin: 0; }')
   })
 })
 
