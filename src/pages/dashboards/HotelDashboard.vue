@@ -1653,7 +1653,7 @@
     <Teleport to="body">
       <Transition name="sv-modal">
         <div v-if="bookingModal" class="sv-modal-backdrop" @click.self="bookingModal = false">
-          <div class="sv-modal" role="dialog" aria-modal="true" :aria-label="$t('stayview.newBooking')">
+          <div class="sv-modal" :class="{ 'sv-modal-lg': roomSelectionsArray.length > 0 || bookingForm.booking_type === 'group' }" role="dialog" aria-modal="true" :aria-label="$t('stayview.newBooking')">
             <div class="sv-modal-head bar-green">
               <span class="sv-modal-head-icon"><i class="fas fa-calendar-plus" aria-hidden="true"></i></span>
               <div class="sv-modal-head-text">
@@ -4681,6 +4681,12 @@ function printEntryInvoice(e) {
   .tot .big { font-size: 16px; color: #005eb8; }
   .issued { margin-top: 26px; font-size: 11px; color: #94a3b8; }
   .foot { margin-top: 8px; padding-top: 10px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 10px; color: #94a3b8; letter-spacing: .4px; }
+
+/* Larger modal for group/multi-room booking */
+.sv-modal-lg {
+  width: 720px;
+  max-width: 96vw;
+}
 </style>
 </head>
 <body>
@@ -5029,6 +5035,12 @@ function printInvoiceBreakdown() {
   .sign .rule { border-top: 1px solid #94a3b8; height: 34px; }
   .sign .cap { font-size: 10.5px; color: #64748b; margin-top: 4px; }
   .foot { margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 10px; color: #94a3b8; letter-spacing: .4px; }
+
+/* Larger modal for group/multi-room booking */
+.sv-modal-lg {
+  width: 720px;
+  max-width: 96vw;
+}
 </style></head><body>
   <div class="band"></div>
   <div class="accent"></div>
@@ -5706,6 +5718,12 @@ function printLedger() {
   tr.cat td { background: #e8e8e8; font-weight: 700; letter-spacing: .05em; }
   tr.item td { font-weight: 700; border-bottom: none; }
   .rpt-foot { margin-top: 12px; font-size: 10px; color: #444; }
+
+/* Larger modal for group/multi-room booking */
+.sv-modal-lg {
+  width: 720px;
+  max-width: 96vw;
+}
 </style></head><body>
 ${head}
 <table>
@@ -9078,5 +9096,11 @@ onUnmounted(() => clearInterval(refreshTimer))
     width: 100%;
     flex: none;
   }
+}
+
+/* Larger modal for group/multi-room booking */
+.sv-modal-lg {
+  width: 720px;
+  max-width: 96vw;
 }
 </style>
