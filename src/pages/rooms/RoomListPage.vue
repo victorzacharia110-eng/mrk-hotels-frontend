@@ -1233,6 +1233,9 @@ const onCellDown = (roomId, iso) => {
   if (pick.roomId !== roomId || !pick.start) {
     calPick.value = { roomId, start: iso, end: iso }
     dragging.value = true
+  } else if (pick.roomId === roomId && !pick.start) {
+    calPick.value = { roomId, start: iso, end: iso }
+    dragging.value = true
   }
 }
 
@@ -1417,8 +1420,17 @@ onMounted(() => {
    drawn in the brand colour and outlined, so it reads as "chosen" without
    looking like the danger red of an actual stop-sell. A stopped cell also takes
    the pointer, since clicking it lifts the night. */
-.cal-cell[role='button'] {
+
+.cal-cell {
   cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.cal-cell:hover:not(.cal-stopped) {
+  background: #e2e8f0;
+}
+.cal-cell.cal-stopped:hover {
+  background: #b91c1c;
 }
 
 .cal-picked {
