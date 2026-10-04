@@ -1204,13 +1204,15 @@ const onCellClick = async (roomId, iso) => {
     return
   }
   const pick = calPick.value
-  // A different room, or no range in progress: start again from this night.
-  if (pick.roomId !== roomId || !pick.start) {
+  if (!pick.start || pick.roomId !== roomId) {
     calPick.value = { roomId, start: iso, end: iso }
     return
   }
-  // Same room, second click: close the range, in whichever order it was clicked.
-  calPick.value = { roomId, start: iso < pick.start ? iso : pick.start, end: iso > pick.start ? iso : pick.start }
+  calPick.value = {
+    roomId,
+    start: pick.start < iso ? pick.start : iso,
+    end: pick.start < iso ? iso : pick.start,
+  }
 }
 
 /** Extends a range while dragging, but only within the row the drag began in. */
