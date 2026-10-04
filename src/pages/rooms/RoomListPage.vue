@@ -1429,18 +1429,17 @@ onMounted(() => {
 }
 
 .cal-picked {
-  background: var(--brand-light);
-  box-shadow: inset 0 0 0 2px var(--brand);
+  background: #bfdbfe !important;
+  box-shadow: inset 0 0 0 2px #2563eb !important;
 }
+
 
 .stop-sell-calendar .cal-stopped:hover {
   background: #b91c1c !important;
 }
 
-.cal-key-picked {
-  background: var(--brand-light);
-  box-shadow: inset 0 0 0 2px var(--brand);
-}
+  background: #bfdbfe;
+  box-shadow: inset 0 0 0 2px #2563eb;
 
 /* The confirmation strip. It sits directly under the grid controls so the
    pending nights and the button that saves them are read together. */
