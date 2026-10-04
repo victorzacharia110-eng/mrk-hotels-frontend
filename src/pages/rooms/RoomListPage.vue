@@ -196,9 +196,9 @@
             </div>
           </div>
           <p class="muted">
-            <span class="cal-key cal-key-stopped"></span> {{ $t('rooms.stopSellStopped') }}
-            <span class="cal-key cal-key-free"></span> {{ $t('rooms.stopSellSellable') }}
-            <span class="cal-key cal-key-picked"></span> {{ $t('rooms.stopSellPicked') }}
+            <span class="cal-key cal-key-stopped"></span> <strong>Blocked (Stop Sell)</strong> — Click to lift
+            <span class="cal-key cal-key-free"></span> Sellable — Click to select
+            <span class="cal-key cal-key-picked"></span> <strong>Selected</strong> — Click last night to complete range
           </p>
         </div>
 
@@ -246,8 +246,9 @@
             </button>
           </div>
         </div>
-        <p v-else-if="canEdit" class="muted cal-hint">
-          {{ $t('rooms.stopSellCalendarHint') }}
+        <p v-else-if="canEdit" class="muted cal-hint" style="padding:8px 12px;border-left:3px solid var(--brand);background:#f0f7ff;border-radius:4px;">
+          <strong>How to use Stop Sell:</strong>
+          Click the <strong>first night</strong> on any room, then click the <strong>last night</strong> (or drag across). The blue selection bar will show the range and nights count. Add a reason and click "Set these nights" to block sales. To <strong>lift</strong> a blocked night, just click it again.
         </p>
 
         <div v-if="blockWarnings.length" class="alert alert-warning">
@@ -256,7 +257,10 @@
         </div>
 
         <div v-if="blocksLoading" class="alert alert-info">{{ $t('rooms.loading') }}</div>
-        <div v-else-if="calRooms.length" class="table-scroll cal-scroll">
+        <p v-if="calRooms.length && canEdit" class="muted" style="font-size:12px;margin-top:-4px;margin-bottom:10px;">
+          <i class="fas fa-info-circle"></i> Tip: Click first night → Click last night (or drag). Click blocked cell to lift it. Table scrolls horizontally/vertically if many rooms/days.
+        </p>
+        <div v-else-if="calRooms.length" class="table-scroll cal-scroll" style="max-height:70vh;overflow:auto;">
           <table class="table stop-sell-calendar">
             <thead>
               <tr>
