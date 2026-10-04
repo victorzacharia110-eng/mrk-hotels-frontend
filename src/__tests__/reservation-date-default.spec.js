@@ -19,13 +19,13 @@ vi.mock('@/api', () => ({
 }))
 
 // The business date is the hotel's own night-audit date, not the browser's.
-const workingDate = { value: '2026-10-02' }
-vi.mock('@/stores/workingDate', () => ({
-  useWorkingDateStore: () => ({
-    get workingDate() {
-      return workingDate.value
+const businessDate = { value: '2026-10-02' }
+vi.mock('@/stores/businessDate', () => ({
+  useBusinessDateStore: () => ({
+    get current() {
+      return businessDate.value
     },
-    ensureLoaded: async () => workingDate.value,
+    ensureLoaded: async () => businessDate.value,
   }),
 }))
 
@@ -58,7 +58,7 @@ function emptyPage() {
 describe('ReservationListPage business-date range', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    workingDate.value = '2026-10-02'
+    businessDate.value = '2026-10-02'
     index.mockReset().mockResolvedValue(emptyPage())
     show.mockReset().mockResolvedValue({ data: { reservation: {} } })
     options.mockReset().mockResolvedValue({ data: { data: [] } })
@@ -73,7 +73,7 @@ describe('ReservationListPage business-date range', () => {
   })
 
   it('leaves the range alone when the business date is not known yet', async () => {
-    workingDate.value = ''
+    businessDate.value = ''
     const wrapper = build()
     await flushPromises()
 
@@ -88,7 +88,7 @@ describe('ReservationListPage business-date range', () => {
     expect(wrapper.vm.filters.from).toBe('2026-10-02')
 
     // A night audit rolls the hotel forward; re-applying moves the range.
-    workingDate.value = '2026-10-03'
+    businessDate.value = '2026-10-03'
     wrapper.vm.applyBusinessDate()
     expect(wrapper.vm.filters.from).toBe('2026-10-03')
     expect(wrapper.vm.filters.to).toBe('2026-10-03')

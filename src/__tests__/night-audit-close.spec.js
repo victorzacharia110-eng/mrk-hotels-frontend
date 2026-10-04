@@ -17,6 +17,7 @@ vi.mock('@/api', () => ({
     close: (...a) => close(...a),
   },
   fbDayCloseApi: { index: vi.fn().mockResolvedValue({ data: {} }) },
+  businessDateApi: { show: vi.fn().mockResolvedValue({ data: {} }) },
 }))
 
 const NightAuditPage = (await import('@/pages/reception/NightAuditPage.vue')).default

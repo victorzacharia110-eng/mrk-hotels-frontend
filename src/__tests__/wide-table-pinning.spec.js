@@ -255,8 +255,9 @@ describe('Wide tables stay usable when the screen is small', () => {
 
     // Guards the gap above: if only management actions render, the sweep proves
     // nothing, so insist the front-desk buttons were the ones inspected.
-    // Read the labels from i18n rather than hardcoding them, so rewording a
-    // button does not read as a failure here.
+    // Delete Permanently is management-only, so it is not in this front-desk
+    // sweep. Read the labels from i18n rather than hardcoding them, so
+    // rewording a button does not read as a failure here.
     const t = i18n.global.t.bind(i18n.global)
     const expected = [
       t('common.view'),
@@ -264,7 +265,6 @@ describe('Wide tables stay usable when the screen is small', () => {
       t('reservations.checkOut'),
       t('reservations.noShow'),
       t('common.cancel'),
-      t('reservations.deletePermanent'),
     ]
     for (const action of expected) {
       expect(seen).toContain(action)

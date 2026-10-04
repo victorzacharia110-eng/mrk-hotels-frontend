@@ -306,13 +306,13 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { nightAuditApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import ConfirmModal from '@/components/ConfirmModal.vue'
-import { useWorkingDateStore } from '@/stores/workingDate'
+import { useBusinessDateStore } from '@/stores/businessDate'
 import { useTenantCurrency } from '@/utils/currency'
 
 const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
-const workingDateStore = useWorkingDateStore()
+const businessDateStore = useBusinessDateStore()
 
 /** The browser's own date, for the moment before the hotel timezone is known. */
 const localToday = () => {
@@ -323,20 +323,20 @@ const localToday = () => {
 // The open business date is the day an audit is actually run against, and it
 // is expressed in the hotel's timezone. `toISOString()` was reading UTC here,
 // which is a day behind the hotel for part of every evening.
-const selectedDate = ref(workingDateStore.workingDate || localToday())
+const selectedDate = ref(businessDateStore.current || localToday())
 
 /** Once the guest picks a date themselves, stop moving it under them. */
 const userPickedDate = ref(false)
 
 watch(
-  () => workingDateStore.workingDate,
+  () => businessDateStore.current,
   (date) => {
     if (!userPickedDate.value && date) selectedDate.value = date
   },
 )
 
 /** The hotel's current calendar day, in the hotel's own timezone. */
-const today = computed(() => workingDateStore.today || localToday())
+const today = computed(() => businessDateStore.calendarToday || localToday())
 
 /**
  * A business day can only be closed once it has fully passed — the backend
@@ -569,8 +569,12 @@ function goToDate(date) {
   onPickDate()
 }
 
-onMounted(() => {
-  workingDateStore.ensureLoaded()
+onMounted(async () => {
+  // Open on the hotel's actual business date, not the browser's calendar day.
+  await businessDateStore.ensureLoaded()
+  if (!userPickedDate.value && businessDateStore.current) {
+    selectedDate.value = businessDateStore.current
+  }
   load()
 })
 </script>

@@ -247,7 +247,7 @@
                   <span class="btn-label">{{ $t('common.cancel') }}</span>
                 </button>
                 <button
-                  v-if="['checked_out', 'cancelled'].includes(r.status) && canOperate"
+                  v-if="['checked_out', 'cancelled'].includes(r.status) && canVoid"
                   class="btn btn-sm btn-danger"
                   :title="$t('reservations.deletePermanent')"
                   :aria-label="$t('reservations.deletePermanent')"
@@ -1078,21 +1078,22 @@
         </div>
 
         <div class="form-group">
-          <label>{{ $t('reservations.deleteTypeName') }}</label>
-          <input
-            v-model="deleteName"
-            type="text"
+          <label>{{ $t('reservations.voidReason') }}</label>
+          <textarea
+            v-model="deleteReason"
             class="input"
+            rows="3"
+            maxlength="255"
             autocomplete="off"
-            :placeholder="String(deleteTarget?.guest_name || '').toUpperCase()"
+            :placeholder="$t('reservations.voidReasonPlaceholder')"
             @keyup.enter="confirmDelete"
-          />
+          ></textarea>
         </div>
         <div class="modal-foot">
           <button class="btn btn-secondary" @click="closeDelete">{{ $t('common.cancel') }}</button>
           <button
             class="btn btn-danger"
-            :disabled="!deleteNameMatches || deleting"
+            :disabled="!deleteReason.trim() || deleting"
             @click="confirmDelete"
           >
             <i class="fas fa-trash-can"></i>
@@ -1117,7 +1118,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { useWorkingDateStore } from '@/stores/workingDate'
+import { useBusinessDateStore } from '@/stores/businessDate'
 import { guestApi, invoiceApi, paymentApi, publicApi, reservationApi } from '@/api'
 import { saveBlob } from '@/utils/download'
 import { collectAllRows } from '@/utils/export'
@@ -1151,8 +1152,10 @@ const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()
-const workingDateStore = useWorkingDateStore()
+const businessDateStore = useBusinessDateStore()
 const canOperate = computed(() => authStore.canOperate)
+// Permanent delete / void is management-only (backend route is level:80).
+const canVoid = computed(() => authStore.can(80))
 
 // Booking and room type vocabularies shared by the filters and the form.
 const BOOKING_TYPES = ['single', 'couple', 'family', 'group']
@@ -1215,7 +1218,7 @@ const filters = reactive({ status: '', booking_type: '', from: '', to: '', searc
 
 /** Applies the current business date to the FROM/TO range. */
 function applyBusinessDate() {
-  const day = workingDateStore.workingDate
+  const day = businessDateStore.current
   if (day) {
     filters.from = day
     filters.to = day
@@ -1247,15 +1250,15 @@ function blankForm() {
     id_type: '',
     id_number: '',
     booking_type: 'single',
-    booking_date: todayISO(),
+    booking_date: businessDateStore.current,
     room_type: '',
     selected_rooms: [],
     // For a multi-room party: the booker's own room (defaults to the first
     // selected). Ignored for a single-room booking.
     primary_room_id: '',
     booking_source: 'walk_in',
-    check_in_date: todayISO(),
-    check_out_date: addDays(todayISO(), 1),
+    check_in_date: businessDateStore.current,
+    check_out_date: addDays(businessDateStore.current, 1),
     num_days: 1,
     num_adults: 1,
     num_children: 0,
@@ -2242,20 +2245,10 @@ const noShow = (reservation) =>
 
 const showDelete = ref(false)
 const deleteTarget = ref(null)
-const deleteName = ref('')
+const deleteReason = ref('')
 const deleting = ref(false)
 const deletePreview = ref(null)
 const loadingDeletePreview = ref(false)
-
-/** The guest name must be typed in caps; the match itself is case-insensitive. */
-const deleteNameMatches = computed(() => {
-  const target = deleteTarget.value
-  if (!target) return false
-  const expected = String(target.guest_name || '')
-    .trim()
-    .toUpperCase()
-  return expected.length > 0 && deleteName.value.trim().toUpperCase() === expected
-})
 
 /**
  * Opens the permanent-delete modal for a checked-out or cancelled reservation
@@ -2264,7 +2257,7 @@ const deleteNameMatches = computed(() => {
  */
 async function openDelete(reservation) {
   deleteTarget.value = reservation
-  deleteName.value = ''
+  deleteReason.value = ''
   deletePreview.value = null
   loadingDeletePreview.value = true
   showDelete.value = true
@@ -2278,23 +2271,23 @@ async function openDelete(reservation) {
   }
 }
 
-/** Closes the delete modal and clears the typed confirmation name. */
+/** Closes the delete modal and clears the typed reason. */
 function closeDelete() {
   showDelete.value = false
   deleteTarget.value = null
-  deleteName.value = ''
+  deleteReason.value = ''
   deletePreview.value = null
 }
 
-/** Permanently deletes the reservation once the typed guest name matches. */
+/** Permanently deletes the reservation once a reason has been given. */
 async function confirmDelete() {
   const target = deleteTarget.value
-  if (!target || !deleteNameMatches.value) return
+  if (!target || !deleteReason.value.trim()) return
   deleting.value = true
   error.value = ''
   try {
     const res = await reservationApi.destroy(target.reservation_id, {
-      confirmed_name: deleteName.value.trim(),
+      reason: deleteReason.value.trim(),
     })
     success.value = res.data.message || t('reservations.deleted')
     closeDelete()
@@ -2309,7 +2302,7 @@ async function confirmDelete() {
 onMounted(async () => {
   // The business date arrives from the backend; seed the range once it is known
   // so a night audit that has rolled the hotel forward is reflected here.
-  await workingDateStore.ensureLoaded()
+  await businessDateStore.ensureLoaded()
   if (!filters.from && !filters.to) applyBusinessDate()
   load()
   loadOptions()

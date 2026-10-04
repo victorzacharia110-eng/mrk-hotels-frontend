@@ -21,12 +21,11 @@
       
       <!-- Toolbar: room/reservation status pills, search and assign-room shortcut -->
       <div class="sv-toolbar">
-        <!-- Signed-in session chip: avatar initial + name + role badge -->
+        <!-- Signed-in session chip: avatar initial + name only (review: no role here) -->
         <div class="session-chip">
           <span class="session-avatar">{{ sessionInitial }}</span>
           <span class="session-meta">
             <span class="session-name">{{ authStore.user?.full_name || authStore.user?.name }}</span>
-            <RoleBadge />
           </span>
         </div>
         <div class="sv-pills">
@@ -35,9 +34,21 @@
           </span>
         </div>
         <div class="sv-toolbar-right">
-          <div class="sv-search">
+          <div class="sv-search" :class="{ open: searchOpen }" @focusout="onSearchFocusOut">
             <i class="fas fa-search" aria-hidden="true"></i>
-            <input v-model="search" type="text" :placeholder="$t('stayview.searchPlaceholder')" />
+            <input v-model="search" type="text" :placeholder="$t('stayview.searchPlaceholder')"
+              @focus="searchOpen = true" @keydown.esc="searchOpen = false" />
+            <div v-if="searchOpen && search.trim().length >= 2" class="sv-search-results">
+              <button v-for="hit in searchResults" :key="hit.key" type="button" class="sv-search-hit"
+                @mousedown.prevent="openSearchHit(hit)">
+                <i :class="hit.icon" aria-hidden="true"></i>
+                <span class="sv-hit-text">
+                  <span class="sv-hit-main">{{ hit.title }}</span>
+                  <span class="sv-hit-sub">{{ hit.subtitle }}</span>
+                </span>
+              </button>
+              <p v-if="!searchResults.length" class="sv-search-empty">{{ $t('stayview.searchNoResults') }}</p>
+            </div>
           </div>
           <button v-if="canSeeFrontDesk" type="button" class="btn btn-primary sv-assign" @click="openNewBooking">
             <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('stayview.newBooking') }}
@@ -65,7 +76,7 @@
             <button type="button" class="sv-nav-btn" :aria-label="$t('stayview.previous')" @click="shift(-7)">
               <i class="fas fa-chevron-left" aria-hidden="true"></i>
             </button>
-            <button type="button" class="sv-today-btn" @click="goToday">{{ $t('stayview.today') }}</button>
+            <button type="button" class="sv-today-btn" :title="businessDateStore.current" @click="goToday">{{ $t('stayview.businessDate') }}</button>
             <button type="button" class="sv-nav-btn" :aria-label="$t('stayview.next')" @click="shift(7)">
               <i class="fas fa-chevron-right" aria-hidden="true"></i>
             </button>
@@ -1618,8 +1629,9 @@
             <div class="sv-modal-body">
               <p class="sv-void-hint">{{ $t('stayview.voidHint') }}</p>
               <label class="sv-field">
-                <span>{{ $t('stayview.guestName') }}</span>
-                <input v-model="voidName" type="text" class="input" required :placeholder="activeBar?.label || ''" />
+                <span>{{ $t('stayview.voidReason') }}</span>
+                <textarea v-model="voidReason" class="input" rows="3" maxlength="255" required
+                  :placeholder="$t('stayview.voidReasonPlaceholder')"></textarea>
               </label>
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
             </div>
@@ -1627,7 +1639,7 @@
               <button type="button" class="btn btn-secondary" :disabled="actionBusy" @click="voidOpen = false">
                 {{ $t('common.close') }}
               </button>
-              <button type="button" class="btn sv-modal-danger" :disabled="actionBusy || !voidName.trim()"
+              <button type="button" class="btn sv-modal-danger" :disabled="actionBusy || !voidReason.trim()"
                 @click="confirmVoid">
                 {{ actionBusy ? $t('common.loading') : $t('stayview.confirmVoid') }}
               </button>
@@ -1721,7 +1733,7 @@
               </div>
               <div class="sv-field-row">
                 <CountryCitySelect v-model:countryCode="bookingForm.country_code" v-model:city="bookingForm.city"
-                  :required="false" />
+                  :required="false" city-as-dropdown />
               </div>
               <div class="sv-field-row">
                 <label class="sv-field">
@@ -1738,7 +1750,7 @@
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.room') }}</span>
-                  <SearchableSelect v-model="bookingForm.room_id" :options="roomMoveOptions"
+                  <SearchableSelect v-model="bookingForm.room_id" :options="bookingRoomOptions"
                     :search-placeholder="$t('stayview.searchRoom')" force-search />
                   <span v-if="bookingErrors.room_id" class="sv-field-msg" role="alert"><i
                       class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.room_id }}</span>
@@ -1763,11 +1775,7 @@
               </div>
               <div class="sv-field-row">
                 <label class="sv-field">
-                  <span>{{ $t('stayview.total') }}<em class="sv-auto"> · {{ $t('reservations.autoTotal', {
-  currency: curCode(),
-                    amount:
-                      bookingNights && bookingNights > 0 ? formatPrice(bookingNights * bookingRate) : 0 })
-                      }}</em></span>
+                  <span>{{ $t('stayview.total') }}</span>
                   <input v-model.number="bookingForm.total_amount" type="number" min="0" class="input" required />
                 </label>
                 <label class="sv-field">
@@ -1802,9 +1810,25 @@
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
             </div>
             <div class="sv-modal-actions">
-              <button type="button" class="btn btn-primary sv-modal-manage" :disabled="actionBusy"
-                @click="submitBooking">
-                <i class="fas fa-check" aria-hidden="true"></i>
+              <!-- Walk-in → immediate check-in (green bar). Reservation → held
+                   (red bar). Walk-ins only exist on the current business date;
+                   any other arrival can only be saved as a reservation. -->
+              <template v-if="bookingOnBusinessDate">
+                <button type="button" class="btn sv-modal-manage sv-btn-walkin" :disabled="actionBusy"
+                  @click="submitBooking('walk_in')">
+                  <i class="fas" :class="actionBusy ? 'fa-spinner fa-spin' : 'fa-person-walking-arrow-right'"
+                    aria-hidden="true"></i>
+                  {{ actionBusy ? $t('common.loading') : $t('stayview.walkIn') }}
+                </button>
+                <button type="button" class="btn btn-primary sv-modal-manage sv-btn-split" :disabled="actionBusy"
+                  @click="submitBooking('reservation')">
+                  <i class="fas" :class="actionBusy ? 'fa-spinner fa-spin' : 'fa-calendar-check'" aria-hidden="true"></i>
+                  {{ actionBusy ? $t('common.loading') : $t('stayview.reservationAction') }}
+                </button>
+              </template>
+              <button v-else type="button" class="btn btn-primary sv-modal-manage" :disabled="actionBusy"
+                @click="submitBooking('reservation')">
+                <i class="fas" :class="actionBusy ? 'fa-spinner fa-spin' : 'fa-calendar-check'" aria-hidden="true"></i>
                 {{ actionBusy ? $t('common.loading') : $t('stayview.createBooking') }}
               </button>
             </div>
@@ -2132,7 +2156,6 @@ import { roomApi, reservationApi, guestApi, housekeepingApi, laundryApi, invoice
 import { useAuthStore } from '@/stores/auth'
 import AlertModal from '@/components/AlertModal.vue'
 import CancelReservationModal from '@/components/CancelReservationModal.vue'
-import RoleBadge from '@/components/RoleBadge.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
@@ -2156,10 +2179,15 @@ import {
   required,
 } from '@/utils/formValidation'
 import { useCategoriesStore } from '@/stores/categories'
+import { useBusinessDateStore } from '@/stores/businessDate'
 
 import { useTenantCurrency } from '@/utils/currency'
 
 const { curCode } = useTenantCurrency()
+
+// The hotel's night-audit business date: every "today" on the board reads
+// from here, not the browser clock, so reception agrees with the audit.
+const businessDateStore = useBusinessDateStore()
 
 const { t, te } = useI18n()
 const notifStore = useNotificationStore()
@@ -2173,19 +2201,96 @@ const DAYS = 14
 // Number of past days shown before today (so checked-out bars stay visible).
 const PAST_DAYS = 3
 
-/** Default window start: a few days before today, like a real stay view. */
+/** Local-midnight Date for the hotel's business date (wall clock until loaded). */
+function businessToday() {
+  return parseDate(businessDateStore.current) || startOfDay(new Date())
+}
+
+/** The business date as a YYYY-MM-DD key. */
+function businessTodayKey() {
+  return isoKey(businessToday())
+}
+
+/** Default window start: a few days before the business date, like a stay view. */
 function defaultWindowStart() {
-  return addDays(startOfDay(new Date()), -PAST_DAYS)
+  return addDays(businessToday(), -PAST_DAYS)
 }
 
 // Chart state: window start, room list, reservation list and search text.
 const windowStart = ref(defaultWindowStart())
+// Once the user has panned the window, don't yank it back when the business
+// date loads or rolls over; "Today" re-centres and clears this.
+let windowPinned = false
 const rooms = ref([])
 const reservations = ref([])
 const search = ref('')
+const searchOpen = ref(false)
 const loading = ref(true)
 const loaded = ref(false)
 const error = ref('')
+
+// Live results for the toolbar search: matching stays (guest, room or
+// reference) followed by matching rooms, so reception can jump straight to
+// the stay/room instead of only filtering the tape.
+const searchResults = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  if (q.length < 2) return []
+  const hits = []
+  for (const r of reservations.value) {
+    if (hits.length >= 6) break
+    const name = String(r.guest_name || '').toLowerCase()
+    const room = String(r.room?.room_number || '')
+    const ref = String(r.booking_reference || '').toLowerCase()
+    if (!name.includes(q) && !room.includes(q) && !ref.includes(q)) continue
+    hits.push({
+      key: `res-${r.reservation_id}`,
+      kind: 'reservation',
+      icon: 'fas fa-bed',
+      title: r.guest_name || '—',
+      subtitle: [room && `${t('stayview.room')} ${room}`, r.booking_reference, r.status]
+        .filter(Boolean)
+        .join(' · '),
+      reservation: r,
+    })
+  }
+  for (const room of rooms.value) {
+    if (hits.length >= 8) break
+    if (!String(room.room_number || '').toLowerCase().includes(q)) continue
+    if (hits.some((h) => h.kind === 'room' && h.room?.room_id === room.room_id)) continue
+    hits.push({
+      key: `room-${room.room_id}`,
+      kind: 'room',
+      icon: 'fas fa-door-open',
+      title: `${t('stayview.room')} ${room.room_number}`,
+      subtitle: `${roomTypeLabel(room.room_type)} · ${room.status}`,
+      room,
+    })
+  }
+  return hits
+})
+
+/** Opens a search hit: a stay on the tape, or a room's details panel. */
+function openSearchHit(hit) {
+  searchOpen.value = false
+  if (hit.kind === 'reservation' && hit.reservation) {
+    const bar = toPanelBar(hit.reservation)
+    if (isHousekeepingStaff.value) {
+      const room = rooms.value.find((r) => r.room_id === bar.roomId)
+      if (room) openRoomModal(room)
+    } else {
+      openBarModal(bar)
+    }
+    return
+  }
+  if (hit.kind === 'room' && hit.room) openRoomModal(hit.room)
+}
+
+/** Slight delay lets a hit's mousedown land before the blur closes the panel. */
+function onSearchFocusOut() {
+  setTimeout(() => {
+    searchOpen.value = false
+  }, 120)
+}
 
 // Operational alerts modal state (urgent notifications from the store).
 const currentAlert = computed(() => notifStore.alerts[0] || null)
@@ -2330,7 +2435,7 @@ async function load(silent = false) {
 
 /** The 14 day columns of the current window. */
 const days = computed(() => {
-  const todayIso = isoKey(startOfDay(new Date()))
+  const todayIso = businessTodayKey()
   return Array.from({ length: DAYS }, (_, i) => {
     const date = addDays(windowStart.value, i)
     const dow = date.toLocaleDateString([], { weekday: 'short' }).toUpperCase()
@@ -2449,7 +2554,7 @@ function toPanelBar(r, colorClass = '') {
     colorClass =
       r.status === 'checked_out' ? 'bar-blue'
         : r.status === 'checked_in'
-          ? (departure.toDateString() === new Date().toDateString() ? 'bar-purple' : 'bar-green')
+          ? (departure.toDateString() === businessToday().toDateString() ? 'bar-purple' : 'bar-green')
           : 'bar-red'
   }
   const fmt = (d) => `${d.getDate()}/${d.getMonth() + 1}/${String(d.getFullYear()).slice(2)}`
@@ -2577,8 +2682,10 @@ const groups = computed(() => {
 
 /** Per-day totals for the footer: available rooms and occupancy percentage. */
 const footer = computed(() => {
-  const total = rooms.value.length
-  const allIds = new Set(rooms.value.map((r) => r.room_id))
+  // Maintenance rooms are not sellable, so they never count as "available".
+  const bookable = rooms.value.filter((r) => r.status !== 'maintenance')
+  const total = bookable.length
+  const allIds = new Set(bookable.map((r) => r.room_id))
   const result = {}
   for (const d of days.value) {
     const occupied = occupiedOnDay(allIds, d.date)
@@ -2592,9 +2699,19 @@ const footer = computed(() => {
 
 /** Summary pill counts shown above the chart. */
 const pills = computed(() => {
-  const today = startOfDay(new Date())
+  const today = businessToday()
   const tomorrow = addDays(today, 1)
   const count = (statuses) => rooms.value.filter((r) => statuses.includes(r.status)).length
+  // In-house guests on the business date, counted from the STAYS (the same
+  // source as the tape) rather than the room's housekeeping status, so the
+  // "Occupied" pill matches the checked-in reservations the desk sees.
+  const inHouse = new Set()
+  for (const r of tapeReservations.value) {
+    if (r.status !== 'checked_in') continue
+    const roomId = reservationRoomId(r)
+    const { arrival, departure } = reservationDates(r)
+    if (roomId && arrival && departure && arrival <= today && departure > today) inHouse.add(roomId)
+  }
   const reserved = tapeReservations.value.filter((r) => {
     if (!['pending', 'confirmed'].includes(r.status)) return false
     const { arrival } = reservationDates(r)
@@ -2607,7 +2724,7 @@ const pills = computed(() => {
   }).length
   return [
     { key: 'vacant', label: t('stayview.vacant'), count: count(['available']) },
-    { key: 'occupied', label: t('stayview.occupied'), count: count(['occupied']) },
+    { key: 'occupied', label: t('stayview.occupied'), count: inHouse.size },
     { key: 'reserved', label: t('stayview.reserved'), count: reserved },
     { key: 'blocked', label: t('stayview.blocked'), count: count(['maintenance']) },
     { key: 'dueout', label: t('stayview.dueOut'), count: dueOut },
@@ -2619,14 +2736,16 @@ const pills = computed(() => {
 
 /** Shifts the visible window by the given number of days. */
 function shift(daysCount) {
+  windowPinned = true
   windowStart.value = addDays(windowStart.value, daysCount)
   // The chart only holds the slice it fetched; moving to another week
   // needs a fresh (quiet) pull for that window.
   load(true)
 }
 
-/** Resets the window to its default position (a few days before today). */
+/** Resets the window to its default position (a few days before the business date). */
 function goToday() {
+  windowPinned = false
   windowStart.value = defaultWindowStart()
   load(true)
 }
@@ -3075,9 +3194,7 @@ const isStayClosed = computed(() => {
   if (!['checked_out', 'cancelled', 'no_show'].includes(bar?.rawStatus)) return false
   const departure = isoToLocalDay(bar?.departureIso) || isoToLocalDay(folio.value?.reservation?.check_out_date)
   if (!departure) return bar?.rawStatus === 'checked_out'
-  const now = new Date()
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  return departure < todayStart
+  return departure < businessToday()
 })
 
 // The reference panel's tab strip: Folio Operations, Booking Details, Guest
@@ -3716,7 +3833,15 @@ const creditExceeded = computed(
  * derived fallback as the folio card so a payload without balance_due does
  * not read as 0 here either.
  */
-const folioBalanceDue = computed(() => folioCardBalance(folio.value, activeBar.value))
+const folioBalanceDue = computed(() => {
+  // The payment/creditor form settles the folio the desk is VIEWING. When a
+  // related/split folio is open its own ledger balance is the one to collect,
+  // never the current folio's (review: post-to-creditors pre-filled the wrong
+  // balance while viewing a related folio).
+  const viewed = viewingFolio.value?.reservation
+  if (viewed) return folioRowBalance(viewed)
+  return folioCardBalance(folio.value, activeBar.value)
+})
 
 /**
  * Loads the postable (active) companies for the creditor picker. Called when
@@ -4441,20 +4566,20 @@ bindBlurValidation(watch, () => amendForm.value, amendSnapshot, amendTouched, am
 
 /* ----- Void reservation ----- */
 const voidOpen = ref(false)
-const voidName = ref('')
+const voidReason = ref('')
 function openVoid() {
   moreOpen.value = false
-  voidName.value = ''
+  voidReason.value = ''
   actionError.value = ''
   voidOpen.value = true
 }
 async function confirmVoid() {
   const bar = activeBar.value
-  if (!bar?.id || !voidName.value.trim()) return
+  if (!bar?.id || !voidReason.value.trim()) return
   actionBusy.value = true
   actionError.value = ''
   try {
-    await reservationApi.destroy(bar.id, { confirmed_name: voidName.value.trim() })
+    await reservationApi.destroy(bar.id, { reason: voidReason.value.trim() })
     voidOpen.value = false
     closeBarModal()
     await load(true)
@@ -4873,6 +4998,10 @@ function printInvoiceBreakdown() {
   .summary .balance td { background: #fff; border-top: 2px solid #062a52; font-weight: 800; }
   .summary .balance td.big { font-size: 15px; color: #005eb8; }
   .issued { margin-top: 22px; font-size: 11px; color: #94a3b8; }
+  .sign { display: flex; gap: 48px; margin-top: 28px; }
+  .sign .line { flex: 1; }
+  .sign .rule { border-top: 1px solid #94a3b8; height: 34px; }
+  .sign .cap { font-size: 10.5px; color: #64748b; margin-top: 4px; }
   .foot { margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 10px; color: #94a3b8; letter-spacing: .4px; }
 </style></head><body>
   <div class="band"></div>
@@ -4899,6 +5028,10 @@ function printInvoiceBreakdown() {
       ${summary.join('')}
     </tfoot>
   </table>
+  <div class="sign">
+    <div class="line"><div class="rule"></div><div class="cap">${esc(t('stayview.guestSignature'))}</div></div>
+    <div class="line"><div class="rule"></div><div class="cap">${esc(t('stayview.staffSignature'))}</div></div>
+  </div>
   <p class="issued">${esc(t('stayview.printEntryInvoiceNote', { date: formatDateDMY(now) }))}</p>
   <div class="foot">${esc(company.name)} · ${esc(t('stayview.printedBy'))}: ${esc(printedBy.value)} · ${esc(stamp)}</div>
   <script>window.onload = function () { window.print() }</${'script'}>
@@ -4953,14 +5086,12 @@ const canSeeRoomPostings = computed(() => {
 // checked-out guest merely reviews what was posted during the stay.
 const canPostRoomPostings = computed(() => activeBar.value?.rawStatus === 'checked_in')
 
-// Voiding a booking is open to any front-desk staff before the guest checks
-// in; an in-house stay additionally requires a manager or accountant (the
-// backend enforces the same rule inside ReservationService::destroy).
-const canVoidReservation = computed(() => {
-  const mgmtOnly = ['manager', 'accountant', 'hotel_admin', 'owner', 'superadmin']
-  if (activeBar.value?.rawStatus !== 'checked_in') return true
-  return mgmtOnly.includes(authStore.user?.user_role)
-})
+// Voiding a booking is management-only: a receptionist must never be able to
+// erase a reservation (the backend route is gated at level:80 and
+// ReservationService::destroy repeats the check).
+const canVoidReservation = computed(() =>
+  ['manager', 'hotel_admin', 'owner', 'superadmin'].includes(authStore.user?.user_role),
+)
 
 // A nightly room charge IS the frozen stay bill, so editing or voiding those
 // rows is manager/accountant work. A closed (checked-out) folio is a final
@@ -5127,7 +5258,7 @@ const dotWhyGuest = computed(() => (dotWhyOccupied.value && dotWhyRoom.value) ? 
 const dotWhyWindow = computed(() => {
   const room = dotWhyRoom.value
   if (!room || !dotWhyOccupied.value) return ''
-  const today = startOfDay(new Date())
+  const today = businessToday()
   const stay = (reservations.value || []).find((r) => {
     if (!r || r.status !== 'checked_in') return false
     if (reservationRoomId(r) !== room.room_id) return false
@@ -5143,7 +5274,7 @@ const dotWhyWindow = computed(() => {
 /** Rule checklist explaining a room's dot colour (shared by both modals). */
 function dotRulesFor(room) {
   if (!room) return []
-  const today = startOfDay(new Date())
+  const today = businessToday()
   const dates = (r) => { try { return reservationDates(r) } catch { return { arrival: null, departure: null } } }
   const stay = (reservations.value || []).find((r) => {
     if (!r || r.status !== 'checked_in') return false
@@ -5231,12 +5362,12 @@ async function wireLogoAccent() {
 }
 
 function roomDotOccupied(room) {
-  return roomOccupiedToday(reservations.value, room?.room_id, startOfDay(new Date()))
+  return roomOccupiedToday(reservations.value, room?.room_id, businessToday())
 }
 
 /** Guest name of the current stay in a room (from the visible window stays). */
 function hkRoomGuest(roomId) {
-  const today = startOfDay(new Date())
+  const today = businessToday()
   const stay = (reservations.value || []).find((r) => {
     if (reservationRoomId(r) !== roomId) return false
     const { arrival, departure } = reservationDates(r)
@@ -5337,7 +5468,7 @@ const ledger = ref(null)
 
 /** Opens the ledger modal with a default one-week date range. */
 function openLedgerModal() {
-  const today = startOfDay(new Date())
+  const today = businessToday()
   ledgerForm.value = {
     from: isoKey(addDays(today, -6)),
     to: isoKey(today),
@@ -5591,8 +5722,8 @@ const bookingSourceOptions = computed(() => [
 
 /** Implements a fresh booking form with today → tomorrow defaults. */
 function resetBookingForm() {
-  const today = isoKey(startOfDay(new Date()))
-  const tomorrow = isoKey(addDays(startOfDay(new Date()), 1))
+  const today = businessTodayKey()
+  const tomorrow = isoKey(addDays(businessToday(), 1))
   bookingForm.value = {
     first_name: '',
     last_name: '',
@@ -5600,7 +5731,9 @@ function resetBookingForm() {
     country_code: 'TZ',
     city: '',
     booking_type: 'single',
-    room_id: rooms.value[0]?.room_id || null,
+    // No room pre-picked: the desk chooses one and the list then narrows to
+    // that room's type, so the start of the pick shows every sellable room.
+    room_id: null,
     check_in_date: today,
     check_out_date: tomorrow,
     total_amount: null,
@@ -5636,6 +5769,55 @@ const bookingRate = computed(() => {
 /** Suggested total based on nights × rate. */
 const bookingTotal = computed(() => bookingNights.value * bookingRate.value)
 
+/**
+ * A walk-in implies an immediate check-in, so it only exists on the current
+ * business date. Every other arrival can only be saved as a reservation.
+ */
+const bookingOnBusinessDate = computed(
+  () => bookingForm.value.check_in_date === businessDateStore.current,
+)
+
+/** Whether a room is sellable for a date range: not under maintenance and not
+ *  already covered by a blocking stay that overlaps [check-in, check-out). */
+function roomAvailableForRange(room, checkInIso, checkOutIso, excludeReservationId = null) {
+  if (!room || room.status === 'maintenance') return false
+  if (!checkInIso || !checkOutIso) return true
+  const inDate = parseDate(checkInIso)
+  const outDate = parseDate(checkOutIso)
+  if (!inDate || !outDate || outDate <= inDate) return true
+  return !tapeReservations.value.some((r) => {
+    if (excludeReservationId && r.reservation_id === excludeReservationId) return false
+    if (['cancelled', 'no_show', 'checked_out'].includes(r.status)) return false
+    if (String(reservationRoomId(r)) !== String(room.room_id)) return false
+    const { arrival, departure } = reservationDates(r)
+    return arrival && departure && arrival < outDate && departure > inDate
+  })
+}
+
+/** Booking room dropdown: once a room is picked, only available rooms of the
+ *  SAME room type are offered (review: suite → only suites). Before any pick,
+ *  every available room is offered so the type can be chosen freely. */
+const bookingRoomOptions = computed(() => {
+  const f = bookingForm.value
+  const selected = rooms.value.find((r) => r.room_id === f.room_id)
+  const type = selected?.room_type
+  const list = rooms.value
+    .filter((room) => (!type || room.room_type === type) && roomAvailableForRange(room, f.check_in_date, f.check_out_date))
+    .map((room) => ({
+      value: room.room_id,
+      label: `${room.room_number} · ${roomTypeLabel(room.room_type)} · ${curCode()} ${formatPrice(room.price_per_night)}`,
+    }))
+  // Never drop the current selection from its own list, even if it just became
+  // unavailable, so the picker keeps showing what is selected.
+  if (selected && !list.some((o) => o.value === selected.room_id)) {
+    list.unshift({
+      value: selected.room_id,
+      label: `${selected.room_number} · ${roomTypeLabel(selected.room_type)} · ${curCode()} ${formatPrice(selected.price_per_night)}`,
+    })
+  }
+  return list
+})
+
 /** Keep the total in step with the dates and room, so it is automatic. Whenever
  *  the room or the stay dates change, the total recomputes to nights × rate —
  *  the desk can still type a different price afterwards, but changing the dates
@@ -5651,6 +5833,8 @@ watch(
  *  A departing guest's bar only fills the FIRST half of its checkout day, so
  *  that day stays bookable: the arriving guest takes the other half below. */
 function isVacantCell(room, iso) {
+  // Maintenance rooms are never bookable from the chart.
+  if (room?.status === 'maintenance') return false
   const idx = days.value.findIndex((d) => d.iso === iso)
   if (idx < 0) return false
   // While reservations are still being paginated in, the bar track is empty, so
@@ -5665,8 +5849,9 @@ function isVacantCell(room, iso) {
 
 /** Clicking a vacant day opens the booking form with that arrival date. */
 function bookVacantDay(room, iso) {
+  if (room?.status === 'maintenance') return
   const arrival = parseDate(iso)
-  const today = startOfDay(new Date())
+  const today = businessToday()
   if (arrival < today) return
   bookingForm.value = {
     ...bookingForm.value,
@@ -5708,7 +5893,7 @@ function bookingRules() {
     { field: 'advance_payment_method', check: (v, form) => Number(form.advance_payment || 0) > 0 && isBlank(v) ? t('validations.fieldRequired') : '' },
   ]
 }
-async function submitBooking() {
+async function submitBooking(mode = 'reservation') {
   const f = bookingForm.value
   bookingTouched.value = true
   const errors = collectErrors(f, bookingRules())
@@ -5732,7 +5917,14 @@ async function submitBooking() {
       payload.total_amount = bookingTotal.value
     }
     payload.guest_phone = phoneCheck.number
-    await reservationApi.store({ ...payload, status: 'confirmed' })
+    // Create as confirmed first (the API only accepts pending/confirmed here),
+    // then immediately admit a walk-in so the room turns green on the tape.
+    const created = await reservationApi.store({ ...payload, status: 'confirmed' })
+    if (mode === 'walk_in') {
+      const id = created?.data?.reservation?.reservation_id
+      if (!id) throw new Error('Reservation was created but could not be checked in.')
+      await reservationApi.checkIn(id, {})
+    }
   })
   if (!actionError.value) {
     bookingModal.value = false
@@ -5885,10 +6077,19 @@ function formatPrice(value) {
 // Background refresh keeps the stay view current without a spinner flash.
 let refreshTimer = null
 
-onMounted(() => {
-  load()
+onMounted(async () => {
   wireLogoAccent()
-  refreshTimer = setInterval(() => load(true), 30000)
+  // Resolve the hotel's business date before the first paint of the window,
+  // then re-centre if the user hasn't panned away.
+  await businessDateStore.ensureLoaded()
+  if (!windowPinned) windowStart.value = defaultWindowStart()
+  load()
+  refreshTimer = setInterval(() => {
+    businessDateStore.reload().then(() => {
+      if (!windowPinned) windowStart.value = defaultWindowStart()
+      load(true)
+    })
+  }, 30000)
 })
 
 onUnmounted(() => clearInterval(refreshTimer))
@@ -6302,6 +6503,7 @@ onUnmounted(() => clearInterval(refreshTimer))
 }
 
 .sv-search {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -6319,6 +6521,72 @@ onUnmounted(() => clearInterval(refreshTimer))
   flex: 1;
   font-size: 14px;
   background: transparent;
+}
+
+/* Live results under the toolbar search: stays and rooms, click to open. */
+.sv-search-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
+  padding: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+  color: #1f2937;
+}
+
+.sv-search-hit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.sv-search-hit:hover {
+  background: #f1f5f9;
+}
+
+.sv-search-hit i {
+  color: #64748b;
+  width: 16px;
+}
+
+.sv-hit-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sv-hit-main {
+  font-weight: 600;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.sv-hit-sub {
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sv-search-empty {
+  margin: 0;
+  padding: 10px;
+  font-size: 13px;
+  color: #94a3b8;
 }
 
 .sv-assign {
@@ -7382,6 +7650,23 @@ onUnmounted(() => clearInterval(refreshTimer))
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+
+/* Split CREATE BOOKING footer: WALK IN (green) | RESERVATION (red) share the row. */
+.sv-modal-actions .sv-btn-walkin,
+.sv-modal-actions .sv-btn-split {
+  flex: 1;
+  margin-left: 0;
+}
+
+.sv-btn-walkin {
+  background: #16a34a;
+  border: 1px solid #15803d;
+  color: #fff;
+}
+
+.sv-btn-walkin:hover {
+  background: #15803d;
 }
 
 /* Toolbar secondary action buttons */

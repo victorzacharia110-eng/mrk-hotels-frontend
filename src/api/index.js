@@ -340,6 +340,11 @@ export const nightAuditApi = {
   deleteTransaction(id) { return api.delete(`${v1}/night-audit/transactions/${id}`) },
 }
 
+/** Hotel-wide open business date (night-audit based, read by every board). */
+export const businessDateApi = {
+  show() { return api.get(`${v1}/business-date`) },
+}
+
 /** F&B Business-Day Close — cashier/bar/inventory panel day close. */
 export const fbDayCloseApi = {
   index() { return api.get(`${v1}/fnb/day-close`) },
