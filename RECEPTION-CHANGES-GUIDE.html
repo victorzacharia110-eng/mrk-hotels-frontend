@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MRK Hotels - Reception Panel Changes Guide</title>
+  <style>
+    @page {
+      margin: 20mm;
+    }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.6;
+      color: #1a1a1a;
+      font-size: 10.5pt;
+    }
+    .header {
+      background: linear-gradient(90deg, #005FB8 0%, #003366 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      border-radius: 4px;
+      margin-bottom: 25px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 18pt;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .header p {
+      margin: 5px 0 0 0;
+      font-size: 9pt;
+      opacity: 0.9;
+    }
+    h2 {
+      background-color: #f5f9ff;
+      color: #005FB8;
+      padding: 10px 12px;
+      border-left: 4px solid #005FB8;
+      font-size: 13pt;
+      margin-top: 30px;
+      margin-bottom: 15px;
+      page-break-after: avoid;
+    }
+    h3 {
+      color: #003366;
+      font-size: 11pt;
+      margin-top: 18px;
+      margin-bottom: 8px;
+      page-break-after: avoid;
+    }
+    .section {
+      margin-bottom: 20px;
+    }
+    ul {
+      margin: 8px 0;
+      padding-left: 22px;
+    }
+    li {
+      margin-bottom: 5px;
+    }
+    .path {
+      background-color: #f0f7ff;
+      border: 1px solid #b3d9ff;
+      border-left: 3px solid #005FB8;
+      padding: 8px 10px;
+      margin: 8px 0;
+      font-size: 10pt;
+      font-weight: bold;
+      color: #004A99;
+    }
+    .highlight {
+      color: #005FB8;
+      font-weight: bold;
+    }
+    .note {
+      background-color: #f9f9f9;
+      border: 1px solid #e0e0e0;
+      padding: 8px 10px;
+      margin: 8px 0;
+      font-size: 10pt;
+    }
+    .before-after {
+      background-color: #fafafa;
+      padding: 8px 10px;
+      border: 1px solid #e6e6e6;
+      margin: 8px 0;
+      font-size: 9.5pt;
+    }
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 9pt;
+      color: #666666;
+      border-top: 1px solid #e0e0e0;
+      padding-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>MRK Hotels</h1>
+    <p>RECEPTION PANEL CHANGES GUIDE</p>
+    <p>For Non-Technical Staff</p>
+  </div>
+
+  <h2>1. DASHBOARD - TOP TOOLBAR</h2>
+
+  <div class="section">
+    <h3>A. Profile (Name Only)</h3>
+    <div class="before-after"><strong>BEFORE:</strong> Name + Role | <strong>AFTER:</strong> Name only</div>
+    <ul>
+      <li><strong>Location:</strong> Top-right corner of the Dashboard</li>
+      <li><strong>What changed:</strong> Profile chip shows only your name and initials - no job title/role shown</li>
+    </ul>
+    <div class="path">→ Dashboard &gt; Top Bar (Right Side) &gt; Profile Chip</div>
+  </div>
+
+  <div class="section">
+    <h3>B. Business Date (Replaces "TODAY")</h3>
+    <div class="before-after"><strong>BEFORE:</strong> "TODAY" | <strong>AFTER:</strong> "BUSINESS DATE"</div>
+    <ul>
+      <li><strong>Location:</strong> Top toolbar, left side</li>
+      <li><strong>Shows:</strong> Hotel's current business date (not your device calendar date)</li>
+      <li><strong>Behavior:</strong> Moves forward automatically ONLY when previous business day had NO activity (no reservations, no checked-in guests). If there is activity, it stays until Night Audit completes.</li>
+    </ul>
+    <div class="path">→ Dashboard &gt; Top Toolbar (Left) &gt; <span class="highlight">BUSINESS DATE</span> Button</div>
+  </div>
+
+  <div class="section">
+    <h3>C. Search Bar With Results Dropdown</h3>
+    <div class="before-after"><strong>BEFORE:</strong> Search not working properly | <strong>AFTER:</strong> Working with clickable results</div>
+    <ul>
+      <li><strong>Location:</strong> Top toolbar, middle-right (magnifying glass)</li>
+      <li><strong>How to use:</strong> Type at least 2 characters (Guest Name, Room Number, or Booking Reference)</li>
+      <li><strong>Result:</strong> Dropdown appears showing matching stays and rooms</li>
+      <li><strong>Action:</strong> Click any result to jump directly to that stay/room</li>
+    </ul>
+    <div class="path">→ Dashboard &gt; Top Toolbar &gt; Search Box &gt; Type 2+ Characters &gt; Results Dropdown</div>
+  </div>
+
+  <h2>2. NEW BOOKING TAB</h2>
+  <p><strong>How to open:</strong> Click <span class="highlight">+ New Booking</span> on the Dashboard</p>
+
+  <div class="section">
+    <h3>A. Room Dropdown Filters By Room Type</h3>
+    <div class="before-after"><strong>BEFORE:</strong> Showed all room types | <strong>AFTER:</strong> Shows only rooms of the same room type</div>
+    <ul>
+      <li><strong>Location:</strong> New Booking Form &gt; Room dropdown</li>
+      <li><strong>Example:</strong> If you select a Suite, only available Suites appear - not Standard/Double rooms</li>
+    </ul>
+    <div class="path">→ Dashboard &gt; + New Booking &gt; Room Field &gt; Dropdown (Same Room Type Only)</div>
+  </div>
+
+  <div class="section">
+    <h3>B. City Field Is Searchable</h3>
+    <div class="before-after"><strong>BEFORE:</strong> Hard to select | <strong>AFTER:</strong> Type-to-search</div>
+    <ul>
+      <li><strong>Location:</strong> New Booking Form &gt; City field</li>
+      <li><strong>How to use:</strong> Click dropdown and type a few letters - list filters automatically</li>
+    </ul>
+    <div class="path">→ Dashboard &gt; + New Booking &gt; City Field &gt; Type To Search</div>
+  </div>
+
+  <div class="section">
+    <h3>C. Auto Total Badge Removed</h3>
+    <div class="before-after"><strong>BEFORE:</strong> Extra "AUTO TOTAL" badge outside box | <strong>AFTER:</strong> Clean, inside form only</div>
+    <ul>
+      <li><strong>Location:</strong> New Booking Form &gt; Totals section</li>
+      <li><strong>What changed:</strong> Removed the floating Auto Total badge outside the CSS box</li>
+    </ul>
+    <div class="path">→ Dashboard &gt; + New Booking &gt; Totals Section (Clean Layout)</div>
+  </div>
+
+  <div class="section">
+    <h3>D. Walk In vs Reservation Buttons (SPLIT BUTTONS)</h3>
+    <div class="before-after"><strong>BEFORE:</strong> One "CREATE BOOKING" button | <strong>AFTER:</strong> Split into WALK IN | RESERVATION</div>
+    <ul>
+      <li><strong>Current BUSINESS DATE:</strong> Shows <span class="highlight">TWO</span> buttons - <strong>WALK IN</strong> (Green) and <strong>RESERVATION</strong>
+        <ul>
+          <li><strong>WALK IN:</strong> Creates booking AND checks guest in immediately (Room turns GREEN/Occupied)</li>
+          <li><strong>RESERVATION:</strong> Creates reservation only (Room stays RED/Reserved, wait for Check-In)</li>
+        </ul>
+      </li>
+      <li><strong>FUTURE DATES:</strong> Shows <span class="highlight">ONLY RESERVATION</span> button (No Walk-In)</li>
+    </ul>
+    <div class="path">→ Dashboard &gt; + New Booking &gt; Bottom Buttons (Split Based On Business Date)</div>
+  </div>
+
+  <h2>3. GROUP BOOKINGS (Multi-Room Bookings)</h2>
+  <p><strong>Location:</strong> New Booking Form &gt; Booking Type Dropdown</p>
+  <div class="section">
+    <ul>
+      <li><strong>What it is:</strong> Create multiple rooms under one group/party with a shared booking reference</li>
+      <li><strong>How to use:</strong> Set Booking Type to <span class="highlight">Group</span>, select 2+ rooms (Room Selections), set Primary Room, fill guest details, Save</li>
+      <li><strong>On Reservation List:</strong> Group bookings show a <strong>Group Badge</strong> showing number of rooms in the party</li>
+      <li><strong>Cancellation:</strong> Cancel Modal lets you cancel the Whole Group OR Selected Rooms only</li>
+    </ul>
+    <div class="path">→ Dashboard &gt; + New Booking &gt; Booking Type = <strong>Group</strong> &gt; Select 2+ Rooms &gt; Set Primary Room &gt; Save</div>
+  </div>
+
+  <h2>4. FOLIO OPERATIONS - Correct Related Folio Balance</h2>
+  <ul>
+    <li><strong>Location:</strong> Folio View &gt; Settle to Creditors (when viewing a Related/Split Folio)</li>
+    <li><strong>What changed:</strong> When viewing a related folio (from Split/Cut), the settlement amount shown is the <span class="highlight">Related Folio's Balance</span> - NOT the main/current folio balance</li>
+  </ul>
+  <div class="path">→ Dashboard &gt; Open Stay (With Split/Cut Folios) &gt; View Related Folio &gt; Folio Operations &gt; Settle To Creditors</div>
+
+  <h2>5. MAINTENANCE ROOMS - Cannot Be Booked</h2>
+  <ul>
+    <li><strong>What changed:</strong> Rooms marked as <span class="highlight">Maintenance</span> are excluded from booking completely</li>
+    <li><strong>Check:</strong> Maintenance rooms do NOT appear in the Room Dropdown when creating a new booking</li>
+  </ul>
+  <div class="path">→ Dashboard &gt; + New Booking &gt; Room Dropdown (Maintenance Rooms Excluded)</div>
+
+  <h2>6. INVOICE - Guest & Staff Signatures</h2>
+  <ul>
+    <li><strong>Location:</strong> Printed Invoice (Print Invoice Breakdown)</li>
+    <li><strong>What added:</strong> Signature spaces at the bottom of the printed invoice</li>
+    <li><strong>Lines shown:</strong> 1) <strong>Guest signature &amp; date</strong> | 2) <strong>Authorized signature &amp; stamp</strong></li>
+  </ul>
+  <div class="path">→ Dashboard &gt; Open Stay &gt; Print &gt; Print Invoice Breakdown &gt; Bottom Of Page (Signature Lines)</div>
+
+  <h2>7. CHECK OUT - Extra Safety Checks</h2>
+
+  <div class="section">
+    <h3>A. All Related Folios Must Be Settled</h3>
+    <ul>
+      <li>If stay has Split/Cut related folios, <span class="highlight">ALL</span> related folio balances must be fully settled before checkout</li>
+      <li>System blocks checkout if any related folio has outstanding balance (with clear message)</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h3>B. Cannot Check Out With Future Departure Date</h3>
+    <ul>
+      <li><strong>BLOCKED:</strong> If Check Out Date is <strong>AFTER</strong> current <span class="highlight">BUSINESS DATE</span></li>
+      <li><strong>ALLOWED:</strong> Overdue stays (departure date already passed)</li>
+      <li><strong>Rule:</strong> Checkout date must match/be on or before Business Date</li>
+    </ul>
+  </div>
+  <div class="path">→ Dashboard &gt; Open Checked-In Stay &gt; Check Out (Validates Both Rules)</div>
+
+  <h2>8. VOID RESERVATION</h2>
+
+  <div class="section">
+    <h3>A. Management Only</h3>
+    <ul>
+      <li>Only visible to: <strong>Manager, Hotel Admin, Owner, or Superadmin</strong></li>
+      <li><span class="highlight">Receptionists do NOT see</span> the "Void Reservation" option</li>
+    </ul>
+    <div class="path">→ Dashboard &gt; Open Reservation &gt; Three Dots (⋯) Menu &gt; Void Reservation (If Authorized)</div>
+  </div>
+
+  <div class="section">
+    <h3>B. Reason Required (No Guest Name)</h3>
+    <ul>
+      <li>Now asks for <span class="highlight">"Reason for voiding"</span> (text box)</li>
+      <li><strong>REQUIRED:</strong> Must type a reason to confirm (No longer asks for guest name)</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h3>C. Voided Reservations Go To Reports (Removed From Dashboard)</h3>
+    <ul>
+      <li>After voiding successfully, reservation is <span class="highlight">COMPLETELY REMOVED</span> from Dashboard (Not left red)</li>
+      <li>Find voided records at: <strong>Reports &gt; Report Browser &gt; Void Reservations</strong></li>
+      <li>Report shows: Booking Ref, Guest, Room, Dates, Amounts, <strong>Voided On</strong>, <strong>Voided By</strong>, <strong>Reason</strong></li>
+    </ul>
+    <div class="path">→ Reports &gt; Report Browser &gt; Void Reservations</div>
+  </div>
+
+  <h2>9. SEQUENCING - Automatic Sequential References</h2>
+  <ul>
+    <li><strong>Reservations:</strong> Automatic sequential Booking Reference (BK-...)</li>
+    <li><strong>Night Audit → Manual Transactions (Insert Transaction):</strong> Sequential ADJ-... reference</li>
+    <li><strong>Folio Entries &amp; Refunds:</strong> Sequential FLX-... references</li>
+    <li><strong>Where to see:</strong> Reservation Details, Night Audit → Transactions, Folio View, Void Reservations Report</li>
+  </ul>
+  <div class="path">→ Reservation Details / Night Audit → Transactions / Folio View / Void Reservations Report</div>
+
+  <div class="footer">
+    <p>MRK Hotels - Reception Panel Changes Guide | October 2026</p>
+  </div>
+
+</body>
+</html>
