@@ -1778,6 +1778,15 @@
                       Primary
                     </label>
                   </div>
+                  <div v-if="roomSelectionsArray.length > 0 || bookingForm.booking_type === 'group'" style="margin-top:8px;">
+                    <div style="display:flex;flex-wrap:wrap;gap:4px;max-height:120px;overflow:auto;padding:4px;border:1px solid #eee;border-radius:4px;">
+                      <label v-for="r in bookingRoomOptions" :key="r.value" style="display:flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:12px;background:#fff;">
+                        <input type="checkbox" :value="r.value" :checked="roomSelectionsArray.some(s => s.room_id === r.value)" @change="toggleRoomSelection(r)" />
+                        <span>{{ r.label }}</span>
+                        <span v-if="bookingForm.primary_room_id === r.value" style="color:#005eb8;font-weight:bold;">(P)</span>
+                      </label>
+                    </div>
+                  </div>
                   <span v-if="bookingErrors.room_id" class="sv-field-msg" role="alert"><i
                       class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.room_id }}</span>
                 </label>
@@ -5879,6 +5888,39 @@ function prevRoomSelection() {
 function nextRoomSelection() {
   if (roomSelectionIndex.value < roomSelectionsArray.value.length - 1) {
     roomSelectionIndex.value++
+  }
+}
+
+function toggleRoomSelection(opt) {
+  const roomId = opt.value
+  const existsIdx = roomSelectionsArray.value.findIndex((r) => r.room_id === roomId)
+  if (existsIdx >= 0) {
+    roomSelectionsArray.value.splice(existsIdx, 1)
+    if (roomSelectionIndex.value >= roomSelectionsArray.value.length && roomSelectionsArray.value.length > 0) {
+      roomSelectionIndex.value = roomSelectionsArray.value.length - 1
+    } else if (roomSelectionsArray.value.length === 0) {
+      roomSelectionIndex.value = 0
+      bookingForm.value.primary_room_id = null
+    }
+    if (roomSelectionsArray.value.length === 1) {
+      bookingForm.value.primary_room_id = roomSelectionsArray.value[0].room_id
+    }
+    if (bookingForm.value.primary_room_id === roomId) {
+      bookingForm.value.primary_room_id = roomSelectionsArray.value[0]?.room_id || null
+    }
+  } else {
+    const room = rooms.value.find((r) => r.room_id === roomId)
+    if (!room) return
+    roomSelectionsArray.value.push({
+      room_id: room.room_id,
+      room_number: room.room_number,
+      room_type: room.room_type,
+      price_per_night: room.price_per_night,
+    })
+    if (roomSelectionsArray.value.length === 1) {
+      bookingForm.value.primary_room_id = roomId
+    }
+    roomSelectionIndex.value = roomSelectionsArray.value.length - 1
   }
 }
 
