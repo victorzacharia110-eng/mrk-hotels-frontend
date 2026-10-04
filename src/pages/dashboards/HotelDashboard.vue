@@ -1750,8 +1750,34 @@
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.room') }}</span>
-                  <SearchableSelect v-model="bookingForm.room_id" :options="bookingRoomOptions"
-                    :search-placeholder="$t('stayview.searchRoom')" force-search />
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <button v-if="roomSelectionsArray.length > 0" type="button" class="btn btn-sm btn-ghost" @click="prevRoomSelection" :disabled="roomSelectionIndex === 0">
+                      <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div v-if="roomSelectionsArray.length > 0" style="flex:1;min-width:0;">
+                      <select class="input" :value="currentRoomSelection?.room_id" disabled>
+                        <option :value="currentRoomSelection?.room_id">{{ currentRoomSelection?.room_number }} ({{ currentRoomSelection?.room_type }})</option>
+                      </select>
+                    </div>
+                    <SearchableSelect v-else v-model="bookingForm.room_id" :options="bookingRoomOptions"
+                      :search-placeholder="$t('stayview.searchRoom')" force-search style="flex:1;min-width:0;" />
+                    <button v-if="roomSelectionsArray.length > 0" type="button" class="btn btn-sm btn-ghost" @click="nextRoomSelection" :disabled="roomSelectionIndex === roomSelectionsArray.length - 1">
+                      <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary" @click="addRoomToSelection" :disabled="!bookingForm.room_id" title="Add room">
+                      <i class="fas fa-plus"></i>
+                    </button>
+                    <button v-if="roomSelectionsArray.length > 0" type="button" class="btn btn-sm btn-danger" @click="removeRoomFromSelection(roomSelectionIndex)" title="Remove room">
+                      <i class="fas fa-minus"></i>
+                    </button>
+                  </div>
+                  <div v-if="roomSelectionsArray.length > 0" style="margin-top:4px;font-size:12px;color:#666;">
+                    Room {{ roomSelectionIndex + 1 }} of {{ roomSelectionsArray.length }}
+                    <label style="margin-left:8px;cursor:pointer;">
+                      <input type="checkbox" :checked="bookingForm.primary_room_id === currentRoomSelection?.room_id" @change="setPrimaryRoom(currentRoomSelection?.room_id)" />
+                      Primary
+                    </label>
+                  </div>
                   <span v-if="bookingErrors.room_id" class="sv-field-msg" role="alert"><i
                       class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.room_id }}</span>
                 </label>
@@ -5703,6 +5729,9 @@ const bookingErrors = ref({})
 const bookingTouched = ref(false)
 const bookingSnapshot = ref({})
 
+const roomSelectionsArray = ref([])
+const roomSelectionIndex = ref(0)
+
 /** User-edited booking fields (the suggested total auto-updates separately). */
 function bookingSnapshotKeys(form) {
   return ['first_name', 'last_name', 'guest_phone', 'country_code', 'booking_type', 'room_id', 'check_in_date', 'check_out_date', 'advance_payment', 'advance_payment_method', 'advance_payment_date', 'company_name', 'business_source'].map(
@@ -5734,6 +5763,8 @@ function resetBookingForm() {
     // No room pre-picked: the desk chooses one and the list then narrows to
     // that room's type, so the start of the pick shows every sellable room.
     room_id: null,
+    room_selections: [],
+    primary_room_id: null,
     check_in_date: today,
     check_out_date: tomorrow,
     total_amount: null,
@@ -5750,6 +5781,8 @@ function resetBookingForm() {
   bookingErrors.value = {}
   bookingTouched.value = false
   bookingSnapshot.value = { ...bookingForm.value }
+  roomSelectionIndex.value = 0
+  roomSelectionsArray.value = []
 }
 
 /** Nights between the selected arrival and departure dates. */
@@ -5768,6 +5801,68 @@ const bookingRate = computed(() => {
 
 /** Suggested total based on nights × rate. */
 const bookingTotal = computed(() => bookingNights.value * bookingRate.value)
+
+/** Current room being viewed in carousel */
+const currentRoomSelection = computed(() => {
+  if (roomSelectionIndex.value < 0 || roomSelectionIndex.value >= roomSelectionsArray.value.length) {
+    return null
+  }
+  return roomSelectionsArray.value[roomSelectionIndex.value]
+})
+
+/** Add selected room to group selections */
+function addRoomToSelection() {
+  const roomId = bookingForm.value.room_id
+  if (!roomId) return
+  const room = rooms.value.find((r) => r.room_id === roomId)
+  if (!room) return
+  const exists = roomSelectionsArray.value.some((r) => r.room_id === roomId)
+  if (exists) return
+  const sel = {
+    room_id: room.room_id,
+    room_number: room.room_number,
+    room_type: room.room_type,
+    price_per_night: room.price_per_night,
+  }
+  roomSelectionsArray.value.push(sel)
+  if (roomSelectionsArray.value.length === 1) {
+    bookingForm.value.primary_room_id = roomId
+  }
+  roomSelectionIndex.value = roomSelectionsArray.value.length - 1
+  bookingForm.value.room_id = null
+}
+
+/** Remove room from selection */
+function removeRoomFromSelection(idx) {
+  if (idx < 0 || idx >= roomSelectionsArray.value.length) return
+  roomSelectionsArray.value.splice(idx, 1)
+  if (roomSelectionIndex.value >= roomSelectionsArray.value.length && roomSelectionsArray.value.length > 0) {
+    roomSelectionIndex.value = roomSelectionsArray.value.length - 1
+  } else if (roomSelectionsArray.value.length === 0) {
+    roomSelectionIndex.value = 0
+    bookingForm.value.primary_room_id = null
+  }
+  if (roomSelectionsArray.value.length === 1) {
+    bookingForm.value.primary_room_id = roomSelectionsArray.value[0].room_id
+  }
+}
+
+/** Set as primary room */
+function setPrimaryRoom(roomId) {
+  bookingForm.value.primary_room_id = roomId
+}
+
+/** Navigate carousel */
+function prevRoomSelection() {
+  if (roomSelectionIndex.value > 0) {
+    roomSelectionIndex.value--
+  }
+}
+function nextRoomSelection() {
+  if (roomSelectionIndex.value < roomSelectionsArray.value.length - 1) {
+    roomSelectionIndex.value++
+  }
+}
 
 /**
  * A walk-in implies an immediate check-in, so it only exists on the current
@@ -5903,7 +5998,7 @@ async function submitBooking(mode = 'reservation') {
   }
   const phoneCheck = validatePhoneNumber(f.guest_phone, f.country_code || 'TZ')
   await runAction(async () => {
-    const payload = { ...f }
+    let payload = { ...f }
     if (!payload.advance_payment_method) {
       delete payload.advance_payment_method
       delete payload.advance_payment_date
@@ -5917,6 +6012,24 @@ async function submitBooking(mode = 'reservation') {
       payload.total_amount = bookingTotal.value
     }
     payload.guest_phone = phoneCheck.number
+
+    // Build multi-room payload if we have selections or group
+    const hasSelections = roomSelectionsArray.value.length > 0
+    if (hasSelections) {
+      payload.room_selections = roomSelectionsArray.value.map((r) => ({
+        room_id: r.room_id,
+        room_number: r.room_number,
+      }))
+      if (payload.primary_room_id) {
+        payload.primary_room_id = payload.primary_room_id
+      } else {
+        payload.primary_room_id = roomSelectionsArray.value[0]?.room_id
+      }
+      delete payload.room_id
+    } else {
+      // single room
+    }
+
     // Create as confirmed first (the API only accepts pending/confirmed here),
     // then immediately admit a walk-in so the room turns green on the tape.
     const created = await reservationApi.store({ ...payload, status: 'confirmed' })
