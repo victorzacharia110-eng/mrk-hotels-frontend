@@ -219,10 +219,10 @@
         <div v-if="calPick.roomId" class="cal-pick-bar">
           <div>
             <strong>{{ roomLabel(calPick.roomId) }}</strong>
-            <span class="muted">
+            <div class="muted" style="font-size:13px;font-weight:600;color:#1e40af;">
               {{ formatDayLabel(calPick.start) }} → {{ formatDayLabel(calPick.end) }}
               · {{ $t('rooms.stopSellNightsCount', { count: calPickNights }) }}
-            </span>
+            </div>
           </div>
           <div class="cal-pick-actions">
             <input
@@ -1229,14 +1229,9 @@ const onCellEnter = (roomId, iso) => {
 const onCellDown = (roomId, iso) => {
   if (!canEdit.value) return
   if (isStoppedOn(roomId, iso)) return
-  const pick = calPick.value
-  if (pick.roomId !== roomId || !pick.start) {
-    calPick.value = { roomId, start: iso, end: iso }
-    dragging.value = true
-  } else if (pick.roomId === roomId && !pick.start) {
-    calPick.value = { roomId, start: iso, end: iso }
-    dragging.value = true
-  }
+  // Always start a new selection from this cell on mousedown
+  calPick.value = { roomId, start: iso, end: iso }
+  dragging.value = true
 }
 
 /**
