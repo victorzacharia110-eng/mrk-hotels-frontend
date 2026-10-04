@@ -1653,7 +1653,7 @@
     <Teleport to="body">
       <Transition name="sv-modal">
         <div v-if="bookingModal" class="sv-modal-backdrop" @click.self="bookingModal = false">
-          <div class="sv-modal" :class="{ 'sv-modal-lg': roomSelectionsArray.length > 0 || bookingForm.booking_type === 'group' }" role="dialog" aria-modal="true" :aria-label="$t('stayview.newBooking')">
+          <div class="sv-modal sv-modal-lg" role="dialog" aria-modal="true" :aria-label="$t('stayview.newBooking')">
             <div class="sv-modal-head bar-green">
               <span class="sv-modal-head-icon"><i class="fas fa-calendar-plus" aria-hidden="true"></i></span>
               <div class="sv-modal-head-text">
