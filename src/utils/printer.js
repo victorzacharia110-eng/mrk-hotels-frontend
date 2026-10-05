@@ -377,6 +377,38 @@ export async function printToPrinter(lines, opts = {}) {
 }
 
 /**
+ * Prints an HTML document on the roll through the bridge agent.
+ *
+ * The reception documents (guest invoice, invoice breakdown, folio ledger) are
+ * built as HTML for A4 because that is what the browser print path expects. The
+ * agent re-lays the same markup out at the roll's width, so the desk gets an
+ * aligned slip with the tables and signature block intact instead of an A4 page
+ * mangled by an 80mm roll. Falls back to the browser's own print dialog when no
+ * agent is reachable, which is what happened before any of this existed.
+ *
+ * @param {string} html  A complete HTML document.
+ * @param {string} [endpoint]  Bridge agent base URL, e.g. http://127.0.0.1:9720.
+ * @returns {Promise<boolean>} True when the agent accepted the document.
+ */
+export async function printHtmlToAgent(html, endpoint) {
+  if (!endpoint) return false
+  try {
+    const resp = await fetch(`${endpoint.replace(/\/+$/, '')}/print/html`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      body: html,
+    })
+    if (!resp.ok) return false
+    const data = await resp.json().catch(() => null)
+    return Boolean(data?.ok)
+  } catch {
+    // No agent listening (till offline, service not started) — the caller
+    // falls back to the browser print dialog rather than losing the document.
+    return false
+  }
+}
+
+/**
  * Posts a raw ESC/POS byte stream to a local bridge agent.
  *
  * The agent runs on the machine that owns the printer and forwards the bytes

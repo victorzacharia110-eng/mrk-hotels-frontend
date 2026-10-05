@@ -2159,7 +2159,7 @@
                 {{ ledgerBusy ? $t('common.loading') : $t('stayview.generate') }}
               </button>
               <button v-if="ledger && ledger.groups.length" type="button" class="btn btn-secondary sv-modal-manage"
-                @click="printLedger">
+                @click="printLedger()">
                 <i class="fas fa-print" aria-hidden="true"></i> {{ $t('stayview.print') }}
               </button>
             </div>
@@ -2196,6 +2196,8 @@ import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import { requiresProvider, providersFor, PAYMENT_METHODS, PAYMENT_STATUSES } from '@/utils/payments'
+import { printHtmlToAgent } from '@/utils/printer'
+import { usePrintSettingsStore } from '@/stores/printSettings'
 import { folioBreakdown, isFolioRefundEntry } from '@/utils/folio'
 import { roomOccupiedToday } from '@/utils/roomOccupancy'
 import { toast } from '@/utils/toast'
@@ -4646,7 +4648,27 @@ const hotelLogo = ref('')
  *  document): targets the clicked row only, with its own entry reference and
  *  issued-at timestamp, independent of the whole-folio bottom print button.
  *  Rendered with the hotel logo and brand palette on A4. */
-function printEntryInvoice(e) {
+/**
+ * Sends a reception document to the roll printer through the bridge agent.
+ *
+ * The guest invoice, invoice breakdown, folio ledger and room-posting slip are
+ * all laid out for A4, which an 80mm roll cannot show. When an agent is
+ * configured it re-lays the markup at the roll's width and prints silently; with
+ * no agent reachable the caller falls back to the browser print dialog, which is
+ * exactly what happened before the agent existed.
+ *
+ * @param {string} html  A complete HTML document.
+ * @returns {Promise<boolean>} True when the agent printed it.
+ */
+async function printReceptionDocument(html) {
+  const endpoint = printSettingsStore.settings?.endpoint
+  if (!endpoint) return false
+  const sent = await printHtmlToAgent(html, endpoint)
+  if (!sent) actionError.value = t('stayview.printEntryInvoiceBlocked')
+  return sent
+}
+
+async function printEntryInvoice(e) {
   if (!e?.entryId) return
   // Mark the row busy until the popup document has been handed to the print
   // dialog; cleared on popup-block and right after the write completes.
@@ -4740,14 +4762,13 @@ function printEntryInvoice(e) {
   <script>window.onload = () => window.print()${closeScript}
 </body>
 </html>`
-  const win = window.open('', '_blank', 'width=860,height=1000')
-  if (!win) {
-    actionError.value = t('stayview.printEntryInvoiceBlocked')
-    entryPrintBusy.value = null
-    return
+  if (!(await printReceptionDocument(doc))) {
+    const win = window.open('', '_blank', 'width=860,height=1000')
+    if (win) {
+      win.document.write(doc)
+      win.document.close()
+    }
   }
-  win.document.write(doc)
-  win.document.close()
   entryPrintBusy.value = null
 }
 
@@ -4963,7 +4984,7 @@ function buildInvoiceLines(f) {
   return lines.sort((a, b) => String(iso(a.raw) || a.raw).localeCompare(String(iso(b.raw) || b.raw)))
 }
 
-function printInvoiceBreakdown() {
+async function printInvoiceBreakdown() {
   const f = invoicePreviewFolio.value
   const b = invoiceBreakdown.value
   if (!f || !b) return
@@ -5083,15 +5104,19 @@ function printInvoiceBreakdown() {
   <div class="foot">${esc(company.name)} · ${esc(t('stayview.printedBy'))}: ${esc(printedBy.value)} · ${esc(stamp)}</div>
   <script>window.onload = function () { window.print() }</${'script'}>
  </body></html>`
-  const win = window.open('', '_blank')
-  if (!win) return
-  win.document.write(html)
-  win.document.close()
+  if (!(await printReceptionDocument(html))) {
+    const win = window.open('', '_blank')
+    if (win) {
+      win.document.write(html)
+      win.document.close()
+    }
+  }
 }
 
 /* ---------------- Stock ledger report ---------------- */
 
 const authStore = useAuthStore()
+const printSettingsStore = usePrintSettingsStore()
 
 // Hotel name and staff identity used in the report header/footer.
 const hotelName = computed(() => authStore.user?.tenant?.hotel_name || 'MRK Hotels')
@@ -5669,7 +5694,7 @@ function esc(value) {
  * the classic layout: hotel header, filter line, grouped item rows and a
  * "Printed By" footer.
  */
-function printLedger() {
+async function printLedger() {
   if (!ledger.value) return
   const now = new Date()
   const stamp = `${isoKey(now)} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
@@ -5742,10 +5767,13 @@ ${head}
 <div class="rpt-foot">${esc(t('stayview.printedBy'))} : ${esc(printedBy.value)} at ${esc(stamp)}</div>
  <script>window.onload = function () { window.print() }</${'script'}>
  </body></html>`
-  const win = window.open('', '_blank')
-  if (!win) return
-  win.document.write(html)
-  win.document.close()
+  if (!(await printReceptionDocument(html))) {
+    const win = window.open('', '_blank')
+    if (win) {
+      win.document.write(html)
+      win.document.close()
+    }
+  }
 }
 
 /* ---------------- New booking modal ---------------- */
