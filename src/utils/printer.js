@@ -184,7 +184,7 @@ export async function restorePrinter() {
  */
 export async function connectPrinter(chosen = null) {
   if (!printerSupported()) {
-    printerState.reason = 'This browser cannot talk directly to the printer. Use Chrome/Edge on desktop.'
+    printerState.reason = 'This browser cannot talk directly to the printer. Use Chrome/Edge on desktop with HTTPS.'
     return false
   }
   try {
@@ -192,7 +192,11 @@ export async function connectPrinter(chosen = null) {
     await openPort(picked)
     return true
   } catch (err) {
-    if (err?.name !== 'NotFoundError') {
+    if (err?.name === 'NotFoundError') {
+      printerState.reason = 'No USB/serial printer found. Power on and plug your thermal printer via USB, or pair it first (Bluetooth/Serial bridge). Then try Connect again.'
+    } else if (err?.name === 'SecurityError') {
+      printerState.reason = 'Browser blocked serial access. Use HTTPS (https://mrk-hotels.com) and allow the permission when prompted. On Chrome: click the "Serial" icon in address bar → Allow.'
+    } else {
       printerState.reason = err?.message || 'Could not connect to the printer.'
     }
     return false
