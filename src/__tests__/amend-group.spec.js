@@ -91,11 +91,11 @@ describe('Amend stay for a grouped booking', () => {
     }
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.vm.amendIsGroup).toBe(true)
-    expect(wrapper.vm.amendGroupRooms).toHaveLength(2)
-
     wrapper.vm.openAmendModal(false)
     await wrapper.vm.$nextTick()
+
+    expect(wrapper.vm.amendIsGroup).toBe(true)
+    expect(wrapper.vm.amendGroupRooms).toHaveLength(2)
 
     wrapper.vm.amendForm.check_out_date = '2026-11-05'
     expect(wrapper.vm.amendIsGroup).toBe(true)
@@ -136,5 +136,36 @@ describe('Amend stay for a grouped booking', () => {
 
     expect(api.reservationApi.update).toHaveBeenCalledTimes(1)
     expect(api.reservationApi.update.mock.calls[0][0]).toBe('s1')
+  })
+
+  it('amends only the rooms the desk ticks in the group grid', async () => {
+    await mountDashboard()
+    wrapper.vm.reservations = [
+      { reservation_id: 'r1', room_number: '101', group_id: 'g1', is_primary: true, group: { rooms: GROUP_ROOMS } },
+    ]
+    wrapper.vm.activeBar = { id: 'r1', rawStatus: 'confirmed', label: 'Amina Hassan', roomId: 'rm1' }
+    wrapper.vm.folio = {
+      reservation: {
+        reservation_id: 'r1',
+        first_name: 'Amina',
+        last_name: 'Hassan',
+        room_id: 'rm1',
+        check_in_date: '2026-11-01',
+        check_out_date: '2026-11-03',
+        guest_phone: '',
+      },
+    }
+    await wrapper.vm.$nextTick()
+
+    wrapper.vm.openAmendModal(false)
+    await wrapper.vm.$nextTick()
+
+    // Untick the primary so only the second room is amended.
+    wrapper.vm.amendSelectedRoomIds = ['r2']
+    wrapper.vm.amendForm.check_out_date = '2026-11-06'
+    await wrapper.vm.submitAmend()
+
+    expect(api.reservationApi.update).toHaveBeenCalledTimes(1)
+    expect(api.reservationApi.update.mock.calls[0][0]).toBe('r2')
   })
 })

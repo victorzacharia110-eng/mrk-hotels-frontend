@@ -1144,15 +1144,24 @@
                   <i class="fas fa-layer-group" aria-hidden="true"></i>
                   {{ $t('stayview.amendGroupRooms', { count: amendGroupRooms.length }) }}
                 </div>
-                <ul>
-                  <li v-for="room in amendGroupRooms" :key="room.reservation_id">
-                    <span>
-                      <strong>{{ room.room?.room_number || room.room_number || '—' }}</strong>
-                      <span v-if="room.guest_name" class="muted"> · {{ room.guest_name }}</span>
-                    </span>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                  <i class="fas fa-arrow-down-wide-short" style="color:#005eb8;font-size:12px;"></i>
+                  <label style="font-size:12px;color:#555;">{{ $t('stayview.sortBy') }}</label>
+                  <select v-model="amendRoomSort" class="input" style="max-width:190px;padding:2px 6px;font-size:12px;">
+                    <option v-for="opt in roomSortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                  </select>
+                  <span style="font-size:12px;color:#555;">{{ $t('stayview.roomsSelected', { count: amendSelectedRoomIds.length }) }}</span>
+                </div>
+                <div class="sv-room-picker-grid">
+                  <label v-for="room in amendGroupRoomOptions" :key="room.value"
+                    style="display:flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:12px;background:#fff;">
+                    <input type="checkbox" :value="room.value" v-model="amendSelectedRoomIds" />
+                    <span>{{ room.room_number }}<template v-if="room.room_type"> · {{ roomTypeLabel(room.room_type) }}</template></span>
                     <span v-if="room.is_primary" class="sv-tag-primary">{{ $t('stayview.primaryRoom') }}</span>
-                  </li>
-                </ul>
+                  </label>
+                </div>
+                <span v-if="amendErrors.room_id" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation"
+                    aria-hidden="true"></i> {{ amendErrors.room_id }}</span>
               </div>
               <label v-else class="sv-field">
                 <span>{{ $t('stayview.room') }}</span>
@@ -1794,8 +1803,15 @@
                     </label>
                   </div>
                   <div v-if="roomSelectionsArray.length > 0 || bookingForm.booking_type === 'group'" style="margin-top:8px;">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                      <i class="fas fa-arrow-down-wide-short" style="color:#005eb8;font-size:12px;"></i>
+                      <label style="font-size:12px;color:#555;">{{ $t('stayview.sortBy') }}</label>
+                      <select v-model="roomSort" class="input" style="max-width:190px;padding:2px 6px;font-size:12px;">
+                        <option v-for="opt in roomSortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                      </select>
+                    </div>
                     <div style="display:flex;flex-wrap:wrap;gap:4px;max-height:120px;overflow:auto;padding:4px;border:1px solid #eee;border-radius:4px;">
-                      <label v-for="r in bookingRoomOptions" :key="r.value" style="display:flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:12px;background:#fff;">
+                      <label v-for="r in bookingRoomOptionsSorted" :key="r.value" style="display:flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:12px;background:#fff;">
                         <input type="checkbox" :value="r.value" :checked="roomSelectionsArray.some(s => s.room_id === r.value)" @change="toggleRoomSelection(r)" />
                         <span>{{ r.label }}</span>
                         <span v-if="bookingForm.primary_room_id === r.value" style="color:#005eb8;font-weight:bold;">(P)</span>
@@ -4562,15 +4578,54 @@ const roomMoveOptions = computed(() =>
 /**
  * The rooms of the booking party when the bar being amended belongs to a
  * group. Empty for a single-room stay, where the form edits just that room.
- * The list view already carries `group.rooms[]` (the same payload the cancel
- * dialog reads), so no extra fetch is needed.
+ * The list view usually carries `group.rooms[]`, but the housekeeping board
+ * feed (used by admin/manager) omits it, so we also fetch the reservation
+ * directly when the in-memory row has no group.
  */
-const amendGroupRooms = computed(() => {
-  const src = reservations.value.find((r) => r.reservation_id === activeBar.value?.id)
-  const rooms = src?.group?.rooms || []
-  return rooms.length > 1 ? rooms : []
+const amendGroupRooms = ref([])
+const amendIsGroup = computed(() => amendGroupRooms.value.length > 1)
+// Which rooms the shared amend should touch (all by default).
+const amendSelectedRoomIds = ref([])
+const amendRoomSort = ref('room')
+
+/** Room checkboxes for the party, ordered by the desk's choice. */
+const amendGroupRoomOptions = computed(() => {
+  const options = amendGroupRooms.value.map((room) => {
+    const full = rooms.value.find((r) => r.room_id === room.room_id)
+    return {
+      value: room.reservation_id,
+      room_number: room.room_number ?? full?.room_number ?? '—',
+      room_type: full?.room_type ?? room.room_type ?? '',
+      price: Number(full?.price_per_night) || 0,
+      is_primary: !!room.is_primary,
+      guest_name: room.guest_name || '',
+    }
+  })
+  return sortRoomOptions(options, amendRoomSort.value)
 })
-const amendIsGroup = computed(() => amendGroupRooms.value.length > 0)
+
+/** Loads the party's rooms into the amend modal (in-memory first, then API). */
+async function loadAmendGroupRooms(reservationId) {
+  if (!reservationId) return
+  const local = reservations.value.find((r) => r.reservation_id === reservationId)?.group?.rooms
+  if (Array.isArray(local) && local.length > 1) {
+    setAmendGroupRooms(local)
+    return
+  }
+  try {
+    const resp = await reservationApi.show(reservationId)
+    const rooms = resp?.data?.reservation?.group?.rooms || []
+    if (amendModal.value && rooms.length > 1) setAmendGroupRooms(rooms)
+  } catch {
+    /* no group (or not readable) — treat as a single-room amend */
+  }
+}
+
+/** Seeds the group room list and ticks every room for the shared amend. */
+function setAmendGroupRooms(rooms) {
+  amendGroupRooms.value = rooms
+  amendSelectedRoomIds.value = rooms.map((r) => r.reservation_id)
+}
 
 function openAmendModal(roomMove = false) {
   moreOpen.value = false
@@ -4593,6 +4648,11 @@ function openAmendModal(roomMove = false) {
   amendSnapshot.value = { ...amendForm.value }
   actionError.value = ''
   amendModal.value = true
+  // Party rooms for a group stay (may arrive a tick later for the HK feed).
+  amendGroupRooms.value = []
+  amendSelectedRoomIds.value = []
+  amendRoomSort.value = 'room'
+  loadAmendGroupRooms(res.reservation_id || activeBar.value?.id)
 }
 function amendRules() {
   return [
@@ -4639,20 +4699,25 @@ async function submitAmend() {
   // matches the reservation) so the folio/Guest-Details/send-invoice always
   // read the address of record from the reservation after an amendment.
   if (f.guest_email) payload.guest_email = f.guest_email
-  amendModal.value = false
   if (amendIsGroup.value) {
-    // A group is amended as one party: the shared dates/guest details go to
-    // every room, but each room keeps its own assignment (no room move here).
+    // Every room keeps its own assignment (no room move here); only the
+    // rooms the desk ticked are amended.
+    const ids = amendSelectedRoomIds.value.slice()
+    if (!ids.length) {
+      amendErrors.value = { ...amendErrors.value, room_id: t('stayview.selectAtLeastOneRoom') }
+      return
+    }
     const groupPayload = { ...payload }
     delete groupPayload.room_id
+    amendModal.value = false
     await runStayAction(() =>
-      Promise.all(
-        amendGroupRooms.value.map((room) => reservationApi.update(room.reservation_id, groupPayload)),
-      ),
+      Promise.all(ids.map((id) => reservationApi.update(id, groupPayload))),
     )
-  } else {
-    await runStayAction(() => reservationApi.update(activeBar.value.id, payload))
+    if (actionError.value) amendModal.value = true
+    return
   }
+  amendModal.value = false
+  await runStayAction(() => reservationApi.update(activeBar.value.id, payload))
   if (actionError.value) amendModal.value = true
 }
 bindBlurValidation(watch, () => amendForm.value, amendSnapshot, amendTouched, amendErrors, amendRules)
@@ -5851,6 +5916,8 @@ const bookingSnapshot = ref({})
 
 const roomSelectionsArray = ref([])
 const roomSelectionIndex = ref(0)
+// Order of the room checkboxes in the New Booking modal.
+const roomSort = ref('room')
 
 /** User-edited booking fields (the suggested total auto-updates separately). */
 function bookingSnapshotKeys(form) {
@@ -6053,6 +6120,9 @@ const bookingRoomOptions = computed(() => {
     .filter((room) => (!type || room.room_type === type) && roomAvailableForRange(room, f.check_in_date, f.check_out_date))
     .map((room) => ({
       value: room.room_id,
+      room_number: room.room_number,
+      room_type: room.room_type,
+      price: Number(room.price_per_night) || 0,
       label: `${room.room_number} · ${roomTypeLabel(room.room_type)} · ${curCode()} ${formatPrice(room.price_per_night)}`,
     }))
   // Never drop the current selection from its own list, even if it just became
@@ -6060,11 +6130,45 @@ const bookingRoomOptions = computed(() => {
   if (selected && !list.some((o) => o.value === selected.room_id)) {
     list.unshift({
       value: selected.room_id,
+      room_number: selected.room_number,
+      room_type: selected.room_type,
+      price: Number(selected.price_per_night) || 0,
       label: `${selected.room_number} · ${roomTypeLabel(selected.room_type)} · ${curCode()} ${formatPrice(selected.price_per_night)}`,
     })
   }
   return list
 })
+
+/** Sort keys offered above the booking room checkboxes. */
+const roomSortOptions = computed(() => [
+  { value: 'room', label: t('stayview.sortByRoom') },
+  { value: 'type', label: t('stayview.sortByType') },
+  { value: 'price-asc', label: t('stayview.sortByPriceLow') },
+  { value: 'price-desc', label: t('stayview.sortByPriceHigh') },
+])
+
+/** Compare two room options by room number, treating numbers numerically. */
+function byRoomNumber(a, b) {
+  return String(a.room_number ?? '').localeCompare(String(b.room_number ?? ''), undefined, { numeric: true, sensitivity: 'base' })
+}
+
+/** Orders a room-option list by the chosen key (number, type, or price). */
+function sortRoomOptions(list, key) {
+  const copy = [...list]
+  if (key === 'type') {
+    copy.sort((a, b) => String(a.room_type ?? '').localeCompare(String(b.room_type ?? '')) || byRoomNumber(a, b))
+  } else if (key === 'price-asc') {
+    copy.sort((a, b) => (a.price ?? 0) - (b.price ?? 0) || byRoomNumber(a, b))
+  } else if (key === 'price-desc') {
+    copy.sort((a, b) => (b.price ?? 0) - (a.price ?? 0) || byRoomNumber(a, b))
+  } else {
+    copy.sort(byRoomNumber)
+  }
+  return copy
+}
+
+/** Room checkboxes in the New Booking modal, ordered by the desk's choice. */
+const bookingRoomOptionsSorted = computed(() => sortRoomOptions(bookingRoomOptions.value, roomSort.value))
 
 /** Keep the total in step with the dates and room, so it is automatic. Whenever
  *  the room or the stay dates change, the total recomputes to nights × rate —
@@ -8109,6 +8213,18 @@ onUnmounted(() => clearInterval(refreshTimer))
   gap: 3px;
   max-height: 130px;
   overflow: auto;
+}
+
+.sv-room-picker-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 140px;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  background: #fff;
 }
 
 .sv-room-summary li {
