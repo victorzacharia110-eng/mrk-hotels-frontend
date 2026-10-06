@@ -543,7 +543,7 @@ describe('folio operations on the stay view', () => {
     const table = document.querySelector('.sv-print-breakdown')
     expect(table).toBeTruthy()
     expect(table.textContent).toContain('TZS')
-    wrapper.vm.printInvoiceBreakdown()
+    await wrapper.vm.printInvoiceBreakdown()
     expect(window.open).toHaveBeenCalled()
     const win = window.open.mock.results[0].value
     const html = win.document.write.mock.calls[0][0]
@@ -567,7 +567,7 @@ describe('folio operations on the stay view', () => {
       reservation: { ...folioPayload().reservation, check_in_date: '2026-11-01', check_out_date: '2026-11-04' },
     }
     await wrapper.vm.openInvoicePreview(activeBar)
-    wrapper.vm.printInvoiceBreakdown()
+    await wrapper.vm.printInvoiceBreakdown()
     const html = window.open.mock.results[0].value.document.write.mock.calls[0][0]
     expect(html).toContain('Azure Bay Resort')
     expect(html).toContain('Bagamoyo, Tanzania')
