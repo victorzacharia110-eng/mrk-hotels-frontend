@@ -4707,12 +4707,10 @@ async function submitAmend() {
       amendErrors.value = { ...amendErrors.value, room_id: t('stayview.selectAtLeastOneRoom') }
       return
     }
-    const groupPayload = { ...payload }
+    const groupPayload = { ...payload, room_ids: ids }
     delete groupPayload.room_id
     amendModal.value = false
-    await runStayAction(() =>
-      Promise.all(ids.map((id) => reservationApi.update(id, groupPayload))),
-    )
+    await runStayAction(() => reservationApi.groupAmend(activeBar.value.id, groupPayload))
     if (actionError.value) amendModal.value = true
     return
   }

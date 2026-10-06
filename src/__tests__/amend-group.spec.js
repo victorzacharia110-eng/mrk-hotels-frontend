@@ -63,6 +63,7 @@ afterEach(() => {
 
 beforeEach(() => {
   api.reservationApi.update.mockClear()
+  api.reservationApi.groupAmend.mockClear()
 })
 
 describe('Amend stay for a grouped booking', () => {
@@ -102,12 +103,13 @@ describe('Amend stay for a grouped booking', () => {
     expect(wrapper.vm.amendGroupRooms.map((r) => r.reservation_id)).toEqual(['r1', 'r2'])
     await wrapper.vm.submitAmend()
 
-    expect(api.reservationApi.update).toHaveBeenCalledTimes(2)
-    expect(api.reservationApi.update.mock.calls.map((c) => c[0]).sort()).toEqual(['r1', 'r2'])
-    for (const call of api.reservationApi.update.mock.calls) {
-      expect(call[1].check_out_date).toBe('2026-11-05')
-      expect(call[1]).not.toHaveProperty('room_id')
-    }
+    expect(api.reservationApi.groupAmend).toHaveBeenCalledTimes(1)
+    const [anchorId, payload] = api.reservationApi.groupAmend.mock.calls[0]
+    expect(anchorId).toBe('r1')
+    expect(payload.check_out_date).toBe('2026-11-05')
+    expect(payload.room_ids.slice().sort()).toEqual(['r1', 'r2'])
+    expect(payload).not.toHaveProperty('room_id')
+    expect(api.reservationApi.update).not.toHaveBeenCalled()
   })
 
   it('edits just the one room for a standalone stay', async () => {
@@ -165,7 +167,9 @@ describe('Amend stay for a grouped booking', () => {
     wrapper.vm.amendForm.check_out_date = '2026-11-06'
     await wrapper.vm.submitAmend()
 
-    expect(api.reservationApi.update).toHaveBeenCalledTimes(1)
-    expect(api.reservationApi.update.mock.calls[0][0]).toBe('r2')
+    expect(api.reservationApi.groupAmend).toHaveBeenCalledTimes(1)
+    const [anchorId, payload] = api.reservationApi.groupAmend.mock.calls[0]
+    expect(anchorId).toBe('r1')
+    expect(payload.room_ids).toEqual(['r2'])
   })
 })

@@ -726,6 +726,15 @@ export const reservationApi = {
     return api.put(`${v1}/reservations/${id}`, data)
   },
   /**
+   * Amends several rooms of one booking party in a single atomic call.
+   * @param {string|number} id - Any reservation in the party (finds the group).
+   * @param {object} data - Shared fields plus `room_ids` to change.
+   * @returns {Promise} Axios response with the updated party.
+   */
+  groupAmend(id, data) {
+    return api.put(`${v1}/reservations/${id}/group`, data)
+  },
+  /**
    * Cancels a reservation.
    * @param {string|number} id - Reservation identifier.
    * @returns {Promise} Axios response confirming the cancellation.
