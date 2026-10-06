@@ -4661,7 +4661,16 @@ const hotelLogo = ref('')
  * @returns {Promise<boolean>} True when the agent printed it.
  */
 async function printReceptionDocument(html) {
-  const endpoint = printSettingsStore.settings?.endpoint
+  let endpoint = printSettingsStore.settings?.endpoint
+  const printers = printSettingsStore.ticketPrinters || []
+  const defaultId = printSettingsStore.defaultTicketPrinterId || ''
+  if (!endpoint) {
+    let p = printers.find(pr => pr.transport === 'network' && pr.endpoint)
+    if (!p && defaultId) {
+      p = printers.find(pr => pr.id === defaultId && pr.transport === 'network' && pr.endpoint)
+    }
+    if (p) endpoint = p.endpoint
+  }
   if (!endpoint) return false
   const sent = await printHtmlToAgent(html, endpoint)
   if (!sent) actionError.value = t('stayview.printEntryInvoiceBlocked')

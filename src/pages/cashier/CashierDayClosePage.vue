@@ -29,7 +29,8 @@
               <div class="dc-date">
                 <span class="dc-date-label">{{ $t('cashier.dayClose.dateToClose') }}</span>
                 <strong>{{ formatDate(status.close_date) }}</strong>
-                <span class="dc-date-sub">{{ $t('cashier.dayClose.openDate') }}: {{ formatDate(status.open_date) }}</span>
+                <span class="dc-date-sub">{{ $t('cashier.dayClose.openDate') }}: {{ formatDate(status.open_date)
+                  }}</span>
               </div>
               <div class="dc-stats">
                 <div class="stat">
@@ -38,13 +39,15 @@
                 </div>
                 <div class="stat">
                   <span>{{ $t('cashier.dayClose.unsettledOrders') }}</span>
-                  <strong :class="{ warn: status.unsettled_orders_count > 0 }">{{ status.unsettled_orders_count }}</strong>
+                  <strong :class="{ warn: status.unsettled_orders_count > 0 }">{{ status.unsettled_orders_count
+                    }}</strong>
                 </div>
               </div>
               <div class="dc-status-note">
                 <i class="fas" :class="closable ? 'fa-circle-check' : 'fa-circle-exclamation'" aria-hidden="true"></i>
                 <span v-if="closable">{{ $t('cashier.dayClose.canCloseHint') }}</span>
-                <span v-else-if="!dayEnded">{{ $t('cashier.dayClose.notEndedHint', { timezone: timezoneLabel }) }}</span>
+                <span v-else-if="!dayEnded">{{ $t('cashier.dayClose.notEndedHint', { timezone: timezoneLabel })
+                  }}</span>
                 <span v-else>{{ $t('cashier.dayClose.blockedHint') }}</span>
               </div>
             </div>
@@ -80,12 +83,14 @@
           <select id="dc-timezone" v-model="tzSelect" class="sm-input">
             <option v-for="tz in timezoneOptions" :key="tz.value" :value="tz.value">{{ tz.label }}</option>
           </select>
-          <p class="fld-hint"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.dayClose.standardTimeHint') }}</p>
+          <p class="fld-hint"><i class="fas fa-circle-info" aria-hidden="true"></i> {{
+            $t('cashier.dayClose.standardTimeHint') }}</p>
           <p v-if="tzError" class="form-error">{{ tzError }}</p>
           <p v-if="tzOk && !tzError" class="sm-ok">{{ tzOk }}</p>
           <div class="dc-actions">
             <button class="sm-btn" :disabled="savingTz || tzSelect === timezoneRaw" @click="saveTimezone">
-              <i class="fas fa-floppy-disk" aria-hidden="true"></i> {{ savingTz ? $t('common.saving') : $t('common.save') }}
+              <i class="fas fa-floppy-disk" aria-hidden="true"></i> {{ savingTz ? $t('common.saving') :
+                $t('common.save') }}
             </button>
           </div>
         </div>
@@ -118,7 +123,9 @@
               <td><span class="status-badge success">{{ $t('cashier.dayClose.closed') }}</span></td>
             </tr>
             <tr v-if="!history.length && !loadingHistory">
-              <td colspan="5" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('common.noData') }}</td>
+              <td colspan="5" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('common.noData')
+                }}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -128,7 +135,8 @@
     <div v-if="confirmOpen" class="sm-modal-backdrop">
       <div class="sm-modal" role="dialog" aria-modal="true">
         <div class="sm-modal-head">
-          <h3><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> {{ $t('cashier.dayClose.confirmTitle') }}</h3>
+          <h3><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> {{ $t('cashier.dayClose.confirmTitle') }}
+          </h3>
         </div>
         <p class="dc-confirm-text">{{ $t('cashier.dayClose.confirmText', { date: formatDate(status.close_date) }) }}</p>
         <div class="sm-modal-foot">
@@ -136,7 +144,9 @@
             <i class="fas fa-xmark" aria-hidden="true"></i> {{ $t('common.cancel') }}
           </button>
           <button class="sm-btn" :disabled="busy" @click="doClose">
-            <i class="fas fa-lock" aria-hidden="true"></i> {{ busy ? $t('common.loading') : $t('cashier.dayClose.closeDay') }}
+            <i class="fas fa-lock" aria-hidden="true"></i> {{ busy ? $t('common.loading') :
+              $t('cashier.dayClose.closeDay')
+            }}
           </button>
         </div>
       </div>
@@ -330,8 +340,18 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.dc-skeleton { display: flex; flex-direction: column; gap: 12px; }
-.dc-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+.dc-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dc-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .dc-status-card {
   display: flex;
   align-items: center;
@@ -343,17 +363,65 @@ onUnmounted(() => {
   flex-wrap: wrap;
   width: 100%;
 }
-.dc-status-card.ok { border-color: #bbf7d0; background: #f0fdf4; }
-.dc-status-card.blocked { border-color: #fecaca; background: #fef2f2; }
-.dc-date { display: flex; flex-direction: column; }
-.dc-date-label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
-.dc-date strong { font-size: 24px; color: #1f2937; margin-top: 2px; }
-.dc-date-sub { font-size: 12px; color: #64748b; margin-top: 2px; }
-.dc-stats { display: flex; gap: 20px; }
-.dc-stats .stat { display: flex; flex-direction: column; }
-.dc-stats .stat span { font-size: 12px; color: #64748b; }
-.dc-stats .stat strong { font-size: 20px; color: #1f2937; }
-.dc-stats .stat strong.warn { color: #b45309; }
+
+.dc-status-card.ok {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.dc-status-card.blocked {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.dc-date {
+  display: flex;
+  flex-direction: column;
+}
+
+.dc-date-label {
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dc-date strong {
+  font-size: 24px;
+  color: #1f2937;
+  margin-top: 2px;
+}
+
+.dc-date-sub {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.dc-stats {
+  display: flex;
+  gap: 20px;
+}
+
+.dc-stats .stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.dc-stats .stat span {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.dc-stats .stat strong {
+  font-size: 20px;
+  color: #1f2937;
+}
+
+.dc-stats .stat strong.warn {
+  color: #b45309;
+}
+
 .dc-status-note {
   display: inline-flex;
   align-items: center;
@@ -366,19 +434,94 @@ onUnmounted(() => {
   border: 1px solid #e2e8f0;
   max-width: 100%;
 }
-.dc-status-card.ok .dc-status-note { color: #166534; border-color: #bbf7d0; }
-.dc-status-card.blocked .dc-status-note { color: #b91c1c; border-color: #fecaca; }
-.dc-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 
-.st-grid { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: start; }
-@media (max-width: 720px) { .st-grid { grid-template-columns: 1fr; } }
-.st-live-clock { display: flex; flex-direction: column; gap: 4px; padding-right: 18px; border-right: 1px dashed #e2e8f0; }
-@media (max-width: 720px) { .st-live-clock { border-right: none; padding-right: 0; } }
-.st-clock { font-size: 26px; font-variant-numeric: tabular-nums; color: #00468c; letter-spacing: 0.03em; }
-.st-zone { font-size: 12px; color: #64748b; }
-.st-form { display: flex; flex-direction: column; gap: 6px; max-width: 460px; }
-.fld-label { font-size: 12px; font-weight: 600; color: #475569; }
-.fld-hint { margin: 0; font-size: 11.5px; color: #94a3b8; display: flex; align-items: center; gap: 4px; }
-.form-error { color: #dc2626; font-size: 13px; margin: 0; }
-.dc-confirm-text { color: #475569; margin: 6px 0 16px; }
+.dc-status-card.ok .dc-status-note {
+  color: #166534;
+  border-color: #bbf7d0;
+}
+
+.dc-status-card.blocked .dc-status-note {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.dc-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.st-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .st-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.st-live-clock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 18px;
+  border-right: 1px dashed #e2e8f0;
+}
+
+@media (max-width: 720px) {
+  .st-live-clock {
+    border-right: none;
+    padding-right: 0;
+  }
+}
+
+.st-clock {
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  color: #00468c;
+  letter-spacing: 0.03em;
+}
+
+.st-zone {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.st-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 460px;
+}
+
+.fld-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.fld-hint {
+  margin: 0;
+  font-size: 11.5px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.form-error {
+  color: #dc2626;
+  font-size: 13px;
+  margin: 0;
+}
+
+.dc-confirm-text {
+  color: #475569;
+  margin: 6px 0 16px;
+}
 </style>
