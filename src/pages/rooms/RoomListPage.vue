@@ -260,7 +260,7 @@
         <p v-if="calRooms.length && canEdit" class="muted" style="font-size:12px;margin-top:-4px;margin-bottom:10px;">
           <i class="fas fa-info-circle"></i> Tip: Click first night → Click last night (or drag). Click blocked cell to lift it. Table scrolls horizontally/vertically if many rooms/days.
         </p>
-        <div v-else-if="calRooms.length" class="table-scroll cal-scroll" style="max-height:70vh;overflow:auto;">
+        <div v-if="calRooms.length" class="table-scroll cal-scroll" style="max-height:70vh;overflow:auto;">
           <table class="table stop-sell-calendar">
             <thead>
               <tr>
