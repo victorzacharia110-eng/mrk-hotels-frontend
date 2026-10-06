@@ -756,7 +756,7 @@
                         <i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('stayview.amendStay') }}
                       </button>
                     </li>
-                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
+                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus) && !amendIsGroup">
                       <button type="button" @click="openAmendModal(true)">
                         <i class="fas fa-arrows-left-right" aria-hidden="true"></i> {{ $t('stayview.roomMove') }}
                       </button>
@@ -1139,7 +1139,22 @@
                 </label>
               </div>
               <div class="sv-tab-section">{{ $t('stayview.room') }}</div>
-              <label class="sv-field">
+              <div v-if="amendIsGroup" class="sv-room-summary">
+                <div class="sv-room-summary-head">
+                  <i class="fas fa-layer-group" aria-hidden="true"></i>
+                  {{ $t('stayview.amendGroupRooms', { count: amendGroupRooms.length }) }}
+                </div>
+                <ul>
+                  <li v-for="room in amendGroupRooms" :key="room.reservation_id">
+                    <span>
+                      <strong>{{ room.room?.room_number || room.room_number || '—' }}</strong>
+                      <span v-if="room.guest_name" class="muted"> · {{ room.guest_name }}</span>
+                    </span>
+                    <span v-if="room.is_primary" class="sv-tag-primary">{{ $t('stayview.primaryRoom') }}</span>
+                  </li>
+                </ul>
+              </div>
+              <label v-else class="sv-field">
                 <span>{{ $t('stayview.room') }}</span>
                 <SearchableSelect v-model="amendForm.room_id" :options="roomMoveOptions"
                   :search-placeholder="$t('stayview.searchRoom')" force-search />
@@ -1652,7 +1667,7 @@
     <!-- New booking modal: create a reservation without leaving the chart -->
     <Teleport to="body">
       <Transition name="sv-modal">
-        <div v-if="bookingModal" class="sv-modal-backdrop" @click.self="bookingModal = false">
+        <div v-if="bookingModal" class="sv-modal-backdrop" @click.self="closeBookingModal">
           <div class="sv-modal sv-modal-lg" role="dialog" aria-modal="true" :aria-label="$t('stayview.newBooking')">
             <div class="sv-modal-head bar-green">
               <span class="sv-modal-head-icon"><i class="fas fa-calendar-plus" aria-hidden="true"></i></span>
@@ -1660,7 +1675,7 @@
                 <h3>{{ $t('stayview.newBooking') }}</h3>
               </div>
               <button type="button" class="sv-modal-close" :aria-label="$t('common.close')"
-                @click="bookingModal = false">
+                @click="closeBookingModal">
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </div>
@@ -1787,6 +1802,23 @@
                       </label>
                     </div>
                   </div>
+                  <div v-if="roomSelectionsArray.length > 0" class="sv-room-summary">
+                    <div class="sv-room-summary-head">
+                      <i class="fas fa-list-check" aria-hidden="true"></i>
+                      {{ $t('stayview.selectedRooms') }} ({{ roomSelectionsArray.length }})
+                    </div>
+                    <ul>
+                      <li v-for="(sel, si) in roomSelectionsArray" :key="sel.room_id">
+                        <span>{{ sel.room_number }} · {{ roomTypeLabel(sel.room_type) }} · {{ curCode() }} {{ formatPrice(sel.price_per_night) }}</span>
+                        <span class="sv-room-summary-tags">
+                          <span v-if="bookingForm.primary_room_id === sel.room_id" class="sv-tag-primary">{{ $t('stayview.primaryRoom') }}</span>
+                          <button type="button" class="sv-room-summary-x" @click="removeRoomFromSelection(si)" :aria-label="$t('common.delete')">
+                            <i class="fas fa-times" aria-hidden="true"></i>
+                          </button>
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
                   <span v-if="bookingErrors.room_id" class="sv-field-msg" role="alert"><i
                       class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.room_id }}</span>
                 </label>
@@ -1846,25 +1878,20 @@
             </div>
             <div class="sv-modal-actions">
               <!-- Walk-in → immediate check-in (green bar). Reservation → held
-                   (red bar). Walk-ins only exist on the current business date;
-                   any other arrival can only be saved as a reservation. -->
-              <template v-if="bookingOnBusinessDate">
-                <button type="button" class="btn sv-modal-manage sv-btn-walkin" :disabled="actionBusy"
-                  @click="submitBooking('walk_in')">
-                  <i class="fas" :class="actionBusy ? 'fa-spinner fa-spin' : 'fa-person-walking-arrow-right'"
-                    aria-hidden="true"></i>
-                  {{ actionBusy ? $t('common.loading') : $t('stayview.walkIn') }}
-                </button>
-                <button type="button" class="btn btn-primary sv-modal-manage sv-btn-split" :disabled="actionBusy"
-                  @click="submitBooking('reservation')">
-                  <i class="fas" :class="actionBusy ? 'fa-spinner fa-spin' : 'fa-calendar-check'" aria-hidden="true"></i>
-                  {{ actionBusy ? $t('common.loading') : $t('stayview.reservationAction') }}
-                </button>
-              </template>
-              <button v-else type="button" class="btn btn-primary sv-modal-manage" :disabled="actionBusy"
+                   (red bar). Walk-ins only exist on the current business date,
+                   so the walk-in button is disabled on any other arrival. -->
+              <button type="button" class="btn sv-modal-manage sv-btn-walkin"
+                :disabled="actionBusy || !bookingOnBusinessDate"
+                :title="bookingOnBusinessDate ? '' : $t('stayview.walkInTodayOnly')"
+                @click="submitBooking('walk_in')">
+                <i class="fas" :class="actionBusy ? 'fa-spinner fa-spin' : 'fa-person-walking-arrow-right'"
+                  aria-hidden="true"></i>
+                {{ actionBusy ? $t('common.loading') : $t('stayview.walkIn') }}
+              </button>
+              <button type="button" class="btn btn-primary sv-modal-manage sv-btn-split" :disabled="actionBusy"
                 @click="submitBooking('reservation')">
                 <i class="fas" :class="actionBusy ? 'fa-spinner fa-spin' : 'fa-calendar-check'" aria-hidden="true"></i>
-                {{ actionBusy ? $t('common.loading') : $t('stayview.createBooking') }}
+                {{ actionBusy ? $t('common.loading') : $t('stayview.reservationAction') }}
               </button>
             </div>
           </div>
@@ -2662,8 +2689,12 @@ const barsByRoom = computed(() => {
       // 0-based half-cell range used by the vacancy check.
       halfStart,
       halfEnd,
-      start: halfStart + 1,
-      span: halfEnd - halfStart + 1,
+      // The bar starts at the vertical MIDPOINT of the arrival day (check-in
+      // is at mid-day, not midnight) and ends at the first half of the
+      // departure day. `halfStart`/`halfEnd` keep their date semantics for the
+      // vacancy check; only the visual grid column/span shift by one half-cell.
+      start: halfStart + 2,
+      span: Math.max(1, halfEnd - halfStart),
       lane: 1,
     })
   }
@@ -4528,6 +4559,19 @@ const roomMoveOptions = computed(() =>
   })),
 )
 
+/**
+ * The rooms of the booking party when the bar being amended belongs to a
+ * group. Empty for a single-room stay, where the form edits just that room.
+ * The list view already carries `group.rooms[]` (the same payload the cancel
+ * dialog reads), so no extra fetch is needed.
+ */
+const amendGroupRooms = computed(() => {
+  const src = reservations.value.find((r) => r.reservation_id === activeBar.value?.id)
+  const rooms = src?.group?.rooms || []
+  return rooms.length > 1 ? rooms : []
+})
+const amendIsGroup = computed(() => amendGroupRooms.value.length > 0)
+
 function openAmendModal(roomMove = false) {
   moreOpen.value = false
   const res = folio.value?.reservation || activeBar.value || {}
@@ -4596,7 +4640,19 @@ async function submitAmend() {
   // read the address of record from the reservation after an amendment.
   if (f.guest_email) payload.guest_email = f.guest_email
   amendModal.value = false
-  await runStayAction(() => reservationApi.update(activeBar.value.id, payload))
+  if (amendIsGroup.value) {
+    // A group is amended as one party: the shared dates/guest details go to
+    // every room, but each room keeps its own assignment (no room move here).
+    const groupPayload = { ...payload }
+    delete groupPayload.room_id
+    await runStayAction(() =>
+      Promise.all(
+        amendGroupRooms.value.map((room) => reservationApi.update(room.reservation_id, groupPayload)),
+      ),
+    )
+  } else {
+    await runStayAction(() => reservationApi.update(activeBar.value.id, payload))
+  }
   if (actionError.value) amendModal.value = true
 }
 bindBlurValidation(watch, () => amendForm.value, amendSnapshot, amendTouched, amendErrors, amendRules)
@@ -6045,18 +6101,21 @@ function bookVacantDay(room, iso) {
   const arrival = parseDate(iso)
   const today = businessToday()
   if (arrival < today) return
-  bookingForm.value = {
-    ...bookingForm.value,
-    room_id: room.room_id,
-    check_in_date: iso,
-    check_out_date: isoKey(addDays(arrival, 1)),
-    total_amount: null,
-  }
-  bookingErrors.value = {}
-  bookingTouched.value = false
+  // Start from a clean form so details typed for a previous room never leak
+  // into this one, then seed the clicked room and arrival.
+  resetBookingForm()
+  bookingForm.value.room_id = room.room_id
+  bookingForm.value.check_in_date = iso
+  bookingForm.value.check_out_date = isoKey(addDays(arrival, 1))
   bookingSnapshot.value = { ...bookingForm.value }
-  actionError.value = ''
   bookingModal.value = true
+}
+
+/** Closes the booking modal and discards whatever was typed, so cancelling
+ *  with the X (or the backdrop) never leaves stale details for the next room. */
+function closeBookingModal() {
+  bookingModal.value = false
+  resetBookingForm()
 }
 
 /** Opens the booking form with sensible defaults (today → tomorrow). */
@@ -6074,7 +6133,17 @@ function bookingRules() {
     { field: 'guest_phone', check: required(t) },
     { field: 'guest_phone', check: phone(t) },
     { field: 'booking_type', check: required(t) },
-    { field: 'room_id', check: required(t) },
+    // A room is required only for a single-room booking; a group/multi-room
+    // booking supplies `room_selections` instead and leaves `room_id` empty.
+    {
+      field: 'room_id',
+      check: (v, form) => {
+        if (roomSelectionsArray.value.length > 0) return ''
+        return form.booking_type === 'group'
+          ? t('stayview.selectAtLeastOneRoom')
+          : required(t)(v)
+      },
+    },
     { field: 'check_in_date', check: required(t) },
     { field: 'check_out_date', check: required(t) },
     { field: 'check_out_date', check: after(t, 'check_in_date') },
@@ -6082,7 +6151,7 @@ function bookingRules() {
     // An advance amount is only trustworthy on the bill when it carries its
     // payment account too — without a method the date is dropped server-side
     // and the advance would show with no recorded date.
-    { field: 'advance_payment_method', check: (v, form) => Number(form.advance_payment || 0) > 0 && isBlank(v) ? t('validations.fieldRequired') : '' },
+    { field: 'advance_payment_method', check: (v, form) => (Number(form.advance_payment || 0) > 0 && isBlank(v) ? t('validations.fieldRequired') : '') },
   ]
 }
 async function submitBooking(mode = 'reservation') {
@@ -6113,27 +6182,35 @@ async function submitBooking(mode = 'reservation') {
     // Build multi-room payload if we have selections or group
     const hasSelections = roomSelectionsArray.value.length > 0
     if (hasSelections) {
-      payload.room_selections = roomSelectionsArray.value.map((r) => ({
+      payload.room_selections = roomSelectionsArray.value.map((r, i) => ({
         room_id: r.room_id,
         room_number: r.room_number,
+        // First selected room is the party's primary by default.
+        primary: i === 0,
       }))
-      if (payload.primary_room_id) {
-        payload.primary_room_id = payload.primary_room_id
-      } else {
-        payload.primary_room_id = roomSelectionsArray.value[0]?.room_id
-      }
+      payload.primary_room_id = payload.primary_room_id || roomSelectionsArray.value[0]?.room_id
       delete payload.room_id
     } else {
-      // single room
+      // A single-room booking must NOT carry the empty `room_selections` array
+      // seeded on the form: the API validates it as "at least 1 item" and would
+      // reject every plain booking with a room_selections error.
+      delete payload.room_selections
+      delete payload.primary_room_id
     }
 
     // Create as confirmed first (the API only accepts pending/confirmed here),
     // then immediately admit a walk-in so the room turns green on the tape.
     const created = await reservationApi.store({ ...payload, status: 'confirmed' })
     if (mode === 'walk_in') {
-      const id = created?.data?.reservation?.reservation_id
-      if (!id) throw new Error('Reservation was created but could not be checked in.')
-      await reservationApi.checkIn(id, {})
+      // A group walk-in checks in every room of the party, not just the primary.
+      const groupRooms = created?.data?.group?.rooms
+      const ids = Array.isArray(groupRooms) && groupRooms.length
+        ? groupRooms.map((r) => r.reservation_id).filter(Boolean)
+        : [created?.data?.reservation?.reservation_id].filter(Boolean)
+      if (!ids.length) throw new Error('Reservation was created but could not be checked in.')
+      for (const id of ids) {
+        await reservationApi.checkIn(id, {})
+      }
     }
   })
   if (!actionError.value) {
@@ -8000,6 +8077,80 @@ onUnmounted(() => clearInterval(refreshTimer))
   font-size: 11.5px;
   line-height: 1.35;
   color: #dc2626;
+}
+
+/* Summary of rooms picked for a multi-room / group booking */
+.sv-room-summary {
+  margin-top: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+  padding: 6px 8px;
+}
+
+.sv-room-summary-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: #005eb8;
+  margin-bottom: 4px;
+}
+
+.sv-room-summary ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 130px;
+  overflow: auto;
+}
+
+.sv-room-summary li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #334155;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+
+.sv-room-summary-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sv-tag-primary {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #fff;
+  background: #005eb8;
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.sv-room-summary-x {
+  border: 0;
+  background: transparent;
+  color: #dc2626;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px;
+}
+
+.sv-room-summary-x:hover {
+  color: #991b1b;
 }
 
 /* Form fields used by the booking/guest/task modals */
