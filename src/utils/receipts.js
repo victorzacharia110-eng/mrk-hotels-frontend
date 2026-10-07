@@ -9,7 +9,7 @@
 
 import { itemRow, padLine } from '@/utils/printer'
 
-const WIDTH = 42
+const WIDTH = 48
 
 function money(value) {
   return new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value ?? 0)
@@ -52,7 +52,7 @@ function friendlyLabel(code, map = {}) {
 /**
  * Centres one line of text inside the printer's width without ever exceeding it.
  *
- * A 42-column ESC/POS printer wraps a 43rd character onto a second line, which
+ * A 48-column ESC/POS printer wraps a 49th character onto a second line, which
  * on a centred header looks like a printer fault. A long hotel name or address
  * is therefore wrapped on word boundaries into several centred rows rather than
  * allowed to spill. A double-width row only has half the columns, so `size 2`
@@ -110,7 +110,7 @@ export function letterheadLines(header = {}, fallbackName = 'MRK HOTELS') {
   const rows = []
   // The hotel name is the only double-width row, matching how the brand line
   // has always been printed; the details below it stay single-width so a long
-  // address gets the full 42 columns.
+  // address gets the full 48 columns.
   for (const row of centeredRows(name, 2)) rows.push([row, true, 2])
   for (const text of [where, contact, taxIds]) {
     for (const row of centeredRows(text, 1)) rows.push([row])
@@ -142,7 +142,7 @@ export function orderReceiptLines(order, opts = {}) {
 
   const lines = [
     ...letterheadLines(opts.letterhead, opts.hotel),
-    [padLine('Receipt', 'center', 21), false, 2],
+    [padLine('Receipt', 'center', 24), false, 2],
     [String(order.order_number || ''), false, 2],
     [''],
     [`Table: ${order.table_number || order.room_number || '-'}`],
@@ -271,7 +271,7 @@ export function kitchenTicketLines(order, opts = {}) {
   // kitchen must not treat a closed ticket as live work. The position is
   // computed rather than fixed because the letterhead length varies by hotel.
   if (opts.reprinted) {
-    // These marks are printed double-width, which leaves 21 columns on 42-column
+    // These marks are printed double-width, which leaves 24 columns on 48-column
     // paper, so the wording is kept short enough not to wrap.
     const mark = opts.closed ? '* CLOSED ORDER *' : '* REPRINTED *'
     const title = opts.station === 'bar' ? 'BAR ORDER TICKET' : 'KITCHEN ORDER TICKET'
@@ -295,12 +295,12 @@ export function kitchenTicketLines(order, opts = {}) {
 export function testPrintLines() {
   const lines = [
     ['MRK HOTELS', true, 2],
-    [padLine('Printer test', 'center', 21), false, 2],
+    [padLine('Printer test', 'center', 24), false, 2],
     [''],
     [itemRow('Line item A', 'TZS 5,000')],
     [itemRow('Line item B', 'TZS 2,500')],
     [divider()],
-    [itemRow('TOTAL', 'TZS 7,500', 21), true, 2],
+    [itemRow('TOTAL', 'TZS 7,500', 24), true, 2],
     [''],
     [padLine('Connected: connectPrinter OK', 'center')],
     [padLine(new Date().toLocaleString(), 'center')],

@@ -151,7 +151,7 @@ describe('letterhead fallbacks', () => {
 })
 
 describe('printed letterhead never overflows the paper', () => {
-  it('wraps a long hotel name and address instead of spilling past 42 columns', () => {
+  it('wraps a long hotel name and address instead of spilling past 48 columns', () => {
     const out = orderReceiptLines(ORDER, {
       letterhead: {
         name: 'Mara Valley Safari Lodge and Conference Centre',
@@ -165,7 +165,7 @@ describe('printed letterhead never overflows the paper', () => {
 
     for (const line of out) {
       // Size-2 rows print double-width, so they only get half the columns.
-      const limit = line[2] === 2 ? 21 : 42
+      const limit = line[2] === 2 ? 24 : 48
       expect(String(line[0]).length).toBeLessThanOrEqual(limit)
     }
     // Nothing is dropped: the tax id is still on the paper.
@@ -183,7 +183,7 @@ describe('printed letterhead never overflows the paper', () => {
     })
 
     for (const line of out) {
-      const limit = line[2] === 2 ? 21 : 42
+      const limit = line[2] === 2 ? 24 : 48
       expect(String(line[0]).length).toBeLessThanOrEqual(limit)
     }
   })

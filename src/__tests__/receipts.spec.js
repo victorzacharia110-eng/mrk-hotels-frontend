@@ -1,7 +1,7 @@
 /**
- * The POS prints to a 58mm (42-column) roll. Every line a formatter emits
+ * The POS prints to an 80mm (48-column) roll. Every line a formatter emits
  * must fit that width — a size-2 (double-width) row is printed at double
- * width, so a full 42-char string would overflow and wrap the paper long.
+ * width, so a full 48-char string would overflow and wrap the paper long.
  */
 import { describe, expect, it } from 'vitest'
 import { orderReceiptLines, kitchenTicketLines, testPrintLines } from '@/utils/receipts'
@@ -17,7 +17,7 @@ const order = {
 }
 
 describe('receipt line widths', () => {
-  it('all raw lines are at most 42 columns (size-2 rows are halved later)', () => {
+  it('all raw lines are at most 48 columns (size-2 rows are halved later)', () => {
     const paidOrder = {
       ...order,
       payment_status: 'paid',
@@ -43,7 +43,7 @@ describe('receipt line widths', () => {
       for (const [text, , size] of lines) {
         const raw = String(text)
         const effective = size === 2 ? Math.ceil(raw.length * 2) : raw.length
-        expect(effective, `${name} row too wide: "${raw}"`).toBeLessThanOrEqual(42)
+        expect(effective, `${name} row too wide: "${raw}"`).toBeLessThanOrEqual(48)
       }
     }
   })
