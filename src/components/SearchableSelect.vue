@@ -190,23 +190,65 @@ function toggle() {
 
 // The panel is positioned with `position: fixed` so it is never clipped by an
 // ancestor with `overflow: hidden` (e.g. `.card`). Anchor it to the trigger.
-const PANEL_HEIGHT = 250
+//
+// The height is measured from the real panel rather than assumed to be a fixed
+// 250px: a short list (e.g. two categories) must be allowed to open *below* its
+// trigger even near the bottom of a tall modal, otherwise a fixed-height flip
+// throws it up over the fields above it (the Department box in the item form).
+const PANEL_MAX = 250
+const PANEL_MIN = 120
+const PANEL_GAP = 4
+const VIEWPORT_MARGIN = 8
+const PANEL_CHROME = 16 // panel padding (8px top + bottom)
+const SEARCH_CHROME = 46 // search input height + its margin
+
 /**
- * Positions the fixed-position panel just below the trigger, flipping it
- * above when there is not enough room at the bottom of the viewport.
+ * Positions the fixed-position panel next to the trigger, preferring the space
+ * below, flipping above only when the panel truly does not fit, and clamping
+ * its height so it never runs off the viewport.
  */
 function positionPanel() {
   const trigger = rootEl.value?.querySelector('.ss-trigger')
   if (!trigger) return
+  const panel = rootEl.value?.querySelector('.ss-panel')
   const rect = trigger.getBoundingClientRect()
-  let top = rect.bottom + 4
-  if (top + PANEL_HEIGHT > window.innerHeight && rect.top > PANEL_HEIGHT) {
-    top = rect.top - PANEL_HEIGHT - 4
+
+  // Natural (unclamped) height; scrollHeight ignores any max-height we applied.
+  const measured = Boolean(panel)
+  const natural = measured ? Math.min(panel.scrollHeight || PANEL_MAX, PANEL_MAX) : PANEL_MAX
+  const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN
+  const spaceAbove = rect.top - VIEWPORT_MARGIN
+
+  let openBelow
+  if (!measured) {
+    // Before the panel has rendered we cannot know its height; anchor it below
+    // so there is no jump, then the next tick refines this with the real size.
+    openBelow = true
+  } else if (spaceBelow >= natural) {
+    openBelow = true
+  } else if (spaceAbove >= natural) {
+    openBelow = false
+  } else {
+    // Neither side fits the whole panel: use the roomier one and scroll inside.
+    openBelow = spaceBelow >= spaceAbove
   }
+
+  const available = Math.max(PANEL_MIN, (openBelow ? spaceBelow : spaceAbove) - PANEL_GAP)
+  const height = Math.min(natural, available)
+  const top = openBelow ? rect.bottom + PANEL_GAP : rect.top - height - PANEL_GAP
+
+  // Keep the panel inside the viewport horizontally too.
+  let left = rect.left
+  if (left + rect.width > window.innerWidth - VIEWPORT_MARGIN) {
+    left = Math.max(VIEWPORT_MARGIN, window.innerWidth - VIEWPORT_MARGIN - rect.width)
+  }
+
   panelStyle.value = {
-    top: `${top}px`,
-    left: `${rect.left}px`,
+    top: `${Math.max(VIEWPORT_MARGIN, top)}px`,
+    left: `${left}px`,
     width: `${rect.width}px`,
+    maxHeight: `${height}px`,
+    '--ss-list-max': `${Math.max(48, height - PANEL_CHROME - (showSearch.value ? SEARCH_CHROME : 0))}px`,
   }
 }
 
@@ -235,7 +277,9 @@ function openPanel(focusFirst = false, focusLast = false) {
   open.value = true
   query.value = ''
   emit('search', '')
-  positionPanel()
+  // The panel is only in the DOM once Vue has rendered it; position it on the
+  // next tick so its real height is known (see positionPanel).
+  nextTick(positionPanel)
   requestAnimationFrame(() => {
     if (focusFirst || focusLast) {
       const items = rootEl.value?.querySelectorAll('[role="option"]')
@@ -338,6 +382,15 @@ watch(
   },
 )
 
+// Filtering (typing in the search box or a parent reloading options) changes
+// the list height, so re-anchor the panel to keep it flush against the trigger.
+watch(
+  () => filteredOptions.value.length,
+  () => {
+    if (open.value) nextTick(positionPanel)
+  },
+)
+
 /** Registers the document/scroll/resize listeners used by the dropdown. */
 onMounted(() => {
   document.addEventListener('mousedown', onDocumentClick)
@@ -407,12 +460,13 @@ onBeforeUnmount(() => {
 
 .ss-panel {
   position: fixed;
-  z-index: 1000;
+  z-index: 1200;
   padding: 8px;
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 4px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
 }
 
 .ss-search {
@@ -420,7 +474,7 @@ onBeforeUnmount(() => {
 }
 
 .ss-list {
-  max-height: 220px;
+  max-height: var(--ss-list-max, 220px);
   overflow-y: auto;
   list-style: none;
   margin: 0;
