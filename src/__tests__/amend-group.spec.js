@@ -172,4 +172,43 @@ describe('Amend stay for a grouped booking', () => {
     expect(anchorId).toBe('r1')
     expect(payload.room_ids).toEqual(['r2'])
   })
+
+  it('leaves a released room unticked and re-includes it when ticked again', async () => {
+    await mountDashboard()
+    const rooms = [
+      { reservation_id: 'r1', room_id: 'rm1', room_number: '101', status: 'confirmed', is_primary: true },
+      { reservation_id: 'r2', room_id: 'rm2', room_number: '102', status: 'cancelled', released_at: '2026-11-01T10:00:00Z' },
+    ]
+    wrapper.vm.reservations = [
+      { reservation_id: 'r1', room_number: '101', group_id: 'g1', is_primary: true, group: { rooms } },
+    ]
+    wrapper.vm.activeBar = { id: 'r1', rawStatus: 'confirmed', label: 'Amina Hassan', roomId: 'rm1' }
+    wrapper.vm.folio = {
+      reservation: {
+        reservation_id: 'r1',
+        first_name: 'Amina',
+        last_name: 'Hassan',
+        room_id: 'rm1',
+        check_in_date: '2026-11-01',
+        check_out_date: '2026-11-03',
+        guest_phone: '',
+      },
+    }
+    await wrapper.vm.$nextTick()
+
+    wrapper.vm.openAmendModal(false)
+    await wrapper.vm.$nextTick()
+
+    // The released room is listed but starts unticked.
+    expect(wrapper.vm.amendGroupRoomOptions.find((r) => r.value === 'r2').released).toBe(true)
+    expect(wrapper.vm.amendSelectedRoomIds).toEqual(['r1'])
+
+    // Ticking it again sends it in the keep set so the backend restores it.
+    wrapper.vm.amendSelectedRoomIds = ['r1', 'r2']
+    await wrapper.vm.submitAmend()
+
+    expect(api.reservationApi.groupAmend).toHaveBeenCalledTimes(1)
+    const [, payload] = api.reservationApi.groupAmend.mock.calls[0]
+    expect(payload.room_ids.slice().sort()).toEqual(['r1', 'r2'])
+  })
 })

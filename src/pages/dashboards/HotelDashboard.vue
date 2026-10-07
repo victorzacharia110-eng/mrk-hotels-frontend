@@ -1158,7 +1158,11 @@
                     <input type="checkbox" :value="room.value" v-model="amendSelectedRoomIds" />
                     <span>{{ room.room_number }}<template v-if="room.room_type"> · {{ roomTypeLabel(room.room_type) }}</template></span>
                     <span v-if="room.is_primary" class="sv-tag-primary">{{ $t('stayview.primaryRoom') }}</span>
+                    <span v-if="room.released" class="sv-tag-released">{{ $t('stayview.released') }}</span>
                   </label>
+                </div>
+                <div style="margin-top:4px;font-size:11px;color:#888;">
+                  <i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('stayview.releaseHint') }}
                 </div>
                 <span v-if="amendErrors.room_id" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation"
                     aria-hidden="true"></i> {{ amendErrors.room_id }}</span>
@@ -4598,6 +4602,7 @@ const amendGroupRoomOptions = computed(() => {
       room_type: full?.room_type ?? room.room_type ?? '',
       price: Number(full?.price_per_night) || 0,
       is_primary: !!room.is_primary,
+      released: !!room.released_at || room.status === 'cancelled',
       guest_name: room.guest_name || '',
     }
   })
@@ -4624,7 +4629,11 @@ async function loadAmendGroupRooms(reservationId) {
 /** Seeds the group room list and ticks every room for the shared amend. */
 function setAmendGroupRooms(rooms) {
   amendGroupRooms.value = rooms
-  amendSelectedRoomIds.value = rooms.map((r) => r.reservation_id)
+  // Tick only the live rooms; a released room stays listed (so it can be
+  // ticked again to re-include it) but starts unticked.
+  amendSelectedRoomIds.value = rooms
+    .filter((r) => !r.released_at && r.status !== 'cancelled')
+    .map((r) => r.reservation_id)
 }
 
 function openAmendModal(roomMove = false) {
@@ -8223,6 +8232,16 @@ onUnmounted(() => clearInterval(refreshTimer))
   border: 1px solid #eee;
   border-radius: 4px;
   background: #fff;
+}
+
+.sv-tag-released {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .sv-room-summary li {
