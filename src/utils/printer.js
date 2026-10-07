@@ -85,7 +85,7 @@ function pushLine(out, text = '', bold = false, size = 0) {
 export function buildRecipt(lines) {
   const out = []
   out.push(ESC.init, 0x40) // ESC @ — reset the printer.
-  out.push(0x1b, 0x4d, 0x01) // ESC M 1 — narrow 9-dot font so 48-char lines fit an 80mm roll.
+  out.push(0x1b, 0x4d, 0x00) // ESC M 0 — Font A (12-dot) so 48-char lines fill an 80mm roll (576 dots).
 
   for (const [text, bold, size] of lines) {
     pushLine(out, text, bold, size || 0)
