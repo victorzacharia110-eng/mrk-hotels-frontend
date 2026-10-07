@@ -162,10 +162,16 @@ describe('Amend stay for a grouped booking', () => {
     wrapper.vm.openAmendModal(false)
     await wrapper.vm.$nextTick()
 
-    // Untick the primary so only the second room is amended.
+    // Untick the primary so only the second room is amended. It is released,
+    // so the desk must confirm before anything is saved.
     wrapper.vm.amendSelectedRoomIds = ['r2']
     wrapper.vm.amendForm.check_out_date = '2026-11-06'
     await wrapper.vm.submitAmend()
+
+    expect(api.reservationApi.groupAmend).not.toHaveBeenCalled()
+    expect(wrapper.vm.amendReleaseConfirm).toBe(true)
+
+    await wrapper.vm.confirmAmendRelease()
 
     expect(api.reservationApi.groupAmend).toHaveBeenCalledTimes(1)
     const [anchorId, payload] = api.reservationApi.groupAmend.mock.calls[0]

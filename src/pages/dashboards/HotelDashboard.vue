@@ -2227,6 +2227,17 @@
       @cancel="showCancel = false"
       @confirm="confirmCancel"
     />
+
+    <!-- Amend stay: confirm before any unticked group room is released. -->
+    <ConfirmModal
+      :show="amendReleaseConfirm"
+      :title="$t('stayview.releaseConfirmTitle')"
+      :body="$t('stayview.releaseConfirmBody', { rooms: amendReleaseNames })"
+      :confirm-label="$t('stayview.releaseConfirmAction')"
+      :busy="actionBusy"
+      @cancel="amendReleaseConfirm = false"
+      @confirm="confirmAmendRelease"
+    />
   </div>
 </template>
 
@@ -2238,6 +2249,7 @@ import { roomApi, reservationApi, guestApi, housekeepingApi, laundryApi, invoice
 import { useAuthStore } from '@/stores/auth'
 import AlertModal from '@/components/AlertModal.vue'
 import CancelReservationModal from '@/components/CancelReservationModal.vue'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
@@ -4588,9 +4600,24 @@ const roomMoveOptions = computed(() =>
  */
 const amendGroupRooms = ref([])
 const amendIsGroup = computed(() => amendGroupRooms.value.length > 1)
-// Which rooms the shared amend should touch (all by default).
+// Which rooms the shared amend should touch (all live rooms by default).
 const amendSelectedRoomIds = ref([])
 const amendRoomSort = ref('room')
+// Holds the group payload while the desk confirms releasing unticked rooms.
+const amendReleaseConfirm = ref(false)
+const amendPendingPayload = ref(null)
+
+/** Rooms that will be released (freed) if the amend is saved as-is. */
+const amendReleaseRooms = computed(() =>
+  amendGroupRooms.value.filter(
+    (r) =>
+      !amendSelectedRoomIds.value.includes(r.reservation_id) &&
+      (r.status === 'pending' || r.status === 'confirmed'),
+  ),
+)
+const amendReleaseNames = computed(() =>
+  amendReleaseRooms.value.map((r) => r.room_number || '—').join(', '),
+)
 
 /** Room checkboxes for the party, ordered by the desk's choice. */
 const amendGroupRoomOptions = computed(() => {
@@ -4709,8 +4736,8 @@ async function submitAmend() {
   // read the address of record from the reservation after an amendment.
   if (f.guest_email) payload.guest_email = f.guest_email
   if (amendIsGroup.value) {
-    // Every room keeps its own assignment (no room move here); only the
-    // rooms the desk ticked are amended.
+    // Every room keeps its own assignment (no room move here); the ticked
+    // rooms are amended and any unticked active room is released.
     const ids = amendSelectedRoomIds.value.slice()
     if (!ids.length) {
       amendErrors.value = { ...amendErrors.value, room_id: t('stayview.selectAtLeastOneRoom') }
@@ -4718,6 +4745,13 @@ async function submitAmend() {
     }
     const groupPayload = { ...payload, room_ids: ids }
     delete groupPayload.room_id
+    // Releasing frees the room and revokes its charges, so make the desk
+    // confirm before we save it.
+    if (amendReleaseNames.value) {
+      amendPendingPayload.value = groupPayload
+      amendReleaseConfirm.value = true
+      return
+    }
     amendModal.value = false
     await runStayAction(() => reservationApi.groupAmend(activeBar.value.id, groupPayload))
     if (actionError.value) amendModal.value = true
@@ -4727,6 +4761,16 @@ async function submitAmend() {
   await runStayAction(() => reservationApi.update(activeBar.value.id, payload))
   if (actionError.value) amendModal.value = true
 }
+async function confirmAmendRelease() {
+  const groupPayload = amendPendingPayload.value
+  amendReleaseConfirm.value = false
+  amendPendingPayload.value = null
+  if (!groupPayload || !activeBar.value?.id) return
+  amendModal.value = false
+  await runStayAction(() => reservationApi.groupAmend(activeBar.value.id, groupPayload))
+  if (actionError.value) amendModal.value = true
+}
+
 bindBlurValidation(watch, () => amendForm.value, amendSnapshot, amendTouched, amendErrors, amendRules)
 
 /* ----- Void reservation ----- */
