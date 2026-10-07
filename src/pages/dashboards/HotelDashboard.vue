@@ -2255,8 +2255,7 @@ import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import { requiresProvider, providersFor, PAYMENT_METHODS, PAYMENT_STATUSES } from '@/utils/payments'
-import { printHtmlToAgent } from '@/utils/printer'
-import { usePrintSettingsStore } from '@/stores/printSettings'
+
 import { folioBreakdown, isFolioRefundEntry } from '@/utils/folio'
 import { roomOccupiedToday } from '@/utils/roomOccupancy'
 import { toast } from '@/utils/toast'
@@ -4821,32 +4820,27 @@ const hotelLogo = ref('')
  *  issued-at timestamp, independent of the whole-folio bottom print button.
  *  Rendered with the hotel logo and brand palette on A4. */
 /**
- * Sends a reception document to the roll printer through the bridge agent.
+ * Opens a reception document in a new window and sends it to the print dialog.
  *
- * The guest invoice, invoice breakdown, folio ledger and room-posting slip are
- * all laid out for A4, which an 80mm roll cannot show. When an agent is
- * configured it re-lays the markup at the roll's width and prints silently; with
- * no agent reachable the caller falls back to the browser print dialog, which is
- * exactly what happened before the agent existed.
+ * The guest invoice, invoice breakdown, folio ledger and stock ledger are all
+ * laid out for A4 (portrait/landscape), so they must go through the browser's
+ * own print dialog — which applies the A4 paper size, margins and pagination.
+ * They are deliberately NOT shrunk onto the 80mm thermal roll: an invoice is an
+ * A4 document for the guest, while the roll is only for receipts and kitchen
+ * tickets.
  *
- * @param {string} html  A complete HTML document.
- * @returns {Promise<boolean>} True when the agent printed it.
+ * @param {string} html  A complete A4 HTML document that self-prints on load.
+ * @returns {boolean} True when the print window was opened.
  */
-async function printReceptionDocument(html) {
-  let endpoint = printSettingsStore.settings?.endpoint
-  const printers = printSettingsStore.ticketPrinters || []
-  const defaultId = printSettingsStore.defaultTicketPrinterId || ''
-  if (!endpoint) {
-    let p = printers.find(pr => pr.transport === 'network' && pr.endpoint)
-    if (!p && defaultId) {
-      p = printers.find(pr => pr.id === defaultId && pr.transport === 'network' && pr.endpoint)
-    }
-    if (p) endpoint = p.endpoint
+function printReceptionDocument(html) {
+  const win = window.open('', '_blank', 'width=860,height=1000')
+  if (!win) {
+    actionError.value = t('stayview.printEntryInvoiceBlocked')
+    return false
   }
-  if (!endpoint) return false
-  const sent = await printHtmlToAgent(html, endpoint)
-  if (!sent) actionError.value = t('stayview.printEntryInvoiceBlocked')
-  return sent
+  win.document.write(html)
+  win.document.close()
+  return true
 }
 
 async function printEntryInvoice(e) {
@@ -4943,13 +4937,7 @@ async function printEntryInvoice(e) {
   <script>window.onload = () => window.print()${closeScript}
 </body>
 </html>`
-  if (!(await printReceptionDocument(doc))) {
-    const win = window.open('', '_blank', 'width=860,height=1000')
-    if (win) {
-      win.document.write(doc)
-      win.document.close()
-    }
-  }
+  printReceptionDocument(doc)
   entryPrintBusy.value = null
 }
 
@@ -5285,19 +5273,12 @@ async function printInvoiceBreakdown() {
   <div class="foot">${esc(company.name)} · ${esc(t('stayview.printedBy'))}: ${esc(printedBy.value)} · ${esc(stamp)}</div>
   <script>window.onload = function () { window.print() }</${'script'}>
  </body></html>`
-  if (!(await printReceptionDocument(html))) {
-    const win = window.open('', '_blank')
-    if (win) {
-      win.document.write(html)
-      win.document.close()
-    }
-  }
+  printReceptionDocument(html)
 }
 
 /* ---------------- Stock ledger report ---------------- */
 
 const authStore = useAuthStore()
-const printSettingsStore = usePrintSettingsStore()
 
 // Hotel name and staff identity used in the report header/footer.
 const hotelName = computed(() => authStore.user?.tenant?.hotel_name || 'MRK Hotels')
@@ -5948,13 +5929,7 @@ ${head}
 <div class="rpt-foot">${esc(t('stayview.printedBy'))} : ${esc(printedBy.value)} at ${esc(stamp)}</div>
  <script>window.onload = function () { window.print() }</${'script'}>
  </body></html>`
-  if (!(await printReceptionDocument(html))) {
-    const win = window.open('', '_blank')
-    if (win) {
-      win.document.write(html)
-      win.document.close()
-    }
-  }
+  printReceptionDocument(html)
 }
 
 /* ---------------- New booking modal ---------------- */
