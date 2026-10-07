@@ -105,13 +105,37 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
   }
 
   /**
+   * The bridge-agent URL the till should print through, if one is configured.
+   *
+   * The top-level transport/endpoint is the primary till setting, but a network
+   * ticket profile (or the default one) is honoured as a fallback. Without this
+   * a till whose receipts were never switched off Web Serial — but which already
+   * prints reception documents through a network profile — tried the (absent)
+   * serial port and reported "printer not connected".
+   */
+  function resolveNetworkEndpoint() {
+    if (settings.value.transport === "network" && settings.value.endpoint) {
+      return settings.value.endpoint;
+    }
+    const printers = settings.value.ticketPrinters || [];
+    const defaultId = settings.value.defaultTicketPrinterId;
+    const preferred = defaultId ? printers.find((p) => p.id === defaultId) : null;
+    if (preferred?.transport === "network" && preferred.endpoint) {
+      return preferred.endpoint;
+    }
+    const first = printers.find((p) => p.transport === "network" && p.endpoint);
+    return first ? first.endpoint : "";
+  }
+
+  const networkEndpoint = computed(() => resolveNetworkEndpoint());
+
+  /**
    * Sends receipt lines to the till printer using whichever transport is
    * configured. Returns true when the job was accepted by the printer/agent.
    */
   async function print(lines, opts = {}) {
-    const transport = settings.value.transport;
-    const endpoint = settings.value.endpoint;
-    if (transport === "network" && endpoint) {
+    const endpoint = resolveNetworkEndpoint();
+    if (endpoint) {
       return printToPrinter(lines, { ...opts, transport: "network", endpoint });
     }
     if (!printerSupported()) {
@@ -120,6 +144,29 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
       return false;
     }
     return printToPrinter(lines, { ...opts, transport: "serial" });
+  }
+
+  /**
+   * Checks a configured bridge agent is reachable so the UI can say "ready"
+   * without having to print a test slip. Returns true when the agent answered.
+   */
+  async function probeNetwork() {
+    const endpoint = resolveNetworkEndpoint();
+    if (!endpoint) return false;
+    try {
+      const resp = await fetch(`${endpoint.replace(/\/+$/, "")}/status`, {
+        method: "GET",
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      printerState.connected = true;
+      printerState.reason = "";
+      printerState.info = `Network bridge · ${endpoint}`;
+      return true;
+    } catch (err) {
+      printerState.connected = false;
+      printerState.reason = `Could not reach the print agent at ${endpoint} (${err?.message || "network error"}). Make sure it is running on the printer machine and reachable from this device.`;
+      return false;
+    }
   }
 
   /**
@@ -274,9 +321,11 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
     defaultTicketPrinterId,
     transport,
     endpoint,
+    networkEndpoint,
     saveSettings,
     reset,
     print,
+    probeNetwork,
     resolveTicketPrinter,
     addTicketPrinter,
     removeTicketPrinter,

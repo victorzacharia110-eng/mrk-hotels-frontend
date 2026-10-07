@@ -390,7 +390,7 @@ const date = ref(workingDateStore.workingDate)
 const search = ref('')
 const activeTab = ref('running')
 const printArea = ref(null)
-const supported = computed(() => printerSupported())
+const supported = computed(() => printerSupported() || !!printStore.networkEndpoint)
 const connecting = ref(false)
 
 const payOpen = ref(false)
@@ -904,7 +904,11 @@ async function doPrint(order, kind) {
 async function connectFromPage() {
   connecting.value = true
   try {
-    const ok = await connectPrinter()
+    // With a bridge agent configured the till is reached over HTTP, not Web
+    // Serial, so "Connect" just pings the agent instead of opening a port.
+    const ok = printStore.networkEndpoint
+      ? await printStore.probeNetwork()
+      : await connectPrinter()
     if (ok) toast(t('cashier.summary.printerConnected'), 'success')
     else toast(printerState.reason || t('cashier.summary.connectFailed'), 'error')
   } finally {
@@ -940,7 +944,8 @@ onMounted(async () => {
   load()
   loadTables()
   loadLogo()
-  restorePrinter()
+  if (printStore.networkEndpoint) printStore.probeNetwork()
+  else restorePrinter()
 })
 
 onUnmounted(() => {

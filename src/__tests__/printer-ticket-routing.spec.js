@@ -208,6 +208,63 @@ describe('print settings — routing each line to its own pass', () => {
     expect(printToPrinter.mock.calls[1][0]).toBe(barLines)
   })
 
+  it('a network ticket profile carries receipts even when the till transport is serial', async () => {
+    const store = usePrintSettingsStore()
+    // The till's own transport was left on Web Serial, but a network profile is
+    // configured. Receipts must use the same agent the reception documents do,
+    // instead of trying the (absent) serial port and reporting "not connected".
+    store.saveSettings({
+      transport: 'serial',
+      endpoint: '',
+      ticketPrinters: [{ id: 'p-bar', transport: 'network', endpoint: 'http://10.0.0.9:9720' }],
+    })
+
+    const sent = await store.print([['x']])
+
+    expect(sent).toBe(true)
+    expect(printToPrinter).toHaveBeenCalledWith([['x']], { transport: 'network', endpoint: 'http://10.0.0.9:9720' })
+  })
+
+  it('the top-level network endpoint wins over a ticket profile', () => {
+    const store = usePrintSettingsStore()
+    store.saveSettings({
+      transport: 'network',
+      endpoint: 'http://127.0.0.1:9720',
+      ticketPrinters: [{ id: 'p-bar', transport: 'network', endpoint: 'http://10.0.0.9:9720' }],
+    })
+
+    expect(store.networkEndpoint).toBe('http://127.0.0.1:9720')
+  })
+
+  it('falls back to serial when no network endpoint is configured', async () => {
+    const store = usePrintSettingsStore()
+    store.saveSettings({ transport: 'serial', endpoint: '', ticketPrinters: [] })
+
+    await store.print([['x']])
+
+    expect(printToPrinter).toHaveBeenCalledWith([['x']], { transport: 'serial' })
+  })
+
+  it('probeNetwork marks the agent connected and reports the reason when it is down', async () => {
+    const store = usePrintSettingsStore()
+    store.saveSettings({ transport: 'network', endpoint: 'http://127.0.0.1:9720' })
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true })
+      .mockRejectedValueOnce(new Error('connection refused'))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(store.probeNetwork()).resolves.toBe(true)
+    expect(printerState.connected).toBe(true)
+    expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:9720/status', { method: 'GET' })
+
+    await expect(store.probeNetwork()).resolves.toBe(false)
+    expect(printerState.connected).toBe(false)
+    expect(printerState.reason).toContain('http://127.0.0.1:9720')
+
+    vi.unstubAllGlobals()
+  })
+
   it('deleting a printer clears the station routes that pointed at it', () => {
     const store = usePrintSettingsStore()
     store.saveSettings({
