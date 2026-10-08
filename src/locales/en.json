@@ -1439,7 +1439,30 @@
     "passHint": "Where an item's order ticket goes. A menu item files itself under Kitchen or Bar, and a pass left on “follow the service line” uses that service line's printer above.",
     "stationKitchen": "Kitchen pass",
     "stationBar": "Bar pass",
-    "followServiceLine": "Follow the service line"
+    "followServiceLine": "Follow the service line",
+    "setupTitle": "Set up printing — step by step",
+    "setupSubtitle": "Run these four steps once at installation. After that, receipts and food tickets print on their own.",
+    "reqTitle": "Before you start",
+    "req1": "The printer must be an ESC/POS thermal receipt printer — the usual restaurant till printer.",
+    "req2": "Connecting a USB printer directly needs Chrome or Edge on a desktop computer, on a secure (https) page — this site is.",
+    "req3": "If the printer is plugged into a different computer, use the network bridge agent — “Network printer” in the cashier's Print Settings for the till, or the Network bridge agent row in step 2 for food tickets.",
+    "step1Title": "Connect the till printer",
+    "step1Hint": "Plug the receipt printer into this computer, click Connect Printer and choose the printer in the browser prompt — not a COM port.",
+    "step2Title": "Add the kitchen & bar printers",
+    "step2Hint": "Only if you have separate printers. Without them, food tickets print on the till printer.",
+    "step3Title": "Route service lines and passes",
+    "step3Hint": "Point Restaurant/Bar lines and the Kitchen/Bar passes at the right printer so tickets land where the food is made.",
+    "step4Title": "Send a test print",
+    "step4Hint": "Press Test Print — a small receipt should come out. If it does, printing is fully set up.",
+    "stepGo": "Open this section",
+    "statusDone": "Done",
+    "statusTodo": "To do",
+    "statusOptional": "Optional",
+    "statusNotNeeded": "Not needed",
+    "bridgeTitle": "Printer on a different computer? Use the bridge agent.",
+    "bridge1": "Copy the printer-bridge folder to that Windows PC, right-click install-start.bat and choose Run as administrator (once). It then starts with Windows every time.",
+    "bridge2": "Enter http://<that PC's IP>:9720 — e.g. http://192.168.1.50:9720 on the same network, or a Tailscale address (http://100.x.y.z:9720) for a till outside the hotel.",
+    "bridge3": "Choose Network bridge agent in the Add printer row, paste the address and click Add — the next food ticket prints through it."
   },
   "orders": {
     "title": "F&B Orders",
@@ -5328,7 +5351,8 @@
       "printOnVoid": "Print Receipt on Void order",
       "printOnVoidDetail": "Print a receipt copy when an order is voided or cancelled.",
       "saved": "Print settings saved.",
-      "reset": "Reset"
+      "reset": "Reset",
+      "bridgeStep3": "Choose Network printer above, paste the address and press Test Print — the receipt must come out of the remote printer."
     },
     "types": {
       "dine_in": "Dine In",

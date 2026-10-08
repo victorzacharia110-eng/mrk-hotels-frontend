@@ -85,6 +85,23 @@
           <button class="btn btn-danger" @click="disconnect"><i class="fas fa-plug-circle-xmark"></i> {{ $t('printer.disconnect') }}</button>
         </template>
       </div>
+
+      <!-- The ordered setup for the chosen transport, so the cashier can wire
+           the printer up without leaving the page. -->
+      <div class="quick-steps">
+        <p class="qs-h"><i class="fas fa-list-ol" aria-hidden="true"></i> <strong>{{ $t('printer.setupTitle') }}</strong></p>
+        <ol v-if="transportRef === 'serial'">
+          <li>{{ $t('printer.how1') }}</li>
+          <li>{{ $t('printer.how2') }}</li>
+          <li>{{ $t('printer.how3') }}</li>
+          <li>{{ $t('printer.how4') }}</li>
+        </ol>
+        <ol v-else>
+          <li>{{ $t('printer.bridge1') }}</li>
+          <li>{{ $t('printer.bridge2') }}</li>
+          <li>{{ $t('cashier.printSettings.bridgeStep3') }}</li>
+        </ol>
+      </div>
     </section>
 
     <!-- Cloud Print Settings -->
@@ -274,6 +291,11 @@ onMounted(() => {
 .network-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 .net-actions { display: flex; align-items: center; gap: 12px; }
 .connect-actions { display: flex; gap: 10px; margin-top: 4px; }
+
+.quick-steps { border-top: 1px solid #ececec; margin-top: 14px; padding-top: 12px; font-size: 13px; }
+.qs-h { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+.qs-h i { color: #005eb8; }
+.quick-steps ol { margin: 0; padding-left: 20px; line-height: 1.7; color: #444; }
 .fld-label { font-size: 12px; font-weight: 600; color: #475569; }
 
 .toggle-row {

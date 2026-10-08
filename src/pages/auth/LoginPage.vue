@@ -523,7 +523,7 @@ function startResendCooldown() {
 
 .auth-header .logo-icon {
   display: inline-flex;
-  background: url('/MRK_logo_transparent.png') center/contain no-repeat;
+  background: url('/MRK_mark_transparent.png') center/contain no-repeat;
   justify-content: center;
   align-items: center;
   width: 170px;

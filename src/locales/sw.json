@@ -1439,7 +1439,30 @@
     "passHint": "Mahali agizo la kitu hiki hupeleka. Kitu cha menyu kinasajiliwa chini ya Jikofu au Bar, na kituo kilichobakiwa “fuata mstari wa huduma” hutumia printa ya mstari huo hapo juu.",
     "stationKitchen": "Kituo cha jikofu",
     "stationBar": "Kituo cha bar",
-    "followServiceLine": "Fuata mstari wa huduma"
+    "followServiceLine": "Fuata mstari wa huduma",
+    "setupTitle": "Weka printa kwa hatua kwa hatua",
+    "setupSubtitle": "Fanya hatua hizi nne mara moja wakati wa usanidi. Baadaye, risiti na tiketi za chakula zitachapisha zenyewe.",
+    "reqTitle": "Kabla ya kuanza",
+    "req1": "Printa lazima iwe ya ESC/POS thermal — printa ya risiti ya kawaida ya kasheri.",
+    "req2": "Kuunganisha USB moja kwa moja inahitaji Chrome au Edge kwenye kompyuta ya meza, kwenye ukurasa salama (https) — tovuti hii ni hiyo.",
+    "req3": "Ikiwa printa imeunganishwa kwenye kompyuta ingine, tumia bridge agent — “Network printer” kwenye Mipangilio ya Uchapishaji ya kasheri kwa printa ya kasheri, au safu ya Network bridge agent katika hatua ya 2 kwa tiketi za chakula.",
+    "step1Title": "Unganisha printa ya kasheri",
+    "step1Hint": "Chomeka printa ya risiti kwenye kompyuta hii, bonyeza Unganisha Printa kisha uchague printa kwenye kidokezo cha kivinjari — si COM port.",
+    "step2Title": "Ongeza printa za jikoni na baa",
+    "step2Hint": "Ni kama ukiwa na printa nyingine. Bila hizo, tiketi za chakula zitachapishwa kwenye printa ya kasheri.",
+    "step3Title": "Elekeza mistari ya huduma na vituo",
+    "step3Hint": "Peleka mistari ya Restaurant/Bar na vituo vya Kitchen/Bar kwenye printa sahihi ili tiketi zifike mahali chakula kinapandwa.",
+    "step4Title": "Tuma majaribio ya uchapishaji",
+    "step4Hint": "Bonyeza Jaribu Uchapishaji — risiti ndogo itatoka. Ikiondokea, usanidi umekamilika kabisa.",
+    "stepGo": "Fungua sehemu hii",
+    "statusDone": "Imekamilika",
+    "statusTodo": "Inasubiri",
+    "statusOptional": "Hiari",
+    "statusNotNeeded": "Haihitajiki",
+    "bridgeTitle": "Printa kwenye kompyuta ingine? Tumia bridge agent.",
+    "bridge1": "Nakili folda ya printer-bridge kwenye PC ya Windows hiyo, bofya install-start.bat kisha uchague Run as administrator (mara moja). Itaanza kila Windows inapoanza.",
+    "bridge2": "Weka http://<IP ya PC hiyo>:9720 — mfano http://192.168.1.50:9720 katika mtandao uleule, au anwani ya Tailscale (http://100.x.y.z:9720) kwa kasheri nje ya hoteli.",
+    "bridge3": "Chagua Network bridge agent kwenye safu ya Ongeza printa, bandika anwani kisha bonyeza Ongeza — tiketi ijayo ya chakula itachapishwa kupitia hiyo."
   },
   "orders": {
     "title": "Maagizo ya Chakula",
@@ -5328,7 +5351,8 @@
       "printOnVoid": "Chapisha Risiti kwenye oda ya Void",
       "printOnVoidDetail": "Chapisha nakala ya risiti wakati oda inafutwa.",
       "saved": "Mipangilio imehifadhiwa.",
-      "reset": "Rudisha"
+      "reset": "Rudisha",
+      "bridgeStep3": "Chagua Network printer hapo juu, bandika anwani kisha bonyeza Jaribu Uchapishaji — risiti itokee kwenye printa ya mbali."
     },
     "types": {
       "dine_in": "Kula Ndani",
