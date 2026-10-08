@@ -855,7 +855,9 @@
     },
     "verifyDevicePrompt": "Weka msimbo tulikutumia kwa barua pepe ili kuamini kifaa hiki.",
     "sentTo": "Kimetumwa kwa:",
-    "verificationCode": "Msimbo uthibitisho"
+    "verificationCode": "Msimbo uthibitisho",
+    "trustDeviceLabel": "Themini kifaa hiki kwa uingiaji wa PIN",
+    "trustDeviceHint": "Tutatuma msimbo wa mara moja kwa barua pepe unapoingia hapa kwa mara ya kwanza — baadaye kivinjari hiki kitaweza kutumia kibodi cha PIN. Uingia kwa PIN hufanya kazi tu kwenye kifaa cha kuaminika."
   },
   "rooms": {
     "title": "Vyumba",

@@ -28,6 +28,46 @@ const ROLE_LEVELS = {
   staff: 20,
 }
 
+/**
+ * Trusted-device key storage.
+ *
+ * The key lives in localStorage because trust belongs to the BROWSER, not to
+ * one tab or one signed-in session: a till keeps its key across refreshes,
+ * new tabs and sign-outs (the backend only revokes it by expiry or from the
+ * Trusted Devices screen). It used to sit in sessionStorage, which wiped it
+ * on every logout and per-tab — so PIN sign-in reached the API with no
+ * device_key and died on "The device key field is required."
+ */
+const DEVICE_KEY = 'trusted_device_key'
+const DEVICE_UNTIL = 'trusted_device_until'
+
+/**
+ * Reads the trusted-device key, migrating a legacy sessionStorage copy.
+ * @returns {string} The raw device key, or '' when this browser is untrusted.
+ */
+function readDeviceKey() {
+  const live = localStorage.getItem(DEVICE_KEY)
+  if (live) return live
+  const legacy = sessionStorage.getItem(DEVICE_KEY)
+  if (!legacy) return ''
+  localStorage.setItem(DEVICE_KEY, legacy)
+  const until = sessionStorage.getItem(DEVICE_UNTIL)
+  if (until) localStorage.setItem(DEVICE_UNTIL, until)
+  sessionStorage.removeItem(DEVICE_KEY)
+  sessionStorage.removeItem(DEVICE_UNTIL)
+  return legacy
+}
+
+/**
+ * Persists the trusted-device key and its expiry for this browser.
+ * @param {string} key   Raw device key returned by the API.
+ * @param {string} [until] ISO trusted-until timestamp, when the API sent one.
+ */
+function rememberDeviceKey(key, until) {
+  if (key) localStorage.setItem(DEVICE_KEY, key)
+  if (until) localStorage.setItem(DEVICE_UNTIL, until)
+}
+
 // Central auth store: session token, current user and role-based access checks.
 export const useAuthStore = defineStore('auth', () => {
   // Currently signed-in user object (or null when logged out).
@@ -88,10 +128,18 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(data) {
     loading.value = true
     try {
-      const response = await authApi.login(data)
+      const payload = { ...data }
+      // An already-trusted terminal sends its key back: the backend then skips
+      // the one-time code, signs in directly and lifts any PIN lockout.
+      const deviceKey = readDeviceKey()
+      if (deviceKey && !payload.device_key) payload.device_key = deviceKey
+      const response = await authApi.login(payload)
       // A fresh login must not inherit an owner's previously selected hotel.
       sessionStorage.removeItem('owner_viewing_hotel')
       sessionStorage.removeItem('owner_viewing_hotel_name')
+      if (response.data?.device_key) {
+        rememberDeviceKey(response.data.device_key, response.data?.trusted_until)
+      }
       applyAuth(response.data)
       return response.data
     } finally {
@@ -112,10 +160,7 @@ export const useAuthStore = defineStore('auth', () => {
       sessionStorage.removeItem('owner_viewing_hotel_name')
       applyAuth(response.data)
       if (response.data?.device_key) {
-        sessionStorage.setItem('trusted_device_key', response.data.device_key)
-      }
-      if (response.data?.trusted_until) {
-        sessionStorage.setItem('trusted_device_until', response.data.trusted_until)
+        rememberDeviceKey(response.data.device_key, response.data?.trusted_until)
       }
       return response.data
     } finally {
@@ -135,23 +180,31 @@ export const useAuthStore = defineStore('auth', () => {
    * @returns {Promise<object>} The login response payload.
    */
   async function loginPin(data) {
+    const payload = { ...data }
+    if (!payload.device_key) payload.device_key = readDeviceKey()
+    // PIN sign-in only exists on a trusted terminal. Without a key the API
+    // would 422 on the required device_key field, so mirror the server's
+    // device_untrusted response instead — the login screen then explains and
+    // falls back to email + password, which re-trusts the browser.
+    if (!payload.device_key) {
+      const err = new Error('device_key required')
+      err.response = {
+        data: {
+          message: 'This device is not trusted for PIN sign-in. Sign in with your email, password and property code first.',
+          device_untrusted: true,
+        },
+      }
+      throw err
+    }
     loading.value = true
     try {
-      const deviceKey = sessionStorage.getItem('trusted_device_key')
-      const payload = { ...data }
-      if (deviceKey && !payload.device_key) {
-        payload.device_key = deviceKey
-      }
       const response = await authApi.loginPin(payload)
       // A fresh login must not inherit an owner's previously selected hotel.
       sessionStorage.removeItem('owner_viewing_hotel')
       sessionStorage.removeItem('owner_viewing_hotel_name')
       applyAuth(response.data)
       if (response.data?.device_key) {
-        sessionStorage.setItem('trusted_device_key', response.data.device_key)
-      }
-      if (response.data?.trusted_until) {
-        sessionStorage.setItem('trusted_device_until', response.data.trusted_until)
+        rememberDeviceKey(response.data.device_key, response.data?.trusted_until)
       }
       return response.data
     } finally {
@@ -179,8 +232,10 @@ export const useAuthStore = defineStore('auth', () => {
       // Drop the owner's selected hotel on logout as well.
       sessionStorage.removeItem('owner_viewing_hotel')
       sessionStorage.removeItem('owner_viewing_hotel_name')
-      sessionStorage.removeItem('trusted_device_key')
-      sessionStorage.removeItem('trusted_device_until')
+      // The trusted-device key is deliberately kept: sign-out ends the session,
+      // not the device's trust (only expiry or the Trusted Devices screen
+      // revokes that), and wiping it here is what made PIN sign-in fail with
+      // "device key field is required" right after logging out.
     }
   }
 
@@ -208,8 +263,7 @@ export const useAuthStore = defineStore('auth', () => {
         permissions.value = []
         mustChangePassword.value = false
         sessionStorage.removeItem('auth_token')
-        sessionStorage.removeItem('trusted_device_key')
-        sessionStorage.removeItem('trusted_device_until')
+        // Device trust survives a dead session — see logout() above.
       }
       throw error
     } finally {

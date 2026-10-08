@@ -9,67 +9,31 @@
 <template>
   <div class="ss" ref="rootEl">
     <!-- Trigger button showing the current selection (or the placeholder). -->
-    <button
-      type="button"
-      class="ss-trigger"
-      :class="{ 'is-empty': !selectedLabel, 'is-disabled': disabled }"
-      :disabled="disabled"
-      :aria-haspopup="'listbox'"
-      :aria-expanded="open"
-      @click="toggle"
-      @keydown.down.prevent="openPanel(true)"
-      @keydown.up.prevent="openPanel(true, true)"
-    >
+    <button type="button" class="ss-trigger" :class="{ 'is-empty': !selectedLabel, 'is-disabled': disabled }"
+      :disabled="disabled" :aria-haspopup="'listbox'" :aria-expanded="open" @click="toggle"
+      @keydown.down.prevent="openPanel(true)" @keydown.up.prevent="openPanel(true, true)">
       <span class="ss-trigger-label">{{ selectedLabel || placeholder }}</span>
     </button>
 
     <!-- Dropdown panel: search box, loading/empty states and the option list. -->
     <div v-if="open" class="ss-panel" :style="panelStyle">
-      <input
-        v-if="showSearch"
-        v-model="query"
-        type="search"
-        class="input ss-search"
-        :placeholder="resolvedSearchPlaceholder"
-        autocomplete="off"
-        :aria-label="resolvedSearchPlaceholder"
-        @keydown.esc="close"
-        @input="onSearchInput"
-      />
-      <ul
-        class="ss-list"
-        role="listbox"
-        :aria-label="resolvedListboxLabel"
-        @keydown="onListKeydown"
-      >
-        <li
-          v-if="emptyAsHint ? (!searching && !options.length) : (emptyLabel !== null && emptyLabel !== undefined)"
-          role="option"
-          tabindex="-1"
-          data-value=""
-          class="ss-option"
-          :class="{ 'is-active': !modelValue, 'ss-muted': emptyAsHint }"
-          :aria-selected="!modelValue ? 'true' : 'false'"
-          @click="emptyAsHint ? null : pick('')"
-        >
+      <input v-if="showSearch" v-model="query" type="search" class="input ss-search"
+        :placeholder="resolvedSearchPlaceholder" autocomplete="off" :aria-label="resolvedSearchPlaceholder"
+        @keydown.esc="close" @input="onSearchInput" />
+      <ul class="ss-list" role="listbox" :aria-label="resolvedListboxLabel" @keydown="onListKeydown">
+        <li v-if="emptyAsHint ? (!searching && !options.length) : (emptyLabel !== null && emptyLabel !== undefined)"
+          role="option" tabindex="-1" data-value="" class="ss-option"
+          :class="{ 'is-active': !modelValue, 'ss-muted': emptyAsHint }" :aria-selected="!modelValue ? 'true' : 'false'"
+          @click="emptyAsHint ? null : pick('')">
           {{ emptyLabel }}
         </li>
         <li v-if="searching" class="ss-option ss-muted">
           <i class="fas fa-spinner fa-spin" aria-hidden="true" /> {{ resolvedLoadingLabel }}
         </li>
-        <li
-          v-for="o in filteredOptions"
-          v-else
-          :key="o.value"
-          :data-value="o.value"
-          role="option"
-          tabindex="-1"
-          class="ss-option"
-          :class="{ 'is-active': String(modelValue) === String(o.value), 'is-disabled': o.disabled }"
+        <li v-for="o in filteredOptions" v-else :key="o.value" :data-value="o.value" role="option" tabindex="-1"
+          class="ss-option" :class="{ 'is-active': String(modelValue) === String(o.value), 'is-disabled': o.disabled }"
           :aria-selected="String(modelValue) === String(o.value) ? 'true' : 'false'"
-          :aria-disabled="o.disabled ? 'true' : 'false'"
-          @click="pick(o.value)"
-        >
+          :aria-disabled="o.disabled ? 'true' : 'false'" @click="pick(o.value)">
           <slot name="option" :option="o" :active="String(modelValue) === String(o.value)">
             {{ o.label }}
           </slot>
@@ -84,15 +48,8 @@
       Invisible twin select so HTML5 constraint validation (e.g. `required`)
       still runs when this control sits inside a <form>.
     -->
-    <select
-      class="ss-native"
-      tabindex="-1"
-      aria-hidden="true"
-      :required="required"
-      :disabled="disabled"
-      :value="modelValue"
-      @change="pick($event.target.value)"
-    >
+    <select class="ss-native" tabindex="-1" aria-hidden="true" :required="required" :disabled="disabled"
+      :value="modelValue" @change="pick($event.target.value)">
       <option v-for="o in options" :key="o.value" :value="o.value" :disabled="o.disabled" />
     </select>
   </div>
@@ -497,6 +454,7 @@ onBeforeUnmount(() => {
   cursor: not-allowed;
   background: #f7f7f7;
 }
+
 .ss-option.is-disabled:hover {
   background: #f7f7f7;
 }

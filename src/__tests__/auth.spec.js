@@ -19,6 +19,7 @@ import { authApi } from '@/api'
 describe('auth store', () => {
   beforeEach(() => {
     sessionStorage.clear()
+    localStorage.clear()
     setActivePinia(createPinia())
     vi.clearAllMocks()
   })
@@ -82,10 +83,25 @@ describe('auth store', () => {
 
       expect(store.mustChangePassword).toBe(true)
     })
+
+    it('sends the stored device key so a trusted terminal skips the one-time code', async () => {
+      localStorage.setItem('trusted_device_key', 'dev-key-77')
+      authApi.login.mockResolvedValue({ data: { token: 't', user: { user_role: 'staff' } } })
+
+      const store = useAuthStore()
+      await store.login({ email: 'a@b.com', password: 'p' })
+
+      expect(authApi.login).toHaveBeenCalledWith({
+        email: 'a@b.com',
+        password: 'p',
+        device_key: 'dev-key-77',
+      })
+    })
   })
 
   describe('loginPin', () => {
     it('authenticates via PIN and stores the session', async () => {
+      localStorage.setItem('trusted_device_key', 'dev-key-123')
       const payload = { token: 'pin_tok', user: { user_role: 'housekeeping' } }
       authApi.loginPin.mockResolvedValue({ data: payload })
 
@@ -94,17 +110,45 @@ describe('auth store', () => {
 
       expect(store.isAuthenticated).toBe(true)
       expect(store.token).toBe('pin_tok')
-      expect(authApi.loginPin).toHaveBeenCalledWith({ identifier: 'staff@mrk.test', pin: '1234' })
+      expect(authApi.loginPin).toHaveBeenCalledWith({
+        identifier: 'staff@mrk.test',
+        pin: '1234',
+        device_key: 'dev-key-123',
+      })
+    })
+
+    it('refuses to call the API when this browser holds no device key', async () => {
+      // Without a key the endpoint would 422 on the required device_key
+      // field; the store mirrors the server's device_untrusted answer so the
+      // login screen can explain and fall back to email + password.
+      const store = useAuthStore()
+
+      await expect(store.loginPin({ pin: '1234' })).rejects.toMatchObject({
+        response: { data: { device_untrusted: true } },
+      })
+      expect(authApi.loginPin).not.toHaveBeenCalled()
     })
 
     it('attaches the stored trusted device key to PIN sign-in', async () => {
-      sessionStorage.setItem('trusted_device_key', 'dev-key-123')
+      localStorage.setItem('trusted_device_key', 'dev-key-123')
       authApi.loginPin.mockResolvedValue({ data: { token: 'pin_tok', user: { user_role: 'waiter' } } })
 
       const store = useAuthStore()
       await store.loginPin({ pin: '1234' })
 
       expect(authApi.loginPin).toHaveBeenCalledWith({ pin: '1234', device_key: 'dev-key-123' })
+    })
+
+    it('migrates a legacy sessionStorage key into localStorage', async () => {
+      sessionStorage.setItem('trusted_device_key', 'legacy-key')
+      authApi.loginPin.mockResolvedValue({ data: { token: 'pin_tok', user: { user_role: 'waiter' } } })
+
+      const store = useAuthStore()
+      await store.loginPin({ pin: '1234' })
+
+      expect(authApi.loginPin).toHaveBeenCalledWith({ pin: '1234', device_key: 'legacy-key' })
+      expect(localStorage.getItem('trusted_device_key')).toBe('legacy-key')
+      expect(sessionStorage.getItem('trusted_device_key')).toBeNull()
     })
   })
 
@@ -124,8 +168,8 @@ describe('auth store', () => {
 
       expect(result.token).toBe('tok_2fa')
       expect(store.isAuthenticated).toBe(true)
-      expect(sessionStorage.getItem('trusted_device_key')).toBe('dev-key-abc')
-      expect(sessionStorage.getItem('trusted_device_until')).toBe('2027-01-08T00:00:00.000Z')
+      expect(localStorage.getItem('trusted_device_key')).toBe('dev-key-abc')
+      expect(localStorage.getItem('trusted_device_until')).toBe('2027-01-08T00:00:00.000Z')
     })
 
     it('resends the code against the resend endpoint', async () => {
@@ -168,6 +212,20 @@ describe('auth store', () => {
       await store.logout()
 
       expect(store.isAuthenticated).toBe(false)
+    })
+
+    it('keeps the trusted device key — sign-out ends the session, not the trust', async () => {
+      // This was the bug behind "The device key field is required": logout
+      // wiped the key, so the next PIN sign-in had nothing to send.
+      localStorage.setItem('trusted_device_key', 'dev-key-keep')
+      authApi.login.mockResolvedValue({ data: { token: 't', user: { user_role: 'staff' } } })
+      const store = useAuthStore()
+      await store.login({ email: 'a@b.com', password: 'p' })
+
+      authApi.logout.mockResolvedValue()
+      await store.logout()
+
+      expect(localStorage.getItem('trusted_device_key')).toBe('dev-key-keep')
     })
   })
 

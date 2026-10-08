@@ -103,6 +103,20 @@
             errors.property_code }}</span>
         </div>
 
+        <!--
+          Device trust is what makes PIN sign-in possible later: without it the
+          login never asks for the one-time code, the browser never receives a
+          device key, and the PIN keypad can only answer "this device is not
+          trusted". On by default; untick for a shared/public machine.
+        -->
+        <label class="trust-device">
+          <input v-model="form.trust_device" type="checkbox" />
+          <span>
+            <strong>{{ $t('auth.trustDeviceLabel') }}</strong>
+            <small>{{ $t('auth.trustDeviceHint') }}</small>
+          </span>
+        </label>
+
         <!-- Authentication failures returned by the API -->
         <div class="server-errors" v-if="serverErrors.length > 0">
           <div v-for="(msg, i) in serverErrors" :key="i" class="server-error"><i class="fas fa-exclamation-circle"></i>
@@ -181,7 +195,7 @@ const year = new Date().getFullYear()
 const { holiday } = useHoliday()
 
 // Login form model, per-field validation errors, server errors and UI flags.
-const form = ref({ email: '', password: '', property_code: '' })
+const form = ref({ email: '', password: '', property_code: '', trust_device: true })
 const errors = ref({})
 const serverErrors = ref([])
 const touched = ref({})
@@ -431,17 +445,12 @@ async function submitDeviceVerification() {
 
   loading.value = true
   try {
-    const data = await authStore.verifyDevice({
+    await authStore.verifyDevice({
       challenge: deviceVerify.value.challenge,
       code: deviceVerify.value.code.trim(),
       trust_months: Number(deviceVerify.value.trustMonths),
     })
-    if (data?.device_key) {
-      sessionStorage.setItem('trusted_device_key', data.device_key)
-    }
-    if (data?.trusted_until) {
-      sessionStorage.setItem('trusted_device_until', data.trusted_until)
-    }
+    // The store persists the returned device key itself — no second copy here.
     sessionStore.start()
     const redirect = route.query.redirect
     if (redirect) {
@@ -780,6 +789,35 @@ function startResendCooldown() {
 
 .pin-error {
   justify-content: center;
+}
+
+/* Device-trust opt-in: checkbox plus a short explanation of the OTP step. */
+.trust-device {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  margin: 2px 0 14px;
+  background: #f5f8fc;
+  border: 1px solid #e3ecf6;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.trust-device input {
+  margin-top: 3px;
+  accent-color: #005eb8;
+}
+.trust-device strong {
+  display: block;
+  font-size: 13px;
+  color: #1f2937;
+}
+.trust-device small {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.45;
+  margin-top: 2px;
 }
 
 /* On-screen numeric keypad: 3x4 grid of digit keys plus clear/backspace */
