@@ -33,15 +33,19 @@ The old system let anyone try the 4-digit PIN over and over (up to 10,000 guesse
 
 **If using PIN on an already trusted device:** works as normal
 
+## Also Built
+
+6. **Resend code button** - On the code-entry screen there is now a "Resend code" button (with a 60-second cool-down). If the code expires or never arrives, staff can request a fresh one without starting over.
+
+7. **Trusted devices screen for hotel admins** - Hotel managers and administrators now have a "Trusted Devices" page (Administration menu) showing every computer/terminal allowed to use a PIN: when it was trusted, when it was last used and its status (Trusted / Expired / Locked). Any device can be revoked with one click — that device must then sign in with email + password + property code again.
+
 ## What Was Not Done (For Now)
 
-- No screen to manage/revoke trusted devices from the admin panel
-- No "resend code" button yet (if code expires, just login again)
 - Superadmin login unchanged (stays as is)
 - SMS delivery depends on your SMS provider settings (works if SMS is configured)
 
 ## Technical Result
 
-- All existing system tests still pass (no breakages)
-- New security tests confirm the PIN can no longer be brute-forced
+- All existing system tests still pass (no breakages): backend 1086, frontend 604
+- New security tests confirm the PIN can no longer be brute-forced, and cover device management + code resend
 - Both backend and frontend updated and live-ready
