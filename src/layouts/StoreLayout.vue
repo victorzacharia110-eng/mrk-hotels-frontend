@@ -908,7 +908,7 @@ const visibleModules = computed(() => {
     // `pos-reports` (nav.posReports -> /app/pos-report-browser). Those are two
     // separate modules with confusingly similar names; an earlier pass moved the
     // wrong one and left the Report Browser behind in the restaurant submenu.
-    const administration = pick(['staff', 'hotel-settings', 'activity-log-report', 'overrides', 'imports', 'reports', 'integrations/booking-com', 'integrations/quickbooks', 'integrations/xero'])
+    const administration = pick(['staff', 'hotel-settings', 'trusted-devices', 'activity-log-report', 'overrides', 'imports', 'reports', 'integrations/booking-com', 'integrations/quickbooks', 'integrations/xero'])
     if (administration.length) frontDesk.push(subGroup('front-administration', 'fas fa-user-tie', t('accordion.administration'), administration))
     if (byKey['requisitions']) frontDesk.push(link('requisitions', t('nav.requisitions')))
     if (byKey.messages) frontDesk.push(link('messages', t('nav.messages')))
@@ -984,7 +984,7 @@ const visibleModules = computed(() => {
     },
     {
       key: 'group-admin', icon: 'fas fa-user-tie', labelKey: 'accordion.administration',
-      keys: ['staff', 'hotel-settings', 'accounting', 'printer', 'imports', 'integrations/booking-com', 'integrations/quickbooks', 'integrations/xero'],
+      keys: ['staff', 'hotel-settings', 'trusted-devices', 'accounting', 'printer', 'imports', 'integrations/booking-com', 'integrations/quickbooks', 'integrations/xero'],
     },
     {
       key: 'group-reports', icon: 'fas fa-chart-line', labelKey: 'accordion.reports',

@@ -9,6 +9,8 @@ vi.mock('@/api', () => ({
     logout: vi.fn(),
     me: vi.fn(),
     changePassword: vi.fn(),
+    verifyDevice: vi.fn(),
+    verifyDeviceResend: vi.fn(),
   },
 }))
 
@@ -93,6 +95,47 @@ describe('auth store', () => {
       expect(store.isAuthenticated).toBe(true)
       expect(store.token).toBe('pin_tok')
       expect(authApi.loginPin).toHaveBeenCalledWith({ identifier: 'staff@mrk.test', pin: '1234' })
+    })
+
+    it('attaches the stored trusted device key to PIN sign-in', async () => {
+      sessionStorage.setItem('trusted_device_key', 'dev-key-123')
+      authApi.loginPin.mockResolvedValue({ data: { token: 'pin_tok', user: { user_role: 'waiter' } } })
+
+      const store = useAuthStore()
+      await store.loginPin({ pin: '1234' })
+
+      expect(authApi.loginPin).toHaveBeenCalledWith({ pin: '1234', device_key: 'dev-key-123' })
+    })
+  })
+
+  describe('verifyDevice', () => {
+    it('stores the session and the trusted device key', async () => {
+      authApi.verifyDevice.mockResolvedValue({
+        data: {
+          token: 'tok_2fa',
+          user: { user_role: 'manager' },
+          device_key: 'dev-key-abc',
+          trusted_until: '2027-01-08T00:00:00.000Z',
+        },
+      })
+
+      const store = useAuthStore()
+      const result = await store.verifyDevice({ challenge: 'ch1', code: '123456', trust_months: 3 })
+
+      expect(result.token).toBe('tok_2fa')
+      expect(store.isAuthenticated).toBe(true)
+      expect(sessionStorage.getItem('trusted_device_key')).toBe('dev-key-abc')
+      expect(sessionStorage.getItem('trusted_device_until')).toBe('2027-01-08T00:00:00.000Z')
+    })
+
+    it('resends the code against the resend endpoint', async () => {
+      authApi.verifyDeviceResend.mockResolvedValue({ data: { challenge: 'ch2' } })
+
+      const store = useAuthStore()
+      const data = await store.verifyDeviceResend({ challenge: 'ch1' })
+
+      expect(authApi.verifyDeviceResend).toHaveBeenCalledWith({ challenge: 'ch1' })
+      expect(data.challenge).toBe('ch2')
     })
   })
 

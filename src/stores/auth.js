@@ -202,7 +202,7 @@ export const useAuthStore = defineStore('auth', () => {
       // can bounce to /login; transient failures (5xx, network blips) keep the
       // session intact and let the guard retry instead of logging the user out.
       const status = error?.response?.status
-    if (status === 401 || status === 403) {
+      if (status === 401 || status === 403) {
         token.value = null
         user.value = null
         permissions.value = []

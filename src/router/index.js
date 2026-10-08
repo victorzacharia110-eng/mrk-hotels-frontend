@@ -33,6 +33,8 @@ const hotelChildren = [
   // page or route, so the details could not be edited from the panel. Writing is
   // gated to level 80 by the backend; the page shows read-only below that.
   { path: 'settings/hotel', name: 'hotel-settings', component: () => import('@/pages/settings/HotelSettingsPage.vue'), meta: { module: 'hotel-settings' } },
+  // Terminals allowed to PIN sign-in — hotel admins revoke them here.
+  { path: 'settings/trusted-devices', name: 'hotel-trusted-devices', component: () => import('@/pages/settings/TrustedDevicesPage.vue'), meta: { module: 'trusted-devices', role: ['hotel_admin', 'manager'] } },
   // Manage guest records.
   { path: 'guests', name: 'hotel-guests', component: () => import('@/pages/guests/GuestListPage.vue'), meta: { module: 'guests' } },
   // List and confirm payments.

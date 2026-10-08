@@ -701,6 +701,18 @@ export const hotelSettingsApi = {
   },
 }
 
+/** Trusted devices — computers/terminals allowed to sign in with a PIN. */
+export const deviceTrustApi = {
+  /** Lists the hotel's trusted devices (hotel admins / managers only). */
+  list() {
+    return api.get(`${v1}/auth/trusted-devices`)
+  },
+  /** Revokes trust so the device must sign in with email + password again. */
+  revoke(id) {
+    return api.delete(`${v1}/auth/trusted-devices/${id}`)
+  },
+}
+
 /** Reservations: CRUD plus the check-in / check-out / no-show lifecycle. */
 export const reservationApi = {
   /**

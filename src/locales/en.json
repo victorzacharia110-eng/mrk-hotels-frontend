@@ -781,7 +781,8 @@
     "dayClose": "Day Close",
     "expenseVoucher": "Expense Voucher",
     "incomeVoucher": "Income Voucher",
-    "menuActivity": "Menu Activity"
+    "menuActivity": "Menu Activity",
+    "trustedDevices": "Trusted Devices"
   },
   "import": {
     "title": "Import Data",
@@ -851,7 +852,10 @@
       "passwordRequired": "Password is required.",
       "pinInvalid": "PIN must be exactly 4 digits.",
       "connectionFailed": "Connection failed. Please try again."
-    }
+    },
+    "verifyDevicePrompt": "Enter the code we emailed to you to trust this device.",
+    "sentTo": "Sent to:",
+    "verificationCode": "Verification code"
   },
   "rooms": {
     "title": "Rooms",
@@ -5685,5 +5689,22 @@
       "sortOrder": "Sort order",
       "active": "Active"
     }
+  },
+  "trustedDevices": {
+    "title": "Trusted Devices",
+    "hint": "Computers and terminals that are allowed to sign in with a 4-digit PIN. Revoke any device you no longer recognise — it will need the email, password and property code next time.",
+    "forbidden": "Only hotel managers and administrators can manage trusted devices.",
+    "device": "Device",
+    "trustedUntil": "Trusted Until",
+    "lastSeen": "Last Used",
+    "status": "Status",
+    "trusted": "Trusted",
+    "expired": "Expired",
+    "locked": "Locked",
+    "revoke": "Revoke",
+    "revoked": "Device revoked.",
+    "revokeConfirm": "Revoke access for \"{{device}}\"? It will have to sign in with email, password and property code again.",
+    "empty": "No devices have been trusted yet.",
+    "unknownDevice": "Unnamed device"
   }
 }

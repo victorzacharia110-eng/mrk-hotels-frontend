@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import api from '@/api/axios'
-import { paymentApi, roomApi } from '@/api'
+import { paymentApi, roomApi, deviceTrustApi, authApi } from '@/api'
 
 describe('folio operations API contract', () => {
   beforeEach(() => {
@@ -50,5 +50,32 @@ describe('stop-sell window is actually sent', () => {
     // empty params object rather than silently dropping the argument.
     roomApi.stopSell()
     expect(api.get).toHaveBeenCalledWith('/v1/rooms/stop-sell', { params: {} })
+  })
+})
+
+describe('trusted device management paths', () => {
+  beforeEach(() => {
+    vi.spyOn(api, 'get').mockResolvedValue({ data: { devices: [] } })
+    vi.spyOn(api, 'delete').mockResolvedValue({ data: {} })
+    vi.spyOn(api, 'post').mockResolvedValue({ data: {} })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('lists devices from /v1/auth/trusted-devices', async () => {
+    await deviceTrustApi.list()
+    expect(api.get).toHaveBeenCalledWith('/v1/auth/trusted-devices')
+  })
+
+  it('revokes a device via DELETE /v1/auth/trusted-devices/{id}', async () => {
+    await deviceTrustApi.revoke('dev-1')
+    expect(api.delete).toHaveBeenCalledWith('/v1/auth/trusted-devices/dev-1')
+  })
+
+  it('asks for a fresh OTP at /v1/auth/login/verify-device/resend', async () => {
+    await authApi.verifyDeviceResend({ challenge: 'ch1' })
+    expect(api.post).toHaveBeenCalledWith('/v1/auth/login/verify-device/resend', { challenge: 'ch1' })
   })
 })
