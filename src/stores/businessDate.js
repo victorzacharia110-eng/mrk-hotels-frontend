@@ -74,10 +74,19 @@ export const useBusinessDateStore = defineStore('businessDate', () => {
     }
   }
 
-  /** Force-refetches the business date (used after a night audit close). */
+  /**
+   * Force-refetches the business date (used after a night audit close).
+   *
+   * The previous date stays on screen while the fetch is in flight. Clearing
+   * it first — as this did — made `current` fall back to the calendar/wall
+   * clock for the duration of the request, so on the dashboard's 30-second
+   * refresh loop the stay-view bars (purple = checking out on the business
+   * date, green = otherwise in-house) flashed between two colours every cycle,
+   * and a single failed refetch left the wrong date showing until a later one
+   * succeeded.
+   */
   async function reload() {
     loaded.value = false
-    businessDate.value = ''
     await ensureLoaded()
   }
 

@@ -58,4 +58,39 @@ describe('businessDate store', () => {
     expect(store.loaded).toBe(false)
     expect(store.current).toBeTruthy()
   })
+
+  it('holds the business date steady while a reload is in flight', async () => {
+    // The dashboard reloads this every 30s. If `current` fell back to the
+    // calendar day mid-fetch, the stay-view bars (purple = departing on the
+    // business date) would flash green every cycle — the colour glitch this
+    // guards against.
+    show.mockResolvedValue({
+      data: { business_date: '2026-05-09', today: '2026-05-10', timezone: 'Africa/Dar_es_Salaam' },
+    })
+    const store = useBusinessDateStore()
+    await store.ensureLoaded()
+    expect(store.current).toBe('2026-05-09')
+
+    let release
+    show.mockReturnValue(new Promise((resolve) => { release = resolve }))
+    const pending = store.reload()
+    expect(store.current).toBe('2026-05-09')
+
+    release({ data: { business_date: '2026-05-10', today: '2026-05-10' } })
+    await pending
+    expect(store.current).toBe('2026-05-10')
+  })
+
+  it('keeps the last known business date when a reload fails', async () => {
+    show.mockResolvedValueOnce({
+      data: { business_date: '2026-05-09', today: '2026-05-10' },
+    })
+    const store = useBusinessDateStore()
+    await store.ensureLoaded()
+
+    show.mockRejectedValueOnce(new Error('offline'))
+    await store.reload()
+
+    expect(store.current).toBe('2026-05-09')
+  })
 })
