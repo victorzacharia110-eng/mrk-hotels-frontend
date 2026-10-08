@@ -1265,6 +1265,7 @@ function formatNotifTime(iso) {
    scrolling. */
 .store-layout.app-shell {
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 

@@ -389,6 +389,7 @@ onMounted(() => {
   --mrk-charcoal: #333333;
   display: flex;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: #f3f6fa;
   font-family: 'Inter', sans-serif;
@@ -401,6 +402,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
   transition: width 0.2s ease;
 }

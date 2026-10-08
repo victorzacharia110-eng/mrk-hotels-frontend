@@ -178,6 +178,7 @@ async function handleLogout() {
 .superadmin-layout {
   display: flex;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: #f0f2f5;
 }
@@ -305,6 +306,7 @@ async function handleLogout() {
 .sa-main {
   flex: 1;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;

@@ -316,6 +316,7 @@ const DAY_CLOSE_ROLES = ['store_manager', 'cashier', 'bartender', 'waiter', 'hot
   --sm-bg: #f3f6fa;
   display: flex;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: var(--sm-bg);
   font-family: 'Inter', sans-serif;
@@ -330,6 +331,7 @@ const DAY_CLOSE_ROLES = ['store_manager', 'cashier', 'bartender', 'waiter', 'hot
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh;
   transition: width 0.2s ease;
 }
 .collapsed .sm-sidebar { width: 72px; }
