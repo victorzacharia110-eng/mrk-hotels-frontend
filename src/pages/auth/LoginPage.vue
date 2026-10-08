@@ -54,8 +54,7 @@
 
           <!-- Device trust verification step (two-step email OTP) -->
           <div v-if="mode === 'password' && deviceVerify.required" class="device-verify">
-            <p class="pin-hint">{{ $t('auth.verifyDevicePrompt', 'Enter the code we emailed to you to trust this
-              device.') }}</p>
+            <p class="pin-hint">{{ $t('auth.verifyDevicePrompt', 'Enter the code we emailed to you to trust this device.') }}</p>
             <p class="pin-hint" v-if="deviceVerify.email"><small>{{ $t('auth.sentTo', 'Sent to:') }} {{
                 deviceVerify.email }}</small></p>
 
@@ -83,6 +82,10 @@
             <button type="button" class="btn btn-primary full-width" :disabled="loading"
               @click="submitDeviceVerification">
               <i class="fas fa-shield-check"></i> {{ loading ? $t('auth.signInLoading') : 'Verify and sign in' }}
+            </button>
+            <button type="button" class="btn btn-secondary full-width" style="margin-top:10px;"
+              :disabled="loading || resendCooldown > 0" @click="resendDeviceCode">
+              <i class="fas fa-rotate"></i> {{ resendCooldown > 0 ? ('Resend (' + resendCooldown + 's)') : 'Resend code' }}
             </button>
             <button type="button" class="btn btn-secondary full-width" style="margin-top:10px;" :disabled="loading"
               @click="deviceVerify.required = false">
@@ -202,6 +205,8 @@ const deviceVerify = ref({
   trustMonths: 3,
 })
 const trustOptions = [1, 3, 6]
+const resendCooldown = ref(0)
+let resendTimer = null
 
 // Timer handle for the temporary password-rotation toast.
 let toastTimer = null
@@ -457,6 +462,33 @@ async function submitDeviceVerification() {
   } finally {
     loading.value = false
   }
+}
+
+async function resendDeviceCode() {
+  if (!deviceVerify.value.challenge || resendCooldown.value > 0 || loading.value) return
+  try {
+    const data = await authStore.verifyDeviceResend({ challenge: deviceVerify.value.challenge })
+    if (data?.challenge) {
+      deviceVerify.value.challenge = data.challenge
+    }
+    startResendCooldown()
+  } catch (e) {
+    if (e.response?.data?.message) {
+      serverErrors.value = [e.response.data.message]
+    }
+  }
+}
+
+function startResendCooldown() {
+  resendCooldown.value = 60
+  clearInterval(resendTimer)
+  resendTimer = setInterval(() => {
+    resendCooldown.value -= 1
+    if (resendCooldown.value <= 0) {
+      clearInterval(resendTimer)
+      resendTimer = null
+    }
+  }, 1000)
 }
 </script>
 

@@ -123,6 +123,11 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function verifyDeviceResend(data) {
+    const response = await authApi.verifyDeviceResend(data)
+    return response.data
+  }
+
   /**
    * Authenticates with a 4-digit staff PIN and stores the returned session.
    * Mirrors login(); the response shape is identical to /auth/login.
@@ -276,6 +281,7 @@ export const useAuthStore = defineStore('auth', () => {
     enabledFeatures,
     login,
     verifyDevice,
+    verifyDeviceResend,
     loginPin,
     logout,
     fetchProfile,

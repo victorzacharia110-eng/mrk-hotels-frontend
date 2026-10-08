@@ -108,6 +108,9 @@ export const authApi = {
   verifyDevice(data) {
     return api.post(`${v1}/auth/login/verify-device`, data)
   },
+  verifyDeviceResend(data) {
+    return api.post(`${v1}/auth/login/verify-device/resend`, data)
+  },
   /**
    * Authenticates a user with their 4-digit staff PIN and returns the token + profile.
    * Mirrors login(); the response shape is identical to /auth/login.
