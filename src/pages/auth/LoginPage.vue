@@ -22,8 +22,9 @@
         <p>{{ $t('auth.signInSubtitle') }}</p>
       </div>
 
-      <!-- Sign-in mode switcher: classic password form vs. iPOS-style PIN keypad -->
-      <div class="mode-switch">
+      <!-- Sign-in mode switcher: classic password form vs. iPOS-style PIN keypad.
+           Hidden while an OTP challenge is pending so it can't wipe it. -->
+      <div v-if="!deviceVerify.required" class="mode-switch">
         <button type="button" class="mode-btn" :class="{ active: mode === 'password' }" :disabled="loading"
           @click="switchMode('password')"><i class="fas fa-keyboard"></i> {{ $t('auth.modePassword') }}</button>
         <button type="button" class="mode-btn" :class="{ active: mode === 'pin' }" :disabled="loading"
@@ -50,47 +51,6 @@
               @input="validateField('password')" />
             <button type="button" class="pw-toggle" @click="showPw = !showPw"><i
                 :class="showPw ? 'fas fa-eye-slash' : 'fas fa-eye'"></i></button>
-          </div>
-
-          <!-- Device trust verification step (two-step email OTP) -->
-          <div v-if="mode === 'password' && deviceVerify.required" class="device-verify">
-            <p class="pin-hint">{{ $t('auth.verifyDevicePrompt', 'Enter the code we emailed to you to trust this device.') }}</p>
-            <p class="pin-hint" v-if="deviceVerify.email"><small>{{ $t('auth.sentTo', 'Sent to:') }} {{
-                deviceVerify.email }}</small></p>
-
-            <div class="form-group" :class="{ 'has-error': errors.code }">
-              <label>{{ $t('auth.verificationCode', 'Verification code') }}</label>
-              <input v-model="deviceVerify.code" type="text" inputmode="numeric" autocomplete="one-time-code"
-                placeholder="123456" maxlength="10"
-                @input="deviceVerify.code = deviceVerify.code.replace(/[^0-9]/g, '')" />
-            </div>
-
-            <div class="form-group">
-              <label>{{ $t('auth.trustDuration', 'Trust this device for') }}</label>
-              <select v-model.number="deviceVerify.trustMonths" class="form-control">
-                <option v-for="m in trustOptions" :key="m" :value="m">{{ m }} {{ m === 1 ? 'month' : 'months' }}
-                </option>
-              </select>
-            </div>
-
-            <div class="server-errors" v-if="serverErrors.length > 0">
-              <div v-for="(msg, i) in serverErrors" :key="i" class="server-error"><i
-                  class="fas fa-exclamation-circle"></i>
-                {{ msg }}</div>
-            </div>
-
-            <button type="button" class="btn btn-primary full-width" :disabled="loading"
-              @click="submitDeviceVerification">
-              <i class="fas fa-shield-check"></i> {{ loading ? $t('auth.signInLoading') : 'Verify and sign in' }}
-            </button>
-            <button type="button" class="btn btn-secondary full-width" style="margin-top:10px;"
-              :disabled="loading || resendCooldown > 0" @click="resendDeviceCode">
-              <i class="fas fa-rotate"></i> {{ resendCooldown > 0 ? ('Resend (' + resendCooldown + 's)') : 'Resend code' }}
-            </button>
-            <button type="button" class="btn btn-secondary full-width" style="margin-top:10px;" :disabled="loading"
-              @click="deviceVerify.required = false">
-              Back
-            </button>
           </div>
         </div>
 
@@ -131,8 +91,54 @@
             class="fas fa-right-to-bracket"></i> {{ loading ? $t('auth.signInLoading') : $t('auth.signIn') }}</button>
       </form>
 
+      <!--
+        Device trust verification step (one-time code + trust duration).
+        It is a SIBLING of the password form, not a child: the form hides
+        itself while a challenge is pending, so nesting this step inside it
+        would render nothing at all — the exact bug that left staff with an
+        OTP in hand and no box to type it into.
+      -->
+      <div v-if="mode === 'password' && deviceVerify.required" class="device-verify">
+        <p class="pin-hint">{{ $t('auth.verifyDevicePrompt') }}</p>
+        <p class="pin-hint" v-if="deviceVerify.email"><small>{{ $t('auth.sentTo', 'Sent to:') }} {{
+            deviceVerify.email }}</small></p>
+        <p class="pin-hint" v-if="deviceVerify.phone"><small>{{ $t('auth.sentTo', 'Sent to:') }} {{
+            deviceVerify.phone }}</small></p>
+
+        <div class="form-group" :class="{ 'has-error': errors.code }">
+          <label>{{ $t('auth.verificationCode', 'Verification code') }}</label>
+          <input v-model="deviceVerify.code" type="text" inputmode="numeric" autocomplete="one-time-code"
+            placeholder="123456" maxlength="10" @input="deviceVerify.code = deviceVerify.code.replace(/[^0-9]/g, '')" />
+        </div>
+
+        <div class="form-group">
+          <label>{{ $t('auth.trustDuration', 'Trust this device for') }}</label>
+          <select v-model.number="deviceVerify.trustMonths" class="form-control">
+            <option v-for="m in trustOptions" :key="m" :value="m">{{ m }} {{ m === 1 ? 'month' : 'months' }}
+            </option>
+          </select>
+        </div>
+
+        <div class="server-errors" v-if="serverErrors.length > 0">
+          <div v-for="(msg, i) in serverErrors" :key="i" class="server-error"><i class="fas fa-exclamation-circle"></i>
+            {{ msg }}</div>
+        </div>
+
+        <button type="button" class="btn btn-primary full-width" :disabled="loading" @click="submitDeviceVerification">
+          <i class="fas fa-shield-check"></i> {{ loading ? $t('auth.signInLoading') : 'Verify and sign in' }}
+        </button>
+        <button type="button" class="btn btn-secondary full-width" style="margin-top:10px;"
+          :disabled="loading || resendCooldown > 0" @click="resendDeviceCode">
+          <i class="fas fa-rotate"></i> {{ resendCooldown > 0 ? ('Resend (' + resendCooldown + 's)') : 'Resend code' }}
+        </button>
+        <button type="button" class="btn btn-secondary full-width" style="margin-top:10px;" :disabled="loading"
+          @click="deviceVerify.required = false">
+          Back
+        </button>
+      </div>
+
       <!-- PIN sign-in mode: just the 4-digit PIN entered via the on-screen keypad; auto-submits at 4 digits -->
-      <div v-else-if="!deviceVerify.required" class="pin-mode">
+      <div v-if="mode === 'pin' && !deviceVerify.required" class="pin-mode">
         <!-- 4-dot progress indicator; dots fill as PIN digits are entered -->
         <div class="pin-dots">
           <span v-for="i in 4" :key="i" class="pin-dot" :class="{ filled: pinForm.pin.length >= i }"></span>
@@ -215,6 +221,7 @@ const deviceVerify = ref({
   required: false,
   challenge: '',
   email: '',
+  phone: '',
   code: '',
   trustMonths: 3,
 })
@@ -309,6 +316,7 @@ async function handleLogin() {
       deviceVerify.value.required = true
       deviceVerify.value.challenge = data.challenge
       deviceVerify.value.email = data.email || form.value.email
+      deviceVerify.value.phone = data.phone || ''
       serverErrors.value = []
       loading.value = false
       return
@@ -353,6 +361,7 @@ function switchMode(m) {
     required: false,
     challenge: '',
     email: '',
+    phone: '',
     code: '',
     trustMonths: 3,
   }
@@ -479,6 +488,9 @@ async function resendDeviceCode() {
     const data = await authStore.verifyDeviceResend({ challenge: deviceVerify.value.challenge })
     if (data?.challenge) {
       deviceVerify.value.challenge = data.challenge
+    }
+    if (data?.phone) {
+      deviceVerify.value.phone = data.phone
     }
     startResendCooldown()
   } catch (e) {

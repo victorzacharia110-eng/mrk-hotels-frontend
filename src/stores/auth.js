@@ -140,7 +140,12 @@ export const useAuthStore = defineStore('auth', () => {
       if (response.data?.device_key) {
         rememberDeviceKey(response.data.device_key, response.data?.trusted_until)
       }
-      applyAuth(response.data)
+      // A pending device-trust challenge carries no session yet — only apply
+      // auth once the OTP step returns a real token, or "auth_token" would be
+      // written as the string "undefined".
+      if (response.data?.token) {
+        applyAuth(response.data)
+      }
       return response.data
     } finally {
       loading.value = false
