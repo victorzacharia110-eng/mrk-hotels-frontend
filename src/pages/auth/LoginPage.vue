@@ -50,39 +50,46 @@
               @input="validateField('password')" />
             <button type="button" class="pw-toggle" @click="showPw = !showPw"><i
                 :class="showPw ? 'fas fa-eye-slash' : 'fas fa-eye'"></i></button>
-      </div>
+          </div>
 
-      <!-- Device trust verification step (two-step email OTP) -->
-      <div v-if="mode === 'password' && deviceVerify.required" class="device-verify">
-        <p class="pin-hint">{{ $t('auth.verifyDevicePrompt', 'Enter the code we emailed to you to trust this device.') }}</p>
-        <p class="pin-hint" v-if="deviceVerify.email"><small>{{ $t('auth.sentTo', 'Sent to:') }} {{ deviceVerify.email }}</small></p>
+          <!-- Device trust verification step (two-step email OTP) -->
+          <div v-if="mode === 'password' && deviceVerify.required" class="device-verify">
+            <p class="pin-hint">{{ $t('auth.verifyDevicePrompt', 'Enter the code we emailed to you to trust this
+              device.') }}</p>
+            <p class="pin-hint" v-if="deviceVerify.email"><small>{{ $t('auth.sentTo', 'Sent to:') }} {{
+                deviceVerify.email }}</small></p>
 
-        <div class="form-group" :class="{ 'has-error': errors.code }">
-          <label>{{ $t('auth.verificationCode', 'Verification code') }}</label>
-          <input v-model="deviceVerify.code" type="text" inputmode="numeric" autocomplete="one-time-code"
-            placeholder="123456" maxlength="10" @input="deviceVerify.code = deviceVerify.code.replace(/[^0-9]/g, '')" />
+            <div class="form-group" :class="{ 'has-error': errors.code }">
+              <label>{{ $t('auth.verificationCode', 'Verification code') }}</label>
+              <input v-model="deviceVerify.code" type="text" inputmode="numeric" autocomplete="one-time-code"
+                placeholder="123456" maxlength="10"
+                @input="deviceVerify.code = deviceVerify.code.replace(/[^0-9]/g, '')" />
+            </div>
+
+            <div class="form-group">
+              <label>{{ $t('auth.trustDuration', 'Trust this device for') }}</label>
+              <select v-model.number="deviceVerify.trustMonths" class="form-control">
+                <option v-for="m in trustOptions" :key="m" :value="m">{{ m }} {{ m === 1 ? 'month' : 'months' }}
+                </option>
+              </select>
+            </div>
+
+            <div class="server-errors" v-if="serverErrors.length > 0">
+              <div v-for="(msg, i) in serverErrors" :key="i" class="server-error"><i
+                  class="fas fa-exclamation-circle"></i>
+                {{ msg }}</div>
+            </div>
+
+            <button type="button" class="btn btn-primary full-width" :disabled="loading"
+              @click="submitDeviceVerification">
+              <i class="fas fa-shield-check"></i> {{ loading ? $t('auth.signInLoading') : 'Verify and sign in' }}
+            </button>
+            <button type="button" class="btn btn-secondary full-width" style="margin-top:10px;" :disabled="loading"
+              @click="deviceVerify.required = false">
+              Back
+            </button>
+          </div>
         </div>
-
-        <div class="form-group">
-          <label>{{ $t('auth.trustDuration', 'Trust this device for') }}</label>
-          <select v-model.number="deviceVerify.trustMonths" class="form-control">
-            <option v-for="m in trustOptions" :key="m" :value="m">{{ m }} {{ m === 1 ? 'month' : 'months' }}</option>
-          </select>
-        </div>
-
-        <div class="server-errors" v-if="serverErrors.length > 0">
-          <div v-for="(msg, i) in serverErrors" :key="i" class="server-error"><i class="fas fa-exclamation-circle"></i>
-            {{ msg }}</div>
-        </div>
-
-        <button type="button" class="btn btn-primary full-width" :disabled="loading" @click="submitDeviceVerification">
-          <i class="fas fa-shield-check"></i> {{ loading ? $t('auth.signInLoading') : 'Verify and sign in' }}
-        </button>
-        <button type="button" class="btn btn-secondary full-width" style="margin-top:10px;" :disabled="loading" @click="deviceVerify.required = false">
-          Back
-        </button>
-      </div>
-      </div>
 
         <!-- Property code field (disambiguates email shared across hotels) -->
         <div class="form-group" :class="{ 'has-error': errors.property_code }">
@@ -137,7 +144,7 @@
 
       <!-- Link back to the public landing page -->
       <p class="auth-link home-link"><router-link to="/"><i class="fas fa-arrow-left"></i> {{ $t('common.backToHome')
-      }}</router-link></p>
+          }}</router-link></p>
 
       <!-- Small app footer: version, short description and copyright -->
       <footer class="auth-footer">
