@@ -199,7 +199,8 @@ async function handleLogout() {
 .sa-sidebar {
   width: 260px;
   height: 100vh;
-  overflow-y: auto;
+  height: 100dvh;
+  overflow: hidden;
   background: #1a1a2e;
   color: #fff;
   display: flex;
@@ -242,6 +243,8 @@ async function handleLogout() {
 
 .sa-nav {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: 16px 12px;
   display: flex;
   flex-direction: column;
@@ -283,7 +286,9 @@ async function handleLogout() {
 }
 
 .sa-sidebar-footer {
+  flex-shrink: 0;
   padding: 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 

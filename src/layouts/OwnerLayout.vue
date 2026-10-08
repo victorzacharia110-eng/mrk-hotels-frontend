@@ -139,6 +139,7 @@ async function handleLogout() {
 .owner-layout {
   display: flex;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: #f0f2f5;
 }
@@ -165,6 +166,7 @@ async function handleLogout() {
   flex-direction: column;
   transition: width 0.2s ease;
   flex-shrink: 0;
+  overflow: hidden;
   z-index: 1000;
 }
 
@@ -201,6 +203,8 @@ async function handleLogout() {
 
 .sa-nav {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: 16px 12px;
   display: flex;
   flex-direction: column;
@@ -242,7 +246,9 @@ async function handleLogout() {
 }
 
 .sa-sidebar-footer {
+  flex-shrink: 0;
   padding: 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 

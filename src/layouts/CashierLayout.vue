@@ -501,7 +501,7 @@ onMounted(() => {
   font-weight: 700;
   box-shadow: 0 4px 14px rgba(6, 42, 82, 0.45);
 }
-.pos-sidebar-footer { padding: 10px; border-top: 1px solid rgba(255, 255, 255, 0.2); display: flex; flex-direction: column; gap: 4px; }
+.pos-sidebar-footer { flex-shrink: 0; padding: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid rgba(255, 255, 255, 0.2); display: flex; flex-direction: column; gap: 4px; }
 .pos-logout:hover { background: rgba(220, 38, 38, 0.25); color: #fca5a5; }
 .pos-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .pos-topbar {

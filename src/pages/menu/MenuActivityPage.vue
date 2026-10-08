@@ -241,6 +241,17 @@ onMounted(() => load(1))
   margin-bottom: 16px;
 }
 
+/* The wrapper never had its own rule, so on phones the wide table just got
+   clipped instead of scrolling sideways. */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-wrap table {
+  min-width: 640px;
+}
+
 .page-head h1 {
   font-size: 22px;
   font-weight: 800;

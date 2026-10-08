@@ -354,7 +354,7 @@ const DAY_CLOSE_ROLES = ['store_manager', 'cashier', 'bartender', 'waiter', 'hot
 }
 .sm-brand-text { font-size: 15px; white-space: nowrap; color: #b0cde9; }
 .sm-brand-text strong { color: #fff; }
-.sm-nav { flex: 1; padding: 12px 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.sm-nav { flex: 1; min-height: 0; padding: 12px 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
 .sm-nav-link {
   display: flex;
   align-items: center;
@@ -396,7 +396,7 @@ const DAY_CLOSE_ROLES = ['store_manager', 'cashier', 'bartender', 'waiter', 'hot
 .sm-subnav.open { grid-template-rows: 1fr; }
 .sm-subnav-inner { overflow: hidden; min-height: 0; display: flex; flex-direction: column; gap: 2px; }
 .sm-nav-link.sm-sub { padding: 9px 12px; font-size: 13px; font-weight: 500; }
-.sm-sidebar-footer { padding: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.sm-sidebar-footer { flex-shrink: 0; padding: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid rgba(255, 255, 255, 0.1); }
 .sm-logout:hover { background: rgba(220, 38, 38, 0.2); color: #fca5a5; }
 .sm-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .sm-topbar {

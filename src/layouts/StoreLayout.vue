@@ -1601,6 +1601,7 @@ function formatNotifTime(iso) {
   z-index: 1500;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
 }
 
@@ -1684,6 +1685,7 @@ function formatNotifTime(iso) {
 
 .drawer-nav {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 10px 0;
   display: flex;
@@ -1809,8 +1811,10 @@ function formatNotifTime(iso) {
 }
 
 .drawer-foot {
+  flex-shrink: 0;
   border-top: 1px solid #004a93;
   padding: 8px 0;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
 }
