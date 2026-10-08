@@ -853,11 +853,11 @@
       "pinInvalid": "PIN must be exactly 4 digits.",
       "connectionFailed": "Connection failed. Please try again."
     },
-    "verifyDevicePrompt": "Enter the code we emailed to you to trust this device.",
+    "verifyDevicePrompt": "Enter the code we emailed or texted you to trust this device.",
     "sentTo": "Sent to:",
     "verificationCode": "Verification code",
     "trustDeviceLabel": "Trust this device for PIN sign-in",
-    "trustDeviceHint": "We'll email a one-time code the first time you sign in here — after that this browser can use the PIN keypad. PIN login only works on a trusted device."
+    "trustDeviceHint": "We'll email and text a one-time code the first time you sign in here — after that this browser can use the PIN keypad. PIN login only works on a trusted device."
   },
   "rooms": {
     "title": "Rooms",
