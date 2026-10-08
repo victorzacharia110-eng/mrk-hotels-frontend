@@ -82,7 +82,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * Authenticates with the backend and stores the returned session.
-   * @param {object} data - Login credentials (email, password).
+   * @param {object} data - Login credentials (email, password, property_code?, trust_device?, device_key?).
    * @returns {Promise<object>} The login response payload.
    */
   async function login(data) {
@@ -100,6 +100,30 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
+   * Confirms a device-trust one-time code and stores the returned session.
+   * @param {object} data - { challenge, code, trust_months }.
+   * @returns {Promise<object>} The verification response payload.
+   */
+  async function verifyDevice(data) {
+    loading.value = true
+    try {
+      const response = await authApi.verifyDevice(data)
+      sessionStorage.removeItem('owner_viewing_hotel')
+      sessionStorage.removeItem('owner_viewing_hotel_name')
+      applyAuth(response.data)
+      if (response.data?.device_key) {
+        sessionStorage.setItem('trusted_device_key', response.data.device_key)
+      }
+      if (response.data?.trusted_until) {
+        sessionStorage.setItem('trusted_device_until', response.data.trusted_until)
+      }
+      return response.data
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
    * Authenticates with a 4-digit staff PIN and stores the returned session.
    * Mirrors login(); the response shape is identical to /auth/login.
    * @param {object} data - PIN login credentials ({ pin: 4 digits }).
@@ -108,11 +132,22 @@ export const useAuthStore = defineStore('auth', () => {
   async function loginPin(data) {
     loading.value = true
     try {
-      const response = await authApi.loginPin(data)
+      const deviceKey = sessionStorage.getItem('trusted_device_key')
+      const payload = { ...data }
+      if (deviceKey && !payload.device_key) {
+        payload.device_key = deviceKey
+      }
+      const response = await authApi.loginPin(payload)
       // A fresh login must not inherit an owner's previously selected hotel.
       sessionStorage.removeItem('owner_viewing_hotel')
       sessionStorage.removeItem('owner_viewing_hotel_name')
       applyAuth(response.data)
+      if (response.data?.device_key) {
+        sessionStorage.setItem('trusted_device_key', response.data.device_key)
+      }
+      if (response.data?.trusted_until) {
+        sessionStorage.setItem('trusted_device_until', response.data.trusted_until)
+      }
       return response.data
     } finally {
       loading.value = false
@@ -139,6 +174,8 @@ export const useAuthStore = defineStore('auth', () => {
       // Drop the owner's selected hotel on logout as well.
       sessionStorage.removeItem('owner_viewing_hotel')
       sessionStorage.removeItem('owner_viewing_hotel_name')
+      sessionStorage.removeItem('trusted_device_key')
+      sessionStorage.removeItem('trusted_device_until')
     }
   }
 
@@ -160,12 +197,14 @@ export const useAuthStore = defineStore('auth', () => {
       // can bounce to /login; transient failures (5xx, network blips) keep the
       // session intact and let the guard retry instead of logging the user out.
       const status = error?.response?.status
-      if (status === 401 || status === 403) {
+    if (status === 401 || status === 403) {
         token.value = null
         user.value = null
         permissions.value = []
         mustChangePassword.value = false
         sessionStorage.removeItem('auth_token')
+        sessionStorage.removeItem('trusted_device_key')
+        sessionStorage.removeItem('trusted_device_until')
       }
       throw error
     } finally {
@@ -236,6 +275,7 @@ export const useAuthStore = defineStore('auth', () => {
     canOperate,
     enabledFeatures,
     login,
+    verifyDevice,
     loginPin,
     logout,
     fetchProfile,

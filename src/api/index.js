@@ -94,16 +94,24 @@ export const publicApi = {
 export const authApi = {
   /**
    * Authenticates a user and returns the token + profile.
-   * @param {object} data - Login credentials (email, password).
+   * @param {object} data - Login credentials (email, password, property_code?, trust_device?, device_key?).
    * @returns {Promise} Axios response with token, user and permissions.
    */
   login(data) {
     return api.post(`${v1}/auth/login`, data)
   },
   /**
+   * Confirms the one-time code when trusting a new device.
+   * @param {object} data - { challenge, code, trust_months }.
+   * @returns {Promise} Axios response with token, user, device_key, trusted_until.
+   */
+  verifyDevice(data) {
+    return api.post(`${v1}/auth/login/verify-device`, data)
+  },
+  /**
    * Authenticates a user with their 4-digit staff PIN and returns the token + profile.
    * Mirrors login(); the response shape is identical to /auth/login.
-   * @param {object} data - PIN login credentials ({ pin: 4 digits }); an optional identifier is accepted by the API for legacy clients.
+   * @param {object} data - PIN login credentials ({ pin: 4 digits, identifier?, device_key }).
    * @returns {Promise} Axios response with token, user and permissions.
    */
   loginPin(data) {

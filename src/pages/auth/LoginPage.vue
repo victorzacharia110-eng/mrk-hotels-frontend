@@ -31,7 +31,7 @@
       </div>
 
       <!-- Sign-in form: validates on blur/input, submits via handleLogin (browser validation disabled in favour of custom messages) -->
-      <form v-if="mode === 'password'" @submit.prevent="handleLogin" novalidate>
+      <form v-if="mode === 'password' && !deviceVerify.required" @submit.prevent="handleLogin" novalidate>
         <!-- Email field; error appears only after the field is touched -->
         <div class="form-group" :class="{ 'has-error': errors.email }">
           <label>{{ $t('auth.email') }}</label>
@@ -50,9 +50,47 @@
               @input="validateField('password')" />
             <button type="button" class="pw-toggle" @click="showPw = !showPw"><i
                 :class="showPw ? 'fas fa-eye-slash' : 'fas fa-eye'"></i></button>
-          </div>
-          <span class="field-error" v-if="errors.password"><i class="fas fa-exclamation-triangle"></i> {{
-            errors.password }}</span>
+      </div>
+
+      <!-- Device trust verification step (two-step email OTP) -->
+      <div v-if="mode === 'password' && deviceVerify.required" class="device-verify">
+        <p class="pin-hint">{{ $t('auth.verifyDevicePrompt', 'Enter the code we emailed to you to trust this device.') }}</p>
+        <p class="pin-hint" v-if="deviceVerify.email"><small>{{ $t('auth.sentTo', 'Sent to:') }} {{ deviceVerify.email }}</small></p>
+
+        <div class="form-group" :class="{ 'has-error': errors.code }">
+          <label>{{ $t('auth.verificationCode', 'Verification code') }}</label>
+          <input v-model="deviceVerify.code" type="text" inputmode="numeric" autocomplete="one-time-code"
+            placeholder="123456" maxlength="10" @input="deviceVerify.code = deviceVerify.code.replace(/[^0-9]/g, '')" />
+        </div>
+
+        <div class="form-group">
+          <label>{{ $t('auth.trustDuration', 'Trust this device for') }}</label>
+          <select v-model.number="deviceVerify.trustMonths" class="form-control">
+            <option v-for="m in trustOptions" :key="m" :value="m">{{ m }} {{ m === 1 ? 'month' : 'months' }}</option>
+          </select>
+        </div>
+
+        <div class="server-errors" v-if="serverErrors.length > 0">
+          <div v-for="(msg, i) in serverErrors" :key="i" class="server-error"><i class="fas fa-exclamation-circle"></i>
+            {{ msg }}</div>
+        </div>
+
+        <button type="button" class="btn btn-primary full-width" :disabled="loading" @click="submitDeviceVerification">
+          <i class="fas fa-shield-check"></i> {{ loading ? $t('auth.signInLoading') : 'Verify and sign in' }}
+        </button>
+        <button type="button" class="btn btn-secondary full-width" style="margin-top:10px;" :disabled="loading" @click="deviceVerify.required = false">
+          Back
+        </button>
+      </div>
+      </div>
+
+        <!-- Property code field (disambiguates email shared across hotels) -->
+        <div class="form-group" :class="{ 'has-error': errors.property_code }">
+          <label>{{ $t('auth.hotelCode', 'Property code') }}</label>
+          <input v-model="form.property_code" type="text" placeholder="HTL001" autocomplete="off"
+            @blur="touch('property_code')" @input="validateField('property_code')" />
+          <span class="field-error" v-if="errors.property_code"><i class="fas fa-exclamation-triangle"></i> {{
+            errors.property_code }}</span>
         </div>
 
         <!-- Authentication failures returned by the API -->
@@ -70,7 +108,7 @@
       </form>
 
       <!-- PIN sign-in mode: just the 4-digit PIN entered via the on-screen keypad; auto-submits at 4 digits -->
-      <div v-else class="pin-mode">
+      <div v-else-if="!deviceVerify.required" class="pin-mode">
         <!-- 4-dot progress indicator; dots fill as PIN digits are entered -->
         <div class="pin-dots">
           <span v-for="i in 4" :key="i" class="pin-dot" :class="{ filled: pinForm.pin.length >= i }"></span>
@@ -133,7 +171,7 @@ const year = new Date().getFullYear()
 const { holiday } = useHoliday()
 
 // Login form model, per-field validation errors, server errors and UI flags.
-const form = ref({ email: '', password: '' })
+const form = ref({ email: '', password: '', property_code: '' })
 const errors = ref({})
 const serverErrors = ref([])
 const touched = ref({})
@@ -147,6 +185,16 @@ const mode = ref('password')
 const pinForm = ref({ pin: '' })
 // Keypad digit keys 1-9; the bottom row (clear, 0, backspace) is rendered separately.
 const keypadDigits = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
+
+// Device trust two-step flow (email + OTP + trust duration).
+const deviceVerify = ref({
+  required: false,
+  challenge: '',
+  email: '',
+  code: '',
+  trustMonths: 3,
+})
+const trustOptions = [1, 3, 6]
 
 // Timer handle for the temporary password-rotation toast.
 let toastTimer = null
@@ -195,6 +243,11 @@ function validateField(field) {
       if (!form.value.password) errors.value.password = t('auth.validation.passwordRequired')
       else delete errors.value.password
       break
+    case 'property_code':
+      // property code is optional in general, but if the user enters one validate length lightly
+      if (form.value.property_code && form.value.property_code.trim().length < 1) errors.value.property_code = 'Property code is required'
+      else delete errors.value.property_code
+      break
   }
 }
 
@@ -223,7 +276,17 @@ async function handleLogin() {
 
   loading.value = true
   try {
-    const data = await authStore.login(form.value)
+    const payload = { ...form.value }
+    if (payload.property_code) payload.property_code = payload.property_code.trim()
+    const data = await authStore.login(payload)
+    if (data?.requires_device_verification) {
+      deviceVerify.value.required = true
+      deviceVerify.value.challenge = data.challenge
+      deviceVerify.value.email = data.email || form.value.email
+      serverErrors.value = []
+      loading.value = false
+      return
+    }
     sessionStore.start()
     const redirect = route.query.redirect
     if (redirect) {
@@ -260,6 +323,13 @@ function switchMode(m) {
   errors.value = {}
   serverErrors.value = []
   pinForm.value.pin = ''
+  deviceVerify.value = {
+    required: false,
+    challenge: '',
+    email: '',
+    code: '',
+    trustMonths: 3,
+  }
 }
 
 /**
@@ -316,13 +386,67 @@ async function submitPin() {
       router.push(resolveLanding(authStore))
     }
   } catch (e) {
+    const msg = e.response?.data?.message
+    const pinLocked = e.response?.data?.pin_locked
+    const deviceUntrusted = e.response?.data?.device_untrusted
+    if (deviceUntrusted) {
+      serverErrors.value = [msg || 'This device is not trusted. Sign in with email, password and property code.']
+      switchMode('password')
+    } else if (pinLocked) {
+      serverErrors.value = [msg || 'PIN is locked. Sign in with email, password and property code to unlock.']
+      switchMode('password')
+    } else if (e.response?.data?.attempts_remaining !== undefined) {
+      serverErrors.value = [msg ? `${msg} Attempts remaining: ${e.response.data.attempts_remaining}` : `Invalid credentials. Attempts remaining: ${e.response.data.attempts_remaining}`]
+      pinForm.value.pin = ''
+    } else if (msg) {
+      serverErrors.value = [msg]
+      pinForm.value.pin = ''
+    } else {
+      serverErrors.value = [t('auth.validation.connectionFailed')]
+      pinForm.value.pin = ''
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+async function submitDeviceVerification() {
+  serverErrors.value = []
+  if (!deviceVerify.value.code || deviceVerify.value.code.trim().length < 4) {
+    serverErrors.value = ['Enter the verification code sent to your email.']
+    return
+  }
+
+  loading.value = true
+  try {
+    const data = await authStore.verifyDevice({
+      challenge: deviceVerify.value.challenge,
+      code: deviceVerify.value.code.trim(),
+      trust_months: Number(deviceVerify.value.trustMonths),
+    })
+    if (data?.device_key) {
+      sessionStorage.setItem('trusted_device_key', data.device_key)
+    }
+    if (data?.trusted_until) {
+      sessionStorage.setItem('trusted_device_until', data.trusted_until)
+    }
+    sessionStore.start()
+    const redirect = route.query.redirect
+    if (redirect) {
+      router.push(redirect)
+    } else if (authStore.isSuperadmin) {
+      router.push('/superadmin')
+    } else if (authStore.user?.user_role === 'owner') {
+      router.push('/owner')
+    } else {
+      router.push(resolveLanding(authStore))
+    }
+  } catch (e) {
     if (e.response?.data?.message) {
       serverErrors.value = [e.response.data.message]
     } else {
       serverErrors.value = [t('auth.validation.connectionFailed')]
     }
-    // A failed attempt always restarts with an empty PIN.
-    pinForm.value.pin = ''
   } finally {
     loading.value = false
   }
@@ -489,6 +613,20 @@ async function submitPin() {
 
 .field-error i {
   font-size: 11px;
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  box-sizing: border-box;
+}
+
+.device-verify {
+  margin-top: 20px;
 }
 
 .server-errors {
