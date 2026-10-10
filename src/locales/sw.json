@@ -782,7 +782,8 @@
     "expenseVoucher": "Voja ya Gharama",
     "incomeVoucher": "Voja ya Mapato",
     "menuActivity": "Shughuli za Menyu",
-    "trustedDevices": "Vifaa Vinavyoaminika"
+    "trustedDevices": "Vifaa Vinavyoaminika",
+    "userManual": "Mwongozo wa Mtumiaji"
   },
   "import": {
     "title": "Ingiza Data",
@@ -4206,7 +4207,9 @@
     "postToCreditors": "Weka kwa wateja",
     "remainingCredit": "Salio lililobaki",
     "searchCompany": "Tafuta kampuni au mteja…",
-    "selectCreditorCompany": "Chagua kampuni ya mteja"
+    "selectCreditorCompany": "Chagua kampuni ya mteja",
+    "guestsInHouse": "Wageni ndani ya hoteli",
+    "businessDateToday": "Rudi kwa tarehe ya biashara"
   },
   "orderTaker": {
     "title": "Chukua Oda",
@@ -5732,5 +5735,18 @@
     "revokeConfirm": "Ondoa ruhusa ya \"{{device}}\"? Kitahitaji kuingia kwa barua pepe, nenosiri na msimbo wa property tena.",
     "empty": "Bado hakujavinaswa kifaa chochote.",
     "unknownDevice": "Kifaa visicho na jina"
+  },
+  "userManual": {
+    "title": "Mwongozo wa Mtumiaji wa Wafanyakazi",
+    "subtitle": "Kumbukumbu ya haraka kwa kazi za kila siku kwenye paneli ya wafanyakazi.",
+    "printersTitle": "Mwongozo wa Kuweka Printa",
+    "printersDesc": "Unganisha printa ya tupu (till) na printa za jikoni na baa, elekeza maagizo na tuma jaribio la uchapishaji.",
+    "trustedTitle": "Vifaa Vinavyoaminika",
+    "trustedDesc": "Simamia kompyuta na vifaa vinavyoruhusiwa kuingia kwa nambari ya siri (PIN).",
+    "nightAuditTitle": "Night Audit",
+    "nightAuditDesc": "Funga siku ya biashara na usongeze paneli kwenda siku inayofuata.",
+    "open": "Fungua",
+    "ratesTitle": "Vyumba na Bei",
+    "ratesDesc": "Sajili vyumba na uweke bei zake za kila usiku kwenye ukurasa wa Vyumba."
   }
 }

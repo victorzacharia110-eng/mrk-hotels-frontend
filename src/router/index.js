@@ -127,6 +127,9 @@ const hotelChildren = [
   { path: 'store/settings', name: 'hotel-store-settings', component: () => import('@/pages/store/StoreSettingsPage.vue'), meta: { module: 'store-settings' } },
   // Current user's own profile.
   { path: 'profile', name: 'hotel-profile', component: () => import('@/pages/profile/ProfilePage.vue'), meta: { module: 'profile' } },
+  // Staff user manual: the in-app guides and quick references. Reachable from
+  // the top-right profile circle; open to any signed-in staff member.
+  { path: 'user-manual', name: 'user-manual', component: () => import('@/pages/guide/UserManualPage.vue'), meta: { title: 'User Manual' } },
   // Booking.com channel manager integration.
   { path: 'integrations/booking-com', name: 'booking-com', component: () => import('@/pages/integrations/BookingComPage.vue'), meta: { module: 'integrations/booking-com', title: 'Booking.com Integration' } },
   // QuickBooks Online accounting integration.

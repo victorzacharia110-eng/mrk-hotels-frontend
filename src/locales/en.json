@@ -782,7 +782,8 @@
     "expenseVoucher": "Expense Voucher",
     "incomeVoucher": "Income Voucher",
     "menuActivity": "Menu Activity",
-    "trustedDevices": "Trusted Devices"
+    "trustedDevices": "Trusted Devices",
+    "userManual": "User Manual"
   },
   "import": {
     "title": "Import Data",
@@ -4206,7 +4207,9 @@
     "searchRoom": "Search room…",
     "selectCreditorCompany": "Select a creditor company",
     "rooms": "rooms",
-    "payments": "payments"
+    "payments": "payments",
+    "guestsInHouse": "Guests in house",
+    "businessDateToday": "Back to business date"
   },
   "orderTaker": {
     "title": "Take Order",
@@ -5732,5 +5735,18 @@
     "revokeConfirm": "Revoke access for \"{{device}}\"? It will have to sign in with email, password and property code again.",
     "empty": "No devices have been trusted yet.",
     "unknownDevice": "Unnamed device"
+  },
+  "userManual": {
+    "title": "Staff User Manual",
+    "subtitle": "Quick reference for the everyday tasks on the staff panel.",
+    "printersTitle": "Printer Setup Guide",
+    "printersDesc": "Connect the till printer and the kitchen & bar printers, route orders and send a test print.",
+    "trustedTitle": "Trusted Devices",
+    "trustedDesc": "Manage the computers and terminals allowed to sign in with a PIN.",
+    "ratesTitle": "Rooms & Rates",
+    "ratesDesc": "Register rooms and set their nightly prices on the Rooms page.",
+    "nightAuditTitle": "Night Audit",
+    "nightAuditDesc": "Close the business day and roll the board over to the next one.",
+    "open": "Open"
   }
 }

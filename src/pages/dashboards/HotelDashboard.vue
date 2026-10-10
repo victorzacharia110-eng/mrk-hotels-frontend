@@ -21,11 +21,16 @@
       
       <!-- Toolbar: room/reservation status pills, search and assign-room shortcut -->
       <div class="sv-toolbar">
-        <!-- Signed-in session chip: avatar initial + name only (review: no role here) -->
+        <!--
+          Panel review (NUMBER OF GUESTS): the circle that used to carry the
+          signed-in user's name now shows the TOTAL number of guests in house
+          on the current business date.
+        -->
         <div class="session-chip">
-          <span class="session-avatar">{{ sessionInitial }}</span>
+          <span class="session-avatar"><i class="fas fa-people-roof" aria-hidden="true"></i></span>
           <span class="session-meta">
-            <span class="session-name">{{ authStore.user?.full_name || authStore.user?.name }}</span>
+            <span class="session-name session-count">{{ totalGuestsInHouse }}</span>
+            <span class="session-sub">{{ $t('stayview.guestsInHouse') }}</span>
           </span>
         </div>
         <div class="sv-pills">
@@ -76,10 +81,46 @@
             <button type="button" class="sv-nav-btn" :aria-label="$t('stayview.previous')" @click="shift(-7)">
               <i class="fas fa-chevron-left" aria-hidden="true"></i>
             </button>
-            <button type="button" class="sv-today-btn" :title="businessDateStore.current" @click="goToday">{{ $t('stayview.businessDate') }}</button>
+            <!--
+              Panel review: the corner shows the BUSINESS DATE as a number
+              figure (09/10/2026) rather than the words "Business Date", and
+              the figure is clickable — it opens a calendar that jumps the
+              board to a chosen day.
+            -->
+            <button type="button" class="sv-today-btn sv-bizdate-btn" :class="{ active: calOpen }"
+              :title="businessDateDisplay" :aria-label="$t('stayview.businessDate')" :aria-expanded="calOpen"
+              @click="toggleCal($event)">
+              <span class="sv-bizdate-text">{{ businessDateDisplay || $t('stayview.businessDate') }}</span>
+              <i class="fas fa-calendar-days" aria-hidden="true"></i>
+            </button>
             <button type="button" class="sv-nav-btn" :aria-label="$t('stayview.next')" @click="shift(7)">
               <i class="fas fa-chevron-right" aria-hidden="true"></i>
             </button>
+            <div v-if="calOpen" class="sv-cal-backdrop" @click="calOpen = false"></div>
+            <div v-if="calOpen" class="sv-cal" :style="{ left: calRect.left + 'px', top: calRect.top + 'px' }">
+              <div class="sv-cal-head">
+                <button type="button" class="sv-nav-btn" aria-label="Previous month" @click="calMove(-1)">
+                  <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                </button>
+                <strong class="sv-cal-title">{{ calTitle }}</strong>
+                <button type="button" class="sv-nav-btn" aria-label="Next month" @click="calMove(1)">
+                  <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                </button>
+              </div>
+              <div class="sv-cal-grid">
+                <span v-for="(d, i) in calWeekdays" :key="i" class="sv-cal-dow">{{ d }}</span>
+                <button v-for="c in calCells" :key="c.key" type="button" class="sv-cal-day"
+                  :class="{ blank: !c.iso, business: c.iso === businessTodayKey(), weekend: c.weekend }"
+                  :disabled="!c.iso" :title="c.iso || undefined" @click="jumpTo(c.date)">
+                  {{ c.day }}
+                </button>
+              </div>
+              <div class="sv-cal-foot">
+                <button type="button" class="sv-cal-reset" @click="calOpen = false; goToday()">
+                  <i class="fas fa-location-crosshairs" aria-hidden="true"></i> {{ $t('stayview.businessDateToday') }}
+                </button>
+              </div>
+            </div>
           </div>
           <div v-for="d in days" :key="d.iso" class="sv-day-head" :class="{ today: d.isToday, weekend: d.isWeekend }">
             <span class="dow">{{ d.dow }}</span>
@@ -2287,14 +2328,14 @@ const businessDateStore = useBusinessDateStore()
 const { t, te } = useI18n()
 const notifStore = useNotificationStore()
 
-// First letter of the signed-in user's name for the session avatar.
-const sessionInitial = computed(() => (authStore.user?.full_name || authStore.user?.name || '?').charAt(0).toUpperCase())
-
 // Number of day columns shown in the tape chart.
 const DAYS = 14
 
-// Number of past days shown before today (so checked-out bars stay visible).
-const PAST_DAYS = 3
+// Number of past days shown before the business date. Panel review: "the
+// business date ... should be the first column after room number", so the
+// window now opens ON the business date instead of three days ahead of it —
+// earlier days are reached by panning (the corner arrows or the calendar).
+const PAST_DAYS = 0
 
 /** Local-midnight Date for the hotel's business date (wall clock until loaded). */
 function businessToday() {
@@ -2796,6 +2837,28 @@ const footer = computed(() => {
   return result
 })
 
+/** Reservations that are in house on the business date (checked in and not yet
+ *  out), counted from the stays — the same source as the tape and the pills. */
+const inHouseReservations = computed(() => {
+  const today = businessToday()
+  return tapeReservations.value.filter((r) => {
+    if (r.status !== 'checked_in') return false
+    const { arrival, departure } = reservationDates(r)
+    return arrival && departure && arrival <= today && departure > today
+  })
+})
+
+/** Total guests across every stay in house on the business date — the figure
+ *  the toolbar circle shows where the signed-in user's name used to be
+ *  (panel review: NUMBER OF GUESTS). */
+const totalGuestsInHouse = computed(() =>
+  inHouseReservations.value.reduce((sum, r) => {
+    const adults = Number(r.num_adults) || 0
+    const children = Number(r.num_children) || 0
+    return sum + Math.max(0, adults + children)
+  }, 0),
+)
+
 /** Summary pill counts shown above the chart. */
 const pills = computed(() => {
   const today = businessToday()
@@ -2846,6 +2909,85 @@ function shift(daysCount) {
 function goToday() {
   windowPinned = false
   windowStart.value = defaultWindowStart()
+  load(true)
+}
+
+/* ---------------- Business-date corner calendar ---------------- */
+
+// The toolbar's business-date figure opens this month picker; picking a day
+// pans the board so that day becomes the first column after the room number.
+const calOpen = ref(false)
+const calMonth = ref(new Date(2000, 0, 1))
+const calRect = ref({ left: 0, top: 0 })
+
+/** The business date as a number figure in DD/MM/YYYY (panel review format). */
+const businessDateDisplay = computed(() => {
+  const d = parseDate(businessDateStore.current)
+  if (!d) return ''
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  return `${dd}/${mm}/${d.getFullYear()}`
+})
+
+/** Opens the calendar under the date figure, anchored on the business date. */
+function toggleCal(event) {
+  calOpen.value = !calOpen.value
+  if (calOpen.value) {
+    const rect = event.currentTarget.getBoundingClientRect()
+    calRect.value = {
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - 272)),
+      top: rect.bottom + 8,
+    }
+    const base = businessToday()
+    calMonth.value = startOfDay(new Date(base.getFullYear(), base.getMonth(), 1))
+  }
+}
+
+/** Steps the calendar to the previous/next month. */
+function calMove(step) {
+  calMonth.value = new Date(calMonth.value.getFullYear(), calMonth.value.getMonth() + step, 1)
+}
+
+/** Monday-first weekday labels ("MON", "TUE"...). */
+const calWeekdays = computed(() => {
+  const base = new Date(2000, 0, 3) // a Monday
+  return Array.from({ length: 7 }, (_, i) =>
+    addDays(base, i).toLocaleDateString([], { weekday: 'short' }).toUpperCase(),
+  )
+})
+
+/** The month title ("October 2026"). */
+const calTitle = computed(() =>
+  calMonth.value.toLocaleDateString([], { month: 'long', year: 'numeric' }),
+)
+
+/** Grid cells for the visible month, Monday-first, blank leading cells. */
+const calCells = computed(() => {
+  const y = calMonth.value.getFullYear()
+  const m = calMonth.value.getMonth()
+  const monthStart = startOfDay(new Date(y, m, 1))
+  const offset = (monthStart.getDay() + 6) % 7
+  const cells = []
+  for (let i = 0; i < offset; i++) cells.push({ key: `blank-${i}`, day: '', iso: '' })
+  const daysInMonth = new Date(y, m + 1, 0).getDate()
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = startOfDay(new Date(y, m, d))
+    cells.push({
+      key: isoKey(date),
+      day: d,
+      date,
+      iso: isoKey(date),
+      weekend: date.getDay() === 0 || date.getDay() === 6,
+    })
+  }
+  return cells
+})
+
+/** Pans the board so the chosen day becomes the leftmost column. */
+function jumpTo(date) {
+  windowPinned = true
+  windowStart.value = startOfDay(date)
+  calOpen.value = false
   load(true)
 }
 
@@ -6862,6 +7004,26 @@ onUnmounted(() => clearInterval(refreshTimer))
   white-space: nowrap;
 }
 
+/* The circle now carries the in-house guest total instead of a name. */
+.session-name.session-count {
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.session-sub {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.75;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.session-avatar i {
+  font-size: 15px;
+}
+
 .sv-pills {
   display: flex;
   flex-wrap: wrap;
@@ -7059,6 +7221,139 @@ onUnmounted(() => clearInterval(refreshTimer))
   color: #005eb8;
 }
 
+/* The business-date figure rendered as a pill, matching the status pills it
+   sits among (panel review: "edit the black rectangle to match the sizes of
+   its peers VACANT | OCCUPIED | RESERVED"). */
+.sv-bizdate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border-color: #ddd;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  color: #1e293b;
+}
+
+.sv-bizdate-btn i {
+  font-size: 12px;
+  color: #005eb8;
+}
+
+.sv-bizdate-btn.active {
+  border-color: #005eb8;
+  background: #eaf3fb;
+  color: #005eb8;
+}
+
+/* Click-away layer for the corner calendar. */
+.sv-cal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.sv-cal {
+  position: fixed;
+  z-index: 91;
+  width: 256px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+  padding: 10px;
+}
+
+.sv-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.sv-cal-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: capitalize;
+}
+
+.sv-cal-head .sv-nav-btn {
+  padding: 2px 8px;
+}
+
+.sv-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.sv-cal-dow {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  padding: 4px 0;
+}
+
+.sv-cal-day {
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font-size: 12px;
+  color: #334155;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.sv-cal-day:hover:not(.blank):not(:disabled) {
+  background: #eaf3fb;
+  color: #005eb8;
+}
+
+.sv-cal-day.business {
+  background: #005eb8;
+  color: #fff;
+  font-weight: 700;
+}
+
+.sv-cal-day.weekend:not(.business) {
+  color: #b45309;
+}
+
+.sv-cal-day.blank {
+  visibility: hidden;
+}
+
+.sv-cal-foot {
+  border-top: 1px solid #f1f5f9;
+  margin-top: 8px;
+  padding-top: 8px;
+  display: flex;
+  justify-content: center;
+}
+
+.sv-cal-reset {
+  border: none;
+  background: none;
+  color: #005eb8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+}
+
+.sv-cal-reset:hover {
+  text-decoration: underline;
+}
+
 .sv-day-head {
   display: flex;
   flex-direction: column;
@@ -7160,14 +7455,14 @@ onUnmounted(() => clearInterval(refreshTimer))
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 4px 12px;
   border-bottom: 1px solid #f0f0f0;
   border-right: 1px solid #e5e7eb;
   position: sticky;
   left: 0;
   background: #fff;
   z-index: 2;
-  min-height: 40px;
+  min-height: 34px;
 }
 
 .sv-room-number {
@@ -7534,7 +7829,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   grid-template-columns: repeat(28, 1fr);
   grid-template-rows: 1fr 1fr;
   border-bottom: 1px solid #f0f0f0;
-  min-height: 52px;
+  min-height: 42px;
   position: relative;
 }
 
@@ -7576,11 +7871,11 @@ onUnmounted(() => clearInterval(refreshTimer))
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 4px 2px;
-  padding: 4px 10px;
+  margin: 2px 2px;
+  padding: 3px 8px;
   border-radius: 6px;
   color: #fff;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
   cursor: pointer;

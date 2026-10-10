@@ -10,8 +10,14 @@
   <div class="store-layout" :class="{ 'app-shell': isAppMode }">
     <a href="#main-content" class="skip-link">{{ $t('common.skipToContent') }}</a>
     <header class="site-header">
-      <!-- Top bar: contact details; the viewed hotel's name when in app mode. -->
-      <div class="top-bar">
+      <!--
+        Top bar: contact details; the viewed hotel's name when in app mode.
+        Panel review: "The top panel has the hotel info should be removed" —
+        phone, email, address and hotel name all leave the staff panel, so the
+        strip now renders on the public storefront only. The footer still
+        carries the contact details for public visitors.
+      -->
+      <div v-if="!isAppMode" class="top-bar">
         <div class="container top-bar-inner">
           <div class="top-bar-left">
             <span><i class="fas fa-phone" aria-hidden="true"></i> {{ contactPhone }}</span>
@@ -19,12 +25,9 @@
             <span><i class="fas fa-location-dot" aria-hidden="true"></i>
               {{ contactLocation }}</span>
           </div>
-          <div class="top-bar-right" v-if="!isAppMode">
+          <div class="top-bar-right">
             <span class="top-bar-tagline"><i class="fas fa-hotel" aria-hidden="true"></i> {{ $t('topBar.tagline')
               }}</span>
-          </div>
-          <div class="top-bar-right" v-else>
-            <span class="top-bar-tagline"><i class="fas fa-hotel" aria-hidden="true"></i> {{ hotelName }}</span>
           </div>
         </div>
       </div>
@@ -78,54 +81,95 @@
               </select>
             </div>
 
-            <router-link v-if="isAppMode" :to="{ name: 'hotel-profile' }" class="header-account"
-              @click="navOpen = false" :aria-label="$t('nav.profile')">
-              <span class="header-account-avatar" aria-hidden="true">{{ accountInitials }}</span>
-              <span class="header-account-meta">
-                <strong class="header-account-name">{{ accountName }}</strong>
-                <RoleBadge />
-              </span>
-            </router-link>
-
-            <router-link v-if="isAppMode" :to="{ name: 'public-home' }" class="action-link" @click="navOpen = false">
-              <i class="fas fa-store" aria-hidden="true"></i>
-              <span class="action-label">{{ $t('nav.portal') }}</span>
-            </router-link>
-
-            <template v-if="authStore.isAuthenticated">
-              <router-link :to="dashboardRoute" class="action-link" @click="navOpen = false">
-                <i class="fas fa-gauge-high" aria-hidden="true"></i>
-                <span class="action-label">{{ $t('nav.dashboard') }}</span>
-              </router-link>
-              <router-link v-if="isAppMode" :to="{ name: 'hotel-profile' }" class="action-link"
-                @click="navOpen = false">
-                <i class="fas fa-user-circle" aria-hidden="true"></i>
-                <span class="action-label">{{ $t('nav.profile') }}</span>
-              </router-link>
-              <button @click="handleLogout" class="action-link logout-btn">
-                <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
-                <span class="action-label">{{ $t('nav.logout') }}</span>
-              </button>
-            </template>
-            <template v-else>
-              <router-link to="/login" class="action-link">
+            <template v-if="isAppMode">
+              <!--
+                Staff panel header: the notification bell and the profile circle
+                replace the inline account chip, Portal / Dashboard / My Profile /
+                Logout links and language switch. Panel review: the circle holds
+                the user's INITIALS only (no name, no role), and clicking it
+                reveals Portal / User Manual / My Profile / Log Out / language.
+              -->
+              <template v-if="authStore.isAuthenticated">
+                <button type="button" class="header-bell" :aria-expanded="showNotifDropdown"
+                  :aria-label="$t('notifications.unreadCount', { count: notifStore.unreadCount })"
+                  @click="toggleNotifDropdown">
+                  <i class="fas fa-bell" aria-hidden="true"></i>
+                  <span v-if="notifStore.unreadCount > 0" class="header-bell-badge">{{ notifStore.unreadCount > 99 ?
+                    '99+' : notifStore.unreadCount }}</span>
+                </button>
+                <div class="profile-menu">
+                  <button type="button" class="profile-menu-trigger" :aria-expanded="profileOpen"
+                    :aria-label="$t('nav.profile')" @click="profileOpen = !profileOpen">
+                    <span class="profile-menu-avatar" aria-hidden="true">{{ accountInitials }}</span>
+                  </button>
+                  <div v-if="profileOpen" class="profile-menu-backdrop" @click="profileOpen = false"></div>
+                  <div v-if="profileOpen" class="profile-menu-panel">
+                    <div class="profile-menu-head">
+                      <span class="profile-menu-avatar" aria-hidden="true">{{ accountInitials }}</span>
+                      <strong class="profile-menu-name">{{ accountName }}</strong>
+                    </div>
+                    <router-link :to="{ name: 'public-home' }" class="profile-menu-link" @click="profileOpen = false">
+                      <i class="fas fa-store" aria-hidden="true"></i> {{ $t('nav.portal') }}
+                    </router-link>
+                    <router-link :to="{ name: 'user-manual' }" class="profile-menu-link" @click="profileOpen = false">
+                      <i class="fas fa-book-open" aria-hidden="true"></i> {{ $t('nav.userManual') }}
+                    </router-link>
+                    <router-link :to="{ name: 'hotel-profile' }" class="profile-menu-link" @click="profileOpen = false">
+                      <i class="fas fa-user-circle" aria-hidden="true"></i> {{ $t('nav.profile') }}
+                    </router-link>
+                    <button type="button" class="profile-menu-link" @click="profileOpen = false; handleLogout()">
+                      <i class="fas fa-right-from-bracket" aria-hidden="true"></i> {{ $t('nav.logout') }}
+                    </button>
+                    <div class="profile-menu-lang" role="group" :aria-label="$t('topBar.language')">
+                      <button type="button" class="lang-option" :class="{ active: locale === 'en' }"
+                        @click="setLocale('en')" :title="$t('topBar.switchToEnglish')"
+                        :aria-pressed="locale === 'en'">
+                        <span class="lang-flag" aria-hidden="true">🇬🇧</span>
+                        <span class="lang-code">EN</span>
+                      </button>
+                      <button type="button" class="lang-option" :class="{ active: locale === 'sw' }"
+                        @click="setLocale('sw')" :title="$t('topBar.switchToSwahili')"
+                        :aria-pressed="locale === 'sw'">
+                        <span class="lang-flag" aria-hidden="true">🇹🇿</span>
+                        <span class="lang-code">SW</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              <router-link v-else to="/login" class="action-link">
                 <i class="fas fa-user" aria-hidden="true"></i>
                 <span class="action-label">{{ $t('nav.signIn') }}</span>
               </router-link>
             </template>
-
-            <div class="lang-switch" role="group" :aria-label="$t('topBar.language')">
-              <button type="button" class="lang-option" :class="{ active: locale === 'en' }" @click="setLocale('en')"
-                :title="$t('topBar.switchToEnglish')" :aria-pressed="locale === 'en'">
-                <span class="lang-flag" aria-hidden="true">🇬🇧</span>
-                <span class="lang-code">EN</span>
-              </button>
-              <button type="button" class="lang-option" :class="{ active: locale === 'sw' }" @click="setLocale('sw')"
-                :title="$t('topBar.switchToSwahili')" :aria-pressed="locale === 'sw'">
-                <span class="lang-flag" aria-hidden="true">🇹🇿</span>
-                <span class="lang-code">SW</span>
-              </button>
-            </div>
+            <template v-else>
+              <template v-if="authStore.isAuthenticated">
+                <router-link :to="dashboardRoute" class="action-link" @click="navOpen = false">
+                  <i class="fas fa-gauge-high" aria-hidden="true"></i>
+                  <span class="action-label">{{ $t('nav.dashboard') }}</span>
+                </router-link>
+                <button @click="handleLogout" class="action-link logout-btn">
+                  <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+                  <span class="action-label">{{ $t('nav.logout') }}</span>
+                </button>
+              </template>
+              <router-link v-else to="/login" class="action-link">
+                <i class="fas fa-user" aria-hidden="true"></i>
+                <span class="action-label">{{ $t('nav.signIn') }}</span>
+              </router-link>
+              <div class="lang-switch" role="group" :aria-label="$t('topBar.language')">
+                <button type="button" class="lang-option" :class="{ active: locale === 'en' }" @click="setLocale('en')"
+                  :title="$t('topBar.switchToEnglish')" :aria-pressed="locale === 'en'">
+                  <span class="lang-flag" aria-hidden="true">🇬🇧</span>
+                  <span class="lang-code">EN</span>
+                </button>
+                <button type="button" class="lang-option" :class="{ active: locale === 'sw' }" @click="setLocale('sw')"
+                  :title="$t('topBar.switchToSwahili')" :aria-pressed="locale === 'sw'">
+                  <span class="lang-flag" aria-hidden="true">🇹🇿</span>
+                  <span class="lang-code">SW</span>
+                </button>
+              </div>
+            </template>
           </div>
 
           <button v-if="!isAppMode" class="hamburger" :class="{ active: navOpen }" @click="navOpen = !navOpen"
@@ -317,19 +361,8 @@
             <span v-if="notifStore.unreadCount > 0" class="drawer-notif-badge">{{ notifStore.unreadCount > 99 ? '99+' :
               notifStore.unreadCount }}</span>
           </button>
-          <router-link :to="{ name: 'public-home' }" class="drawer-link" @click="sideOpen = false">
-            <i class="fas fa-store" aria-hidden="true"></i> {{ $t('nav.portal') }}
-          </router-link>
-          <router-link :to="{ name: 'hotel-profile' }" class="drawer-link" @click="sideOpen = false">
-            <i class="fas fa-user-circle" aria-hidden="true"></i> {{ $t('nav.profile') }}
-          </router-link>
-          <button class="drawer-link" @click="toggleLocale">
-            <span class="mobile-lang-flag" aria-hidden="true">{{ locale === 'sw' ? '🇬🇧' : '🇹🇿' }}</span>
-            {{ locale === 'sw' ? $t('topBar.switchToEnglish') : $t('topBar.switchToSwahili') }}
-          </button>
-          <button class="drawer-link logout" @click="handleLogout">
-            <i class="fas fa-right-from-bracket" aria-hidden="true"></i> {{ $t('nav.logout') }}
-          </button>
+          <!-- Portal / User Manual / My Profile / Log Out / language now live
+               in the top-right profile circle, so they leave the drawer. -->
         </div>
       </aside>
     </Transition>
@@ -389,7 +422,7 @@
     <!-- Read-only banner shown when an owner is previewing one of their hotels. -->
     <div v-if="isOwnerViewing" class="owner-banner" role="status">
       <i class="fas fa-eye" aria-hidden="true"></i>
-      <span>{{ $t('owner.viewingHotel', { hotel: viewingHotelName }) }}</span>
+      <span>{{ $t('owner.viewingHotel', { hotel: hotelNameForBanner }) }}</span>
       <span class="owner-banner-readonly">{{ $t('owner.readOnly') }}</span>
       <button class="owner-banner-btn" @click="exitOwnerView">
         <i class="fas fa-arrow-left" aria-hidden="true"></i> {{ $t('owner.backToOwnerPanel') }}
@@ -544,6 +577,15 @@ const navOpen = ref(false)
 const sideOpen = ref(false)
 const showNotifDropdown = ref(false)
 const showNotifSound = ref(false)
+// Staff profile dropdown (top-right initials circle). It closes on route
+// change so navigating out of the panel never strands it open.
+const profileOpen = ref(false)
+watch(
+  () => route.fullPath,
+  () => {
+    profileOpen.value = false
+  },
+)
 const notifSettingsStore = useNotificationSettingsStore()
 notifSettingsStore.load()
 
@@ -607,12 +649,11 @@ const isDirectory = computed(() => route.name === 'public-home')
 
 const homeLink = computed(() => (isAppMode.value ? '/app' : '/'))
 
-// Branding: the current hotel's name (or the viewed hotel when an owner is
-// browsing). The signed-in role is rendered by <RoleBadge /> in the header.
-const hotelName = computed(() =>
+// Branding kept only for the owner preview banner.
+const hotelNameForBanner = computed(() =>
   isOwnerViewing.value
     ? viewingHotelName.value
-    : authStore.user?.tenant?.hotel_name || 'MRK Hotels',
+    : (authStore.user?.tenant?.hotel_name || 'MRK Hotels'),
 )
 
 // Per-hotel public contact details: the top bar and footer show the currently
@@ -745,7 +786,9 @@ const visibleModules = computed(() => {
     const child = (item, label) => item && { to: item.to, label, icon: item.icon }
     const out = []
 
-    if (byKey.dashboard) out.push(byKey.dashboard)
+    // The panel review removes the Dashboard and My Profile entries entirely:
+    // the circle in the top-right corner owns account actions, and the logo
+    // already routes home.
     if (byKey.rooms) out.push(byKey.rooms)
 
     // Reservations: manual booking, channel bookings and public booking requests.
@@ -791,8 +834,6 @@ const visibleModules = computed(() => {
     // Administration: reports, activity log and override approvals.
     const admin = pick(['reports', 'activity-log-report', 'overrides'])
     if (admin.length) out.push(accordionGroup('reception-admin', 'fas fa-user-tie', 'accordion.administration', admin))
-
-    if (byKey.profile) out.push(byKey.profile)
 
     return out
   }
@@ -1547,6 +1588,175 @@ function formatNotifTime(iso) {
 .header-account-meta .role-badge {
   font-size: 10px;
   padding: 2px 8px;
+}
+
+/* ── Staff panel header: notification bell + profile circle ──────── */
+.header-bell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 16px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.header-bell:hover {
+  border-color: var(--brand, #005eb8);
+  color: var(--brand, #005eb8);
+  background: #eef6ff;
+}
+
+.header-bell-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+}
+
+.profile-menu {
+  position: relative;
+}
+
+.profile-menu-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  background: #f8fafc;
+  padding: 0;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.profile-menu-trigger:hover {
+  border-color: var(--brand, #005eb8);
+  box-shadow: 0 2px 8px rgba(0, 94, 184, 0.18);
+}
+
+.profile-menu-trigger:focus-visible,
+.header-bell:focus-visible {
+  outline: 2px solid var(--brand, #005eb8);
+  outline-offset: 2px;
+}
+
+.profile-menu-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #005eb8, #0a7ee8);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+/* Full-screen transparent layer so a click anywhere closes the menu. */
+.profile-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 94;
+}
+
+.profile-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 95;
+  min-width: 230px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+  padding: 8px;
+}
+
+.profile-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 6px;
+}
+
+.profile-menu-head .profile-menu-avatar {
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+}
+
+.profile-menu-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.25;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-menu-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: #334155;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.profile-menu-link:hover {
+  background: #f1f5f9;
+  color: var(--brand, #005eb8);
+}
+
+.profile-menu-link i {
+  width: 18px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.profile-menu-lang {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px 4px;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 4px;
+}
+
+.profile-menu-lang .lang-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .hamburger {
