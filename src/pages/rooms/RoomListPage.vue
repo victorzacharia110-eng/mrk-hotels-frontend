@@ -64,8 +64,9 @@
     <!-- ─── INVENTORY (default) ─────────────────────────────────────────── -->
     <div v-if="activeTab === 'inventory'">
       <div v-if="invLoading" class="alert alert-info">{{ $t('rooms.loading') }}</div>
-      <div v-else-if="invSummary.length">
-        <div class="summary-grid">
+      <template v-else>
+        <!-- Summarised by room type, exactly as the reception review asks. -->
+        <div v-if="invSummary.length" class="summary-grid">
           <div v-for="s in invSummary" :key="s.room_type" class="card summary-card">
             <div class="summary-head">
               <strong>{{ s.room_type }}</strong>
@@ -87,7 +88,61 @@
             </p>
           </div>
         </div>
-      </div>
+
+        <!-- Bottom totals: SOLD / AVAILABLE / TOTAL across every room type. -->
+        <div class="inventory-totals">
+          <div class="inventory-total inventory-total--sold">
+            <span class="inventory-total-figure">{{ invTotals.sold }}</span>
+            <span class="inventory-total-label">{{ $t('rooms.inventorySold') }}</span>
+          </div>
+          <div class="inventory-total inventory-total--free">
+            <span class="inventory-total-figure">{{ invTotals.available }}</span>
+            <span class="inventory-total-label">{{ $t('rooms.inventoryAvailable') }}</span>
+          </div>
+          <div class="inventory-total inventory-total--total">
+            <span class="inventory-total-figure">{{ invTotals.total }}</span>
+            <span class="inventory-total-label">{{ $t('rooms.inventoryTotal') }}</span>
+          </div>
+        </div>
+
+        <!-- Calendar-themed availability grid: rooms in rows, the business date
+             as the first day column (per the reception review). -->
+        <div v-if="invRooms.length" class="card">
+          <div class="inventory-cal-head">
+            <strong>{{ $t('rooms.inventoryCalendarTitle') }}</strong>
+            <span class="muted">{{ $t('rooms.inventoryCalendarHint') }}</span>
+          </div>
+          <div class="table-scroll cal-scroll" style="max-height:70vh;overflow:auto;">
+            <table class="table inventory-calendar">
+              <thead>
+                <tr>
+                  <th class="cal-room-col">{{ $t('rooms.tableRoom') }}</th>
+                  <th v-for="d in invDays" :key="d" :class="{ today: d === invFrom }">
+                    {{ formatDayLabel(d) }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="r in invRooms" :key="r.room_id">
+                  <td class="cal-room-col">
+                    <strong>{{ r.room_number }}</strong>
+                    <span class="muted">{{ r.room_type }}</span>
+                  </td>
+                  <td
+                    v-for="d in invDays"
+                    :key="d"
+                    class="cal-cell"
+                    :class="{ today: d === invFrom, stopped: r.sellable?.[d] === false }"
+                    :title="`${r.room_number} · ${formatDayLabel(d)}`"
+                  >
+                    <i v-if="r.sellable?.[d] === false" class="fas fa-user" aria-hidden="true"></i>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
     </div>
 
     <!-- ─── RATES (manager only) ────────────────────────────────────────── -->
@@ -617,6 +672,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useBusinessDateStore } from '@/stores/businessDate'
 import { roomApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
@@ -630,6 +686,7 @@ const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()
+const businessDateStore = useBusinessDateStore()
 const canEdit = computed(() => authStore.can(80))
 
 // List state: room rows, pagination, filters and feedback flags.
@@ -955,15 +1012,55 @@ const activeTab = ref('inventory')
 
 // Inventory summary (per room type): room_count / available / stop-sold days.
 const invSummary = ref([])
+const invRooms = ref([])
+const invFrom = ref('')
+const invTo = ref('')
 const invLoading = ref(false)
+
+/**
+ * The nights shown on the inventory calendar: the business date first, then the
+ * following 13 nights (a fortnight reads availability without the grid growing
+ * unreadably wide). The business date is column one by design.
+ */
+const invDays = computed(() => {
+  if (!invFrom.value || !invTo.value) return []
+  const out = []
+  const cursor = new Date(`${invFrom.value}T00:00:00`)
+  const end = new Date(`${invTo.value}T00:00:00`)
+  while (!Number.isNaN(cursor.getTime()) && cursor <= end) {
+    out.push(toIso(cursor))
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return out
+})
+
+/**
+ * Bottom figures the reception review asked for: SOLD (in-house) rooms summed
+ * across every type, AVAILABLE (total minus sold) and TOTAL rooms.
+ */
+const invTotals = computed(() => {
+  let total = 0
+  let sold = 0
+  for (const type of invSummary.value) {
+    total += Number(type.room_count || 0)
+    sold += Number(type.status_counts?.in_house || 0)
+  }
+  return { total, sold, available: Math.max(0, total - sold) }
+})
 
 const loadInventory = async () => {
   invLoading.value = true
   try {
-    const res = await roomApi.inventory()
-    // Backend returns the per-room-type summaries under `types` (see
+    await businessDateStore.ensureLoaded()
+    const from = businessDateStore.current || todayIso()
+    const res = await roomApi.inventory({ from_date: from, to_date: addDaysIso(from, 13) })
+    // Backend returns the per-type summaries under `types` and one row per room
+    // under `rooms`, each carrying a per-night `sellable` map (see
     // RoomController::inventory); reading `summaries` left this tab empty.
     invSummary.value = res.data?.types ?? []
+    invRooms.value = res.data?.rooms ?? []
+    invFrom.value = res.data?.from ?? from
+    invTo.value = res.data?.to ?? addDaysIso(from, 13)
   } catch (err) {
     error.value = flattenError(err)
   } finally {
@@ -1318,6 +1415,14 @@ function toIso(date) {
 function todayIso(offsetDays = 0) {
   const d = new Date()
   d.setDate(d.getDate() + offsetDays)
+  return toIso(d)
+}
+
+/** An ISO date shifted forward by `days`, staying in local time. */
+function addDaysIso(isoDate, days) {
+  const d = new Date(`${isoDate}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return isoDate
+  d.setDate(d.getDate() + days)
   return toIso(d)
 }
 
@@ -1780,6 +1885,127 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 20px;
+}
+
+/* ─── Inventory summary totals + calendar (reception review) ─────────────── */
+.inventory-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0 20px;
+}
+
+.inventory-total {
+  border-radius: 10px;
+  padding: 14px 16px;
+  text-align: center;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.inventory-total-figure {
+  display: block;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.inventory-total-label {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.inventory-total--sold {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.inventory-total--sold .inventory-total-figure {
+  color: #b91c1c;
+}
+
+.inventory-total--free {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.inventory-total--free .inventory-total-figure {
+  color: #15803d;
+}
+
+.inventory-total--total {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.inventory-total--total .inventory-total-figure {
+  color: #1d4ed8;
+}
+
+.inventory-cal-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.inventory-cal-head .muted {
+  font-size: 12px;
+}
+
+.inventory-calendar {
+  table-layout: fixed;
+  overflow: visible;
+}
+
+.inventory-calendar thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f9f9f9;
+}
+
+.inventory-calendar thead th.cal-room-col {
+  z-index: 3;
+  background: #f9f9f9;
+}
+
+.inventory-calendar .cal-room-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--card, #fff);
+  min-width: 110px;
+  text-align: left;
+}
+
+.inventory-calendar .cal-room-col .muted {
+  display: block;
+  font-size: 11px;
+}
+
+.inventory-calendar th.today {
+  background: var(--brand-light, #e0f2fe);
+  color: var(--brand, #005fb8);
+}
+
+.inventory-calendar td.today {
+  box-shadow: inset 1px 0 0 var(--brand, #005fb8), inset -1px 0 0 var(--brand, #005fb8);
+}
+
+.inventory-calendar .cal-cell {
+  cursor: default;
+  background: #f1f5f9;
+}
+
+.inventory-calendar .cal-cell.stopped {
+  background: #dc2626 !important;
+  color: #fff;
+  box-shadow: inset 0 0 0 1px #991b1b;
 }
 
 /* Tablets: 768px is the classic iPad portrait width, so the phone

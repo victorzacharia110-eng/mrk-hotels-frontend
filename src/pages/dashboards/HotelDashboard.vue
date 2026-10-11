@@ -2666,8 +2666,11 @@ const visibleReservations = computed(() => {
     if (!arrival || !departure) return false
     // A stay departing ON the window's first day still owns the room for that
     // day's first half (half-day handover), so it must stay visible — only
-    // stays that ended before the window are hidden.
-    if (departure < windowStart.value || arrival >= windowEnd.value) return false
+    // stays that ended before the window are hidden. An exception: a resident
+    // who is still checked in but overdue (checkout already behind the window)
+    // is still in the room and must keep showing as a due-out.
+    if (arrival >= windowEnd.value) return false
+    if (departure < windowStart.value && r.status !== 'checked_in') return false
     if (!q) return true
     const roomNumber = r.room?.room_number || ''
     return (
@@ -2690,7 +2693,13 @@ function toPanelBar(r, colorClass = '') {
     colorClass =
       r.status === 'checked_out' ? 'bar-blue'
         : r.status === 'checked_in'
-          ? (departure.toDateString() === businessToday().toDateString() ? 'bar-purple' : 'bar-green')
+          // Purple = due out: a checked-in guest whose checkout day is the
+          // business date OR has already passed (an overdue resident still in
+          // house). The old equality test let an overdue guest flip back to
+          // green once the business date rolled past their checkout day, which
+          // is exactly the "due-out colour change condition bypassed" the
+          // reception review reported.
+          ? (departure.getTime() <= businessToday().getTime() ? 'bar-purple' : 'bar-green')
           : 'bar-red'
   }
   const fmt = (d) => `${d.getDate()}/${d.getMonth() + 1}/${String(d.getFullYear()).slice(2)}`
@@ -2751,7 +2760,15 @@ const barsByRoom = computed(() => {
     // otherwise degenerates to zero width because endIdx == startIdx at the
     // clamped window edge, hiding the resident the front desk must clear out
     // before their same-day successor checks in).
-    if (halfEnd < halfStart || diffDays(windowStart.value, departure) < 0) continue
+    // An overdue resident (checkout before the window, still checked in) must
+    // stay visible as a due-out; anyone else fully ended before the window is
+    // dropped. The resident is clamped to the first night and given one
+    // half-cell so the room also reads as occupied (and not bookable).
+    const endedBeforeWindow = diffDays(windowStart.value, departure) < 0
+    if (halfEnd < halfStart || (endedBeforeWindow && r.status !== 'checked_in')) continue
+    const effectiveHalfEnd = endedBeforeWindow && r.status === 'checked_in'
+      ? Math.max(halfEnd, halfStart + 1)
+      : halfEnd
     // Bar colors: blue = checked out, green = in-house, red = anything not yet
     // checked in. A reserved guest that has paid in full must NOT flip green —
     // only an actual check-in turns the bar green.
@@ -2760,13 +2777,13 @@ const barsByRoom = computed(() => {
       // Grid column/span on the 28 half-day track (1-based) + the inclusive
       // 0-based half-cell range used by the vacancy check.
       halfStart,
-      halfEnd,
+      halfEnd: effectiveHalfEnd,
       // The bar starts at the vertical MIDPOINT of the arrival day (check-in
       // is at mid-day, not midnight) and ends at the first half of the
       // departure day. `halfStart`/`halfEnd` keep their date semantics for the
       // vacancy check; only the visual grid column/span shift by one half-cell.
       start: halfStart + 2,
-      span: Math.max(1, halfEnd - halfStart),
+      span: Math.max(1, effectiveHalfEnd - halfStart),
       lane: 1,
     })
   }
@@ -2837,14 +2854,15 @@ const footer = computed(() => {
   return result
 })
 
-/** Reservations that are in house on the business date (checked in and not yet
- *  out), counted from the stays — the same source as the tape and the pills. */
+/** Reservations that are in house on the business date: every stay actually
+ *  checked in (a due-out or overdue resident is still in house until the desk
+ *  checks them out), counted from the stays — the same source as the tape. */
 const inHouseReservations = computed(() => {
   const today = businessToday()
   return tapeReservations.value.filter((r) => {
     if (r.status !== 'checked_in') return false
-    const { arrival, departure } = reservationDates(r)
-    return arrival && departure && arrival <= today && departure > today
+    const { arrival } = reservationDates(r)
+    return arrival && arrival <= today
   })
 })
 
@@ -2862,17 +2880,18 @@ const totalGuestsInHouse = computed(() =>
 /** Summary pill counts shown above the chart. */
 const pills = computed(() => {
   const today = businessToday()
-  const tomorrow = addDays(today, 1)
   const count = (statuses) => rooms.value.filter((r) => statuses.includes(r.status)).length
   // In-house guests on the business date, counted from the STAYS (the same
   // source as the tape) rather than the room's housekeeping status, so the
-  // "Occupied" pill matches the checked-in reservations the desk sees.
+  // "Occupied" pill matches the checked-in reservations the desk sees. A
+  // checked-in guest occupies the room until the desk actually checks them out,
+  // so due-out and overdue residents count too.
   const inHouse = new Set()
   for (const r of tapeReservations.value) {
     if (r.status !== 'checked_in') continue
     const roomId = reservationRoomId(r)
-    const { arrival, departure } = reservationDates(r)
-    if (roomId && arrival && departure && arrival <= today && departure > today) inHouse.add(roomId)
+    const { arrival } = reservationDates(r)
+    if (roomId && arrival && arrival <= today) inHouse.add(roomId)
   }
   const reserved = tapeReservations.value.filter((r) => {
     if (!['pending', 'confirmed'].includes(r.status)) return false
@@ -2882,7 +2901,9 @@ const pills = computed(() => {
   const dueOut = tapeReservations.value.filter((r) => {
     if (r.status !== 'checked_in') return false
     const { departure } = reservationDates(r)
-    return departure && departure >= today && departure < tomorrow
+    // Due out = checkout day has arrived or already passed (an overdue resident
+    // still in house), not only the exact business date.
+    return departure && departure.getTime() <= today.getTime()
   }).length
   return [
     { key: 'vacant', label: t('stayview.vacant'), count: count(['available']) },
@@ -4081,7 +4102,13 @@ const folioBalanceDue = computed(() => {
   // balance while viewing a related folio).
   const viewed = viewingFolio.value?.reservation
   if (viewed) return folioRowBalance(viewed)
-  return folioCardBalance(folio.value, activeBar.value)
+  // Read the SAME ledger balance the Balance card shows, never the backend
+  // header `balance_due`: that header is recomputed from total_amount +
+  // room_charges − advance and shifts when a due-out guest is carried past
+  // their checkout (night audit accrues another night), so the amount payable /
+  // postable to creditors disagreed with the amount the desk was shown. The
+  // ledger is charges − payments, exactly what is payable.
+  return folioRowBalance(activeBar.value)
 })
 
 /**

@@ -359,18 +359,34 @@ describe('folio operations on the stay view', () => {
 
   it('blocks post-to-creditors when the amount exceeds the folio balance', async () => {
     await mountDashboard()
-    // Give the folio a balance_due of 100,000.
+    // A stale backend balance_due must not be the yardstick: the ledger balance
+    // (220,000 = charges − credits) is the exact amount payable, so posting
+    // above it is blocked even when the header says a smaller figure.
     const payload = folioPayload()
     payload.folio.balance_due = 100000
     wrapper.vm.folio = payload
     await wrapper.vm.$nextTick()
     wrapper.vm.openPaymentModal('company')
     wrapper.vm.paymentForm.company_id = 9
-    wrapper.vm.paymentForm.amount = 150000
+    wrapper.vm.paymentForm.amount = 250000
     await wrapper.vm.submitPayment()
     expect(api.reservationApi.folioCreditors).not.toHaveBeenCalled()
     expect(wrapper.vm.paymentErrors.amount).toBeTruthy()
     expect(wrapper.vm.paymentModal).toBe(true)
+  })
+
+  it('pre-fills post-to-creditors from the ledger balance, not a stale balance_due', async () => {
+    await mountDashboard()
+    // The due-out accrual can move the backend header balance_due while the
+    // ledger (the amount actually payable) stays put; the form must always
+    // offer the ledger figure so the two can never disagree.
+    const payload = folioPayload()
+    payload.folio.balance_due = 100000
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    wrapper.vm.openPaymentModal('company')
+    expect(wrapper.vm.folioBalanceDue).toBe(220000)
+    expect(wrapper.vm.paymentForm.amount).toBe(220000)
   })
 
   it('posts to creditors when the amount is within the folio balance', async () => {

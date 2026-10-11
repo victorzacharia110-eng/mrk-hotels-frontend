@@ -254,3 +254,88 @@ describe('stay-view dot board occupancy', () => {
     expect(dot.attributes('title')).toBe('Amina Hassan')
   })
 })
+
+describe('due-out residents on the stay view', () => {
+  const today = startOfToday()
+  const daysAgo = (n) => iso(new Date(today.getTime() - n * 86400000))
+
+  const occupiedRoom = {
+    room_id: 1,
+    room_number: '101',
+    room_type: 'single',
+    status: 'occupied',
+    price_per_night: 100,
+  }
+
+  it('keeps an overdue checked-in resident on the tape and paints the bar purple', async () => {
+    await mountDashboard()
+    await fillBoard([occupiedRoom], [
+      {
+        reservation_id: 1,
+        room: { room_id: 1, room_number: '101' },
+        guest_name: 'Swaum Hamis',
+        arrival_date: daysAgo(3),
+        departure_date: daysAgo(1),
+        status: 'checked_in',
+        total_amount: 200000,
+      },
+    ])
+    const bars = wrapper.vm.barsByRoom[1]
+    expect(bars).toHaveLength(1)
+    expect(bars[0].colorClass).toBe('bar-purple')
+    expect(bars[0].span).toBeGreaterThan(0)
+  })
+
+  it('paints a stay due out exactly on the business date purple', async () => {
+    await mountDashboard()
+    await fillBoard([occupiedRoom], [
+      {
+        reservation_id: 2,
+        room: { room_id: 1, room_number: '101' },
+        guest_name: 'Grace Mollel',
+        arrival_date: daysAgo(2),
+        departure_date: daysAgo(0),
+        status: 'checked_in',
+        total_amount: 200000,
+      },
+    ])
+    const bars = wrapper.vm.barsByRoom[1]
+    expect(bars).toHaveLength(1)
+    expect(bars[0].colorClass).toBe('bar-purple')
+  })
+
+  it('still hides a non-resident stay that fully ended before the window', async () => {
+    await mountDashboard()
+    await fillBoard([occupiedRoom], [
+      {
+        reservation_id: 3,
+        room: { room_id: 1, room_number: '101' },
+        guest_name: 'Past Guest',
+        arrival_date: daysAgo(4),
+        departure_date: daysAgo(2),
+        status: 'checked_out',
+        total_amount: 200000,
+      },
+    ])
+    expect(wrapper.vm.barsByRoom[1] || []).toHaveLength(0)
+  })
+
+  it('counts overdue residents in the due-out and occupied pills', async () => {
+    await mountDashboard()
+    await fillBoard([occupiedRoom], [
+      {
+        reservation_id: 4,
+        room: { room_id: 1, room_number: '101' },
+        guest_name: 'Swaum Hamis',
+        arrival_date: daysAgo(3),
+        departure_date: daysAgo(1),
+        status: 'checked_in',
+        total_amount: 200000,
+      },
+    ])
+    const dueOut = wrapper.vm.pills.find((p) => p.key === 'dueout')
+    expect(dueOut.count).toBe(1)
+    const occupied = wrapper.vm.pills.find((p) => p.key === 'occupied')
+    expect(occupied.count).toBe(1)
+  })
+})
