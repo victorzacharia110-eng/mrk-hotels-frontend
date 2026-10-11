@@ -524,6 +524,16 @@
           <button type="button" class="oh-manage" @click="loadOpenOrders">
             <i class="fas fa-rotate" aria-hidden="true"></i> {{ $t('orderTaker.refresh') }}
           </button>
+          <button
+            v-if="canVoidOrders && bulkVoidable.length"
+            type="button"
+            class="oh-manage oh-danger"
+            :title="$t('orderTaker.voidAll')"
+            :aria-label="$t('orderTaker.voidAll')"
+            @click="openVoidAll"
+          >
+            <i class="fas fa-xmark" aria-hidden="true"></i> {{ $t('orderTaker.voidAll') }}
+          </button>
         </div>
       </div>
       <div class="open-tools">
@@ -907,6 +917,48 @@
               <button type="button" class="open-btn danger" :disabled="voiding" @click="confirmVoid">
                 <i class="fas fa-ban" aria-hidden="true"></i>
                 {{ voiding ? $t('orderTaker.sending') : $t('orderTaker.voidOrder') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Void all listed orders: one X clears the whole visible board -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="voidAllOpen" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog" :aria-label="$t('orderTaker.voidAllTitle')">
+          <div class="cat-pop-backdrop" @click="closeVoidAll"></div>
+          <div class="cat-pop-panel accomp-panel">
+            <header class="cat-pop-head">
+              <strong>{{ $t('orderTaker.voidAllTitle') }} · {{ bulkVoidable.length }}</strong>
+              <button type="button" class="cat-pop-close" :aria-label="$t('orderTaker.cancel')" @click="closeVoidAll">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </header>
+            <p class="accomp-hint">{{ $t('orderTaker.voidAllHint') }}</p>
+            <p class="void-summary">
+              {{ $t('orderTaker.voidAllSummary', {
+                count: bulkVoidable.length,
+                currency: curCode(),
+                total: money(bulkVoidTotal),
+              }) }}
+            </p>
+            <label class="void-reason">
+              <textarea
+                v-model="voidReason"
+                rows="2"
+                :placeholder="$t('orderTaker.voidReason')"
+                :disabled="voidingAll"
+              ></textarea>
+            </label>
+            <div class="void-actions">
+              <button type="button" class="open-btn ghost" :disabled="voidingAll" @click="closeVoidAll">
+                {{ $t('orderTaker.cancel') }}
+              </button>
+              <button type="button" class="open-btn danger" :disabled="voidingAll" @click="confirmVoidAll">
+                <i class="fas fa-ban" aria-hidden="true"></i>
+                {{ voidingAll ? $t('orderTaker.sending') : $t('orderTaker.voidAllConfirm', { count: bulkVoidable.length }) }}
               </button>
             </div>
           </div>
@@ -1396,6 +1448,63 @@ async function confirmVoid() {
   } finally {
     voiding.value = false
   }
+}
+
+// Bulk void: the board's single X voids every order currently listed (honouring
+// the search/status filter). Orders the backend would reject — paid, room-billed
+// or already closed — are skipped, so the button only offers what it can clear.
+const voidAllOpen = ref(false)
+const voidingAll = ref(false)
+
+/** Roles allowed to void, matching the per-order Void button (waiters excluded). */
+const canVoidOrders = computed(() => !isWaiterRole.value)
+
+/** The listed orders the void endpoint will accept right now. */
+const bulkVoidable = computed(() =>
+  openFiltered.value.filter(
+    (o) => ['pending', 'preparing', 'in_progress', 'processing'].includes(o.status) && o.payment_status === 'unpaid',
+  ),
+)
+const bulkVoidTotal = computed(() => bulkVoidable.value.reduce((sum, o) => sum + Number(o.total_amount || 0), 0))
+
+function openVoidAll() {
+  if (!canVoidOrders.value || !bulkVoidable.value.length) return
+  voidAllOpen.value = true
+  voidReason.value = ''
+}
+
+function closeVoidAll() {
+  if (voidingAll.value) return
+  voidAllOpen.value = false
+}
+
+async function confirmVoidAll() {
+  if (voidingAll.value) return
+  const targets = bulkVoidable.value
+  if (!targets.length) {
+    voidAllOpen.value = false
+    return
+  }
+  voidingAll.value = true
+  const reason = voidReason.value.trim() || t('orderTaker.voidBy', { waiter: waiterName.value || '-' })
+  let done = 0
+  let failed = 0
+  for (const order of targets) {
+    try {
+      await orderApi.voidOrder(order.order_id, { reason })
+      done += 1
+    } catch {
+      failed += 1
+    }
+  }
+  voidingAll.value = false
+  voidAllOpen.value = false
+  sentToast.value = failed
+    ? t('orderTaker.voidAllPartial', { done, total: targets.length, failed })
+    : t('orderTaker.voidAllDone', { count: done })
+  setTimeout(() => (sentToast.value = ''), 4000)
+  await loadOpenOrders()
+  loadDeptOrders()
 }
 
 // Per-line cooking status: single tap advances the dish pending -> ready ->
@@ -3301,6 +3410,9 @@ function onKey(e) {
 }
 
 .oh-manage:hover { background: var(--pad-accent-deep); }
+
+.oh-manage.oh-danger { background: #dc2626; }
+.oh-manage.oh-danger:hover { background: #b91c1c; }
 
 /* Manager table modal */
 .tm-pop {
