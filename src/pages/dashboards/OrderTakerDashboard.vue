@@ -191,19 +191,13 @@
           </div>
           <p v-else class="cat-empty">{{ $t('orderTaker.emptyCategory') }}</p>
         </div>
-      </div>
 
-      <!-- RIGHT: the selected order panel, like the Ezee order book -->
-      <div class="ts-right">
         <!--
           Dine-in table map: which tables are free vs occupied (and by whom).
 
-          This used to sit at the BOTTOM of the left column, underneath the food
-          cards. The food list grows with the menu, so the further down it was,
-          the further down the tables were, and assigning a table meant scrolling
-          past the entire menu every time. It now leads the right rail and is
-          sticky, so it is on screen at the same place no matter how long the
-          order or the food list gets.
+          It sits at the BOTTOM of the categories column, under the food cards,
+          so the picker reads top-to-bottom on the left (categories, then food,
+          then tables) while the order being built stays on the right.
         -->
         <div class="table-map" v-if="servingTables.length">
           <div class="cat-panel-head">
@@ -231,7 +225,10 @@
             </button>
           </div>
         </div>
+      </div>
 
+      <!-- RIGHT: the selected order panel, like the Ezee order book -->
+      <div class="ts-right">
         <!-- Order header: No, waiter, diners, VIP, transaction type -->
         <header class="order-header">
           <div class="oh-field">
@@ -274,53 +271,66 @@
           </button>
         </header>
 
-        <!-- Order lines table: Table / Qty / Item / Price / Amount -->
-        <div class="lines-wrap">
-          <table class="lines-table">
-            <thead>
-              <tr>
-                <th class="col-table">{{ $t('orderTaker.table') }}</th>
-                <th class="col-qty">{{ $t('orderTaker.qty') }}</th>
-                <th>{{ $t('orderTaker.item') }}</th>
-                <th class="col-price">{{ $t('orderTaker.price') }}</th>
-                <th class="col-amount">{{ $t('orderTaker.amount') }}</th>
-                <th class="col-x"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="line in pagedLines" :key="line.key || line.menu_item_id">
-                <td class="col-table">
-                  <span v-if="form.table_number" class="line-table">
-                    <i class="fas fa-chair line-table-icon" aria-hidden="true"></i>
-                    {{ form.table_number }}
-                  </span>
-                  <span v-else class="line-table is-unset" :title="$t('orderTaker.selectTable')">—</span>
-                </td>
-                <td class="col-qty">
-                  <div class="qty-step">
-                    <button type="button" :disabled="line.quantity <= 1" @click="stepQty(line, -1)">-</button>
-                    <span>{{ line.quantity }}</span>
-                    <button type="button" :disabled="lineIsMaxed(line)" @click="stepQty(line, 1)">+</button>
-                  </div>
-                </td>
-                <td>{{ line.item_name }}</td>
-                <td class="col-price">{{ money(line.unit_price) }}</td>
-                <td class="col-amount">{{ money(line.subtotal) }}</td>
-                <td class="col-x">
-                  <button type="button" class="line-remove" :title="$t('orderTaker.removeLine')" @click="removeLine(line)">
-                    <i class="fas fa-times" aria-hidden="true"></i>
-                  </button>
-                </td>
-              </tr>
-              <tr v-if="!orderLines.length">
-                <td colspan="6" class="empty-cell">{{ $t('orderTaker.empty') }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <input v-model.trim="form.notes" type="text" class="notes-line" :placeholder="$t('orderTaker.notesPlaceholder')" />
+        <!-- Order lines table, with the Send action on its side -->
+        <div class="order-body">
+          <div class="lines-wrap">
+            <table class="lines-table">
+              <thead>
+                <tr>
+                  <th class="col-table">{{ $t('orderTaker.table') }}</th>
+                  <th class="col-qty">{{ $t('orderTaker.qty') }}</th>
+                  <th>{{ $t('orderTaker.item') }}</th>
+                  <th class="col-price">{{ $t('orderTaker.price') }}</th>
+                  <th class="col-amount">{{ $t('orderTaker.amount') }}</th>
+                  <th class="col-x"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="line in pagedLines" :key="line.key || line.menu_item_id">
+                  <td class="col-table">
+                    <span v-if="form.table_number" class="line-table">
+                      <i class="fas fa-chair line-table-icon" aria-hidden="true"></i>
+                      {{ form.table_number }}
+                    </span>
+                    <span v-else class="line-table is-unset" :title="$t('orderTaker.selectTable')">—</span>
+                  </td>
+                  <td class="col-qty">
+                    <div class="qty-step">
+                      <button type="button" :disabled="line.quantity <= 1" @click="stepQty(line, -1)">-</button>
+                      <span>{{ line.quantity }}</span>
+                      <button type="button" :disabled="lineIsMaxed(line)" @click="stepQty(line, 1)">+</button>
+                    </div>
+                  </td>
+                  <td>{{ line.item_name }}</td>
+                  <td class="col-price">{{ money(line.unit_price) }}</td>
+                  <td class="col-amount">{{ money(line.subtotal) }}</td>
+                  <td class="col-x">
+                    <button type="button" class="line-remove" :title="$t('orderTaker.removeLine')" @click="removeLine(line)">
+                      <i class="fas fa-times" aria-hidden="true"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr v-if="!orderLines.length">
+                  <td colspan="6" class="empty-cell">{{ $t('orderTaker.empty') }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <input v-model.trim="form.notes" type="text" class="notes-line" :placeholder="$t('orderTaker.notesPlaceholder')" />
+          </div>
+
+          <!-- The order action sits on the side of the order table so sending
+               the ticket is always one tap beside the lines, never below them. -->
+          <div class="order-send">
+            <p v-if="sendError" class="send-error">{{ sendError }}</p>
+            <button type="button" class="send-btn" :disabled="!orderLines.length || sending" @click="sendOrder">
+              <i v-if="sending" class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+              <i v-else class="fas fa-paper-plane" aria-hidden="true"></i>
+              {{ sending ? $t('orderTaker.sending') : $t('orderTaker.send') }}
+            </button>
+          </div>
         </div>
 
-        <!-- Page start / page end + total + send -->
+        <!-- Page start / page end + total -->
         <div class="pager-row">
           <button type="button" class="pager-btn" :disabled="page <= 1" @click="setPage(1)">
             <i class="fas fa-angles-left" aria-hidden="true"></i> {{ $t('orderTaker.pageStart') }}
@@ -333,14 +343,6 @@
             {{ $t('orderTaker.pageEnd') }} <i class="fas fa-angles-right" aria-hidden="true"></i>
           </button>
         </div>
-
-        <p v-if="sendError" class="send-error">{{ sendError }}</p>
-
-        <button type="button" class="send-btn" :disabled="!orderLines.length || sending" @click="sendOrder">
-          <i v-if="sending" class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
-          <i v-else class="fas fa-paper-plane" aria-hidden="true"></i>
-          {{ sending ? $t('orderTaker.sending') : $t('orderTaker.send') }}
-        </button>
       </div>
     </div>
     </template>
@@ -3024,18 +3026,15 @@ function onKey(e) {
 }
 
 /*
- * The table map leads the right rail and stays put while the order scrolls under
- * it, so a table is always one tap away and never below the fold.
+ * The table map closes the categories column: it sits at the BOTTOM of the
+ * picker, under the food cards, so the left side reads categories → food →
+ * tables and the ticket stays on the right.
  */
-.ts-right .table-map {
-  position: sticky;
-  top: 0;
-  z-index: 3;
+.ts-left .table-map {
+  flex: 0 0 auto;
 }
-/* Below the sticky map the order content needs to be able to pass under it
-   without the map's own background showing through. */
-.taker-page.taker-fixed .table-map {
-  max-height: 42vh;
+.taker-page.taker-fixed .ts-left .table-map {
+  max-height: 34vh;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -3211,11 +3210,8 @@ function onKey(e) {
     max-height: none;
     overflow-y: visible;
   }
-  .taker-page.taker-fixed .table-map {
+  .taker-page.taker-fixed .ts-left .table-map {
     max-height: none;
-  }
-  .ts-right .table-map {
-    position: static;
   }
 }
 
@@ -3498,6 +3494,29 @@ function onKey(e) {
   border: 1px solid #d4d4d8;
   border-radius: 10px;
   overflow: hidden;
+}
+
+/* The order table and the Send action share a row: the button stands on the
+   side of the lines, so the ticket can be sent without scrolling past the
+   items to a button below them. */
+.order-body {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+.order-body .lines-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.order-send {
+  flex: 0 0 auto;
+  width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.order-send .send-btn {
+  flex: 1 1 auto;
 }
 
 .lines-table {
@@ -4844,6 +4863,14 @@ function onKey(e) {
 
   .lines-table {
     min-width: 620px;
+  }
+
+  /* On phones the Send action drops under the table and goes full width. */
+  .order-body {
+    flex-direction: column;
+  }
+  .order-send {
+    width: 100%;
   }
 
   .pager-row {

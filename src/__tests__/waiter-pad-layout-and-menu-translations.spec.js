@@ -131,8 +131,8 @@ describe('waiter pad: categories scroll sideways, food scrolls down', () => {
   })
 })
 
-describe('waiter pad: the table cards are on the right and stay put', () => {
-  it('renders the table map inside the right column, not the left', () => {
+describe('waiter pad: the table cards close the categories column', () => {
+  it('renders the table map inside the left column, under the categories', () => {
     const leftAt = pad.indexOf('class="ts-left"')
     const rightAt = pad.indexOf('class="ts-right"')
     const mapAt = pad.indexOf('class="table-map"')
@@ -140,24 +140,20 @@ describe('waiter pad: the table cards are on the right and stay put', () => {
     expect(rightAt, 'right column not found').toBeGreaterThan(leftAt)
     expect(mapAt, 'table map not found').toBeGreaterThan(-1)
 
-    // The table map used to sit at the bottom of the left column, under the food
-    // cards, so the longer the menu the further down the tables were. Asserting
-    // the ORDER is enough: the map has to come after the right column opens.
-    expect(mapAt).toBeGreaterThan(rightAt)
+    // The map closes the picker: it opens after the left column and before the
+    // right one, so it sits under the categories and food cards on the left.
+    expect(mapAt).toBeGreaterThan(leftAt)
+    expect(mapAt).toBeLessThan(rightAt)
   })
 
-  it('keeps the map visible while the order scrolls under it', () => {
-    expect(rule(styles, '.ts-right .table-map')).toMatch(/position:\s*sticky/)
-    // A sticky child needs something to stick inside, and the right column is
-    // that. Matched with the brace so the earlier grouped `.ts-left, .ts-right`
-    // rule (which only sets height) is not picked up instead.
-    expect(styles).toMatch(/\.taker-page\.taker-fixed \.ts-right\s*\{[^}]*overflow-y:\s*auto/)
-    // A sticky child needs a defined top to stick to.
-    expect(rule(styles, '.ts-right .table-map')).toMatch(/top:\s*0/)
+  it('keeps the map at the bottom of the picker without sticking', () => {
+    expect(rule(styles, '.ts-left .table-map')).toMatch(/flex:\s*0 0 auto/)
+    // It is a normal block in the categories column now — no sticky pinning.
+    expect(rule(styles, '.ts-left .table-map')).not.toMatch(/position:\s*sticky/)
   })
 
   it('lets the map scroll internally instead of growing past the window', () => {
-    expect(rule(styles, '.taker-page.taker-fixed .table-map')).toMatch(/max-height:\s*42vh/)
+    expect(rule(styles, '.taker-page.taker-fixed .ts-left .table-map')).toMatch(/max-height:\s*34vh/)
     expect(rule(styles, '.taker-page.taker-fixed .table-map-grid')).toMatch(/overflow-y|min-height:\s*0/)
   })
 
@@ -170,9 +166,28 @@ describe('waiter pad: the table cards are on the right and stay put', () => {
     expect(styles).toMatch(/\.taker-page\.taker-fixed \.ts-right\s*\{[^}]*overflow-y:\s*auto/)
   })
 
-  it('stops being sticky on a narrow screen, where it would overlap', () => {
+  it('drops the map height cap on a narrow screen', () => {
     const narrow = styles.slice(styles.indexOf('@media (max-width: 820px)'))
-    expect(narrow).toMatch(/\.ts-right \.table-map\s*\{[^}]*position:\s*static/)
+    expect(narrow).toMatch(/\.taker-page\.taker-fixed \.ts-left \.table-map\s*\{[^}]*max-height:\s*none/)
+  })
+})
+
+describe('waiter pad: the Send action sits beside the order table', () => {
+  it('wraps the lines table and the Send button in one row', () => {
+    const bodyAt = pad.indexOf('class="order-body"')
+    const linesAt = pad.indexOf('class="lines-wrap"')
+    const sendAt = pad.indexOf('class="order-send"')
+    expect(bodyAt, 'order body not found').toBeGreaterThan(-1)
+    expect(linesAt, 'lines wrap not found').toBeGreaterThan(bodyAt)
+    expect(sendAt, 'order send not found').toBeGreaterThan(linesAt)
+    // The button lives in the send column that shares the row with the table.
+    expect(pad.slice(sendAt)).toMatch(/class="send-btn"/)
+  })
+
+  it('lays the row out as a flex row and stacks it on phones', () => {
+    expect(rule(styles, '.order-body')).toMatch(/display:\s*flex/)
+    const narrow = styles.slice(styles.lastIndexOf('@media (max-width: 768px)'))
+    expect(narrow).toMatch(/\.order-body\s*\{[^}]*flex-direction:\s*column/)
   })
 })
 
