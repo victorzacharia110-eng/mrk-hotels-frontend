@@ -775,6 +775,34 @@
                 <i class="fas fa-paper-plane" aria-hidden="true"></i>
                 {{ sendBusy ? $t('invoices.preparing') : $t('stayview.sendInvoice') }}
               </button>
+                <button type="button" class="btn btn-secondary sv-modal-manage" :disabled="sendBusy"
+                  @click="invoiceMenuOpen = !invoiceMenuOpen">
+                  <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                </button>
+                <Transition name="sv-pop">
+                  <ul v-if="invoiceMenuOpen" class="sv-dropdown-menu">
+                    <li>
+                      <button type="button" :disabled="sendBusy"
+                        :title="currentFolioTarget.phone ? currentFolioTarget.phone : $t('stayview.noGuestPhone')"
+                        @click="sendFolioInvoiceSms(currentFolioTarget)">
+                        <i class="fas fa-comment-sms" aria-hidden="true"></i> {{ $t('stayview.sendInvoiceSms') }}
+                      </button>
+                    </li>
+                    <li>
+                      <button type="button" :disabled="sendBusy"
+                        :title="currentFolioTarget.email ? currentFolioTarget.email : $t('stayview.noGuestEmail')"
+                        @click="sendFolioInvoiceEmail(currentFolioTarget)">
+                        <i class="fas fa-envelope" aria-hidden="true"></i> {{ $t('stayview.sendInvoiceEmail') }}
+                      </button>
+                    </li>
+                    <li>
+                      <button type="button" :disabled="sendBusy"
+                        @click="sendFolioInvoiceBoth(currentFolioTarget)">
+                        <i class="fas fa-paper-plane" aria-hidden="true"></i> {{ $t('stayview.sendInvoiceBoth') }}
+                      </button>
+                    </li>
+                  </ul>
+                </Transition>
               <div class="sv-dropdown">
                 <button type="button" class="btn btn-secondary sv-modal-manage" :disabled="actionBusy"
                   @click="moreOpen = !moreOpen">
@@ -3447,6 +3475,7 @@ async function switchFolio(item) {
 // Active tab in the stay-view modal; "More" dropdown open state.
 const stayTab = ref('folio')
 const moreOpen = ref(false)
+const invoiceMenuOpen = ref(false)
 
 /** Converts an ISO date ('YYYY-MM-DD') to a local midnight Date (null if malformed). */
 function isoToLocalDay(iso) {
@@ -5130,12 +5159,17 @@ const currentFolioTarget = computed(() => {
     reservation_id: res.reservation_id ?? activeBar.value?.id ?? null,
     name: res.guest_name || res.label || '',
     email: res.guest_email || res.guestEmail || res.guest?.email || src?.guest_email || src?.reservation?.guest?.email || '',
+    phone: res.guest_phone || res.guestPhone || res.guest?.phone || src?.guest_phone || src?.reservation?.guest?.phone || '',
   }
 })
 
 /** Guest e-mail for a switcher row (the stay's own bar or a related folio). */
 function folioRowEmail(r) {
   return r?.guest_email || r?.guestEmail || r?.guest?.email || (r === activeBar.value ? activeBar.value?.guestEmail : '') || ''
+}
+
+function folioRowPhone(r) {
+  return r?.guest_phone || r?.guestPhone || r?.guest?.phone || (r === activeBar.value ? activeBar.value?.guestPhone || activeBar.value?.phone : '') || ''
 }
 
 /**
@@ -5163,33 +5197,41 @@ async function printInvoice(bar) {
   }
 }
 
-/** Sends the invoice for a folio (which reservation its invoice is generated for). */
-async function sendFolioInvoice(r) {
+async function sendInvoiceTo(r, channel = 'email') {
   const id = r?.reservation_id ?? r?.id
   if (!id || sendBusy.value) return
   const email = folioRowEmail(r) || currentFolioTarget.value?.email
-  if (!email) {
-    // No guest e-mail on this folio (typical for company/DBA folios): do NOT
-    // silently swallow the click — surface why so the button never feels dead.
-    actionError.value = t('stayview.noGuestEmail')
-    return
+  const phone = folioRowPhone(r) || currentFolioTarget.value?.phone
+
+  if (channel === 'email' || channel === 'both') {
+    if (!email) {
+      actionError.value = t('stayview.noGuestEmail')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
+      actionError.value = t('stayview.invoiceEmailInvalid')
+      return
+    }
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
-    // A malformed e-mail can only ever come back as a server error — catch it
-    // here so the receptionist sees the reason instead.
-    actionError.value = t('stayview.invoiceEmailInvalid')
-    return
+  if (channel === 'sms' || channel === 'both') {
+    if (!phone) {
+      actionError.value = t('stayview.noGuestPhone')
+      return
+    }
+    const digits = String(phone).replace(/\D/g, '')
+    if (digits.length < 8) {
+      actionError.value = t('stayview.noGuestPhone')
+      return
+    }
   }
+
   sendBusy.value = true
   actionError.value = ''
   try {
-    const res = await invoiceApi.send(id)
+    const res = await invoiceApi.send(id, channel)
     toast(res.data.message || t('stayview.invoiceSent'))
+    invoiceMenuOpen.value = false
   } catch (err) {
-    // Never show a raw "server error". A failed send is either a real mail-
-    // delivery problem (the hotel's e-mail settings) or a validation refusal —
-    // each gets its own readable message, with the backend's own words kept
-    // only when they are a real, structured explanation.
     const status = Number(err?.response?.status || 0)
     const backendMsg = err?.response?.data?.message
     if (status >= 500) actionError.value = t('stayview.invoiceEmailServer')
@@ -5200,6 +5242,19 @@ async function sendFolioInvoice(r) {
   } finally {
     sendBusy.value = false
   }
+}
+
+function sendFolioInvoice(r) {
+  return sendInvoiceTo(r, 'email')
+}
+function sendFolioInvoiceSms(r) {
+  return sendInvoiceTo(r, 'sms')
+}
+function sendFolioInvoiceEmail(r) {
+  return sendInvoiceTo(r, 'email')
+}
+function sendFolioInvoiceBoth(r) {
+  return sendInvoiceTo(r, 'both')
 }
 
 /* ----- Folio invoice print preview (switcher per-row action) ----- */

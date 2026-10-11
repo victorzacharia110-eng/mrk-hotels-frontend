@@ -353,7 +353,7 @@ describe('folio operations on the stay view', () => {
     await mountDashboard()
     api.invoiceApi.send.mockRejectedValueOnce({ response: { status: 500 } })
     await wrapper.vm.sendFolioInvoice(activeBar)
-    expect(api.invoiceApi.send).toHaveBeenCalledWith(501)
+    expect(api.invoiceApi.send).toHaveBeenCalledWith(501, 'email')
     expect(wrapper.vm.actionError).toContain('e-mail settings')
   })
 

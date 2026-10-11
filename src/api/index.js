@@ -1121,12 +1121,13 @@ export const invoiceApi = {
     return api.post(`${v1}/reservations/${reservationId}/invoice`)
   },
   /**
-   * Refreshes the folio invoice and e-mails the PDF to the guest's address.
+   * Refreshes the folio invoice and delivers the PDF via the selected channel.
    * @param {string|number} reservationId - Reservation identifier.
+   * @param {('email'|'sms'|'both')} [channel='email'] - Delivery channel.
    * @returns {Promise} Axios response confirming the dispatch.
    */
-  send(reservationId) {
-    return api.post(`${v1}/reservations/${reservationId}/invoice/send`)
+  send(reservationId, channel = 'email') {
+    return api.post(`${v1}/reservations/${reservationId}/invoice/send`, { channel })
   },
   /**
    * Streams the PDF; the caller turns the blob into a browser download.
