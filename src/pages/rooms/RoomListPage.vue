@@ -660,7 +660,17 @@ import { collectAllRows } from '@/utils/export'
 
 import { useTenantCurrency } from '@/utils/currency'
 
-const { curCode } = useTenantCurrency()
+const { curCode, moneyAs } = useTenantCurrency()
+
+/**
+ * Nightly rates on the inventory cards render as whole shillings, matching the
+ * rooms table ("TZS 180,000"). The inventory template called a `formatRate`
+ * helper that was never defined, which threw "formatRate is not a function"
+ * the moment the per-type summary had a rate.
+ */
+function formatRate(value) {
+  return moneyAs(value, 0)
+}
 
 const { t } = useI18n()
 const authStore = useAuthStore()
