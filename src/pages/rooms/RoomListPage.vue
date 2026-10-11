@@ -961,7 +961,9 @@ const loadInventory = async () => {
   invLoading.value = true
   try {
     const res = await roomApi.inventory()
-    invSummary.value = res.data?.summaries ?? []
+    // Backend returns the per-room-type summaries under `types` (see
+    // RoomController::inventory); reading `summaries` left this tab empty.
+    invSummary.value = res.data?.types ?? []
   } catch (err) {
     error.value = flattenError(err)
   } finally {
