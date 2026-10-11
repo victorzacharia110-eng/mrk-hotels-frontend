@@ -199,6 +199,12 @@
               <router-link :to="{ name: 'public-home' }" class="mobile-link" @click="navOpen = false">
                 <i class="fas fa-store" aria-hidden="true"></i> {{ $t('nav.portal') }}
               </router-link>
+              <router-link :to="{ name: 'user-manual' }" class="mobile-link" @click="navOpen = false">
+                <i class="fas fa-book-open" aria-hidden="true"></i> {{ $t('nav.userManual') }}
+              </router-link>
+              <router-link :to="{ name: 'hotel-profile' }" class="mobile-link" @click="navOpen = false">
+                <i class="fas fa-user-circle" aria-hidden="true"></i> {{ $t('nav.profile') }}
+              </router-link>
             </template>
             <template v-else>
               <router-link :to="{ name: 'public-home' }" class="mobile-link" @click="navOpen = false">
@@ -212,7 +218,7 @@
             <div class="mobile-divider"></div>
 
             <template v-if="authStore.isAuthenticated">
-              <router-link :to="dashboardRoute" class="mobile-link" @click="navOpen = false">
+              <router-link v-if="!isAppMode" :to="dashboardRoute" class="mobile-link" @click="navOpen = false">
                 <i class="fas fa-gauge-high" aria-hidden="true"></i> {{ $t('nav.dashboard') }}
               </router-link>
               <button @click="handleLogout" class="mobile-link logout">
@@ -2688,10 +2694,6 @@ function formatNotifTime(iso) {
     width: 34px;
     height: 34px;
     font-size: 15px;
-  }
-
-  .header-actions {
-    display: none;
   }
 
   .hamburger {
