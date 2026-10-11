@@ -5748,5 +5748,27 @@
     "nightAuditTitle": "Night Audit",
     "nightAuditDesc": "Close the business day and roll the board over to the next one.",
     "open": "Open"
+  },
+  "backOffice": {
+    "title": "Back Office",
+    "subtitle": "The engine where management sets prices, time zone, printer, hotel info, payments, LIPA and bank accounts.",
+    "browser": "Back Office",
+    "hotelInfo": "Hotel Information",
+    "rates": "Rates & Prices",
+    "printerConfig": "Printer Configuration",
+    "receiptSettings": "Receipt & Tax Settings",
+    "tiles": {
+      "hotelInfo": "Name, logo, motto, time zone, payment modes, LIPA number and bank accounts.",
+      "ratesTitle": "Rates & Prices",
+      "rates": "Nightly prices for every room type.",
+      "printer": "Till, kitchen and bar printer setup.",
+      "receipt": "Receipt header/footer, paper width, tax rate.",
+      "departments": "The departments stock and indents are booked against.",
+      "categories": "Shared category vocabularies for inventory, suppliers and expenses.",
+      "suppliers": "The supplier records used on purchase orders.",
+      "staff": "Add staff, set roles and reset access.",
+      "trustedDevices": "Terminals trusted for PIN sign-in.",
+      "import": "Import bulk data from a CSV file."
+    }
   }
 }

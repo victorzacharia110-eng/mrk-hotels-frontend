@@ -5748,5 +5748,27 @@
     "open": "Fungua",
     "ratesTitle": "Vyumba na Bei",
     "ratesDesc": "Sajili vyumba na uweke bei zake za kila usiku kwenye ukurasa wa Vyumba."
+  },
+  "backOffice": {
+    "title": "Ofisi ya Nyuma",
+    "subtitle": "Kitovu ambacho menejimenti huweka bei, eneo la saa, printa, taarifa za hoteli, malipo, LIPA na akaunti za benki.",
+    "browser": "Ofisi ya Nyuma",
+    "hotelInfo": "Taarifa za Hoteli",
+    "rates": "Bei na Viwango",
+    "printerConfig": "Mipangilio ya Printa",
+    "receiptSettings": "Mipangilio ya Risiti na Kodi",
+    "tiles": {
+      "hotelInfo": "Jina, nembo, kauli mbiu, eneo la saa, njia za malipo, namba ya LIPA na akaunti za benki.",
+      "ratesTitle": "Bei na Viwango",
+      "rates": "Bei za usiku kwa kila aina ya chumba.",
+      "printer": "Muunganisho wa printa ya kasha.",
+      "receipt": "Kichwa, kijachini, upana wa karatasi na kodi ya risiti.",
+      "departments": "Idara zinazotumika kwenye ombi la bidhaa.",
+      "categories": "Aina za bidhaa zinazotumika kwenye stoo na manunuzi.",
+      "suppliers": "Wasambazaji wanaotumika kwenye oda za manunuzi.",
+      "staff": "Ongeza wafanyakazi, weka majukumu na ruhusa.",
+      "trustedDevices": "Vifaa vinavyoruhusiwa kuingia kwa PIN.",
+      "import": "Pakia data nyingi kwa pamoja."
+    }
   }
 }

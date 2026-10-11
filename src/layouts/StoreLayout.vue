@@ -957,8 +957,9 @@ const visibleModules = computed(() => {
     // wrong one and left the Report Browser behind in the restaurant submenu.
     const administration = pick(['staff', 'hotel-settings', 'trusted-devices', 'activity-log-report', 'overrides', 'imports', 'reports', 'integrations/booking-com', 'integrations/quickbooks', 'integrations/xero'])
     if (administration.length) frontDesk.push(subGroup('front-administration', 'fas fa-user-tie', t('accordion.administration'), administration))
-    if (byKey['requisitions']) frontDesk.push(link('requisitions', t('nav.requisitions')))
-    if (byKey.messages) frontDesk.push(link('messages', t('nav.messages')))
+    // Management panel review: "just keep one communication tab & requisitions
+    // tab ... and remove the rest from the management panel." Both now live in
+    // the single COMMUNICATION accordion below, so they are not repeated here.
     if (frontDesk.length) out.push(accordionGroup('front-desk', 'fas fa-bed', 'accordion.frontDesk', frontDesk))
 
     // 3. RESTAURANT & BAR — Ordering / Manager / Inventory / Printer sub
@@ -988,6 +989,16 @@ const visibleModules = computed(() => {
         icon: 'fas fa-users',
         label: t('cashier.nav.accountLookup'),
       })
+      // Management panel review: management gets the same Restaurant & Bar UX as
+      // the cashier/bartender, "plus more authority such as void order". Voiding
+      // lives on the POS order summary (`canVoidSettled` already admits
+      // hotel_admin/manager), so surface that page here for the authority.
+      manager.push({
+        key: 'order-summary',
+        to: { name: 'cashier-order-summary' },
+        icon: 'fas fa-receipt',
+        label: t('cashier.nav.orderSummary'),
+      })
     }
     if (manager.length) restaurantBar.push(subGroup('fnb-manager', 'fas fa-user-gear', t('accordion.manager'), manager))
     const rbInventory = pick(['requisitions', 'stock-counts', 'stock-adjust'])
@@ -998,23 +1009,37 @@ const visibleModules = computed(() => {
     }
     if (restaurantBar.length) out.push(accordionGroup('restaurant-bar', 'fas fa-utensils', 'accordion.foodBeverage', restaurantBar))
 
-    // 4. INVENTORY & PROCUREMENT — Dashboard, Purchase Orders, Goods Received,
-    // Expenses, Cash Register, Reports, Department Indents, Inventory, Back
-    // Office and Communications, then the dedicated management extras
-    // (departments, categories, suppliers, accounting) stay reachable.
+    // 4. INVENTORY & PROCUREMENT — the store/procurement workbench. Per the
+    // management panel review, DEPARTMENTS & CATEGORIES move to BACK OFFICE and
+    // the old "Back Office" (store settings) page is removed from this group;
+    // SUPPLIER stays. ACCOUNTING is accountant-only.
     const inventoryProcurement = [
-      ...pick(['store-dashboard', 'purchase-orders', 'goods-received', 'store-expenses', 'store-cash-register', 'store-reports', 'requisitions', 'inventory', 'store-settings']),
+      ...pick(['store-dashboard', 'purchase-orders', 'goods-received', 'store-expenses', 'store-cash-register', 'store-reports', 'inventory', 'suppliers']),
     ]
-    if (byKey.messages) inventoryProcurement.push(link('messages', t('nav.messages')))
-    inventoryProcurement.push(...pick(['departments', 'categories', 'suppliers']))
     if (authStore.user?.user_role === 'accountant') {
       inventoryProcurement.push(...pick(['accounting']))
     }
     if (inventoryProcurement.length) out.push(accordionGroup('inventory-procurement', 'fas fa-boxes-stacked', 'accordion.inventoryProcurement', inventoryProcurement))
 
-    // 5. COMMUNICATION — consolidated (per management panel review: keep one communication tab)
+    // 5. COMMUNICATION — one communication tab plus the requisitions tab, which
+    // is the management inbox summarising requisitions from every department.
     const communication = pick(['messages', 'statuses'])
+    if (byKey['requisitions']) communication.push(byKey['requisitions'])
     if (communication.length) out.push(accordionGroup('communication', 'fas fa-comments', 'accordion.communication', communication))
+
+    // 6. BACK OFFICE — the management engine (EZEE "Switch to Back"): hotel
+    // info, rates/prices, time zone, printer config, payment settings, LIPA and
+    // bank accounts, departments and categories. The browser page collects the
+    // settings; the dropdown surfaces the individual editors the review names.
+    const backOffice = []
+    if (byKey['back-office']) backOffice.push({ key: 'back-office-browser', to: byKey['back-office'].to, icon: byKey['back-office'].icon, label: t('backOffice.browser') })
+    if (byKey['hotel-settings']) backOffice.push({ key: 'bo-hotel-info', to: byKey['hotel-settings'].to, icon: byKey['hotel-settings'].icon, label: t('backOffice.hotelInfo') })
+    if (byKey.rooms) backOffice.push({ key: 'bo-rates', to: '/app/rooms', icon: 'fas fa-tags', label: t('backOffice.rates') })
+    if (byKey.printer) backOffice.push({ key: 'bo-printer', to: byKey.printer.to, icon: byKey.printer.icon, label: t('backOffice.printerConfig') })
+    if (byKey.departments) backOffice.push({ key: 'bo-departments', to: byKey.departments.to, icon: byKey.departments.icon, label: t('nav.departments') })
+    if (byKey.categories) backOffice.push({ key: 'bo-categories', to: byKey.categories.to, icon: byKey.categories.icon, label: t('nav.categories') })
+    if (byKey['store-settings']) backOffice.push({ key: 'bo-store-settings', to: byKey['store-settings'].to, icon: byKey['store-settings'].icon, label: t('backOffice.receiptSettings') })
+    if (backOffice.length) out.push(accordionGroup('management-back-office', 'fas fa-briefcase', 'backOffice.title', backOffice))
 
     return out
   }
@@ -1128,6 +1153,15 @@ watch(
   () => route.path,
   (path) => {
     if (!isAppMode.value) return
+    // Management panel review: "When manager clicks the side bar menu the FRONT
+    // DESK dropdown is automatically down ... it should be clicked in order to
+    // show its dropdown menu." Management groups therefore open only on a click,
+    // never on a route change, so the drawer always lands collapsed.
+    if (isManagement.value) {
+      openAcc.value = ''
+      openSubAcc.value = ''
+      return
+    }
     for (const item of visibleModules.value) {
       if (!item.children) continue
       for (const child of item.children) {

@@ -102,6 +102,10 @@ export const MODULES = [
   { key: 'pos-reports', to: '/app/pos-report-browser', icon: 'fas fa-utensils', labelKey: 'nav.posReports', roles: ['hotel_admin', 'manager', 'accountant', 'receptionist', 'procurement_officer', 'housekeeping', 'bartender', 'staff'], feature: 'reports' },
   // Accounting reports.
   { key: 'accounting', to: '/app/accounting', icon: 'fas fa-scale-balanced', labelKey: 'accounting.title', roles: ['hotel_admin', 'manager', 'accountant'], feature: 'accounting' },
+  // Back Office — the management settings browser (the EZEE-style "Switch to
+  // Back"): hotel identity, rates, time zone, printer, payment settings, LIPA /
+  // bank accounts, departments and categories. Management panel review.
+  { key: 'back-office', to: '/app/back-office', icon: 'fas fa-briefcase', labelKey: 'backOffice.title', roles: ['hotel_admin', 'manager', 'accountant'] },
   // Personal profile, visible to all staff.
   { key: 'profile', to: '/app/profile', icon: 'fas fa-user-circle', labelKey: 'nav.profile', roles: [], feature: 'profile' },
   // Booking.com channel manager integration.

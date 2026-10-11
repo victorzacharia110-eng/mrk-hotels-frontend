@@ -112,6 +112,10 @@ const hotelChildren = [
   { path: 'pos-report-browser', name: 'hotel-pos-reports', component: () => import('@/pages/reports/PosReportBrowserPage.vue'), meta: { module: 'pos-reports' } },
   // Accounting reports.
   { path: 'accounting', name: 'hotel-accounting', component: () => import('@/pages/accounting/AccountingPage.vue'), meta: { module: 'accounting' } },
+  // Back Office — the management settings/reports browser (EZEE "Switch to
+  // Back"): hotel info, rates, printer, payments, LIPA/Bank, departments,
+  // categories and the other back-office surfaces in one place.
+  { path: 'back-office', name: 'hotel-back-office', component: () => import('@/pages/backoffice/BackOfficePage.vue'), meta: { module: 'back-office' } },
   // POS manager screens shared with the cashier panel (Restaurant & Bar > Manager).
   { path: 'pos/item-lookup', name: 'hotel-pos-item-lookup', component: () => import('@/pages/cashier/CashierItemLookupPage.vue'), meta: { module: 'item-lookup' } },
   { path: 'pos/shift', name: 'hotel-pos-shift', component: () => import('@/pages/cashier/CashierShiftManagerPage.vue'), meta: { module: 'shift' } },
