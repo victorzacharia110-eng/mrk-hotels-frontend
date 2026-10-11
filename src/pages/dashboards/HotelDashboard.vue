@@ -7386,7 +7386,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 8px 4px;
+  padding: 5px 4px;
   border-bottom: 1px solid #e5e7eb;
   border-right: 1px solid #f0f0f0;
   font-size: 12px;
@@ -7421,7 +7421,7 @@ onUnmounted(() => clearInterval(refreshTimer))
 .sv-type-cell {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: 5px 12px;
   font-weight: 600;
   font-size: 13px;
   text-transform: capitalize;
@@ -7438,7 +7438,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 6px 4px;
+  padding: 4px 4px;
   border-bottom: 1px solid #f0f0f0;
   border-right: 1px solid #f5f5f5;
   font-size: 12px;
@@ -7482,14 +7482,14 @@ onUnmounted(() => clearInterval(refreshTimer))
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 12px;
+  padding: 2px 12px;
   border-bottom: 1px solid #f0f0f0;
   border-right: 1px solid #e5e7eb;
   position: sticky;
   left: 0;
   background: #fff;
   z-index: 2;
-  min-height: 34px;
+  min-height: 26px;
 }
 
 .sv-room-number {
@@ -7856,7 +7856,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   grid-template-columns: repeat(28, 1fr);
   grid-template-rows: 1fr 1fr;
   border-bottom: 1px solid #f0f0f0;
-  min-height: 42px;
+  min-height: 30px;
   position: relative;
 }
 
@@ -7898,8 +7898,8 @@ onUnmounted(() => clearInterval(refreshTimer))
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 2px 2px;
-  padding: 3px 8px;
+  margin: 1px 2px;
+  padding: 1px 8px;
   border-radius: 6px;
   color: #fff;
   font-size: 11px;

@@ -478,7 +478,7 @@ function formatPrice(value) {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 8px 4px;
+  padding: 5px 4px;
   border-bottom: 1px solid #e5e7eb;
   border-right: 1px solid #f0f0f0;
   font-size: 12px;
@@ -510,7 +510,7 @@ function formatPrice(value) {
 .sv-type-cell {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: 5px 12px;
   border-bottom: 1px solid #f0f0f0;
   border-right: 1px solid #e5e7eb;
   position: sticky;
@@ -528,7 +528,7 @@ function formatPrice(value) {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 6px 4px;
+  padding: 4px 4px;
   border-bottom: 1px solid #f0f0f0;
   border-right: 1px solid #f0f0f0;
   background: #f7fafd;
@@ -558,14 +558,14 @@ function formatPrice(value) {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 4px 12px;
+  padding: 2px 12px;
   border-bottom: 1px solid #f0f0f0;
   border-right: 1px solid #e5e7eb;
   position: sticky;
   left: 0;
   background: #fff;
   z-index: 2;
-  min-height: 34px;
+  min-height: 26px;
 }
 
 .sv-room-number {
@@ -611,7 +611,7 @@ function formatPrice(value) {
   grid-template-columns: repeat(28, 1fr);
   grid-template-rows: 1fr 1fr;
   border-bottom: 1px solid #f0f0f0;
-  min-height: 42px;
+  min-height: 30px;
   position: relative;
 }
 
@@ -632,7 +632,8 @@ function formatPrice(value) {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 8px;
+  margin: 1px 2px;
+  padding: 1px 8px;
   border-radius: 6px;
   color: #fff;
   font-size: 11px;
