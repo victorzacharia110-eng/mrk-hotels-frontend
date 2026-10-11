@@ -658,7 +658,7 @@ const form = reactive({
   // category manager can set afterwards.
   sub_category_id: '',
   department: 'restaurant',
-  inventory_item_id: '',
+  inventory_item_id: null,
   price: null,
   cost: null,
   description: '',
@@ -790,7 +790,7 @@ function resetForm() {
   form.sub_category = ''
   form.sub_category_id = ''
   form.department = 'restaurant'
-  form.inventory_item_id = ''
+  form.inventory_item_id = null
   form.price = null
   form.cost = null
   form.description = ''
@@ -835,7 +835,7 @@ function openEdit(item) {
   form.sub_category = item.sub_category || ''
   form.sub_category_id = item.sub_category_id || ''
   form.department = item.department
-  form.inventory_item_id = item.inventory_item_id || ''
+  form.inventory_item_id = item.inventory_item_id || null
   form.price = item.price
   form.cost = item.cost
   form.description = item.description || ''
@@ -864,7 +864,7 @@ async function save() {
   try {
     const payload = {
       ...form,
-      inventory_item_id: form.inventory_item_id || null,
+      inventory_item_id: (form.inventory_item_id === '' || form.inventory_item_id === undefined) ? null : form.inventory_item_id,
       // An untouched translation goes over as null, not ''. The read path treats
       // blank as "fall back to English" either way, but a real NULL is what the
       // column is meant to hold and what a translation-gap report counts.

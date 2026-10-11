@@ -1469,6 +1469,7 @@ function formatNotifTime(iso) {
   display: flex;
   align-items: center;
   gap: 20px;
+  margin-left: auto;
 }
 
 /* Outlet picker. Sits in the header row with the account chip so the working
