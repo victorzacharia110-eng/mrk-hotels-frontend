@@ -1009,7 +1009,7 @@ const visibleModules = computed(() => {
     inventoryProcurement.push(...pick(['departments', 'categories', 'suppliers', 'accounting']))
     if (inventoryProcurement.length) out.push(accordionGroup('inventory-procurement', 'fas fa-boxes-stacked', 'accordion.inventoryProcurement', inventoryProcurement))
 
-    // 5. COMMUNICATION — top-level accordion for the whole panel.
+    // 5. COMMUNICATION — consolidated (per management panel review: keep one communication tab)
     const communication = pick(['messages', 'statuses'])
     if (communication.length) out.push(accordionGroup('communication', 'fas fa-comments', 'accordion.communication', communication))
 
