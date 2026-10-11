@@ -113,8 +113,10 @@ describe('Wide tables stay usable when the screen is small', () => {
     reservationIndex.mockResolvedValue(reservationPage())
   })
 
-  it('pins the header, the identity column and the actions on the rooms table', async () => {
+  it('pins the header, the identity column and the actions on the All rooms table', async () => {
     const wrapper = build(RoomListPage)
+    // The listing lives on its own tab now; Inventory stays a summary.
+    wrapper.vm.switchTab('all-rooms')
     await flushPromises()
 
     const scroll = wrapper.find('.table-scroll.is-pinned')
@@ -216,6 +218,7 @@ describe('Wide tables stay usable when the screen is small', () => {
 
   it('gives every action button a label that survives the icon-only collapse', async () => {
     const wrapper = build(RoomListPage)
+    wrapper.vm.switchTab('all-rooms')
     await flushPromises()
 
     const actions = wrapper.find('td.actions-col .actions')

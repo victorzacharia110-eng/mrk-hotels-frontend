@@ -71,4 +71,18 @@ describe('RoomListPage inventory', () => {
     expect(wrapper.text()).toContain('TZS 200,000')
     expect(wrapper.text()).toContain('deluxe')
   })
+
+  it('keeps the per-room listing off Inventory and on the All rooms tab', async () => {
+    inventory.mockResolvedValue({ data: { from: '2026-10-11', types: [] } })
+
+    const wrapper = build()
+    await flushPromises()
+
+    // Inventory is a summary (cards + tape calendar), never the room listing.
+    expect(wrapper.find('.table-scroll.is-pinned table.table-pinned').exists()).toBe(false)
+
+    wrapper.vm.switchTab('all-rooms')
+    await flushPromises()
+    expect(wrapper.find('.table-scroll.is-pinned table.table-pinned').exists()).toBe(true)
+  })
 })

@@ -369,7 +369,12 @@
       </div>
     </div>
 
-    <div class="card filter-bar">
+    <!-- ─── ALL ROOMS (the CRUD listing) ──────────────────────────────────
+         The panel review wants INVENTORY to read as a summary, not a listing,
+         so the per-room table with its filters lives on its own tab instead of
+         sitting under the inventory summary. -->
+    <template v-if="activeTab === 'all-rooms'">
+      <div class="card filter-bar">
       <div class="filter-grid">
         <div class="form-group">
           <label>{{ $t('rooms.status') }}</label>
@@ -523,6 +528,7 @@
         {{ $t('common.next') }}
       </button>
     </div>
+    </template>
 
     <!-- Create/edit room modal; amenities are typed as a comma-separated list -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
@@ -988,11 +994,14 @@ function flattenError(err) {
     : err.response?.data?.message || t('common.actionFailed')
 }
 
-// ─── Rooms tab bar: inventory summary (default), bulk rates, stop-sell ───
-// The list table above stays the INVENTORY tab; the other two panels read/write
-// the same API surface exposed by reservations/rates/stop-sell endpoints.
+// ─── Rooms tab bar: inventory summary (default), the CRUD listing, bulk rates
+// and stop-sell ───
+// INVENTORY stays a summary (per-type cards + totals + tape calendar); the
+// per-room listing table lives on the ALL ROOMS tab, and the other two panels
+// read/write the same API surface exposed by reservations/rates/stop-sell.
 const tabs = [
   { key: 'inventory', label: 'rooms.tabInventory', icon: 'fas fa-bed', tone: 'brand' },
+  { key: 'all-rooms', label: 'rooms.tabAllRooms', icon: 'fas fa-list-ul', tone: 'neutral' },
   { key: 'rates', label: 'rooms.tabRates', icon: 'fas fa-tags', tone: 'success' },
   { key: 'stop-sell', label: 'rooms.tabStopSell', icon: 'fas fa-ban', tone: 'danger' },
 ]
@@ -1394,6 +1403,8 @@ const liftStopSell = async (id) => {
 function switchTab(key) {
   activeTab.value = key
   if (key === 'inventory' && !invSummary.value.length) loadInventory()
+  // The listing is fetched on mount; reload only if it came back empty.
+  if (key === 'all-rooms' && !rooms.value.length) load()
   if (key === 'stop-sell') {
     // The calendar needs both the rooms and the blocks in the window.
     if (!calRooms.value.length) loadCalendarRooms()
@@ -1735,6 +1746,12 @@ onMounted(() => {
 .tab-danger.active {
   background: #c0392b;
   border-color: #c0392b;
+  color: #fff;
+}
+
+.tab-neutral.active {
+  background: #475569;
+  border-color: #475569;
   color: #fff;
 }
 
