@@ -1,129 +1,58 @@
 # MRK Hotels - Reception Panel Changes Guide
 
-*For Non-Technical Staff | Use this to verify all updates*
+*For Non-Technical Staff | Source document: "RECEPTIONIST PANEL DESIGN AND LOGIC TO BE UPDATED"*
 
-## 1. DASHBOARD - Top Toolbar
+For each request below you will see the **Problem** (written as in the client PDF), the **Solution** delivered, and **Where** to find it in the system. All changes are visible to the reception / front-desk staff.
 
-### A. Profile (Name Only)
-- **Location:** Top-right corner of the Dashboard screen.
-- **What changed:** The profile chip no longer shows your role - only your name and initials.
-- **How to check:** Look at the top-right. You should see just your name with your initial circle - no job title shown.
-- **Path to find:** → Dashboard → Top Bar (Right Side) → Profile Chip
+## 1. ROOMs Page - Inventory Summary & Calendar
 
-### B. Business Date (Replaces "TODAY")
-- **Location:** Top toolbar, left side.
-- **What changed:** The button now shows **BUSINESS DATE** instead of "TODAY".
-- **What it shows:** The hotel's current business date (not your device's calendar date).
-- **Behavior:** It only moves forward automatically when the previous business day had **NO activity** (no reservations and no checked-in guests). If there is any activity, it stays on that business date until Night Audit is completed.
-- **Path to find:** → Dashboard → Top Toolbar (Left) → **BUSINESS DATE** Button
+- **Problem:** "When receptionist clicks ROOMs the default page is INVENTORY currently in MRK the inventory page is a list of rooms registered... By [room type] ... bottom totals SOLD ROOMS / ROOMS AVAILABLE / TOTAL ROOMS ... a calendar-themed page ... the business date ... should be the first column after room number."
+- **Solution:** The Inventory tab now summarises rooms by **room type** and shows totals **SOLD ROOMS / ROOMS AVAILABLE / TOTAL ROOMS**. A new **Availability Calendar** (rooms down the side, days across) puts the **business date in the first column**. The plain room register remains on its own tab.
+- **Status:** DONE
+- **Path to find:** -> Dashboard -> ROOMs -> Inventory (Summary Totals + Availability Calendar)
 
-### C. Search Bar With Results Dropdown
-- **Location:** Top toolbar, middle-right (magnifying glass icon).
-- **How to use:** Type at least **2 characters** (guest name, room number, or booking reference).
-- **What happens:** A dropdown list appears below the search box showing matching stays and rooms.
-- **Action:** Click any result in the list to jump straight to that stay or room.
-- **Path to find:** → Dashboard → Top Toolbar → Search Box → Type 2+ characters → Results Dropdown
+## 2. Dashboard Rooms Rows Spacing
 
-## 2. NEW BOOKING TAB
+- **Problem:** "Reduce the spacing between the dashboard room rows."
+- **Solution:** Room rows on the Dashboard chart are tighter, so more rooms fit on one screen.
+- **Status:** DONE
+- **Path to find:** -> Dashboard -> Rooms Chart (Tighter Rows)
 
-**How to open:** Click **+ New Booking** on the Dashboard.
+## 3. Business Date
 
-### A. Room Dropdown Filters By Room Type
-- **Location:** New Booking Form → Room dropdown.
-- **What changed:** The room dropdown now only shows available rooms of the **same room type** as what you're working with.
-- **Example:** If you select a Suite, the dropdown will only show available Suites - not Standard, Double, or other room types.
-- **Path to find:** → Dashboard → + New Booking → Room Field → Dropdown (filtered by room type)
+- **Problem:** "Instead of writing the word BUSINESS DATE replace it with the actual BUSINESS DATE in numbers; the business date should be clickable as well meaning by clicking it opens a calendar... the business date on the calendar page ... should be the first column after room number."
+- **Solution:** The toolbar now shows the real business date in numbers (for example **09/10/2026**) and it is **clickable** to open a calendar. On the chart the business date is the first day column after the room number.
+- **Status:** DONE
+- **Path to find:** -> Dashboard -> Top Toolbar -> Business Date Figure (Click To Open Calendar)
 
-### B. City Field Is Searchable
-- **Location:** New Booking Form → City field.
-- **What changed:** You can now type to search for cities.
-- **How to check:** Click the City dropdown and start typing a few letters - the list filters automatically as you type.
-- **Path to find:** → Dashboard → + New Booking → City Field → Type to Search
+## 4. Number Of Guests (And Booking Type)
 
-### C. Auto Total Badge Removed
-- **Location:** New Booking Form → Totals/Amount section.
-- **What changed:** The extra floating "AUTO TOTAL" badge that appeared outside the form boxes has been removed.
-- **What to see:** Totals now display cleanly and neatly inside the form only.
-- **Path to find:** → Dashboard → + New Booking → Totals Section
+- **Problem:** "Upon registering a guest there is a REQUIREMENT to fill which type of booking it is: SINGLE BOOKING = 1 GUEST, COUPLE BOOKING = 2 GUESTS, FAMILY BOOKING = 3-5 GUESTS. Replace the profile name of the LOGGED IN USER with the TOTAL number of GUESTS from all checked in guests in the house of the particular BUSINESS DATE."
+- **Solution:** The booking form has a **Booking Type** (Single = 1, Couple = 2, Family = 3-5, Group) that sets the guest count. On the Dashboard the logged-in user's name was replaced by the **total number of guests** staying on the business date.
+- **Status:** DONE
+- **Path to find:** -> Dashboard -> + New Booking -> Booking Type | Dashboard -> Top Bar -> Guests In House Count
 
-### D. Walk In vs Reservation Buttons
-- **Location:** Bottom of the New Booking form.
+## 5. Top Panel And Side Bar Rearrangement
 
-**If the date is the CURRENT BUSINESS DATE:**
-- You will see **TWO** buttons: **WALK IN** (Green) and **RESERVATION**.
-  - **WALK IN** – Creates the booking AND checks the guest in immediately. The room turns **GREEN** (Occupied) on the chart.
-  - **RESERVATION** – Creates a reservation only. The room stays **RED** (Reserved) and waits to be checked in later.
+- **Problem:** "The top panel has the hotel info; should be removed... The words ... should be moved into the profile at TOP RIGHT CORNER which will have a circle profile with the user's PROFILE PICTURE if not let it be initials of their registered names. Right next to the profile circle add a NOTIFICATION BADGE BELL. DASHBOARD should be removed completely."
+- **Solution:** The hotel contact strip was removed from the staff panel. The top-right corner now has the **circle profile** (initials only) and a **notification bell** beside it. Clicking the profile reveals **Portal, User Manual, My Profile, Log Out** and the language switch (**EN / SW**). The **Dashboard** link and duplicated side-bar account links were removed.
+- **Status:** DONE
+- **Path to find:** -> Dashboard -> Top Bar (Right Side) -> Bell + Circle Profile (Initials)
 
-**If the date is a FUTURE DATE:**
-- You will see **ONLY ONE** button: **RESERVATION**. Walk-In is not allowed for future dates.
+## 6. Due Out Conditions Bypassed
 
-**Path to find:** → Dashboard → + New Booking → Fill Form → Bottom Action Buttons
+- **Problem:** "Upon testing it has occurred once again where DUE OUT color change conditions has been bypassed. Example the user performed night audit of 08/10/2026 therefore the guest SWAUM HAMIS should automatically turn to purple indicating this room is due out therefore night audit for 09/10/2026 would be blocked unless the guest SWAUM HAMIS is checked out. Fix this error."
+- **Solution:** A checked-in guest whose checkout day has arrived **or already passed** now stays on the board and turns **purple (Due Out)**. The Due Out and Occupied counts and the guests-in-house figure include them, and the night audit still **blocks** while any overdue guest has an unsettled bill.
+- **Status:** DONE
+- **Path to find:** -> Dashboard -> Rooms Chart -> Overdue Stay Shown Purple (Due Out)
 
-## 3. GROUP BOOKINGS (Multi-Room Bookings)
+## 7. Due Out Folio Operations Flaw
 
-- **Location:** New Booking Form → Booking Type dropdown.
-- **What changed:** Group booking is fully supported. When creating a group (party) with 2 or more rooms, the system creates them as linked reservations under one group with a shared reference.
-- **How to use:** Select **Group** as Booking Type, add multiple rooms (room selections), set the Primary Room, then save.
-- **Where to see group info:** In reservation lists, group bookings show a "Group" badge indicating how many rooms are in the party. Cancellation modal allows cancelling the whole group or selected rooms.
-- **Path to find:** → Dashboard → + New Booking → Booking Type = Group → Select 2+ Rooms → Save
+- **Problem:** "When room status changes to due out it seems to affect the amount due of the guest either to be paid or to be posted to creditors. Why does this happen? TO FIX - ensure the balance due matches the exact amount that should be payable upon adding payments."
+- **Solution:** The amount offered in **Post to Creditors** and **Collect Payment** (and the over-payment guard) now reads the same **ledger balance** shown on the folio (charges minus payments), not the separate backend header figure that shifted when a guest was carried past checkout as a due-out. The amount payable and the balance due therefore always agree.
+- **Status:** DONE
+- **Path to find:** -> Dashboard -> Open Stay -> Folio Operations -> Balance / Post To Creditors
 
-## 4. FOLIO OPERATIONS - Correct Related Folio Balance
+---
 
-- **Location:** Folio View → Settle to Creditors (when viewing a related/split folio).
-- **What changed:** When viewing a **related folio** (created from Split/Cut), the settlement screen now shows the correct balance for that related folio - not the main/current folio's balance.
-- **Path to find:** → Dashboard → Open Stay (with Split/Cut Folios) → View Related Folio → Folio Operations → Settle to Creditors
-
-## 5. MAINTENANCE ROOMS - Cannot Be Booked
-
-- **What changed:** Rooms marked as **Maintenance** cannot be booked.
-- **How to check:** Maintenance rooms do **NOT** appear in the Room dropdown when creating a new booking.
-- **Path to find:** → Dashboard → + New Booking → Room Dropdown (Maintenance rooms excluded)
-
-## 6. INVOICE - Guest & Staff Signatures
-
-- **Location:** Printed Invoice (Print Invoice Breakdown).
-- **What changed:** The printed invoice now includes signature spaces at the bottom.
-- **What to see:** At the bottom of the printed invoice there are two signature lines:
-  1. **Guest signature & date**
-  2. **Authorized signature & stamp**
-- **Path to find:** → Dashboard → Open Stay → Print → Print Invoice Breakdown → Bottom of Printed Page
-
-## 7. CHECK OUT - Extra Safety Checks
-
-### A. Related Folios Must Be Settled First
-- If a stay has Split/Cut related folios, **ALL** related folio balances must be fully settled before checkout.
-- The system will block checkout if any related folio still has an outstanding balance and show a clear message.
-
-### B. Cannot Check Out With Future Departure Date
-- You cannot check out if the Check Out Date is **after** the current **BUSINESS DATE**.
-- **Allowed:** Overdue stays (departure date has already passed).
-- **Blocked:** Stays with a future departure date (clear message shown).
-- **Path to find:** → Dashboard → Open Checked-In Stay → Check Out (System validates both rules)
-
-## 8. VOID RESERVATION
-
-### A. Management Only
-- "Void Reservation" only appears for: **Manager, Hotel Admin, Owner, or Superadmin**.
-- Receptionists will **NOT** see this option at all.
-- **Path to find:** → Dashboard → Open Reservation → Three Dots (⋯) Menu → Void Reservation (if authorized)
-
-### B. Reason Required (No Guest Name)
-- The popup now asks for **"Reason for voiding"** (text box).
-- You must type a reason to confirm. It no longer asks you to type the guest's name.
-
-### C. Voided Reservations Go To Reports (Removed From Dashboard)
-- When voided successfully, the reservation is **completely removed** from the Dashboard (not left red).
-- To view voided reservations: **Reports → Report Browser → Void Reservations**
-- The report shows: Booking Ref, Guest, Room, Dates, Amounts, **Voided On**, **Voided By**, and **Reason**.
-- **Path to find:** → Reports → Report Browser → Void Reservations
-
-## 9. SEQUENCING - Automatic Sequential References
-
-- **What changed:** All key records now get automatic sequential reference numbers (clean, ordered, not random).
-
-**Where to see them:**
-- **Reservations:** Get sequential Booking Reference (BK-...) automatically
-- **Night Audit → Manual Transactions (Insert Transaction):** Get sequential ADJ-... reference numbers
-- **Folio Entries & Refunds:** Use sequential FLX-... reference numbers
-
-**Path to find:** → Reservation Details / Night Audit → Transactions / Folio View / Void Reservations Report
+MRK Hotels - Reception Panel Changes Guide | October 2026
