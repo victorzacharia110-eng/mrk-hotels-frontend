@@ -2501,11 +2501,18 @@ function isoKey(date) {
 
 /** Fetches every page of a paginated list endpoint (tolerates plain arrays too). */
 async function fetchAll(apiFn, params = {}) {
-  const perPage = 100
+  // 50 keeps within every endpoint's cap (GET /rooms is max per_page 50; asking
+  // for 100 there returned a 422 that the caller swallowed, so the receptionist
+  // tape — and the inventory calendar that reuses it — came up with no rooms).
+  const perPage = 50
   const first = await apiFn({ ...params, page: 1, per_page: perPage })
   const payload = first.data
   const rows = [...(Array.isArray(payload) ? payload : payload?.data || [])]
-  const lastPage = payload?.last_page || Math.ceil((payload?.total || rows.length) / perPage) || 1
+  const lastPage =
+    payload?.meta?.last_page ||
+    payload?.last_page ||
+    Math.ceil((payload?.meta?.total || payload?.total || rows.length) / perPage) ||
+    1
   for (let page = 2; page <= lastPage; page++) {
     const res = await apiFn({ ...params, page, per_page: perPage })
     const p = res.data

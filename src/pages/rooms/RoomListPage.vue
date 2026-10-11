@@ -799,14 +799,17 @@ function applyFilter() {
 }
 
 function loadAllRooms() {
-  return collectAllRows((page, perPage) =>
-    roomApi.index({
-      status: filters.status,
-      room_type: filters.room_type,
-      search: filters.search,
-      page,
-      per_page: perPage,
-    }),
+  return collectAllRows(
+    (page, perPage) =>
+      roomApi.index({
+        status: filters.status,
+        room_type: filters.room_type,
+        search: filters.search,
+        page,
+        per_page: perPage,
+      }),
+    // GET /rooms caps per_page at 50; the 100 default returned a 422.
+    50,
   )
 }
 
@@ -1016,13 +1019,17 @@ const invLoading = ref(false)
 const invCalRooms = ref([])
 const invReservations = ref([])
 
-/** Fetches every page of a paginated list endpoint (tolerates plain arrays). */
-async function fetchAll(apiFn, params = {}) {
-  const perPage = 100
+/** Fetches every page of a paginated list endpoint (tolerates plain arrays).
+ *  `perPage` stays within the server's per-endpoint cap (rooms is max 50). */
+async function fetchAll(apiFn, params = {}, perPage = 50) {
   const first = await apiFn({ ...params, page: 1, per_page: perPage })
   const payload = first.data
   const rows = [...(Array.isArray(payload) ? payload : payload?.data || [])]
-  const lastPage = payload?.last_page || Math.ceil((payload?.total || rows.length) / perPage) || 1
+  const lastPage =
+    payload?.meta?.last_page ||
+    payload?.last_page ||
+    Math.ceil((payload?.meta?.total || payload?.total || rows.length) / perPage) ||
+    1
   for (let page = 2; page <= lastPage; page++) {
     const res = await apiFn({ ...params, page, per_page: perPage })
     const p = res.data
@@ -1051,22 +1058,26 @@ const loadInventory = async () => {
     await businessDateStore.ensureLoaded()
     const from = businessDateStore.current || todayIso()
     const to = addDaysIso(from, 13)
-    const [invRes, roomRows, stayRows] = await Promise.all([
+    const [invRes, stayRows] = await Promise.all([
+      // The inventory endpoint already returns both the per-type summaries and
+      // the physical room rows, so the calendar reads them from here. Calling
+      // GET /rooms separately sent per_page=100, over that endpoint's max of 50,
+      // and the swallowed 422 left the calendar with no rooms to draw.
       roomApi.inventory({ from_date: from, to_date: to }),
-      // Rooms (level 40) and reservations (level 60) for the tape chart; empty
-      // rather than a 403 flash for roles that cannot read them.
-      fetchAll(roomApi.index).catch(() => []),
+      // Reservations (level 60) for the stay bars; empty rather than a 403
+      // flash for roles that cannot read them.
       fetchAll(reservationApi.index, {
         window_start: from,
         window_end: addDaysIso(from, 14),
         exclude_status: ['cancelled', 'no_show'],
-      }).catch(() => []),
+      }, 100).catch(() => []),
     ])
-    // Backend returns the per-type summaries under `types`; reading `summaries`
-    // left this tab empty (see RoomController::inventory).
-    invSummary.value = invRes.data?.types ?? []
+    // The API seeds every known room type with a zero count, so keep only the
+    // types this hotel actually registered (the review: "summarized based on
+    // which type is registered").
+    invSummary.value = (invRes.data?.types ?? []).filter((t) => Number(t.room_count || 0) > 0)
     invFrom.value = invRes.data?.from ?? from
-    invCalRooms.value = roomRows
+    invCalRooms.value = invRes.data?.rooms ?? []
     invReservations.value = stayRows
   } catch (err) {
     error.value = flattenError(err)
@@ -1210,8 +1221,9 @@ const loadBlocks = async () => {
 /** Loads the room list once for the picker and the calendar's rows. */
 const loadCalendarRooms = async () => {
   try {
-    const res = await roomApi.index({ per_page: 100 })
-    const rows = res.data?.data ?? []
+    // GET /rooms caps per_page at 50, so walk its pages (per_page=100 here
+    // previously 422'd and left the stop-sell picker empty).
+    const rows = await fetchAll(roomApi.index)
     calRooms.value = rows.map((r) => ({
       room_id: r.room_id,
       room_number: r.room_number,
