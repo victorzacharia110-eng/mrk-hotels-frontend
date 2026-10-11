@@ -22,6 +22,16 @@
         <i class="fas fa-search" aria-hidden="true"></i>
         <input v-model="search" type="search" :placeholder="$t('common.search')" />
       </div>
+      <button
+        v-if="bulkVoidable.length"
+        type="button"
+        class="sm-btn sm danger-ghost"
+        :title="$t('cashier.summary.voidAll')"
+        :aria-label="$t('cashier.summary.voidAll')"
+        @click="openBulkVoid"
+      >
+        <i class="fas fa-xmark" aria-hidden="true"></i> {{ $t('cashier.summary.voidAll') }}
+      </button>
     </div>
 
     <div v-if="error" class="alert alert-error">{{ error }}</div>
@@ -336,6 +346,45 @@
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Void every ticket currently listed (honours the active tab + search). -->
+    <div v-if="bulkVoidOpen" class="pay-modal-overlay" @click.self="closeBulkVoid">
+      <div class="pay-modal" role="dialog" aria-modal="true" :aria-label="$t('cashier.summary.voidAllTitle')">
+        <div class="pay-modal-head">
+          <h2><i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.summary.voidAllTitle') }}</h2>
+          <button type="button" class="pay-modal-close" aria-label="Close" @click="closeBulkVoid">
+            <i class="fas fa-xmark"></i>
+          </button>
+        </div>
+
+        <p v-if="bulkVoidError" class="alert alert-error">{{ bulkVoidError }}</p>
+        <p class="pay-order-line">
+          {{ $t('cashier.summary.voidAllSummary', { count: bulkVoidable.length, total: money(bulkVoidTotal) }) }}
+        </p>
+
+        <div class="pay-ref">
+          <label :for="bulkVoidReasonId">{{ $t('storeManager.common.reason') }}</label>
+          <input
+            :id="bulkVoidReasonId"
+            v-model.trim="bulkVoidReason"
+            type="text"
+            maxlength="255"
+            :disabled="savingBulkVoid"
+            :placeholder="$t('storeManager.common.reasonTitle')"
+          />
+        </div>
+
+        <div class="pay-modal-foot">
+          <button type="button" class="btn btn-secondary" :disabled="savingBulkVoid" @click="closeBulkVoid">
+            {{ $t('common.cancel') }}
+          </button>
+          <button type="button" class="btn btn-primary" :disabled="savingBulkVoid || !bulkVoidReason" @click="confirmBulkVoid">
+            <i class="fas fa-ban" aria-hidden="true"></i>
+            {{ savingBulkVoid ? $t('common.saving') : $t('cashier.summary.voidAllConfirm', { count: bulkVoidable.length }) }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -736,6 +785,66 @@ async function confirmVoid() {
   } finally {
     savingVoid.value = false
   }
+}
+
+/**
+ * Bulk void: clears every ticket currently listed in one confirmed action. Like
+ * the per-row Void it honours the active tab and search, and only offers tickets
+ * this role may void (running, plus settled for the counter roles).
+ */
+const bulkVoidOpen = ref(false)
+const bulkVoidReason = ref('')
+const bulkVoidReasonId = `bulk-void-reason-${Date.now()}`
+const savingBulkVoid = ref(false)
+const bulkVoidError = ref('')
+
+const bulkVoidable = computed(() => filteredOrders.value.filter((order) => canVoid(order)))
+const bulkVoidTotal = computed(() =>
+  bulkVoidable.value.reduce((sum, order) => sum + Number(order.total_amount || 0), 0),
+)
+
+function openBulkVoid() {
+  if (!bulkVoidable.value.length) return
+  bulkVoidOpen.value = true
+  bulkVoidReason.value = ''
+  bulkVoidError.value = ''
+}
+
+function closeBulkVoid() {
+  if (savingBulkVoid.value) return
+  bulkVoidOpen.value = false
+}
+
+async function confirmBulkVoid() {
+  if (savingBulkVoid.value) return
+  if (!bulkVoidReason.value.trim()) {
+    bulkVoidError.value = t('cashier.summary.voidReasonRequired')
+    return
+  }
+  const targets = bulkVoidable.value
+  if (!targets.length) {
+    bulkVoidOpen.value = false
+    return
+  }
+  savingBulkVoid.value = true
+  bulkVoidError.value = ''
+  const reason = bulkVoidReason.value.trim()
+  const override = canVoidSettled.value ? { override: true } : {}
+  let done = 0
+  let failed = 0
+  for (const order of targets) {
+    try {
+      await orderApi.voidOrder(order.order_id, { reason, ...override })
+      done += 1
+    } catch {
+      failed += 1
+    }
+  }
+  savingBulkVoid.value = false
+  bulkVoidOpen.value = false
+  await load()
+  if (failed) toast(t('cashier.summary.voidAllPartial', { done, total: targets.length, failed }), 'error')
+  else toast(t('cashier.summary.voidAllDone', { count: done }), 'success')
 }
 
 /** Asks for the target table and moves the whole ticket onto it. */

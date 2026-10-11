@@ -3,20 +3,21 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 /**
- * The Open Orders board (shared by the waiter, cashier and bartender panels)
- * gained a single X that voids every order currently listed, instead of one
- * ticket at a time.
+ * Bulk void: one X clears every order currently listed, instead of one ticket at
+ * a time. It lives on the Open Orders board (shared by the waiter, cashier and
+ * bartender panels) and on the Cashier Order Summary table.
  *
- * These are structural assertions on the source. The board's data flow is
- * already covered indirectly by the waiter-pad tests; what is easy to break and
- * hard to notice is the *scope* of "all" — the button must honour the active
- * search/status filter, must match the per-order Void button's permission, and
- * must never attempt a void the backend rejects (paid / room-billed tickets).
+ * These are structural assertions on the source. What is easy to break and hard
+ * to notice is the *scope* of "all" — the button must honour the active
+ * search/status view, offer only what the backend will accept (running + unpaid,
+ * or settled for the counter roles), and report partial failures.
  */
 
-const pad = readFileSync(resolve(process.cwd(), 'src/pages/dashboards/OrderTakerDashboard.vue'), 'utf8')
-const en = JSON.parse(readFileSync(resolve(process.cwd(), 'src/locales/en.json'), 'utf8'))
-const sw = JSON.parse(readFileSync(resolve(process.cwd(), 'src/locales/sw.json'), 'utf8'))
+const read = (rel) => readFileSync(resolve(process.cwd(), rel), 'utf8')
+const pad = read('src/pages/dashboards/OrderTakerDashboard.vue')
+const cashier = read('src/pages/cashier/CashierOrderSummaryPage.vue')
+const en = JSON.parse(read('src/locales/en.json'))
+const sw = JSON.parse(read('src/locales/sw.json'))
 
 describe('open-orders board: void-all button', () => {
   it('renders one X next to the refresh control', () => {
@@ -27,12 +28,18 @@ describe('open-orders board: void-all button', () => {
   })
 
   it('only appears when there is something voidable to clear', () => {
-    expect(pad).toMatch(/v-if="canVoidOrders && bulkVoidable\.length"/)
+    expect(pad).toMatch(/v-if="bulkVoidable\.length"/)
   })
 
-  it('follows the per-order Void permission (waiters excluded)', () => {
-    // Matches the single-order button, which is also gated on `!isWaiterRole`.
-    expect(pad).toMatch(/const canVoidOrders = computed\(\(\) => !isWaiterRole\.value\)/)
+  it('lets waiters void too, like the counter roles', () => {
+    // The waiter was previously excluded from the single Void button; the product
+    // decision is now that a waiter may void their running tickets, so neither
+    // the button nor openVoid() may still gate on the role.
+    expect(pad).not.toMatch(/v-if="!isWaiterRole && \[\s*'pending'/)
+    const at = pad.indexOf('function openVoid(')
+    expect(at, 'openVoid not found').toBeGreaterThan(-1)
+    const body = pad.slice(at, pad.indexOf('\n}', at))
+    expect(body).not.toMatch(/isWaiterRole/)
   })
 
   it('clears exactly what the filter/search is showing', () => {
@@ -59,8 +66,38 @@ describe('open-orders board: void-all button', () => {
   })
 })
 
-describe('open-orders board: void-all translations', () => {
-  const keys = [
+describe('cashier summary: void-all button', () => {
+  it('renders one X in the toolbar and opens the confirm modal', () => {
+    expect(cashier).toMatch(/class="sm-btn sm danger-ghost"[\s\S]{0,120}@click="openBulkVoid"/)
+    expect(cashier).toMatch(/v-if="bulkVoidOpen" class="pay-modal-overlay"/)
+    expect(cashier).toMatch(/fa-xmark/)
+  })
+
+  it('clears the filtered list and only offers tickets this role may void', () => {
+    const at = cashier.indexOf('const bulkVoidable = computed')
+    expect(at, 'bulkVoidable not found').toBeGreaterThan(-1)
+    const body = cashier.slice(at, cashier.indexOf('\n\n', at))
+    expect(body).toMatch(/filteredOrders\.value/)
+    expect(body).toMatch(/canVoid\(order\)/)
+  })
+
+  it('voids each listed ticket and forwards the settled override', () => {
+    const at = cashier.indexOf('async function confirmBulkVoid')
+    expect(at, 'confirmBulkVoid not found').toBeGreaterThan(-1)
+    const body = cashier.slice(at, cashier.indexOf('\n}\n', at))
+    expect(body).toMatch(/orderApi\.voidOrder\(order\.order_id/)
+    expect(body).toMatch(/override: true/)
+    expect(body).toMatch(/cashier\.summary\.voidAllPartial/)
+  })
+
+  it('requires a reason, like the single-ticket void', () => {
+    expect(cashier).toMatch(/cashier\.summary\.voidReasonRequired/)
+    expect(cashier).toMatch(/:disabled="savingBulkVoid \|\| !bulkVoidReason"/)
+  })
+})
+
+describe('void-all translations', () => {
+  const padKeys = [
     'voidAll',
     'voidAllTitle',
     'voidAllHint',
@@ -69,11 +106,26 @@ describe('open-orders board: void-all translations', () => {
     'voidAllDone',
     'voidAllPartial',
   ]
+  const cashierKeys = [
+    'voidAll',
+    'voidAllTitle',
+    'voidAllSummary',
+    'voidAllConfirm',
+    'voidAllDone',
+    'voidAllPartial',
+  ]
 
-  it('defines every void-all key in both locales', () => {
-    for (const key of keys) {
+  it('defines every orderTaker void-all key in both locales', () => {
+    for (const key of padKeys) {
       expect(en.orderTaker[key], `en.orderTaker.${key}`).toBeTruthy()
       expect(sw.orderTaker[key], `sw.orderTaker.${key}`).toBeTruthy()
+    }
+  })
+
+  it('defines every cashier.summary void-all key in both locales', () => {
+    for (const key of cashierKeys) {
+      expect(en.cashier.summary[key], `en.cashier.summary.${key}`).toBeTruthy()
+      expect(sw.cashier.summary[key], `sw.cashier.summary.${key}`).toBeTruthy()
     }
   })
 
@@ -81,6 +133,8 @@ describe('open-orders board: void-all translations', () => {
     expect(en.orderTaker.voidAllConfirm).toContain('{count}')
     expect(en.orderTaker.voidAllSummary).toContain('{count}')
     expect(en.orderTaker.voidAllPartial).toContain('{total}')
-    expect(sw.orderTaker.voidAllConfirm).toContain('{count}')
+    expect(en.cashier.summary.voidAllConfirm).toContain('{count}')
+    expect(en.cashier.summary.voidAllSummary).toContain('{count}')
+    expect(sw.cashier.summary.voidAllConfirm).toContain('{count}')
   })
 })

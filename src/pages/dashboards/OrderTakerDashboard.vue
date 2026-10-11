@@ -525,7 +525,7 @@
             <i class="fas fa-rotate" aria-hidden="true"></i> {{ $t('orderTaker.refresh') }}
           </button>
           <button
-            v-if="canVoidOrders && bulkVoidable.length"
+            v-if="bulkVoidable.length"
             type="button"
             class="oh-manage oh-danger"
             :title="$t('orderTaker.voidAll')"
@@ -690,7 +690,7 @@
               <i class="fas fa-receipt" aria-hidden="true"></i> {{ $t('orderTaker.printReceipt') }}
             </button>
             <button
-              v-if="!isWaiterRole && ['pending', 'preparing', 'in_progress', 'processing'].includes(order.status) && order.payment_status === 'unpaid'"
+              v-if="['pending', 'preparing', 'in_progress', 'processing'].includes(order.status) && order.payment_status === 'unpaid'"
               type="button"
               class="open-btn ghost danger"
               @click="openVoid(order)"
@@ -1417,7 +1417,6 @@ const voidError = ref('')
 const advancingItem = ref(null)
 
 function openVoid(order) {
-  if (isWaiterRole.value) return
   voidTarget.value = order
   voidReason.value = ''
   voidError.value = ''
@@ -1453,11 +1452,10 @@ async function confirmVoid() {
 // Bulk void: the board's single X voids every order currently listed (honouring
 // the search/status filter). Orders the backend would reject — paid, room-billed
 // or already closed — are skipped, so the button only offers what it can clear.
+// Waiters may void their running tickets too; only the kitchen flow is theirs to
+// read, not to advance, which stays gated in advanceItem().
 const voidAllOpen = ref(false)
 const voidingAll = ref(false)
-
-/** Roles allowed to void, matching the per-order Void button (waiters excluded). */
-const canVoidOrders = computed(() => !isWaiterRole.value)
 
 /** The listed orders the void endpoint will accept right now. */
 const bulkVoidable = computed(() =>
@@ -1468,7 +1466,7 @@ const bulkVoidable = computed(() =>
 const bulkVoidTotal = computed(() => bulkVoidable.value.reduce((sum, o) => sum + Number(o.total_amount || 0), 0))
 
 function openVoidAll() {
-  if (!canVoidOrders.value || !bulkVoidable.value.length) return
+  if (!bulkVoidable.value.length) return
   voidAllOpen.value = true
   voidReason.value = ''
 }
