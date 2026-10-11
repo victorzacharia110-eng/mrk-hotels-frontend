@@ -130,4 +130,30 @@ describe('KitchenBoardPage', () => {
     expect(wrapper.find('.kb-closed .cat-empty').exists()).toBe(true)
     expect(wrapper.find('.kb-closed .cat-empty').text()).toContain('No closed tickets')
   })
+
+  it('marks a dish using the parent order id, not a (missing) item.order_id', async () => {
+    await mountBoard()
+    api.orderApi.index.mockResolvedValue({
+      data: {
+        data: [
+          {
+            order_id: 900,
+            order_number: 'KB-900',
+            status: 'pending',
+            department: 'restaurant',
+            table_number: '3',
+            items: [{ order_item_id: 42, item_name: 'Chips', quantity: 1, status: 'pending' }],
+          },
+        ],
+      },
+    })
+    await wrapper.vm.load()
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+
+    await wrapper.find('.kb-item').trigger('click')
+    await flushPromises()
+
+    expect(api.orderApi.markItemStatus).toHaveBeenCalledWith(900, 42, 'ready')
+  })
 })

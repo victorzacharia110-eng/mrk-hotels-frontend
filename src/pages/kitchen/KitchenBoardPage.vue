@@ -106,7 +106,7 @@
                 class="kb-item"
                 :class="[item.status]"
                 :disabled="busy === item.order_item_id"
-                @click="advance(item)"
+                @click="advance(order, item)"
               >
                 <span class="kb-item-main">
                   <span class="kb-item-name">{{ item.quantity }}× {{ item.item_name }}</span>
@@ -321,12 +321,12 @@ watch(department, () => {
  * One tap on a dish: pending → ready (kitchen), ready → served (runner).
  * Served dishes stay visible briefly as confirmation, then the board reloads.
  */
-async function advance(item) {
+async function advance(order, item) {
   if (item.status === 'served') return
   const next = item.status === 'pending' ? 'ready' : 'served'
   busy.value = item.order_item_id
   try {
-    await orderApi.markItemStatus(item.order_id, item.order_item_id, next)
+    await orderApi.markItemStatus(order.order_id, item.order_item_id, next)
     item.status = next
     if (next === 'served') setTimeout(load, 1200)
   } catch (err) {
