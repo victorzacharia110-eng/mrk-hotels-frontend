@@ -105,42 +105,19 @@
           </div>
         </div>
 
-        <!-- Calendar-themed availability grid: rooms in rows, the business date
-             as the first day column (per the reception review). -->
-        <div v-if="invRooms.length" class="card">
+        <!-- Stay/tape calendar, the same chart the dashboard uses: rooms in
+             rows grouped by type, booking bars across the nights, and the
+             business date as the first day column (per the reception review). -->
+        <div v-if="invCalRooms.length" class="card">
           <div class="inventory-cal-head">
             <strong>{{ $t('rooms.inventoryCalendarTitle') }}</strong>
             <span class="muted">{{ $t('rooms.inventoryCalendarHint') }}</span>
           </div>
-          <div class="table-scroll cal-scroll" style="max-height:70vh;overflow:auto;">
-            <table class="table inventory-calendar">
-              <thead>
-                <tr>
-                  <th class="cal-room-col">{{ $t('rooms.tableRoom') }}</th>
-                  <th v-for="d in invDays" :key="d" :class="{ today: d === invFrom }">
-                    {{ formatDayLabel(d) }}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="r in invRooms" :key="r.room_id">
-                  <td class="cal-room-col">
-                    <strong>{{ r.room_number }}</strong>
-                    <span class="muted">{{ r.room_type }}</span>
-                  </td>
-                  <td
-                    v-for="d in invDays"
-                    :key="d"
-                    class="cal-cell"
-                    :class="{ today: d === invFrom, stopped: r.sellable?.[d] === false }"
-                    :title="`${r.room_number} · ${formatDayLabel(d)}`"
-                  >
-                    <i v-if="r.sellable?.[d] === false" class="fas fa-user" aria-hidden="true"></i>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <StayCalendar
+            :rooms="invCalRooms"
+            :reservations="invReservations"
+            :business-date="invFrom"
+          />
         </div>
       </template>
     </div>
@@ -673,10 +650,11 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useBusinessDateStore } from '@/stores/businessDate'
-import { roomApi } from '@/api'
+import { roomApi, reservationApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
+import StayCalendar from '@/components/StayCalendar.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 import { collectAllRows } from '@/utils/export'
 
@@ -1012,27 +990,27 @@ const activeTab = ref('inventory')
 
 // Inventory summary (per room type): room_count / available / stop-sold days.
 const invSummary = ref([])
-const invRooms = ref([])
 const invFrom = ref('')
-const invTo = ref('')
 const invLoading = ref(false)
+// The tape calendar reads the same physical rooms and reservations the
+// dashboard stay view uses, so the chart matches the dashboard exactly.
+const invCalRooms = ref([])
+const invReservations = ref([])
 
-/**
- * The nights shown on the inventory calendar: the business date first, then the
- * following 13 nights (a fortnight reads availability without the grid growing
- * unreadably wide). The business date is column one by design.
- */
-const invDays = computed(() => {
-  if (!invFrom.value || !invTo.value) return []
-  const out = []
-  const cursor = new Date(`${invFrom.value}T00:00:00`)
-  const end = new Date(`${invTo.value}T00:00:00`)
-  while (!Number.isNaN(cursor.getTime()) && cursor <= end) {
-    out.push(toIso(cursor))
-    cursor.setDate(cursor.getDate() + 1)
+/** Fetches every page of a paginated list endpoint (tolerates plain arrays). */
+async function fetchAll(apiFn, params = {}) {
+  const perPage = 100
+  const first = await apiFn({ ...params, page: 1, per_page: perPage })
+  const payload = first.data
+  const rows = [...(Array.isArray(payload) ? payload : payload?.data || [])]
+  const lastPage = payload?.last_page || Math.ceil((payload?.total || rows.length) / perPage) || 1
+  for (let page = 2; page <= lastPage; page++) {
+    const res = await apiFn({ ...params, page, per_page: perPage })
+    const p = res.data
+    rows.push(...(Array.isArray(p) ? p : p?.data || []))
   }
-  return out
-})
+  return rows
+}
 
 /**
  * Bottom figures the reception review asked for: SOLD (in-house) rooms summed
@@ -1053,14 +1031,24 @@ const loadInventory = async () => {
   try {
     await businessDateStore.ensureLoaded()
     const from = businessDateStore.current || todayIso()
-    const res = await roomApi.inventory({ from_date: from, to_date: addDaysIso(from, 13) })
-    // Backend returns the per-type summaries under `types` and one row per room
-    // under `rooms`, each carrying a per-night `sellable` map (see
-    // RoomController::inventory); reading `summaries` left this tab empty.
-    invSummary.value = res.data?.types ?? []
-    invRooms.value = res.data?.rooms ?? []
-    invFrom.value = res.data?.from ?? from
-    invTo.value = res.data?.to ?? addDaysIso(from, 13)
+    const to = addDaysIso(from, 13)
+    const [invRes, roomRows, stayRows] = await Promise.all([
+      roomApi.inventory({ from_date: from, to_date: to }),
+      // Rooms (level 40) and reservations (level 60) for the tape chart; empty
+      // rather than a 403 flash for roles that cannot read them.
+      fetchAll(roomApi.index).catch(() => []),
+      fetchAll(reservationApi.index, {
+        window_start: from,
+        window_end: addDaysIso(from, 14),
+        exclude_status: ['cancelled', 'no_show'],
+      }).catch(() => []),
+    ])
+    // Backend returns the per-type summaries under `types`; reading `summaries`
+    // left this tab empty (see RoomController::inventory).
+    invSummary.value = invRes.data?.types ?? []
+    invFrom.value = invRes.data?.from ?? from
+    invCalRooms.value = roomRows
+    invReservations.value = stayRows
   } catch (err) {
     error.value = flattenError(err)
   } finally {
