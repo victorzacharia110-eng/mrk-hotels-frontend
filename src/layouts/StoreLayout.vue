@@ -1006,7 +1006,10 @@ const visibleModules = computed(() => {
       ...pick(['store-dashboard', 'purchase-orders', 'goods-received', 'store-expenses', 'store-cash-register', 'store-reports', 'requisitions', 'inventory', 'store-settings']),
     ]
     if (byKey.messages) inventoryProcurement.push(link('messages', t('nav.messages')))
-    inventoryProcurement.push(...pick(['departments', 'categories', 'suppliers', 'accounting']))
+    inventoryProcurement.push(...pick(['departments', 'categories', 'suppliers']))
+    if (authStore.user?.user_role === 'accountant') {
+      inventoryProcurement.push(...pick(['accounting']))
+    }
     if (inventoryProcurement.length) out.push(accordionGroup('inventory-procurement', 'fas fa-boxes-stacked', 'accordion.inventoryProcurement', inventoryProcurement))
 
     // 5. COMMUNICATION — consolidated (per management panel review: keep one communication tab)
