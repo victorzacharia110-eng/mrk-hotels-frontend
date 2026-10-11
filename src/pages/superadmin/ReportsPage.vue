@@ -28,12 +28,12 @@
         <div class="stat-card">
           <div class="stat-icon"><i class="fas fa-hotel"></i></div>
           <div>
-            <span class="stat-value">{{ dash.tenants.total }}</span>
+            <span class="stat-value">{{ formatNum(dash.tenants.total) }}</span>
             <span class="stat-label">{{ $t('superadmin.totalHotels') }}</span>
             <span class="stat-sub">
-              <span class="dot dot-green"></span> {{ dash.tenants.active }} {{ $t('superadmin.active') }}
-              <span class="dot dot-yellow"></span> {{ dash.tenants.pending_approvals }} {{ $t('superadmin.pending') }}
-              <span class="dot dot-red"></span> {{ dash.tenants.suspended }} {{ $t('superadmin.suspended') }}
+              <span class="dot dot-green"></span> {{ formatNum(dash.tenants.active) }} {{ $t('superadmin.active') }}
+              <span class="dot dot-yellow"></span> {{ formatNum(dash.tenants.pending_approvals) }} {{ $t('superadmin.pending') }}
+              <span class="dot dot-red"></span> {{ formatNum(dash.tenants.suspended) }} {{ $t('superadmin.suspended') }}
             </span>
           </div>
         </div>
@@ -72,11 +72,11 @@
         <div class="stat-card">
           <div class="stat-icon trials"><i class="fas fa-hourglass-half"></i></div>
           <div>
-            <span class="stat-value">{{ dash.saas?.active_trials ?? 0 }}</span>
+            <span class="stat-value">{{ formatNum(dash.saas?.active_trials ?? 0) }}</span>
             <span class="stat-label">{{ $t('superadmin.activeTrials') }}</span>
             <span class="stat-sub warn" v-if="dash.saas?.trials_expiring_7_days">
               <i class="fas fa-exclamation-triangle"></i>
-              {{ dash.saas.trials_expiring_7_days }} {{ $t('superadmin.expiring7Days') }}
+              {{ formatNum(dash.saas.trials_expiring_7_days) }} {{ $t('superadmin.expiring7Days') }}
             </span>
           </div>
         </div>
@@ -88,7 +88,7 @@
             <span class="stat-value">{{ dash.saas?.conversion_rate ?? 0 }}%</span>
             <span class="stat-label">{{ $t('superadmin.conversionRate') }}</span>
             <span class="stat-sub">
-              {{ dash.saas?.paying_hotels ?? 0 }} {{ $t('superadmin.paying') }} / {{ dash.tenants.total }} {{ $t('superadmin.total') }}
+              {{ formatNum(dash.saas?.paying_hotels ?? 0) }} {{ $t('superadmin.paying') }} / {{ formatNum(dash.tenants.total) }} {{ $t('superadmin.total') }}
             </span>
           </div>
         </div>
@@ -151,8 +151,8 @@
                 </td>
                 <td><span class="plan-pill" :class="'plan-' + tenant.subscription_plan">{{ tenant.subscription_plan }}</span></td>
                 <td><span class="badge" :class="statusBadge(tenant.status)">{{ tenant.status }}</span></td>
-                <td class="num-cell">{{ tenant.staff_count ?? '-' }}</td>
-                <td class="num-cell">{{ tenant.room_count ?? '-' }}</td>
+                <td class="num-cell">{{ formatNum(tenant.staff_count ?? '-') }}</td>
+                <td class="num-cell">{{ formatNum(tenant.room_count ?? '-') }}</td>
                 <td>
                   <span class="muted">{{ tenant.subscription_status || '—' }}</span>
                 </td>
@@ -218,8 +218,9 @@ function barWidth(total) {
 }
 
 function formatNum(n) {
-  if (n == null) return '0'
-  return Number(n).toLocaleString()
+  if (n == null || n === '') return '0'
+  const value = Number(n)
+  return Number.isFinite(value) ? value.toLocaleString() : String(n)
 }
 
 function formatCompact(n) {

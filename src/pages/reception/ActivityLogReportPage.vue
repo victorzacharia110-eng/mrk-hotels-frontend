@@ -54,7 +54,7 @@
             <i class="fas fa-calendar-day" style="color: var(--mrk-blue);"></i>
             {{ row.period_start }}{{ period !== 'daily' ? ' → ' + row.period_end : '' }}
           </h3>
-          <span class="action-count">{{ row.total_actions }} {{ $t('activityLog.actions') }}</span>
+          <span class="action-count">{{ formatNumber(row.total_actions) }} {{ $t('activityLog.actions') }}</span>
         </div>
 
         <div class="kpi-grid">
@@ -133,6 +133,7 @@
 import { ref, onMounted } from 'vue'
 import { activityLogReportApi } from '@/api'
 import { useI18n } from 'vue-i18n'
+import { formatNumber } from '@/utils/numbers'
 
 const { t } = useI18n()
 

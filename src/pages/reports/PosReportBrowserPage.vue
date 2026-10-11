@@ -296,7 +296,7 @@
 
         <div v-if="engine?.summary?.length" class="rb-kpi-grid">
           <div v-for="(kpi, i) in engine.summary" :key="i" class="rb-kpi">
-            <span class="rb-kpi-value">{{ summaryValue(kpi.value) }}</span>
+            <span class="rb-kpi-value">{{ summaryValue(kpi.value, kpi.key) }}</span>
             <span class="rb-kpi-label">{{ columnLabel(kpi.label, kpi.label) }}</span>
           </div>
         </div>
@@ -331,7 +331,7 @@
                         :key="col.key"
                         :class="{ num: col.format === 'money' || col.format === 'pct' }"
                       >
-                        {{ formatCell(row[col.key], col.format) }}
+                        {{ formatCell(row[col.key], col.format, col.key) }}
                       </td>
                     </tr>
                     <tr class="rb-group-foot">
@@ -360,7 +360,7 @@
                         :key="col.key"
                         :class="{ num: col.format === 'money' || col.format === 'pct' }"
                       >
-                        {{ formatCell(row[col.key], col.format) }}
+                        {{ formatCell(row[col.key], col.format, col.key) }}
                       </td>
                     </template>
                   </tr>
@@ -402,6 +402,7 @@ import ReportCharts from '@/components/reports/ReportCharts.vue'
 import { reportApi, outletApi, departmentApi, hotelSettingsApi } from '@/api'
 import { exportCSV } from '@/utils/export'
 import { useAuthStore } from '@/stores/auth'
+import { formatNumber, isIdentifierKey } from '@/utils/numbers'
 import { fmtLedgerMoney, fmtQty, unitSuffix, fmtLedgerDateTime, ledgerTypeLabel, buildLedgerGroups, INVENTORY_CATEGORIES } from '@/utils/ezeeLedger'
 
 const { t, te } = useI18n()
@@ -888,11 +889,11 @@ function rowBandClass(row) {
   return 'rb-group-foot'
 }
 
-function formatCell(value, format) {
+function formatCell(value, format, key = null) {
   if (value === null || value === undefined || value === '') return '—'
   if (format === 'money' && typeof value === 'number') return money(value)
   if (format === 'pct') return `${value}%`
-  if (typeof value === 'number') return String(value)
+  if (typeof value === 'number') return formatNumber(value, key)
   if (Array.isArray(value)) return value.join(', ') || '—'
   return String(value)
 }
@@ -900,11 +901,14 @@ function formatCell(value, format) {
 function totalFor(key, format) {
   const total = (engine.value?.totals || []).find((tt) => tt.key === key)
   if (!total) return null
-  return { label: total.label || null, value: formatCell(total.value, format) }
+  return { label: total.label || null, value: formatCell(total.value, format, key) }
 }
 
-function summaryValue(value) {
-  if (typeof value === 'number' && !Number.isInteger(value)) return money(value)
+function summaryValue(value, key) {
+  if (typeof value === 'number') {
+    if (isIdentifierKey(key)) return String(value)
+    return Number.isInteger(value) ? formatNumber(value, key) : money(value)
+  }
   return value === null || value === undefined ? '—' : String(value)
 }
 
@@ -1057,7 +1061,7 @@ function printPosReceipt() {
   const colWidths = cols.map((c) => Math.max(esc(columnLabel(c.key, c.label)).length, 8)).map((w) => Math.min(w, 16))
   const head = cols.map((c, i) => esc(columnLabel(c.key, c.label)).padEnd(colWidths[i])).join(' ').slice(0, 46)
   const lineRows = data.rows.map(
-    (r) => cols.map((c, i) => esc(formatCell(r[c.key], c.format)).padEnd(colWidths[i])).join(' ').trimEnd().slice(0, 46),
+    (r) => cols.map((c, i) => esc(formatCell(r[c.key], c.format, c.key)).padEnd(colWidths[i])).join(' ').trimEnd().slice(0, 46),
   )
   const totalLines = (data.totals || [])
     .map((tt) => `${pad(esc(tt.label), 24)} ${esc(formatCell(tt.value, 'money'))}`)

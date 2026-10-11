@@ -399,7 +399,7 @@
 
           <div v-if="engine.summary?.length" class="rb-kpi-grid">
             <div v-for="(kpi, i) in engine.summary" :key="i" class="rb-kpi">
-              <span class="rb-kpi-value">{{ engineSummaryValue(kpi.value) }}</span>
+              <span class="rb-kpi-value">{{ engineSummaryValue(kpi.value, kpi.key) }}</span>
               <span class="rb-kpi-label">{{ kpi.label }}</span>
             </div>
           </div>
@@ -515,6 +515,7 @@ import ReportCharts from '@/components/reports/ReportCharts.vue'
 import NightAuditSheet from '@/components/reports/NightAuditSheet.vue'
 import { useAuthStore } from '@/stores/auth'
 import { currencyCode } from '@/utils/currency'
+import { formatNumber, isIdentifierKey } from '@/utils/numbers'
 import { nightAuditApi, guestReportApi, reportApi, hotelSettingsApi } from '@/api'
 import { exportCSV } from '@/utils/export'
 
@@ -1336,7 +1337,7 @@ function formatEngineCell(value, key, format) {
   if (value === null || value === undefined || value === '') return '—'
   if (format === 'money' && typeof value === 'number') return money(value)
   if (format === 'pct') return `${value}%`
-  if (typeof value === 'number') return String(value)
+  if (typeof value === 'number') return formatNumber(value, key)
   if (Array.isArray(value)) return value.join(', ') || '—'
   // Enum/status codes come through as snake_case from the engine
   // ("walk_in", "billed_to_room"); render them as plain words.
@@ -1355,8 +1356,11 @@ function engineTotalFor(key, format) {
   return { label: total.label || null, value: formatEngineCell(total.value, key, format) }
 }
 
-function engineSummaryValue(value) {
-  if (typeof value === 'number' && !Number.isInteger(value)) return money(value)
+function engineSummaryValue(value, key) {
+  if (typeof value === 'number') {
+    if (isIdentifierKey(key)) return String(value)
+    return Number.isInteger(value) ? formatNumber(value, key) : money(value)
+  }
   return value === null || value === undefined ? '—' : String(value)
 }
 

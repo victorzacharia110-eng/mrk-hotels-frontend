@@ -61,7 +61,7 @@
         <div class="rp-kpis">
           <div class="rp-kpi">
             <span class="rk-label">{{ $t('staffDashboard.salesOrders') }}</span>
-            <strong>{{ dashboard.sales?.orders ?? 0 }}</strong>
+            <strong>{{ formatNumber(dashboard.sales?.orders ?? 0) }}</strong>
           </div>
           <div class="rp-kpi">
             <span class="rk-label">{{ $t('staffDashboard.salesRevenue') }}</span>
@@ -69,7 +69,7 @@
           </div>
           <div class="rp-kpi">
             <span class="rk-label">{{ $t('staffDashboard.salesCovers') }}</span>
-            <strong>{{ dashboard.sales?.covers ?? 0 }}</strong>
+            <strong>{{ formatNumber(dashboard.sales?.covers ?? 0) }}</strong>
           </div>
           <div class="rp-kpi">
             <span class="rk-label">{{ $t('staffDashboard.salesAverage') }}</span>
@@ -88,7 +88,7 @@
           <tbody>
             <tr v-for="row in dashboard.sales.daily" :key="row.date">
               <td>{{ row.date }}</td>
-              <td>{{ row.orders }}</td>
+              <td>{{ formatNumber(row.orders) }}</td>
               <td class="num">{{ curCode() }} {{ money(row.revenue) }}</td>
             </tr>
           </tbody>
@@ -109,7 +109,7 @@
           <tbody>
             <tr v-for="row in dashboard.fast_moving" :key="row.item_name">
               <td>{{ row.item_name }}</td>
-              <td class="num">{{ row.qty }}</td>
+              <td class="num">{{ formatNumber(row.qty) }}</td>
               <td class="num">{{ curCode() }} {{ money(row.revenue) }}</td>
             </tr>
           </tbody>
@@ -126,7 +126,7 @@
           </div>
           <div class="rp-kpi">
             <span class="rk-label">{{ $t('staffDashboard.stockOnHand') }}</span>
-            <strong>{{ dashboard.stock?.on_hand ?? 0 }}</strong>
+            <strong>{{ formatNumber(dashboard.stock?.on_hand ?? 0) }}</strong>
           </div>
           <div class="rp-kpi">
             <span class="rk-label">{{ $t('staffDashboard.stockValue') }}</span>
@@ -134,7 +134,7 @@
           </div>
           <div class="rp-kpi" :class="{ 'kpi-alert': (dashboard.stock?.low_stock_count ?? 0) > 0 }">
             <span class="rk-label">{{ $t('staffDashboard.lowStockCount') }}</span>
-            <strong>{{ dashboard.stock?.low_stock_count ?? 0 }}</strong>
+            <strong>{{ formatNumber(dashboard.stock?.low_stock_count ?? 0) }}</strong>
           </div>
         </div>
 
@@ -153,8 +153,8 @@
             <tr v-for="row in dashboard.stock.rows" :key="row.item_name" :class="{ 'row-low': row.low }">
               <td>{{ row.item_name }} <span v-if="row.low" class="rp-badge">low</span></td>
               <td>{{ row.unit }}</td>
-              <td class="num">{{ row.quantity }}</td>
-              <td class="num">{{ row.reorder_level }}</td>
+              <td class="num">{{ formatNumber(row.quantity) }}</td>
+              <td class="num">{{ formatNumber(row.reorder_level) }}</td>
               <td class="num">{{ money(row.unit_cost) }}</td>
               <td class="num">{{ money(row.value) }}</td>
             </tr>
@@ -171,7 +171,7 @@
             <ul v-if="dashboard.requisitions?.pending?.list?.length" class="rp-req-list">
               <li v-for="row in dashboard.requisitions.pending.list" :key="row.indent_id">
                 <strong>{{ row.indent_number }}</strong>
-                <span>{{ row.items }} items · {{ row.requested_by }}</span>
+                <span>{{ formatNumber(row.items) }} items · {{ row.requested_by }}</span>
                 <small>{{ row.created_at }}</small>
               </li>
             </ul>
@@ -182,7 +182,7 @@
             <ul v-if="dashboard.requisitions?.accepted?.list?.length" class="rp-req-list">
               <li v-for="row in dashboard.requisitions.accepted.list" :key="row.indent_id">
                 <strong>{{ row.indent_number }}</strong>
-                <span>{{ row.items }} items · {{ row.requested_by }}</span>
+                <span>{{ formatNumber(row.items) }} items · {{ row.requested_by }}</span>
                 <small>{{ row.created_at }}</small>
               </li>
             </ul>
@@ -204,6 +204,7 @@ import { reportApi } from '@/api'
 import CalendarInput from '@/components/CalendarInput.vue'
 
 import { useTenantCurrency } from '@/utils/currency'
+import { formatNumber } from '@/utils/numbers'
 
 const { curCode } = useTenantCurrency()
 
