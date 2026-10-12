@@ -172,22 +172,26 @@ describe('waiter pad: the table cards close the categories column', () => {
   })
 })
 
-describe('waiter pad: the Send action sits beside the order table', () => {
-  it('wraps the lines table and the Send button in one row', () => {
+describe('waiter pad: the order table fills the width with Send only above the total', () => {
+  it('keeps the lines table full width and has no Send button beside it', () => {
     const bodyAt = pad.indexOf('class="order-body"')
     const linesAt = pad.indexOf('class="lines-wrap"')
-    const sendAt = pad.indexOf('class="order-send"')
     expect(bodyAt, 'order body not found').toBeGreaterThan(-1)
     expect(linesAt, 'lines wrap not found').toBeGreaterThan(bodyAt)
-    expect(sendAt, 'order send not found').toBeGreaterThan(linesAt)
-    // The button lives in the send column that shares the row with the table.
-    expect(pad.slice(sendAt)).toMatch(/class="send-btn"/)
+    // No Send column shares the row with the table any more.
+    expect(pad).not.toMatch(/class="order-send"/)
   })
 
-  it('lays the row out as a flex row and stacks it on phones', () => {
-    expect(rule(styles, '.order-body')).toMatch(/display:\s*flex/)
-    const narrow = styles.slice(styles.lastIndexOf('@media (max-width: 768px)'))
-    expect(narrow).toMatch(/\.order-body\s*\{[^}]*flex-direction:\s*column/)
+  it('lays the order body out as a full-width block', () => {
+    expect(rule(styles, '.order-body')).toMatch(/display:\s*block/)
+    expect(rule(styles, '.order-body')).toMatch(/width:\s*100%/)
+  })
+
+  it('sends the ticket from the single button above the total', () => {
+    const totalAt = pad.indexOf('class="pager-row"')
+    const sendRowAt = pad.indexOf('class="order-send-row"')
+    expect(sendRowAt, 'send row not found').toBeGreaterThan(-1)
+    expect(sendRowAt).toBeLessThan(totalAt)
   })
 })
 

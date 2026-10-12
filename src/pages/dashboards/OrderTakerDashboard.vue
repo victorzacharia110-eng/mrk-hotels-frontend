@@ -318,16 +318,6 @@
             </table>
             <input v-model.trim="form.notes" type="text" class="notes-line" :placeholder="$t('orderTaker.notesPlaceholder')" />
           </div>
-
-
-          <div class="order-send">
-            <p v-if="sendError" class="send-error">{{ sendError }}</p>
-            <button type="button" class="send-btn" :disabled="!orderLines.length || sending" @click="sendOrder">
-              <i v-if="sending" class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
-              <i v-else class="fas fa-paper-plane" aria-hidden="true"></i>
-              {{ sending ? $t('orderTaker.sending') : $t('orderTaker.send') }}
-            </button>
-          </div>
         </div>
 
         <div class="order-send-row">
@@ -3682,25 +3672,15 @@ function onKey(e) {
    side of the lines, so the ticket can be sent without scrolling past the
    items to a button below them. */
 .order-body {
-  display: flex;
-  align-items: stretch;
-  gap: 10px;
+  display: block;
   width: 100%;
 }
 .order-body .lines-wrap {
-  flex: 1 1 auto;
-  min-width: 0;
   width: 100%;
+  min-width: 0;
 }
 .order-send {
-  flex: 0 0 auto;
-  width: 140px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.order-send .send-btn {
-  flex: 1 1 auto;
+  display: none;
 }
 .order-send-row {
   margin-top: 8px;
