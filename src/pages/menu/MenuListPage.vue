@@ -238,7 +238,7 @@
             </div>
             <div class="form-group">
               <label>{{ $t('common.department') }} *</label>
-              <SearchableSelect v-model="form.department" :options="departmentOptions" required />
+              <SearchableSelect v-model="form.department" :options="departmentOptions" @change="onFormDepartmentChange" required />
             </div>
             <div class="form-group form-full">
               <label>{{ $t('menu.syncToStock') }}</label>
@@ -799,6 +799,14 @@ function resetForm() {
   form.print_on_receipt = true
   form.print_on_order = true
   form.printer_station = 'kitchen'
+}
+
+function onFormDepartmentChange() {
+  form.category = ''
+  form.sub_category = ''
+  form.sub_category_id = ''
+  loadCategories(form.department)
+  loadFormSubCategories()
 }
 
 /** Opens the create-item modal with a fresh form. */
