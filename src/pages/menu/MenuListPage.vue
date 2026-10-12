@@ -15,6 +15,9 @@
         <p class="muted">{{ $t('menu.subtitle') }}</p>
       </div>
       <div class="head-actions">
+        <router-link to="/app" class="btn btn-secondary">
+          <i class="fas fa-gauge-high"></i> {{ $t('nav.dashboard') }}
+        </router-link>
         <button class="btn btn-secondary" @click="load">
           <i class="fas fa-rotate"></i> {{ $t('menu.refresh') }}
         </button>
