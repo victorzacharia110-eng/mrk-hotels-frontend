@@ -319,8 +319,6 @@
             <input v-model.trim="form.notes" type="text" class="notes-line" :placeholder="$t('orderTaker.notesPlaceholder')" />
           </div>
 
-          <!-- The order action sits on the side of the order table so sending
-               the ticket is always one tap beside the lines, never below them. -->
           <div class="order-send">
             <p v-if="sendError" class="send-error">{{ sendError }}</p>
             <button type="button" class="send-btn" :disabled="!orderLines.length || sending" @click="sendOrder">
@@ -329,6 +327,19 @@
               {{ sending ? $t('orderTaker.sending') : $t('orderTaker.send') }}
             </button>
           </div>
+        </div>
+
+        <div class="order-send-row">
+          <button type="button" class="send-btn" :disabled="!orderLines.length || sending" @click="sendOrder">
+            <i v-if="sending" class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+            <i v-else class="fas fa-paper-plane" aria-hidden="true"></i>
+            {{ sending ? $t('orderTaker.sending') : $t('orderTaker.send') }}
+          </button>
+          <button type="button" class="send-btn" :disabled="!orderLines.length || sending" @click="sendOrder">
+            <i v-if="sending" class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+            <i v-else class="fas fa-paper-plane" aria-hidden="true"></i>
+            {{ sending ? $t('orderTaker.sending') : $t('orderTaker.send') }}
+          </button>
         </div>
 
         <!-- Page start / page end + total -->
@@ -3692,6 +3703,19 @@ function onKey(e) {
 }
 .order-send .send-btn {
   flex: 1 1 auto;
+}
+.order-send-row {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.order-send-row .send-btn {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .lines-table {
