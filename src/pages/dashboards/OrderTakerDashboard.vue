@@ -321,11 +321,6 @@
 
           <div class="order-send">
             <p v-if="sendError" class="send-error">{{ sendError }}</p>
-            <button type="button" class="send-btn" :disabled="!orderLines.length || sending" @click="sendOrder">
-              <i v-if="sending" class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
-              <i v-else class="fas fa-paper-plane" aria-hidden="true"></i>
-              {{ sending ? $t('orderTaker.sending') : $t('orderTaker.send') }}
-            </button>
           </div>
         </div>
 
