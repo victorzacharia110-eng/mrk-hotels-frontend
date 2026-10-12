@@ -3679,10 +3679,12 @@ function onKey(e) {
   display: flex;
   align-items: stretch;
   gap: 10px;
+  width: 100%;
 }
 .order-body .lines-wrap {
-  flex: 1 1 auto;
+  flex: 1 1 100%;
   min-width: 0;
+  width: 100%;
 }
 .order-send {
   flex: 0 0 auto;
