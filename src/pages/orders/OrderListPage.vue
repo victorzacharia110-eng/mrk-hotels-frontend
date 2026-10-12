@@ -20,6 +20,9 @@
         <button class="btn btn-secondary" @click="load">
           <i class="fas fa-rotate"></i> {{ $t('orders.refresh') }}
         </button>
+        <button v-if="selectedOrders.length" class="btn btn-danger" @click="openVoidSelected">
+          <i class="fas fa-xmark"></i> {{ $t('orders.voidSelected') }} ({{ selectedOrders.length }})
+        </button>
         <button v-if="canOperate" class="btn btn-primary" @click="openCreate">
           <i class="fas fa-plus"></i> {{ $t('orders.newOrder') }}
         </button>
@@ -106,6 +109,7 @@
       <table class="table">
         <thead>
           <tr>
+            <th scope="col" class="col-check"></th>
             <th scope="col">{{ $t('orders.tableOrder') }}</th>
             <th scope="col">{{ $t('orders.tableLocation') }}</th>
             <th scope="col">{{ $t('orders.tableGuestTable') }}</th>
@@ -120,6 +124,15 @@
         </thead>
         <tbody>
           <tr v-for="order in orders" :key="order.order_id">
+            <td class="col-check">
+              <input
+                type="checkbox"
+                :value="order.order_id"
+                v-model="selected"
+                :disabled="!isVoidable(order)"
+                :aria-label="$t('orders.voidSelected')"
+              />
+            </td>
             <td>
               <strong>{{ order.order_number }}</strong>
               <div class="muted">{{ order.order_id }}</div>
@@ -221,7 +234,7 @@
             </td>
           </tr>
           <tr v-if="!orders.length && !loading">
-            <td colspan="10" class="muted">{{ $t('orders.empty') }}</td>
+            <td colspan="11" class="muted">{{ $t('orders.empty') }}</td>
           </tr>
         </tbody>
       </table>
@@ -556,6 +569,53 @@
         </div>
       </div>
     </div>
+
+    <!-- Void the ticked running/unpaid orders in one confirmed action. -->
+    <div v-if="showVoidSelected" class="modal-overlay" @click.self="showVoidSelected = false">
+      <div class="modal modal-sm">
+        <div class="modal-head">
+          <h2><i class="fas fa-ban"></i> {{ $t('orders.voidSelectedTitle') }}</h2>
+          <button class="modal-close" @click="showVoidSelected = false"><i class="fas fa-xmark"></i></button>
+        </div>
+
+        <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
+
+        <p v-if="selectedOrders.length" class="void-selected-summary">
+          {{ $t('orders.voidSummary', {
+            count: selectedOrders.length,
+            currency: curCode(),
+            total: Number(selectedVoidTotal).toLocaleString(),
+          }) }}
+        </p>
+        <div v-if="selectedOrders.length" class="void-order-list">
+          <span v-for="order in selectedOrders" :key="order.order_id" class="void-order-chip">
+            {{ order.order_number }}
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label>{{ $t('orders.voidReason') }}</label>
+          <input
+            v-model.trim="voidReason"
+            type="text"
+            class="input"
+            maxlength="255"
+            :disabled="savingVoidSelected"
+            :placeholder="$t('orders.voidReasonPlaceholder')"
+          />
+        </div>
+
+        <div class="modal-foot">
+          <button type="button" class="btn btn-secondary" :disabled="savingVoidSelected" @click="showVoidSelected = false">
+            {{ $t('common.cancel') }}
+          </button>
+          <button type="button" class="btn btn-danger" :disabled="savingVoidSelected || !voidReason" @click="confirmVoidSelected">
+            <i class="fas fa-ban"></i>
+            {{ savingVoidSelected ? $t('orders.processing') : $t('orders.voidConfirm', { count: selectedOrders.length }) }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -572,6 +632,7 @@ import { isGrillMenuItem, canManageAccompaniments, lockedAccompanimentDepartment
 import { useAccompaniments } from '@/composables/useAccompaniments'
 import { selectedOutlet } from '@/composables/useOutletContext'
 import { collectAllRows } from '@/utils/export'
+import { toast } from '@/utils/toast'
 
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -616,6 +677,12 @@ const payOrder = ref(null)
 const payMethod = ref('cash')
 const showDetail = ref(false)
 const detail = ref(null)
+
+// Multi-select bulk void: tick the running/unpaid orders to clear together.
+const selected = ref([])
+const showVoidSelected = ref(false)
+const voidReason = ref('')
+const savingVoidSelected = ref(false)
 const inHouseGuests = ref([])
 const waiters = ref([])
 // Physical restaurant/bar tables for the searchable table picker.
@@ -907,6 +974,10 @@ async function load() {
       items_count: order.items_count ?? (Array.isArray(order.items) ? order.items.length : 0),
     }))
     meta.value = res.data
+    // Drop ticked ids that are no longer on this page / no longer voidable.
+    selected.value = selected.value.filter((id) =>
+      orders.value.some((o) => o.order_id === id && isVoidable(o)),
+    )
   } catch (err) {
     error.value = err.response?.data?.message || t('orders.loadError')
   } finally {
@@ -1101,6 +1172,67 @@ async function setStatus(order, status) {
   }
 }
 
+/**
+ * A ticket may be bulk-voided when it is still running and unpaid: not
+ * cancelled / completed / merged, and nothing has been collected yet.
+ */
+function isVoidable(order) {
+  return (
+    !!order &&
+    !['cancelled', 'merged', 'completed'].includes(order.status) &&
+    String(order.payment_status || 'unpaid') === 'unpaid'
+  )
+}
+
+/** The ticked orders on the current list that the void endpoint will accept. */
+const selectedOrders = computed(() =>
+  orders.value.filter((order) => selected.value.includes(order.order_id) && isVoidable(order)),
+)
+const selectedVoidTotal = computed(() =>
+  selectedOrders.value.reduce((sum, order) => sum + Number(order.total_amount || 0), 0),
+)
+
+/** Arms the bulk-void confirm modal for the ticked orders. */
+function openVoidSelected() {
+  if (!selectedOrders.value.length) return
+  modalError.value = ''
+  voidReason.value = ''
+  showVoidSelected.value = true
+}
+
+/** Voids each ticked ticket with the entered reason; reports partial failures. */
+async function confirmVoidSelected() {
+  if (savingVoidSelected.value) return
+  if (!voidReason.value.trim()) {
+    modalError.value = t('orders.voidReasonRequired')
+    return
+  }
+  const targets = selectedOrders.value
+  if (!targets.length) {
+    showVoidSelected.value = false
+    return
+  }
+  savingVoidSelected.value = true
+  modalError.value = ''
+  const reason = voidReason.value.trim()
+  let done = 0
+  let failed = 0
+  for (const order of targets) {
+    try {
+      await orderApi.voidOrder(order.order_id, { reason })
+      done += 1
+    } catch {
+      failed += 1
+    }
+  }
+  savingVoidSelected.value = false
+  showVoidSelected.value = false
+  selected.value = []
+  await load()
+  if (failed) toast(t('orders.voidPartial', { done, total: targets.length, failed }), 'error')
+  else toast(t('orders.voidDone', { count: done }), 'success')
+}
+
 /** Opens the collect-payment modal for the given order. */
 function openPay(order) {
   modalError.value = ''
@@ -1228,6 +1360,41 @@ onMounted(() => {
   border: none;
   padding: 0;
   font-size: 13px;
+}
+
+/* Multi-select void: row tick boxes + the confirm modal's order list. */
+.col-check {
+  width: 36px;
+  text-align: center;
+}
+.col-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: #c0392b;
+  cursor: pointer;
+}
+.col-check input:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+.void-selected-summary {
+  margin: 8px 0 4px;
+  font-weight: 600;
+  color: #424242;
+}
+.void-order-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.void-order-chip {
+  font-size: 12px;
+  font-weight: 700;
+  color: #991b1b;
+  background: #fee2e2;
+  border-radius: 999px;
+  padding: 2px 10px;
 }
 
 .pagination {

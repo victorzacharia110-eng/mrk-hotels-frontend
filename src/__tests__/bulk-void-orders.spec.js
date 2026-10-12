@@ -16,6 +16,7 @@ import { resolve } from 'node:path'
 const read = (rel) => readFileSync(resolve(process.cwd(), rel), 'utf8')
 const pad = read('src/pages/dashboards/OrderTakerDashboard.vue')
 const cashier = read('src/pages/cashier/CashierOrderSummaryPage.vue')
+const ordersList = read('src/pages/orders/OrderListPage.vue')
 const en = JSON.parse(read('src/locales/en.json'))
 const sw = JSON.parse(read('src/locales/sw.json'))
 
@@ -96,9 +97,56 @@ describe('cashier summary: void-all button', () => {
   })
 })
 
+describe('cashier summary: void selected (multi-select)', () => {
+  it('adds a row checkbox gated to running tickets', () => {
+    expect(cashier).toMatch(/v-model="selected"/)
+    expect(cashier).toMatch(/:disabled="!isRunning\(order\)"/)
+  })
+
+  it('offers a void-selected button only when something is ticked', () => {
+    expect(cashier).toMatch(/v-if="selectedOrders\.length"/)
+    expect(cashier).toMatch(/@click="openSelectedVoid"/)
+    expect(cashier).toMatch(/cashier\.summary\.voidSelected/)
+  })
+
+  it('shows the ticked numbers and voids each through voidOrder', () => {
+    expect(cashier).toMatch(/void-order-chip/)
+    const at = cashier.indexOf('async function confirmSelectedVoid')
+    expect(at, 'confirmSelectedVoid not found').toBeGreaterThan(-1)
+    const body = cashier.slice(at, cashier.indexOf('\n}\n', at))
+    expect(body).toMatch(/for \(const order of targets\)/)
+    expect(body).toMatch(/orderApi\.voidOrder\(order\.order_id/)
+    expect(body).toMatch(/cashier\.summary\.voidAllPartial/)
+  })
+})
+
+describe('orders list: void selected (multi-select)', () => {
+  it('adds a row checkbox gated to running/unpaid tickets', () => {
+    expect(ordersList).toMatch(/v-model="selected"/)
+    expect(ordersList).toMatch(/:disabled="!isVoidable\(order\)"/)
+    expect(ordersList).toMatch(/function isVoidable/)
+    expect(ordersList).toMatch(/payment_status \|\| 'unpaid'\) === 'unpaid'/)
+  })
+
+  it('offers a void-selected button only when something is ticked', () => {
+    expect(ordersList).toMatch(/v-if="selectedOrders\.length"/)
+    expect(ordersList).toMatch(/@click="openVoidSelected"/)
+    expect(ordersList).toMatch(/orders\.voidSelected/)
+  })
+
+  it('voids each ticked order and reports partial failures', () => {
+    expect(ordersList).toMatch(/void-order-chip/)
+    const at = ordersList.indexOf('async function confirmVoidSelected')
+    expect(at, 'confirmVoidSelected not found').toBeGreaterThan(-1)
+    const body = ordersList.slice(at, ordersList.indexOf('\n}\n', at))
+    expect(body).toMatch(/orderApi\.voidOrder\(order\.order_id/)
+    expect(body).toMatch(/orders\.voidPartial/)
+    expect(body).toMatch(/orders\.voidDone/)
+  })
+})
+
 describe('void-all translations', () => {
   const padKeys = [
-    'voidAll',
     'voidAllTitle',
     'voidAllHint',
     'voidAllSummary',
@@ -136,5 +184,28 @@ describe('void-all translations', () => {
     expect(en.cashier.summary.voidAllConfirm).toContain('{count}')
     expect(en.cashier.summary.voidAllSummary).toContain('{count}')
     expect(sw.cashier.summary.voidAllConfirm).toContain('{count}')
+  })
+
+  it('defines the void-selected keys on both pages, in both locales', () => {
+    const cashierSelected = ['voidSelected', 'voidSelectedTitle']
+    const ordersKeys = [
+      'voidSelected',
+      'voidSelectedTitle',
+      'voidReason',
+      'voidReasonPlaceholder',
+      'voidReasonRequired',
+      'voidSummary',
+      'voidConfirm',
+      'voidDone',
+      'voidPartial',
+    ]
+    for (const key of cashierSelected) {
+      expect(en.cashier.summary[key], `en.cashier.summary.${key}`).toBeTruthy()
+      expect(sw.cashier.summary[key], `sw.cashier.summary.${key}`).toBeTruthy()
+    }
+    for (const key of ordersKeys) {
+      expect(en.orders[key], `en.orders.${key}`).toBeTruthy()
+      expect(sw.orders[key], `sw.orders.${key}`).toBeTruthy()
+    }
   })
 })

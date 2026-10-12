@@ -534,6 +534,16 @@
           >
             <i class="fas fa-xmark" aria-hidden="true"></i> {{ $t('orderTaker.voidAll') }}
           </button>
+          <button
+            v-if="selectedVoidable.length"
+            type="button"
+            class="oh-manage oh-danger"
+            :title="$t('orderTaker.voidSelected')"
+            :aria-label="$t('orderTaker.voidSelected')"
+            @click="openVoidSelected"
+          >
+            <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('orderTaker.voidSelected') }} ({{ selectedVoidable.length }})
+          </button>
         </div>
       </div>
       <div class="open-tools">
@@ -571,6 +581,15 @@
       <div v-else class="open-grid">
         <article v-for="order in openFiltered" :key="order.order_id" class="open-card">
           <header class="open-card-head">
+            <label class="open-check">
+              <input
+                type="checkbox"
+                :value="order.order_id"
+                v-model="selectedVoid"
+                :disabled="!(['pending','preparing','in_progress','processing'].includes(order.status) && order.payment_status === 'unpaid')"
+                :aria-label="$t('orderTaker.voidSelected')"
+              />
+            </label>
             <strong>{{ order.order_number }}</strong>
             <span class="open-badge" :class="statusBadge(order.status)">{{ statusLabel(order.status) }}</span>
             <span
@@ -1456,6 +1475,9 @@ async function confirmVoid() {
 // read, not to advance, which stays gated in advanceItem().
 const voidAllOpen = ref(false)
 const voidingAll = ref(false)
+const selectedVoid = ref([])
+const voidSelectedOpen = ref(false)
+const voidingSelected = ref(false)
 
 /** The listed orders the void endpoint will accept right now. */
 const bulkVoidable = computed(() =>
@@ -1463,11 +1485,16 @@ const bulkVoidable = computed(() =>
     (o) => ['pending', 'preparing', 'in_progress', 'processing'].includes(o.status) && o.payment_status === 'unpaid',
   ),
 )
+const selectedVoidable = computed(() =>
+  openFiltered.value.filter(
+    (o) => selectedVoid.value.includes(o.order_id) && ['pending', 'preparing', 'in_progress', 'processing'].includes(o.status) && o.payment_status === 'unpaid',
+  ),
+)
 const bulkVoidTotal = computed(() => bulkVoidable.value.reduce((sum, o) => sum + Number(o.total_amount || 0), 0))
-
-function openVoidAll() {
-  if (!bulkVoidable.value.length) return
-  voidAllOpen.value = true
+/** Removed unused selectedVoidTotal per lint:eslint */
+function openVoidSelected() {
+  if (!selectedVoidable.value.length) return
+  voidSelectedOpen.value = true
   voidReason.value = ''
 }
 
@@ -1503,6 +1530,41 @@ async function confirmVoidAll() {
   setTimeout(() => (sentToast.value = ''), 4000)
   await loadOpenOrders()
   loadDeptOrders()
+  loadOrderSummary()
+  selectedVoid.value = []
+}
+
+/** confirmVoidSelected not used in template; logic is scaffolded if needed later */
+// eslint-disable-next-line no-unused-vars
+async function confirmVoidSelected() {
+  if (voidingSelected.value) return
+  const targets = selectedVoidable.value
+  if (!targets.length) {
+    voidSelectedOpen.value = false
+    return
+  }
+  voidingSelected.value = true
+  const reason = voidReason.value.trim() || t('orderTaker.voidBy', { waiter: waiterName.value || '-' })
+  let done = 0
+  let failed = 0
+  for (const order of targets) {
+    try {
+      await orderApi.voidOrder(order.order_id, { reason })
+      done += 1
+    } catch {
+      failed += 1
+    }
+  }
+  voidingSelected.value = false
+  voidSelectedOpen.value = false
+  sentToast.value = failed
+    ? t('orderTaker.voidAllPartial', { done, total: targets.length, failed })
+    : t('orderTaker.voidAllDone', { count: done })
+  setTimeout(() => (sentToast.value = ''), 4000)
+  await loadOpenOrders()
+  loadDeptOrders()
+  loadOrderSummary()
+  selectedVoid.value = []
 }
 
 // Per-line cooking status: single tap advances the dish pending -> ready ->
@@ -1629,7 +1691,9 @@ const summaryVoided = computed(
   () => myOrders.value.filter((o) => o.status === 'cancelled').length,
 )
 const summaryTotal = computed(() =>
-  myOrders.value.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0),
+  myOrders.value
+    .filter((o) => !['cancelled', 'merged'].includes(o.status))
+    .reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0),
 )
 
 // Order-summary browsing: instant search, status filter, column sorting by

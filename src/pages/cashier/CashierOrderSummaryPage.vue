@@ -32,6 +32,16 @@
       >
         <i class="fas fa-xmark" aria-hidden="true"></i> {{ $t('cashier.summary.voidAll') }}
       </button>
+      <button
+        v-if="selectedOrders.length"
+        type="button"
+        class="sm-btn sm danger-ghost"
+        :title="$t('cashier.summary.voidSelected')"
+        :aria-label="$t('cashier.summary.voidSelected')"
+        @click="openSelectedVoid"
+      >
+        <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.summary.voidSelected') }} ({{ selectedOrders.length }})
+      </button>
     </div>
 
     <div v-if="error" class="alert alert-error">{{ error }}</div>
@@ -50,6 +60,7 @@
       <table class="sm-table" v-else>
         <thead>
           <tr>
+            <th class="col-check"></th>
             <th>{{ $t('cashier.summary.order') }}</th>
             <th>{{ $t('cashier.summary.waiter') }}</th>
             <th>{{ $t('cashier.summary.dateTime') }}</th>
@@ -63,6 +74,15 @@
         <tbody>
           <tr v-for="order in pagedOrders" :key="order.order_id"
             :class="{ 'row-frozen': order.is_frozen }">
+            <td class="col-check">
+              <input
+                type="checkbox"
+                :value="order.order_id"
+                v-model="selected"
+                :disabled="!isRunning(order)"
+                :aria-label="$t('cashier.summary.voidSelected')"
+              />
+            </td>
             <td>
               <button type="button" class="order-link" @click="openDrawer(order)"
                 :title="$t('cashier.summary.viewOrder')">
@@ -114,7 +134,7 @@
             </td>
           </tr>
           <tr v-if="!filteredOrders.length">
-            <td colspan="8" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.summary.none') }}</td>
+            <td colspan="9" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.summary.none') }}</td>
           </tr>
         </tbody>
       </table>
@@ -388,6 +408,48 @@
       </div>
     </div>
 
+    <!-- Void only the tickets ticked with the row checkboxes. -->
+    <div v-if="selectedVoidOpen" class="pay-modal-overlay" @click.self="closeSelectedVoid">
+      <div class="pay-modal" role="dialog" aria-modal="true" :aria-label="$t('cashier.summary.voidSelectedTitle')">
+        <div class="pay-modal-head">
+          <h2><i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.summary.voidSelectedTitle') }}</h2>
+          <button type="button" class="pay-modal-close" aria-label="Close" @click="closeSelectedVoid">
+            <i class="fas fa-xmark"></i>
+          </button>
+        </div>
+
+        <p v-if="selectedVoidError" class="alert alert-error">{{ selectedVoidError }}</p>
+        <p class="pay-order-line">
+          {{ $t('cashier.summary.voidAllSummary', { count: selectedOrders.length, total: money(selectedVoidTotal) }) }}
+        </p>
+        <p class="void-order-list" v-if="selectedOrders.length">
+          <span v-for="order in selectedOrders" :key="order.order_id" class="void-order-chip">{{ order.order_number }}</span>
+        </p>
+
+        <div class="pay-ref">
+          <label :for="selectedVoidReasonId">{{ $t('storeManager.common.reason') }}</label>
+          <input
+            :id="selectedVoidReasonId"
+            v-model.trim="selectedVoidReason"
+            type="text"
+            maxlength="255"
+            :disabled="savingSelectedVoid"
+            :placeholder="$t('storeManager.common.reasonTitle')"
+          />
+        </div>
+
+        <div class="pay-modal-foot">
+          <button type="button" class="btn btn-secondary" :disabled="savingSelectedVoid" @click="closeSelectedVoid">
+            {{ $t('common.cancel') }}
+          </button>
+          <button type="button" class="btn btn-primary" :disabled="savingSelectedVoid || !selectedVoidReason" @click="confirmSelectedVoid">
+            <i class="fas fa-ban" aria-hidden="true"></i>
+            {{ savingSelectedVoid ? $t('common.saving') : $t('cashier.summary.voidAllConfirm', { count: selectedOrders.length }) }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Silent till printing; no browser print dialog. -->
     <div ref="printArea" class="receipt-print"></div>
   </div>
@@ -587,7 +649,10 @@ const pagedOrders = computed(() => {
   const p = Math.min(page.value, lastPage.value)
   return filteredOrders.value.slice((p - 1) * PAGE_SIZE, p * PAGE_SIZE)
 })
-watch([search, activeTab], () => { page.value = 1 })
+watch([search, activeTab], () => {
+  page.value = 1
+  selected.value = []
+})
 
 const filterTabs = computed(() => [
   { key: 'running', label: t('cashier.summary.tabRunning'), count: orders.value.filter(isRunning).length },
@@ -639,6 +704,10 @@ async function load() {
     orders.value = params.date
       ? rows
       : rows.filter((o) => localDateOf(o.created_at || o.order_date) === date.value)
+    // Drop any ticked ids that are no longer on the board / no longer voidable.
+    selected.value = selected.value.filter((id) =>
+      orders.value.some((o) => o.order_id === id && isRunning(o)),
+    )
   } catch (err) {
     error.value = err.response?.data?.message || t('common.loadError')
   } finally {
@@ -842,6 +911,71 @@ async function confirmBulkVoid() {
   }
   savingBulkVoid.value = false
   bulkVoidOpen.value = false
+  await load()
+  if (failed) toast(t('cashier.summary.voidAllPartial', { done, total: targets.length, failed }), 'error')
+  else toast(t('cashier.summary.voidAllDone', { count: done }), 'success')
+}
+
+/**
+ * Multi-select void: tick the running/unpaid tickets this role may void on the
+ * list, then clear just those. Like void-all it honours the active tab + search
+ * (the ids are intersected with `filteredOrders`), but it lets the counter pick
+ * a subset instead of clearing the whole board.
+ */
+const selected = ref([])
+const selectedVoidOpen = ref(false)
+const selectedVoidReason = ref('')
+const selectedVoidReasonId = `selected-void-reason-${Date.now()}`
+const savingSelectedVoid = ref(false)
+const selectedVoidError = ref('')
+
+const selectedOrders = computed(() =>
+  filteredOrders.value.filter((order) => selected.value.includes(order.order_id) && isRunning(order)),
+)
+const selectedVoidTotal = computed(() =>
+  selectedOrders.value.reduce((sum, order) => sum + Number(order.total_amount || 0), 0),
+)
+
+function openSelectedVoid() {
+  if (!selectedOrders.value.length) return
+  selectedVoidOpen.value = true
+  selectedVoidReason.value = ''
+  selectedVoidError.value = ''
+}
+
+function closeSelectedVoid() {
+  if (savingSelectedVoid.value) return
+  selectedVoidOpen.value = false
+}
+
+async function confirmSelectedVoid() {
+  if (savingSelectedVoid.value) return
+  if (!selectedVoidReason.value.trim()) {
+    selectedVoidError.value = t('cashier.summary.voidReasonRequired')
+    return
+  }
+  const targets = selectedOrders.value
+  if (!targets.length) {
+    selectedVoidOpen.value = false
+    return
+  }
+  savingSelectedVoid.value = true
+  selectedVoidError.value = ''
+  const reason = selectedVoidReason.value.trim()
+  const override = canVoidSettled.value ? { override: true } : {}
+  let done = 0
+  let failed = 0
+  for (const order of targets) {
+    try {
+      await orderApi.voidOrder(order.order_id, { reason, ...override })
+      done += 1
+    } catch {
+      failed += 1
+    }
+  }
+  savingSelectedVoid.value = false
+  selectedVoidOpen.value = false
+  selected.value = []
   await load()
   if (failed) toast(t('cashier.summary.voidAllPartial', { done, total: targets.length, failed }), 'error')
   else toast(t('cashier.summary.voidAllDone', { count: done }), 'success')
@@ -1082,6 +1216,20 @@ onUnmounted(() => {
 .frozen-tag { margin-left: 8px; font-size: 11px; color: #00468c; background: #e8f1fa; border-radius: 999px; padding: 2px 8px; font-weight: 700; }
 .nc-tag { margin-left: 6px; font-size: 11px; color: #333333; background: #ececec; border-radius: 999px; padding: 2px 8px; font-weight: 700; }
 .sm-inline-label { font-size: 13px; color: #475569; font-weight: 600; }
+
+/* Multi-select void: row tick boxes + the confirm modal's order list. */
+.col-check { width: 36px; text-align: center; }
+.col-check input { width: 16px; height: 16px; accent-color: #b91c1c; cursor: pointer; }
+.col-check input:disabled { cursor: not-allowed; opacity: 0.4; }
+.void-order-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.void-order-chip {
+  font-size: 12px;
+  font-weight: 700;
+  color: #991b1b;
+  background: #fee2e2;
+  border-radius: 999px;
+  padding: 2px 10px;
+}
 
 .sm-toolbar input[type="date"] {
   width: auto;
