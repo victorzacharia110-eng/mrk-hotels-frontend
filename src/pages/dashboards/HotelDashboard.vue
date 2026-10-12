@@ -3107,6 +3107,7 @@ function openBarModal(bar) {
   viewingFolio.value = null
   stayTab.value = 'folio'
   moreOpen.value = false
+  invoiceMenuOpen.value = false
   roomTasks.value = []
   roomTasksLoaded.value = false
   if (bar?.id) loadFolio(bar.id)
@@ -3153,6 +3154,7 @@ function closeBarModal() {
   viewingFolio.value = null
   stayTab.value = 'folio'
   moreOpen.value = false
+  invoiceMenuOpen.value = false
   roomTasks.value = []
   roomTasksLoaded.value = false
 }

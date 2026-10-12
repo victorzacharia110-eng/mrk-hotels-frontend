@@ -33,16 +33,8 @@
         </p>
         <div class="form-group">
           <label>{{ $t('common.typeWordToConfirm', { word: word }) }}</label>
-          <input
-            v-model="typed"
-            type="text"
-            class="input del-confirm-input"
-            :placeholder="word"
-            autocomplete="off"
-            autocapitalize="characters"
-            spellcheck="false"
-            @keyup.enter="submit"
-          />
+          <input v-model="typed" type="text" class="input del-confirm-input" :placeholder="word" autocomplete="off"
+            autocapitalize="characters" spellcheck="false" @keyup.enter="submit" />
         </div>
       </div>
 
