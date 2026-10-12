@@ -775,8 +775,9 @@
                 <i class="fas fa-paper-plane" aria-hidden="true"></i>
                 {{ sendBusy ? $t('invoices.preparing') : $t('stayview.sendInvoice') }}
               </button>
+              <div class="sv-dropdown">
                 <button type="button" class="btn btn-secondary sv-modal-manage" :disabled="sendBusy"
-                  @click="invoiceMenuOpen = !invoiceMenuOpen">
+                  @click.stop="invoiceMenuOpen = !invoiceMenuOpen">
                   <i class="fas fa-chevron-down" aria-hidden="true"></i>
                 </button>
                 <Transition name="sv-pop">
@@ -784,94 +785,95 @@
                     <li>
                       <button type="button" :disabled="sendBusy"
                         :title="currentFolioTarget.phone ? currentFolioTarget.phone : $t('stayview.noGuestPhone')"
-                        @click="sendFolioInvoiceSms(currentFolioTarget)">
+                        @click.stop="sendFolioInvoiceSms(currentFolioTarget); invoiceMenuOpen = false">
                         <i class="fas fa-comment-sms" aria-hidden="true"></i> {{ $t('stayview.sendInvoiceSms') }}
                       </button>
                     </li>
                     <li>
                       <button type="button" :disabled="sendBusy"
                         :title="currentFolioTarget.email ? currentFolioTarget.email : $t('stayview.noGuestEmail')"
-                        @click="sendFolioInvoiceEmail(currentFolioTarget)">
+                        @click.stop="sendFolioInvoiceEmail(currentFolioTarget); invoiceMenuOpen = false">
                         <i class="fas fa-envelope" aria-hidden="true"></i> {{ $t('stayview.sendInvoiceEmail') }}
                       </button>
                     </li>
                     <li>
                       <button type="button" :disabled="sendBusy"
-                        @click="sendFolioInvoiceBoth(currentFolioTarget)">
+                        @click.stop="sendFolioInvoiceBoth(currentFolioTarget); invoiceMenuOpen = false">
                         <i class="fas fa-paper-plane" aria-hidden="true"></i> {{ $t('stayview.sendInvoiceBoth') }}
                       </button>
                     </li>
                   </ul>
                 </Transition>
+              </div>
               <div class="sv-dropdown">
                 <button type="button" class="btn btn-secondary sv-modal-manage" :disabled="actionBusy"
-                  @click="moreOpen = !moreOpen">
+                  @click.stop="moreOpen = !moreOpen">
                   <i class="fas fa-ellipsis" aria-hidden="true"></i> {{ $t('stayview.more') }}
                 </button>
                 <Transition name="sv-pop">
                   <ul v-if="moreOpen" class="sv-dropdown-menu">
                     <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
-                      <button type="button" @click="openPaymentModal">
+                      <button type="button" @click.stop="openPaymentModal(); moreOpen = false">
                         <i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('stayview.addPayment') }}
                       </button>
                     </li>
                     <li v-if="canPostRoomPostings">
-                      <button type="button" @click="openPaymentModal('company')">
+                      <button type="button" @click.stop="openPaymentModal('company'); moreOpen = false">
                         <i class="fas fa-building" aria-hidden="true"></i> {{ $t('stayview.postToCreditors') }}
                       </button>
                     </li>
                     <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
-                      <button type="button" @click="openAmendModal(false)">
+                      <button type="button" @click.stop="openAmendModal(false); moreOpen = false">
                         <i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('stayview.amendStay') }}
                       </button>
                     </li>
                     <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus) && !amendIsGroup">
-                      <button type="button" @click="openAmendModal(true)">
+                      <button type="button" @click.stop="openAmendModal(true); moreOpen = false">
                         <i class="fas fa-arrows-left-right" aria-hidden="true"></i> {{ $t('stayview.roomMove') }}
                       </button>
                     </li>
                     <li v-if="canPostRoomPostings">
-                      <button type="button" @click="openChargeModal">
+                      <button type="button" @click.stop="openChargeModal(); moreOpen = false">
                         <i class="fas fa-receipt" aria-hidden="true"></i> {{ $t('stayview.addCharges') }}
                       </button>
                     </li>
                     <li v-if="canPostRoomPostings">
-                      <button type="button" @click="openFolioOp('discount')">
+                      <button type="button" @click.stop="openFolioOp('discount'); moreOpen = false">
                         <i class="fas fa-percent" aria-hidden="true"></i> {{ $t('stayview.applyDiscount') }}
                       </button>
                     </li>
                     <li v-if="canPostRoomPostings">
-                      <button type="button" @click="openFolioOp('adjustment')">
+                      <button type="button" @click.stop="openFolioOp('adjustment'); moreOpen = false">
                         <i class="fas fa-scale-balanced" aria-hidden="true"></i> {{ $t('stayview.folioAdjustment') }}
                       </button>
                     </li>
                     <li v-if="canPostRoomPostings">
-                      <button type="button" @click="openFolioOp('inclusion')">
+                      <button type="button" @click.stop="openFolioOp('inclusion'); moreOpen = false">
                         <i class="fas fa-gift" aria-hidden="true"></i> {{ $t('stayview.folioInclusion') }}
                       </button>
                     </li>
                     <li v-if="canPostRoomPostings">
-                      <button type="button" @click="openFolioOp('move')">
+                      <button type="button" @click.stop="openFolioOp('move'); moreOpen = false">
                         <i class="fas fa-repeat" aria-hidden="true"></i> {{ $t('stayview.transferFolio') }}
                       </button>
                     </li>
                     <li v-if="canPostRoomPostings">
-                      <button type="button" @click="openFolioOp('move', 'split')">
-                        <i class="fas fa-code-branch" aria-hidden="true"></i> {{ $t('stayview.splitFolio') }}
+                      <button type="button" @click.stop="openFolioOp('deposit'); moreOpen = false">
+                        <i class="fas fa-coins" aria-hidden="true"></i> {{ $t('stayview.addDeposit') }}
                       </button>
                     </li>
                     <li v-if="canPostRoomPostings">
-                      <button type="button" @click="openFolioOp('move', 'cut')">
-                        <i class="fas fa-scissors" aria-hidden="true"></i> {{ $t('stayview.cutFolio') }}
+                      <button type="button" @click.stop="openFolioOp('refund'); moreOpen = false">
+                        <i class="fas fa-rotate-left" aria-hidden="true"></i> {{ $t('stayview.refund') }}
                       </button>
                     </li>
                     <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
-                      <button type="button" @click="openFolioOp('upload')">
+                      <button type="button" @click.stop="openFolioOp('upload'); moreOpen = false">
                         <i class="fas fa-paperclip" aria-hidden="true"></i> {{ $t('stayview.uploadFiles') }}
                       </button>
                     </li>
                     <li v-if="canVoidReservation">
-                      <button type="button" class="danger" @click="openVoid">
+                      <button type="button" class="danger" @click.stop="openVoid(); moreOpen = false">
                         <i class="fas fa-trash-can" aria-hidden="true"></i> {{ $t('stayview.voidReservation') }}
                       </button>
                     </li>
