@@ -102,7 +102,7 @@
             A rail keeps every category on one line, so switching department is
             a sideways swipe and the food list below never moves.
           -->
-          <div v-else-if="categories.length" class="cat-rail" role="tablist">
+          <div v-else-if="form.table_number && categories.length" class="cat-rail" role="tablist">
             <button
               v-for="cat in categories"
               :key="cat"
@@ -116,7 +116,8 @@
               {{ cat }}
             </button>
           </div>
-          <p v-else class="cat-empty">{{ $t('orderTaker.noCategories') }}</p>
+          <p v-else-if="form.table_number && !categories.length" class="cat-empty">{{ $t('orderTaker.noCategories') }}</p>
+          <p v-else class="cat-empty">{{ $t('orderTaker.selectTableFirst') || 'Select a table to see categories' }}</p>
 
           <!--
             The second level. The menu is two levels deep — Drinks is the service
