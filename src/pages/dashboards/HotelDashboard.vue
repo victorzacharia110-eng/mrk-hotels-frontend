@@ -7920,10 +7920,12 @@ onUnmounted(() => clearInterval(refreshTimer))
   grid-column: 2 / -1;
   display: grid;
   grid-template-columns: repeat(28, 1fr);
-  grid-template-rows: 1fr 1fr;
+  grid-template-rows: 1fr;
   border-bottom: 1px solid #f0f0f0;
-  min-height: 30px;
+  min-height: 36px;
+  height: 100%;
   position: relative;
+  align-items: stretch;
 }
 
 .sv-cell-bg {
@@ -7964,8 +7966,8 @@ onUnmounted(() => clearInterval(refreshTimer))
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 1px 2px;
-  padding: 1px 8px;
+  margin: 2px 2px;
+  padding: 2px 8px;
   border-radius: 6px;
   color: #fff;
   font-size: 11px;
@@ -7977,6 +7979,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   z-index: 1;
   animation: sv-bar-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  height: calc(100% - 4px);
 }
 
 .sv-bar:hover {

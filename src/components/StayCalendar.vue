@@ -609,10 +609,12 @@ function formatPrice(value) {
   grid-column: 2 / -1;
   display: grid;
   grid-template-columns: repeat(28, 1fr);
-  grid-template-rows: 1fr 1fr;
+  grid-template-rows: 1fr;
   border-bottom: 1px solid #f0f0f0;
-  min-height: 30px;
+  min-height: 36px;
+  height: 100%;
   position: relative;
+  align-items: stretch;
 }
 
 .sv-cell-bg {
@@ -632,14 +634,19 @@ function formatPrice(value) {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 1px 2px;
-  padding: 1px 8px;
+  margin: 2px 2px;
+  padding: 2px 8px;
   border-radius: 6px;
   color: #fff;
   font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
   overflow: hidden;
   white-space: nowrap;
+  z-index: 1;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  height: calc(100% - 4px);
 }
 
 .sv-bar i {
