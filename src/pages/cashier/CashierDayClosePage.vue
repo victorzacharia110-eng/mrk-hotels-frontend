@@ -68,6 +68,44 @@
       </div>
     </section>
 
+    <section v-if="blockingOrders.length" class="panel">
+      <div class="panel-head">
+        <h2><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> {{ $t('cashier.dayClose.blockingTitle') }}</h2>
+        <span class="hotel-name">{{ $t('cashier.dayClose.blockingCount', { n: blockingOrders.length }) }}</span>
+      </div>
+      <div class="table-scroll">
+        <table class="sm-table">
+          <thead>
+            <tr>
+              <th>{{ $t('cashier.dayClose.orderNo') }}</th>
+              <th>{{ $t('cashier.dayClose.table') }}</th>
+              <th>{{ $t('cashier.dayClose.waiter') }}</th>
+              <th class="num">{{ $t('cashier.dayClose.amount') }}</th>
+              <th>{{ $t('common.status') }}</th>
+              <th>{{ $t('cashier.dayClose.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="o in blockingOrders" :key="o.order_id">
+              <td>{{ o.order_number }}</td>
+              <td>{{ o.table_number || o.room_number || '—' }}</td>
+              <td>{{ o.waiter_name || '—' }}</td>
+              <td class="num">{{ money(o.total_amount) }}</td>
+              <td><span class="status-badge warn">{{ blockingLabel(o) }}</span></td>
+              <td class="dc-row-actions">
+                <button v-if="o.can_settle" class="sm-btn tiny" :disabled="busy" @click="openSettle(o)">
+                  <i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('cashier.dayClose.settle') }}
+                </button>
+                <button v-if="o.can_void" class="sm-btn tiny ghost" :disabled="busy" @click="openVoid(o)">
+                  <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.dayClose.voidOrder') }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="panel">
       <div class="panel-head">
         <h2><i class="fas fa-clock" aria-hidden="true"></i> {{ $t('cashier.dayClose.standardTime') }}</h2>
@@ -132,6 +170,59 @@
       </div>
     </section>
 
+    <div v-if="settleTarget" class="sm-modal-backdrop">
+      <div class="sm-modal" role="dialog" aria-modal="true">
+        <div class="sm-modal-head">
+          <h3><i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('cashier.dayClose.settleTitle') }}</h3>
+        </div>
+        <p class="dc-confirm-text">
+          {{ $t('cashier.dayClose.settleText', { order: settleTarget.order_number, amount: money(settleTarget.total_amount) }) }}
+        </p>
+        <label class="fld-label" for="dc-settle-method">{{ $t('cashier.dayClose.method') }}</label>
+        <select id="dc-settle-method" v-model="settleMethod" class="sm-input">
+          <option v-for="m in methodOptions" :key="m.value" :value="m.value">{{ m.label }}</option>
+        </select>
+        <template v-if="providerOptions.length">
+          <label class="fld-label" for="dc-settle-provider">{{ $t('cashier.dayClose.provider') }}</label>
+          <select id="dc-settle-provider" v-model="settleProvider" class="sm-input">
+            <option value="">—</option>
+            <option v-for="p in providerOptions" :key="p.value" :value="p.value">{{ p.label }}</option>
+          </select>
+        </template>
+        <p v-if="actionError" class="sm-error">{{ actionError }}</p>
+        <div class="sm-modal-foot">
+          <button class="sm-btn ghost" :disabled="busy" @click="settleTarget = null">
+            <i class="fas fa-xmark" aria-hidden="true"></i> {{ $t('common.cancel') }}
+          </button>
+          <button class="sm-btn" :disabled="busy" @click="doSettle">
+            <i class="fas fa-check" aria-hidden="true"></i> {{ busy ? $t('common.loading') : $t('cashier.dayClose.settle') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="voidTarget" class="sm-modal-backdrop">
+      <div class="sm-modal" role="dialog" aria-modal="true">
+        <div class="sm-modal-head">
+          <h3><i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.dayClose.voidTitle') }}</h3>
+        </div>
+        <p class="dc-confirm-text">
+          {{ $t('cashier.dayClose.voidText', { order: voidTarget.order_number }) }}
+        </p>
+        <label class="fld-label" for="dc-void-reason">{{ $t('cashier.dayClose.reason') }}</label>
+        <input id="dc-void-reason" v-model.trim="voidReason" type="text" class="sm-input" :placeholder="$t('cashier.dayClose.reasonPlaceholder')" />
+        <p v-if="actionError" class="sm-error">{{ actionError }}</p>
+        <div class="sm-modal-foot">
+          <button class="sm-btn ghost" :disabled="busy" @click="voidTarget = null">
+            <i class="fas fa-xmark" aria-hidden="true"></i> {{ $t('common.cancel') }}
+          </button>
+          <button class="sm-btn" :disabled="busy || !voidReason" @click="doVoid">
+            <i class="fas fa-ban" aria-hidden="true"></i> {{ busy ? $t('common.loading') : $t('cashier.dayClose.voidOrder') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div v-if="confirmOpen" class="sm-modal-backdrop">
       <div class="sm-modal" role="dialog" aria-modal="true">
         <div class="sm-modal-head">
@@ -157,7 +248,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { fbDayCloseApi } from '@/api'
+import { fbDayCloseApi, orderApi } from '@/api'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
@@ -173,6 +264,13 @@ const status = ref({ open_date: '', close_date: '', timezone: 'Africa/Dar_es_Sal
 const history = ref([])
 const confirmOpen = ref(false)
 
+const settleTarget = ref(null)
+const settleMethod = ref('cash')
+const settleProvider = ref('')
+const voidTarget = ref(null)
+const voidReason = ref('')
+const actionError = ref('')
+
 const savingTz = ref(false)
 const tzSelect = ref('Africa/Dar_es_Salaam')
 const tzError = ref('')
@@ -183,6 +281,43 @@ let clockTimer = null
 
 const dayEnded = computed(() => status.value.close_day_has_ended === true)
 const closable = computed(() => status.value.can_close === true)
+
+/** The tickets holding the close date open (running or unpaid). */
+const blockingOrders = computed(() => status.value.blocking_orders || [])
+
+/** Settlement methods offered for the quick settle action. */
+const METHOD_OPTIONS = [
+  { value: 'cash', label: 'Cash' },
+  { value: 'mobile_money', label: 'Mobile money' },
+  { value: 'card', label: 'Card' },
+  { value: 'bank', label: 'Bank' },
+]
+const METHOD_PROVIDERS = {
+  mobile_money: ['airtel_money', 'mixx_by_yas', 'halopesa', 'mpesa'],
+  bank: ['crdb', 'nmb', 'nbc', 'other'],
+}
+
+const methodOptions = computed(() => METHOD_OPTIONS)
+const providerOptions = computed(() =>
+  (METHOD_PROVIDERS[settleMethod.value] || []).map((value) => ({ value, label: prettyProvider(value) })),
+)
+
+function prettyProvider(value) {
+  return String(value || '').split('_').map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')
+}
+
+/** Masked amount for the blocking table and modals. */
+function money(value) {
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value ?? 0)
+}
+
+/** A human label combining the kitchen/flow status with the bill state. */
+function blockingLabel(order) {
+  if (order.payment_status === 'unpaid') {
+    return `${order.status} · ${t('cashier.dayClose.unpaid')}`
+  }
+  return order.status
+}
 
 /** The hotel's standard timezone identifier as stored (e.g. Africa/Dar_es_Salaam). */
 const timezoneRaw = computed(() => status.value.timezone || 'Africa/Dar_es_Salaam')
@@ -305,6 +440,56 @@ async function doClose() {
   } catch (err) {
     error.value = err.response?.data?.message || t('common.error')
     confirmOpen.value = false
+  } finally {
+    busy.value = false
+  }
+}
+
+/** Opens the quick-settle modal for a blocking ticket. */
+function openSettle(order) {
+  actionError.value = ''
+  settleMethod.value = 'cash'
+  settleProvider.value = ''
+  settleTarget.value = order
+}
+
+/** Collects the bill for a blocking ticket, then refreshes the close state. */
+async function doSettle() {
+  if (!settleTarget.value) return
+  busy.value = true
+  actionError.value = ''
+  try {
+    await orderApi.pay(settleTarget.value.order_id, {
+      method: settleMethod.value,
+      provider: settleProvider.value || undefined,
+    })
+    settleTarget.value = null
+    await refetch()
+  } catch (err) {
+    actionError.value = err.response?.data?.message || t('common.error')
+  } finally {
+    busy.value = false
+  }
+}
+
+/** Opens the void modal for a blocking ticket. */
+function openVoid(order) {
+  actionError.value = ''
+  voidReason.value = ''
+  voidTarget.value = order
+}
+
+/** Voids a blocking ticket (stock returned), then refreshes the close state. */
+async function doVoid() {
+  if (!voidTarget.value || !voidReason.value) return
+  busy.value = true
+  actionError.value = ''
+  try {
+    await orderApi.voidOrder(voidTarget.value.order_id, { reason: voidReason.value })
+    voidTarget.value = null
+    await refetch()
+  } catch (err) {
+    actionError.value = err.response?.data?.message || t('common.error')
   } finally {
     busy.value = false
   }
@@ -523,5 +708,21 @@ onUnmounted(() => {
 .dc-confirm-text {
   color: #475569;
   margin: 6px 0 16px;
+}
+
+.dc-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dc-row-actions .sm-btn.tiny {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.status-badge.warn {
+  background: #fef3c7;
+  color: #92400e;
 }
 </style>
