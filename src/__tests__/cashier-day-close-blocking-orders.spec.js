@@ -33,6 +33,7 @@ const blocking = [
   {
     order_id: 'o1',
     order_number: 'ORD-1',
+    business_date: '2026-10-11',
     table_number: 'T1',
     waiter_name: 'Amina',
     status: 'pending',
@@ -44,6 +45,7 @@ const blocking = [
   {
     order_id: 'o2',
     order_number: 'ORD-2',
+    business_date: '2026-10-12',
     room_number: '101',
     waiter_name: 'Juma',
     status: 'served',
@@ -104,6 +106,9 @@ describe('cashier day close — blocking orders', () => {
     expect(text).toContain('Juma')
     expect(text).toContain('101')
     expect(text).toContain('20,000')
+    // The business date column shows which previous day each orphan belongs to.
+    expect(text).toContain('Oct 11, 2026')
+    expect(text).toContain('Oct 12, 2026')
 
     wrapper.unmount()
   })

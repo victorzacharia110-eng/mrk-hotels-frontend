@@ -73,10 +73,12 @@
         <h2><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> {{ $t('cashier.dayClose.blockingTitle') }}</h2>
         <span class="hotel-name">{{ $t('cashier.dayClose.blockingCount', { n: blockingOrders.length }) }}</span>
       </div>
+      <p class="dc-blocking-hint"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.dayClose.blockingHint') }}</p>
       <div class="table-scroll">
         <table class="sm-table">
           <thead>
             <tr>
+              <th>{{ $t('cashier.dayClose.businessDate') }}</th>
               <th>{{ $t('cashier.dayClose.orderNo') }}</th>
               <th>{{ $t('cashier.dayClose.table') }}</th>
               <th>{{ $t('cashier.dayClose.waiter') }}</th>
@@ -87,6 +89,7 @@
           </thead>
           <tbody>
             <tr v-for="o in blockingOrders" :key="o.order_id">
+              <td>{{ o.business_date ? formatDate(o.business_date) : '—' }}</td>
               <td>{{ o.order_number }}</td>
               <td>{{ o.table_number || o.room_number || '—' }}</td>
               <td>{{ o.waiter_name || '—' }}</td>
