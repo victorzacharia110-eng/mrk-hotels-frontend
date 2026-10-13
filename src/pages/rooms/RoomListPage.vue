@@ -68,59 +68,50 @@
     <div v-if="activeTab === 'inventory'">
       <div v-if="invLoading" class="alert alert-info">{{ $t('rooms.loading') }}</div>
       <template v-else>
-        <!-- Summarised by room type, exactly as the reception review asks. -->
-        <div v-if="invSummary.length" class="summary-grid">
-          <div v-for="s in invSummary" :key="s.room_type" class="card summary-card">
-            <div class="summary-head">
-              <strong>{{ s.room_type }}</strong>
-              <span class="badge" :class="s.available_count > 0 ? 'badge-green' : 'badge-red'">
-                {{ s.available_count }}/{{ s.room_count }} {{ $t('rooms.tabAvailable') }}
-              </span>
-            </div>
-            <p class="muted">
-              {{ $t('rooms.tabMin') }} {{
-                s.min_rate != null ? formatRate(s.min_rate) : '—'
-              }} ·
-              {{ $t('rooms.tabAvg') }} {{
-                s.avg_rate != null ? formatRate(s.avg_rate) : '—'
-              }}
-            </p>
-            <p v-if="s.stop_sold_count > 0" class="warning-inline">
-              <i class="fas fa-ban"></i>
-              {{ $t('rooms.tabStopSoldDays', { count: s.stop_sold_count }) }}
-            </p>
+        <!-- One row per room type: the actual available and occupied room
+             numbers first, then the availability badge and the rates. -->
+        <div v-if="invRows.length" class="card">
+          <div class="table-scroll">
+            <table class="table inventory-table">
+              <thead>
+                <tr>
+                  <th scope="col">{{ $t('rooms.roomType') }}</th>
+                  <th scope="col">{{ $t('rooms.inventoryRoomsFree') }}</th>
+                  <th scope="col">{{ $t('rooms.inventoryRoomsBusy') }}</th>
+                  <th scope="col">{{ $t('rooms.tabAvailable') }}</th>
+                  <th scope="col">{{ $t('rooms.tableRate') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in invRows" :key="row.room_type">
+                  <td class="inv-type">{{ row.room_type }}</td>
+                  <td class="inv-rooms">
+                    <span v-for="n in row.availableRooms" :key="n" class="room-pill room-pill--free">{{ n }}</span>
+                    <span v-if="!row.availableRooms.length" class="muted">—</span>
+                  </td>
+                  <td class="inv-rooms">
+                    <span v-for="n in row.occupiedRooms" :key="n" class="room-pill room-pill--busy">{{ n }}</span>
+                    <span v-if="!row.occupiedRooms.length" class="muted">—</span>
+                  </td>
+                  <td>
+                    <span class="badge" :class="row.available_count > 0 ? 'badge-green' : 'badge-red'">
+                      {{ row.available_count }}/{{ row.room_count }} {{ $t('rooms.tabAvailable') }}
+                    </span>
+                    <p v-if="row.stop_sold_count > 0" class="warning-inline">
+                      <i class="fas fa-ban"></i>
+                      {{ $t('rooms.tabStopSoldDays', { count: row.stop_sold_count }) }}
+                    </p>
+                  </td>
+                  <td class="inv-rates">
+                    {{ $t('rooms.tabMin') }}
+                    {{ row.min_rate != null ? formatRate(row.min_rate) : '—' }} ·
+                    {{ $t('rooms.tabAvg') }}
+                    {{ row.avg_rate != null ? formatRate(row.avg_rate) : '—' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-        </div>
-
-        <!-- Bottom totals: SOLD / AVAILABLE / TOTAL across every room type. -->
-        <div class="inventory-totals">
-          <div class="inventory-total inventory-total--sold">
-            <span class="inventory-total-figure">{{ invTotals.sold }}</span>
-            <span class="inventory-total-label">{{ $t('rooms.inventorySold') }}</span>
-          </div>
-          <div class="inventory-total inventory-total--free">
-            <span class="inventory-total-figure">{{ invTotals.available }}</span>
-            <span class="inventory-total-label">{{ $t('rooms.inventoryAvailable') }}</span>
-          </div>
-          <div class="inventory-total inventory-total--total">
-            <span class="inventory-total-figure">{{ invTotals.total }}</span>
-            <span class="inventory-total-label">{{ $t('rooms.inventoryTotal') }}</span>
-          </div>
-        </div>
-
-        <!-- Stay/tape calendar, the same chart the dashboard uses: rooms in
-             rows grouped by type, booking bars across the nights, and the
-             business date as the first day column (per the reception review). -->
-        <div v-if="invCalRooms.length" class="card">
-          <div class="inventory-cal-head">
-            <strong>{{ $t('rooms.inventoryCalendarTitle') }}</strong>
-            <span class="muted">{{ $t('rooms.inventoryCalendarHint') }}</span>
-          </div>
-          <StayCalendar
-            :rooms="invCalRooms"
-            :reservations="invReservations"
-            :business-date="invFrom"
-          />
         </div>
       </template>
     </div>
@@ -659,11 +650,10 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useBusinessDateStore } from '@/stores/businessDate'
-import { roomApi, reservationApi } from '@/api'
+import { roomApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
-import StayCalendar from '@/components/StayCalendar.vue'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 import { collectAllRows } from '@/utils/export'
 
@@ -1013,14 +1003,12 @@ const tabs = [
 ]
 const activeTab = ref('inventory')
 
-// Inventory summary (per room type): room_count / available / stop-sold days.
+// Inventory summary (per room type): room_count / available / stop-sold days,
+// plus the physical room rows used to name the available and occupied rooms.
 const invSummary = ref([])
 const invFrom = ref('')
 const invLoading = ref(false)
-// The tape calendar reads the same physical rooms and reservations the
-// dashboard stay view uses, so the chart matches the dashboard exactly.
 const invCalRooms = ref([])
-const invReservations = ref([])
 
 /** Fetches every page of a paginated list endpoint (tolerates plain arrays).
  *  `perPage` stays within the server's per-endpoint cap (rooms is max 50). */
@@ -1042,17 +1030,35 @@ async function fetchAll(apiFn, params = {}, perPage = 50) {
 }
 
 /**
- * Bottom figures the reception review asked for: SOLD (in-house) rooms summed
- * across every type, AVAILABLE (total minus sold) and TOTAL rooms.
+ * Per room type, the individual available and occupied room numbers for the
+ * current business date, merged with the type's availability and rates so the
+ * table shows the rooms next to the summary. A room is available when it is
+ * sellable that night (available status, no reservation, not stopped); every
+ * other room is shown as occupied.
  */
-const invTotals = computed(() => {
-  let total = 0
-  let sold = 0
-  for (const type of invSummary.value) {
-    total += Number(type.room_count || 0)
-    sold += Number(type.status_counts?.in_house || 0)
+const invRows = computed(() => {
+  const from = invFrom.value
+  const byType = new Map()
+  for (const room of invCalRooms.value) {
+    if (!byType.has(room.room_type)) byType.set(room.room_type, { free: [], busy: [] })
+    const bucket = byType.get(room.room_type)
+    if (room.sellable?.[from] === true) bucket.free.push(room.room_number)
+    else bucket.busy.push(room.room_number)
   }
-  return { total, sold, available: Math.max(0, total - sold) }
+  const byNumber = (a, b) => {
+    const na = parseInt(a, 10)
+    const nb = parseInt(b, 10)
+    if (!Number.isNaN(na) && !Number.isNaN(nb) && na !== nb) return na - nb
+    return String(a).localeCompare(String(b))
+  }
+  return invSummary.value.map((summary) => {
+    const bucket = byType.get(summary.room_type) || { free: [], busy: [] }
+    return {
+      ...summary,
+      availableRooms: [...bucket.free].sort(byNumber),
+      occupiedRooms: [...bucket.busy].sort(byNumber),
+    }
+  })
 })
 
 const loadInventory = async () => {
@@ -1061,27 +1067,17 @@ const loadInventory = async () => {
     await businessDateStore.ensureLoaded()
     const from = businessDateStore.current || todayIso()
     const to = addDaysIso(from, 13)
-    const [invRes, stayRows] = await Promise.all([
-      // The inventory endpoint already returns both the per-type summaries and
-      // the physical room rows, so the calendar reads them from here. Calling
-      // GET /rooms separately sent per_page=100, over that endpoint's max of 50,
-      // and the swallowed 422 left the calendar with no rooms to draw.
-      roomApi.inventory({ from_date: from, to_date: to }),
-      // Reservations (level 60) for the stay bars; empty rather than a 403
-      // flash for roles that cannot read them.
-      fetchAll(reservationApi.index, {
-        window_start: from,
-        window_end: addDaysIso(from, 14),
-        exclude_status: ['cancelled', 'no_show'],
-      }, 100).catch(() => []),
-    ])
+    // The inventory endpoint returns both the per-type summaries and the
+    // physical room rows, so the table names the available and occupied rooms
+    // without a second call. (GET /rooms sends per_page=100, over that
+    // endpoint's max of 50, and the swallowed 422 leaves the table empty.)
+    const invRes = await roomApi.inventory({ from_date: from, to_date: to })
     // The API seeds every known room type with a zero count, so keep only the
     // types this hotel actually registered (the review: "summarized based on
     // which type is registered").
     invSummary.value = (invRes.data?.types ?? []).filter((t) => Number(t.room_count || 0) > 0)
     invFrom.value = invRes.data?.from ?? from
     invCalRooms.value = invRes.data?.rooms ?? []
-    invReservations.value = stayRows
   } catch (err) {
     error.value = flattenError(err)
   } finally {
@@ -1917,125 +1913,47 @@ onMounted(() => {
   margin-top: 20px;
 }
 
-/* ─── Inventory summary totals + calendar (reception review) ─────────────── */
-.inventory-totals {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin: 16px 0 20px;
+/* ─── Inventory table: rooms beside their type summary (reception review) ── */
+.inventory-table {
+  table-layout: auto;
 }
 
-.inventory-total {
-  border-radius: 10px;
-  padding: 14px 16px;
-  text-align: center;
-  border: 1px solid #e2e8f0;
-  background: #fff;
+.inventory-table .inv-type {
+  text-transform: capitalize;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-.inventory-total-figure {
-  display: block;
-  font-size: 26px;
-  font-weight: 800;
-  line-height: 1.1;
+.inventory-table .inv-rooms {
+  max-width: 280px;
 }
 
-.inventory-total-label {
-  display: block;
+.inventory-table .inv-rates {
+  white-space: nowrap;
+}
+
+.room-pill {
+  display: inline-block;
+  min-width: 26px;
+  margin: 2px 4px 2px 0;
+  padding: 2px 7px;
+  border-radius: 6px;
   font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: #64748b;
-  margin-top: 4px;
+  font-weight: 600;
+  text-align: center;
+  border: 1px solid transparent;
 }
 
-.inventory-total--sold {
-  border-color: #fecaca;
-  background: #fef2f2;
-}
-
-.inventory-total--sold .inventory-total-figure {
-  color: #b91c1c;
-}
-
-.inventory-total--free {
-  border-color: #bbf7d0;
+.room-pill--free {
   background: #f0fdf4;
-}
-
-.inventory-total--free .inventory-total-figure {
+  border-color: #bbf7d0;
   color: #15803d;
 }
 
-.inventory-total--total {
-  border-color: #bfdbfe;
-  background: #eff6ff;
-}
-
-.inventory-total--total .inventory-total-figure {
-  color: #1d4ed8;
-}
-
-.inventory-cal-head {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: 8px;
-}
-
-.inventory-cal-head .muted {
-  font-size: 12px;
-}
-
-.inventory-calendar {
-  table-layout: fixed;
-  overflow: visible;
-}
-
-.inventory-calendar thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #f9f9f9;
-}
-
-.inventory-calendar thead th.cal-room-col {
-  z-index: 3;
-  background: #f9f9f9;
-}
-
-.inventory-calendar .cal-room-col {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background: var(--card, #fff);
-  min-width: 110px;
-  text-align: left;
-}
-
-.inventory-calendar .cal-room-col .muted {
-  display: block;
-  font-size: 11px;
-}
-
-.inventory-calendar th.today {
-  background: var(--brand-light, #e0f2fe);
-  color: var(--brand, #005fb8);
-}
-
-.inventory-calendar td.today {
-  box-shadow: inset 1px 0 0 var(--brand, #005fb8), inset -1px 0 0 var(--brand, #005fb8);
-}
-
-.inventory-calendar .cal-cell {
-  cursor: default;
-  background: #f1f5f9;
-}
-
-.inventory-calendar .cal-cell.stopped {
-  background: #dc2626 !important;
-  color: #fff;
-  box-shadow: inset 0 0 0 1px #991b1b;
+.room-pill--busy {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
 }
 
 /* Tablets: 768px is the classic iPad portrait width, so the phone

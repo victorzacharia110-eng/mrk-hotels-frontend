@@ -95,11 +95,70 @@ describe('RoomListPage inventory', () => {
     const wrapper = build()
     await flushPromises()
 
-    // Inventory is a summary (cards + tape calendar), never the room listing.
+    // Inventory is a summary (table of room numbers), never the room listing.
     expect(wrapper.find('.table-scroll.is-pinned table.table-pinned').exists()).toBe(false)
 
     wrapper.vm.switchTab('all-rooms')
     await flushPromises()
     expect(wrapper.find('.table-scroll.is-pinned table.table-pinned').exists()).toBe(true)
+  })
+
+  it('lists the actual available and occupied room numbers per type, in order', async () => {
+    inventory.mockResolvedValue({
+      data: {
+        from: '2026-10-11',
+        types: [
+          {
+            room_type: 'deluxe',
+            room_count: 3,
+            available_count: 1,
+            min_rate: 180000,
+            avg_rate: 180000,
+            status_counts: { in_house: 2 },
+          },
+        ],
+        rooms: [
+          // Deliberately unordered to prove the room numbers are sorted.
+          { room_id: 'r2', room_number: '102', room_type: 'deluxe', status: 'occupied', sellable: { '2026-10-11': false } },
+          { room_id: 'r1', room_number: '101', room_type: 'deluxe', status: 'available', sellable: { '2026-10-11': true } },
+          { room_id: 'r3', room_number: '103', room_type: 'deluxe', status: 'occupied', sellable: { '2026-10-11': false } },
+        ],
+      },
+    })
+
+    const wrapper = build()
+    await flushPromises()
+    await wrapper.vm.loadInventory()
+    await flushPromises()
+
+    const rows = wrapper.vm.invRows
+    expect(rows).toHaveLength(1)
+    expect(rows[0].availableRooms).toEqual(['101'])
+    expect(rows[0].occupiedRooms).toEqual(['102', '103'])
+
+    // The row shows the room numbers beside the availability and rates.
+    expect(wrapper.find('.inventory-table').exists()).toBe(true)
+    expect(wrapper.findAll('.room-pill--free').map((n) => n.text())).toEqual(['101'])
+    expect(wrapper.findAll('.room-pill--busy').map((n) => n.text())).toEqual(['102', '103'])
+  })
+
+  it('drops the old totals row and tape calendar from Inventory', async () => {
+    inventory.mockResolvedValue({
+      data: {
+        from: '2026-10-11',
+        types: [{ room_type: 'deluxe', room_count: 1, available_count: 1, status_counts: {} }],
+        rooms: [
+          { room_id: 'r1', room_number: '101', room_type: 'deluxe', status: 'available', sellable: { '2026-10-11': true } },
+        ],
+      },
+    })
+
+    const wrapper = build()
+    await flushPromises()
+    await wrapper.vm.loadInventory()
+    await flushPromises()
+
+    expect(wrapper.find('.inventory-totals').exists()).toBe(false)
+    expect(wrapper.find('.inventory-cal-head').exists()).toBe(false)
   })
 })
