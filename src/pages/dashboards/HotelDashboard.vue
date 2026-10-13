@@ -2628,9 +2628,12 @@ const days = computed(() => {
 /** Exclusive end date of the visible window. */
 const windowEnd = computed(() => addDays(windowStart.value, DAYS))
 
-/** Grid template: fixed room column plus one column per day. */
+/** Grid template: fixed room column plus one column per day. The first
+ *  column must be wide enough to hold the corner's business-date nav
+ *  (prev arrow + date pill + next arrow) so it never bleeds into the
+ *  first day column. */
 const gridStyle = computed(() => ({
-  gridTemplateColumns: `170px repeat(${DAYS}, minmax(96px, 1fr))`,
+  gridTemplateColumns: `210px repeat(${DAYS}, minmax(96px, 1fr))`,
 }))
 
 /** Normalized room id for a reservation (nested room object or flat field). */
@@ -7286,7 +7289,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   padding: 8px;
   border-bottom: 1px solid #e5e7eb;
   border-right: 1px solid #e5e7eb;
@@ -7295,6 +7298,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   top: 0;
   background: #fff;
   z-index: 4;
+  min-width: 0;
 }
 
 .sv-nav-btn,
@@ -7306,6 +7310,14 @@ onUnmounted(() => clearInterval(refreshTimer))
   font-size: 12px;
   cursor: pointer;
   color: #333;
+}
+
+/* Keep the day-stepping arrows at a fixed size so the date pill absorbs
+   any width pressure instead of the controls colliding with the day
+   columns beside them. */
+.sv-corner>.sv-nav-btn {
+  flex: none;
+  padding: 4px 8px;
 }
 
 .sv-nav-btn:hover,
@@ -7328,11 +7340,22 @@ onUnmounted(() => clearInterval(refreshTimer))
   font-weight: 600;
   line-height: 1;
   color: #1e293b;
+  min-width: 0;
+}
+
+/* The date figure truncates rather than pushing the nav arrows out of the
+   column (see the .sv-corner note above). */
+.sv-bizdate-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .sv-bizdate-btn i {
   font-size: 12px;
   color: #005eb8;
+  flex: none;
 }
 
 .sv-bizdate-btn.active {
