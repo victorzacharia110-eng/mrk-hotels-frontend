@@ -172,3 +172,44 @@ describe('front-desk board in the management sidebar', () => {
     expect(overview.roles).toEqual(MANAGEMENT_ROLES)
   })
 })
+
+/**
+ * The receptionist branch of visibleModules, as source text.
+ *
+ * The front desk needs a one-click way back to its landing board (/app) from
+ * any screen. The module is open to the role, so this test asserts the branch
+ * actually emits it as the first entry rather than trusting the access matrix.
+ */
+function receptionistBlock() {
+  const source = readFileSync(layoutPath, 'utf8')
+  const start = source.indexOf('if (isReceptionist.value) {')
+  const end = source.indexOf('if (isHousekeeping.value)', start)
+  expect(start, 'receptionist branch').toBeGreaterThan(-1)
+  expect(end, 'housekeeping branch').toBeGreaterThan(start)
+  return source.slice(start, end)
+}
+
+describe('dashboard in the receptionist sidebar', () => {
+  const block = receptionistBlock()
+  const board = moduleByKey('dashboard')
+
+  it('keeps the front-desk board open to the receptionist', () => {
+    expect(board.to).toBe('/app')
+    expect(board.roles).toContain('receptionist')
+  })
+
+  it('emits the dashboard as the first entry of the receptionist drawer', () => {
+    expect(block).toContain('out.push({ ...byKey.dashboard, exact: true })')
+    expect(block.indexOf('byKey.dashboard')).toBeLessThan(block.indexOf('byKey.rooms'))
+  })
+
+  it('marks the dashboard exact so it lights only on /app, not every /app/* page', () => {
+    // An inclusive-active /app link would highlight on rooms, reservations,
+    // payments and every other front-desk screen. The drawer styles the exact
+    // class separately for that reason.
+    expect(block).toContain('exact: true')
+    const source = readFileSync(layoutPath, 'utf8')
+    expect(source).toContain(".drawer-link.is-exact.router-link-exact-active")
+    expect(source).toContain("'is-exact': item.exact")
+  })
+})

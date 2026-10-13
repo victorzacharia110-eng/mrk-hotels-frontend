@@ -355,7 +355,8 @@
                 </div>
               </div>
             </template>
-            <router-link v-else :key="item.to" :to="item.to" class="drawer-link" @click="sideOpen = false">
+            <router-link v-else :key="item.to" :to="item.to" class="drawer-link"
+              :class="{ 'is-exact': item.exact }" @click="sideOpen = false">
               <i :class="item.icon" aria-hidden="true"></i> {{ item.label }}
             </router-link>
           </template>
@@ -792,9 +793,12 @@ const visibleModules = computed(() => {
     const child = (item, label) => item && { to: item.to, label, icon: item.icon }
     const out = []
 
-    // The panel review removes the Dashboard and My Profile entries entirely:
-    // the circle in the top-right corner owns account actions, and the logo
-    // already routes home.
+    // Dashboard: the front-desk home board (arrivals, departures, occupancy),
+    // so the receptionist has a one-click way back to their landing page from
+    // any screen. `exact` keeps it lit only on /app itself rather than on every
+    // /app/* page. My Profile stays in the top-right account circle.
+    if (byKey.dashboard) out.push({ ...byKey.dashboard, exact: true })
+
     if (byKey.rooms) out.push(byKey.rooms)
 
     // Reservations: manual booking, channel bookings and public booking requests.
@@ -1977,6 +1981,27 @@ function formatNotifTime(iso) {
 
 .drawer-link:hover i,
 .drawer-link.router-link-active i {
+  color: #c9a227;
+}
+
+/* A dashboard entry that points at /app would otherwise stay lit on every
+   /app/* page through router-link-active. Undo that and let only the exact
+   dashboard route highlight it. */
+.drawer-link.is-exact.router-link-active {
+  background: none;
+  color: #d6e9f9;
+}
+
+.drawer-link.is-exact.router-link-active i {
+  color: #a9d1f2;
+}
+
+.drawer-link.is-exact.router-link-exact-active {
+  background: #004a93;
+  color: #fff;
+}
+
+.drawer-link.is-exact.router-link-exact-active i {
   color: #c9a227;
 }
 
