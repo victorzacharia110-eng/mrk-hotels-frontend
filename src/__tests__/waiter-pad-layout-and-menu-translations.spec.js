@@ -193,6 +193,11 @@ describe('waiter pad: the order table fills the width with Send only above the t
     expect(sendRowAt, 'send row not found').toBeGreaterThan(-1)
     expect(sendRowAt).toBeLessThan(totalAt)
   })
+
+  it('shows the send error instead of failing silently', () => {
+    expect(pad).toMatch(/v-if="sendError"/)
+    expect(pad).toMatch(/class="send-error"/)
+  })
 })
 
 describe('menu translations', () => {
