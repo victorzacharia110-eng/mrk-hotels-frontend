@@ -1468,7 +1468,13 @@
     "bridgeTitle": "Printa kwenye kompyuta ingine? Tumia bridge agent.",
     "bridge1": "Nakili folda ya printer-bridge kwenye PC ya Windows hiyo, bofya install-start.bat kisha uchague Run as administrator (mara moja). Itaanza kila Windows inapoanza.",
     "bridge2": "Weka http://<IP ya PC hiyo>:9720 — mfano http://192.168.1.50:9720 katika mtandao uleule, au anwani ya Tailscale (http://100.x.y.z:9720) kwa kasheri nje ya hoteli.",
-    "bridge3": "Chagua Network bridge agent kwenye safu ya Ongeza printa, bandika anwani kisha bonyeza Ongeza — tiketi ijayo ya chakula itachapishwa kupitia hiyo."
+    "bridge3": "Chagua Network bridge agent kwenye safu ya Ongeza printa, bandika anwani kisha bonyeza Ongeza — tiketi ijayo ya chakula itachapishwa kupitia hiyo.",
+    "downloadsTitle": "Mwongozo wa kusanidi na kisaidizi cha printa",
+    "downloadsHint": "Pakua mwongozo wa hatua kwa hatua, au kisaidizi cha printa ili kuweka kwenye kompyuta ya printa.",
+    "downloadGuide": "Mwongozo wa kusanidi printa (PDF)",
+    "downloadGuideHint": "Mwongozo kwa lugha rahisi wenye picha za kila hatua — Windows, Mac na Linux.",
+    "downloadHelper": "Kisaidizi cha printa (printer-bridge.zip)",
+    "downloadHelperHint": "Nakili hii kwenye kompyuta ya printa kisha uendeshe install-start.bat mara moja."
   },
   "orders": {
     "title": "Maagizo ya Chakula",

@@ -138,4 +138,21 @@ describe('PrinterSettingsPage — setup guide', () => {
     expect(openBtn.text()).toContain('Open this section')
     await openBtn.trigger('click')
   })
+
+  it('offers the setup guide and the printer helper as downloads', async () => {
+    const wrapper = await mountPage()
+
+    const cards = wrapper.findAll('.downloads .download-card')
+    expect(cards).toHaveLength(2)
+
+    // The links must point at the files served from public/, and be downloads
+    // (an <a download>) rather than navigating the app away.
+    expect(cards[0].attributes('href')).toBe('/MRK_Hotels_Printer_Setup_Guide.pdf')
+    expect(cards[0].attributes()).toHaveProperty('download')
+    expect(cards[1].attributes('href')).toBe('/MRK_Printer_Bridge.zip')
+    expect(cards[1].attributes()).toHaveProperty('download')
+
+    expect(wrapper.text()).toContain('Printer Setup Guide (PDF)')
+    expect(wrapper.text()).toContain('printer-bridge.zip')
+  })
 })

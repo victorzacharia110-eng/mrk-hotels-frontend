@@ -52,6 +52,33 @@
       </ol>
     </section>
 
+    <!-- Everything the installer needs, reachable from inside the app: the
+         printed manual and the helper to put on the printer's computer. -->
+    <section id="downloads" class="panel downloads">
+      <h2><i class="fas fa-download"></i> {{ $t('printer.downloadsTitle') }}</h2>
+      <p class="muted">{{ $t('printer.downloadsHint') }}</p>
+
+      <div class="download-grid">
+        <a class="download-card" :href="guideUrl" download>
+          <i class="fas fa-file-pdf dl-kind" aria-hidden="true"></i>
+          <span class="download-text">
+            <strong>{{ $t('printer.downloadGuide') }}</strong>
+            <span class="muted block">{{ $t('printer.downloadGuideHint') }}</span>
+          </span>
+          <i class="fas fa-download dl-action" aria-hidden="true"></i>
+        </a>
+
+        <a class="download-card" :href="helperUrl" download>
+          <i class="fas fa-file-zipper dl-kind" aria-hidden="true"></i>
+          <span class="download-text">
+            <strong>{{ $t('printer.downloadHelper') }}</strong>
+            <span class="muted block">{{ $t('printer.downloadHelperHint') }}</span>
+          </span>
+          <i class="fas fa-download dl-action" aria-hidden="true"></i>
+        </a>
+      </div>
+    </section>
+
     <section id="connection" class="panel">
       <div class="status-row">
         <span class="status-dot" :class="supported && printerState.connected ? 'ok' : (supported ? 'off' : 'na')"></span>
@@ -389,6 +416,11 @@ function addPrinter() {
 
 const { t } = useI18n()
 
+// Static files served from public/. BASE_URL keeps these correct if the app is
+// ever mounted under a sub-path rather than at the site root.
+const guideUrl = `${import.meta.env.BASE_URL}MRK_Hotels_Printer_Setup_Guide.pdf`
+const helperUrl = `${import.meta.env.BASE_URL}MRK_Printer_Bridge.zip`
+
 const supported = computed(() => printerSupported())
 const error = ref('')
 const testing = ref(false)
@@ -488,8 +520,7 @@ onMounted(() => {
 .chip-notNeeded { background: #f1f5f9; color: #64748b; }
 
 /* Bridge-agent help sits where the endpoint is typed */
-.bridge-help { align-items: flex-start; }
-.bridge-help > i { color: #005eb8; margin-top: 2px; }
+.bridge-help { align-items: flex-start; }.bridge-help > i { color: #005eb8; margin-top: 2px; }
 .bridge-help strong { font-size: 13px; }
 .bridge-help ol { margin: 6px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.6; }
 
@@ -507,4 +538,21 @@ onMounted(() => {
 .printer-list { list-style: none; padding: 0; margin: 14px 0 0; }
 .printer-list li { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
 .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+/* Manual & helper downloads */
+.downloads h2 { display: flex; align-items: center; gap: 8px; }
+.downloads h2 i { color: #005eb8; }
+.download-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 12px; }
+.download-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; border: 1px solid #e3ecf6; border-radius: 10px;
+  background: #f5f8fc; color: #1e293b; text-decoration: none;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.download-card:hover { border-color: #005eb8; background: #eef4fe; box-shadow: 0 4px 14px rgba(0,94,184,.12); }
+.download-card .dl-kind { font-size: 26px; color: #005eb8; flex: none; }
+.download-card .download-text { flex: 1; min-width: 0; }
+.download-card .download-text strong { font-size: 14px; }
+.download-card .download-text .muted { margin: 2px 0 0; line-height: 1.5; }
+.download-card .dl-action { color: #005eb8; font-size: 16px; flex: none; }
 </style>
