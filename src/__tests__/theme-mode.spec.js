@@ -126,6 +126,21 @@ describe('dark theme stylesheet', () => {
     }
   })
 
+  it('makes the reports browser paper a dark surface with light text', () => {
+    // The white .rb-paper inherited the dark theme's light body colour, which is
+    // what made the report text read as faint grey on a white sheet.
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.rb-paper,[\s\S]*?background: #111c2e/)
+    expect(themeCss).toContain('html[data-theme=\'dark\'] .rb-paper')
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.rb-loading,[\s\S]*?color: #cbd5e1/)
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.rb-report-head h2,[\s\S]*?color: #f1f5f9/)
+  })
+
+  it('repaints the other report pages too', () => {
+    expect(themeCss).toContain("html[data-theme='dark'] .rp-section")
+    expect(themeCss).toContain("html[data-theme='dark'] .tab-btn")
+    expect(themeCss).toMatch(/--text-muted: #94a3b8/)
+  })
+
   it('is loaded and applied before the app mounts', () => {
     expect(main).toMatch(/import '\.\/assets\/theme\.css'/)
     const applyAt = main.indexOf('applyTheme(resolveStoredTheme())')

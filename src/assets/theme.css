@@ -16,6 +16,7 @@
 html[data-theme='dark'] {
   --text: #e2e8f0;
   --muted: #94a3b8;
+  --text-muted: #94a3b8;
   --border: #23324a;
   --bg: #0b1220;
   --card: #111c2e;
@@ -310,4 +311,270 @@ html[data-theme='dark'] .mobile-search input {
   background: #0e1729;
   border-color: #23324a;
   color: #e2e8f0;
+}
+
+/* ── Reports browser ──────────────────────────────────────────────────────────
+   The report browser was built as a paper-on-screen document: a white sheet
+   (.rb-paper), navy headings (--mrk-dark), pale KPI/table surfaces and grey
+   captions (#64748b / #94a3b8). Left untouched in dark mode that reads as faint
+   grey text on a dark page, which is what the client flagged. Here the sheet and
+   its panels become dark surfaces and the captions are lifted to a readable
+   slate. The navy group/ledger bands keep their dark fill, since they already
+   carry white text. */
+
+html[data-theme='dark'] .rb-root,
+html[data-theme='dark'] .rb-content {
+  background: #0b1220;
+}
+
+html[data-theme='dark'] .rb-paper,
+html[data-theme='dark'] .rb-toolbar,
+html[data-theme='dark'] .rb-tree,
+html[data-theme='dark'] .posr-block,
+html[data-theme='dark'] .posr-builder {
+  background: #111c2e;
+  border-color: #23324a;
+  color: #e2e8f0;
+  box-shadow: none;
+}
+
+html[data-theme='dark'] .rb-tree {
+  border-right-color: #23324a;
+}
+
+/* Navy headings and figures become light, so they stand out on the dark sheet. */
+html[data-theme='dark'] .rb-report-head h2,
+html[data-theme='dark'] .rb-kpi-value,
+html[data-theme='dark'] .rb-report-row strong,
+html[data-theme='dark'] .rb-total td,
+html[data-theme='dark'] .rb-help-body h4,
+html[data-theme='dark'] .ledger-item-head strong {
+  color: #f1f5f9;
+}
+
+/* Grey captions and secondary text, lifted for legibility. */
+html[data-theme='dark'] .rb-loading,
+html[data-theme='dark'] .rb-count,
+html[data-theme='dark'] .rb-pct,
+html[data-theme='dark'] .rb-date,
+html[data-theme='dark'] .cap,
+html[data-theme='dark'] .rb-total-label,
+html[data-theme='dark'] .rb-subtotal-label,
+html[data-theme='dark'] .rb-kpi-label,
+html[data-theme='dark'] .rb-report-row-label,
+html[data-theme='dark'] .rb-help-body,
+html[data-theme='dark'] .rb-legend,
+html[data-theme='dark'] .rb-toolbar-field label,
+html[data-theme='dark'] .posr-field > span,
+html[data-theme='dark'] .posr-col-caption,
+html[data-theme='dark'] .ledger-item-head small,
+html[data-theme='dark'] .ledger-item-balance {
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .rb-empty,
+html[data-theme='dark'] .rb-report i {
+  color: #94a3b8;
+}
+
+/* Panels, KPI tiles and hover fills get a raised dark surface. */
+html[data-theme='dark'] .rb-kpi,
+html[data-theme='dark'] .rb-report-row,
+html[data-theme='dark'] .rb-legend,
+html[data-theme='dark'] .rb-help,
+html[data-theme='dark'] .rb-cat.open,
+html[data-theme='dark'] .rb-cat-head:hover,
+html[data-theme='dark'] .rb-report:hover,
+html[data-theme='dark'] .posr-col {
+  background: #16233a;
+  border-color: #23324a;
+}
+
+html[data-theme='dark'] .rb-cat-head,
+html[data-theme='dark'] .rb-report,
+html[data-theme='dark'] .posr-col {
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .rb-cat-head .fa-chevron-right,
+html[data-theme='dark'] .rb-cat-head .fa-chevron-down {
+  color: #94a3b8;
+}
+
+html[data-theme='dark'] .rb-cat-icon,
+html[data-theme='dark'] .rb-section-title,
+html[data-theme='dark'] .rb-help summary,
+html[data-theme='dark'] .posr-block-title {
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .rb-cat-count {
+  color: #7cc0ff;
+  background: #23324a;
+}
+
+html[data-theme='dark'] .rb-input,
+html[data-theme='dark'] .rb-chart-toggle {
+  background: #0e1729;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] .rb-btn-ghost,
+html[data-theme='dark'] .rb-btn-reset {
+  background: #0e1729;
+  border-color: #334155;
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .rb-quick option,
+html[data-theme='dark'] .rb-quick optgroup {
+  background: #0e1729;
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] .rb-table th {
+  background: #16233a;
+  color: #cbd5e1;
+  border-color: #23324a;
+}
+
+html[data-theme='dark'] .rb-table td,
+html[data-theme='dark'] .ledger-table th,
+html[data-theme='dark'] .ledger-table td {
+  border-color: #23324a;
+}
+
+html[data-theme='dark'] .rb-table tfoot td,
+html[data-theme='dark'] .rb-group-sub td,
+html[data-theme='dark'] .rb-group-foot td {
+  background: #16233a;
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] .rb-badge {
+  background: #23324a;
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .rb-table .row-overdue td {
+  background: #3a1c1f;
+}
+
+html[data-theme='dark'] .rb-table .row-arrived td {
+  color: #86efac;
+}
+
+html[data-theme='dark'] .text-red {
+  color: #f87171 !important;
+}
+
+html[data-theme='dark'] .text-green {
+  color: #4ade80 !important;
+}
+
+html[data-theme='dark'] .ledger-table tbody tr.movement-in td {
+  background: #10261a;
+}
+
+html[data-theme='dark'] .ledger-table tbody tr.movement-out td {
+  background: #2a1417;
+}
+
+html[data-theme='dark'] .ledger-table tbody tr.opening-row td {
+  background: #16233a;
+}
+
+/* ── Staff reports page (StaffReportsPage) ──────────────────────────────────── */
+
+html[data-theme='dark'] .rp-subtitle,
+html[data-theme='dark'] .rp-field,
+html[data-theme='dark'] .rk-label,
+html[data-theme='dark'] .rp-table th,
+html[data-theme='dark'] .rp-req-list span,
+html[data-theme='dark'] .cat-loading {
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .rp-meta,
+html[data-theme='dark'] .rp-req-list small,
+html[data-theme='dark'] .rp-empty {
+  color: #94a3b8;
+}
+
+html[data-theme='dark'] .rp-section,
+html[data-theme='dark'] .dept-toggle button,
+html[data-theme='dark'] .rp-field input {
+  background: #111c2e;
+  border-color: #23324a;
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] .dept-toggle {
+  border-color: #23324a;
+}
+
+html[data-theme='dark'] .dept-toggle button + button {
+  border-left-color: #23324a;
+}
+
+html[data-theme='dark'] .rp-kpi {
+  background: #16233a;
+  border-color: #23324a;
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] .rp-table th,
+html[data-theme='dark'] .rp-table td {
+  border-bottom-color: #23324a;
+}
+
+html[data-theme='dark'] .rp-table tr.row-low td {
+  background: #3a1c1f;
+}
+
+html[data-theme='dark'] .rp-req-list li {
+  border-color: #23324a;
+}
+
+html[data-theme='dark'] .send-error {
+  background: #2a1417;
+  color: #fca5a5;
+  border-color: #7f1d1d;
+}
+
+/* ── Reports dashboard (ReportPage) ─────────────────────────────────────────── */
+
+html[data-theme='dark'] .tab-btn {
+  background: #111c2e;
+  border-color: #23324a;
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .room-status-item {
+  background: #16233a;
+}
+
+html[data-theme='dark'] .room-status-label,
+html[data-theme='dark'] .occ-label,
+html[data-theme='dark'] .muted {
+  color: #94a3b8;
+}
+
+html[data-theme='dark'] .occ-value {
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] .bar {
+  background: #23324a;
+}
+
+html[data-theme='dark'] .ledger-group-head {
+  color: #bfdbfe;
+  background: rgba(59, 130, 246, 0.18);
+  border-color: #23324a;
+}
+
+html[data-theme='dark'] .opening-row td {
+  background: rgba(148, 163, 184, 0.08);
 }
