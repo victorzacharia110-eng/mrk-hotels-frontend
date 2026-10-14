@@ -3,12 +3,10 @@
   the cashier panel.
 
   Mirrors the print-on-event toggles common to POS systems (the client uses
-  E-Zee): decide WHEN a receipt or guest check should print. Also lets the
-  cashier choose how the printer is reached:
-    - Web Serial: a USB printer attached to THIS machine.
-    - Network:    a local bridge agent (on the printer machine, reached over
-                  LAN/tunnel) that forwards prints to a printer elsewhere —
-                  required when the till printer is on another PC or remote.
+  E-Zee): decide WHEN a receipt or guest check should print. The printer is
+  always reached through the network bridge agent (a small helper on the
+  printer's computer, addressed over LAN/tunnel) — the old direct USB/Serial
+  option was removed.
 -->
 
 <template>
@@ -32,10 +30,7 @@
           <p class="muted">{{ statusDetail }}</p>
         </div>
       </div>
-      <p v-if="!supported && transportRef === 'serial'" class="notice">
-        <i class="fas fa-circle-info"></i> {{ $t('cashier.printSettings.serialUnsupported') }}
-      </p>
-      <p v-else-if="printerState.reason" class="notice">
+      <p v-if="printerState.reason" class="notice">
         <i class="fas fa-triangle-exclamation"></i> {{ printerState.reason }}
       </p>
     </section>
@@ -43,26 +38,17 @@
     <!-- Transport / how the printer is reached -->
     <section class="panel">
       <h2 class="panel-h"><i class="fas fa-tower-broadcast"></i> {{ $t('cashier.printSettings.transportTitle') }}</h2>
-      <div class="transport-grid">
-        <label class="transport-option" :class="{ active: transportRef === 'serial' }">
-          <input type="radio" v-model="transportRef" value="serial" />
-          <i class="fas fa-plug" aria-hidden="true"></i>
-          <div>
-            <strong>{{ $t('cashier.printSettings.transportSerial') }}</strong>
-            <small>{{ $t('cashier.printSettings.transportSerialDetail') }}</small>
-          </div>
-        </label>
-        <label class="transport-option" :class="{ active: transportRef === 'network' }">
-          <input type="radio" v-model="transportRef" value="network" />
+      <div class="transport-grid transport-grid--single">
+        <div class="transport-option active">
           <i class="fas fa-network-wired" aria-hidden="true"></i>
           <div>
             <strong>{{ $t('cashier.printSettings.transportNetwork') }}</strong>
             <small>{{ $t('cashier.printSettings.transportNetworkDetail') }}</small>
           </div>
-        </label>
+        </div>
       </div>
 
-      <div v-if="transportRef === 'network'" class="network-form">
+      <div class="network-form">
         <label class="fld-label" for="net-endpoint">{{ $t('cashier.printSettings.endpointLabel') }}</label>
         <input id="net-endpoint" v-model.trim="endpointRef" type="url" class="sm-input"
           :placeholder="$t('cashier.printSettings.endpointPlaceholder')" />
@@ -74,29 +60,11 @@
         </div>
       </div>
 
-      <div class="connect-actions" v-if="transportRef === 'serial'">
-        <template v-if="!printerState.connected">
-          <button class="btn btn-primary" @click="connect"><i class="fas fa-plug"></i> {{ $t('printer.connect') }}</button>
-        </template>
-        <template v-else>
-          <button class="btn btn-secondary" :disabled="testing" @click="testSerial">
-            <i class="fas fa-file-lines"></i> {{ testing ? $t('common.saving') : $t('printer.test') }}
-          </button>
-          <button class="btn btn-danger" @click="disconnect"><i class="fas fa-plug-circle-xmark"></i> {{ $t('printer.disconnect') }}</button>
-        </template>
-      </div>
-
-      <!-- The ordered setup for the chosen transport, so the cashier can wire
+      <!-- The ordered setup for the network bridge, so the cashier can wire
            the printer up without leaving the page. -->
       <div class="quick-steps">
         <p class="qs-h"><i class="fas fa-list-ol" aria-hidden="true"></i> <strong>{{ $t('printer.setupTitle') }}</strong></p>
-        <ol v-if="transportRef === 'serial'">
-          <li>{{ $t('printer.how1') }}</li>
-          <li>{{ $t('printer.how2') }}</li>
-          <li>{{ $t('printer.how3') }}</li>
-          <li>{{ $t('printer.how4') }}</li>
-        </ol>
-        <ol v-else>
+        <ol>
           <li>{{ $t('printer.bridge1') }}</li>
           <li>{{ $t('printer.bridge2') }}</li>
           <li>{{ $t('cashier.printSettings.bridgeStep3') }}</li>
@@ -149,52 +117,40 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePrintSettingsStore } from '@/stores/printSettings'
-import { printerState, printerSupported, connectPrinter, disconnectPrinter, restorePrinter, printToPrinter } from '@/utils/printer'
+import { printerState, printToPrinter } from '@/utils/printer'
 import { testPrintLines } from '@/utils/receipts'
 import { toast } from '@/utils/toast'
 
 const { t } = useI18n()
 const printStore = usePrintSettingsStore()
 
-const supported = computed(() => printerSupported())
 const error = ref('')
 const testing = ref(false)
 let saveMsg = ref('')
 
 const settingsRef = reactive({ ...printStore.settings })
-const transportRef = ref(printStore.transport)
 const endpointRef = ref(printStore.endpoint)
 const endpointHelp = ref('')
 
-const statusDot = computed(() => {
-  if (transportRef.value === 'network') return endpointRef.value ? 'ok' : 'off'
-  if (!supported.value) return 'na'
-  return printerState.connected ? 'ok' : 'off'
-})
+const statusDot = computed(() => (endpointRef.value ? 'ok' : 'off'))
 
-const statusTitle = computed(() => {
-  if (transportRef.value === 'network') {
-    return endpointRef.value ? t('cashier.printSettings.statusNetwork') : t('cashier.printSettings.statusNoNetwork')
-  }
-  if (!supported.value) return t('printer.statusUnsupported')
-  return printerState.connected ? t('printer.statusConnected') : t('printer.statusNotConnected')
-})
+const statusTitle = computed(() =>
+  endpointRef.value ? t('cashier.printSettings.statusNetwork') : t('cashier.printSettings.statusNoNetwork'),
+)
 
-const statusDetail = computed(() => {
-  if (transportRef.value === 'network') {
-    return endpointRef.value ? `${t('cashier.printSettings.statusNetworkDetail')} ${endpointRef.value}` : t('cashier.printSettings.statusNoNetworkDetail')
-  }
-  if (!supported.value) return t('printer.statusUnsupportedDetail')
-  return printerState.connected ? printerState.info || t('printer.statusConnectedDetail') : t('printer.statusNotConnectedDetail')
-})
+const statusDetail = computed(() =>
+  endpointRef.value
+    ? `${t('cashier.printSettings.statusNetworkDetail')} ${endpointRef.value}`
+    : t('cashier.printSettings.statusNoNetworkDetail'),
+)
 
 function save() {
   const saved = {
     ...settingsRef,
-    transport: transportRef.value,
+    transport: 'network',
     endpoint: endpointRef.value || '',
   }
   printStore.saveSettings(saved)
@@ -206,33 +162,8 @@ function save() {
 function doReset() {
   printStore.reset()
   Object.assign(settingsRef, printStore.settings)
-  transportRef.value = printStore.transport
   endpointRef.value = printStore.endpoint
   toast(t('cashier.printSettings.reset'), 'success')
-}
-
-async function connect() {
-  error.value = ''
-  const ok = await connectPrinter()
-  if (!ok && !printerState.connected) error.value = printerState.reason || t('printer.connectFailed')
-  else error.value = printerState.reason || t('printer.readyToTest')
-}
-
-async function disconnect() {
-  await disconnectPrinter()
-  error.value = ''
-}
-
-async function testSerial() {
-  error.value = ''
-  testing.value = true
-  try {
-    const sent = await printToPrinter(testPrintLines(), { transport: 'serial' })
-    if (!sent) error.value = printerState.reason || t('printer.testFailed')
-    else toast(t('cashier.printSettings.testOk'), 'success')
-  } finally {
-    testing.value = false
-  }
 }
 
 async function testNetwork() {
@@ -251,10 +182,6 @@ async function testNetwork() {
     testing.value = false
   }
 }
-
-onMounted(() => {
-  restorePrinter()
-})
 </script>
 
 <style scoped>
@@ -275,6 +202,7 @@ onMounted(() => {
 .panel-h i { color: #005eb8; }
 
 .transport-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.transport-grid--single { grid-template-columns: 1fr; }
 @media (max-width: 700px) { .transport-grid { grid-template-columns: 1fr; } }
 .transport-option {
   display: flex; gap: 10px; align-items: flex-start;

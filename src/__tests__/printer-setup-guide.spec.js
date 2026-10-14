@@ -63,10 +63,10 @@ describe('PrinterSettingsPage — setup guide', () => {
     const wrapper = await mountPage()
 
     expect(titles(wrapper)).toEqual([
-      'Connect the till printer',
+      'Set the print agent endpoint',
       'Add the kitchen & bar printers',
       'Route service lines and passes',
-      'Send a test print',
+      'Test the connection',
     ])
   })
 

@@ -48,9 +48,11 @@ const DEFAULTS = {
   // Profile used when a service line has no route of its own, or its route
   // points at a printer that has since been deleted.
   defaultTicketPrinterId: "",
-  // How the till printer is reached: 'serial' (Web Serial/USB on this machine)
-  // or 'network' (a local bridge agent forwarding to the printer).
-  transport: "serial",
+  // How the till printer is reached. Only 'network' is offered: the printer is
+  // reached through the bridge agent on the printer's computer. The legacy
+  // 'serial' value still works for a device that had it saved, but is migrated
+  // to 'network' on load (see loadSaved) so the UI never shows it again.
+  transport: "network",
   // Base URL of the network bridge agent, e.g. http://100.x.y.z:9720
   endpoint: "",
 };
@@ -59,7 +61,12 @@ function loadSaved() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
     if (parsed && typeof parsed === "object") {
-      return { ...DEFAULTS, ...parsed };
+      const merged = { ...DEFAULTS, ...parsed };
+      // Serial (a USB printer on this machine) is no longer offered in the UI.
+      // A till that still had it selected is moved to the network bridge so it
+      // is never shown the removed option again.
+      if (merged.transport === "serial") merged.transport = "network";
+      return merged;
     }
   } catch {
     /* corrupted storage — fall back to defaults */
