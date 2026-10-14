@@ -1069,3 +1069,754 @@ html[data-theme='dark'] .bill-arrow-bar {
 html[data-theme='dark'] .bill-arrow-btn:disabled {
   background: #374248;
 }
+
+/* ── Reception stay view (tape chart) and its modals ───────────────────────────
+   The stay view is a second world of hardcoded light surfaces: a white tape
+   chart, white room/type columns, day headers and a stack of white modals. None
+   of it is reached by the shared primitives above, so in dark mode the whole
+   board stayed white with near-white text. Repainted here with the same tokens;
+   the accent tints (green/red/amber/purple) are kept as translucent chips so the
+   status colours still read. The shared StayCalendar board uses the same class
+   names, so it is covered too. */
+html[data-theme='dark'] .stayview-page {
+  background: #0b141a;
+  color: #e9edef;
+}
+
+/* The "Hotels" half of the brand wordmark is brand blue; on the dark header it
+   needs the lighter link blue to stay legible. */
+html[data-theme='dark'] .logo .logo-text span {
+  color: #7cc0ff;
+}
+
+/* Status pills */
+html[data-theme='dark'] .sv-pill {
+  background: #2a3942;
+  color: #aebac1;
+}
+
+html[data-theme='dark'] .sv-pill.vacant {
+  background: rgba(40, 199, 111, 0.16);
+  color: #7ee2a8;
+}
+
+html[data-theme='dark'] .sv-pill.occupied {
+  background: rgba(255, 107, 107, 0.16);
+  color: #ff9b9b;
+}
+
+html[data-theme='dark'] .sv-pill.reserved {
+  background: rgba(255, 180, 0, 0.18);
+  color: #ffd27a;
+}
+
+html[data-theme='dark'] .sv-pill.blocked {
+  background: #374248;
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .sv-pill.dueout {
+  background: rgba(159, 122, 234, 0.2);
+  color: #c4b5fd;
+}
+
+html[data-theme='dark'] .sv-pill.dirty {
+  background: rgba(220, 53, 69, 0.2);
+  color: #f199a3;
+}
+
+/* Toolbar search + results */
+html[data-theme='dark'] .sv-search {
+  background: #2a3942;
+  border-color: #374248;
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-search input {
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-search-results {
+  background: #202c33;
+  border-color: #2f3b43;
+  color: #e9edef;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme='dark'] .sv-search-hit:hover {
+  background: #2a3942;
+}
+
+html[data-theme='dark'] .sv-search-hit i {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-hit-main {
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-hit-sub,
+html[data-theme='dark'] .sv-search-empty {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-tool-btn {
+  background: #2a3942;
+  border-color: #374248;
+  color: #aebac1;
+}
+
+html[data-theme='dark'] .sv-tool-btn:hover {
+  color: #7cc0ff;
+}
+
+/* Tape chart surface */
+html[data-theme='dark'] .sv-chart {
+  background: #202c33;
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-corner {
+  background: #2a3942;
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-nav-btn,
+html[data-theme='dark'] .sv-today-btn {
+  background: #2a3942;
+  border-color: #374248;
+  color: #aebac1;
+}
+
+html[data-theme='dark'] .sv-nav-btn:hover,
+html[data-theme='dark'] .sv-today-btn:hover {
+  border-color: #005eb8;
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .sv-bizdate-btn,
+html[data-theme='dark'] .sv-bizdate-text {
+  background: #2a3942;
+  border-color: #374248;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-bizdate-btn i {
+  color: #7cc0ff;
+}
+
+/* Day headers */
+html[data-theme='dark'] .sv-day-head {
+  background: #2a3942;
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-day-head .dow {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-day-head .dom {
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-day-head.today {
+  background: rgba(0, 94, 184, 0.28);
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .sv-day-head.weekend:not(.today) {
+  background: #25323a;
+}
+
+/* Type / rate / room columns */
+html[data-theme='dark'] .sv-type-cell {
+  background: #202c33;
+  border-color: #2f3b43;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-rate-cell {
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-rate-cell.today,
+html[data-theme='dark'] .sv-cell-bg.today,
+html[data-theme='dark'] .sv-footer-day.today {
+  background: rgba(0, 94, 184, 0.16);
+}
+
+html[data-theme='dark'] .sv-rate-cell.weekend:not(.today),
+html[data-theme='dark'] .sv-cell-bg.weekend:not(.today),
+html[data-theme='dark'] .sv-footer-day.weekend:not(.today) {
+  background: #25323a;
+}
+
+html[data-theme='dark'] .sv-avail-pill {
+  background: rgba(255, 180, 0, 0.18);
+  color: #ffd27a;
+}
+
+html[data-theme='dark'] .sv-avail-pill.zero {
+  background: rgba(220, 53, 69, 0.2);
+  color: #f199a3;
+}
+
+html[data-theme='dark'] .sv-price {
+  color: #aebac1;
+}
+
+html[data-theme='dark'] .sv-room-cell {
+  background: #202c33;
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-room-number {
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-room-flag {
+  color: #8696a0;
+}
+
+/* Booking-bar lanes */
+html[data-theme='dark'] .sv-cell-bg {
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-cell-bg.vacant:hover {
+  background: rgba(0, 94, 184, 0.14);
+  box-shadow: inset 0 0 0 1px #1c4a78;
+}
+
+html[data-theme='dark'] .sv-day-mid {
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-auto {
+  color: #7ee2a8;
+}
+
+/* Booking bars: deepened so the white label keeps its contrast on the dark board */
+html[data-theme='dark'] .sv-bar.bar-green,
+html[data-theme='dark'] .sv-popover-badge.bar-green {
+  background: #1f9d57;
+}
+
+html[data-theme='dark'] .sv-bar.bar-purple,
+html[data-theme='dark'] .sv-popover-badge.bar-purple {
+  background: #7b5cd6;
+}
+
+html[data-theme='dark'] .sv-bar.bar-red,
+html[data-theme='dark'] .sv-popover-badge.bar-red {
+  background: #e04b4b;
+}
+
+html[data-theme='dark'] .sv-bar.bar-blue,
+html[data-theme='dark'] .sv-popover-badge.bar-blue {
+  background: #2563eb;
+}
+
+html[data-theme='dark'] .sv-modal-head.bar-green {
+  background: linear-gradient(135deg, #1f9d57, #157a41);
+}
+
+html[data-theme='dark'] .sv-modal-head.bar-purple {
+  background: linear-gradient(135deg, #7b5cd6, #5b3fb0);
+}
+
+html[data-theme='dark'] .sv-modal-head.bar-red {
+  background: linear-gradient(135deg, #e04b4b, #bd3838);
+}
+
+html[data-theme='dark'] .sv-modal-head.bar-blue {
+  background: linear-gradient(135deg, #2563eb, #1b4fc0);
+}
+
+/* Footer rows */
+html[data-theme='dark'] .sv-footer-cell {
+  background: #202c33;
+  border-color: #2f3b43;
+  color: #aebac1;
+}
+
+html[data-theme='dark'] .sv-footer-day {
+  background: #202c33;
+  border-color: #2f3b43;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-occ-bar {
+  background: #374248;
+}
+
+/* Calendar popup */
+html[data-theme='dark'] .sv-cal {
+  background: #202c33;
+  border-color: #2f3b43;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
+}
+
+html[data-theme='dark'] .sv-cal-title,
+html[data-theme='dark'] .sv-cal-day {
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-cal-dow {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-cal-day:hover:not(.blank):not(:disabled) {
+  background: #2a3942;
+}
+
+html[data-theme='dark'] .sv-cal-day.business {
+  background: rgba(0, 94, 184, 0.28);
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .sv-cal-day.weekend:not(.business) {
+  background: #25323a;
+}
+
+html[data-theme='dark'] .sv-cal-day.blank,
+html[data-theme='dark'] .sv-cal-reset {
+  color: #8696a0;
+}
+
+/* Hover popover on a booking bar */
+html[data-theme='dark'] .sv-popover {
+  background: #202c33;
+  border-color: #2f3b43;
+  color: #e9edef;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+
+html[data-theme='dark'] .sv-popover-icon {
+  background: #2a3942;
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .sv-popover-name {
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-popover-row {
+  color: #aebac1;
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-popover-row i {
+  color: #8696a0;
+}
+
+/* Housekeeping floating card */
+html[data-theme='dark'] .sv-hk-card {
+  background: #202c33;
+  border-color: #2f3b43;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+
+html[data-theme='dark'] .sv-hk-card-room strong,
+html[data-theme='dark'] .sv-hk-task-type {
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-hk-card-guest {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-hk-card-close {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-hk-item {
+  background: #25323a;
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-hk-status {
+  background: #374248;
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .sv-hk-status.dirty,
+html[data-theme='dark'] .sv-hk-status.confirmed {
+  background: rgba(220, 53, 69, 0.2);
+  color: #f199a3;
+}
+
+/* Modals (teleported to <body>, so targeted by their own class) */
+html[data-theme='dark'] .sv-modal {
+  background: #202c33;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-modal-section {
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .sv-modal-row {
+  color: #aebac1;
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-modal-row i {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-ledger-head {
+  background: #2a3942;
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-ledger-head small {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-ledger-preview {
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-ledger-table th,
+html[data-theme='dark'] .sv-ledger-table td {
+  border-color: #2f3b43;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-ledger-table th {
+  background: #2a3942;
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-ledger-table .cat-row td {
+  background: #25323a;
+}
+
+/* Stay strip + folio tabs + summary cards */
+html[data-theme='dark'] .sv-stay-strip {
+  background: #2a3942;
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-stay-item span,
+html[data-theme='dark'] .sv-tab-section,
+html[data-theme='dark'] .sv-panel-card span,
+html[data-theme='dark'] .sv-grid-item span {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-stay-item strong,
+html[data-theme='dark'] .sv-panel-card strong,
+html[data-theme='dark'] .sv-grid-item strong {
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-tabs {
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-tab {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-tab:hover {
+  background: #2a3942;
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .sv-tab.active {
+  background: rgba(0, 94, 184, 0.22);
+  border-color: #005eb8;
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .sv-panel-card,
+html[data-theme='dark'] .sv-grid-item {
+  background: #2a3942;
+  border-color: #2f3b43;
+}
+
+/* Folio reference + compact tables */
+html[data-theme='dark'] .sv-folio-ref {
+  background: #2a3942;
+  border-color: #4b3f6b;
+  color: #aebac1;
+}
+
+html[data-theme='dark'] .sv-folio-ref i {
+  color: #b794f6;
+}
+
+html[data-theme='dark'] .sv-folio-ref strong {
+  color: #c4b5fd;
+}
+
+html[data-theme='dark'] .sv-table-wrap {
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-table th {
+  background: #2a3942;
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-table th,
+html[data-theme='dark'] .sv-table td {
+  border-color: #2f3b43;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-table tfoot td {
+  background: #2a3942;
+}
+
+html[data-theme='dark'] .sv-folio-table .row-charge td,
+html[data-theme='dark'] .sv-folio-table .sv-folio-total td {
+  color: #e9edef;
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-folio-table .row-credit td,
+html[data-theme='dark'] .sv-folio-table .sv-folio-balance td {
+  color: #7ee2a8;
+}
+
+html[data-theme='dark'] .sv-folio-table .sv-folio-balance td {
+  background: rgba(40, 199, 111, 0.14);
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-folio-table .row-muted td,
+html[data-theme='dark'] .sv-folio-table .sv-muted-cell,
+html[data-theme='dark'] .sv-folio-hint {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-folio-table .sv-icon-link {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-amount-charge {
+  color: #f0b264;
+}
+
+html[data-theme='dark'] .sv-amount-credit {
+  color: #7ee2a8;
+}
+
+html[data-theme='dark'] .sv-detail-row {
+  color: #e9edef;
+}
+
+/* Split / transfer panels */
+html[data-theme='dark'] .sv-split-side {
+  background: #202c33;
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-split-op {
+  background: #25323a;
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-split-op:hover {
+  background: #2a3942;
+  border-color: #1c4a78;
+}
+
+html[data-theme='dark'] .sv-split-target.checked,
+html[data-theme='dark'] .sv-split-op.checked {
+  background: rgba(123, 92, 214, 0.22);
+  border-color: #7b5cd6;
+}
+
+html[data-theme='dark'] .sv-split-arrow-bar {
+  background: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-move-summary {
+  background: rgba(255, 180, 0, 0.14);
+  border-color: #5c5010;
+  color: #ffd27a;
+}
+
+/* Task list rows + fields */
+html[data-theme='dark'] .sv-task-row {
+  border-color: #2f3b43;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-task-type {
+  color: #aebac1;
+}
+
+html[data-theme='dark'] .sv-task-status {
+  background: rgba(255, 180, 0, 0.18);
+  color: #ffd27a;
+}
+
+html[data-theme='dark'] .sv-field {
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-room-summary {
+  background: #2a3942;
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-room-summary li {
+  background: #25323a;
+  border-color: #2f3b43;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-room-picker-grid {
+  background: #202c33;
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-empty-state {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-empty-state i {
+  color: #4b5b63;
+}
+
+/* More-actions dropdown */
+html[data-theme='dark'] .sv-dropdown-menu {
+  background: #202c33;
+  border-color: #2f3b43;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme='dark'] .sv-dropdown-menu li button {
+  color: #aebac1;
+}
+
+html[data-theme='dark'] .sv-dropdown-menu li button i {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-dropdown-menu li button:hover {
+  background: #2a3942;
+  color: #7cc0ff;
+}
+
+/* Printable receipt shown inside a modal */
+html[data-theme='dark'] .sv-receipt-head .sv-receipt-hotel,
+html[data-theme='dark'] .sv-receipt-total-pay {
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-receipt-head .sv-receipt-line {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-receipt-meta {
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-receipt-meta-row > :nth-child(n+1) {
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-receipt-key {
+  background: #2a3942;
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-receipt-val {
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-receipt-items th {
+  background: #2a3942;
+}
+
+html[data-theme='dark'] .sv-receipt-items td {
+  border-color: #2f3b43;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-receipt-totals {
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .sv-receipt-total-row {
+  color: #aebac1;
+}
+
+html[data-theme='dark'] .sv-receipt-total-pay {
+  border-top-color: #e9edef;
+}
+
+/* State accents the base overrides could not reach (they carry an extra class).
+   Green = paid, red = pending, amber = weekend; kept on-brand but lifted for the
+   dark background. */
+html[data-theme='dark'] .sv-bizdate-btn.active {
+  background: rgba(0, 94, 184, 0.22);
+  border-color: #005eb8;
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .sv-cal-day.weekend:not(.business) {
+  color: #ffd27a;
+}
+
+html[data-theme='dark'] .sv-modal-row.pay-pending,
+html[data-theme='dark'] .sv-modal-row.pay-pending i,
+html[data-theme='dark'] .sv-popover-row.pay-pending,
+html[data-theme='dark'] .sv-popover-row.pay-pending i,
+html[data-theme='dark'] .sv-panel-card.pay-pending strong {
+  color: #ff9b9b;
+}
+
+html[data-theme='dark'] .sv-modal-row.pay-ok,
+html[data-theme='dark'] .sv-modal-row.pay-ok i,
+html[data-theme='dark'] .sv-popover-row.pay-ok,
+html[data-theme='dark'] .sv-popover-row.pay-ok i,
+html[data-theme='dark'] .sv-panel-card.pay-ok strong {
+  color: #7ee2a8;
+}
+
+html[data-theme='dark'] .sv-balance-negative {
+  color: #ff9b9b !important;
+}
+
+/* Shared buttons (base.css) — the neutral variants were the last white surfaces
+   in the stay-view modals and across the panel. */
+html[data-theme='dark'] .btn-secondary {
+  background: #2a3942;
+  border-color: #374248;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .btn-secondary:hover {
+  background: #374248;
+}
+
+html[data-theme='dark'] .btn-white {
+  background: #2a3942;
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .btn-white:hover {
+  background: #374248;
+}
+
+html[data-theme='dark'] .btn-outline {
+  color: #e9edef;
+  border-color: #4b5b63;
+}
+
+html[data-theme='dark'] .btn-outline:hover {
+  background: #e9edef;
+  color: #0b141a;
+}
+
+/* Purple folio-guest caption was too dim on the dark folio reference bar. */
+html[data-theme='dark'] .sv-folio-guest {
+  color: #b794f6;
+}

@@ -166,6 +166,26 @@ describe('dark theme stylesheet', () => {
     expect(themeCss).toMatch(/html\[data-theme='dark'\] \.cat-search,[\s\S]*?background: #2a3942/)
   })
 
+  it('repaints the reception stay view, which stayed a white tape chart', () => {
+    // The stay view is a second self-contained world of white surfaces: the
+    // board, its day/room/type columns, and the booking-bar modals. Left alone
+    // it rendered as a bright white chart against the dark shell.
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.stayview-page \{[\s\S]*?background: #0b141a/)
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.sv-chart \{[\s\S]*?background: #202c33/)
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.sv-modal \{[\s\S]*?background: #202c33/)
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.sv-room-cell \{[\s\S]*?background: #202c33/)
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.sv-day-head \{[\s\S]*?background: #2a3942/)
+    for (const sel of ['.sv-type-cell', '.sv-footer-day', '.sv-search', '.sv-dropdown-menu', '.sv-panel-card']) {
+      expect(themeCss).toContain(`html[data-theme='dark'] ${sel}`)
+    }
+  })
+
+  it('repaints the shared neutral buttons, which were the last white surfaces', () => {
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.btn-secondary \{[\s\S]*?background: #2a3942/)
+    expect(themeCss).toContain("html[data-theme='dark'] .btn-white")
+    expect(themeCss).toContain("html[data-theme='dark'] .btn-outline")
+  })
+
   it('is loaded and applied before the app mounts', () => {
     expect(main).toMatch(/import '\.\/assets\/theme\.css'/)
     const applyAt = main.indexOf('applyTheme(resolveStoredTheme())')
