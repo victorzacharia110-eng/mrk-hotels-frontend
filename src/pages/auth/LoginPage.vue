@@ -52,6 +52,8 @@
             <button type="button" class="pw-toggle" @click="showPw = !showPw"><i
                 :class="showPw ? 'fas fa-eye-slash' : 'fas fa-eye'"></i></button>
           </div>
+          <span class="field-error" v-if="errors.password"><i class="fas fa-exclamation-triangle"></i> {{
+            errors.password }}</span>
         </div>
 
         <!-- Property code field (disambiguates email shared across hotels) -->
