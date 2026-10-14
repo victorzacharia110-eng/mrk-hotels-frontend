@@ -89,18 +89,18 @@ describe('waiter pad: the page itself does not scroll while taking an order', ()
   })
 })
 
-describe('waiter pad: categories scroll sideways, food scrolls down', () => {
-  it('lays the categories out as one non-wrapping horizontal rail', () => {
+describe('waiter pad: categories wrap so every one is visible, food scrolls down', () => {
+  it('wraps the categories instead of scrolling them off the edge', () => {
     const rail = rule(styles, '.cat-rail')
     expect(rail).toMatch(/display:\s*flex/)
-    // nowrap is what keeps every category on one line; the default would wrap
-    // and push the food cards off the bottom of the pad, which was the original
-    // complaint.
-    expect(rail).toMatch(/flex-wrap|overflow-x:\s*auto/)
-    expect(rule(styles, '.cat-rail')).toMatch(/overflow-x:\s*auto/)
+    // Wrapping is what keeps every category on screen: as a single sideways
+    // scrolling line the last ones sat off the right edge behind a hairline
+    // scrollbar, so a waiter had to scroll sideways to find a department.
+    expect(rail).toMatch(/flex-wrap:\s*wrap/)
+    expect(rule(styles, '.cat-rail')).not.toMatch(/overflow-x:\s*auto/)
   })
 
-  it('keeps the category chips from wrapping onto a second row', () => {
+  it('keeps a category chip label on a single line', () => {
     const chip = rule(styles, '.cat-rail .cat-btn')
     expect(chip).toMatch(/flex:\s*0 0 auto/)
     // Category names range from "Soup" to "Cold Beverages"; a fixed narrow
@@ -147,14 +147,23 @@ describe('waiter pad: the table cards close the categories column', () => {
   })
 
   it('keeps the map at the bottom of the picker without sticking', () => {
-    expect(rule(styles, '.ts-left .table-map')).toMatch(/flex:\s*0 0 auto/)
+    // It yields height to the food list above it (which is what is actually
+    // being ordered from) rather than holding a fixed slice of the column.
+    expect(rule(styles, '.ts-left .table-map')).toMatch(/flex:\s*0 1 auto/)
     // It is a normal block in the categories column now — no sticky pinning.
     expect(rule(styles, '.ts-left .table-map')).not.toMatch(/position:\s*sticky/)
   })
 
   it('lets the map scroll internally instead of growing past the window', () => {
-    expect(rule(styles, '.taker-page.taker-fixed .ts-left .table-map')).toMatch(/max-height:\s*34vh/)
+    expect(rule(styles, '.taker-page.taker-fixed .ts-left .table-map')).toMatch(/max-height:\s*30vh/)
     expect(rule(styles, '.taker-page.taker-fixed .table-map-grid')).toMatch(/overflow-y|min-height:\s*0/)
+  })
+
+  it('scrolls the column when a wrapped rail leaves no room for both', () => {
+    // With the categories wrapping onto more rows on a short window, the food
+    // box and the table map no longer fit together. The column scrolls then, so
+    // the tables stay reachable instead of being clipped by `overflow: hidden`.
+    expect(rule(styles, '.taker-page.taker-fixed .ts-left')).toMatch(/overflow-y:\s*auto/)
   })
 
   it('keeps the order sections full-height so long tickets scroll, not clip', () => {

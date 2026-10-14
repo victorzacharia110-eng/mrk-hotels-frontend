@@ -96,11 +96,11 @@
           </div>
           <div v-if="menuLoading" class="cat-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></div>
           <!--
-            A horizontal rail, not a grid. As a grid the category list grew
-            downward and pushed the food cards off the bottom of the pad, so
-            reaching the last department meant scrolling past everything else.
-            A rail keeps every category on one line, so switching department is
-            a sideways swipe and the food list below never moves.
+            A wrapping rail. As a single sideways-scrolling line the last
+            categories sat off the right edge on a small screen, so finding a
+            department meant scrolling sideways. They wrap onto as many rows as
+            they need instead, which pushes the food list and table map below
+            them further down but keeps every category in view.
           -->
           <div v-else-if="form.table_number && categories.length" class="cat-rail" role="tablist">
             <button
@@ -3190,9 +3190,12 @@ function onKey(e) {
 .taker-page.taker-fixed .ts-right > * {
   flex-shrink: 0;
 }
-/* The picker side does not scroll; the food box below the rail does. */
+/* Once the category rail wraps, a short window can run out of room for the
+   food box and the table map together. The column scrolls then, so the tables
+   are always reachable instead of being clipped by `overflow: hidden`. */
 .taker-page.taker-fixed .ts-left {
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /*
@@ -3201,10 +3204,13 @@ function onKey(e) {
  * tables and the ticket stays on the right.
  */
 .ts-left .table-map {
-  flex: 0 0 auto;
+  /* The table map yields to the food list, which is the thing being ordered
+     from: when the category rail wraps onto more rows the map shrinks (and its
+     own grid scrolls) instead of squeezing the food cards to nothing. */
+  flex: 0 1 auto;
 }
 .taker-page.taker-fixed .ts-left .table-map {
-  max-height: 34vh;
+  max-height: 30vh;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -3219,7 +3225,9 @@ function onKey(e) {
      inside it, instead of the whole page growing. */
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  /* Never collapse the food list to a sliver: the wrapped category rail takes
+     rows, and without a floor the grid below was squeezed to a few pixels. */
+  min-height: 132px;
   /* Takes whatever height the category and sub-category rails leave behind, and
      is the part that gives way when the column runs short. */
   flex: 1 1 auto;
@@ -3941,25 +3949,21 @@ function onKey(e) {
 }
 
 /*
- * The category rail: every department on one line, scrolled sideways.
+ * The category rail: every department visible at once, wrapping onto as many
+ * rows as the column needs.
  *
- * As a wrapping grid this list grew downward and took the food cards off the
- * bottom of the pad with it. A single non-wrapping row keeps all of them
- * reachable with a sideways swipe, and because the rail is pinned above the food
- * box the categories stay on screen while the food below is scrolled.
+ * This used to be a single sideways-scrolling line. On a small laptop the last
+ * categories sat off the right edge with only a hairline scrollbar as a hint, so
+ * a waiter had to scroll sideways to find a department. Wrapping shows all of
+ * them; the panel grows and the tables below simply move further down.
  */
 .cat-rail {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  /* Room for the lift-on-hover shadow, which would otherwise be clipped by the
-     rail's own overflow box. */
+  /* Room for the lift-on-hover shadow, which would otherwise be clipped. */
   padding: 4px 2px 8px;
   margin: -4px -2px 0;
-  scrollbar-width: thin;
-  scroll-snap-type: x proximity;
-  -webkit-overflow-scrolling: touch;
 }
 .cat-rail .cat-btn {
   flex: 0 0 auto;
@@ -3970,7 +3974,6 @@ function onKey(e) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  scroll-snap-align: start;
 }
 
 /*
