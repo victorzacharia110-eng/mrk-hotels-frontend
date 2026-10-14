@@ -138,14 +138,14 @@ describe('dark theme stylesheet', () => {
   it('repaints the other report pages too', () => {
     expect(themeCss).toContain("html[data-theme='dark'] .rp-section")
     expect(themeCss).toContain("html[data-theme='dark'] .tab-btn")
-    expect(themeCss).toMatch(/--text-muted: #8696a0/)
+    expect(themeCss).toMatch(/--text-muted: #95a3ab/)
   })
 
   it('uses the WhatsApp-style dark palette', () => {
     expect(themeCss).toMatch(/--bg: #0b141a/)
     expect(themeCss).toMatch(/--card: #202c33/)
     expect(themeCss).toMatch(/--text: #e9edef/)
-    expect(themeCss).toMatch(/--muted: #8696a0/)
+    expect(themeCss).toMatch(/--muted: #95a3ab/)
   })
 
   it('repaints the sign-in pages dark too', () => {
@@ -184,6 +184,30 @@ describe('dark theme stylesheet', () => {
     expect(themeCss).toMatch(/html\[data-theme='dark'\] \.btn-secondary \{[\s\S]*?background: #2a3942/)
     expect(themeCss).toContain("html[data-theme='dark'] .btn-white")
     expect(themeCss).toContain("html[data-theme='dark'] .btn-outline")
+  })
+
+  it('repaints the cashier POS + store panels and the chat', () => {
+    // The POS/store panels are a whole light design system; the chat is the
+    // WhatsApp-style column. All of them used to stay white in dark mode.
+    for (const sel of [
+      '.pos-topbar', '.pos-table', '.waiter-row', '.outlet-option', '.sm-topbar',
+      '.panel', '.sa-header', '.chat-shell', '.chat-messages', '.bubble.theirs',
+    ]) {
+      expect(themeCss).toContain(`html[data-theme='dark'] ${sel}`)
+    }
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.chat-messages \{[\s\S]*?background: #0b141a/)
+  })
+
+  it('repaints the marketing, portal and report-browser leftovers', () => {
+    // These shipped hardcoded light surfaces the shared primitives never reach:
+    // the marketing header, the portal page title, the report help-table's dark
+    // first column, the POS/store page shells and the mobile logout link.
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.mkt-header \{ background:\s*#202c33/)
+    expect(themeCss).toContain("html[data-theme='dark'] .sa-page-title")
+    expect(themeCss).toContain("html[data-theme='dark'] .rb-help-table td:first-child")
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.pos-layout \{[\s\S]*?background: #0b141a/)
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.sm-layout \{[\s\S]*?background: #0b141a/)
+    expect(themeCss).toContain("html[data-theme='dark'] .mobile-link.logout")
   })
 
   it('is loaded and applied before the app mounts', () => {
