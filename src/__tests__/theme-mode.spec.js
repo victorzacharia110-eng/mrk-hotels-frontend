@@ -141,6 +141,12 @@ describe('dark theme stylesheet', () => {
     expect(themeCss).toMatch(/--text-muted: #94a3b8/)
   })
 
+  it('keeps the staff sign-in page dark-on-light in dark mode', () => {
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.auth-card \.auth-header h1 \{[\s\S]*?color: #0b1f33/)
+    expect(themeCss).toContain("html[data-theme='dark'] .auth-card .form-group label")
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.auth-card \.form-group input,[\s\S]*?color: #111827/)
+  })
+
   it('is loaded and applied before the app mounts', () => {
     expect(main).toMatch(/import '\.\/assets\/theme\.css'/)
     const applyAt = main.indexOf('applyTheme(resolveStoredTheme())')

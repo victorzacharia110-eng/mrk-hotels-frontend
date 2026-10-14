@@ -578,3 +578,89 @@ html[data-theme='dark'] .ledger-group-head {
 html[data-theme='dark'] .opening-row td {
   background: rgba(148, 163, 184, 0.08);
 }
+
+/* ── Staff sign-in page (auth/LoginPage) ────────────────────────────────────── */
+
+/* The sign-in page keeps its light brand look in dark mode, but it inherited the
+   theme's light body colour onto its light background, washing out the
+   "MRK Hotels" heading and the field labels. Pin it back to the light palette.
+   Scoped to .auth-card so the separate portal sign-in (.auth-page siblings) is
+   untouched. */
+html[data-theme='dark'] .auth-card {
+  color: #0b1f33;
+}
+
+html[data-theme='dark'] .auth-card .auth-header h1 {
+  color: #0b1f33;
+}
+
+html[data-theme='dark'] .auth-card .auth-header p,
+html[data-theme='dark'] .auth-card .pin-hint,
+html[data-theme='dark'] .auth-card .trust-device small,
+html[data-theme='dark'] .auth-card .home-version,
+html[data-theme='dark'] .auth-card .auth-link {
+  color: #6b7280;
+}
+
+html[data-theme='dark'] .auth-card .form-group label {
+  color: #333;
+}
+
+html[data-theme='dark'] .auth-card .form-group input,
+html[data-theme='dark'] .auth-card .form-control {
+  background: #fff;
+  border-color: #e0e0e0;
+  color: #111827;
+}
+
+html[data-theme='dark'] .auth-card input::placeholder,
+html[data-theme='dark'] .auth-card textarea::placeholder {
+  color: #9ca3af;
+}
+
+html[data-theme='dark'] .auth-card .pw-toggle {
+  color: #6b7280;
+}
+
+html[data-theme='dark'] .auth-card .mode-switch {
+  background: #f3f4f6;
+  border-color: #e0e0e0;
+}
+
+html[data-theme='dark'] .auth-card .mode-btn {
+  color: #6b7280;
+}
+
+html[data-theme='dark'] .auth-card .mode-btn.active {
+  background: #fff;
+  color: var(--brand);
+}
+
+html[data-theme='dark'] .auth-card .trust-device {
+  background: #f5f8fc;
+  border-color: #e3ecf6;
+}
+
+html[data-theme='dark'] .auth-card .trust-device strong {
+  color: #1f2937;
+}
+
+html[data-theme='dark'] .auth-card .pin-dot {
+  background: #fff;
+  border-color: #e0e0e0;
+}
+
+html[data-theme='dark'] .auth-card .pin-dot.filled {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+html[data-theme='dark'] .auth-card .pin-key {
+  background: #fff;
+  border-color: #e0e0e0;
+  color: #333;
+}
+
+html[data-theme='dark'] .auth-card .pin-key:active:not(:disabled) {
+  background: #f0f7ff;
+}
