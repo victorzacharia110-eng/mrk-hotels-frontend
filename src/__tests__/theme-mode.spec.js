@@ -210,6 +210,15 @@ describe('dark theme stylesheet', () => {
     expect(themeCss).toContain("html[data-theme='dark'] .mobile-link.logout")
   })
 
+  it('turns the sidebars near-black in dark mode', () => {
+    // The brand-blue drawer and the POS/store/superadmin rails all go black so
+    // the whole chrome matches the dark shell instead of a bright blue slab.
+    for (const sel of ['.staff-drawer', '.pos-sidebar', '.sm-sidebar', '.sa-sidebar']) {
+      expect(themeCss).toContain(`html[data-theme='dark'] ${sel}`)
+    }
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.staff-drawer,[\s\S]*?background: #0b141a/)
+  })
+
   it('is loaded and applied before the app mounts', () => {
     expect(main).toMatch(/import '\.\/assets\/theme\.css'/)
     const applyAt = main.indexOf('applyTheme(resolveStoredTheme())')

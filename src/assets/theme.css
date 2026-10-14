@@ -2883,6 +2883,19 @@ html[data-theme='dark'] .dc-btn {
   color: #e9edef;
 }
 
+/* Sidebars: the brand-blue / gradient rails become near-black in dark mode. */
+html[data-theme='dark'] .staff-drawer,
+html[data-theme='dark'] .pos-sidebar,
+html[data-theme='dark'] .sm-sidebar,
+html[data-theme='dark'] .sa-sidebar {
+  background: #0b141a;
+}
+
+html[data-theme='dark'] .staff-drawer {
+  color: #e9edef;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.55);
+}
+
 /* ── Remaining panel coverage (auto-generated sweep) ────────────────────────
    Pages/reports/portal/superadmin/kitchen/rooms/etc. each ship their own
    hardcoded light surfaces. Hue-aware sweep (postcss-parsed): near-white
