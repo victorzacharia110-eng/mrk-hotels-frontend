@@ -754,3 +754,318 @@ html[data-theme='dark'] .alert--success {
   color: #86efac;
   border-color: #1c4a2f;
 }
+
+/* ── Take-order pad (waiter / cashier / bartender) ─────────────────────────────
+   The pad is its own world of hardcoded light surfaces — white cards, grey
+   inputs and near-black text, none of which the shared primitives above reach.
+   It used to render white panels with near-white text in dark mode (the cards
+   were invisible). The same WhatsApp-style tokens as the shell are applied here;
+   the gold (waiter) and blue (cashier/bartender) accents are kept. Rules carry
+   exactly the component's selectors under `html[data-theme='dark']`, which lands
+   one step above the scoped base and one step below the component's own
+   `.active` / `:hover` rules, so selected and hovered states still win. */
+
+html[data-theme='dark'] .taker-page {
+  --pad-accent-soft: rgba(184, 134, 11, 0.16);
+  --pad-accent-soft-text: #e3c15a;
+  background: #0b141a;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .cat-pop {
+  --pad-accent-soft: rgba(184, 134, 11, 0.16);
+  --pad-accent-soft-text: #e3c15a;
+}
+
+html[data-theme='dark'] .taker-page.pos-theme,
+html[data-theme='dark'] .cat-pop.pos-theme {
+  --pad-accent-soft: rgba(0, 94, 184, 0.22);
+  --pad-accent-soft-text: #7cc0ff;
+}
+
+/* Panels and cards */
+html[data-theme='dark'] .cat-panel,
+html[data-theme='dark'] .inline-items,
+html[data-theme='dark'] .table-map,
+html[data-theme='dark'] .order-header,
+html[data-theme='dark'] .lines-wrap,
+html[data-theme='dark'] .open-card,
+html[data-theme='dark'] .summary-kpi,
+html[data-theme='dark'] .summary-tools,
+html[data-theme='dark'] .open-tools,
+html[data-theme='dark'] .dash-card,
+html[data-theme='dark'] .dash-date,
+html[data-theme='dark'] .receipt-panel,
+html[data-theme='dark'] .cat-pop-panel {
+  background: #202c33;
+  border-color: #2f3b43;
+  color: #e9edef;
+}
+
+/* Inputs, chips and buttons that were white/light grey */
+html[data-theme='dark'] .cat-search,
+html[data-theme='dark'] .st-search,
+html[data-theme='dark'] .st-select,
+html[data-theme='dark'] .ot-search input,
+html[data-theme='dark'] .void-reason textarea,
+html[data-theme='dark'] .tm-input,
+html[data-theme='dark'] .oh-input,
+html[data-theme='dark'] .cat-btn,
+html[data-theme='dark'] .sub-rail .sub-btn,
+html[data-theme='dark'] .dept-toggle button,
+html[data-theme='dark'] .type-toggle button,
+html[data-theme='dark'] .covers-step button,
+html[data-theme='dark'] .qty-step button,
+html[data-theme='dark'] .accomp-option,
+html[data-theme='dark'] .summary-link,
+html[data-theme='dark'] .item-advance,
+html[data-theme='dark'] .pager-btn,
+html[data-theme='dark'] .pos-tab,
+html[data-theme='dark'] .ot-chips button,
+html[data-theme='dark'] .tm-btn,
+html[data-theme='dark'] .tm-chip,
+html[data-theme='dark'] .tm-cancel,
+html[data-theme='dark'] .open-day-label {
+  background: #2a3942;
+  border-color: #2f3b43;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .cat-search:focus,
+html[data-theme='dark'] .st-search:focus,
+html[data-theme='dark'] .void-reason textarea:focus,
+html[data-theme='dark'] .ot-search input:focus {
+  background: #2a3942;
+  border-color: #3a4a54;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .taker-page input::placeholder,
+html[data-theme='dark'] .taker-page textarea::placeholder,
+html[data-theme='dark'] .cat-pop input::placeholder,
+html[data-theme='dark'] .cat-pop textarea::placeholder {
+  color: #8696a0;
+}
+
+/* Hover backgrounds that were still light */
+html[data-theme='dark'] .tm-btn:hover,
+html[data-theme='dark'] .item-advance:hover,
+html[data-theme='dark'] .summary-link:hover,
+html[data-theme='dark'] .ot-chips button:hover,
+html[data-theme='dark'] .split-line:hover,
+html[data-theme='dark'] .open-btn.ghost:hover {
+  background: #374248;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .tm-btn.danger:hover,
+html[data-theme='dark'] .tm-chip-del:hover,
+html[data-theme='dark'] .open-btn.ghost.danger:hover {
+  background: rgba(220, 38, 38, 0.18);
+  color: #fca5a5;
+}
+
+/* Neutral borders */
+html[data-theme='dark'] .sub-rail,
+html[data-theme='dark'] .covers-step,
+html[data-theme='dark'] .qty-step,
+html[data-theme='dark'] .type-toggle,
+html[data-theme='dark'] .dept-toggle,
+html[data-theme='dark'] .tm-form,
+html[data-theme='dark'] .tm-locs,
+html[data-theme='dark'] .split-pick,
+html[data-theme='dark'] .bill-dest,
+html[data-theme='dark'] .bill-actions,
+html[data-theme='dark'] .notes-line,
+html[data-theme='dark'] .bill-preview,
+html[data-theme='dark'] .bill-preview-empty,
+html[data-theme='dark'] .dept-toggle button + button {
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .lines-table td {
+  border-bottom-color: #2f3b43;
+}
+
+/* Quiet raised rows */
+html[data-theme='dark'] .notes-line,
+html[data-theme='dark'] .tm-locs,
+html[data-theme='dark'] .dash-req,
+html[data-theme='dark'] .summary-items-row td {
+  background: #1b262c;
+}
+
+/* Captions and secondary text */
+html[data-theme='dark'] .cat-panel-head,
+html[data-theme='dark'] .oh-field label,
+html[data-theme='dark'] .oh-check span,
+html[data-theme='dark'] .sk-label,
+html[data-theme='dark'] .sk-sub,
+html[data-theme='dark'] .open-meta,
+html[data-theme='dark'] .open-total,
+html[data-theme='dark'] .tm-meta,
+html[data-theme='dark'] .tm-empty,
+html[data-theme='dark'] .tm-locs-hint,
+html[data-theme='dark'] .cat-empty,
+html[data-theme='dark'] .empty-cell,
+html[data-theme='dark'] .line-table-icon,
+html[data-theme='dark'] .line-table.is-unset,
+html[data-theme='dark'] .accomp-hint,
+html[data-theme='dark'] .ot-search i,
+html[data-theme='dark'] .dash-req-items,
+html[data-theme='dark'] .bill-all,
+html[data-theme='dark'] .bill-dest-count,
+html[data-theme='dark'] .bill-summary,
+html[data-theme='dark'] .cat-item.price-sold-out,
+html[data-theme='dark'] .cat-item.out-of-stock .cat-item-price,
+html[data-theme='dark'] .summary-items .cat-empty,
+html[data-theme='dark'] .receipt .rc-line,
+html[data-theme='dark'] .receipt .rc-thanks {
+  color: #8696a0;
+}
+
+/* Primary copy */
+html[data-theme='dark'] .oh-static,
+html[data-theme='dark'] .tm-name,
+html[data-theme='dark'] .tm-locs-head strong,
+html[data-theme='dark'] .open-card-head,
+html[data-theme='dark'] .open-items,
+html[data-theme='dark'] .dash-card-head,
+html[data-theme='dark'] .dash-req strong,
+html[data-theme='dark'] .dash-req li,
+html[data-theme='dark'] .summary-kpi strong,
+html[data-theme='dark'] .summary-items li,
+html[data-theme='dark'] .split-amt,
+html[data-theme='dark'] .split-line,
+html[data-theme='dark'] .void-summary,
+html[data-theme='dark'] .open-head h2,
+html[data-theme='dark'] .bill-preview,
+html[data-theme='dark'] .receipt .rc-item,
+html[data-theme='dark'] .cat-item-name,
+html[data-theme='dark'] .table-chip-name,
+html[data-theme='dark'] .lines-table td {
+  color: #e9edef;
+}
+
+/* Food cards */
+html[data-theme='dark'] .cat-item {
+  background: #202c33;
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .cat-item.out-of-stock {
+  background: #1b262c;
+}
+
+html[data-theme='dark'] .cat-item-stock {
+  color: #86efac;
+}
+
+/* Table chips: tint the state colour instead of the light pastel */
+html[data-theme='dark'] .table-chip.free {
+  background: rgba(34, 197, 94, 0.14);
+  border-color: #2f7d4f;
+}
+
+html[data-theme='dark'] .table-chip.taken,
+html[data-theme='dark'] .table-chip.occupied,
+html[data-theme='dark'] .table-chip.occupied:disabled {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: #7f1d1d;
+}
+
+html[data-theme='dark'] .table-chip.mine {
+  background: rgba(37, 99, 235, 0.18);
+  border-color: #2563eb;
+}
+
+html[data-theme='dark'] .table-chip-free {
+  color: #86efac;
+}
+
+html[data-theme='dark'] .table-chip-occ {
+  color: #fca5a5;
+}
+
+html[data-theme='dark'] .table-chip-occ.is-mine,
+html[data-theme='dark'] .table-chip.mine .table-chip-tick,
+html[data-theme='dark'] .table-chip.taken .table-chip-tick {
+  color: #7cc0ff;
+}
+
+/* Dark header bars */
+html[data-theme='dark'] .inline-items-head,
+html[data-theme='dark'] .lines-table th,
+html[data-theme='dark'] .cat-pop-head {
+  background: #2a3942;
+  color: #e9edef;
+}
+
+/* Remaining neutrals */
+html[data-theme='dark'] .summary-link {
+  background: #2a3942;
+  border-color: #2f3b43;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .item-advance {
+  background: #2a3942;
+  border-color: #2f3b43;
+  color: #aebac1;
+}
+
+html[data-theme='dark'] .open-btn.ghost {
+  color: #e9edef;
+  border-color: #2f3b43;
+  background: transparent;
+}
+
+html[data-theme='dark'] .open-btn.ghost.danger {
+  color: #fca5a5;
+  border-color: #7f1d1d;
+  background: transparent;
+}
+
+html[data-theme='dark'] .dept-toggle button.locked,
+html[data-theme='dark'] .dept-toggle button.locked.active {
+  background: #202c33;
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .tm-chip-del {
+  background: #2a3942;
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .line-remove {
+  color: #f87171;
+}
+
+html[data-theme='dark'] .tm-error,
+html[data-theme='dark'] .send-error,
+html[data-theme='dark'] .tm-btn.danger {
+  color: #f87171;
+}
+
+html[data-theme='dark'] .bill-dest.checked {
+  border-color: #2563eb;
+  background: rgba(37, 99, 235, 0.18);
+}
+
+html[data-theme='dark'] .bill-dest-tag.mine {
+  background: rgba(37, 99, 235, 0.22);
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .bill-dest-tag.taken {
+  background: rgba(244, 63, 94, 0.2);
+  color: #fca5a5;
+}
+
+html[data-theme='dark'] .bill-arrow-bar {
+  background: #2f3b43;
+}
+
+html[data-theme='dark'] .bill-arrow-btn:disabled {
+  background: #374248;
+}

@@ -154,6 +154,18 @@ describe('dark theme stylesheet', () => {
     expect(themeCss).toMatch(/html\[data-theme='dark'\] \.form-group input,[\s\S]*?background: #2a3942/)
   })
 
+  it('repaints the take-order pad, which was white panels with white text', () => {
+    // The pad ships its own hardcoded light surfaces that the shared primitives
+    // never reach, so in dark mode it used to show white cards with near-white
+    // text — the cards were unreadable. The panels and the food/table cards are
+    // repainted here; the gold/blue accents are left to win.
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.cat-panel,[\s\S]*?background: #202c33/)
+    expect(themeCss).toContain("html[data-theme='dark'] .table-map")
+    expect(themeCss).toContain("html[data-theme='dark'] .inline-items")
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.cat-item \{[\s\S]*?background: #202c33/)
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.cat-search,[\s\S]*?background: #2a3942/)
+  })
+
   it('is loaded and applied before the app mounts', () => {
     expect(main).toMatch(/import '\.\/assets\/theme\.css'/)
     const applyAt = main.indexOf('applyTheme(resolveStoredTheme())')
