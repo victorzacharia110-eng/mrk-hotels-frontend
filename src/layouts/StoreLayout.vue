@@ -120,6 +120,12 @@
                     <button type="button" class="profile-menu-link" @click="profileOpen = false; handleLogout()">
                       <i class="fas fa-right-from-bracket" aria-hidden="true"></i> {{ $t('nav.logout') }}
                     </button>
+                    <button type="button" class="profile-menu-link theme-toggle" :aria-pressed="themeStore.isDark"
+                      :title="themeStore.isDark ? $t('topBar.lightMode') : $t('topBar.darkMode')"
+                      @click="themeStore.toggleTheme()">
+                      <i :class="themeStore.isDark ? 'fas fa-sun' : 'fas fa-moon'" aria-hidden="true"></i>
+                      {{ themeStore.isDark ? $t('topBar.lightMode') : $t('topBar.darkMode') }}
+                    </button>
                     <div class="profile-menu-lang" role="group" :aria-label="$t('topBar.language')">
                       <button type="button" class="lang-option" :class="{ active: locale === 'en' }"
                         @click="setLocale('en')" :title="$t('topBar.switchToEnglish')"
@@ -232,6 +238,12 @@
             </template>
 
             <div class="mobile-divider"></div>
+
+            <button class="mobile-link theme-toggle" :aria-pressed="themeStore.isDark"
+              @click="themeStore.toggleTheme()">
+              <i :class="themeStore.isDark ? 'fas fa-sun' : 'fas fa-moon'" aria-hidden="true"></i>
+              {{ themeStore.isDark ? $t('topBar.lightMode') : $t('topBar.darkMode') }}
+            </button>
 
             <button class="mobile-link" @click="toggleLocale">
               <span class="mobile-lang-flag" aria-hidden="true">{{ locale === 'sw' ? '🇬🇧' : '🇹🇿' }}</span>
@@ -546,12 +558,14 @@ import NotificationSoundSettings from '@/components/notification/NotificationSou
 import DayCloseReminderModal from '@/components/cashier/DayCloseReminderModal.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { useOutletContext } from '@/composables/useOutletContext'
+import { useThemeStore } from '@/stores/theme'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const route = useRoute()
 const router = useRouter()
 const { t, locale } = useI18n()
 const authStore = useAuthStore()
+const themeStore = useThemeStore()
 const notifStore = useNotificationStore()
 const workingDateStore = useWorkingDateStore()
 // The review's Day Close reminder lists the waiter panel too, so a waiter may

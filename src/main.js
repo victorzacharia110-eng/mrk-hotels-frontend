@@ -13,6 +13,7 @@ import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import '@fortawesome/fontawesome-free/css/all.min.css'
 import './assets/base.css'
 import './assets/skeleton.css'
+import './assets/theme.css'
 
 import App from './App.vue'
 import router from './router'
@@ -20,6 +21,11 @@ import i18n from './locales/i18n'
 import { initA11y } from './utils/a11y'
 import './utils/toast'
 import { primeNotificationAudio } from './utils/notificationTone'
+import { applyTheme, resolveStoredTheme } from './stores/theme'
+
+// Paint the remembered theme before the first render, so a dark-mode user does
+// not see a flash of the light theme while the app boots.
+applyTheme(resolveStoredTheme())
 
 // Root Vue application instance.
 const app = createApp(App)

@@ -705,7 +705,9 @@
     "tagline": "Direct booking, best rates",
     "switchToEnglish": "Switch to English",
     "switchToSwahili": "Switch to Swahili",
-    "language": "Language"
+    "language": "Language",
+    "darkMode": "Dark mode",
+    "lightMode": "Light mode"
   },
   "search": {
     "placeholder": "Search hotels or cities..."

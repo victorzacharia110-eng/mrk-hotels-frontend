@@ -705,7 +705,9 @@
     "tagline": "Uhifadhi wa moja kwa moja, bei nzuri",
     "switchToEnglish": "Badilisha kuwa Kiingereza",
     "switchToSwahili": "Badilisha kuwa Kiswahili",
-    "language": "Lugha"
+    "language": "Lugha",
+    "darkMode": "Hali ya giza",
+    "lightMode": "Hali ya mwanga"
   },
   "search": {
     "placeholder": "Tafuta hoteli au miji..."

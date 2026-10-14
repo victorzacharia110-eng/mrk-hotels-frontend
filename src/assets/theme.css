@@ -1,0 +1,313 @@
+/*
+ * Dark theme layer.
+ *
+ * The panel ships a light theme built from hardcoded colours. Rather than
+ * rewrite every component, this file re-paints the shared surfaces once, keyed
+ * off <html data-theme="dark">, which the theme store toggles. Scoped component
+ * styles carry a `[data-v-…]` attribute (specificity 0,2,0); prefixing the
+ * selectors here with `html[data-theme='dark']` gives 0,2,1 and wins without
+ * `!important` in almost every case.
+ *
+ * Covered here: the app shell (header, profile menu, drawer, nav) and the
+ * shared primitives from base.css/skeleton.css (cards, tables, forms, modals,
+ * badges, alerts, toasts). Page-specific colours are polished separately.
+ */
+
+html[data-theme='dark'] {
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --border: #23324a;
+  --bg: #0b1220;
+  --card: #111c2e;
+  --brand-light: #16233a;
+  /* Native widgets (scrollbars, autofill, date pickers) follow this. */
+  color-scheme: dark;
+}
+
+html[data-theme='dark'] body {
+  background: #0b1220;
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] ::-webkit-scrollbar-track {
+  background: #0e1729;
+}
+
+html[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+/* ── Shared primitives (base.css) ─────────────────────────────────────────── */
+
+html[data-theme='dark'] .card,
+html[data-theme='dark'] .stat-card {
+  background: #111c2e;
+  border-color: #23324a;
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] .page-title,
+html[data-theme='dark'] .card-title,
+html[data-theme='dark'] .page-head h1,
+html[data-theme='dark'] .modal-head h2,
+html[data-theme='dark'] .modal-head h3,
+html[data-theme='dark'] .section-title {
+  color: #f1f5f9;
+}
+
+html[data-theme='dark'] .section-subtitle,
+html[data-theme='dark'] .kpi-label {
+  color: #94a3b8;
+}
+
+html[data-theme='dark'] .kpi-value {
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] .kpi.total {
+  border-top-color: #23324a;
+}
+
+html[data-theme='dark'] .table {
+  background: #111c2e;
+  border-color: #23324a;
+}
+
+html[data-theme='dark'] .table th {
+  background: #16233a;
+  color: #94a3b8;
+}
+
+html[data-theme='dark'] .table th,
+html[data-theme='dark'] .table td {
+  border-bottom-color: #1e293b;
+}
+
+html[data-theme='dark'] .table tbody tr:hover {
+  background: #16233a;
+}
+
+html[data-theme='dark'] .table-scroll.is-pinned {
+  border-color: #23324a;
+  background: #111c2e;
+}
+
+html[data-theme='dark'] .table-pinned thead th.pin-col,
+html[data-theme='dark'] .table-pinned thead th.actions-col {
+  background: #16233a;
+}
+
+html[data-theme='dark'] .table-pinned tbody tr:hover .pin-col,
+html[data-theme='dark'] .table-pinned tbody tr:hover .actions-col {
+  background: #16233a;
+}
+
+html[data-theme='dark'] .input,
+html[data-theme='dark'] .select,
+html[data-theme='dark'] .textarea,
+html[data-theme='dark'] .form-group input,
+html[data-theme='dark'] .form-group select,
+html[data-theme='dark'] .form-group textarea {
+  background: #0e1729;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] .form-group label {
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .input::placeholder,
+html[data-theme='dark'] .textarea::placeholder,
+html[data-theme='dark'] input::placeholder,
+html[data-theme='dark'] textarea::placeholder {
+  color: #64748b;
+}
+
+html[data-theme='dark'] .modal-overlay {
+  background: rgba(2, 6, 16, 0.72);
+}
+
+html[data-theme='dark'] .modal {
+  background: #111c2e;
+  color: #e2e8f0;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+html[data-theme='dark'] .modal-close {
+  color: #94a3b8;
+}
+
+html[data-theme='dark'] .modal-close:hover {
+  color: #f1f5f9;
+}
+
+html[data-theme='dark'] .alert-error {
+  background: #2a1417;
+  color: #fca5a5;
+  border-color: #7f1d1d;
+}
+
+html[data-theme='dark'] .alert-success {
+  background: #0f2419;
+  color: #86efac;
+}
+
+html[data-theme='dark'] .alert-info {
+  background: #10243a;
+  color: #93c5fd;
+}
+
+html[data-theme='dark'] .alert-warning {
+  background: #2a210f;
+  color: #fcd34d;
+  border-color: #7c5e10;
+}
+
+html[data-theme='dark'] .spinner {
+  border-color: #1e293b;
+  border-top-color: #3b82f6;
+}
+
+/* ── Skeleton loading (skeleton.css) ──────────────────────────────────────── */
+
+html[data-theme='dark'] .sk {
+  background: #16233a;
+  background-image: linear-gradient(90deg, #16233a 25%, #1e2d47 37%, #16233a 63%);
+}
+
+html[data-theme='dark'] .sk-block--table .sk-row,
+html[data-theme='dark'] .sk-block--cards .sk-card {
+  background: #111c2e;
+  border-color: #23324a;
+}
+
+/* ── App shell (StoreLayout) ──────────────────────────────────────────────── */
+
+html[data-theme='dark'] .main-header {
+  background: #0e1729;
+  border-bottom-color: #23324a;
+}
+
+html[data-theme='dark'] .logo-text {
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] .logo-icon {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme='dark'] .search-input-wrap input {
+  background: #0e1729;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] .action-link {
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .action-link:hover {
+  background: #16233a;
+  color: #fff;
+}
+
+html[data-theme='dark'] .outlet-picker-select {
+  background: #0e1729;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] .hamburger span {
+  background: #cbd5e1;
+}
+
+html[data-theme='dark'] .header-bell {
+  background: #16233a;
+  border-color: #23324a;
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .header-bell:hover {
+  background: #1e2d47;
+  color: #fff;
+}
+
+html[data-theme='dark'] .profile-menu-trigger {
+  background: #16233a;
+  border-color: #23324a;
+}
+
+html[data-theme='dark'] .profile-menu-panel {
+  background: #111c2e;
+  border-color: #23324a;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+html[data-theme='dark'] .profile-menu-head {
+  border-bottom-color: #1e293b;
+}
+
+html[data-theme='dark'] .profile-menu-name {
+  color: #f1f5f9;
+}
+
+html[data-theme='dark'] .profile-menu-link {
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .profile-menu-link:hover {
+  background: #16233a;
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .profile-menu-lang {
+  border-top-color: #1e293b;
+}
+
+html[data-theme='dark'] .lang-switch {
+  background: #16233a;
+  border-color: #23324a;
+}
+
+html[data-theme='dark'] .lang-option {
+  color: #94a3b8;
+}
+
+html[data-theme='dark'] .lang-option:hover {
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .lang-option.active {
+  background: #23324a;
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .mobile-dropdown {
+  background: #0e1729;
+  border-top-color: #23324a;
+}
+
+html[data-theme='dark'] .mobile-link {
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .mobile-link:hover {
+  background: #16233a;
+  color: #fff;
+}
+
+html[data-theme='dark'] .mobile-link.router-link-exact-active {
+  background: #16233a;
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .mobile-divider {
+  background: #23324a;
+}
+
+html[data-theme='dark'] .mobile-search input {
+  background: #0e1729;
+  border-color: #23324a;
+  color: #e2e8f0;
+}
