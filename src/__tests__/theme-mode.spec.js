@@ -129,22 +129,29 @@ describe('dark theme stylesheet', () => {
   it('makes the reports browser paper a dark surface with light text', () => {
     // The white .rb-paper inherited the dark theme's light body colour, which is
     // what made the report text read as faint grey on a white sheet.
-    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.rb-paper,[\s\S]*?background: #111c2e/)
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.rb-paper,[\s\S]*?background: #202c33/)
     expect(themeCss).toContain('html[data-theme=\'dark\'] .rb-paper')
-    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.rb-loading,[\s\S]*?color: #cbd5e1/)
-    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.rb-report-head h2,[\s\S]*?color: #f1f5f9/)
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.rb-loading,[\s\S]*?color: #aebac1/)
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.rb-report-head h2,[\s\S]*?color: #e9edef/)
   })
 
   it('repaints the other report pages too', () => {
     expect(themeCss).toContain("html[data-theme='dark'] .rp-section")
     expect(themeCss).toContain("html[data-theme='dark'] .tab-btn")
-    expect(themeCss).toMatch(/--text-muted: #94a3b8/)
+    expect(themeCss).toMatch(/--text-muted: #8696a0/)
   })
 
-  it('keeps the staff sign-in page dark-on-light in dark mode', () => {
-    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.auth-card \.auth-header h1 \{[\s\S]*?color: #0b1f33/)
-    expect(themeCss).toContain("html[data-theme='dark'] .auth-card .form-group label")
-    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.auth-card \.form-group input,[\s\S]*?color: #111827/)
+  it('uses the WhatsApp-style dark palette', () => {
+    expect(themeCss).toMatch(/--bg: #0b141a/)
+    expect(themeCss).toMatch(/--card: #202c33/)
+    expect(themeCss).toMatch(/--text: #e9edef/)
+    expect(themeCss).toMatch(/--muted: #8696a0/)
+  })
+
+  it('repaints the sign-in pages dark too', () => {
+    expect(themeCss).toContain("html[data-theme='dark'] .auth-page")
+    expect(themeCss).toContain("html[data-theme='dark'] .guest-login-page")
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.form-group input,[\s\S]*?background: #2a3942/)
   })
 
   it('is loaded and applied before the app mounts', () => {

@@ -11,40 +11,45 @@
  * Covered here: the app shell (header, profile menu, drawer, nav) and the
  * shared primitives from base.css/skeleton.css (cards, tables, forms, modals,
  * badges, alerts, toasts). Page-specific colours are polished separately.
+ *
+ * Palette: mirrors WhatsApp's dark mode — near-black desaturated background
+ * (#0b141a), raised slate panels (#202c33) and inputs (#2a3942), near-white
+ * text (#e9edef) and grey captions (#8696a0) — while keeping the hotel's blue
+ * brand accent. Light mode is untouched.
  */
 
 html[data-theme='dark'] {
-  --text: #e2e8f0;
-  --muted: #94a3b8;
-  --text-muted: #94a3b8;
-  --border: #23324a;
-  --bg: #0b1220;
-  --card: #111c2e;
-  --brand-light: #16233a;
+  --text: #e9edef;
+  --muted: #8696a0;
+  --text-muted: #8696a0;
+  --border: #2f3b43;
+  --bg: #0b141a;
+  --card: #202c33;
+  --brand-light: #2a3942;
   /* Native widgets (scrollbars, autofill, date pickers) follow this. */
   color-scheme: dark;
 }
 
 html[data-theme='dark'] body {
-  background: #0b1220;
-  color: #e2e8f0;
+  background: #0b141a;
+  color: #e9edef;
 }
 
 html[data-theme='dark'] ::-webkit-scrollbar-track {
-  background: #0e1729;
+  background: #111b21;
 }
 
 html[data-theme='dark'] ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #374248;
 }
 
 /* ── Shared primitives (base.css) ─────────────────────────────────────────── */
 
 html[data-theme='dark'] .card,
 html[data-theme='dark'] .stat-card {
-  background: #111c2e;
-  border-color: #23324a;
-  color: #e2e8f0;
+  background: #202c33;
+  border-color: #2f3b43;
+  color: #e9edef;
 }
 
 html[data-theme='dark'] .page-title,
@@ -53,54 +58,54 @@ html[data-theme='dark'] .page-head h1,
 html[data-theme='dark'] .modal-head h2,
 html[data-theme='dark'] .modal-head h3,
 html[data-theme='dark'] .section-title {
-  color: #f1f5f9;
+  color: #e9edef;
 }
 
 html[data-theme='dark'] .section-subtitle,
 html[data-theme='dark'] .kpi-label {
-  color: #94a3b8;
+  color: #8696a0;
 }
 
 html[data-theme='dark'] .kpi-value {
-  color: #e2e8f0;
+  color: #e9edef;
 }
 
 html[data-theme='dark'] .kpi.total {
-  border-top-color: #23324a;
+  border-top-color: #2f3b43;
 }
 
 html[data-theme='dark'] .table {
-  background: #111c2e;
-  border-color: #23324a;
+  background: #202c33;
+  border-color: #2f3b43;
 }
 
 html[data-theme='dark'] .table th {
-  background: #16233a;
-  color: #94a3b8;
+  background: #2a3942;
+  color: #8696a0;
 }
 
 html[data-theme='dark'] .table th,
 html[data-theme='dark'] .table td {
-  border-bottom-color: #1e293b;
+  border-bottom-color: #2f3b43;
 }
 
 html[data-theme='dark'] .table tbody tr:hover {
-  background: #16233a;
+  background: #2a3942;
 }
 
 html[data-theme='dark'] .table-scroll.is-pinned {
-  border-color: #23324a;
-  background: #111c2e;
+  border-color: #2f3b43;
+  background: #202c33;
 }
 
 html[data-theme='dark'] .table-pinned thead th.pin-col,
 html[data-theme='dark'] .table-pinned thead th.actions-col {
-  background: #16233a;
+  background: #2a3942;
 }
 
 html[data-theme='dark'] .table-pinned tbody tr:hover .pin-col,
 html[data-theme='dark'] .table-pinned tbody tr:hover .actions-col {
-  background: #16233a;
+  background: #2a3942;
 }
 
 html[data-theme='dark'] .input,
@@ -109,20 +114,20 @@ html[data-theme='dark'] .textarea,
 html[data-theme='dark'] .form-group input,
 html[data-theme='dark'] .form-group select,
 html[data-theme='dark'] .form-group textarea {
-  background: #0e1729;
-  border-color: #334155;
-  color: #e2e8f0;
+  background: #2a3942;
+  border-color: #374248;
+  color: #e9edef;
 }
 
 html[data-theme='dark'] .form-group label {
-  color: #cbd5e1;
+  color: #aebac1;
 }
 
 html[data-theme='dark'] .input::placeholder,
 html[data-theme='dark'] .textarea::placeholder,
 html[data-theme='dark'] input::placeholder,
 html[data-theme='dark'] textarea::placeholder {
-  color: #64748b;
+  color: #8696a0;
 }
 
 html[data-theme='dark'] .modal-overlay {
@@ -130,17 +135,17 @@ html[data-theme='dark'] .modal-overlay {
 }
 
 html[data-theme='dark'] .modal {
-  background: #111c2e;
-  color: #e2e8f0;
+  background: #202c33;
+  color: #e9edef;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
 }
 
 html[data-theme='dark'] .modal-close {
-  color: #94a3b8;
+  color: #8696a0;
 }
 
 html[data-theme='dark'] .modal-close:hover {
-  color: #f1f5f9;
+  color: #e9edef;
 }
 
 html[data-theme='dark'] .alert-error {
@@ -166,32 +171,32 @@ html[data-theme='dark'] .alert-warning {
 }
 
 html[data-theme='dark'] .spinner {
-  border-color: #1e293b;
+  border-color: #2f3b43;
   border-top-color: #3b82f6;
 }
 
 /* ── Skeleton loading (skeleton.css) ──────────────────────────────────────── */
 
 html[data-theme='dark'] .sk {
-  background: #16233a;
-  background-image: linear-gradient(90deg, #16233a 25%, #1e2d47 37%, #16233a 63%);
+  background: #2a3942;
+  background-image: linear-gradient(90deg, #2a3942 25%, #374248 37%, #2a3942 63%);
 }
 
 html[data-theme='dark'] .sk-block--table .sk-row,
 html[data-theme='dark'] .sk-block--cards .sk-card {
-  background: #111c2e;
-  border-color: #23324a;
+  background: #202c33;
+  border-color: #2f3b43;
 }
 
 /* ── App shell (StoreLayout) ──────────────────────────────────────────────── */
 
 html[data-theme='dark'] .main-header {
-  background: #0e1729;
-  border-bottom-color: #23324a;
+  background: #2a3942;
+  border-bottom-color: #2f3b43;
 }
 
 html[data-theme='dark'] .logo-text {
-  color: #e2e8f0;
+  color: #e9edef;
 }
 
 html[data-theme='dark'] .logo-icon {
@@ -199,80 +204,80 @@ html[data-theme='dark'] .logo-icon {
 }
 
 html[data-theme='dark'] .search-input-wrap input {
-  background: #0e1729;
-  border-color: #334155;
-  color: #e2e8f0;
+  background: #2a3942;
+  border-color: #374248;
+  color: #e9edef;
 }
 
 html[data-theme='dark'] .action-link {
-  color: #cbd5e1;
+  color: #aebac1;
 }
 
 html[data-theme='dark'] .action-link:hover {
-  background: #16233a;
+  background: #2a3942;
   color: #fff;
 }
 
 html[data-theme='dark'] .outlet-picker-select {
-  background: #0e1729;
-  border-color: #334155;
-  color: #e2e8f0;
+  background: #2a3942;
+  border-color: #374248;
+  color: #e9edef;
 }
 
 html[data-theme='dark'] .hamburger span {
-  background: #cbd5e1;
+  background: #aebac1;
 }
 
 html[data-theme='dark'] .header-bell {
-  background: #16233a;
-  border-color: #23324a;
-  color: #cbd5e1;
+  background: #2a3942;
+  border-color: #2f3b43;
+  color: #aebac1;
 }
 
 html[data-theme='dark'] .header-bell:hover {
-  background: #1e2d47;
+  background: #374248;
   color: #fff;
 }
 
 html[data-theme='dark'] .profile-menu-trigger {
-  background: #16233a;
-  border-color: #23324a;
+  background: #2a3942;
+  border-color: #2f3b43;
 }
 
 html[data-theme='dark'] .profile-menu-panel {
-  background: #111c2e;
-  border-color: #23324a;
+  background: #202c33;
+  border-color: #2f3b43;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
 }
 
 html[data-theme='dark'] .profile-menu-head {
-  border-bottom-color: #1e293b;
+  border-bottom-color: #2f3b43;
 }
 
 html[data-theme='dark'] .profile-menu-name {
-  color: #f1f5f9;
+  color: #e9edef;
 }
 
 html[data-theme='dark'] .profile-menu-link {
-  color: #cbd5e1;
+  color: #aebac1;
 }
 
 html[data-theme='dark'] .profile-menu-link:hover {
-  background: #16233a;
+  background: #2a3942;
   color: #7cc0ff;
 }
 
 html[data-theme='dark'] .profile-menu-lang {
-  border-top-color: #1e293b;
+  border-top-color: #2f3b43;
 }
 
 html[data-theme='dark'] .lang-switch {
-  background: #16233a;
-  border-color: #23324a;
+  background: #2a3942;
+  border-color: #2f3b43;
 }
 
 html[data-theme='dark'] .lang-option {
-  color: #94a3b8;
+  color: #8696a0;
 }
 
 html[data-theme='dark'] .lang-option:hover {
@@ -280,43 +285,43 @@ html[data-theme='dark'] .lang-option:hover {
 }
 
 html[data-theme='dark'] .lang-option.active {
-  background: #23324a;
+  background: #2f3b43;
   color: #7cc0ff;
 }
 
 html[data-theme='dark'] .mobile-dropdown {
-  background: #0e1729;
-  border-top-color: #23324a;
+  background: #202c33;
+  border-top-color: #2f3b43;
 }
 
 html[data-theme='dark'] .mobile-link {
-  color: #cbd5e1;
+  color: #aebac1;
 }
 
 html[data-theme='dark'] .mobile-link:hover {
-  background: #16233a;
+  background: #2a3942;
   color: #fff;
 }
 
 html[data-theme='dark'] .mobile-link.router-link-exact-active {
-  background: #16233a;
+  background: #2a3942;
   color: #7cc0ff;
 }
 
 html[data-theme='dark'] .mobile-divider {
-  background: #23324a;
+  background: #2f3b43;
 }
 
 html[data-theme='dark'] .mobile-search input {
-  background: #0e1729;
-  border-color: #23324a;
-  color: #e2e8f0;
+  background: #2a3942;
+  border-color: #2f3b43;
+  color: #e9edef;
 }
 
 /* ── Reports browser ──────────────────────────────────────────────────────────
    The report browser was built as a paper-on-screen document: a white sheet
    (.rb-paper), navy headings (--mrk-dark), pale KPI/table surfaces and grey
-   captions (#64748b / #94a3b8). Left untouched in dark mode that reads as faint
+   captions (#8696a0 / #8696a0). Left untouched in dark mode that reads as faint
    grey text on a dark page, which is what the client flagged. Here the sheet and
    its panels become dark surfaces and the captions are lifted to a readable
    slate. The navy group/ledger bands keep their dark fill, since they already
@@ -324,7 +329,7 @@ html[data-theme='dark'] .mobile-search input {
 
 html[data-theme='dark'] .rb-root,
 html[data-theme='dark'] .rb-content {
-  background: #0b1220;
+  background: #0b141a;
 }
 
 html[data-theme='dark'] .rb-paper,
@@ -332,14 +337,14 @@ html[data-theme='dark'] .rb-toolbar,
 html[data-theme='dark'] .rb-tree,
 html[data-theme='dark'] .posr-block,
 html[data-theme='dark'] .posr-builder {
-  background: #111c2e;
-  border-color: #23324a;
-  color: #e2e8f0;
+  background: #202c33;
+  border-color: #2f3b43;
+  color: #e9edef;
   box-shadow: none;
 }
 
 html[data-theme='dark'] .rb-tree {
-  border-right-color: #23324a;
+  border-right-color: #2f3b43;
 }
 
 /* Navy headings and figures become light, so they stand out on the dark sheet. */
@@ -349,7 +354,7 @@ html[data-theme='dark'] .rb-report-row strong,
 html[data-theme='dark'] .rb-total td,
 html[data-theme='dark'] .rb-help-body h4,
 html[data-theme='dark'] .ledger-item-head strong {
-  color: #f1f5f9;
+  color: #e9edef;
 }
 
 /* Grey captions and secondary text, lifted for legibility. */
@@ -369,12 +374,12 @@ html[data-theme='dark'] .posr-field > span,
 html[data-theme='dark'] .posr-col-caption,
 html[data-theme='dark'] .ledger-item-head small,
 html[data-theme='dark'] .ledger-item-balance {
-  color: #cbd5e1;
+  color: #aebac1;
 }
 
 html[data-theme='dark'] .rb-empty,
 html[data-theme='dark'] .rb-report i {
-  color: #94a3b8;
+  color: #8696a0;
 }
 
 /* Panels, KPI tiles and hover fills get a raised dark surface. */
@@ -386,19 +391,19 @@ html[data-theme='dark'] .rb-cat.open,
 html[data-theme='dark'] .rb-cat-head:hover,
 html[data-theme='dark'] .rb-report:hover,
 html[data-theme='dark'] .posr-col {
-  background: #16233a;
-  border-color: #23324a;
+  background: #2a3942;
+  border-color: #2f3b43;
 }
 
 html[data-theme='dark'] .rb-cat-head,
 html[data-theme='dark'] .rb-report,
 html[data-theme='dark'] .posr-col {
-  color: #cbd5e1;
+  color: #aebac1;
 }
 
 html[data-theme='dark'] .rb-cat-head .fa-chevron-right,
 html[data-theme='dark'] .rb-cat-head .fa-chevron-down {
-  color: #94a3b8;
+  color: #8696a0;
 }
 
 html[data-theme='dark'] .rb-cat-icon,
@@ -410,51 +415,51 @@ html[data-theme='dark'] .posr-block-title {
 
 html[data-theme='dark'] .rb-cat-count {
   color: #7cc0ff;
-  background: #23324a;
+  background: #2f3b43;
 }
 
 html[data-theme='dark'] .rb-input,
 html[data-theme='dark'] .rb-chart-toggle {
-  background: #0e1729;
-  border-color: #334155;
-  color: #e2e8f0;
+  background: #2a3942;
+  border-color: #374248;
+  color: #e9edef;
 }
 
 html[data-theme='dark'] .rb-btn-ghost,
 html[data-theme='dark'] .rb-btn-reset {
-  background: #0e1729;
-  border-color: #334155;
+  background: #2a3942;
+  border-color: #374248;
   color: #7cc0ff;
 }
 
 html[data-theme='dark'] .rb-quick option,
 html[data-theme='dark'] .rb-quick optgroup {
-  background: #0e1729;
-  color: #e2e8f0;
+  background: #2a3942;
+  color: #e9edef;
 }
 
 html[data-theme='dark'] .rb-table th {
-  background: #16233a;
-  color: #cbd5e1;
-  border-color: #23324a;
+  background: #2a3942;
+  color: #aebac1;
+  border-color: #2f3b43;
 }
 
 html[data-theme='dark'] .rb-table td,
 html[data-theme='dark'] .ledger-table th,
 html[data-theme='dark'] .ledger-table td {
-  border-color: #23324a;
+  border-color: #2f3b43;
 }
 
 html[data-theme='dark'] .rb-table tfoot td,
 html[data-theme='dark'] .rb-group-sub td,
 html[data-theme='dark'] .rb-group-foot td {
-  background: #16233a;
-  color: #e2e8f0;
+  background: #2a3942;
+  color: #e9edef;
 }
 
 html[data-theme='dark'] .rb-badge {
-  background: #23324a;
-  color: #cbd5e1;
+  background: #2f3b43;
+  color: #aebac1;
 }
 
 html[data-theme='dark'] .rb-table .row-overdue td {
@@ -482,7 +487,7 @@ html[data-theme='dark'] .ledger-table tbody tr.movement-out td {
 }
 
 html[data-theme='dark'] .ledger-table tbody tr.opening-row td {
-  background: #16233a;
+  background: #2a3942;
 }
 
 /* ── Staff reports page (StaffReportsPage) ──────────────────────────────────── */
@@ -493,40 +498,40 @@ html[data-theme='dark'] .rk-label,
 html[data-theme='dark'] .rp-table th,
 html[data-theme='dark'] .rp-req-list span,
 html[data-theme='dark'] .cat-loading {
-  color: #cbd5e1;
+  color: #aebac1;
 }
 
 html[data-theme='dark'] .rp-meta,
 html[data-theme='dark'] .rp-req-list small,
 html[data-theme='dark'] .rp-empty {
-  color: #94a3b8;
+  color: #8696a0;
 }
 
 html[data-theme='dark'] .rp-section,
 html[data-theme='dark'] .dept-toggle button,
 html[data-theme='dark'] .rp-field input {
-  background: #111c2e;
-  border-color: #23324a;
-  color: #e2e8f0;
+  background: #202c33;
+  border-color: #2f3b43;
+  color: #e9edef;
 }
 
 html[data-theme='dark'] .dept-toggle {
-  border-color: #23324a;
+  border-color: #2f3b43;
 }
 
 html[data-theme='dark'] .dept-toggle button + button {
-  border-left-color: #23324a;
+  border-left-color: #2f3b43;
 }
 
 html[data-theme='dark'] .rp-kpi {
-  background: #16233a;
-  border-color: #23324a;
-  color: #e2e8f0;
+  background: #2a3942;
+  border-color: #2f3b43;
+  color: #e9edef;
 }
 
 html[data-theme='dark'] .rp-table th,
 html[data-theme='dark'] .rp-table td {
-  border-bottom-color: #23324a;
+  border-bottom-color: #2f3b43;
 }
 
 html[data-theme='dark'] .rp-table tr.row-low td {
@@ -534,7 +539,7 @@ html[data-theme='dark'] .rp-table tr.row-low td {
 }
 
 html[data-theme='dark'] .rp-req-list li {
-  border-color: #23324a;
+  border-color: #2f3b43;
 }
 
 html[data-theme='dark'] .send-error {
@@ -546,121 +551,206 @@ html[data-theme='dark'] .send-error {
 /* ── Reports dashboard (ReportPage) ─────────────────────────────────────────── */
 
 html[data-theme='dark'] .tab-btn {
-  background: #111c2e;
-  border-color: #23324a;
-  color: #cbd5e1;
+  background: #202c33;
+  border-color: #2f3b43;
+  color: #aebac1;
 }
 
 html[data-theme='dark'] .room-status-item {
-  background: #16233a;
+  background: #2a3942;
 }
 
 html[data-theme='dark'] .room-status-label,
 html[data-theme='dark'] .occ-label,
 html[data-theme='dark'] .muted {
-  color: #94a3b8;
+  color: #8696a0;
 }
 
 html[data-theme='dark'] .occ-value {
-  color: #e2e8f0;
+  color: #e9edef;
 }
 
 html[data-theme='dark'] .bar {
-  background: #23324a;
+  background: #2f3b43;
 }
 
 html[data-theme='dark'] .ledger-group-head {
   color: #bfdbfe;
   background: rgba(59, 130, 246, 0.18);
-  border-color: #23324a;
+  border-color: #2f3b43;
 }
 
 html[data-theme='dark'] .opening-row td {
   background: rgba(148, 163, 184, 0.08);
 }
 
-/* ── Staff sign-in page (auth/LoginPage) ────────────────────────────────────── */
+/* ── Sign-in pages (staff auth + TSCL portal + guest) ─────────────────────────
+   WhatsApp-style dark: the page background goes near-black, cards and controls
+   become raised slate surfaces, and copy is repainted light with grey captions. */
 
-/* The sign-in page keeps its light brand look in dark mode, but it inherited the
-   theme's light body colour onto its light background, washing out the
-   "MRK Hotels" heading and the field labels. Pin it back to the light palette.
-   Scoped to .auth-card so the separate portal sign-in (.auth-page siblings) is
-   untouched. */
-html[data-theme='dark'] .auth-card {
-  color: #0b1f33;
+html[data-theme='dark'] .auth-page,
+html[data-theme='dark'] .guest-login-page {
+  background: #0b141a;
+  color: #e9edef;
 }
 
-html[data-theme='dark'] .auth-card .auth-header h1 {
-  color: #0b1f33;
+html[data-theme='dark'] .auth-header h1,
+html[data-theme='dark'] .login-header h1,
+html[data-theme='dark'] .auth-content h1 {
+  color: #e9edef;
 }
 
-html[data-theme='dark'] .auth-card .auth-header p,
-html[data-theme='dark'] .auth-card .pin-hint,
-html[data-theme='dark'] .auth-card .trust-device small,
-html[data-theme='dark'] .auth-card .home-version,
-html[data-theme='dark'] .auth-card .auth-link {
-  color: #6b7280;
+html[data-theme='dark'] .auth-header p,
+html[data-theme='dark'] .login-header p,
+html[data-theme='dark'] .auth-subtitle,
+html[data-theme='dark'] .pin-hint,
+html[data-theme='dark'] .auth-link,
+html[data-theme='dark'] .home-version,
+html[data-theme='dark'] .back-link {
+  color: #8696a0;
 }
 
-html[data-theme='dark'] .auth-card .form-group label {
-  color: #333;
+html[data-theme='dark'] .home-link {
+  border-top-color: #2f3b43;
 }
 
-html[data-theme='dark'] .auth-card .form-group input,
-html[data-theme='dark'] .auth-card .form-control {
-  background: #fff;
-  border-color: #e0e0e0;
-  color: #111827;
+/* Staff sign-in (auth/LoginPage) */
+html[data-theme='dark'] .form-group label,
+html[data-theme='dark'] .input-group label {
+  color: #aebac1;
 }
 
-html[data-theme='dark'] .auth-card input::placeholder,
-html[data-theme='dark'] .auth-card textarea::placeholder {
-  color: #9ca3af;
+html[data-theme='dark'] .form-group input,
+html[data-theme='dark'] .form-control {
+  background: #2a3942;
+  border-color: #2f3b43;
+  color: #e9edef;
 }
 
-html[data-theme='dark'] .auth-card .pw-toggle {
-  color: #6b7280;
+html[data-theme='dark'] .form-group.has-error input {
+  background: #2a1417;
 }
 
-html[data-theme='dark'] .auth-card .mode-switch {
-  background: #f3f4f6;
-  border-color: #e0e0e0;
+html[data-theme='dark'] .auth-page input::placeholder,
+html[data-theme='dark'] .auth-page textarea::placeholder,
+html[data-theme='dark'] .guest-login-page input::placeholder {
+  color: #8696a0;
 }
 
-html[data-theme='dark'] .auth-card .mode-btn {
-  color: #6b7280;
+html[data-theme='dark'] .pw-toggle,
+html[data-theme='dark'] .password-toggle {
+  color: #8696a0;
 }
 
-html[data-theme='dark'] .auth-card .mode-btn.active {
-  background: #fff;
-  color: var(--brand);
+html[data-theme='dark'] .pw-toggle:hover,
+html[data-theme='dark'] .password-toggle:hover {
+  color: #e9edef;
 }
 
-html[data-theme='dark'] .auth-card .trust-device {
-  background: #f5f8fc;
-  border-color: #e3ecf6;
+html[data-theme='dark'] .mode-switch {
+  background: #202c33;
+  border-color: #2f3b43;
 }
 
-html[data-theme='dark'] .auth-card .trust-device strong {
-  color: #1f2937;
+html[data-theme='dark'] .mode-btn {
+  color: #8696a0;
 }
 
-html[data-theme='dark'] .auth-card .pin-dot {
-  background: #fff;
-  border-color: #e0e0e0;
+html[data-theme='dark'] .mode-btn.active {
+  background: #2a3942;
+  color: #7cc0ff;
+  box-shadow: none;
 }
 
-html[data-theme='dark'] .auth-card .pin-dot.filled {
+html[data-theme='dark'] .trust-device {
+  background: #202c33;
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .trust-device strong {
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .trust-device small {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .pin-dot {
+  background: #2a3942;
+  border-color: #3a4a54;
+}
+
+html[data-theme='dark'] .pin-dot.filled {
   background: var(--brand);
   border-color: var(--brand);
 }
 
-html[data-theme='dark'] .auth-card .pin-key {
-  background: #fff;
-  border-color: #e0e0e0;
-  color: #333;
+html[data-theme='dark'] .pin-key {
+  background: #2a3942;
+  border-color: #3a4a54;
+  color: #e9edef;
 }
 
-html[data-theme='dark'] .auth-card .pin-key:active:not(:disabled) {
-  background: #f0f7ff;
+html[data-theme='dark'] .pin-key:active:not(:disabled) {
+  background: #374248;
+}
+
+html[data-theme='dark'] .server-error {
+  background: #2a1417;
+  border-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+html[data-theme='dark'] .password-toast {
+  background: #2a210f;
+  border-color: #7c5e10;
+  color: #fcd34d;
+}
+
+/* TSCL portal sign-in (portal/PortalLoginPage) */
+html[data-theme='dark'] .auth-logo {
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .auth-input {
+  background: #2a3942;
+  border-color: #2f3b43;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .auth-links {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .auth-links a {
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .auth-error {
+  background: #2a1417;
+  color: #fca5a5;
+  border-color: #7f1d1d;
+}
+
+/* Guest sign-in (guest/GuestLoginPage) */
+html[data-theme='dark'] .login-card {
+  background: #202c33;
+  border-color: #2f3b43;
+  box-shadow: none;
+}
+
+html[data-theme='dark'] .input-hint {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .alert--error {
+  background: #2a1417;
+  color: #fca5a5;
+  border-color: #7f1d1d;
+}
+
+html[data-theme='dark'] .alert--success {
+  background: #0f2419;
+  color: #86efac;
+  border-color: #1c4a2f;
 }
