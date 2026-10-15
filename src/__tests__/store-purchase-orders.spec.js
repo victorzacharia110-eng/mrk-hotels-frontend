@@ -112,6 +112,35 @@ describe('StorePurchaseOrdersPage', () => {
     wrapper.vm.onPickItem(duplicate, { value: 1 })
 
     expect(wrapper.vm.formError).toBe(i18n.global.t('purchaseOrders.duplicateItem'))
+    expect(duplicate.item_id).toBe('')
+  })
+
+  it('refuses to save a purchase order holding a duplicated line', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    wrapper.vm.inventoryItems = [ITEM]
+
+    const a = wrapper.vm.emptyItem()
+    Object.assign(a, { item_id: 1, item_name: 'Bavaria', quantity: 1, unit: 'BTL', unit_price: 3000 })
+    const b = wrapper.vm.emptyItem()
+    Object.assign(b, { item_id: 1, item_name: 'Bavaria', quantity: 2, unit: 'BTL', unit_price: 3000 })
+    wrapper.vm.form.items = [a, b]
+
+    await wrapper.vm.save()
+
+    expect(wrapper.vm.formError).toBe(i18n.global.t('purchaseOrders.duplicateItem'))
+    expect(api.purchaseOrderApi.store).not.toHaveBeenCalled()
+  })
+
+  it('sends the purchase order by the chosen channel (email / sms / both)', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    vi.spyOn(window, 'alert').mockImplementation(() => {})
+    wrapper.vm.detail = { po_id: 7, po_number: 'PO-0007', supplier: { email: 'a@b.c', phone: '0712000000' }, items: [] }
+
+    await wrapper.vm.sendToSupplier('both')
+
+    expect(api.purchaseOrderApi.email).toHaveBeenCalledWith(7, null, 'both')
   })
 
   it('scales the inherited price by the selected SI unit factor', async () => {

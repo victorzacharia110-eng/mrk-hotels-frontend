@@ -2568,13 +2568,17 @@ export const purchaseOrderApi = {
     return api.get(`${v1}/purchase-orders/${id}/pdf`, { responseType: 'blob' })
   },
   /**
-   * E-mails the purchase order PDF to the supplier (or a custom `to`).
+   * Sends the purchase order to the supplier by e-mail, SMS or both.
    * @param {string|number} id - Purchase order identifier.
-   * @param {string} [to] - Optional recipient override.
+   * @param {string} [to] - Optional recipient override (ignored for 'both').
+   * @param {'email'|'sms'|'both'} [channel] - Delivery channel (defaults to email).
    * @returns {Promise} Axios response confirming the send.
    */
-  email(id, to) {
-    return api.post(`${v1}/purchase-orders/${id}/email`, to ? { to } : {})
+  email(id, to, channel) {
+    const body = {}
+    if (to) body.to = to
+    if (channel) body.channel = channel
+    return api.post(`${v1}/purchase-orders/${id}/email`, body)
   },
 }
 

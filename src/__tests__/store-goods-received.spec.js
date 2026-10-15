@@ -32,6 +32,11 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }))
 
+const authState = vi.hoisted(() => ({ can: () => false }))
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => ({ can: (...args) => authState.can(...args), user: null }),
+}))
+
 const stubs = {
   CalendarInput: { template: '<div />', props: ['modelValue', 'placeholder', 'min'] },
   SearchableSelect: { template: '<div />', props: ['modelValue', 'options', 'forceSearch', 'emptyLabel'] },
@@ -125,5 +130,22 @@ describe('StoreGoodsReceivedPage', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain(i18n.global.t('storeManager.reports.ledgerEmpty'))
+  })
+
+  it('only offers recall/void for a past business day to management', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    authState.can = () => false
+    wrapper.vm.detail = { grn_id: 5, received_date: '2000-01-01', items: [] }
+    await flushPromises()
+    expect(wrapper.vm.canRecall).toBe(false)
+    expect(wrapper.vm.canVoidGrn).toBe(false)
+
+    authState.can = () => true
+    wrapper.vm.detail = { grn_id: 5, received_date: '2000-01-01', items: [] }
+    await flushPromises()
+    expect(wrapper.vm.canRecall).toBe(true)
+    expect(wrapper.vm.canVoidGrn).toBe(true)
   })
 })

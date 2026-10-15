@@ -2081,7 +2081,12 @@
     "noPurchaseForDate": "Hakuna oda za ununuzi kwa tarehe hii.",
     "printError": "Imeshindikana kuunda PDF ya oda ya ununuzi.",
     "emailSuccess": "Oda ya ununuzi imetumwa kwa barua pepe kwa {recipient}.",
-    "emailError": "Imeshindikana kutuma oda ya ununuzi kwa barua pepe. {message}"
+    "emailError": "Imeshindikana kutuma oda ya ununuzi kwa barua pepe. {message}",
+    "smsSuccess": "SMS ya oda ya ununuzi imetumwa kwa {recipient}.",
+    "smsError": "Imeshindikana kutuma SMS ya oda ya ununuzi. {message}",
+    "sendEmail": "Barua pepe",
+    "sendSms": "SMS",
+    "sendBoth": "Barua pepe & SMS"
   },
   "goodsReceived": {
     "title": "Rekodi za Vitu Vilivyopokelewa",

@@ -2081,7 +2081,12 @@
     "noPurchaseForDate": "No purchase orders for this date.",
     "printError": "Could not generate the purchase order PDF.",
     "emailSuccess": "Purchase order e-mailed to {recipient}.",
-    "emailError": "Could not e-mail the purchase order. {message}"
+    "emailError": "Could not e-mail the purchase order. {message}",
+    "smsSuccess": "Purchase order SMS sent to {recipient}.",
+    "smsError": "Could not send the purchase order SMS. {message}",
+    "sendEmail": "Email",
+    "sendSms": "SMS",
+    "sendBoth": "Email & SMS"
   },
   "goodsReceived": {
     "title": "Goods Received Notes",

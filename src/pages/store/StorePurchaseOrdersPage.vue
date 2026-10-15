@@ -141,7 +141,9 @@
             <button class="sm-btn sm ghost" @click="printDetail"><i class="fas fa-print"></i> {{ $t('common.print') }}</button>
             <button v-if="canEdit" class="sm-btn sm ghost" @click="startEdit"><i class="fas fa-pen"></i> {{ $t('common.edit') }}</button>
             <button v-if="['pending', 'approved', 'partially_received', 'manager_approved'].includes(detail.status)" class="sm-btn sm primary" @click="receiveGoods"><i class="fas fa-box-open"></i> {{ $t('purchaseOrders.receiveGoods') }}</button>
-            <button v-if="detail.supplier?.email" class="sm-btn sm ghost" @click="emailSupplier"><i class="fas fa-envelope"></i> {{ $t('common.email') }}</button>
+            <button v-if="detail.supplier?.email" class="sm-btn sm ghost" :disabled="sending" @click="sendToSupplier('email')"><i class="fas fa-envelope"></i> {{ $t('purchaseOrders.sendEmail') }}</button>
+            <button v-if="detail.supplier?.phone" class="sm-btn sm ghost" :disabled="sending" @click="sendToSupplier('sms')"><i class="fas fa-sms"></i> {{ $t('purchaseOrders.sendSms') }}</button>
+            <button v-if="detail.supplier?.email && detail.supplier?.phone" class="sm-btn sm primary" :disabled="sending" @click="sendToSupplier('both')"><i class="fas fa-paper-plane"></i> {{ $t('purchaseOrders.sendBoth') }}</button>
             <button v-if="canVoid" class="sm-btn sm danger" @click="voidPo"><i class="fas fa-trash"></i> {{ $t('purchaseOrders.voidAction') }}</button>
           </div>
           <p v-if="detail.void_reason" class="void-note"><i class="fas fa-circle-info"></i> voided by {{ detail.voided_by_name || detail.voided_by }}: {{ detail.void_reason }}</p>
@@ -222,6 +224,7 @@ const inventoryItems = ref([])
 const meta = ref({ current_page: 1, last_page: 1 })
 const loading = ref(false)
 const saving = ref(false)
+const sending = ref(false)
 const statusFilter = ref('')
 const dateFilter = ref('')
 const showForm = ref(false)
@@ -301,21 +304,27 @@ function normalizeSiUnits(found) {
 }
 
 /** Applies a picked registered item to a PO line (id, name, units + default). */
-function onPickItem(line, hit) {
-  const id = hit?.value ?? hit
-  const found = inventoryItems.value.find((i) => String(i.item_id) === String(id))
-  const duplicated = found && form.items.some((l) => l !== line && String(l.item_id) === String(found.item_id))
-  formError.value = duplicated ? t('purchaseOrders.duplicateItem') : ''
-  line.item_id = id ?? ''
-  line.item_name = found?.item_name || ''
-  const { names, factors } = normalizeSiUnits(found)
-  line.si_units = names
-  line.si_factors = factors
-  line.base_unit = found?.unit || ''
-  line.base_cost = Number(found?.unit_cost || 0)
-  if (found?.unit) line.unit = found.unit
-  if (line.base_cost) line.unit_price = line.base_cost
-}
+  function onPickItem(line, hit) {
+    const id = hit?.value ?? hit
+    const found = inventoryItems.value.find((i) => String(i.item_id) === String(id))
+    const duplicated = found && form.items.some((l) => l !== line && String(l.item_id) === String(found.item_id))
+    if (duplicated) {
+      formError.value = t('purchaseOrders.duplicateItem')
+      line.item_id = ''
+      line.item_name = ''
+      return
+    }
+    formError.value = ''
+    line.item_id = id ?? ''
+    line.item_name = found?.item_name || ''
+    const { names, factors } = normalizeSiUnits(found)
+    line.si_units = names
+    line.si_factors = factors
+    line.base_unit = found?.unit || ''
+    line.base_cost = Number(found?.unit_cost || 0)
+    if (found?.unit) line.unit = found.unit
+    if (line.base_cost) line.unit_price = line.base_cost
+  }
 
 /**
  * When the line switch comes in a larger SI unit (e.g. CARTON on an item
@@ -426,6 +435,17 @@ async function startEdit() {
 }
 
 async function save() {
+  // Block duplicates before persisting so "item already exists" is enforced.
+  const seen = new Set()
+  for (const i of form.items) {
+    if (i.item_id) {
+      if (seen.has(String(i.item_id))) {
+        formError.value = t('purchaseOrders.duplicateItem')
+        return
+      }
+      seen.add(String(i.item_id))
+    }
+  }
   if (form.items.some((i) => !i.item_name || i.quantity == null)) {
     formError.value = t('inventory.selectItem')
     return
@@ -476,13 +496,17 @@ function receiveGoods() {
   router.push({ name: 'store-goods-received', query: { po_id: detail.value.po_id, create: '1' } })
 }
 
-async function emailSupplier() {
+async function sendToSupplier(channel) {
   const po = detail.value
+  if (sending.value) return
+  sending.value = true
   try {
-    const res = await purchaseOrderApi.email(po.po_id)
-    window.alert(t('purchaseOrders.emailSuccess', { recipient: res.data?.message || '' }))
+    const res = await purchaseOrderApi.email(po.po_id, null, channel)
+    window.alert(res.data?.message || t('purchaseOrders.emailSuccess', { recipient: '' }))
   } catch (e) {
-    window.alert(t('purchaseOrders.emailError', { message: e.response?.data?.message || '' }))
+    window.alert(e.response?.data?.message || t('purchaseOrders.emailError', { message: '' }))
+  } finally {
+    sending.value = false
   }
 }
 

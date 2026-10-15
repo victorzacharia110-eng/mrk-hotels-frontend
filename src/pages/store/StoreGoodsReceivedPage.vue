@@ -315,6 +315,7 @@ import { goodsReceivedNoteApi, purchaseOrderApi, storeApi } from '@/api'
 import CalendarInput from '@/components/CalendarInput.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
 import { useWorkingDateStore } from '@/stores/workingDate'
+import { useAuthStore } from '@/stores/auth'
 
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -324,6 +325,7 @@ const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 const workingDateStore = useWorkingDateStore()
+const auth = useAuthStore()
 
 const grns = ref([])
 const { q, status, statuses, paged } = useClientTable(grns, { pageSize: 15, searchFields: ['grn_number', 'status', (r) => r.po?.po_number] })
@@ -372,8 +374,17 @@ const emptyText = computed(() => {
   return t('goodsReceived.empty')
 })
 
-const canRecall = computed(() => detail.value && !detail.value.voided_by)
-const canVoidGrn = computed(() => detail.value && !detail.value.voided_by && !detail.value.recalled_by)
+const canRecall = computed(() => {
+  if (!detail.value || detail.value.voided_by) return false
+  // Backend restricts: after business day, only management (level 80+). Mirror here.
+  if (!sameDay(detail.value.received_date)) return auth.can(80)
+  return true
+})
+const canVoidGrn = computed(() => {
+  if (!detail.value || detail.value.voided_by || detail.value.recalled_by) return false
+  if (!sameDay(detail.value.received_date)) return auth.can(80)
+  return true
+})
 
 // Ledger mode: ?view=ledger-detail swaps the GRN list for the Stock Ledger
 // detail table (date/time + reference per movement). The old Stock Movement
