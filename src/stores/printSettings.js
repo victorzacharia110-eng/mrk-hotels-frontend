@@ -161,7 +161,9 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
     const endpoint = resolveNetworkEndpoint();
     if (!endpoint) return false;
     try {
-      const resp = await fetch(`${endpoint.replace(/\/+$/, "")}/status`, {
+      // The bridge agent exposes GET /health (see printer-bridge/README.md);
+      // /status never existed, so this probe used to 404 on a running agent.
+      const resp = await fetch(`${endpoint.replace(/\/+$/, "")}/health`, {
         method: "GET",
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);

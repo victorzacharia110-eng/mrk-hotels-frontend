@@ -256,7 +256,7 @@ describe('print settings — routing each line to its own pass', () => {
 
     await expect(store.probeNetwork()).resolves.toBe(true)
     expect(printerState.connected).toBe(true)
-    expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:9720/status', { method: 'GET' })
+    expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:9720/health', { method: 'GET' })
 
     await expect(store.probeNetwork()).resolves.toBe(false)
     expect(printerState.connected).toBe(false)
