@@ -3,13 +3,20 @@
 const http = require('http');
 const config = require('./config');
 const { rawPrint } = require('./windows-print');
+const { renderSetupPage } = require('./setup-page');
 
+const VERSION = '1.2.0';
 const MAX_BODY = 2 * 1024 * 1024; // 2 MB of raw bytes is generous for a receipt
 
 function send(res, status, obj) {
   const body = JSON.stringify(obj);
   res.writeHead(status, { 'Content-Type': 'application/json' });
   res.end(body);
+}
+
+function sendHtml(res, status, html) {
+  res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8' });
+  res.end(html);
 }
 
 function setCors(res) {
@@ -65,17 +72,49 @@ const server = http.createServer(async (req, res) => {
           ? `${config.printerHost}:${config.printerPort}`
           : config.printerName || '(Windows default printer)',
       auth: !!config.authToken,
-      version: '1.1.0',
+      version: VERSION,
     });
   }
-  if (req.method === 'GET' && req.url === '/') {
+
+  // ---- setup page (open http://localhost:9720/ in a browser) ----
+  if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) {
+    return sendHtml(res, 200, renderSetupPage({ configPath: config.configPath, version: VERSION }));
+  }
+
+  // ---- printer settings (read by the setup page; also handy for the app) ----
+  if (req.method === 'GET' && req.url === '/config') {
     return send(res, 200, {
       ok: true,
-      name: 'mrk-printer-bridge',
+      printerHost: config.printerHost,
+      printerPort: config.printerPort,
       transport: config.transport,
-      description:
-        'MRK Hotels POS local printer bridge. POST raw ESC/POS bytes to /print.',
+      configPath: config.configPath,
+      version: VERSION,
     });
+  }
+  if (req.method === 'POST' && req.url === '/config') {
+    if (!authorized(req)) return send(res, 401, { ok: false, error: 'Unauthorized' });
+    let payload;
+    try {
+      const raw = await readBody(req);
+      payload = raw.length ? JSON.parse(raw.toString('utf8')) : {};
+    } catch (e) {
+      return send(res, 400, { ok: false, error: 'Invalid JSON body' });
+    }
+    try {
+      const saved = config.setPrinter(payload.printerHost, payload.printerPort);
+      if (config.verbose) console.log(`[config] printer set to ${saved.printerHost || '(none)'}:${saved.printerPort}`);
+      return send(res, 200, {
+        ok: true,
+        printer: saved.transport === 'network' ? `${saved.printerHost}:${saved.printerPort}` : '(Windows queue)',
+        printerHost: saved.printerHost,
+        printerPort: saved.printerPort,
+        transport: saved.transport,
+        configPath: saved.configPath,
+      });
+    } catch (e) {
+      return send(res, 500, { ok: false, error: 'Could not save settings: ' + e.message });
+    }
   }
 
   // ---- printing ----
@@ -102,6 +141,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(config.port, config.host, () => {
   console.log('MRK printer bridge listening on http://' + config.host + ':' + config.port);
+  console.log('Set the printer address here: http://localhost:' + config.port + '/');
   console.log('Auth token: ' + (config.authToken ? '(set)' : '(disabled)'));
   if (config.transport === 'network') {
     console.log('Printer: network ' + config.printerHost + ':' + config.printerPort);
@@ -109,6 +149,17 @@ server.listen(config.port, config.host, () => {
     console.log('WARNING: no PRINTER_HOST set and not running on Windows; printing will FAIL here. Run this on the Windows printer PC, or set PRINTER_HOST.');
   } else {
     console.log('Printer: Windows queue ' + (config.printerName || '(default)'));
+  }
+
+  // Single-file .exe, first run, nothing configured yet: open the setup page so
+  // a non-technical user can type the printer's address. Opt out with MRK_NO_BROWSER=1.
+  if (config.singleFile && process.platform === 'win32' && !config.hasConfigFile && !process.env.MRK_NO_BROWSER) {
+    const url = 'http://localhost:' + config.port + '/';
+    try {
+      require('child_process').exec('start "" "' + url + '"');
+    } catch {
+      // Non-fatal: the user can open the URL manually.
+    }
   }
 });
 

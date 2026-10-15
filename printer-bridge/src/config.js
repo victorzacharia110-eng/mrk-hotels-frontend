@@ -5,9 +5,15 @@
  *
  * Values are read, in order of priority:
  *   1. environment variables (handy for a one-off `node src/server.js`)
- *   2. an optional `config.local.json` next to package.json (handy for the
- *      auto-start Windows task, which has no window to type variables into)
- *   3. the defaults below
+ *   2. `config.local.json` (handy for the auto-start Windows task / the
+ *      single-file .exe, which have no window to type variables into). It sits
+ *      next to the executable for the .exe build, or in the package root for a
+ *      normal node run, and can be written from the built-in setup page.
+ *   3. the baked-in default (single-file .exe build only) and the values below
+ *
+ * The printer target is mutable at runtime: POST /config (or the setup page at
+ * http://localhost:9720/) calls setPrinter(), which writes config.local.json
+ * and applies the new address immediately — no restart, no rebuild.
  *
  * Environment variables:
  *
@@ -35,22 +41,26 @@ function boolish(value, fallback) {
   return v === '1' || v === 'true' || v === 'yes' || v === 'on';
 }
 
-/**
- * Loads the optional on-disk override file. Kept tiny and dependency-free so a
- * non-technical user can create it with the set-network-printer.bat helper.
- */
-function loadLocal() {
-  // Normal run: the script lives in src/, so the config sits one level up (the
-  // package root). Single-file .exe (Node SEA): __dirname is the folder holding
-  // the executable, so the config must sit next to the exe instead.
-  const candidates = [
-    path.join(__dirname, '..', 'config.local.json'),
-    path.join(__dirname, 'config.local.json'),
-  ];
-  if (typeof process !== 'undefined' && process.execPath) {
-    candidates.push(path.join(path.dirname(process.execPath), 'config.local.json'));
-  }
-  for (const file of candidates) {
+// Single-file .exe (Node SEA) detection. `node:sea` exists on Node >= 20.12;
+// the try/catch keeps this safe on anything older or if the module is missing.
+let isSea = false;
+try {
+  isSea = require('node:sea').isSea();
+} catch {
+  isSea = false;
+}
+
+const CONFIG_FILENAME = 'config.local.json';
+
+// Where config.local.json lives:
+//   - single-file .exe: the folder that holds the executable
+//   - normal node run : the package root, one level up from src/
+const configDir = isSea ? path.dirname(process.execPath) : path.join(__dirname, '..');
+const configFile = path.join(configDir, CONFIG_FILENAME);
+
+/** Reads the on-disk override file, tolerating a missing/malformed file. */
+function readLocal() {
+  for (const file of [configFile, path.join(__dirname, CONFIG_FILENAME), path.join(__dirname, '..', CONFIG_FILENAME)]) {
     try {
       if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf8')) || {};
     } catch {
@@ -60,7 +70,7 @@ function loadLocal() {
   return {};
 }
 
-const local = loadLocal();
+let local = readLocal();
 
 // Baked-in defaults, set only by the single-file .exe build (src/sea-entry.js).
 // Priority stays: env var > config.local.json > baked default.
@@ -76,17 +86,73 @@ function pick(envKey, fileKey, fallback) {
   return fallback;
 }
 
-const printerHost = pick('PRINTER_HOST', 'printerHost', seaDefaults.printerHost || '');
-
-module.exports = {
+const config = {
   host: pick('HOST', 'host', '0.0.0.0'),
   port: Number(pick('PORT', 'port', 9720)),
   authToken: pick('AUTH_TOKEN', 'authToken', ''), // empty = auth disabled
   printerName: pick('PRINTER_NAME', 'printerName', ''), // empty = Windows default printer
-  printerHost, // empty = Windows spooler mode
-  printerPort: Number(pick('PRINTER_PORT', 'printerPort', seaDefaults.printerPort || 9100)),
+  printerHost: '', // empty = Windows spooler mode (filled below)
+  printerPort: 9100,
   allowedOrigin: pick('ALLOWED_ORIGIN', 'allowedOrigin', '*'),
   verbose: boolish(pick('PRINT_VERBOSE', 'verbose', ''), false),
   // Which transport will actually be used, for /health and log messages.
-  transport: printerHost ? 'network' : 'windows',
+  transport: 'windows',
+  // Absolute path of the config.local.json that setPrinter() writes, so the
+  // setup page can tell the operator exactly where settings are saved.
+  configPath: configFile,
+  // True when running as the single-file .exe (Node SEA) — used to auto-open
+  // the setup page on first run.
+  singleFile: isSea,
+  // True when a config.local.json already existed at startup (so we don't nag
+  // with the setup page once the printer has been configured).
+  hasConfigFile: fs.existsSync(configFile),
 };
+
+/** Recomputes printerHost/printerPort from env + file + baked defaults. */
+function applyPrinter() {
+  config.printerHost = pick('PRINTER_HOST', 'printerHost', seaDefaults.printerHost || '');
+  config.printerPort = Number(pick('PRINTER_PORT', 'printerPort', seaDefaults.printerPort || 9100));
+  config.transport = config.printerHost ? 'network' : 'windows';
+}
+
+applyPrinter();
+
+/**
+ * Persists the printer target to config.local.json and applies it immediately.
+ * Other keys already in the file (authToken, host, ...) are preserved.
+ *
+ * Note: a PRINTER_HOST / PRINTER_PORT environment variable still wins over the
+ * saved file, matching the documented priority order.
+ *
+ * @param {string} host  Printer IP or hostname ('' clears it → Windows spooler).
+ * @param {number} port  Printer TCP port (defaults to 9100).
+ */
+function setPrinter(host, port) {
+  const next = { ...local };
+  next.printerHost = String(host == null ? '' : host).trim();
+  next.printerPort = Number(port) || 9100;
+
+  fs.mkdirSync(configDir, { recursive: true });
+  fs.writeFileSync(configFile, JSON.stringify(next, null, 2) + '\n', 'utf8');
+
+  local = next;
+  applyPrinter();
+
+  return {
+    printerHost: config.printerHost,
+    printerPort: config.printerPort,
+    transport: config.transport,
+    configPath: configFile,
+  };
+}
+
+/** Re-reads config.local.json from disk (used by POST /config refresh). */
+function reload() {
+  local = readLocal();
+  applyPrinter();
+}
+
+config.setPrinter = setPrinter;
+config.reload = reload;
+
+module.exports = config;

@@ -80,16 +80,16 @@ directly over TCP — no Windows driver and no "Add printer" step.
      the Wi-Fi's `192.168.1.x` and break the internet.)
    - **Through the router/switch:** just make sure the printer's IP is on the same subnet as
      the computer — no extra setup is needed.
-2. **Tell the agent the printer's IP** — either:
-   - Right-click **`set-network-printer.bat`** and run it, then type the printer IP when asked
-     (easiest; it writes `config.local.json` and restarts the helper), **or**
-   - Set `PRINTER_HOST` (and, if unusual, `PRINTER_PORT`) as environment variables, **or**
-   - Create a file `config.local.json` next to `package.json`:
-     ```json
-     { "printerHost": "192.168.1.200", "printerPort": 9100 }
-     ```
+2. **Tell the agent the printer's IP** — easiest is the built-in **setup page**:
+   - Open **`http://localhost:9720/`** in a browser, type the printer's **IP address** (and
+     port, if it is not `9100`) and click **Save**. It applies **immediately** — no restart,
+     no rebuild — and is remembered in `config.local.json`.
+   - *(Alternatives, same result: run **`set-network-printer.bat`** which writes
+     `config.local.json` for you, set the `PRINTER_HOST` / `PRINTER_PORT` environment variables,
+     or edit `config.local.json` by hand:
+     `{ "printerHost": "192.168.1.200", "printerPort": 9100 }`.)*
 3. **Check it.** Open `http://localhost:9720/health` — it should report `"transport":"network"`
-   and the printer address. Then press **Test Print** in MRK.
+   and the printer address. Use **Test print** on the setup page, or **Test Print** in MRK.
 
 > With `PRINTER_HOST` set, the agent prints **only** over the network and ignores the Windows
 > queue. Delete `config.local.json` (or clear `PRINTER_HOST`) to go back to USB/Windows mode.
@@ -104,18 +104,18 @@ install, no commands, no batch files.
 1. **Double-click `mrk-printer-bridge.exe`.** A console window opens — leave it open (that is
    the agent running). On first run Windows SmartScreen may warn because the exe is unsigned:
    choose **More info → Run anyway**.
-2. Open **`http://localhost:9720/health`** — it should report `"transport":"network"`.
-3. In MRK, set the Print Settings endpoint to **`http://localhost:9720`** and press **Test Print**.
+2. On its **first run the setup page opens by itself** in your browser
+   (**`http://localhost:9720/`**). Type the printer's **IP address** (e.g. `192.168.1.100`) and
+   port (`9100`), click **Save**, then **Test print**. You can reopen the page at any time by
+   browsing to `http://localhost:9720/`.
+3. In MRK, set the Print Settings endpoint to **`http://localhost:9720`**.
 
-The exe has a **default printer baked in** (`192.168.1.100:9100`). To point it at a different
-printer, either drop a `config.local.json` next to the exe:
+The printer address is **fully adjustable at run time** — a different network just types a
+different IP; there is nothing to rebuild and no file to hand-edit. Saving writes
+`config.local.json` **next to the exe**. A `PRINTER_HOST` / `PRINTER_PORT` environment variable,
+if one is set, still wins over it (priority: env → `config.local.json` → baked default).
 
-```json
-{ "printerHost": "192.168.1.200", "printerPort": 9100 }
-```
-
-…or set the `PRINTER_HOST` / `PRINTER_PORT` environment variables. Both override the baked
-default (priority: env → `config.local.json` → baked default).
+> Set `MRK_NO_BROWSER=1` to stop the setup page opening automatically on first run.
 
 **Auto-start:** put a shortcut to the exe in the Startup folder (Win+R → `shell:startup`).
 
@@ -162,9 +162,12 @@ the endpoint:
 | `PRINTER_NAME` | *(empty = default)* | **Windows mode.** Print to a specific Windows printer by name instead of the default. |
 | `ALLOWED_ORIGIN` | `*` | Restrict which origin may call the agent (CORS). |
 | `PRINT_VERBOSE` | (off) | Log each print job to the console. |
+| `MRK_NO_BROWSER` | (off) | Set to `1` to stop the single-file `.exe` opening the setup page automatically on first run. |
 
-Any of these can also be set in a `config.local.json` file next to `package.json` (handy for
-the auto-start task, which has no window for typing variables). Environment variables win.
+Any of these can also be set in a `config.local.json` file — next to the `.exe` for the
+single-file build, or next to `package.json` for a normal node run (handy for the auto-start
+task, which has no window for typing variables). Environment variables win. The easiest way to
+write it is the setup page at `http://localhost:9720/`.
 
 Example with a token:
 ```bat
@@ -174,8 +177,12 @@ node src/server.js
 
 ## API
 
-- `GET /health` — status: `{ ok, platform, transport, printer, auth }` (`transport` is `network`
-  or `windows`; `printer` is `host:port` or the Windows queue).
+- `GET /` — the **setup page** (HTML): set the printer's IP/port and test-print from a browser.
+- `GET /health` — status: `{ ok, platform, transport, printer, auth, version }` (`transport` is
+  `network` or `windows`; `printer` is `host:port` or the Windows queue).
+- `GET /config` — current printer settings: `{ ok, printerHost, printerPort, transport, configPath }`.
+- `POST /config` — JSON body `{ "printerHost": "...", "printerPort": 9100 }`; saves to
+  `config.local.json` and applies it **immediately**. Requires `X-Auth-Token` only if `AUTH_TOKEN` is set.
 - `POST /print` — body = raw ESC/POS bytes. Returns `{ ok, bytes, printer }`.
   - Requires `X-Auth-Token` header **only if** `AUTH_TOKEN` is set.
 

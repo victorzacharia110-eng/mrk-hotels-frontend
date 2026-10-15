@@ -53,3 +53,7 @@ playwright-report/
 /*.pdf
 /src/locales/*.pdf
 /pdf-node.mjs
+
+# Printer-bridge local config (per-machine printer address, written by the
+# setup page at http://localhost:9720/ or the set-network-printer helper)
+printer-bridge/config.local.json
