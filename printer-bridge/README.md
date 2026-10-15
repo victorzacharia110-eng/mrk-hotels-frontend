@@ -70,10 +70,16 @@ To remove the auto-start later: right-click **`uninstall-service.bat`** → **Ru
 If the printer is connected with a **network cable** instead of USB, the agent talks to it
 directly over TCP — no Windows driver and no "Add printer" step.
 
-1. **Give the printer a fixed IP.** Print its self-test / network config page and set a static
-   IP on the same subnet as the computer (for a direct cable, use e.g. printer `192.168.1.200`
-   and the computer's Ethernet NIC `192.168.1.10`, subnet `255.255.255.0`). The printer almost
-   always listens on TCP port **9100**.
+1. **Give the printer a fixed IP.** The printer almost always listens on TCP port **9100**.
+   Most of these printers already ship with a fixed IP (e.g. `192.168.1.100`) — print its
+   self-test / network config page to confirm it.
+   - **Direct cable** (printer plugged straight into this PC's Ethernet port, not the router):
+     run **`setup-printer-link.bat`** as administrator first. It gives the Ethernet port a
+     `/32` address and adds a host route so *only* the printer uses that cable, without
+     breaking the PC's Wi-Fi. (A plain `192.168.1.10/24` on the Ethernet port would clash with
+     the Wi-Fi's `192.168.1.x` and break the internet.)
+   - **Through the router/switch:** just make sure the printer's IP is on the same subnet as
+     the computer — no extra setup is needed.
 2. **Tell the agent the printer's IP** — either:
    - Right-click **`set-network-printer.bat`** and run it, then type the printer IP when asked
      (easiest; it writes `config.local.json` and restarts the helper), **or**
@@ -93,8 +99,14 @@ directly over TCP — no Windows driver and no "Add printer" step.
 In MRK, open the cashier **Print Settings** page and choose **Network printer**, then enter
 the endpoint:
 
+- **Same PC as the app (recommended):** `http://localhost:9720`
 - **Same LAN:** `http://<printer-computer's local IP>:9720` — e.g. `http://192.168.1.50:9720`
 - **Remote/Roaming:** a Tailscale address such as `http://100.x.y.z:9720` (see below).
+
+> **Important:** MRK is served over **HTTPS**, and browsers **block** an HTTPS page from calling
+> an `http://<lan-ip>:9720` address (mixed content). Only `http://localhost:9720` is allowed.
+> So run the agent **on the same PC the till browser runs on** and use `http://localhost:9720`
+> as the endpoint.
 
 ## Options (environment variables)
 
