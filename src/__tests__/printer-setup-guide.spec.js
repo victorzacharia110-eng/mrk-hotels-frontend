@@ -103,8 +103,8 @@ describe('PrinterSettingsPage — setup guide', () => {
   })
 
   it('marks step 4 done only after a test print comes back', async () => {
-    // The Test Print button only renders once the printer is connected.
-    printerState.connected = true
+    // The till prints over the network, so an agent endpoint must be set first.
+    usePrintSettingsStore().saveSettings({ transport: 'network', endpoint: 'http://10.0.0.9:9720' })
     const wrapper = await mountPage()
 
     const testBtn = wrapper.findAll('button').find((b) => b.text().includes('Test Print'))

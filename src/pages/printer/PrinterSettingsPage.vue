@@ -1,11 +1,13 @@
 <!--
   PrinterSettingsPage — the till printer connection for direct thermal printing.
 
-  Uses the Web Serial API: the hotel picks the USB/serial ESC/POS printer once
-  per device, the app keeps the connection and writes receipts straight to it
-  (no drivers, no server). When the browser can't reach the printer directly
-  (e.g. Safari/Firefox or a phone), the receipt falls back to the browser print
-  dialog, so this page also lets staff test the connection.
+  The till printer is always reached over the network through the printer-bridge
+  helper (a small agent on the printer's computer, or on any always-on machine
+  that can reach an Ethernet printer). The hotel enters the agent's address once
+  and the app posts ESC/POS bytes to it. The old direct USB/Web Serial option was
+  removed: a browser cannot drive a USB printer on another machine, and cannot
+  open a raw socket to a network printer, so a local agent is the only reliable
+  route. This page also lets staff test the connection.
 -->
 
 <template>
@@ -81,42 +83,36 @@
 
     <section id="connection" class="panel">
       <div class="status-row">
-        <span class="status-dot" :class="supported && printerState.connected ? 'ok' : (supported ? 'off' : 'na')"></span>
+        <span class="status-dot" :class="statusDot"></span>
         <div>
           <strong>{{ statusTitle }}</strong>
           <p class="muted">{{ statusDetail }}</p>
         </div>
       </div>
 
-      <p v-if="!supported" class="notice">
-        <i class="fas fa-circle-info"></i> {{ $t('printer.unsupported') }}
-      </p>
-      <p v-else-if="printerState.reason" class="notice">
+      <p v-if="printerState.reason" class="notice">
         <i class="fas fa-triangle-exclamation"></i> {{ printerState.reason }}
       </p>
 
-      <div class="actions">
-        <button v-if="!printerState.connected" class="btn btn-primary" @click="connect">
-          <i class="fas fa-plug"></i> {{ $t('printer.connect') }}
-        </button>
-        <template v-else>
+      <!-- The till printer (receipts and guest checks) is reached through the
+           same bridge agent the ticket printers use. The address is stored on
+           the print settings so every print call site shares one setting. -->
+      <div class="network-form">
+        <label class="fld-label" for="till-endpoint">{{ $t('cashier.printSettings.endpointLabel') }}</label>
+        <input
+          id="till-endpoint"
+          v-model.trim="endpointRef"
+          type="url"
+          class="form-control"
+          :placeholder="$t('cashier.printSettings.endpointPlaceholder')"
+          @change="saveEndpoint"
+        />
+        <div class="actions">
           <button class="btn btn-secondary" :disabled="testing" @click="test">
             <i class="fas fa-file-lines"></i> {{ testing ? $t('common.saving') : $t('printer.test') }}
           </button>
-          <button class="btn btn-danger" @click="disconnect">
-            <i class="fas fa-plug-circle-xmark"></i> {{ $t('printer.disconnect') }}
-          </button>
-        </template>
-      </div>
-
-      <div class="hints">
-        <p><strong>{{ $t('printer.howTitle') }}</strong></p>
-        <ol>
-          <li>{{ $t('printer.how1') }}</li>
-          <li>{{ $t('printer.how2') }}</li>
-          <li>{{ $t('printer.how3') }}</li>
-        </ol>
-        <p class="muted">{{ $t('printer.how4') }}</p>
+          <p v-if="endpointHelp" class="muted">{{ endpointHelp }}</p>
+        </div>
       </div>
     </section>
 
@@ -214,17 +210,12 @@
           class="form-control"
           :placeholder="$t('printer.printerName')"
         />
-        <select v-model="newPrinter.transport" class="form-control">
-          <option value="serial">{{ $t('printer.thisMachine') }}</option>
-          <option value="network">{{ $t('printer.networkBridge') }}</option>
-        </select>
         <input
-          v-if="newPrinter.transport === 'network'"
           v-model="newPrinter.endpoint"
           class="form-control"
-          placeholder="http://100.x.y.z:9720"
+          :placeholder="$t('cashier.printSettings.endpointPlaceholder')"
         />
-        <button class="btn btn-primary" :disabled="!newPrinter.name" @click="addPrinter">
+        <button class="btn btn-primary" :disabled="!newPrinter.name || !newPrinter.endpoint" @click="addPrinter">
           <i class="fas fa-plus"></i> {{ $t('common.add') }}
         </button>
       </div>
@@ -233,7 +224,7 @@
         <li v-for="p in ticketPrinters" :key="p.id">
           <span>
             <strong>{{ p.name }}</strong>
-            <span class="muted"> — {{ p.transport === 'network' ? p.endpoint : $t('printer.thisMachine') }}</span>
+            <span class="muted"> — {{ p.endpoint }}</span>
           </span>
           <button class="btn btn-danger btn-sm" @click="removeTicketPrinter(p.id)">
             <i class="fas fa-trash"></i>
@@ -262,13 +253,14 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { printerState, printerSupported, connectPrinter, disconnectPrinter, restorePrinter, printToPrinter } from '@/utils/printer'
+import { printerState, printToPrinter } from '@/utils/printer'
 import { testPrintLines } from '@/utils/receipts'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { menuCategoryApi } from '@/api'
 
 const {
   settings,
+  endpoint,
   ticketPrinters,
   departmentRouting,
   stationRouting,
@@ -304,7 +296,7 @@ const STATIONS = [
   { id: 'bar', labelKey: 'printer.stationBar' },
 ]
 
-const newPrinter = ref({ name: '', transport: 'serial', endpoint: '' })
+const newPrinter = ref({ name: '', endpoint: '' })
 
 // True once a test print has actually come back from the printer in this
 // session — it is the only honest proof that step 4 is finished.
@@ -325,8 +317,8 @@ const setupSteps = computed(() => [
   {
     key: 'step1',
     icon: 'fas fa-plug',
-    done: printerState.connected,
-    chip: printerState.connected ? 'done' : 'todo',
+    done: Boolean(endpointRef.value),
+    chip: endpointRef.value ? 'done' : 'todo',
     target: 'connection',
   },
   {
@@ -408,10 +400,10 @@ function setDefault(printerId) {
 function addPrinter() {
   addTicketPrinter({
     name: newPrinter.value.name.trim(),
-    transport: newPrinter.value.transport,
-    endpoint: newPrinter.value.transport === 'network' ? newPrinter.value.endpoint.trim() : '',
+    transport: 'network',
+    endpoint: newPrinter.value.endpoint.trim(),
   })
-  newPrinter.value = { name: '', transport: 'serial', endpoint: '' }
+  newPrinter.value = { name: '', endpoint: '' }
 }
 
 const { t } = useI18n()
@@ -421,42 +413,40 @@ const { t } = useI18n()
 const guideUrl = `${import.meta.env.BASE_URL}MRK_Hotels_Printer_Setup_Guide.pdf`
 const helperUrl = `${import.meta.env.BASE_URL}MRK_Printer_Bridge.zip`
 
-const supported = computed(() => printerSupported())
 const error = ref('')
 const testing = ref(false)
 
-const statusTitle = computed(() => {
-  if (!supported.value) return t('printer.statusUnsupported')
-  if (printerState.connected) return t('printer.statusConnected')
-  return t('printer.statusNotConnected')
-})
+// The till printer's bridge-agent address. Kept in a local ref so the field is
+// editable, and written back to the store (which every print call site reads).
+const endpointRef = ref(endpoint)
+const endpointHelp = ref('')
 
-const statusDetail = computed(() => {
-  if (!supported.value) return t('printer.statusUnsupportedDetail')
-  if (printerState.connected) return printerState.info || t('printer.statusConnectedDetail')
-  return t('printer.statusNotConnectedDetail')
-})
+const statusDot = computed(() => (endpointRef.value ? 'ok' : 'off'))
+const statusTitle = computed(() =>
+  endpointRef.value ? t('cashier.printSettings.statusNetwork') : t('cashier.printSettings.statusNoNetwork'),
+)
+const statusDetail = computed(() =>
+  endpointRef.value
+    ? `${t('cashier.printSettings.statusNetworkDetail')} ${endpointRef.value}`
+    : t('cashier.printSettings.statusNoNetworkDetail'),
+)
 
-async function connect() {
-  error.value = ''
-  const ok = await connectPrinter()
-  if (!ok && !printerState.connected) {
-    error.value = printerState.reason || t('printer.connectFailed')
-  } else {
-    error.value = printerState.reason || t('printer.readyToTest')
-  }
-}
-
-async function disconnect() {
-  await disconnectPrinter()
-  error.value = ''
+/** Persists the endpoint so receipts use it without re-entering it. */
+function saveEndpoint() {
+  saveSettings({ transport: 'network', endpoint: endpointRef.value || '' })
 }
 
 async function test() {
   error.value = ''
+  if (!endpointRef.value) {
+    endpointHelp.value = t('cashier.printSettings.endpointRequired')
+    return
+  }
+  endpointHelp.value = ''
   testing.value = true
   try {
-    const sent = await printToPrinter(testPrintLines())
+    saveEndpoint()
+    const sent = await printToPrinter(testPrintLines(), { transport: 'network', endpoint: endpointRef.value })
     if (!sent) error.value = printerState.reason || t('printer.testFailed')
     else testPassed.value = true
   } finally {
@@ -465,7 +455,6 @@ async function test() {
 }
 
 onMounted(() => {
-  restorePrinter()
   loadServiceLines()
 })
 </script>
@@ -485,7 +474,9 @@ onMounted(() => {
 
 .notice { display: flex; align-items: center; gap: 8px; background: #fff8e1; color: #8a6d1a; padding: 10px 14px; border-radius: 6px; margin: 8px 0 16px; }
 
-.actions { display: flex; gap: 10px; margin: 8px 0 20px; }
+.actions { display: flex; gap: 10px; align-items: center; margin: 8px 0 20px; }
+.network-form { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 8px; }
+.fld-label { font-size: 12px; font-weight: 600; color: #475569; }
 
 .hints { border-top: 1px solid #ececec; padding-top: 14px; }
 .hints ol { margin: 8px 0 10px; padding-left: 20px; line-height: 1.7; font-size: 14px; }

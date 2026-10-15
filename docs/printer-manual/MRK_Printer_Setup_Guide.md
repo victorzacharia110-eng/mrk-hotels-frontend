@@ -64,6 +64,11 @@ Use the computer that the printer's cable is plugged into. We call it **"the pri
 If the printer has a small self-test button, you can press it once to print a test slip. That proves the printer itself is healthy before we set up the computer.
 </div>
 
+<div class="callout note" markdown="1">
+<div class="callout-title">Using a network (Ethernet) cable instead of USB</div>
+Some printers — including the one in this hotel — have a **network socket** as well as USB. You can plug the printer into the network instead of a computer's USB port. When you do, the printer needs its own **fixed IP address** (for example `192.168.1.200`), and the helper is told that address so it can send receipts over the cable. Receipt printers almost always listen on port **9100**. The helper's **set-network-printer.bat** does this for you (Part 5).
+</div>
+
 ---
 
 # Part 2 — Windows (the printer's computer) {: .part }
@@ -182,6 +187,11 @@ The **helper** (we also call it the **bridge**) lives on the printer's computer.
 </div>
 
 <div class="callout note" markdown="1">
+<div class="callout-title">If the printer uses a network (Ethernet) cable</div>
+Do the three steps above first, then **right-click `set-network-printer.bat`** and run it. Type the printer's IP address when asked (press Enter to accept port `9100`). The helper then prints straight to the printer over the network — no USB and no Windows driver needed.
+</div>
+
+<div class="callout note" markdown="1">
 <div class="callout-title">On Mac and Linux</div>
 Your MRK support team will give you the matching helper for your system. The idea is exactly the same: start it once and leave it running in the background.
 </div>
@@ -222,6 +232,7 @@ Find your problem in the left column and try the fix on the right. Go slowly, on
 | CUPS asks for a password | Type your **computer's** username and password (not your MRK login). |
 | The test page is blank or prints strange characters | That is normal for a "raw" test page. Try the **Test Print** inside MRK instead — that one is the real receipt. |
 | MRK's Test Print does nothing | Make sure the **helper** is running, the address ends with **:9720**, both computers are on the same network, and the helper's port is allowed through the firewall. |
+| The printer is on a network cable and still nothing | Give the printer a fixed IP, run **set-network-printer.bat** on the helper computer and enter that IP. Check `http://localhost:9720/health` — it should say `"transport":"network"`. |
 | The receipt is very long, or blank | Set the paper size to the **80mm roll** in your printer settings and try again. |
 | It prints on one computer but not another | The **helper** must run on the **printer's** computer, and every other computer must use that computer's address. |
 

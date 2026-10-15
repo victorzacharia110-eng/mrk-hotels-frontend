@@ -5,6 +5,7 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const config = require('./config');
+const { printRawToNetwork } = require('./network-print');
 
 /**
  * Spool raw ESC/POS bytes to the Windows printer.
@@ -127,20 +128,26 @@ function printRawToWindowsDefault(bytes, printerName) {
 }
 
 /**
- * Print a raw byte buffer on Windows. Thin wrapper that also handles the
- * non-Windows case with a clear, useful error.
+ * Print a raw byte buffer, choosing the right transport.
+ *
+ *  - Network printer (PRINTER_HOST set) -> open a raw TCP socket to the printer
+ *    (normally port 9100). Works on Windows, Linux or Mac, no driver needed.
+ *  - Otherwise -> spool RAW bytes to a Windows printer queue (the USB path).
  */
 async function rawPrint(bytes) {
-  if (process.platform !== 'win32') {
-    throw new Error(
-      'This agent must run on the Windows machine that owns the printer ' +
-        '(PC-2). Current platform: ' + process.platform
-    );
-  }
   if (!Buffer.isBuffer(bytes) || bytes.length === 0) {
     throw new Error('No print data supplied');
+  }
+  if (config.printerHost) {
+    return printRawToNetwork(bytes);
+  }
+  if (process.platform !== 'win32') {
+    throw new Error(
+      'Set PRINTER_HOST to print to a network printer, or run this agent on ' +
+        'Windows with a USB printer installed. Current platform: ' + process.platform
+    );
   }
   return printRawToWindowsDefault(bytes, config.printerName);
 }
 
-module.exports = { rawPrint, printRawToWindowsDefault };
+module.exports = { rawPrint, printRawToWindowsDefault, printRawToNetwork };

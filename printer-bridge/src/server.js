@@ -59,16 +59,22 @@ const server = http.createServer(async (req, res) => {
       ok: true,
       name: 'mrk-printer-bridge',
       platform: process.platform,
-      printer: config.printerName || '(Windows default printer)',
+      transport: config.transport,
+      printer:
+        config.transport === 'network'
+          ? `${config.printerHost}:${config.printerPort}`
+          : config.printerName || '(Windows default printer)',
       auth: !!config.authToken,
-      version: '1.0.0',
+      version: '1.1.0',
     });
   }
   if (req.method === 'GET' && req.url === '/') {
     return send(res, 200, {
       ok: true,
       name: 'mrk-printer-bridge',
-      description: 'MRK Hotels POS local printer bridge. POST raw ESC/POS bytes to /print.',
+      transport: config.transport,
+      description:
+        'MRK Hotels POS local printer bridge. POST raw ESC/POS bytes to /print.',
     });
   }
 
@@ -97,8 +103,12 @@ const server = http.createServer(async (req, res) => {
 server.listen(config.port, config.host, () => {
   console.log('MRK printer bridge listening on http://' + config.host + ':' + config.port);
   console.log('Auth token: ' + (config.authToken ? '(set)' : '(disabled)'));
-  if (process.platform !== 'win32') {
-    console.log('WARNING: not running on Windows; printing will FAIL here. Run this on PC-2.');
+  if (config.transport === 'network') {
+    console.log('Printer: network ' + config.printerHost + ':' + config.printerPort);
+  } else if (process.platform !== 'win32') {
+    console.log('WARNING: no PRINTER_HOST set and not running on Windows; printing will FAIL here. Run this on the Windows printer PC, or set PRINTER_HOST.');
+  } else {
+    console.log('Printer: Windows queue ' + (config.printerName || '(default)'));
   }
 });
 
