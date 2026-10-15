@@ -94,6 +94,48 @@ directly over TCP — no Windows driver and no "Add printer" step.
 > With `PRINTER_HOST` set, the agent prints **only** over the network and ignores the Windows
 > queue. Delete `config.local.json` (or clear `PRINTER_HOST`) to go back to USB/Windows mode.
 
+## Easiest option: the single-file `.exe` (Windows, no Node install)
+
+If installing Node.js on the printer PC is inconvenient, hand out the **single executable
+`mrk-printer-bridge.exe`** instead. It is a copy of Node with this agent packed inside (Node's
+Single Executable Application support), so **a double-click is the whole install** — nothing to
+install, no commands, no batch files.
+
+1. **Double-click `mrk-printer-bridge.exe`.** A console window opens — leave it open (that is
+   the agent running). On first run Windows SmartScreen may warn because the exe is unsigned:
+   choose **More info → Run anyway**.
+2. Open **`http://localhost:9720/health`** — it should report `"transport":"network"`.
+3. In MRK, set the Print Settings endpoint to **`http://localhost:9720`** and press **Test Print**.
+
+The exe has a **default printer baked in** (`192.168.1.100:9100`). To point it at a different
+printer, either drop a `config.local.json` next to the exe:
+
+```json
+{ "printerHost": "192.168.1.200", "printerPort": 9100 }
+```
+
+…or set the `PRINTER_HOST` / `PRINTER_PORT` environment variables. Both override the baked
+default (priority: env → `config.local.json` → baked default).
+
+**Auto-start:** put a shortcut to the exe in the Startup folder (Win+R → `shell:startup`).
+
+> The direct-cable setup (`setup-printer-link.bat`, `ping 192.168.1.100`) and the
+> `http://localhost:9720` endpoint rule above still apply — the exe only replaces the Node
+> install + `node src/server.js` steps.
+
+## Building the single-file exe
+
+The exe is **not** committed to git — it embeds the whole Node runtime (~80 MB). Build it from
+source (requires Node.js on the build machine and `npm install` in the repo root for esbuild):
+
+```bash
+./printer-bridge/build-sea.sh [DEFAULT_PRINTER_HOST] [DEFAULT_PRINTER_PORT]
+```
+
+It bundles `src/sea-entry.js`, downloads the matching Windows `node.exe`, generates a SEA blob
+and injects it, writing **`printer-bridge/dist/mrk-printer-bridge.exe`**. The two arguments bake
+a default printer at build time; with no arguments it bakes `192.168.1.100:9100`.
+
 ## Configuring the app to use it
 
 In MRK, open the cashier **Print Settings** page and choose **Network printer**, then enter

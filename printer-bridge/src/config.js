@@ -40,16 +40,31 @@ function boolish(value, fallback) {
  * non-technical user can create it with the set-network-printer.bat helper.
  */
 function loadLocal() {
-  try {
-    const file = path.join(__dirname, '..', 'config.local.json');
-    if (!fs.existsSync(file)) return {};
-    return JSON.parse(fs.readFileSync(file, 'utf8')) || {};
-  } catch {
-    return {};
+  // Normal run: the script lives in src/, so the config sits one level up (the
+  // package root). Single-file .exe (Node SEA): __dirname is the folder holding
+  // the executable, so the config must sit next to the exe instead.
+  const candidates = [
+    path.join(__dirname, '..', 'config.local.json'),
+    path.join(__dirname, 'config.local.json'),
+  ];
+  if (typeof process !== 'undefined' && process.execPath) {
+    candidates.push(path.join(path.dirname(process.execPath), 'config.local.json'));
   }
+  for (const file of candidates) {
+    try {
+      if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf8')) || {};
+    } catch {
+      // Ignore an unreadable/malformed file and keep looking.
+    }
+  }
+  return {};
 }
 
 const local = loadLocal();
+
+// Baked-in defaults, set only by the single-file .exe build (src/sea-entry.js).
+// Priority stays: env var > config.local.json > baked default.
+const seaDefaults = globalThis.__MRK_SEA_DEFAULTS || {};
 
 function pick(envKey, fileKey, fallback) {
   if (process.env[envKey] !== undefined && process.env[envKey] !== '') {
@@ -61,7 +76,7 @@ function pick(envKey, fileKey, fallback) {
   return fallback;
 }
 
-const printerHost = pick('PRINTER_HOST', 'printerHost', '');
+const printerHost = pick('PRINTER_HOST', 'printerHost', seaDefaults.printerHost || '');
 
 module.exports = {
   host: pick('HOST', 'host', '0.0.0.0'),
@@ -69,7 +84,7 @@ module.exports = {
   authToken: pick('AUTH_TOKEN', 'authToken', ''), // empty = auth disabled
   printerName: pick('PRINTER_NAME', 'printerName', ''), // empty = Windows default printer
   printerHost, // empty = Windows spooler mode
-  printerPort: Number(pick('PRINTER_PORT', 'printerPort', 9100)),
+  printerPort: Number(pick('PRINTER_PORT', 'printerPort', seaDefaults.printerPort || 9100)),
   allowedOrigin: pick('ALLOWED_ORIGIN', 'allowedOrigin', '*'),
   verbose: boolish(pick('PRINT_VERBOSE', 'verbose', ''), false),
   // Which transport will actually be used, for /health and log messages.
