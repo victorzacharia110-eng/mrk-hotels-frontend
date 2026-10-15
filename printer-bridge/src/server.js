@@ -4,6 +4,8 @@ const http = require('http');
 const config = require('./config');
 const { rawPrint } = require('./windows-print');
 const { renderSetupPage } = require('./setup-page');
+const { discoverPrinters } = require('./discover');
+const install = require('./install');
 
 const VERSION = '1.2.0';
 const MAX_BODY = 2 * 1024 * 1024; // 2 MB of raw bytes is generous for a receipt
@@ -61,8 +63,9 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ---- health / discovery ----
-  if (req.method === 'GET' && req.url === '/health') {
-    return send(res, 200, {
+  const reqPath = req.url.split('?')[0];
+  if (req.method === 'GET' && reqPath === '/health') {
+    const health = {
       ok: true,
       name: 'mrk-printer-bridge',
       platform: process.platform,
@@ -73,7 +76,14 @@ const server = http.createServer(async (req, res) => {
           : config.printerName || '(Windows default printer)',
       auth: !!config.authToken,
       version: VERSION,
-    });
+    };
+    // For a network printer, probe reachability so the setup page can tell the
+    // operator whether they still need the direct-cable connection fix. Only
+    // when ?probe=1 (the setup page) — the app's own /health poll stays instant.
+    if (config.transport === 'network' && config.printerHost && req.url.includes('probe=1')) {
+      health.reachable = await install.canReachPrinter(config.printerHost, config.printerPort);
+    }
+    return send(res, 200, health);
   }
 
   // ---- setup page (open http://localhost:9720/ in a browser) ----
@@ -98,7 +108,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const raw = await readBody(req);
       payload = raw.length ? JSON.parse(raw.toString('utf8')) : {};
-    } catch (e) {
+    } catch {
       return send(res, 400, { ok: false, error: 'Invalid JSON body' });
     }
     try {
@@ -115,6 +125,36 @@ const server = http.createServer(async (req, res) => {
     } catch (e) {
       return send(res, 500, { ok: false, error: 'Could not save settings: ' + e.message });
     }
+  }
+
+  // ---- discover printers on the local network (used by the setup page) ----
+  if (req.method === 'GET' && req.url === '/discover') {
+    try {
+      const result = await discoverPrinters();
+      return send(res, 200, { ok: true, ...result });
+    } catch (e) {
+      return send(res, 500, { ok: false, error: e.message });
+    }
+  }
+
+  // ---- direct-cable network fix (elevates via a single UAC prompt) ----
+  if (req.method === 'POST' && req.url === '/setup/link') {
+    if (!authorized(req)) return send(res, 401, { ok: false, error: 'Unauthorized' });
+    let payload = {};
+    try {
+      const raw = await readBody(req);
+      payload = raw.length ? JSON.parse(raw.toString('utf8')) : {};
+    } catch {
+      payload = {};
+    }
+    const target = String(payload.printerHost || config.printerHost || '').trim();
+    if (!target) return send(res, 400, { ok: false, error: 'No printer address set yet.' });
+    const result = install.runElevatedNetworkFix(target);
+    return send(res, result.ok ? 200 : 500, {
+      ok: result.ok,
+      message: result.message,
+      printerHost: target,
+    });
   }
 
   // ---- printing ----

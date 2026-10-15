@@ -48,6 +48,16 @@ function renderSetupPage(info = {}) {
   details { margin-top:20px; } summary { cursor:pointer; color:var(--muted); font-size:13px; }
   pre { background:#0b141a; color:#d7e3ec; padding:12px; border-radius:8px; overflow:auto; font-size:12px; margin:10px 0 0; }
   .hint { color:var(--muted); font-size:12px; margin-top:6px; }
+  .steps { margin:0 0 18px; padding-left:20px; color:var(--ink); font-size:14px; }
+  .steps li { margin:4px 0; }
+  .results { display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+  .result-item { display:flex; justify-content:space-between; align-items:center; text-align:left; background:#f0f5fb; border:1px solid #d5e3f2; color:var(--ink); font-weight:600; padding:10px 12px; }
+  .result-item:hover { background:#e3eefb; }
+  .ri-ip { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .ri-mac { color:var(--muted); font-weight:400; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; }
+  .fixbox { margin-top:14px; padding:14px; background:#fff8e6; border:1px solid #f0d98a; border-radius:9px; }
+  .fixbox h3 { margin:0 0 6px; font-size:14px; }
+  .fixbox p { margin:0 0 10px; font-size:13px; color:var(--ink); }
   .hidden { display:none; }
 </style>
 </head>
@@ -58,6 +68,12 @@ function renderSetupPage(info = {}) {
       <p class="sub">Set the receipt printer's network address. Saving applies immediately.</p>
 
       <div class="status"><span id="dot" class="dot"></span><span id="statusText">Checking…</span></div>
+
+      <ol class="steps">
+        <li>Click <b>Detect printers</b>.</li>
+        <li>Click your printer in the list.</li>
+        <li>Click <b>Save</b>, then <b>Test print</b>.</li>
+      </ol>
 
       <form id="form">
         <div class="row">
@@ -78,9 +94,18 @@ function renderSetupPage(info = {}) {
         </div>
         <div class="actions">
           <button type="submit" class="primary">Save</button>
+          <button type="button" id="detect" class="ghost">Detect printers</button>
           <button type="button" id="test" class="ghost">Test print</button>
         </div>
       </form>
+
+      <div id="results" class="results hidden"></div>
+
+      <div id="fixbox" class="fixbox hidden">
+        <h3>Printer plugged straight into this PC?</h3>
+        <p>If the printer's network cable goes directly into this computer (not the router), the PC needs a one-time connection fix. Windows will ask for permission once — click <b>Yes</b>.</p>
+        <button type="button" id="fixlink" class="primary">Fix direct-cable connection</button>
+      </div>
 
       <p id="msg" class="msg"></p>
       <p class="hint" id="pathHint"></p>
@@ -116,12 +141,19 @@ function renderSetupPage(info = {}) {
   function json(url) { return fetch(url).then(function (r) { return r.json(); }); }
 
   function refresh() {
-    return json('/health').then(function (h) {
+    return json('/health?probe=1').then(function (h) {
       authRequired = !!h.auth;
       if (authRequired) $('tokenRow').classList.remove('hidden');
-      setStatus(h.transport === 'network'
-        ? 'Connected \\u2014 printing over the network to ' + h.printer
-        : 'Ready \\u2014 printing via the Windows queue (' + h.printer + ')', 'ok');
+      var fixbox = $('fixbox');
+      if (h.transport === 'network' && h.reachable === false) {
+        setStatus('Printer configured but NOT reachable \\u2014 ' + h.printer, 'err');
+        fixbox.classList.remove('hidden');
+      } else if (h.transport === 'network') {
+        setStatus('Connected \\u2014 printing over the network to ' + h.printer, 'ok');
+        fixbox.classList.add('hidden');
+      } else {
+        setStatus('Ready \\u2014 printing via the Windows queue (' + h.printer + ')', 'ok');
+      }
       return json('/config');
     }).then(function (c) {
       if (c && c.ok) {
@@ -184,6 +216,66 @@ function renderSetupPage(info = {}) {
     token = $('token').value.trim();
     if (token) localStorage.setItem('mrk-bridge-token', token);
     else localStorage.removeItem('mrk-bridge-token');
+  });
+
+  $('detect').addEventListener('click', function () {
+    var box = $('results');
+    box.classList.add('hidden');
+    box.innerHTML = '';
+    msg('Scanning the local network for printers\\u2026 (a few seconds)');
+    fetch('/discover').then(function (r) { return r.json(); }).then(function (res) {
+      if (!res.ok) { msg('Scan failed: ' + (res.error || 'unknown error'), 'err'); return; }
+      if (!res.printers || !res.printers.length) {
+        msg('No printers found on the local network. If the printer is plugged straight into this PC, use the button below. Otherwise type its IP above. (Scanned ' + res.scanned + ' addresses.)', 'err');
+        $('fixbox').classList.remove('hidden');
+        return;
+      }
+      msg('Found ' + res.printers.length + (res.printers.length > 1 ? ' printers' : ' printer') + ' \\u2014 click one to use it:', 'ok');
+      box.classList.remove('hidden');
+      res.printers.forEach(function (p) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'result-item';
+        var ip = document.createElement('span');
+        ip.className = 'ri-ip';
+        ip.textContent = p.ip + ':' + p.ports.join(',');
+        b.appendChild(ip);
+        if (p.mac) {
+          var mac = document.createElement('span');
+          mac.className = 'ri-mac';
+          mac.textContent = p.mac;
+          b.appendChild(mac);
+        }
+        b.addEventListener('click', function () {
+          $('host').value = p.ip;
+          if (p.ports && p.ports[0]) $('port').value = p.ports[0];
+          msg('Selected ' + p.ip + '. Click Save to apply.', 'ok');
+        });
+        box.appendChild(b);
+      });
+    }).catch(function () { msg('Could not reach the bridge.', 'err'); });
+  });
+
+  $('fixlink').addEventListener('click', function () {
+    var host = $('host').value.trim();
+    if (!host) { msg('Enter the printer IP above first (usually 192.168.1.100), then click Fix.', 'err'); return; }
+    msg('Applying the connection fix \\u2014 accept the Windows permission prompt\\u2026');
+    $('fixlink').disabled = true;
+    fetch('/setup/link', {
+      method: 'POST',
+      headers: headers({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ printerHost: host })
+    }).then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+      .then(function (res) {
+        $('fixlink').disabled = false;
+        if (res.status === 200 && res.body.ok) {
+          msg('Connection fixed. Click Test print to confirm it works.', 'ok');
+          $('fixbox').classList.add('hidden');
+        } else {
+          msg('Fix did not apply: ' + (res.body.message || res.body.error || res.status), 'err');
+        }
+      })
+      .catch(function () { $('fixlink').disabled = false; msg('Could not reach the bridge.', 'err'); });
   });
 
   refresh();

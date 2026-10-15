@@ -65,6 +65,26 @@ If you prefer (or want to review what runs), you can instead:
 
 To remove the auto-start later: right-click **`uninstall-service.bat`** → **Run as administrator**.
 
+## Finding the printer's IP address
+
+The printer needs a fixed IP the agent can reach. Three ways to find it, easiest first:
+
+1. **Printer self-test page.** Power the printer off, **hold the FEED button**, power it on,
+   release after a few seconds. It prints a slip showing the **IP**, whether it is DHCP/static,
+   and the **MAC**. This is the printer reporting its own address — the most reliable source.
+2. **Router's client list.** If the printer goes through a router/switch, open the router's
+   **DHCP / connected-devices** page and find the row whose **MAC matches the one on the
+   printer's label** (for the ZyWell Zy-Q822: `00:54:19:2d:ef:7e`). The row shows its IP.
+3. **From the till PC.** If the printer is on the same subnet, use the setup page's
+   **Detect printers** button (scans the local network for port 9100), or from a terminal:
+   - Windows: `arp -a` (look for the MAC), then `Test-NetConnection <ip> -Port 9100`.
+   - Linux/Mac: `nmap -p 9100 192.168.1.0/24`, or `nc -vz <ip> 9100`.
+   A host with **TCP port 9100 open** is almost certainly the printer.
+
+> For a **direct-cable** setup (printer plugged straight into the PC), the address is the
+> printer's **static default, `192.168.1.100`** — no discovery needed. Confirm it with the
+> self-test page if unsure.
+
 ## Printing to an Ethernet (network) printer
 
 If the printer is connected with a **network cable** instead of USB, the agent talks to it
@@ -81,9 +101,11 @@ directly over TCP — no Windows driver and no "Add printer" step.
    - **Through the router/switch:** just make sure the printer's IP is on the same subnet as
      the computer — no extra setup is needed.
 2. **Tell the agent the printer's IP** — easiest is the built-in **setup page**:
-   - Open **`http://localhost:9720/`** in a browser, type the printer's **IP address** (and
-     port, if it is not `9100`) and click **Save**. It applies **immediately** — no restart,
-     no rebuild — and is remembered in `config.local.json`.
+   - Open **`http://localhost:9720/`** in a browser and click **Detect printers** to find it
+     automatically (it scans the local network for the printer's port and shows the MAC of each
+     hit), or type the printer's **IP address** (and port, if not `9100`) yourself, then click
+     **Save**. It applies **immediately** — no restart, no rebuild — and is remembered in
+     `config.local.json`.
    - *(Alternatives, same result: run **`set-network-printer.bat`** which writes
      `config.local.json` for you, set the `PRINTER_HOST` / `PRINTER_PORT` environment variables,
      or edit `config.local.json` by hand:
@@ -99,29 +121,43 @@ directly over TCP — no Windows driver and no "Add printer" step.
 If installing Node.js on the printer PC is inconvenient, hand out the **single executable
 `mrk-printer-bridge.exe`** instead. It is a copy of Node with this agent packed inside (Node's
 Single Executable Application support), so **a double-click is the whole install** — nothing to
-install, no commands, no batch files.
+install, no commands, no batch files, no admin rights for the normal case.
 
-1. **Double-click `mrk-printer-bridge.exe`.** A console window opens — leave it open (that is
-   the agent running). On first run Windows SmartScreen may warn because the exe is unsigned:
-   choose **More info → Run anyway**.
-2. On its **first run the setup page opens by itself** in your browser
-   (**`http://localhost:9720/`**). Type the printer's **IP address** (e.g. `192.168.1.100`) and
-   port (`9100`), click **Save**, then **Test print**. You can reopen the page at any time by
-   browsing to `http://localhost:9720/`.
-3. In MRK, set the Print Settings endpoint to **`http://localhost:9720`**.
+### What a non-technical person does
+
+1. **Double-click `mrk-printer-bridge.exe`.** On first run Windows SmartScreen may warn because
+   the exe is unsigned: choose **More info → Run anyway** (this warning appears once).
+2. The first run **installs itself**: it copies the exe to
+   `%LOCALAPPDATA%\MRKPrinterBridge\mrk-printer-bridge.exe` and registers itself to start with
+   Windows (per-user auto-start — **no administrator prompt**), then relaunches from there. A
+   console window opens; leave it open, that is the agent running.
+3. The **setup page opens by itself** in the browser (**`http://localhost:9720/`**). It walks
+   them through it:
+   - Click **Detect printers** — it scans the local network for the printer's port and lists
+     each candidate with its MAC (so it can be matched to the sticker on the printer).
+   - Click the printer in the list, then **Save**, then **Test print**.
+4. In MRK, set the Print Settings endpoint to **`http://localhost:9720`**.
+
+**If the printer is plugged straight into this PC** (not into the router), detection finds
+nothing. The page then shows a **"Fix direct-cable connection"** box — clicking it gives the
+wired port a one-time network fix. This is the only step that can ask for permission: Windows
+shows a single UAC prompt, and they click **Yes**. (The fix routes just the printer's IP
+through the wired port, so the PC's Wi-Fi keeps working.)
 
 The printer address is **fully adjustable at run time** — a different network just types a
 different IP; there is nothing to rebuild and no file to hand-edit. Saving writes
 `config.local.json` **next to the exe**. A `PRINTER_HOST` / `PRINTER_PORT` environment variable,
 if one is set, still wins over it (priority: env → `config.local.json` → baked default).
 
-> Set `MRK_NO_BROWSER=1` to stop the setup page opening automatically on first run.
+> Set `MRK_NO_BROWSER=1` to stop the setup page opening automatically on first run, or
+> `MRK_SKIP_INSTALL=1` to skip the self-install (run it straight from wherever it is).
 
-**Auto-start:** put a shortcut to the exe in the Startup folder (Win+R → `shell:startup`).
+**Auto-start** is installed automatically on first run. To remove it later: `Win+R` →
+`shell:startup` and delete the `MRKPrinterBridge` shortcut, or delete the `MRKPrinterBridge`
+value from `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.
 
-> The direct-cable setup (`setup-printer-link.bat`, `ping 192.168.1.100`) and the
-> `http://localhost:9720` endpoint rule above still apply — the exe only replaces the Node
-> install + `node src/server.js` steps.
+> The exe replaces the Node install + `node src/server.js` steps; the direct-cable fix and the
+> `http://localhost:9720` endpoint rule are handled from inside the setup page.
 
 ## Building the single-file exe
 
@@ -183,6 +219,8 @@ node src/server.js
 - `GET /config` — current printer settings: `{ ok, printerHost, printerPort, transport, configPath }`.
 - `POST /config` — JSON body `{ "printerHost": "...", "printerPort": 9100 }`; saves to
   `config.local.json` and applies it **immediately**. Requires `X-Auth-Token` only if `AUTH_TOKEN` is set.
+- `GET /discover` — scans the local subnet(s) for printers (TCP **9100** open) and returns
+  `{ ok, localAddresses, subnets, scanned, printers: [{ ip, ports, mac }] }`. Used by the setup page's **Detect printers** button.
 - `POST /print` — body = raw ESC/POS bytes. Returns `{ ok, bytes, printer }`.
   - Requires `X-Auth-Token` header **only if** `AUTH_TOKEN` is set.
 
