@@ -117,9 +117,6 @@
                     <router-link :to="{ name: 'hotel-profile' }" class="profile-menu-link" @click="profileOpen = false">
                       <i class="fas fa-user-circle" aria-hidden="true"></i> {{ $t('nav.profile') }}
                     </router-link>
-                    <button type="button" class="profile-menu-link" @click="profileOpen = false; handleLogout()">
-                      <i class="fas fa-right-from-bracket" aria-hidden="true"></i> {{ $t('nav.logout') }}
-                    </button>
                     <button type="button" class="profile-menu-link theme-toggle" :aria-pressed="themeStore.isDark"
                       :title="themeStore.isDark ? $t('topBar.lightMode') : $t('topBar.darkMode')"
                       @click="themeStore.toggleTheme()">
@@ -140,6 +137,9 @@
                         <span class="lang-code">SW</span>
                       </button>
                     </div>
+                    <button type="button" class="profile-menu-link" @click="profileOpen = false; handleLogout()">
+                      <i class="fas fa-right-from-bracket" aria-hidden="true"></i> {{ $t('nav.logout') }}
+                    </button>
                   </div>
                 </div>
               </template>
