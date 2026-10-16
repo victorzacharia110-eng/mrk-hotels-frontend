@@ -306,6 +306,7 @@ export async function rasterLogoBytes(src, width = 384) {
  * @param {Array<Array<string|boolean|number>>} lines  [text, bold?, size?] rows.
  * @param {object} [opts]  Options.
  * @param {string} [opts.logo]  Logo URL to raster a store brand on top of the sheet.
+ * @param {number} [opts.logoWidth]  Logo width in dots; defaults to 384 (48mm).
  * @param {object} [opts.printer]  The QZ target to print to.
  * @returns {Promise<boolean>} True when the job was handed to the printer.
  */
@@ -320,7 +321,7 @@ export async function printToPrinter(lines, opts = {}) {
     let raster = null
     if (opts.logo) {
       try {
-        raster = await rasterLogoBytes(opts.logo)
+        raster = await rasterLogoBytes(opts.logo, opts.logoWidth)
       } catch {
         // A logo we cannot read cross-origin must not stop the receipt.
         raster = null

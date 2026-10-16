@@ -1140,7 +1140,9 @@ async function doPrint(order, kind) {
     if (failed.length > 0) toast(printerState.reason || t('printer.noPrinter'), 'error')
     return
   }
-  const sent = await printStore.print(await orderPrintLines(order, kind, opts), { logo: logoUrl.value })
+  // 192 dots = 24mm, half the old 48mm default, so the brand no longer dominates
+  // the paper a guest is handed.
+  const sent = await printStore.print(await orderPrintLines(order, kind, opts), { logo: logoUrl.value, logoWidth: 192 })
   if (!sent) toast(printerState.reason || t('printer.noPrinter'), 'error')
 }
 

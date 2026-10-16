@@ -71,7 +71,8 @@ describe('letterhead reaches the printed receipt', () => {
   it('still prints the bill below the letterhead', async () => {
     const out = text(await orderPrintLines(ORDER, 'receipt'))
 
-    expect(out).toContain('Receipt')
+    expect(out).not.toContain('Receipt')
+    expect(out).toContain('TA-0001')
     expect(out).toContain('2 x Ugali')
     expect(out).toContain('Bill Amount:')
   })
@@ -79,8 +80,18 @@ describe('letterhead reaches the printed receipt', () => {
   it('puts the letterhead above the bill', async () => {
     const out = text(await orderPrintLines(ORDER, 'receipt'))
 
-    expect(out.indexOf('MRK Grand Hotel')).toBeLessThan(out.indexOf('Receipt'))
+    expect(out.indexOf('MRK Grand Hotel')).toBeLessThan(out.indexOf('TA-0001'))
     expect(out.indexOf('TIN: 123-456-789')).toBeLessThan(out.indexOf('Bill Amount:'))
+  })
+
+  it('leaves 3cm of clear paper under the brand and at the foot', async () => {
+    const lines = text(await orderPrintLines(ORDER, 'receipt')).split('\n')
+
+    // A blank thermal line feeds ~3mm, so ten of them make the 3cm band a
+    // signature or a stamp needs: one under the letterhead, one at the foot.
+    const clearLinesAbove = (index) => lines.slice(0, index).reverse().findIndex((l) => l.trim() !== '')
+    expect(clearLinesAbove(lines.indexOf('TA-0001'))).toBe(10)
+    expect(lines.slice(-10).every((l) => l.trim() === '')).toBe(true)
   })
 
   it('fetches the hotel details once no matter how many tickets print', async () => {

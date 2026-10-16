@@ -11,6 +11,17 @@ import { itemRow, padLine } from '@/utils/printer'
 
 const WIDTH = 48
 
+/**
+ * A blank thermal line feeds ~3mm (24 dots at 8 dots/mm), so ten of them leave
+ * the 3cm of clear paper a signature or a stamp needs.
+ */
+const BLANK_3CM = 10
+
+/** `n` blank rows, each its own array so no two rows share a reference. */
+function blankLines(n) {
+  return Array.from({ length: n }, () => [''])
+}
+
 function money(value) {
   return new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value ?? 0)
 }
@@ -122,9 +133,10 @@ export function letterheadLines(header = {}, fallbackName = 'MRK HOTELS') {
  * Lines for a guest receipt — a compact bill that fits small receipt paper.
  * Rows are [text, bold?, size?] where size 2 = double-width double-height.
  *
- * Layout mirrors the reference till receipt: letterhead, Receipt, Table /
- * Guest / Waiter, dated, then a Qty·Item·Amount column, Bill Amount / Total
- * Tax / Total Discount / Total / Paid / Due, Thank you and Prepared By.
+ * Layout mirrors the reference till receipt: letterhead, a 3cm clear band for a
+ * signature or stamp, Table / Guest / Waiter, dated, then a Qty·Item·Amount
+ * column, Bill Amount / Total Tax / Total Discount / Total / Paid / Due,
+ * Thank you and Prepared By, and a further 3cm of clear paper at the foot.
  *
  * @param {object} order  Order (must carry items) with optional `_payment`.
  * @param {object} [opts]  Options: `letterhead` (saved hotel details) and
@@ -142,7 +154,9 @@ export function orderReceiptLines(order, opts = {}) {
 
   const lines = [
     ...letterheadLines(opts.letterhead, opts.hotel),
-    [padLine('Receipt', 'center', 24), false, 2],
+    // The "Receipt" title is no longer printed; it left a 3cm band of clear
+    // paper under the brand for a signature or stamp.
+    ...blankLines(BLANK_3CM),
     [String(order.order_number || ''), false, 2],
     [''],
     [`Table: ${order.table_number || order.room_number || '-'}`],
@@ -191,6 +205,8 @@ export function orderReceiptLines(order, opts = {}) {
   lines.push([''])
   lines.push([padLine('Thank you', 'center')])
   lines.push([`Prepared By: ${order._payment?.collected_by || order.waiter_name || ''}`])
+  // 3cm of clear paper at the foot, so a signature or stamp never lands on text.
+  lines.push(...blankLines(BLANK_3CM))
   return lines
 }
 

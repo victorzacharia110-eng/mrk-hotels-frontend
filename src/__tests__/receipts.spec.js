@@ -56,7 +56,9 @@ describe('receipt line widths', () => {
     const orderNumberIdx = lines.findIndex((l) => String(l[0]).includes('ORD-MGH-2026-00144'))
     expect(lines[orderNumberIdx][0]).toBe('ORD-MGH-2026-00144')
     const text = lines.map((l) => l[0]).join('\n')
-    expect(text).toContain('Receipt')
+    // The "Receipt" title was taken off the paper; a settled order still shows
+    // its "Receipt No:" under Payment, which is a different line.
+    expect(text).not.toContain('Receipt')
     expect(text).toContain('Qty  Item')
     expect(text).toContain('Bill Amount:')
     expect(text).toContain('Total Tax:')
