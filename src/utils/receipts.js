@@ -302,7 +302,7 @@ export function testPrintLines() {
     [divider()],
     [itemRow('TOTAL', 'TZS 7,500', 24), true, 2],
     [''],
-    [padLine('Connected: connectPrinter OK', 'center')],
+    [padLine('Connected: QZ Tray OK', 'center')],
     [padLine(new Date().toLocaleString(), 'center')],
   ]
   return lines

@@ -1,13 +1,12 @@
 <!--
   PrinterSettingsPage — the till printer connection for direct thermal printing.
 
-  The till printer is always reached over the network through the printer-bridge
-  helper (a small agent on the printer's computer, or on any always-on machine
-  that can reach an Ethernet printer). The hotel enters the agent's address once
-  and the app posts ESC/POS bytes to it. The old direct USB/Web Serial option was
-  removed: a browser cannot drive a USB printer on another machine, and cannot
-  open a raw socket to a network printer, so a local agent is the only reliable
-  route. This page also lets staff test the connection.
+  Printing goes through QZ Tray, the free cross-platform helper (Windows / macOS
+  / Linux) that runs a small websocket on the till the browser talks to over
+  HTTPS. That lets the page reach a thermal printer over USB, Serial or a raw
+  network socket, which a browser cannot do on its own — and it is why the old
+  hand-rolled bridge agent is gone. The hotel installs QZ Tray once, connects,
+  picks its printer, and tests it here.
 -->
 
 <template>
@@ -54,14 +53,14 @@
       </ol>
     </section>
 
-    <!-- The client's install path, kept to one obvious button: download the
-         Windows setup, double-click it on the printer's PC, done. The guide and
-         the source zip stay as quiet fallbacks for other setups. -->
+    <!-- QZ Tray is the one thing to install: it is free, open-source and
+         cross-platform. The download link is theirs so the operator always
+         gets the current, correctly-signed build. -->
     <section id="downloads" class="panel downloads">
       <h2><i class="fas fa-download"></i> {{ $t('printer.downloadsTitle') }}</h2>
 
-      <a class="download-card primary-card" :href="exeUrl">
-        <i class="fab fa-windows dl-kind" aria-hidden="true"></i>
+      <a class="download-card primary-card" :href="qzDownloadUrl" target="_blank" rel="noopener">
+        <i class="fas fa-print dl-kind" aria-hidden="true"></i>
         <span class="download-text">
           <strong>{{ $t('printer.downloadExe') }}</strong>
           <span class="muted block">{{ $t('printer.downloadExeHint') }}</span>
@@ -71,13 +70,16 @@
 
       <p class="download-alt">
         <span class="muted">{{ $t('printer.downloadAltLead') }}</span>
-        <a :href="guideUrl" download>{{ $t('printer.downloadGuideLink') }}</a>
+        <a :href="guideUrl">{{ $t('printer.downloadGuideLink') }}</a>
         <span class="muted" aria-hidden="true">·</span>
-        <a :href="helperUrl" download>{{ $t('printer.downloadHelperLink') }}</a>
+        <a :href="qzDocsUrl" target="_blank" rel="noopener">{{ $t('printer.downloadHelperLink') }}</a>
       </p>
     </section>
 
     <section id="connection" class="panel">
+      <h2><i class="fas fa-plug"></i> {{ $t('printer.connectionTitle') }}</h2>
+      <p class="muted">{{ $t('printer.connectionHint') }}</p>
+
       <div class="status-row">
         <span class="status-dot" :class="statusDot"></span>
         <div>
@@ -90,24 +92,38 @@
         <i class="fas fa-triangle-exclamation"></i> {{ printerState.reason }}
       </p>
 
-      <!-- The till printer (receipts and guest checks) is reached through the
-           same bridge agent the ticket printers use. The address is stored on
-           the print settings so every print call site shares one setting. -->
+      <div class="actions">
+        <button class="btn btn-primary" :disabled="connecting" @click="connect">
+          <i class="fas fa-plug"></i> {{ connected ? $t('printer.reconnect') : $t('printer.connect') }}
+        </button>
+        <button class="btn btn-secondary" :disabled="connecting" @click="refreshPrinters">
+          <i class="fas fa-rotate"></i> {{ $t('printer.refresh') }}
+        </button>
+        <button class="btn btn-secondary" :disabled="testing" @click="test">
+          <i class="fas fa-file-lines"></i> {{ testing ? $t('common.saving') : $t('printer.test') }}
+        </button>
+      </div>
+
+      <!-- The till printer (receipts and guest checks). Pick an installed
+           printer QZ Tray can see, or point straight at a network printer. -->
       <div class="network-form">
-        <label class="fld-label" for="till-endpoint">{{ $t('cashier.printSettings.endpointLabel') }}</label>
-        <input
-          id="till-endpoint"
-          v-model.trim="endpointRef"
-          type="url"
-          class="form-control"
-          :placeholder="$t('cashier.printSettings.endpointPlaceholder')"
-          @change="saveEndpoint"
-        />
-        <div class="actions">
-          <button class="btn btn-secondary" :disabled="testing" @click="test">
-            <i class="fas fa-file-lines"></i> {{ testing ? $t('common.saving') : $t('printer.test') }}
-          </button>
-          <p v-if="endpointHelp" class="muted">{{ endpointHelp }}</p>
+        <label class="fld-label" for="till-printer">{{ $t('printer.tillPrinterLabel') }}</label>
+        <select id="till-printer" class="form-control" :value="tillPrinterName" @change="setTillPrinter($event.target.value)">
+          <option value="">{{ $t('printer.selectPrinter') }}</option>
+          <option v-for="name in availablePrinters" :key="name" :value="name">{{ name }}</option>
+          <!-- Keep the saved printer visible even before QZ Tray reports the list. -->
+          <option v-if="tillPrinterName && !availablePrinters.includes(tillPrinterName)" :value="tillPrinterName">
+            {{ tillPrinterName }}
+          </option>
+        </select>
+      </div>
+
+      <div class="network-form">
+        <label class="fld-label" for="till-host">{{ $t('printer.orNetwork') }}</label>
+        <div class="inline-fields">
+          <input id="till-host" v-model.trim="networkHost" class="form-control" :placeholder="$t('printer.hostLabel')" @change="saveNetwork" />
+          <input v-model.trim="networkPort" class="form-control port" :placeholder="$t('printer.portLabel')" @change="saveNetwork" />
+          <button class="btn btn-secondary" @click="saveNetwork">{{ $t('printer.saveNetwork') }}</button>
         </div>
       </div>
     </section>
@@ -132,20 +148,6 @@
     <section id="ticket-printers" class="panel">
       <h2>{{ $t('printer.ticketTitle') }}</h2>
       <p class="muted">{{ $t('printer.ticketHint') }}</p>
-
-      <!-- The network path has no OS driver to lean on, so the three real
-           setup actions are written out where the endpoint is entered. -->
-      <div class="notice bridge-help">
-        <i class="fas fa-network-wired" aria-hidden="true"></i>
-        <div>
-          <strong>{{ $t('printer.bridgeTitle') }}</strong>
-          <ol>
-            <li>{{ $t('printer.bridge1') }}</li>
-            <li>{{ $t('printer.bridge2') }}</li>
-            <li>{{ $t('printer.bridge3') }}</li>
-          </ol>
-        </div>
-      </div>
 
       <div v-if="!ticketPrinters.length" class="notice">
         <i class="fas fa-circle-info"></i> {{ $t('printer.noTicketPrinters') }}
@@ -206,12 +208,19 @@
           class="form-control"
           :placeholder="$t('printer.printerName')"
         />
-        <input
-          v-model="newPrinter.endpoint"
-          class="form-control"
-          :placeholder="$t('cashier.printSettings.endpointPlaceholder')"
-        />
-        <button class="btn btn-primary" :disabled="!newPrinter.name || !newPrinter.endpoint" @click="addPrinter">
+        <select v-model="newPrinter.kind" class="form-control">
+          <option value="system">{{ $t('printer.systemPrinter') }}</option>
+          <option value="socket">{{ $t('printer.networkPrinter') }}</option>
+        </select>
+        <select v-if="newPrinter.kind === 'system'" v-model="newPrinter.printer" class="form-control">
+          <option value="">{{ $t('printer.selectPrinter') }}</option>
+          <option v-for="name in availablePrinters" :key="name" :value="name">{{ name }}</option>
+        </select>
+        <template v-else>
+          <input v-model.trim="newPrinter.host" class="form-control" :placeholder="$t('printer.hostLabel')" />
+          <input v-model.trim="newPrinter.port" class="form-control port" :placeholder="$t('printer.portLabel')" />
+        </template>
+        <button class="btn btn-primary" :disabled="!canAddPrinter" @click="addPrinter">
           <i class="fas fa-plus"></i> {{ $t('common.add') }}
         </button>
       </div>
@@ -220,7 +229,7 @@
         <li v-for="p in ticketPrinters" :key="p.id">
           <span>
             <strong>{{ p.name }}</strong>
-            <span class="muted"> — {{ p.endpoint }}</span>
+            <span class="muted"> — {{ targetLabel(p) }}</span>
           </span>
           <button class="btn btn-danger btn-sm" @click="removeTicketPrinter(p.id)">
             <i class="fas fa-trash"></i>
@@ -249,22 +258,32 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { printerState, printToPrinter } from '@/utils/printer'
+import { storeToRefs } from 'pinia'
+import {
+  printerState,
+  connectPrinter,
+  listPrinters,
+  printToPrinter,
+  printerSupported,
+  targetLabel,
+  targetUsable,
+} from '@/utils/printer'
 import { testPrintLines } from '@/utils/receipts'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { menuCategoryApi } from '@/api'
 
+const { t } = useI18n()
+
+const printStore = usePrintSettingsStore()
 const {
   settings,
-  endpoint,
+  tillPrinter,
   ticketPrinters,
   departmentRouting,
   stationRouting,
   defaultTicketPrinterId,
-  saveSettings,
-  addTicketPrinter,
-  removeTicketPrinter,
-} = usePrintSettingsStore()
+} = storeToRefs(printStore)
+const { saveSettings, addTicketPrinter, removeTicketPrinter } = printStore
 
 // Service lines used to be a fixed restaurant/bar pair; `department` is now
 // free text, so the list is read from the service lines the hotel's own menu
@@ -278,7 +297,7 @@ async function loadServiceLines() {
     const lines = [...new Set(categories.map((c) => String(c.department || '').trim()).filter(Boolean))]
     // A line already routed to a printer stays listed even if its last category
     // was removed, so a configured route cannot vanish out of the UI.
-    const routed = Object.keys(departmentRouting || {})
+    const routed = Object.keys(departmentRouting.value || {})
     if (lines.length) serviceLines.value = [...new Set([...lines, ...routed])]
   } catch {
     /* keep the defaults; the page still works with the two original lines */
@@ -292,16 +311,42 @@ const STATIONS = [
   { id: 'bar', labelKey: 'printer.stationBar' },
 ]
 
-const newPrinter = ref({ name: '', endpoint: '' })
+const error = ref('')
+const connecting = ref(false)
+const testing = ref(false)
+const connected = ref(printerState.connected)
+const availablePrinters = ref([])
 
 // True once a test print has actually come back from the printer in this
 // session — it is the only honest proof that step 4 is finished.
 const testPassed = ref(false)
 
+const newPrinter = ref({ name: '', kind: 'system', printer: '', host: '', port: '9100' })
+
+// QZ Tray's own download and docs so the operator always gets a current,
+// correctly-signed build rather than a copy bundled with the app.
+const qzDownloadUrl = 'https://qz.io/download/'
+const qzDocsUrl = 'https://qz.io/docs'
+const guideUrl = `${import.meta.env.BASE_URL}MRK_Hotels_Printer_Setup_Guide.pdf`
+
+/** The configured till printer, when it is complete enough to print to. */
+const tillTarget = computed(() => (targetUsable(tillPrinter.value) ? tillPrinter.value : null))
+
+/** The name shown in the printer picker (system printers only). */
+const tillPrinterName = computed(() => (tillPrinter.value?.kind === 'system' ? tillPrinter.value.printer : ''))
+
+const networkHost = ref(tillPrinter.value?.kind === 'socket' ? tillPrinter.value.host : '')
+const networkPort = ref(String(tillPrinter.value?.kind === 'socket' ? tillPrinter.value.port || 9100 : 9100))
+
+const canAddPrinter = computed(() => {
+  if (!newPrinter.value.name.trim()) return false
+  return newPrinter.value.kind === 'socket' ? Boolean(newPrinter.value.host.trim()) : true
+})
+
 /** Every service line pointed at a printer, or a default to catch them all. */
 const routesDone = computed(() => {
-  if (!ticketPrinters.length) return false
-  return serviceLines.value.every((line) => routingFor(line)) || Boolean(defaultTicketPrinterId)
+  if (!ticketPrinters.value.length) return false
+  return serviceLines.value.every((line) => routingFor(line)) || Boolean(defaultTicketPrinterId.value)
 })
 
 /**
@@ -312,24 +357,24 @@ const routesDone = computed(() => {
 const setupSteps = computed(() => [
   {
     key: 'step1',
-    icon: 'fas fa-plug',
-    done: Boolean(endpointRef.value),
-    chip: endpointRef.value ? 'done' : 'todo',
-    target: 'connection',
+    icon: 'fas fa-download',
+    done: connected.value,
+    chip: connected.value ? 'done' : 'todo',
+    target: 'downloads',
   },
   {
     key: 'step2',
-    icon: 'fas fa-plus',
-    done: ticketPrinters.length > 0,
-    chip: ticketPrinters.length ? 'done' : 'optional',
-    target: 'ticket-printers',
+    icon: 'fas fa-plug',
+    done: connected.value,
+    chip: connected.value ? 'done' : 'todo',
+    target: 'connection',
   },
   {
     key: 'step3',
-    icon: 'fas fa-route',
-    done: routesDone.value,
-    chip: !ticketPrinters.length ? 'notNeeded' : routesDone.value ? 'done' : 'todo',
-    target: 'ticket-printers',
+    icon: 'fas fa-print',
+    done: Boolean(tillTarget.value),
+    chip: tillTarget.value ? 'done' : 'todo',
+    target: 'connection',
   },
   {
     key: 'step4',
@@ -364,26 +409,33 @@ const toggles = [
   { key: 'printFoodTicketOnItemAdded', label: 'printer.printFoodTicketOnItemAdded', hint: 'printer.printFoodTicketOnItemAddedHint' },
 ]
 
+const statusDot = computed(() => (connected.value ? 'ok' : 'off'))
+const statusTitle = computed(() => {
+  if (!tillTarget.value) return t('printer.noPrinter')
+  return connected.value ? t('printer.statusReady') : t('printer.statusNotReady')
+})
+const statusDetail = computed(() => (tillTarget.value ? targetLabel(tillTarget.value) : t('printer.noPrinterHint')))
+
 function setFlag(key, value) {
   saveSettings({ [key]: value })
 }
 
 function routingFor(line) {
-  return departmentRouting[line] || ''
+  return departmentRouting.value[line] || ''
 }
 
 function setRoute(line, printerId) {
-  saveSettings({ departmentRouting: { ...departmentRouting, [line]: printerId } })
+  saveSettings({ departmentRouting: { ...departmentRouting.value, [line]: printerId } })
 }
 
 function stationRouteFor(station) {
-  return stationRouting?.[station] || ''
+  return stationRouting.value?.[station] || ''
 }
 
 function setStationRoute(station, printerId) {
   // Left blank means "follow the service line's printer", which is why an
   // empty value is written as an absent key rather than as ''.
-  const next = { ...stationRouting }
+  const next = { ...stationRouting.value }
   if (printerId) next[station] = printerId
   else delete next[station]
   saveSettings({ stationRouting: next })
@@ -393,61 +445,70 @@ function setDefault(printerId) {
   saveSettings({ defaultTicketPrinterId: printerId })
 }
 
-function addPrinter() {
-  addTicketPrinter({
-    name: newPrinter.value.name.trim(),
-    transport: 'network',
-    endpoint: newPrinter.value.endpoint.trim(),
-  })
-  newPrinter.value = { name: '', endpoint: '' }
+/** Stores the picked system printer as the till printer. */
+function setTillPrinter(name) {
+  saveSettings({ tillPrinter: name ? { kind: 'system', printer: name, label: name } : null })
 }
 
-const { t } = useI18n()
+/** Stores a raw network printer (host:port) as the till printer. */
+function saveNetwork() {
+  const host = networkHost.value.trim()
+  if (!host) return
+  const port = Number(networkPort.value) || 9100
+  saveSettings({ tillPrinter: { kind: 'socket', host, port, label: `${host}:${port}` } })
+}
 
-// Static files served from public/. BASE_URL keeps these correct if the app is
-// ever mounted under a sub-path rather than at the site root.
-const guideUrl = `${import.meta.env.BASE_URL}MRK_Hotels_Printer_Setup_Guide.pdf`
-const helperUrl = `${import.meta.env.BASE_URL}MRK_Printer_Bridge.zip`
-// The one-double-click Windows bridge (single-file .exe, ~85 MB) is too large to
-// live in the repo/deploy, so it is published as a GitHub Release asset. This
-// "latest" URL always points at the newest release's file, so it never changes.
-const exeUrl =
-  'https://github.com/victorzacharia110-eng/mrk-hotels-frontend/releases/latest/download/mrk-printer-bridge.exe'
+function addPrinter() {
+  const name = newPrinter.value.name.trim()
+  if (!name) return
+  const target =
+    newPrinter.value.kind === 'socket'
+      ? { name, kind: 'socket', host: newPrinter.value.host.trim(), port: Number(newPrinter.value.port) || 9100 }
+      : { name, kind: 'system', printer: newPrinter.value.printer || name }
+  addTicketPrinter(target)
+  newPrinter.value = { name: '', kind: 'system', printer: '', host: '', port: '9100' }
+}
 
-const error = ref('')
-const testing = ref(false)
+/** Connects to QZ Tray and refreshes the list of printers it can see. */
+async function connect() {
+  error.value = ''
+  if (!printerSupported()) {
+    error.value = t('printer.unsupported')
+    return
+  }
+  connecting.value = true
+  try {
+    const ok = await connectPrinter(tillTarget.value)
+    connected.value = ok
+    if (!ok) error.value = printerState.reason || t('printer.connectFailed')
+    else await refreshPrinters()
+  } finally {
+    connecting.value = false
+  }
+}
 
-// The till printer's bridge-agent address. Kept in a local ref so the field is
-// editable, and written back to the store (which every print call site reads).
-const endpointRef = ref(endpoint)
-const endpointHelp = ref('')
-
-const statusDot = computed(() => (endpointRef.value ? 'ok' : 'off'))
-const statusTitle = computed(() =>
-  endpointRef.value ? t('cashier.printSettings.statusNetwork') : t('cashier.printSettings.statusNoNetwork'),
-)
-const statusDetail = computed(() =>
-  endpointRef.value
-    ? `${t('cashier.printSettings.statusNetworkDetail')} ${endpointRef.value}`
-    : t('cashier.printSettings.statusNoNetworkDetail'),
-)
-
-/** Persists the endpoint so receipts use it without re-entering it. */
-function saveEndpoint() {
-  saveSettings({ transport: 'network', endpoint: endpointRef.value || '' })
+/** Re-reads the installed printers from QZ Tray. */
+async function refreshPrinters() {
+  error.value = ''
+  try {
+    const printers = await listPrinters()
+    availablePrinters.value = [...new Set(printers)].sort()
+    connected.value = true
+  } catch (err) {
+    connected.value = false
+    error.value = printerState.reason || err?.message || t('printer.connectFailed')
+  }
 }
 
 async function test() {
   error.value = ''
-  if (!endpointRef.value) {
-    endpointHelp.value = t('cashier.printSettings.endpointRequired')
+  if (!tillTarget.value) {
+    error.value = t('printer.endpointRequired')
     return
   }
-  endpointHelp.value = ''
   testing.value = true
   try {
-    saveEndpoint()
-    const sent = await printToPrinter(testPrintLines(), { transport: 'network', endpoint: endpointRef.value })
+    const sent = await printToPrinter(testPrintLines(), { printer: tillTarget.value })
     if (!sent) error.value = printerState.reason || t('printer.testFailed')
     else testPassed.value = true
   } finally {
@@ -457,6 +518,7 @@ async function test() {
 
 onMounted(() => {
   loadServiceLines()
+  if (printerState.connected) refreshPrinters()
 })
 </script>
 
@@ -475,15 +537,15 @@ onMounted(() => {
 
 .notice { display: flex; align-items: center; gap: 8px; background: #fff8e1; color: #8a6d1a; padding: 10px 14px; border-radius: 6px; margin: 8px 0 16px; }
 
-.actions { display: flex; gap: 10px; align-items: center; margin: 8px 0 20px; }
-.network-form { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 8px; }
+.actions { display: flex; gap: 10px; align-items: center; margin: 8px 0 20px; flex-wrap: wrap; }
+.network-form { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 12px; }
 .fld-label { font-size: 12px; font-weight: 600; color: #475569; }
-
-.hints { border-top: 1px solid #ececec; padding-top: 14px; }
-.hints ol { margin: 8px 0 10px; padding-left: 20px; line-height: 1.7; font-size: 14px; }
+.inline-fields { display: flex; gap: 8px; flex-wrap: wrap; }
+.inline-fields .port { max-width: 110px; }
 
 .panel { margin-top: 20px; scroll-margin-top: 16px; }
 .panel h2 { font-size: 17px; font-weight: 700; margin: 0 0 4px; }
+.panel h2 i { color: #005eb8; }
 .block { display: block; }
 
 /* Step-by-step setup guide */
@@ -511,11 +573,6 @@ onMounted(() => {
 .chip-optional { background: #e0f2fe; color: #0369a1; }
 .chip-notNeeded { background: #f1f5f9; color: #64748b; }
 
-/* Bridge-agent help sits where the endpoint is typed */
-.bridge-help { align-items: flex-start; }.bridge-help > i { color: #005eb8; margin-top: 2px; }
-.bridge-help strong { font-size: 13px; }
-.bridge-help ol { margin: 6px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.6; }
-
 .toggle { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
 .toggle:last-child { border-bottom: 0; }
 .default-row { justify-content: space-between; align-items: center; margin-top: 14px; }
@@ -526,12 +583,13 @@ onMounted(() => {
 
 .add-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .add-row .form-control { flex: 1 1 160px; }
+.add-row .port { flex: 0 0 110px; }
 
 .printer-list { list-style: none; padding: 0; margin: 14px 0 0; }
 .printer-list li { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
 .btn-sm { padding: 5px 10px; font-size: 12px; }
 
-/* Manual & helper downloads: one obvious button, quiet fallbacks. */
+/* One obvious download, with quiet fallbacks for docs and the setup guide. */
 .downloads h2 { display: flex; align-items: center; gap: 8px; }
 .downloads h2 i { color: #005eb8; }
 .download-card {

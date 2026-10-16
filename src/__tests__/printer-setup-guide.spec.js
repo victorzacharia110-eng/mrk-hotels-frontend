@@ -8,9 +8,11 @@ import PrinterSettingsPage from '@/pages/printer/PrinterSettingsPage.vue'
 /**
  * The setup guide is the client's installation path: four numbered steps, each
  * with a live status chip (Done / To do / Optional / Not needed) and a jump to
- * the section it is talking about. These tests read the rendered guide so the
- * statuses on screen are what is asserted on — a chip that says "Done" while
- * the underlying condition is unmet is exactly the lie this guards against.
+ * the section it is talking about. Printing now goes through QZ Tray, so the
+ * steps are: install QZ Tray, connect, choose the till printer, test. These
+ * tests read the rendered guide so the statuses on screen are what is asserted
+ * on — a chip that says "Done" while the underlying condition is unmet is
+ * exactly the lie this guards against.
  */
 
 const categoryIndex = vi.hoisted(() => vi.fn())
@@ -25,11 +27,12 @@ vi.mock('@/utils/printer', async (importOriginal) => ({
   printerSupported: () => true,
   connectPrinter: vi.fn().mockResolvedValue(true),
   disconnectPrinter: vi.fn(),
+  listPrinters: vi.fn().mockResolvedValue([]),
   restorePrinter: vi.fn().mockResolvedValue(true),
   printToPrinter: vi.fn().mockResolvedValue(true),
 }))
 
-const { printerState, printToPrinter } = await import('@/utils/printer')
+const { printerState, printToPrinter, connectPrinter } = await import('@/utils/printer')
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -58,44 +61,41 @@ function titles(wrapper) {
   return wrapper.findAll('.steps .step').map((li) => li.find('strong').text())
 }
 
+const TILL = { kind: 'system', printer: 'ZyWell Zy-Q822', label: 'ZyWell Zy-Q822' }
+
 describe('PrinterSettingsPage — setup guide', () => {
   it('renders the four steps with their titles', async () => {
     const wrapper = await mountPage()
 
     expect(titles(wrapper)).toEqual([
-      'Set the print agent endpoint',
-      'Add the kitchen & bar printers',
-      'Route service lines and passes',
+      'Install QZ Tray',
+      'Connect to QZ Tray',
+      'Choose the till printer',
       'Test the connection',
     ])
   })
 
-  it('starts with the till and test steps to do, and the printer steps skippable', async () => {
+  it('starts with every step to do', async () => {
     const wrapper = await mountPage()
 
-    expect(chips(wrapper)).toEqual(['To do', 'Optional', 'Not needed', 'To do'])
+    expect(chips(wrapper)).toEqual(['To do', 'To do', 'To do', 'To do'])
   })
 
-  it('marks step 2 done once a ticket printer exists, which makes step 3 relevant', async () => {
-    usePrintSettingsStore().addTicketPrinter({
-      name: 'Kitchen',
-      transport: 'network',
-      endpoint: 'http://10.0.0.5:9720',
-    })
-
+  it('marks the connect steps done once QZ Tray is connected', async () => {
     const wrapper = await mountPage()
 
-    expect(chips(wrapper)).toEqual(['To do', 'Done', 'To do', 'To do'])
+    const connectBtn = wrapper.findAll('button').find((b) => b.text().includes('Connect'))
+    expect(connectBtn).toBeTruthy()
+    await connectBtn.trigger('click')
+    await flushPromises()
+
+    expect(connectPrinter).toHaveBeenCalled()
+    expect(chips(wrapper)[0]).toBe('Done')
+    expect(chips(wrapper)[1]).toBe('Done')
   })
 
-  it('marks step 3 done when a default printer catches every unrouted line', async () => {
-    const store = usePrintSettingsStore()
-    const kitchen = store.addTicketPrinter({
-      name: 'Kitchen',
-      transport: 'network',
-      endpoint: 'http://10.0.0.5:9720',
-    })
-    store.saveSettings({ defaultTicketPrinterId: kitchen })
+  it('marks the printer step done once a till printer is chosen', async () => {
+    usePrintSettingsStore().saveSettings({ tillPrinter: TILL })
 
     const wrapper = await mountPage()
 
@@ -103,8 +103,7 @@ describe('PrinterSettingsPage — setup guide', () => {
   })
 
   it('marks step 4 done only after a test print comes back', async () => {
-    // The till prints over the network, so an agent endpoint must be set first.
-    usePrintSettingsStore().saveSettings({ transport: 'network', endpoint: 'http://10.0.0.9:9720' })
+    usePrintSettingsStore().saveSettings({ tillPrinter: TILL })
     const wrapper = await mountPage()
 
     const testBtn = wrapper.findAll('button').find((b) => b.text().includes('Test Print'))
@@ -116,14 +115,11 @@ describe('PrinterSettingsPage — setup guide', () => {
     expect(printToPrinter).toHaveBeenCalled()
   })
 
-  it('states the requirements and the bridge-agent setup in order', async () => {
+  it('states the requirements and the QZ Tray setup', async () => {
     const wrapper = await mountPage()
 
     expect(wrapper.find('.reqs').text()).toContain('ESC/POS thermal')
-    const bridgeItems = wrapper.findAll('.bridge-help li').map((li) => li.text())
-    expect(bridgeItems).toHaveLength(3)
-    expect(bridgeItems[0]).toContain('Windows setup')
-    expect(bridgeItems[1]).toContain(':9720')
+    expect(wrapper.find('.reqs').text()).toContain('QZ Tray')
   })
 
   it('jumps to the section its step talks about', async () => {
@@ -132,6 +128,7 @@ describe('PrinterSettingsPage — setup guide', () => {
     // Every step's jump target must exist on the page, or the button no-ops.
     expect(wrapper.find('#ticket-printers').exists()).toBe(true)
     expect(wrapper.find('#connection').exists()).toBe(true)
+    expect(wrapper.find('#downloads').exists()).toBe(true)
     expect(wrapper.find('#when-to-print').exists()).toBe(true)
 
     const openBtn = wrapper.findAll('.steps .step')[1].find('.link-btn')
@@ -139,24 +136,20 @@ describe('PrinterSettingsPage — setup guide', () => {
     await openBtn.trigger('click')
   })
 
-  it('makes the Windows .exe the one obvious download', async () => {
+  it('makes the QZ Tray download the one obvious download', async () => {
     const wrapper = await mountPage()
 
-    // A single primary button, so the client is never asked to choose. It is too
-    // big to ship in the repo, so it lives as a GitHub Release asset.
+    // A single primary button, so the client is never asked to choose.
     const cards = wrapper.findAll('.downloads .download-card')
     expect(cards).toHaveLength(1)
-    expect(cards[0].attributes('href')).toContain('mrk-printer-bridge.exe')
-    expect(cards[0].text()).toContain('Download for Windows')
+    expect(cards[0].attributes('href')).toContain('qz.io/download')
+    expect(cards[0].text()).toContain('Download QZ Tray')
     expect(cards[0].text()).toContain('Recommended')
 
-    // The guide and the source zip remain as quiet fallback links, served from
-    // public/ as downloads rather than navigating the app away.
+    // The setup guide and the QZ Tray docs remain as quiet fallback links.
     const alt = wrapper.findAll('.download-alt a')
     expect(alt).toHaveLength(2)
     expect(alt[0].attributes('href')).toBe('/MRK_Hotels_Printer_Setup_Guide.pdf')
-    expect(alt[0].attributes()).toHaveProperty('download')
-    expect(alt[1].attributes('href')).toBe('/MRK_Printer_Bridge.zip')
-    expect(alt[1].attributes()).toHaveProperty('download')
+    expect(alt[1].attributes('href')).toBe('https://qz.io/docs')
   })
 })

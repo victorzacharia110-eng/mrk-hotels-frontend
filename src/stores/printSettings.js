@@ -4,15 +4,17 @@
  * Mirrors the print-on-event toggles common to POS systems (e.g. E-Zee):
  * decide WHEN a receipt or guest check should go to the till printer.
  *
- * The printer may be reached either over Web Serial (a USB printer attached
- * to this machine) or over the network via a local bridge agent exposed on an
- * HTTP endpoint (for printers on another machine / remote printing). The
- * chosen endpoint is stored here so every print call site shares one setting.
+ * Every printer is described to QZ Tray as a "target" (see @/utils/printer):
+ *   { kind: 'system', printer: 'ZyWell Zy-Q822', label: 'Front desk' }
+ *   { kind: 'socket', host: '192.168.1.100', port: 9100, label: 'Kitchen' }
+ * The till printer (receipts) and every ticket printer share that shape, so a
+ * USB printer on this machine and an Ethernet printer in the kitchen are
+ * configured the same way.
  */
 
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import { printerState, printToPrinter, printerSupported } from "@/utils/printer";
+import { printerState, printToPrinter, targetUsable, targetLabel, listPrinters, connectReason } from "@/utils/printer";
 
 // localStorage key for the whole settings blob.
 const STORAGE_KEY = "mrk_print_settings";
@@ -33,41 +35,87 @@ const DEFAULTS = {
   // Print a food ticket when a single item is added to an order that was
   // already placed. Off by default: most kitchens reprint the whole ticket.
   printFoodTicketOnItemAdded: false,
-  // Named printer profiles a food ticket can be routed to. Each is either the
-  // USB printer attached to this machine ('serial', at most one at a time) or a
-  // bridge agent on another machine ('network'). Ids are stable so a route
-  // pointing at a deleted printer degrades to the till printer instead of
-  // silently dropping the ticket.
+  // The till printer (receipts, guest checks, reports): a QZ target or null.
+  tillPrinter: null,
+  // Named printer profiles a food ticket can be routed to. Ids are stable so a
+  // route pointing at a deleted printer degrades to the till printer instead
+  // of silently dropping the ticket.
   ticketPrinters: [],
   // Which printer each service line's tickets go to, by profile id.
   departmentRouting: {},
-  // Which printer each PHYSICAL pass (manager review item 4) goes to, by profile
-  // id. A menu item's `printer_station` picks the pass; this picks the printer
-  // on that pass. Falls back to the service line's route, then the default.
+  // Which printer each PHYSICAL pass goes to, by profile id. A menu item's
+  // `printer_station` picks the pass; this picks the printer on that pass.
   stationRouting: {},
   // Profile used when a service line has no route of its own, or its route
   // points at a printer that has since been deleted.
   defaultTicketPrinterId: "",
-  // How the till printer is reached. Only 'network' is offered: the printer is
-  // reached through the bridge agent on the printer's computer. The legacy
-  // 'serial' value still works for a device that had it saved, but is migrated
-  // to 'network' on load (see loadSaved) so the UI never shows it again.
-  transport: "network",
-  // Base URL of the network bridge agent, e.g. http://100.x.y.z:9720
-  endpoint: "",
 };
+
+/**
+ * Best-effort conversion of a legacy bridge endpoint (http://HOST:PORT) into a
+ * QZ raw-socket target. The old bridge lived on the printer's own machine, so
+ * its host was the printer's address; the raw ESC/POS port is 9100. A loopback
+ * endpoint cannot be mapped (the bridge hid the real address), so it returns
+ * null and the operator re-selects the printer once.
+ *
+ * @param {unknown} endpoint  The old bridge base URL.
+ * @param {string} label  Human label for the converted target.
+ * @returns {object|null} A QZ target, or null when it cannot be derived.
+ */
+function endpointToTarget(endpoint, label) {
+  if (typeof endpoint !== "string") return null;
+  const match = endpoint.match(/^https?:\/\/([^/:]+)(?::(\d+))?/i);
+  if (!match) return null;
+  const host = match[1];
+  if (["localhost", "127.0.0.1", "::1"].includes(host.toLowerCase())) return null;
+  return { kind: "socket", host, port: 9100, label };
+}
+
+/**
+ * Brings a saved blob forward onto the QZ-target shape. Old blobs carried a
+ * `transport`/`endpoint` pair (and per-printer `endpoint`s) from the retired
+ * bridge agent; those are converted where the printer can be located and
+ * dropped otherwise, along with any route that pointed at a dropped printer.
+ *
+ * @param {object} saved  The parsed localStorage blob.
+ * @returns {object} A settings object on the current shape.
+ */
+function migrate(saved) {
+  const next = { ...DEFAULTS, ...saved };
+  delete next.transport;
+  delete next.endpoint;
+
+  if (!targetUsable(next.tillPrinter) && saved.endpoint) {
+    next.tillPrinter = endpointToTarget(saved.endpoint, "Till printer");
+  }
+
+  if (Array.isArray(next.ticketPrinters)) {
+    next.ticketPrinters = next.ticketPrinters
+      .map((p) => {
+        // Already a QZ target — leave it untouched.
+        if (p && (p.kind || p.printer || p.host)) return p;
+        const target = endpointToTarget(p?.endpoint, p?.name || "Printer");
+        if (!target || !p?.id) return null;
+        return { id: p.id, ...target };
+      })
+      .filter(Boolean);
+  }
+
+  const kept = new Set(next.ticketPrinters.map((p) => p.id));
+  const prune = (map) =>
+    Object.fromEntries(Object.entries(map || {}).filter(([, id]) => kept.has(id)));
+  next.departmentRouting = prune(next.departmentRouting);
+  next.stationRouting = prune(next.stationRouting);
+  if (next.defaultTicketPrinterId && !kept.has(next.defaultTicketPrinterId)) {
+    next.defaultTicketPrinterId = "";
+  }
+  return next;
+}
 
 function loadSaved() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-    if (parsed && typeof parsed === "object") {
-      const merged = { ...DEFAULTS, ...parsed };
-      // Serial (a USB printer on this machine) is no longer offered in the UI.
-      // A till that still had it selected is moved to the network bridge so it
-      // is never shown the removed option again.
-      if (merged.transport === "serial") merged.transport = "network";
-      return merged;
-    }
+    if (parsed && typeof parsed === "object") return migrate(parsed);
   } catch {
     /* corrupted storage — fall back to defaults */
   }
@@ -83,6 +131,7 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
   const printOnVoid = computed(() => settings.value.printOnVoid);
   const printFoodTicketOnOrder = computed(() => settings.value.printFoodTicketOnOrder);
   const printFoodTicketOnItemAdded = computed(() => settings.value.printFoodTicketOnItemAdded);
+  const tillPrinter = computed(() => settings.value.tillPrinter);
   const ticketPrinters = computed(() => settings.value.ticketPrinters);
   const departmentRouting = computed(() => settings.value.departmentRouting);
   // Exposed because the settings screen edits the pass routes. Without this the
@@ -90,8 +139,6 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
   // blank and saving wrote a fresh map over the top of the old one.
   const stationRouting = computed(() => settings.value.stationRouting || {});
   const defaultTicketPrinterId = computed(() => settings.value.defaultTicketPrinterId);
-  const transport = computed(() => settings.value.transport);
-  const endpoint = computed(() => settings.value.endpoint);
 
   function saveSettings(next) {
     settings.value = { ...settings.value, ...next };
@@ -112,68 +159,51 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
   }
 
   /**
-   * The bridge-agent URL the till should print through, if one is configured.
+   * The printer receipts should go to.
    *
-   * The top-level transport/endpoint is the primary till setting, but a network
-   * ticket profile (or the default one) is honoured as a fallback. Without this
-   * a till whose receipts were never switched off Web Serial — but which already
-   * prints reception documents through a network profile — tried the (absent)
-   * serial port and reported "printer not connected".
+   * The till printer is the primary setting, but a till whose receipts were
+   * never pointed at one still prints to the default ticket printer (or any
+   * configured printer) rather than dropping the receipt on the floor.
    */
-  function resolveNetworkEndpoint() {
-    if (settings.value.transport === "network" && settings.value.endpoint) {
-      return settings.value.endpoint;
-    }
-    const printers = settings.value.ticketPrinters || [];
-    const defaultId = settings.value.defaultTicketPrinterId;
-    const preferred = defaultId ? printers.find((p) => p.id === defaultId) : null;
-    if (preferred?.transport === "network" && preferred.endpoint) {
-      return preferred.endpoint;
-    }
-    const first = printers.find((p) => p.transport === "network" && p.endpoint);
-    return first ? first.endpoint : "";
+  function resolveTillPrinter() {
+    const s = settings.value;
+    if (targetUsable(s.tillPrinter)) return s.tillPrinter;
+    const printers = s.ticketPrinters || [];
+    const preferred = printers.find((p) => p.id === s.defaultTicketPrinterId);
+    if (targetUsable(preferred)) return preferred;
+    return printers.find((p) => targetUsable(p)) || null;
   }
 
-  const networkEndpoint = computed(() => resolveNetworkEndpoint());
-
   /**
-   * Sends receipt lines to the till printer using whichever transport is
-   * configured. Returns true when the job was accepted by the printer/agent.
+   * Sends receipt lines to the till printer through QZ Tray. Returns true when
+   * the job was handed to the printer.
    */
   async function print(lines, opts = {}) {
-    const endpoint = resolveNetworkEndpoint();
-    if (endpoint) {
-      return printToPrinter(lines, { ...opts, transport: "network", endpoint });
-    }
-    if (!printerSupported()) {
-      printerState.reason =
-        "This browser cannot talk directly to the printer. Use Chrome/Edge on desktop, or set a network printer endpoint in Print Settings.";
-      return false;
-    }
-    return printToPrinter(lines, { ...opts, transport: "serial" });
+    return printToPrinter(lines, { ...opts, printer: resolveTillPrinter() });
   }
 
   /**
-   * Checks a configured bridge agent is reachable so the UI can say "ready"
-   * without having to print a test slip. Returns true when the agent answered.
+   * Connects to QZ Tray and confirms the configured printer is present, so the
+   * UI can say "ready" without having to print a test slip.
+   *
+   * @returns {Promise<boolean>} True when QZ Tray answered and the target exists.
    */
-  async function probeNetwork() {
-    const endpoint = resolveNetworkEndpoint();
-    if (!endpoint) return false;
+  async function probePrinter() {
+    const target = resolveTillPrinter();
     try {
-      // The bridge agent exposes GET /health (see printer-bridge/README.md);
-      // /status never existed, so this probe used to 404 on a running agent.
-      const resp = await fetch(`${endpoint.replace(/\/+$/, "")}/health`, {
-        method: "GET",
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const printers = await listPrinters();
+      if (target?.kind === "system" && target.printer && !printers.includes(target.printer)) {
+        printerState.connected = false;
+        printerState.reason = `“${target.printer}” was not found on this computer. Check the printer is installed and switched on, then re-select it in Printer Settings.`;
+        return false;
+      }
       printerState.connected = true;
       printerState.reason = "";
-      printerState.info = `Network bridge · ${endpoint}`;
+      printerState.info = target ? targetLabel(target) : "QZ Tray";
       return true;
     } catch (err) {
       printerState.connected = false;
-      printerState.reason = `Could not reach the print agent at ${endpoint} (${err?.message || "network error"}). Make sure it is running on the printer machine and reachable from this device.`;
+      printerState.reason = connectReason(err);
       return false;
     }
   }
@@ -189,8 +219,6 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
     const printers = settings.value.ticketPrinters;
     const byId = new Map(printers.map((p) => [p.id, p]));
     // The station's own route wins, then the service line's, then the default.
-    // A route pointing at a deleted printer is skipped rather than honoured,
-    // so a mis-typed ticket still gets in front of somebody.
     const routed = station
       ? settings.value.stationRouting?.[station]
       : settings.value.departmentRouting?.[department];
@@ -204,10 +232,6 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
 
   /**
    * Adds a named printer profile and returns its id.
-   *
-   * The id is generated here rather than by the caller so a profile can be
-   * created from the settings form without it having to think about
-   * collisions with ids already stored.
    */
   function addTicketPrinter(printer) {
     const id = `tp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
@@ -227,10 +251,6 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
           ([, printerId]) => printerId !== id,
         ),
       ),
-      // The station routes point at the same profiles, so they have to be
-      // cleared here too. A dangling entry was survivable -- resolution skips
-      // an unknown id and falls back -- but it left the settings screen showing
-      // a printer that no longer exists.
       stationRouting: Object.fromEntries(
         Object.entries(settings.value.stationRouting || {}).filter(
           ([, printerId]) => printerId !== id,
@@ -249,16 +269,11 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
    * With no profile configured for the line, the ticket goes to the till
    * printer: that is the one printer known to exist, and a single till printing
    * a kitchen ticket is still better than a dropped order.
-   *
-   * `station` narrows the routing to a physical pass ('kitchen' | 'bar'), which
-   * is how a menu item's `printer_station` reaches the right machine when the
-   * hotel runs a separate bar printer.
    */
   async function printFoodTicket(lines, department, opts = {}) {
     const { station, ...rest } = opts;
     const profile = resolveTicketPrinter(department, station);
-    if (!profile) return print(lines, rest);
-    return printToPrinter(lines, { ...rest, transport: profile.transport, endpoint: profile.endpoint });
+    return printToPrinter(lines, { ...rest, printer: profile || resolveTillPrinter() });
   }
 
   /**
@@ -267,19 +282,7 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
    * A single order routinely holds both food and drinks, so a ticket that is
    * printed in one piece sends drinks to the kitchen pass. This walks the passes
    * that actually have lines and prints one ticket per pass, skipping any pass
-   * the manager has switched off, so the kitchen ticket carries only food and
-   * the bar ticket only drinks.
-   *
-   * Returns which passes were tried and which refused the job, so the caller
-   * can tell "this order had nothing to cook or pour" apart from "the printer
-   * did not take it". The two used to be indistinguishable: every pass that was
-   * attempted was reported as printed, so a refused job looked like a success
-   * and nothing was ever reported to the manager.
-   *
-   * One dead printer no longer costs the other pass its ticket. A broken kitchen
-   * printer used to throw out of the loop before the bar ticket was built, so
-   * drinks on an order with food went missing exactly when the kitchen was
-   * already in trouble.
+   * the manager has switched off.
    *
    * @param {(station: string) => Promise<Array>} buildLines  Builds the rows for a pass.
    * @param {string} department  Service line the order was rung in.
@@ -295,17 +298,11 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
     const failed = [];
     for (const station of ['kitchen', 'bar']) {
       // A pass with no lines for this order must not send a blank ticket: an
-      // empty slip in the kitchen reads as a real ticket for nothing. The test
-      // is on the ORDER's lines, not the built rows, because a formatted
-      // ticket always carries the letterhead and order number and would
-      // therefore never look empty.
+      // empty slip in the kitchen reads as a real ticket for nothing.
       if (hasLinesFor && !hasLinesFor(station)) continue;
       const lines = await buildLines(station);
       attempted.push(station);
       try {
-        // `printFoodTicket` reports whether the job was actually taken. That
-        // answer used to be discarded, which is what made a refused print look
-        // like a delivered one.
         const ok = await printFoodTicket(lines, department, { ...rest, station });
         if (!ok) failed.push(station);
       } catch {
@@ -324,17 +321,16 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
     printOnVoid,
     printFoodTicketOnOrder,
     printFoodTicketOnItemAdded,
+    tillPrinter,
     ticketPrinters,
     departmentRouting,
     stationRouting,
     defaultTicketPrinterId,
-    transport,
-    endpoint,
-    networkEndpoint,
     saveSettings,
     reset,
+    resolveTillPrinter,
     print,
-    probeNetwork,
+    probePrinter,
     resolveTicketPrinter,
     addTicketPrinter,
     removeTicketPrinter,

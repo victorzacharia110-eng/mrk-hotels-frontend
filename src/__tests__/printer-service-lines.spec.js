@@ -22,13 +22,14 @@ vi.mock('@/api', () => ({
   menuCategoryApi: { index: (...a) => categoryIndex(...a) },
 }))
 
-// The transport is stubbed: the page probes support on mount.
+// The transport is stubbed: the page reads the printer state on mount.
 vi.mock('@/utils/printer', async (importOriginal) => ({
   ...(await importOriginal()),
   printerState: { connected: false, reason: '', info: '' },
   printerSupported: () => true,
   connectPrinter: vi.fn().mockResolvedValue(true),
   disconnectPrinter: vi.fn(),
+  listPrinters: vi.fn().mockResolvedValue([]),
   restorePrinter: vi.fn().mockResolvedValue(true),
   printToPrinter: vi.fn().mockResolvedValue(true),
 }))

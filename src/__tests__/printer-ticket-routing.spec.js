@@ -2,18 +2,20 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import i18n from '@/locales/i18n'
 
-// Web Serial is unavailable in the test environment, so the printer transport
-// is stubbed and every call is inspected rather than sent to real hardware.
+// Printing goes through QZ Tray now, so the transport is stubbed and every call
+// is inspected rather than sent to real hardware.
 const printToPrinter = vi.fn().mockResolvedValue(true)
-// True so the serial path is exercised: the point of the fallback test is that
-// a ticket with no profile still reaches *a* printer.
-const printerSupported = vi.fn().mockReturnValue(true)
+const listPrinters = vi.fn().mockResolvedValue([])
 const printerState = { connected: false, reason: '', info: '' }
 
-vi.mock('@/utils/printer', () => ({
+vi.mock('@/utils/printer', async (importOriginal) => ({
+  // targetUsable / targetLabel / connectReason are pure helpers, so the real
+  // implementations are kept and only the I/O is stubbed.
+  ...(await importOriginal()),
   printerState,
-  printerSupported: (...a) => printerSupported(...a),
   printToPrinter: (...a) => printToPrinter(...a),
+  listPrinters: (...a) => listPrinters(...a),
+  printerSupported: () => true,
   connectPrinter: vi.fn(),
   disconnectPrinter: vi.fn(),
   restorePrinter: vi.fn(),
@@ -21,12 +23,20 @@ vi.mock('@/utils/printer', () => ({
 
 const { usePrintSettingsStore } = await import('@/stores/printSettings')
 
+const KITCHEN = { name: 'Kitchen', kind: 'system', printer: 'Kitchen Printer' }
+const BAR = { name: 'Bar', kind: 'socket', host: '10.0.0.6', port: 9100 }
+const TILL = { kind: 'system', printer: 'Till Printer', label: 'Till Printer' }
+
+/** The target a print call was sent to. */
+function targetOf(call) {
+  return call[1].printer
+}
+
 describe('print settings — when to print', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()
     printToPrinter.mockClear()
-    printerSupported.mockReturnValue(true)
     i18n.global.locale.value = 'en'
   })
 
@@ -50,79 +60,144 @@ describe('print settings — when to print', () => {
   })
 })
 
+describe('print settings — printer targets', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    localStorage.clear()
+    printToPrinter.mockClear()
+    printToPrinter.mockResolvedValue(true)
+  })
+
+  it('adds a named printer and gives it a stable id', () => {
+    const store = usePrintSettingsStore()
+    const id = store.addTicketPrinter(KITCHEN)
+
+    expect(id).toBeTruthy()
+    expect(store.ticketPrinters).toHaveLength(1)
+    expect(store.ticketPrinters[0]).toMatchObject({ name: 'Kitchen', kind: 'system', printer: 'Kitchen Printer' })
+  })
+
+  it('migrates a legacy bridge endpoint onto a raw-socket target', () => {
+    localStorage.setItem(
+      'mrk_print_settings',
+      JSON.stringify({ endpoint: 'http://192.168.1.100:9720', transport: 'network' }),
+    )
+    const store = usePrintSettingsStore()
+
+    expect(store.tillPrinter).toMatchObject({ kind: 'socket', host: '192.168.1.100', port: 9100 })
+    expect(store.settings.transport).toBeUndefined()
+    expect(store.settings.endpoint).toBeUndefined()
+  })
+})
+
 describe('print settings — routing food tickets to a service line', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()
     printToPrinter.mockClear()
-    printerSupported.mockReturnValue(true)
-  })
-
-  it('adds a named printer and gives it a stable id', () => {
-    const store = usePrintSettingsStore()
-    const id = store.addTicketPrinter({ name: 'Kitchen', transport: 'network', endpoint: 'http://10.0.0.5:9720' })
-
-    expect(id).toBeTruthy()
-    expect(store.ticketPrinters).toHaveLength(1)
-    expect(store.ticketPrinters[0]).toMatchObject({ name: 'Kitchen', transport: 'network' })
   })
 
   it('sends a food ticket to the printer routed for that service line', async () => {
     const store = usePrintSettingsStore()
-    const kitchen = store.addTicketPrinter({ name: 'Kitchen', transport: 'network', endpoint: 'http://10.0.0.5:9720' })
-    const bar = store.addTicketPrinter({ name: 'Bar', transport: 'network', endpoint: 'http://10.0.0.6:9720' })
+    const kitchen = store.addTicketPrinter(KITCHEN)
+    const bar = store.addTicketPrinter(BAR)
     store.saveSettings({ departmentRouting: { restaurant: kitchen, bar } })
 
     await store.printFoodTicket(['2xUgali'], 'restaurant')
-    expect(printToPrinter).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ transport: 'network', endpoint: 'http://10.0.0.5:9720' }),
-    )
+    expect(targetOf(printToPrinter.mock.calls[0])).toMatchObject({ printer: 'Kitchen Printer' })
 
     await store.printFoodTicket(['1xWhisky'], 'bar')
-    expect(printToPrinter).toHaveBeenLastCalledWith(
-      expect.anything(),
-      expect.objectContaining({ endpoint: 'http://10.0.0.6:9720' }),
-    )
+    expect(targetOf(printToPrinter.mock.calls[1])).toMatchObject({ host: '10.0.0.6' })
   })
 
   it('uses the default printer for a service line with no route of its own', async () => {
     const store = usePrintSettingsStore()
-    const kitchen = store.addTicketPrinter({ name: 'Kitchen', transport: 'network', endpoint: 'http://10.0.0.5:9720' })
+    const kitchen = store.addTicketPrinter(KITCHEN)
     store.saveSettings({ departmentRouting: {}, defaultTicketPrinterId: kitchen })
 
     await store.printFoodTicket(['1xUgali'], 'restaurant')
-    expect(printToPrinter).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ endpoint: 'http://10.0.0.5:9720' }),
-    )
+    expect(targetOf(printToPrinter.mock.calls[0])).toMatchObject({ printer: 'Kitchen Printer' })
   })
 
   it('falls back to the default when a route points at a deleted printer', async () => {
     const store = usePrintSettingsStore()
-    const kitchen = store.addTicketPrinter({ name: 'Kitchen', transport: 'network', endpoint: 'http://10.0.0.5:9720' })
-    store.saveSettings({ departmentRouting: { restaurant: kitchen } })
+    const kitchen = store.addTicketPrinter(KITCHEN)
+    const bar = store.addTicketPrinter(BAR)
+    store.saveSettings({ departmentRouting: { restaurant: kitchen }, defaultTicketPrinterId: bar })
 
     // The route outlives the printer it named.
     store.removeTicketPrinter(kitchen)
     expect(store.departmentRouting.restaurant).toBeUndefined()
 
-    // A dropped ticket is worse than a ticket on the wrong printer, so with no
-    // profile left it goes to the till.
+    // A dropped ticket is worse than a ticket on the wrong printer, so it goes
+    // to the default rather than nowhere.
     await store.printFoodTicket(['1xUgali'], 'restaurant')
-    expect(printToPrinter).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ transport: 'serial' }),
-    )
+    expect(targetOf(printToPrinter.mock.calls[0])).toMatchObject({ host: '10.0.0.6' })
+  })
+
+  it('sends a ticket with no printer at all to a null target rather than throwing', async () => {
+    const store = usePrintSettingsStore()
+    store.saveSettings({ ticketPrinters: [], departmentRouting: {}, tillPrinter: null })
+
+    await store.printFoodTicket(['1xUgali'], 'restaurant')
+    expect(targetOf(printToPrinter.mock.calls[0])).toBeNull()
   })
 
   it('clears the default when the printer it named is removed', () => {
     const store = usePrintSettingsStore()
-    const kitchen = store.addTicketPrinter({ name: 'Kitchen', transport: 'network', endpoint: 'http://10.0.0.5:9720' })
+    const kitchen = store.addTicketPrinter(KITCHEN)
     store.saveSettings({ defaultTicketPrinterId: kitchen })
 
     store.removeTicketPrinter(kitchen)
     expect(store.defaultTicketPrinterId).toBe('')
+  })
+})
+
+describe('print settings — till printer resolution', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    localStorage.clear()
+    printToPrinter.mockClear()
+  })
+
+  it('prints receipts to the configured till printer', async () => {
+    const store = usePrintSettingsStore()
+    store.saveSettings({ tillPrinter: TILL })
+
+    const sent = await store.print([['x']])
+
+    expect(sent).toBe(true)
+    expect(printToPrinter).toHaveBeenCalledWith([['x']], { printer: TILL })
+  })
+
+  it('falls back to the default ticket printer when no till printer is set', async () => {
+    const store = usePrintSettingsStore()
+    const kitchen = store.addTicketPrinter(KITCHEN)
+    store.saveSettings({ tillPrinter: null, defaultTicketPrinterId: kitchen })
+
+    await store.print([['x']])
+    expect(targetOf(printToPrinter.mock.calls[0])).toMatchObject({ printer: 'Kitchen Printer' })
+  })
+
+  it('probePrinter marks connected when QZ Tray answers and the printer exists', async () => {
+    const store = usePrintSettingsStore()
+    store.saveSettings({ tillPrinter: { kind: 'system', printer: 'Till Printer' } })
+    listPrinters.mockResolvedValueOnce(['Till Printer'])
+
+    await expect(store.probePrinter()).resolves.toBe(true)
+    expect(printerState.connected).toBe(true)
+  })
+
+  it('probePrinter reports a missing printer and an unreachable QZ Tray', async () => {
+    const store = usePrintSettingsStore()
+    store.saveSettings({ tillPrinter: { kind: 'system', printer: 'Gone' } })
+    listPrinters.mockResolvedValueOnce(['Something Else'])
+    await expect(store.probePrinter()).resolves.toBe(false)
+    expect(printerState.reason).toContain('Gone')
+
+    listPrinters.mockRejectedValueOnce(new Error('connection refused'))
+    await expect(store.probePrinter()).resolves.toBe(false)
+    expect(printerState.connected).toBe(false)
   })
 })
 
@@ -131,7 +206,6 @@ describe('print settings — routing each line to its own pass', () => {
     setActivePinia(createPinia())
     localStorage.clear()
     printToPrinter.mockClear()
-    printerSupported.mockReturnValue(true)
     printToPrinter.mockResolvedValue(true)
   })
 
@@ -139,9 +213,8 @@ describe('print settings — routing each line to its own pass', () => {
   const barLines = [['BAR ORDER TICKET'], ['2 x Kilimanjaro']]
 
   /** Builds the rows a pass would print, and says which passes have content. */
-  const build = (kitchen, bar) => async (station) =>
-    station === 'kitchen' ? kitchen : bar
-  const has = (kitchen, bar) => (station) => station === 'kitchen' ? kitchen : bar
+  const build = (kitchen, bar) => async (station) => (station === 'kitchen' ? kitchen : bar)
+  const has = (kitchen, bar) => (station) => (station === 'kitchen' ? kitchen : bar)
 
   it('prints one ticket per pass and skips the pass with no lines', async () => {
     const store = usePrintSettingsStore()
@@ -173,8 +246,6 @@ describe('print settings — routing each line to its own pass', () => {
     // blank slip in the kitchen reads as a real ticket for nothing.
     const result = await store.printFoodTicketsByStation(build([], []), 'restaurant', { hasLinesFor: has(false, false) })
 
-    // Nothing attempted and nothing failed: the manager is not told the printer
-    // is broken when the order simply had no ticket to send.
     expect(result.attempted).toEqual([])
     expect(result.failed).toEqual([])
     expect(printToPrinter).not.toHaveBeenCalled()
@@ -208,69 +279,12 @@ describe('print settings — routing each line to its own pass', () => {
     expect(printToPrinter.mock.calls[1][0]).toBe(barLines)
   })
 
-  it('a network ticket profile carries receipts even when the till transport is serial', async () => {
-    const store = usePrintSettingsStore()
-    // The till's own transport was left on Web Serial, but a network profile is
-    // configured. Receipts must use the same agent the reception documents do,
-    // instead of trying the (absent) serial port and reporting "not connected".
-    store.saveSettings({
-      transport: 'serial',
-      endpoint: '',
-      ticketPrinters: [{ id: 'p-bar', transport: 'network', endpoint: 'http://10.0.0.9:9720' }],
-    })
-
-    const sent = await store.print([['x']])
-
-    expect(sent).toBe(true)
-    expect(printToPrinter).toHaveBeenCalledWith([['x']], { transport: 'network', endpoint: 'http://10.0.0.9:9720' })
-  })
-
-  it('the top-level network endpoint wins over a ticket profile', () => {
-    const store = usePrintSettingsStore()
-    store.saveSettings({
-      transport: 'network',
-      endpoint: 'http://127.0.0.1:9720',
-      ticketPrinters: [{ id: 'p-bar', transport: 'network', endpoint: 'http://10.0.0.9:9720' }],
-    })
-
-    expect(store.networkEndpoint).toBe('http://127.0.0.1:9720')
-  })
-
-  it('falls back to serial when no network endpoint is configured', async () => {
-    const store = usePrintSettingsStore()
-    store.saveSettings({ transport: 'serial', endpoint: '', ticketPrinters: [] })
-
-    await store.print([['x']])
-
-    expect(printToPrinter).toHaveBeenCalledWith([['x']], { transport: 'serial' })
-  })
-
-  it('probeNetwork marks the agent connected and reports the reason when it is down', async () => {
-    const store = usePrintSettingsStore()
-    store.saveSettings({ transport: 'network', endpoint: 'http://127.0.0.1:9720' })
-
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true })
-      .mockRejectedValueOnce(new Error('connection refused'))
-    vi.stubGlobal('fetch', fetchMock)
-
-    await expect(store.probeNetwork()).resolves.toBe(true)
-    expect(printerState.connected).toBe(true)
-    expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:9720/health', { method: 'GET' })
-
-    await expect(store.probeNetwork()).resolves.toBe(false)
-    expect(printerState.connected).toBe(false)
-    expect(printerState.reason).toContain('http://127.0.0.1:9720')
-
-    vi.unstubAllGlobals()
-  })
-
   it('deleting a printer clears the station routes that pointed at it', () => {
     const store = usePrintSettingsStore()
     store.saveSettings({
       ticketPrinters: [
-        { id: 'p-kitchen', transport: 'serial', endpoint: '' },
-        { id: 'p-bar', transport: 'network', endpoint: 'http://10.0.0.9:9720' },
+        { id: 'p-kitchen', ...KITCHEN },
+        { id: 'p-bar', ...BAR },
       ],
       departmentRouting: { restaurant: 'p-kitchen' },
       stationRouting: { bar: 'p-bar' },
@@ -290,9 +304,9 @@ describe('print settings — routing each line to its own pass', () => {
     const store = usePrintSettingsStore()
     store.saveSettings({
       ticketPrinters: [
-        { id: 'p-kitchen', transport: 'serial', endpoint: '' },
-        { id: 'p-bar', transport: 'network', endpoint: 'http://10.0.0.9:9720' },
-        { id: 'p-default', transport: 'serial', endpoint: '' },
+        { id: 'p-kitchen', ...KITCHEN },
+        { id: 'p-bar', ...BAR },
+        { id: 'p-default', kind: 'system', printer: 'Default Printer' },
       ],
       departmentRouting: { restaurant: 'p-kitchen' },
       stationRouting: { bar: 'p-bar' },
@@ -302,17 +316,16 @@ describe('print settings — routing each line to its own pass', () => {
     await store.printFoodTicketsByStation(build(kitchenLines, barLines), 'restaurant', { hasLinesFor: has(true, true) })
 
     // The kitchen ticket went to the restaurant route; the bar ticket used its
-    // own station route and therefore the network bridge agent.
-    const [kitchenCall, barCall] = printToPrinter.mock.calls
-    expect(kitchenCall[1].endpoint).toBe('')
-    expect(barCall[1].transport).toBe('network')
-    expect(barCall[1].endpoint).toBe('http://10.0.0.9:9720')
+    // own station route and therefore the network printer.
+    const [kitchenTarget, barTarget] = printToPrinter.mock.calls.map(targetOf)
+    expect(kitchenTarget.printer).toBe('Kitchen Printer')
+    expect(barTarget.host).toBe('10.0.0.6')
   })
 
   it('a station route pointing at a deleted printer falls back, never drops', async () => {
     const store = usePrintSettingsStore()
     store.saveSettings({
-      ticketPrinters: [{ id: 'p-default', transport: 'serial', endpoint: '' }],
+      ticketPrinters: [{ id: 'p-default', kind: 'system', printer: 'Default Printer' }],
       stationRouting: { bar: 'p-removed' },
       defaultTicketPrinterId: 'p-default',
     })

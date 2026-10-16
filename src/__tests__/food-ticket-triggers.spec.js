@@ -180,7 +180,7 @@ describe('food ticket on order — cashier new-order modal', () => {
     // Routed to the kitchen printer, not the till.
     expect(printToPrinter).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ transport: 'network', endpoint: 'http://10.0.0.5:9720' }),
+      expect.objectContaining({ printer: expect.objectContaining({ name: 'Kitchen' }) }),
     )
   })
 
@@ -273,7 +273,7 @@ describe('food ticket on the waiter order-taker panel', () => {
     expect(printedText()).toContain('2 x Ugali')
     expect(printToPrinter).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ endpoint: 'http://10.0.0.7:9720' }),
+      expect.objectContaining({ printer: expect.objectContaining({ name: 'Kitchen' }) }),
     )
   })
 

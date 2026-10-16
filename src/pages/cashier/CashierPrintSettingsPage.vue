@@ -3,10 +3,9 @@
   the cashier panel.
 
   Mirrors the print-on-event toggles common to POS systems (the client uses
-  E-Zee): decide WHEN a receipt or guest check should print. The printer is
-  always reached through the network bridge agent (a small helper on the
-  printer's computer, addressed over LAN/tunnel) — the old direct USB/Serial
-  option was removed.
+  E-Zee): decide WHEN a receipt or guest check should print. The printer itself
+  is reached through QZ Tray, the free cross-platform helper that lets a web
+  page drive a thermal printer over USB, Serial or a network socket.
 -->
 
 <template>
@@ -35,12 +34,12 @@
       </p>
     </section>
 
-    <!-- Transport / how the printer is reached -->
+    <!-- How the printer is reached: through QZ Tray on this computer. -->
     <section class="panel">
       <h2 class="panel-h"><i class="fas fa-tower-broadcast"></i> {{ $t('cashier.printSettings.transportTitle') }}</h2>
       <div class="transport-grid transport-grid--single">
         <div class="transport-option active">
-          <i class="fas fa-network-wired" aria-hidden="true"></i>
+          <i class="fas fa-plug" aria-hidden="true"></i>
           <div>
             <strong>{{ $t('cashier.printSettings.transportNetwork') }}</strong>
             <small>{{ $t('cashier.printSettings.transportNetworkDetail') }}</small>
@@ -48,27 +47,37 @@
         </div>
       </div>
 
-      <div class="network-form">
-        <label class="fld-label" for="net-endpoint">{{ $t('cashier.printSettings.endpointLabel') }}</label>
-        <input id="net-endpoint" v-model.trim="endpointRef" type="url" class="sm-input"
-          :placeholder="$t('cashier.printSettings.endpointPlaceholder')" />
-        <div class="net-actions">
-          <button class="sm-btn sm primary" :disabled="testing" @click="testNetwork">
-            <i class="fas fa-file-lines"></i> {{ testing ? $t('common.saving') : $t('cashier.printSettings.testNetwork') }}
-          </button>
-          <p v-if="endpointHelp" class="muted">{{ endpointHelp }}</p>
-        </div>
+      <div class="net-actions">
+        <button class="sm-btn sm primary" :disabled="connecting" @click="connect">
+          <i class="fas fa-plug"></i> {{ connected ? $t('cashier.printSettings.reconnect') : $t('cashier.printSettings.connect') }}
+        </button>
+        <button class="sm-btn" :disabled="connecting" @click="refreshPrinters">
+          <i class="fas fa-rotate"></i> {{ $t('cashier.printSettings.refresh') }}
+        </button>
       </div>
 
-      <!-- The ordered setup for the network bridge, so the cashier can wire
-           the printer up without leaving the page. -->
-      <div class="quick-steps">
-        <p class="qs-h"><i class="fas fa-list-ol" aria-hidden="true"></i> <strong>{{ $t('printer.setupTitle') }}</strong></p>
-        <ol>
-          <li>{{ $t('printer.bridge1') }}</li>
-          <li>{{ $t('printer.bridge2') }}</li>
-          <li>{{ $t('cashier.printSettings.bridgeStep3') }}</li>
-        </ol>
+      <div class="network-form">
+        <label class="fld-label" for="cashier-printer">{{ $t('cashier.printSettings.printerLabel') }}</label>
+        <select id="cashier-printer" class="sm-input" :value="tillPrinterName" @change="setTillPrinter($event.target.value)">
+          <option value="">{{ $t('cashier.printSettings.selectPrinter') }}</option>
+          <option v-for="name in availablePrinters" :key="name" :value="name">{{ name }}</option>
+          <option v-if="tillPrinterName && !availablePrinters.includes(tillPrinterName)" :value="tillPrinterName">
+            {{ tillPrinterName }}
+          </option>
+        </select>
+      </div>
+
+      <div class="network-form">
+        <label class="fld-label" for="cashier-host">{{ $t('cashier.printSettings.orNetwork') }}</label>
+        <input id="cashier-host" v-model.trim="networkHost" class="sm-input" :placeholder="$t('cashier.printSettings.hostLabel')" @change="saveNetwork" />
+        <input v-model.trim="networkPort" class="sm-input port" :placeholder="$t('cashier.printSettings.portLabel')" @change="saveNetwork" />
+      </div>
+
+      <div class="net-actions">
+        <button class="sm-btn sm primary" :disabled="testing" @click="testNetwork">
+          <i class="fas fa-file-lines"></i> {{ testing ? $t('common.saving') : $t('cashier.printSettings.testNetwork') }}
+        </button>
+        <p v-if="endpointHelp" class="muted">{{ endpointHelp }}</p>
       </div>
     </section>
 
@@ -117,10 +126,18 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePrintSettingsStore } from '@/stores/printSettings'
-import { printerState, printToPrinter } from '@/utils/printer'
+import {
+  printerState,
+  connectPrinter,
+  listPrinters,
+  printToPrinter,
+  printerSupported,
+  targetLabel,
+  targetUsable,
+} from '@/utils/printer'
 import { testPrintLines } from '@/utils/receipts'
 import { toast } from '@/utils/toast'
 
@@ -128,32 +145,77 @@ const { t } = useI18n()
 const printStore = usePrintSettingsStore()
 
 const error = ref('')
+const connecting = ref(false)
 const testing = ref(false)
+const connected = ref(printerState.connected)
+const availablePrinters = ref([])
 let saveMsg = ref('')
 
 const settingsRef = reactive({ ...printStore.settings })
-const endpointRef = ref(printStore.endpoint)
 const endpointHelp = ref('')
 
-const statusDot = computed(() => (endpointRef.value ? 'ok' : 'off'))
-
-const statusTitle = computed(() =>
-  endpointRef.value ? t('cashier.printSettings.statusNetwork') : t('cashier.printSettings.statusNoNetwork'),
+const tillTarget = computed(() => (targetUsable(printStore.tillPrinter) ? printStore.tillPrinter : null))
+const tillPrinterName = computed(() =>
+  printStore.tillPrinter?.kind === 'system' ? printStore.tillPrinter.printer : '',
 )
 
+const networkHost = ref(printStore.tillPrinter?.kind === 'socket' ? printStore.tillPrinter.host : '')
+const networkPort = ref(String(printStore.tillPrinter?.kind === 'socket' ? printStore.tillPrinter.port || 9100 : 9100))
+
+const statusDot = computed(() => (connected.value ? 'ok' : 'off'))
+const statusTitle = computed(() => {
+  if (!tillTarget.value) return t('cashier.printSettings.statusNoNetwork')
+  return connected.value ? t('cashier.printSettings.statusNetwork') : t('cashier.printSettings.statusNoNetwork')
+})
 const statusDetail = computed(() =>
-  endpointRef.value
-    ? `${t('cashier.printSettings.statusNetworkDetail')} ${endpointRef.value}`
+  tillTarget.value
+    ? `${t('cashier.printSettings.statusNetworkDetail')} ${targetLabel(tillTarget.value)}`
     : t('cashier.printSettings.statusNoNetworkDetail'),
 )
 
-function save() {
-  const saved = {
-    ...settingsRef,
-    transport: 'network',
-    endpoint: endpointRef.value || '',
+/** Stores the picked system printer as the till printer. */
+function setTillPrinter(name) {
+  printStore.saveSettings({ tillPrinter: name ? { kind: 'system', printer: name, label: name } : null })
+}
+
+/** Stores a raw network printer (host:port) as the till printer. */
+function saveNetwork() {
+  const host = networkHost.value.trim()
+  if (!host) return
+  const port = Number(networkPort.value) || 9100
+  printStore.saveSettings({ tillPrinter: { kind: 'socket', host, port, label: `${host}:${port}` } })
+}
+
+async function connect() {
+  error.value = ''
+  if (!printerSupported()) {
+    error.value = t('cashier.printSettings.unsupported')
+    return
   }
-  printStore.saveSettings(saved)
+  connecting.value = true
+  try {
+    const ok = await connectPrinter(tillTarget.value)
+    connected.value = ok
+    if (!ok) error.value = printerState.reason || t('cashier.printSettings.connectFailed')
+    else await refreshPrinters()
+  } finally {
+    connecting.value = false
+  }
+}
+
+async function refreshPrinters() {
+  error.value = ''
+  try {
+    availablePrinters.value = [...new Set(await listPrinters())].sort()
+    connected.value = true
+  } catch (err) {
+    connected.value = false
+    error.value = printerState.reason || err?.message || t('cashier.printSettings.connectFailed')
+  }
+}
+
+function save() {
+  printStore.saveSettings({ ...settingsRef })
   saveMsg.value = t('cashier.printSettings.saved')
   toast(t('cashier.printSettings.saved'), 'success')
   setTimeout(() => (saveMsg.value = ''), 3000)
@@ -162,26 +224,29 @@ function save() {
 function doReset() {
   printStore.reset()
   Object.assign(settingsRef, printStore.settings)
-  endpointRef.value = printStore.endpoint
   toast(t('cashier.printSettings.reset'), 'success')
 }
 
 async function testNetwork() {
   error.value = ''
-  if (!endpointRef.value) {
+  if (!tillTarget.value) {
     endpointHelp.value = t('cashier.printSettings.endpointRequired')
     return
   }
   testing.value = true
   endpointHelp.value = ''
   try {
-    const sent = await printToPrinter(testPrintLines(), { transport: 'network', endpoint: endpointRef.value })
+    const sent = await printToPrinter(testPrintLines(), { printer: tillTarget.value })
     if (!sent) { error.value = printerState.reason || t('printer.testFailed') }
     else { toast(t('cashier.printSettings.testOk'), 'success') }
   } finally {
     testing.value = false
   }
 }
+
+onMounted(() => {
+  if (printerState.connected) refreshPrinters()
+})
 </script>
 
 <style scoped>
@@ -217,8 +282,9 @@ async function testNetwork() {
 .transport-option input { margin-top: 3px; }
 
 .network-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-.net-actions { display: flex; align-items: center; gap: 12px; }
+.net-actions { display: flex; align-items: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
 .connect-actions { display: flex; gap: 10px; margin-top: 4px; }
+.sm-input.port { max-width: 110px; }
 
 .quick-steps { border-top: 1px solid #ececec; margin-top: 14px; padding-top: 12px; font-size: 13px; }
 .qs-h { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }

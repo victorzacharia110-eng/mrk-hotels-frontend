@@ -1,42 +1,40 @@
 /**
- * Printer service — direct thermal printing over the Web Serial API.
+ * Printer service — direct thermal printing through QZ Tray.
  *
  * The POS prints its receipts and kitchen tickets to an ESC/POS thermal
- * printer plugged into the till (USB/serial). Browsers can open that port
- * through the Web Serial API (Chrome/Edge on desktop, over HTTPS) without any
- * server or driver: the hotel picks the printer once per device and the app
- * writes the ESC/POS bytes straight to it.
+ * printer. Instead of a hand-rolled bridge agent, printing goes through
+ * QZ Tray, the free cross-platform helper (Windows / macOS / Linux) that
+ * exposes a local websocket the browser can drive over HTTPS. QZ Tray can
+ * reach the printer over USB (its OS driver), Serial, or a raw network
+ * socket — so one printer profile works on any till.
  *
- * When the browser does not support Serial (or no printer is connected), every
- * caller falls back to the browser's own print dialog, so nothing breaks.
+ * A "target" is how a printer is described to QZ Tray:
+ *   { kind: 'system', printer: 'ZyWell Zy-Q822', label: 'Front desk' }
+ *   { kind: 'socket', host: '192.168.1.100', port: 9100, label: 'Kitchen' }
+ *
+ * When no target is configured (or QZ Tray is unavailable), the caller gets a
+ * false result and a reason on `printerState`, so the UI can tell the operator
+ * exactly what to fix rather than failing silently.
  */
 
 import { reactive } from 'vue'
+import { qzConnect, qzDisconnect, qzIsActive, qzListPrinters, qzPrintRaw, qzSupported } from './qz'
 
 /**
- * Shared connection state so any page sees whether the till printer is on.
- * - connected   -> a serial port is open AND a print has actually been sent
- *                  out of it. Opening a port alone never claims the printer
- *                  works, because browsers can also open virtual "COM" ports
- *                  that are not real thermal printers (the write fails or
- *                  hangs until the timeout, which is far more useful feedback
- *                  than falsely showing "connected").
- * - info        -> human-readable port label shown in the UI.
- * - reason      -> why printing is unavailable (empty when it can).
+ * Shared connection state so any page sees whether the till printer is usable.
+ * - connected -> QZ Tray is reachable AND a print has been handed to the
+ *                printer, or a connect/probe confirmed the target exists.
+ * - info      -> human-readable label for the connected target.
+ * - reason    -> why printing is unavailable (empty when it can).
  */
 export const printerState = reactive({ connected: false, info: '', reason: '' })
 
-/** localStorage key remembering the last granted printer. */
-const PORT_KEY = 'mrk_printer_port'
-
-/** Does this browser expose the Web Serial API? (Chrome/Edge desktop, HTTPS.) */
+/** Does this browser have the WebSocket + btoa QZ Tray needs? (all desktops do.) */
 export function printerSupported() {
-  return 'serial' in navigator
+  return qzSupported()
 }
 
-/**
- * ESC/POS command bytes used to build a 58/80mm receipt.
- */
+/** ESC/POS command bytes used to build a 58/80mm receipt. */
 const ESC = { init: 0x1b, feed: 0x64 }
 
 /**
@@ -131,129 +129,108 @@ export function itemRow(item, right = '', width = 48) {
 }
 
 /**
- * The running serial port, kept as a module singleton so the receipt print
- * calls from any page reuse the same connection.
+ * Is a target complete enough to send to QZ Tray?
+ * @param {{kind?:string, printer?:string, host?:string}} target
+ * @returns {boolean}
  */
-let port = null
-
-function rememberPort() {
-  try {
-    localStorage.setItem(PORT_KEY, JSON.stringify(port.getInfo()))
-  } catch {
-    /* storage full / private mode — the link just won't persist. */
-  }
-}
-
-function forgetPort() {
-  try {
-    localStorage.removeItem(PORT_KEY)
-  } catch {
-    /* ignore */
-  }
+export function targetUsable(target) {
+  if (!target) return false
+  if (target.kind === 'socket') return Boolean(target.host)
+  return Boolean(target.printer)
 }
 
 /**
- * Opens a saved serial port if the browser re-grants it (called on page
- * load so the till reconnects after a refresh).
+ * The label to show for a target.
+ * @param {object} target
+ * @returns {string}
+ */
+export function targetLabel(target) {
+  if (!target) return ''
+  if (target.label) return target.label
+  if (target.kind === 'socket') return `${target.host}:${target.port || 9100}`
+  return target.printer || ''
+}
+
+/**
+ * Turns a QZ/transport error into an operator-facing sentence.
+ * @param {unknown} err
+ * @returns {string}
+ */
+export function connectReason(err) {
+  const msg = String(err?.message || err || '')
+  if (/websocket|unable to (open|connect)|econnrefused|refused|timed out|404|not found: qz/i.test(msg)) {
+    return 'QZ Tray is not running on this computer, or the connection was blocked. Install and open QZ Tray (qz.io/download), then allow it when the browser asks.'
+  }
+  return msg || 'Could not reach QZ Tray.'
+}
+
+/**
+ * Reconnects to a printer that was already working earlier in this session.
+ *
+ * Deliberately does NOT open a new QZ Tray connection: doing so on every page
+ * load would fire the "Allow this site" dialog at the operator for no reason.
+ * If QZ Tray's socket is already open the state is refreshed; otherwise the
+ * caller prints lazily and QZ Tray connects on the first real job.
+ *
+ * @returns {Promise<boolean>} True when QZ Tray is already connected.
  */
 export async function restorePrinter() {
-  if (!printerSupported() || port) return
   try {
-    const saved = JSON.parse(localStorage.getItem(PORT_KEY) || 'null')
-    if (!saved) return
-    const ports = await navigator.serial.getPorts()
-    const match = ports.find((p) => {
-      const info = p.getInfo()
-      return info.usbVendorId === saved.usbVendorId && info.usbProductId === saved.usbProductId
-    })
-    if (match) await openPort(match)
+    if (await qzIsActive()) {
+      printerState.connected = true
+      printerState.reason = ''
+      printerState.info = 'QZ Tray'
+      return true
+    }
   } catch {
-    printerState.reason = 'Restoring the saved printer failed. Reconnect it in Printer Settings.'
+    /* not connected yet — printing will connect on demand. */
   }
+  return false
 }
 
 /**
- * Opens (and remembers) a serial port the user granted via the picker.
+ * Connects to the local QZ Tray software.
  *
- * Opening the port does not prove a printer is there — it just makes the port
- * writable. The machine is only confirmed once a test/receipt print actually
- * goes out (printToPrinter flips `connected` to true).
- *
- * @param {SerialPort|null} [chosen]  A specific port, or null to show the picker.
- * @returns {Promise<boolean>} True when the port is open and ready to test.
+ * @param {object|null} [target]  Optional target whose label is shown.
+ * @returns {Promise<boolean>} True when QZ Tray answered.
  */
-export async function connectPrinter(chosen = null) {
+export async function connectPrinter(target = null) {
   if (!printerSupported()) {
-    printerState.reason = 'This browser cannot talk directly to the printer. Use Chrome/Edge on desktop with HTTPS.'
+    printerState.connected = false
+    printerState.reason = 'This browser cannot reach QZ Tray. Use Chrome, Edge, Firefox or Safari on a desktop.'
     return false
   }
   try {
-    const picked = chosen || (await navigator.serial.requestPort())
-    await openPort(picked)
+    await qzConnect()
+    printerState.connected = true
+    printerState.reason = ''
+    printerState.info = target ? targetLabel(target) : 'QZ Tray'
     return true
   } catch (err) {
-    if (err?.name === 'NotFoundError') {
-      printerState.reason = 'No USB/serial printer found. Power on and plug your thermal printer via USB, or pair it first (Bluetooth/Serial bridge). Then try Connect again.'
-    } else if (err?.name === 'SecurityError') {
-      printerState.reason = 'Browser blocked serial access. Use HTTPS (https://mrk-hotels.com) and allow the permission when prompted. On Chrome: click the "Serial" icon in address bar → Allow.'
-    } else {
-      printerState.reason = err?.message || 'Could not connect to the printer.'
-    }
+    printerState.connected = false
+    printerState.reason = connectReason(err)
     return false
   }
 }
 
-// Best-effort friendly names for common ESC/POS thermal printer vendors.
-const VENDOR_NAMES = {
-  1046: 'Epson', // 0x0416
-  1208: 'Star Micronics', // 0x04B8
-  1271: 'HPRT', // 0x04F7
-  1659: 'Xprinter', // 0x067B
-  8968: 'Gprinter', // 0x2308
-  10081: 'Zjiang', // 0x2761
-}
-
-function deviceLabel(info) {
-  const vendorName = info.usbVendorId ? (VENDOR_NAMES[info.usbVendorId] || `Vendor ${info.usbVendorId}`) : 'Serial'
-  const product = info.usbProductId ? ` (product ${info.usbProductId})` : ''
-  return `${vendorName}${product}`.trim()
-}
-
-async function openPort(serialPort) {
-  try {
-    await serialPort.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: 'none' })
-  } catch {
-    // Already open is fine; anything else surfaces below.
-    if (!serialPort.readable && !serialPort.writable) throw new Error('Printer port could not be opened.')
-  }
-  port = serialPort
-  rememberPort()
-  const info = port.getInfo()
-  // A port that opens is NOT yet "connected" — the only truthful proof that a
-  // printer is there is a write actually going out. Web Serial can open virtual
-  // COM ports (e.g. Windows "Communications Port (COMx) - Paired") that are not
-  // thermal printers; claiming "connected" for those misleads the till user
-  // into thinking a receipt will print. We stay "not connected" until a real
-  // write succeeds in printToPrinter().
+/**
+ * Closes the QZ Tray connection.
+ * @returns {Promise<void>}
+ */
+export async function disconnectPrinter() {
+  await qzDisconnect()
   printerState.connected = false
-  printerState.reason = 'The port is open. Press Test Print to confirm the printer responds.'
-  printerState.info = deviceLabel(info)
+  printerState.info = ''
 }
 
 /**
- * Closes the printer port and forgets the saved mapping.
+ * Lists the printer names QZ Tray can see on this machine.
+ *
+ * @returns {Promise<string[]>} Printer names (empty when none are installed).
+ * @throws When QZ Tray cannot be reached (use connectReason to explain it).
  */
-export async function disconnectPrinter() {
-  if (!port) return
-  try {
-    await port.close()
-  } catch {
-    /* the port may already be closed */
-  }
-  port = null
-  printerState.connected = false
-  printerState.info = ''
-  forgetPort()
+export async function listPrinters() {
+  return qzListPrinters()
 }
 
 /**
@@ -317,26 +294,22 @@ export async function rasterLogoBytes(src, width = 384) {
 }
 
 /**
- * Writes a set of receipt lines (plus an optional raster logo) to the
- * printer.
- *
- * Transport is chosen by opts.transport:
- *  - 'network' -> POST the raw ESC/POS bytes to opts.endpoint, a local bridge
- *                 agent (http://host:port) that forwards them to the physical
- *                 printer. This is how a hosted web app reaches a printer on
- *                 another machine or a remote location (e.g. a USB printer
- *                 shared via Tailscale).
- *  - otherwise -> Web Serial, a USB printer physically attached to THIS
- *                 machine.
+ * Prints a set of receipt lines (plus an optional raster logo) to the printer
+ * through QZ Tray.
  *
  * @param {Array<Array<string|boolean|number>>} lines  [text, bold?, size?] rows.
  * @param {object} [opts]  Options.
  * @param {string} [opts.logo]  Logo URL to raster a store brand on top of the sheet.
- * @param {string} [opts.transport]  'network' or 'serial' (default).
- * @param {string} [opts.endpoint]  Bridge agent base URL for the network transport.
- * @returns {Promise<boolean>} True when the job was sent to the printer.
+ * @param {object} [opts.printer]  The QZ target to print to.
+ * @returns {Promise<boolean>} True when the job was handed to the printer.
  */
 export async function printToPrinter(lines, opts = {}) {
+  const target = opts.printer
+  if (!targetUsable(target)) {
+    printerState.connected = false
+    printerState.reason = 'No printer is set up yet. Open Printer Settings, install QZ Tray and choose your printer.'
+    return false
+  }
   try {
     const raster = opts.logo ? await rasterLogoBytes(opts.logo) : null
     const text = buildRecipt(lines)
@@ -344,109 +317,24 @@ export async function printToPrinter(lines, opts = {}) {
     if (raster) merged.set(raster, 0)
     merged.set(text, raster ? raster.length : 0)
 
-    if (opts.transport === 'network' && opts.endpoint) {
-      return sendToNetwork(opts.endpoint, merged)
-    }
-
-    if (!port || !port.writable) return false
-
-    const writer = port.writable.getWriter()
-    // Guard against a non-responsive printer hanging the write forever (the
-    // "saving..." that never stops). If nothing is sent in 8s we give up.
-    let timer = null
-    const timeout = new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error('Timeout waiting for the printer.')), 8000)
-    })
-    try {
-      await Promise.race([writer.write(merged), timeout])
-    } finally {
-      clearTimeout(timer)
-      writer.releaseLock()
-    }
-    // A write that reaches the wire is the proof the printer is really there
-    // and talking. Only now do we mark the machine as connected.
+    await qzPrintRaw(target, merged)
     printerState.connected = true
     printerState.reason = ''
-    return true
-  } catch {
-    printerState.connected = false
-    printerState.reason =
-      'The port is open but the printer is not responding. This usually means the chosen port is not a real thermal printer (e.g. a virtual COM port) or the cable is loose. Pick the printer, not a "COM" port, in the serial chooser.'
-    return false
-  }
-}
-
-/**
- * Prints an HTML document on the roll through the bridge agent.
- *
- * The reception documents (guest invoice, invoice breakdown, folio ledger) are
- * built as HTML for A4 because that is what the browser print path expects. The
- * agent re-lays the same markup out at the roll's width, so the desk gets an
- * aligned slip with the tables and signature block intact instead of an A4 page
- * mangled by an 80mm roll. Falls back to the browser's own print dialog when no
- * agent is reachable, which is what happened before any of this existed.
- *
- * @param {string} html  A complete HTML document.
- * @param {string} [endpoint]  Bridge agent base URL, e.g. http://127.0.0.1:9720.
- * @returns {Promise<boolean>} True when the agent accepted the document.
- */
-export async function printHtmlToAgent(html, endpoint) {
-  if (!endpoint) return false
-  try {
-    const resp = await fetch(`${endpoint.replace(/\/+$/, '')}/print/html`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/html; charset=utf-8' },
-      body: html,
-    })
-    if (!resp.ok) return false
-    const data = await resp.json().catch(() => null)
-    return Boolean(data?.ok)
-  } catch {
-    // No agent listening (till offline, service not started) — the caller
-    // falls back to the browser print dialog rather than losing the document.
-    return false
-  }
-}
-
-/**
- * Posts a raw ESC/POS byte stream to a local bridge agent.
- *
- * The agent runs on the machine that owns the printer and forwards the bytes
- * into it (USB/serial/network). This lets a hosted web app print to a till
- * printer that is NOT attached to the browser's own machine — including a
- * remote till reached over a tunnel/VPN (e.g. Tailscale).
- *
- * @param {string} endpoint  Base URL like http://127.0.0.1:9720 or http://100.x.y.z:9720.
- * @param {Uint8Array} bytes  The ESC/POS byte stream to print.
- * @returns {Promise<boolean>} True when the agent accepted the job.
- */
-async function sendToNetwork(endpoint, bytes) {
-  const url = `${endpoint.replace(/\/+$/, '')}/print`
-  let timer = null
-  const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error('Timeout waiting for the print agent.')), 8000)
-  })
-  try {
-    const resp = await Promise.race([
-      fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: bytes }),
-      timeout,
-    ])
-    if (!resp.ok) throw new Error(`Print agent replied ${resp.status}`)
-    printerState.connected = true
-    printerState.reason = ''
+    printerState.info = targetLabel(target)
     return true
   } catch (err) {
     printerState.connected = false
-    printerState.reason = `Could not reach the print agent at ${endpoint}. Make sure it is running on the printer machine and reachable from this device (${err?.message || 'network error'}).`
+    const msg = String(err?.message || err || '')
+    printerState.reason = /printer|not found|invalid/i.test(msg)
+      ? `The printer “${targetLabel(target)}” was not found. Check it is switched on, then re-select it in Printer Settings.`
+      : connectReason(err)
     return false
-  } finally {
-    clearTimeout(timer)
   }
 }
 
 /** Is a printer available right now? (Only true once a print has been verified.) */
 export function printerReady() {
-  return printerState.connected && Boolean(port?.writable)
+  return printerState.connected
 }
 
 /**

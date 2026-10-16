@@ -468,7 +468,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { useOrderRealtime } from '@/composables/useOrderRealtime'
 import { PAYMENT_METHODS } from '@/utils/payments'
-import { restorePrinter, printerState, connectPrinter, printerSupported } from '@/utils/printer'
+import { restorePrinter, printerState, printerSupported } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { orderPrintLines } from '@/utils/orderPrint'
 import { hasPrintableLines } from '@/utils/receipts'
@@ -501,7 +501,7 @@ const date = ref(workingDateStore.workingDate)
 const search = ref('')
 const activeTab = ref('running')
 const printArea = ref(null)
-const supported = computed(() => printerSupported() || !!printStore.networkEndpoint)
+const supported = computed(() => printerSupported() && !!printStore.resolveTillPrinter())
 const connecting = ref(false)
 
 const payOpen = ref(false)
@@ -1147,11 +1147,9 @@ async function doPrint(order, kind) {
 async function connectFromPage() {
   connecting.value = true
   try {
-    // With a bridge agent configured the till is reached over HTTP, not Web
-    // Serial, so "Connect" just pings the agent instead of opening a port.
-    const ok = printStore.networkEndpoint
-      ? await printStore.probeNetwork()
-      : await connectPrinter()
+    // Printing goes through QZ Tray, so "Connect" asks it for the printer list
+    // and confirms the configured till printer is actually present.
+    const ok = await printStore.probePrinter()
     if (ok) toast(t('cashier.summary.printerConnected'), 'success')
     else toast(printerState.reason || t('cashier.summary.connectFailed'), 'error')
   } finally {
@@ -1187,8 +1185,9 @@ onMounted(async () => {
   load()
   loadTables()
   loadLogo()
-  if (printStore.networkEndpoint) printStore.probeNetwork()
-  else restorePrinter()
+  // Refresh state from an already-open QZ Tray session without prompting:
+  // connecting here would fire the "Allow this site" dialog on every load.
+  restorePrinter()
 })
 
 onUnmounted(() => {

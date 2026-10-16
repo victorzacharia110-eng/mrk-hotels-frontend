@@ -114,7 +114,8 @@ import { useAuthStore } from '@/stores/auth'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useCategoriesStore } from '@/stores/categories'
 import { useWorkingDateStore } from '@/stores/workingDate'
-import { printToPrinter, restorePrinter, buildReportLines } from '@/utils/printer'
+import { restorePrinter, buildReportLines } from '@/utils/printer'
+import { usePrintSettingsStore } from '@/stores/printSettings'
 import '@/pages/store/store-shared.css'
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -124,6 +125,7 @@ const { t } = useI18n()
 const workingDateStore = useWorkingDateStore()
 const route = useRoute()
 const authStore = useAuthStore()
+const printStore = usePrintSettingsStore()
 
 const hotelName = computed(() => authStore.user?.tenant?.hotel_name || 'MRK Hotels')
 const userName = computed(() => authStore.user?.name || authStore.user?.full_name || '—')
@@ -472,7 +474,7 @@ function buildThermalLines() {
 }
 
 async function printToMachine() {
-  const sent = await printToPrinter(buildReportLines(buildThermalLines()), { logo: logoUrl.value })
+  const sent = await printStore.print(buildReportLines(buildThermalLines()), { logo: logoUrl.value })
   if (!sent) printReport()
 }
 
