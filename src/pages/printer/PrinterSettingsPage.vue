@@ -555,7 +555,7 @@ onMounted(() => {
   transition: border-color .15s, box-shadow .15s, background .15s;
 }
 .download-card:hover { border-color: #005eb8; background: #eef4fe; box-shadow: 0 4px 14px rgba(0,94,184,.12); }
-.download-card.primary-card { border-color: #005eb8; background: #eaf2fd; }
+.download-card.primary-card { border-color: #005eb8; }
 .download-card.primary-card .dl-kind { font-size: 30px; }
 .download-card .dl-kind { font-size: 26px; color: #005eb8; flex: none; }
 .download-card .download-text { flex: 1; min-width: 0; }
