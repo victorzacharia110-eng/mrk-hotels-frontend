@@ -122,7 +122,7 @@ describe('PrinterSettingsPage — setup guide', () => {
     expect(wrapper.find('.reqs').text()).toContain('ESC/POS thermal')
     const bridgeItems = wrapper.findAll('.bridge-help li').map((li) => li.text())
     expect(bridgeItems).toHaveLength(3)
-    expect(bridgeItems[0]).toContain('install-start.bat')
+    expect(bridgeItems[0]).toContain('Windows setup')
     expect(bridgeItems[1]).toContain(':9720')
   })
 
@@ -139,20 +139,22 @@ describe('PrinterSettingsPage — setup guide', () => {
     await openBtn.trigger('click')
   })
 
-  it('offers the setup guide and the printer helper as downloads', async () => {
+  it('offers the Windows setup, the guide and the helper as downloads', async () => {
     const wrapper = await mountPage()
 
     const cards = wrapper.findAll('.downloads .download-card')
-    expect(cards).toHaveLength(2)
+    expect(cards).toHaveLength(3)
+
+    // The Windows .exe is the primary path: one double-click, no install. It is
+    // too big to ship in the repo, so it lives as a GitHub Release asset.
+    expect(cards[0].attributes('href')).toContain('mrk-printer-bridge.exe')
+    expect(cards[0].text()).toContain('Windows printer setup')
 
     // The links must point at the files served from public/, and be downloads
     // (an <a download>) rather than navigating the app away.
-    expect(cards[0].attributes('href')).toBe('/MRK_Hotels_Printer_Setup_Guide.pdf')
-    expect(cards[0].attributes()).toHaveProperty('download')
-    expect(cards[1].attributes('href')).toBe('/MRK_Printer_Bridge.zip')
+    expect(cards[1].attributes('href')).toBe('/MRK_Hotels_Printer_Setup_Guide.pdf')
     expect(cards[1].attributes()).toHaveProperty('download')
-
-    expect(wrapper.text()).toContain('Printer Setup Guide (PDF)')
-    expect(wrapper.text()).toContain('printer-bridge.zip')
+    expect(cards[2].attributes('href')).toBe('/MRK_Printer_Bridge.zip')
+    expect(cards[2].attributes()).toHaveProperty('download')
   })
 })

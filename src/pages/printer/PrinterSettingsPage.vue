@@ -61,6 +61,15 @@
       <p class="muted">{{ $t('printer.downloadsHint') }}</p>
 
       <div class="download-grid">
+        <a class="download-card primary-card" :href="exeUrl">
+          <i class="fab fa-windows dl-kind" aria-hidden="true"></i>
+          <span class="download-text">
+            <strong>{{ $t('printer.downloadExe') }}</strong>
+            <span class="muted block">{{ $t('printer.downloadExeHint') }}</span>
+          </span>
+          <i class="fas fa-download dl-action" aria-hidden="true"></i>
+        </a>
+
         <a class="download-card" :href="guideUrl" download>
           <i class="fas fa-file-pdf dl-kind" aria-hidden="true"></i>
           <span class="download-text">
@@ -412,6 +421,11 @@ const { t } = useI18n()
 // ever mounted under a sub-path rather than at the site root.
 const guideUrl = `${import.meta.env.BASE_URL}MRK_Hotels_Printer_Setup_Guide.pdf`
 const helperUrl = `${import.meta.env.BASE_URL}MRK_Printer_Bridge.zip`
+// The one-double-click Windows bridge (single-file .exe, ~85 MB) is too large to
+// live in the repo/deploy, so it is published as a GitHub Release asset. This
+// "latest" URL always points at the newest release's file, so it never changes.
+const exeUrl =
+  'https://github.com/victorzacharia110-eng/mrk-hotels-frontend/releases/latest/download/mrk-printer-bridge.exe'
 
 const error = ref('')
 const testing = ref(false)
@@ -541,6 +555,8 @@ onMounted(() => {
   transition: border-color .15s, box-shadow .15s, background .15s;
 }
 .download-card:hover { border-color: #005eb8; background: #eef4fe; box-shadow: 0 4px 14px rgba(0,94,184,.12); }
+.download-card.primary-card { border-color: #005eb8; background: #eaf2fd; }
+.download-card.primary-card .dl-kind { font-size: 30px; }
 .download-card .dl-kind { font-size: 26px; color: #005eb8; flex: none; }
 .download-card .download-text { flex: 1; min-width: 0; }
 .download-card .download-text strong { font-size: 14px; }
