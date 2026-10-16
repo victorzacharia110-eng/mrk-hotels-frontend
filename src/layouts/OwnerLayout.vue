@@ -75,6 +75,7 @@
           <h2>{{ pageTitle }}</h2>
         </div>
         <div class="sa-header-right">
+          <ThemeToggle />
           <span class="sa-badge"
             ><i class="fas fa-crown" aria-hidden="true"></i> {{ $t('owner.title') }}</span
           >
@@ -94,6 +95,7 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import RoleBadge from '@/components/RoleBadge.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const router = useRouter()
 const route = useRoute()

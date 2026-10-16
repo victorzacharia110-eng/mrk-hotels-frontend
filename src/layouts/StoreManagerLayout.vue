@@ -55,6 +55,7 @@
         </button>
         <h1 class="sm-page-title">{{ pageTitle }}</h1>
         <div class="sm-topbar-right">
+          <ThemeToggle />
           <button class="sm-icon-btn sm-notif-bell" :title="$t('notifications.title')"
             :aria-label="$t('notifications.unreadCount', { count: notifStore.unreadCount })"
             @click="toggleNotifDropdown">
@@ -146,6 +147,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notifications'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import RoleBadge from '@/components/RoleBadge.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 import DayCloseReminderModal from '@/components/cashier/DayCloseReminderModal.vue'
 
 const route = useRoute()

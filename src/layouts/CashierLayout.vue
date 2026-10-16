@@ -189,6 +189,7 @@
             <i class="fas fa-bars" aria-hidden="true"></i>
           </button>
           <h1 class="pos-page-title">{{ pageTitle }}</h1>
+          <ThemeToggle />
           <div class="sm-user">
             <span class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
             <span class="sm-user-meta">
@@ -259,6 +260,7 @@ import { selectedOutlet } from '@/pages/cashier/outlet-context'
 import { useOutletContext } from '@/composables/useOutletContext'
 import { restorePrinter } from '@/utils/printer'
 import RoleBadge from '@/components/RoleBadge.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 import DayCloseReminderModal from '@/components/cashier/DayCloseReminderModal.vue'
 
 const route = useRoute()
