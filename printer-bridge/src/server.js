@@ -2,6 +2,7 @@
 
 const http = require('http');
 const config = require('./config');
+const log = require('./log');
 const { rawPrint } = require('./windows-print');
 const { renderSetupPage } = require('./setup-page');
 const { discoverPrinters } = require('./discover');
@@ -113,7 +114,7 @@ const server = http.createServer(async (req, res) => {
     }
     try {
       const saved = config.setPrinter(payload.printerHost, payload.printerPort);
-      if (config.verbose) console.log(`[config] printer set to ${saved.printerHost || '(none)'}:${saved.printerPort}`);
+      if (config.verbose) log.log(`[config] printer set to ${saved.printerHost || '(none)'}:${saved.printerPort}`);
       return send(res, 200, {
         ok: true,
         printer: saved.transport === 'network' ? `${saved.printerHost}:${saved.printerPort}` : '(Windows queue)',
@@ -169,7 +170,7 @@ const server = http.createServer(async (req, res) => {
     if (bytes.length === 0) return send(res, 400, { ok: false, error: 'Empty body' });
     try {
       const used = await rawPrint(bytes);
-      if (config.verbose) console.log(`[print] ${bytes.length} bytes -> ${used}`);
+      if (config.verbose) log.log(`[print] ${bytes.length} bytes -> ${used}`);
       return send(res, 200, { ok: true, bytes: bytes.length, printer: used });
     } catch (e) {
       return send(res, 500, { ok: false, error: e.message });
@@ -180,27 +181,26 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(config.port, config.host, () => {
-  console.log('MRK printer bridge listening on http://' + config.host + ':' + config.port);
-  console.log('Set the printer address here: http://localhost:' + config.port + '/');
-  console.log('Auth token: ' + (config.authToken ? '(set)' : '(disabled)'));
+  log.log('MRK printer bridge listening on http://' + config.host + ':' + config.port);
+  log.log('Set the printer address here: http://localhost:' + config.port + '/');
+  log.log('Auth token: ' + (config.authToken ? '(set)' : '(disabled)'));
   if (config.transport === 'network') {
-    console.log('Printer: network ' + config.printerHost + ':' + config.printerPort);
+    log.log('Printer: network ' + config.printerHost + ':' + config.printerPort);
   } else if (process.platform !== 'win32') {
-    console.log('WARNING: no PRINTER_HOST set and not running on Windows; printing will FAIL here. Run this on the Windows printer PC, or set PRINTER_HOST.');
+    log.log('WARNING: no PRINTER_HOST set and not running on Windows; printing will FAIL here. Run this on the Windows printer PC, or set PRINTER_HOST.');
   } else {
-    console.log('Printer: Windows queue ' + (config.printerName || '(default)'));
+    log.log('Printer: Windows queue ' + (config.printerName || '(default)'));
   }
 
-  // Single-file .exe, first run, nothing configured yet: open the setup page so
-  // a non-technical user can type the printer's address. Opt out with MRK_NO_BROWSER=1.
-  if (config.singleFile && process.platform === 'win32' && !config.hasConfigFile && !process.env.MRK_NO_BROWSER) {
-    const url = 'http://localhost:' + config.port + '/';
+  // Let the entry point (sea-entry.js) decide whether to show the wizard,
+  // the browser setup page, or nothing at all (silent --serve auto-start).
+  if (typeof globalThis.__MRK_ON_LISTEN === 'function') {
     try {
-      require('child_process').exec('start "" "' + url + '"');
-    } catch {
-      // Non-fatal: the user can open the URL manually.
+      globalThis.__MRK_ON_LISTEN();
+    } catch (e) {
+      log.error('on-listen hook failed:', e.message);
     }
   }
 });
 
-process.on('uncaughtException', (e) => console.error('Fatal:', e.message));
+process.on('uncaughtException', (e) => log.error('Fatal:', e.message));

@@ -36,20 +36,21 @@ if [ ! -x "$ESBUILD" ]; then
   exit 1
 fi
 
-echo "  1/4 bundling src/sea-entry.js"
+echo "  1/5 bundling src/sea-entry.js"
 "$ESBUILD" "$HERE/src/sea-entry.js" \
   --bundle --platform=node --format=cjs \
+  --loader:.ps1=text \
   --define:process.env.MRK_DEFAULT_PRINTER_HOST="\"$DEFAULT_HOST\"" \
   --define:process.env.MRK_DEFAULT_PRINTER_PORT="\"$DEFAULT_PORT\"" \
   --outfile="$BUILD_DIR/bundle.js"
 
-echo "  2/4 downloading Windows node.exe (v$NODE_V)"
+echo "  2/5 downloading Windows node.exe (v$NODE_V)"
 WIN_URL="https://nodejs.org/dist/v${NODE_V}/node-v${NODE_V}-win-x64.zip"
 curl -fsSL "$WIN_URL" -o "$BUILD_DIR/node-win.zip"
 unzip -o -q "$BUILD_DIR/node-win.zip" "node-v${NODE_V}-win-x64/node.exe" -d "$BUILD_DIR"
 cp "$BUILD_DIR/node-v${NODE_V}-win-x64/node.exe" "$BUILD_DIR/node.exe"
 
-echo "  3/4 generating SEA blob (cross-platform: no code cache / snapshot)"
+echo "  3/5 generating SEA blob (cross-platform: no code cache / snapshot)"
 cat > "$BUILD_DIR/sea-config.json" <<JSON
 {
   "main": "$BUILD_DIR/bundle.js",
@@ -61,11 +62,13 @@ cat > "$BUILD_DIR/sea-config.json" <<JSON
 JSON
 node --experimental-sea-config "$BUILD_DIR/sea-config.json"
 
-echo "  4/4 injecting blob into the exe"
+echo "  4/5 injecting blob into the exe"
 mkdir -p "$OUT_DIR"
 cp "$BUILD_DIR/node.exe" "$OUT_EXE"
 npx --yes postject "$OUT_EXE" NODE_SEA_BLOB "$BUILD_DIR/sea-prep.blob" \
   --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
+
+node "$HERE/tools/hide-console.js" "$OUT_EXE"
 
 echo
 echo "Done: $OUT_EXE ($(du -h "$OUT_EXE" | cut -f1))"

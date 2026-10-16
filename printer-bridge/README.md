@@ -120,8 +120,12 @@ directly over TCP — no Windows driver and no "Add printer" step.
 
 If installing Node.js on the printer PC is inconvenient, hand out the **single executable
 `mrk-printer-bridge.exe`** instead. It is a copy of Node with this agent packed inside (Node's
-Single Executable Application support), so **a double-click is the whole install** — nothing to
-install, no commands, no batch files, no admin rights for the normal case.
+Single Executable Application support) plus a **native Windows setup wizard**, so **a double-click
+is the whole install** — nothing to install, no commands, no batch files, no browser page, and no
+admin rights for the normal case.
+
+The exe is built as a **GUI-subsystem binary**, so it shows **no console window** — it looks and
+behaves like a normal Windows desktop app.
 
 ### What a non-technical person does
 
@@ -129,35 +133,40 @@ install, no commands, no batch files, no admin rights for the normal case.
    the exe is unsigned: choose **More info → Run anyway** (this warning appears once).
 2. The first run **installs itself**: it copies the exe to
    `%LOCALAPPDATA%\MRKPrinterBridge\mrk-printer-bridge.exe` and registers itself to start with
-   Windows (per-user auto-start — **no administrator prompt**), then relaunches from there. A
-   console window opens; leave it open, that is the agent running.
-3. The **setup page opens by itself** in the browser (**`http://localhost:9720/`**). It walks
-   them through it:
-   - Click **Detect printers** — it scans the local network for the printer's port and lists
-     each candidate with its MAC (so it can be matched to the sticker on the printer).
-   - Click the printer in the list, then **Save**, then **Test print**.
+   Windows (per-user auto-start — **no administrator prompt**), then relaunches from there.
+3. A **native setup wizard** opens (a normal Windows dialog — no console, no browser). It has
+   three steps and ends with a **Finish** button:
+   - **Welcome** → **Next**.
+   - **Find your printer** → click **Detect printers** (it scans the local network for the
+     printer's port and lists each candidate with its MAC, so it can be matched to the sticker on
+     the printer), pick one (or type the IP and port), then **Next**.
+   - **Test & finish** → click **Test print**, then **Finish**.
 4. In MRK, set the Print Settings endpoint to **`http://localhost:9720`**.
 
 **If the printer is plugged straight into this PC** (not into the router), detection finds
-nothing. The page then shows a **"Fix direct-cable connection"** box — clicking it gives the
-wired port a one-time network fix. This is the only step that can ask for permission: Windows
-shows a single UAC prompt, and they click **Yes**. (The fix routes just the printer's IP
-through the wired port, so the PC's Wi-Fi keeps working.)
+nothing and the **Test & finish** step shows a **"Fix direct-cable connection"** button — clicking
+it applies a one-time network fix. This is the only step that can ask for permission: Windows
+shows a single UAC prompt, and they click **Yes**. (The fix routes just the printer's IP through
+the wired port, so the PC's Wi-Fi keeps working.)
+
+You can reopen the wizard any time by double-clicking the exe again. (The old browser setup page
+still works at `http://localhost:9720/` as a fallback.)
 
 The printer address is **fully adjustable at run time** — a different network just types a
 different IP; there is nothing to rebuild and no file to hand-edit. Saving writes
 `config.local.json` **next to the exe**. A `PRINTER_HOST` / `PRINTER_PORT` environment variable,
 if one is set, still wins over it (priority: env → `config.local.json` → baked default).
 
-> Set `MRK_NO_BROWSER=1` to stop the setup page opening automatically on first run, or
-> `MRK_SKIP_INSTALL=1` to skip the self-install (run it straight from wherever it is).
+> Set `MRK_NO_WIZARD=1` to fall back to the browser setup page instead of the wizard, or
+> `MRK_SKIP_INSTALL=1` to skip the self-install (run it straight from wherever it is). Auto-start
+> runs the exe with `--serve`, which starts the bridge silently with no wizard.
 
-**Auto-start** is installed automatically on first run. To remove it later: `Win+R` →
-`shell:startup` and delete the `MRKPrinterBridge` shortcut, or delete the `MRKPrinterBridge`
-value from `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.
+**Auto-start** is installed automatically on first run. To remove it later, delete the
+`MRKPrinterBridge` value from
+`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.
 
 > The exe replaces the Node install + `node src/server.js` steps; the direct-cable fix and the
-> `http://localhost:9720` endpoint rule are handled from inside the setup page.
+> `http://localhost:9720` endpoint rule are handled from inside the wizard.
 
 ## Building the single-file exe
 
@@ -168,9 +177,11 @@ source (requires Node.js on the build machine and `npm install` in the repo root
 ./printer-bridge/build-sea.sh [DEFAULT_PRINTER_HOST] [DEFAULT_PRINTER_PORT]
 ```
 
-It bundles `src/sea-entry.js`, downloads the matching Windows `node.exe`, generates a SEA blob
-and injects it, writing **`printer-bridge/dist/mrk-printer-bridge.exe`**. The two arguments bake
-a default printer at build time; with no arguments it bakes `192.168.1.100:9100`.
+It bundles `src/sea-entry.js` (including the setup wizard `src/wizard.ps1`, inlined as text),
+downloads the matching Windows `node.exe`, generates a SEA blob and injects it, then flips the PE
+subsystem to GUI so the exe runs with no console window. Output is
+**`printer-bridge/dist/mrk-printer-bridge.exe`**. The two arguments bake a default printer at
+build time; with no arguments it bakes `192.168.1.100:9100`.
 
 ## Configuring the app to use it
 

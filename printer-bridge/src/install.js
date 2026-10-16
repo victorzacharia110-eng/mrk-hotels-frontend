@@ -71,9 +71,10 @@ function ensureInstalled() {
 /** Registers the installed copy to start with Windows (per-user, no admin). */
 function setAutoStart(target) {
   try {
+    // --serve starts the bridge silently (no wizard) at login.
     execFileSync(
       'reg',
-      ['add', RUN_KEY, '/v', RUN_NAME, '/t', 'REG_SZ', '/d', target, '/f'],
+      ['add', RUN_KEY, '/v', RUN_NAME, '/t', 'REG_SZ', '/d', `"${target}" --serve`, '/f'],
       { stdio: 'ignore', windowsHide: true }
     );
   } catch {
@@ -92,13 +93,51 @@ function isAutoStartRegistered() {
 }
 
 /** Starts a detached copy of the exe (used to hand off to the installed one). */
-function relaunch(exePath) {
-  const child = spawn(exePath, [], {
+function relaunch(exePath, args = []) {
+  const child = spawn(exePath, args, {
     detached: true,
     stdio: 'ignore',
-    windowsHide: false, // keep a console window so the user can see it running
+    windowsHide: true, // the app is windowless (GUI subsystem); no console flash
   });
   child.unref();
+}
+
+/**
+ * Opens the native Windows setup wizard (PowerShell WinForms). The wizard script
+ * is embedded in the bundle (see build-sea.sh --loader:.ps1=text), written to a
+ * temp file and launched with a hidden console so only the dialog window shows.
+ *
+ * @returns {boolean} true if the wizard process was launched.
+ */
+function openWizard() {
+  if (process.platform !== 'win32') return false;
+  let script;
+  try {
+    // esbuild inlines the file contents as a string in the packaged exe.
+    script = require('./wizard.ps1');
+  } catch {
+    return false;
+  }
+  if (typeof script !== 'string' || !script.trim()) return false;
+
+  const scriptPath = path.join(os.tmpdir(), 'mrk-printer-wizard.ps1');
+  try {
+    fs.writeFileSync(scriptPath, script, 'utf8');
+  } catch {
+    return false;
+  }
+
+  try {
+    const child = spawn(
+      'powershell.exe',
+      ['-STA', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', scriptPath],
+      { detached: true, stdio: 'ignore', windowsHide: true }
+    );
+    child.unref();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Opens a URL in the default browser (cross-platform). */
@@ -214,6 +253,7 @@ module.exports = {
   isAutoStartRegistered,
   relaunch,
   openBrowser,
+  openWizard,
   runElevatedNetworkFix,
   canReachPrinter,
   installDir,
