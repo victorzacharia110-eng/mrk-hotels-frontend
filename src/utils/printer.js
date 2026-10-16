@@ -240,16 +240,22 @@ export async function listPrinters() {
  * Transparent pixels become white; everything dark becomes a printed dot.
  * Widths in dots: 384 for a 58mm roll, 576 for 80mm.
  *
- * @param {string} src  Logo URL. Must be same-origin or CORS-enabled.
+ * @param {string} src  Logo URL. Read with CORS so the canvas stays untainted;
+ *   a logo that cannot be read cross-origin is skipped, never fatal.
  * @param {number} [width]  Target width in printer dots.
  * @returns {Promise<Uint8Array>} The raster command block.
  */
 export async function rasterLogoBytes(src, width = 384) {
+  // The public asset host caches objects without the bucket's CORS headers; a
+  // fixed query param keys a fresh CDN entry that DOES carry them, so the
+  // crossOrigin canvas read succeeds instead of throwing "tainted canvas".
+  const corsUrl = src + (src.includes('?') ? '&' : '?') + 'cors=1'
   const image = await new Promise((resolve, reject) => {
     const img = new Image()
+    img.crossOrigin = 'anonymous'
     img.onload = () => resolve(img)
     img.onerror = () => reject(new Error('Could not load the logo for printing.'))
-    img.src = src
+    img.src = corsUrl
   })
 
   const scale = width / image.width
@@ -311,7 +317,15 @@ export async function printToPrinter(lines, opts = {}) {
     return false
   }
   try {
-    const raster = opts.logo ? await rasterLogoBytes(opts.logo) : null
+    let raster = null
+    if (opts.logo) {
+      try {
+        raster = await rasterLogoBytes(opts.logo)
+      } catch {
+        // A logo we cannot read cross-origin must not stop the receipt.
+        raster = null
+      }
+    }
     const text = buildRecipt(lines)
     const merged = new Uint8Array((raster ? raster.length : 0) + text.length)
     if (raster) merged.set(raster, 0)
