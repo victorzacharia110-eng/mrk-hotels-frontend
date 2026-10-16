@@ -55,6 +55,8 @@ describe('receipt line widths', () => {
     expect(lines[0][0].trim()).toBe('Brand Hotel')
     const orderNumberIdx = lines.findIndex((l) => String(l[0]).includes('ORD-MGH-2026-00144'))
     expect(lines[orderNumberIdx][0]).toBe('ORD-MGH-2026-00144')
+    // The order code prints single-width now, not the old double-height row.
+    expect(lines[orderNumberIdx][2]).toBeUndefined()
     const text = lines.map((l) => l[0]).join('\n')
     // The "Receipt" title was taken off the paper; a settled order still shows
     // its "Receipt No:" under Payment, which is a different line.

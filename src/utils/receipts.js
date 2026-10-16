@@ -157,7 +157,8 @@ export function orderReceiptLines(order, opts = {}) {
     // The "Receipt" title is no longer printed; it left a 3cm band of clear
     // paper under the brand for a signature or stamp.
     ...blankLines(BLANK_3CM),
-    [String(order.order_number || ''), false, 2],
+    // The order code prints single-width now, not the old double-height row.
+    [String(order.order_number || '')],
     [''],
     [`Table: ${order.table_number || order.room_number || '-'}`],
     [`Guest: ${order.guest_name || '-'}`],
