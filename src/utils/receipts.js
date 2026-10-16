@@ -133,10 +133,10 @@ export function letterheadLines(header = {}, fallbackName = 'MRK HOTELS') {
  * Lines for a guest receipt — a compact bill that fits small receipt paper.
  * Rows are [text, bold?, size?] where size 2 = double-width double-height.
  *
- * Layout mirrors the reference till receipt: letterhead, a 3cm clear band for a
- * signature or stamp, Table / Guest / Waiter, dated, then a Qty·Item·Amount
- * column, Bill Amount / Total Tax / Total Discount / Total / Paid / Due,
- * Thank you and Prepared By, and a further 3cm of clear paper at the foot.
+ * Layout mirrors the reference till receipt: letterhead, the order code,
+ * Table / Guest / Waiter, dated, then a Qty·Item·Amount column, Bill Amount /
+ * Total Tax / Total Discount / Total / Paid / Due, Thank you and Prepared By,
+ * and 3cm of clear paper at the foot.
  *
  * @param {object} order  Order (must carry items) with optional `_payment`.
  * @param {object} [opts]  Options: `letterhead` (saved hotel details) and
@@ -154,9 +154,6 @@ export function orderReceiptLines(order, opts = {}) {
 
   const lines = [
     ...letterheadLines(opts.letterhead, opts.hotel),
-    // The "Receipt" title is no longer printed; it left a 3cm band of clear
-    // paper under the brand for a signature or stamp.
-    ...blankLines(BLANK_3CM),
     // The order code prints single-width now, not the old double-height row.
     [String(order.order_number || '')],
     [''],

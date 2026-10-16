@@ -84,13 +84,14 @@ describe('letterhead reaches the printed receipt', () => {
     expect(out.indexOf('TIN: 123-456-789')).toBeLessThan(out.indexOf('Bill Amount:'))
   })
 
-  it('leaves 3cm of clear paper under the brand and at the foot', async () => {
+  it('leaves the clear 3cm band at the foot only, not above the order code', async () => {
     const lines = text(await orderPrintLines(ORDER, 'receipt')).split('\n')
 
     // A blank thermal line feeds ~3mm, so ten of them make the 3cm band a
-    // signature or a stamp needs: one under the letterhead, one at the foot.
+    // signature or a stamp needs. It belongs only at the foot: the order code
+    // sits straight under the letterhead with no gap above it.
     const clearLinesAbove = (index) => lines.slice(0, index).reverse().findIndex((l) => l.trim() !== '')
-    expect(clearLinesAbove(lines.indexOf('TA-0001'))).toBe(10)
+    expect(clearLinesAbove(lines.indexOf('TA-0001'))).toBe(0)
     expect(lines.slice(-10).every((l) => l.trim() === '')).toBe(true)
   })
 
