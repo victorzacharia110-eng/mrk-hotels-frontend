@@ -236,9 +236,8 @@ describe('Wide tables stay usable when the screen is small', () => {
     // Two reservation actions had text but no icon, so there was nothing left
     // to show once the label was hidden. Every button needs both halves.
     //
-    // Signed in at the front desk, not as management: `canOperate` is false for
-    // hotel_admin, so signing in as one renders a single View button and this
-    // assertion would pass without ever looking at the buttons that were broken.
+    // Signed in at the front desk, which renders the full set of row actions,
+    // so the sweep below actually inspects the buttons that were broken.
     const seen = new Set()
 
     for (const status of ['pending', 'confirmed', 'checked_in', 'checked_out', 'cancelled']) {
