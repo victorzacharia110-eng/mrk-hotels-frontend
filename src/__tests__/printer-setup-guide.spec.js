@@ -139,22 +139,24 @@ describe('PrinterSettingsPage — setup guide', () => {
     await openBtn.trigger('click')
   })
 
-  it('offers the Windows setup, the guide and the helper as downloads', async () => {
+  it('makes the Windows .exe the one obvious download', async () => {
     const wrapper = await mountPage()
 
+    // A single primary button, so the client is never asked to choose. It is too
+    // big to ship in the repo, so it lives as a GitHub Release asset.
     const cards = wrapper.findAll('.downloads .download-card')
-    expect(cards).toHaveLength(3)
-
-    // The Windows .exe is the primary path: one double-click, no install. It is
-    // too big to ship in the repo, so it lives as a GitHub Release asset.
+    expect(cards).toHaveLength(1)
     expect(cards[0].attributes('href')).toContain('mrk-printer-bridge.exe')
-    expect(cards[0].text()).toContain('Windows printer setup')
+    expect(cards[0].text()).toContain('Download for Windows')
+    expect(cards[0].text()).toContain('Recommended')
 
-    // The links must point at the files served from public/, and be downloads
-    // (an <a download>) rather than navigating the app away.
-    expect(cards[1].attributes('href')).toBe('/MRK_Hotels_Printer_Setup_Guide.pdf')
-    expect(cards[1].attributes()).toHaveProperty('download')
-    expect(cards[2].attributes('href')).toBe('/MRK_Printer_Bridge.zip')
-    expect(cards[2].attributes()).toHaveProperty('download')
+    // The guide and the source zip remain as quiet fallback links, served from
+    // public/ as downloads rather than navigating the app away.
+    const alt = wrapper.findAll('.download-alt a')
+    expect(alt).toHaveLength(2)
+    expect(alt[0].attributes('href')).toBe('/MRK_Hotels_Printer_Setup_Guide.pdf')
+    expect(alt[0].attributes()).toHaveProperty('download')
+    expect(alt[1].attributes('href')).toBe('/MRK_Printer_Bridge.zip')
+    expect(alt[1].attributes()).toHaveProperty('download')
   })
 })
