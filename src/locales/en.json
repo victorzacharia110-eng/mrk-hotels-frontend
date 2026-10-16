@@ -1422,7 +1422,7 @@
     "downloadExeHint": "Free cross-platform helper for USB, Serial and network printers. Install it once on the till.",
     "downloadExeBadge": "Recommended",
     "downloadAltLead": "Need the guide or the docs?",
-    "downloadGuideLink": "Setup guide (PDF)",
+    "downloadGuideLink": "Till setup (Windows)",
     "downloadHelperLink": "QZ Tray documentation",
     "connectionTitle": "Printer connection",
     "connectionHint": "Connect to QZ Tray on this computer, then choose the printer receipts should use.",

@@ -327,7 +327,10 @@ const newPrinter = ref({ name: '', kind: 'system', printer: '', host: '', port: 
 // correctly-signed build rather than a copy bundled with the app.
 const qzDownloadUrl = 'https://qz.io/download/'
 const qzDocsUrl = 'https://qz.io/docs'
-const guideUrl = `${import.meta.env.BASE_URL}MRK_Hotels_Printer_Setup_Guide.pdf`
+// MRK's one-click Windows till setup: installs QZ Tray if missing and trusts
+// the MRK root certificate so printing is silent. Built by the API repo's
+// till-setup/build-zip.sh — regenerate it if the root CA is ever reissued.
+const guideUrl = `${import.meta.env.BASE_URL}mrk-till-setup.zip`
 
 /** The configured till printer, when it is complete enough to print to. */
 const tillTarget = computed(() => (targetUsable(tillPrinter.value) ? tillPrinter.value : null))

@@ -149,7 +149,7 @@ describe('PrinterSettingsPage — setup guide', () => {
     // The setup guide and the QZ Tray docs remain as quiet fallback links.
     const alt = wrapper.findAll('.download-alt a')
     expect(alt).toHaveLength(2)
-    expect(alt[0].attributes('href')).toBe('/MRK_Hotels_Printer_Setup_Guide.pdf')
+    expect(alt[0].attributes('href')).toBe('/mrk-till-setup.zip')
     expect(alt[1].attributes('href')).toBe('https://qz.io/docs')
   })
 })

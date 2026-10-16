@@ -11,10 +11,12 @@
  * ~150 kB bundle, and the module never touches the network at import time.
  *
  * Silent printing needs signed requests (a certificate trusted by QZ Tray plus
- * a signing endpoint). That is optional here: set VITE_QZ_CERT_URL and
- * VITE_QZ_SIGN_URL and it is wired up automatically; leave them unset and QZ
- * Tray shows its normal one-time "Allow" prompt, which the operator can make
- * permanent with "Remember this decision".
+ * a signing endpoint). That is wired up automatically: the browser fetches the
+ * certificate and signs each message via the API (`VITE_API_URL`), keeping the
+ * private key server-side. Point `VITE_QZ_CERT_URL` / `VITE_QZ_SIGN_URL`
+ * elsewhere to override. When signing is unavailable QZ Tray falls back to its
+ * normal one-time "Allow" prompt, which the operator can make permanent with
+ * "Remember this decision".
  */
 
 /** The loaded qz-tray instance, or null before the first call. */
@@ -33,27 +35,54 @@ async function loadQz() {
 }
 
 /**
- * Installs optional message-signing handlers when the app is configured with a
- * certificate URL and a signing URL. Without them QZ Tray falls back to its
- * interactive allow prompt, which is fine for a single till.
+ * Resolves a QZ signing endpoint. The defaults live on the same API as the
+ * rest of the app (`VITE_API_URL`), so silent printing works with no extra
+ * configuration; `VITE_QZ_CERT_URL` / `VITE_QZ_SIGN_URL` override the host if
+ * signing is ever served elsewhere.
+ *
+ * @param {string} path  'certificate' or 'sign'.
+ * @returns {string|null} Absolute URL, or null when no API base is configured.
+ */
+function qzSigningUrl(path) {
+  const base = import.meta.env?.VITE_API_URL
+  if (!base) return null
+  return `${String(base).replace(/\/+$/, '')}/v1/qz/${path}`
+}
+
+/**
+ * Installs message-signing handlers so QZ Tray prints without its interactive
+ * "Allow" prompt (once the signing certificate's root CA is trusted on the
+ * till via override.crt — see docs/qz-tray-till-setup.md).
+ *
+ * The private key stays on the server: the browser fetches the public
+ * certificate and asks the API to sign each message. If signing is not
+ * configured, QZ Tray simply falls back to the one-time allow prompt, so a
+ * missing endpoint degrades to "asks once" rather than "cannot print".
  */
 function configureSecurity(instance) {
   if (securityConfigured) return
   securityConfigured = true
 
-  const certUrl = import.meta.env?.VITE_QZ_CERT_URL
-  const signUrl = import.meta.env?.VITE_QZ_SIGN_URL
+  const certUrl = import.meta.env?.VITE_QZ_CERT_URL || qzSigningUrl('certificate')
+  const signUrl = import.meta.env?.VITE_QZ_SIGN_URL || qzSigningUrl('sign')
   if (!certUrl || !signUrl) return
 
   instance.security.setCertificatePromise((resolve, reject) => {
-    fetch(certUrl, { cache: 'no-store', headers: { 'Content-Type': 'text/plain' } })
+    fetch(certUrl, { cache: 'no-store' })
       .then((resp) => (resp.ok ? resp.text().then(resolve) : reject(new Error('QZ certificate unavailable'))))
       .catch(reject)
-  }, { rejectOnFailure: true })
+  }, { rejectOnFailure: false })
 
   instance.security.setSignatureAlgorithm('SHA512')
   instance.security.setSignaturePromise((toSign) => (resolve, reject) => {
-    fetch(`${signUrl}?request=${encodeURIComponent(toSign)}`, { cache: 'no-store' })
+    // POST the raw message rather than a query string: a raster logo makes the
+    // payload hundreds of KB, well past any URL length limit.
+    fetch(signUrl, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'text/plain' },
+      body: toSign,
+    })
       .then((resp) => (resp.ok ? resp.text().then(resolve) : reject(new Error('QZ signature request failed'))))
       .catch(reject)
   })
