@@ -70,6 +70,8 @@
 
       <p class="download-alt">
         <span class="muted">{{ $t('printer.downloadAltLead') }}</span>
+        <a :href="pdfGuideUrl" target="_blank" rel="noopener">{{ $t('printer.downloadPdfGuideLink') }}</a>
+        <span class="muted" aria-hidden="true">·</span>
         <a :href="guideUrl">{{ $t('printer.downloadGuideLink') }}</a>
         <span class="muted" aria-hidden="true">·</span>
         <a :href="qzDocsUrl" target="_blank" rel="noopener">{{ $t('printer.downloadHelperLink') }}</a>
@@ -327,6 +329,10 @@ const newPrinter = ref({ name: '', kind: 'system', printer: '', host: '', port: 
 // correctly-signed build rather than a copy bundled with the app.
 const qzDownloadUrl = 'https://qz.io/download/'
 const qzDocsUrl = 'https://qz.io/docs'
+// Human-readable, printable walkthrough (QZ Tray install, Windows printer,
+// app selection, test print). Opens in a new tab so the till keeps this page.
+const pdfGuideUrl = `${import.meta.env.BASE_URL}MRK_Hotels_Printer_Setup_Guide.pdf`
+
 // MRK's one-click Windows till setup: installs QZ Tray if missing and trusts
 // the MRK root certificate so printing is silent. Built by the API repo's
 // till-setup/build-zip.sh — regenerate it if the root CA is ever reissued.
