@@ -256,12 +256,14 @@ describe('auth store', () => {
       expect(store.isSuperadmin).toBe(false)
     })
 
-    it('canOperate is false for hotel_admin and manager', () => {
+    it('lets every signed-in role operate, management included', () => {
+      // Admin and manager carry all other staff's work, so they must be able to
+      // act on it, not just observe it.
       const store = useAuthStore()
       store.user = { user_role: 'hotel_admin' }
-      expect(store.canOperate).toBe(false)
+      expect(store.canOperate).toBe(true)
       store.user = { user_role: 'manager' }
-      expect(store.canOperate).toBe(false)
+      expect(store.canOperate).toBe(true)
       store.user = { user_role: 'receptionist' }
       expect(store.canOperate).toBe(true)
     })

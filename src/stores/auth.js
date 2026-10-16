@@ -94,8 +94,10 @@ export const useAuthStore = defineStore('auth', () => {
   const isHotelAdmin = computed(() => user.value?.user_role === 'hotel_admin')
   /** Seniority of the user's role; prefers the backend's level over the local map. */
   const roleLevel = computed(() => user.value?.role_level ?? ROLE_LEVELS[user.value?.user_role] ?? 0)
-  // False for management roles, who observe rather than operate the front desk.
-  const canOperate = computed(() => !['hotel_admin', 'manager'].includes(user.value?.user_role))
+  // Admin and manager carry every other staff member's work too, so no signed-in
+  // role is observe-only any more: everyone may act, and `can()` still gates the
+  // privileged actions on top of it.
+  const canOperate = computed(() => true)
 
   /**
    * The subscription features enabled for the panel the user is looking at.
