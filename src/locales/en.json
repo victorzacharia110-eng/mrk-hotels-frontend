@@ -5831,6 +5831,12 @@
     "rates": "Rates & Prices",
     "printerConfig": "Printer Configuration",
     "receiptSettings": "Receipt & Tax Settings",
+    "groups": {
+      "property": "Property & Brand",
+      "operations": "Operations",
+      "access": "Staff & Access",
+      "data": "Data"
+    },
     "tiles": {
       "hotelInfo": "Name, logo, motto, time zone, payment modes, LIPA number and bank accounts.",
       "ratesTitle": "Rates & Prices",

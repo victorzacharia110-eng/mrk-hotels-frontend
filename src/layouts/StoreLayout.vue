@@ -1047,17 +1047,11 @@ const visibleModules = computed(() => {
 
     // 6. BACK OFFICE — the management engine (EZEE "Switch to Back"): hotel
     // info, rates/prices, time zone, printer config, payment settings, LIPA and
-    // bank accounts, departments and categories. The browser page collects the
-    // settings; the dropdown surfaces the individual editors the review names.
-    const backOffice = []
-    if (byKey['back-office']) backOffice.push({ key: 'back-office-browser', to: byKey['back-office'].to, icon: byKey['back-office'].icon, label: t('backOffice.browser') })
-    if (byKey['hotel-settings']) backOffice.push({ key: 'bo-hotel-info', to: byKey['hotel-settings'].to, icon: byKey['hotel-settings'].icon, label: t('backOffice.hotelInfo') })
-    if (byKey.rooms) backOffice.push({ key: 'bo-rates', to: '/app/rooms', icon: 'fas fa-tags', label: t('backOffice.rates') })
-    if (byKey.printer) backOffice.push({ key: 'bo-printer', to: byKey.printer.to, icon: byKey.printer.icon, label: t('backOffice.printerConfig') })
-    if (byKey.departments) backOffice.push({ key: 'bo-departments', to: byKey.departments.to, icon: byKey.departments.icon, label: t('nav.departments') })
-    if (byKey.categories) backOffice.push({ key: 'bo-categories', to: byKey.categories.to, icon: byKey.categories.icon, label: t('nav.categories') })
-    if (byKey['store-settings']) backOffice.push({ key: 'bo-store-settings', to: byKey['store-settings'].to, icon: byKey['store-settings'].icon, label: t('backOffice.receiptSettings') })
-    if (backOffice.length) out.push(accordionGroup('management-back-office', 'fas fa-briefcase', 'backOffice.title', backOffice))
+    // bank accounts, departments and categories. It used to be a dropdown whose
+    // entries each redirected to one editor; per the panel review it now opens
+    // the Back Office browser, which files every editor under an accordion on
+    // its own page — the same pattern as the POS Reports browser.
+    if (byKey['back-office']) out.push({ ...byKey['back-office'], exact: true })
 
     return out
   }

@@ -5831,6 +5831,12 @@
     "rates": "Bei na Viwango",
     "printerConfig": "Mipangilio ya Printa",
     "receiptSettings": "Mipangilio ya Risiti na Kodi",
+    "groups": {
+      "property": "Mali na Chapa",
+      "operations": "Uendeshaji",
+      "access": "Wafanyakazi na Ruhusa",
+      "data": "Data"
+    },
     "tiles": {
       "hotelInfo": "Jina, nembo, kauli mbiu, eneo la saa, njia za malipo, namba ya LIPA na akaunti za benki.",
       "ratesTitle": "Bei na Viwango",
