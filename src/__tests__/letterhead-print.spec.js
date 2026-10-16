@@ -88,10 +88,11 @@ describe('letterhead reaches the printed receipt', () => {
     const lines = text(await orderPrintLines(ORDER, 'receipt')).split('\n')
 
     // A blank thermal line feeds ~3mm, so ten of them make the 3cm band a
-    // signature or a stamp needs. It belongs only at the foot: the order code
+    // signature or a stamp needs. It belongs only at the foot: the order id
     // sits straight under the letterhead with no gap above it.
+    const orderIdx = lines.findIndex((l) => l.includes('TA-0001'))
     const clearLinesAbove = (index) => lines.slice(0, index).reverse().findIndex((l) => l.trim() !== '')
-    expect(clearLinesAbove(lines.indexOf('TA-0001'))).toBe(0)
+    expect(clearLinesAbove(orderIdx)).toBe(0)
     expect(lines.slice(-10).every((l) => l.trim() === '')).toBe(true)
   })
 
