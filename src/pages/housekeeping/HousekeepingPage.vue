@@ -27,10 +27,6 @@
       </div>
     </div>
 
-    <!-- Global success / error feedback banners -->
-    <div v-if="success" class="alert alert-success">{{ success }}</div>
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
-
     <!-- Housekeeping dashboard: always-visible KPI strip + operational board -->
     <section class="hk-dash" :class="{ 'is-loading': dashLoading }">
       <div class="summary-kpis hk-kpis">
@@ -478,6 +474,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { housekeepingApi, inventoryApi, roomApi, userApi } from '@/api'
 import { collectAllRows } from '@/utils/export'
+import { toast } from '@/utils/toast'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 
@@ -504,8 +501,6 @@ const meta = ref({
 })
 const filters = reactive({ status: '', house_status: '', room_status: '', room_id: '' })
 const loading = ref(false)
-const error = ref('')
-const success = ref('')
 
 /* Housekeeping dashboard — the always-visible KPI strip above the task board. */
 const dash = ref(null)
@@ -636,7 +631,6 @@ function formatDeparture(date) {
  */
 async function load() {
   loading.value = true
-  error.value = ''
   try {
     const res = await housekeepingApi.index({
       status: filters.status,
@@ -649,7 +643,7 @@ async function load() {
     tasks.value = res.data.data || []
     meta.value = res.data
   } catch (err) {
-    error.value = err.response?.data?.message || t('housekeeping.loadError')
+    toast(err.response?.data?.message || t('housekeeping.loadError'), 'error')
   } finally {
     loading.value = false
   }
@@ -875,10 +869,10 @@ async function save() {
       .map((line) => ({ item_id: line.item_id, quantity: line.quantity }))
     if (editing.value) {
       await housekeepingApi.update(editingId.value, payload)
-      success.value = t('housekeeping.updateSuccess')
+      toast(t('housekeeping.updateSuccess'))
     } else {
       await housekeepingApi.store(payload)
-      success.value = t('housekeeping.createSuccess')
+      toast(t('housekeeping.createSuccess'))
     }
     showModal.value = false
     await load()
@@ -905,7 +899,7 @@ async function assignTask() {
     const res = await housekeepingApi.assign(assignTaskId.value, {
       assigned_to: assignUserId.value,
     })
-    success.value = res.data.message || t('housekeeping.assigned')
+    toast(res.data.message || t('housekeeping.assigned'))
     showAssign.value = false
     await load()
   } catch (err) {
@@ -917,13 +911,12 @@ async function assignTask() {
 
 /** Runs a housekeeping action (e.g. start/confirm/verify) and reloads the list, surfacing API errors. */
 async function runAction(task, fn, message) {
-  error.value = ''
   try {
     const res = await fn(task.task_id)
-    success.value = res.data.message || message
+    toast(res.data.message || message)
     await load()
   } catch (err) {
-    error.value = flattenError(err)
+    toast(flattenError(err), 'error')
   }
 }
 
