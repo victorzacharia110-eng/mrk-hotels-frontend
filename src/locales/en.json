@@ -5832,6 +5832,7 @@
     "printerConfig": "Printer Configuration",
     "receiptSettings": "Receipt & Tax Settings",
     "open": "Open",
+    "openFullPage": "Open in full page",
     "noMatch": "No settings match your search.",
     "backToBackOffice": "Back to Back Office",
     "groups": {

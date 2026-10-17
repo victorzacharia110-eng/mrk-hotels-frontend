@@ -13,12 +13,32 @@ import { moduleByKey } from '@/config/modules'
 import BackOfficePage from '@/pages/backoffice/BackOfficePage.vue'
 import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
 
+// The editors are full pages that fetch on mount; they are stubbed here so the
+// suite exercises the browser shell, not the editors' own data flow. The stub
+// is hoisted so the vi.mock factories (which run before this module body) can
+// reference it. `__esModule` lets the async-component loader unwrap `default`.
+const { editorModule } = vi.hoisted(() => {
+  const editorStub = { name: 'EditorStub', template: '<div class="stub-editor" />' }
+  return { editorModule: { __esModule: true, default: editorStub } }
+})
+
+vi.mock('@/pages/settings/HotelSettingsPage.vue', () => editorModule)
+vi.mock('@/pages/rooms/RoomListPage.vue', () => editorModule)
+vi.mock('@/pages/printer/PrinterSettingsPage.vue', () => editorModule)
+vi.mock('@/pages/store/StoreSettingsPage.vue', () => editorModule)
+vi.mock('@/pages/inventory/DepartmentListPage.vue', () => editorModule)
+vi.mock('@/pages/inventory/CategoryListPage.vue', () => editorModule)
+vi.mock('@/pages/suppliers/SupplierListPage.vue', () => editorModule)
+vi.mock('@/pages/staff/StaffListPage.vue', () => editorModule)
+vi.mock('@/pages/settings/TrustedDevicesPage.vue', () => editorModule)
+vi.mock('@/pages/imports/ImportPage.vue', () => editorModule)
+
 /**
  * The Back Office opens in the same Reports-browser shell the POS Reports page
  * uses: a category tree on the left (Property / Operations / Staff & Access /
  * Data) and a detail paper on the right. Picking an editor shows what it
- * controls plus an Open action that routes to the real page — the sidebar
- * carries one link instead of a dropdown.
+ * controls and mounts that editor inline, so the sidebar carries one link
+ * instead of a dropdown and nothing navigates away.
  */
 
 const STORE_LAYOUT_SRC = readFileSync(
@@ -77,7 +97,7 @@ describe('Back Office presents the editors in the Reports-browser shell', () => 
     expect(wrapper.find('.bo-detail-desc').text()).toContain('Name, logo, motto')
   })
 
-  it('shows the picked editor with a group label and an Open action', async () => {
+  it('shows the picked editor with a group label and a full-page action', async () => {
     const { wrapper } = await mountAs('hotel_admin')
 
     // Property → Rates & Prices is the second Editor leaf.
@@ -87,6 +107,32 @@ describe('Back Office presents the editors in the Reports-browser shell', () => 
     expect(wrapper.find('.bo-detail-title').text()).toBe('Rates & Prices')
     expect(wrapper.find('.bo-detail-group').text()).toBe('Property & Brand')
     expect(wrapper.findComponent(RouterLinkStub).props('to')).toEqual({ name: 'hotel-rooms' })
+  })
+
+  it('mounts the picked editor inline instead of navigating away', async () => {
+    const { wrapper } = await mountAs('hotel_admin')
+    await flushPromises()
+
+    expect(wrapper.find('.bo-embed .stub-editor').exists()).toBe(true)
+    expect(activeLeaf(wrapper).classes()).toContain('active')
+  })
+
+  it('mounts an editor for every leaf in the tree', async () => {
+    const { wrapper } = await mountAs('hotel_admin')
+
+    const count = leaves(wrapper).length
+    expect(count).toBeGreaterThan(0)
+
+    for (let i = 0; i < count; i += 1) {
+      await leaves(wrapper)[i].trigger('click')
+      await flushPromises()
+      expect(wrapper.find('.bo-embed .stub-editor').exists()).toBe(true)
+    }
+  })
+
+  it('has a full-page escape link in both languages', () => {
+    expect(en.backOffice.openFullPage).toBeTruthy()
+    expect(sw.backOffice.openFullPage).toBeTruthy()
   })
 
   it('keeps only the jump-to tool, dropping the report-only buttons', async () => {

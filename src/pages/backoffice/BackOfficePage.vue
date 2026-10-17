@@ -11,9 +11,9 @@
 
   The sidebar Back Office entry opens this page, which presents every editor in
   the same Reports-browser shell the POS Reports page uses: a category tree on
-  the left and a detail paper on the right. Selecting an editor shows what it
-  controls and an Open action that routes to the real page — the browser never
-  duplicates an editor, it only points at the one that exists.
+  the left and a detail paper on the right. Selecting an editor mounts that
+  editor inline, so nothing navigates away; the header keeps a small
+  "open in full page" link as the escape hatch to the standalone route.
 
   Tiles are filtered by the same role gates the sidebar uses, so a property
   that does not run a module never sees a dead item.
@@ -35,12 +35,15 @@
           <span class="bo-detail-group">{{ activeGroupLabel }}</span>
           <h2 class="bo-detail-title">{{ $t(activeTile.titleKey) }}</h2>
         </div>
-        <router-link :to="activeTile.to" class="bo-open">
-          <i class="fas fa-arrow-right" aria-hidden="true"></i>
-          {{ $t('backOffice.open') }}
+        <router-link :to="activeTile.to" class="bo-open" :title="$t('backOffice.openFullPage')">
+          <i class="fas fa-up-right-from-square" aria-hidden="true"></i>
+          <span class="bo-open-label">{{ $t('backOffice.openFullPage') }}</span>
         </router-link>
       </div>
       <p class="bo-detail-desc">{{ $t(activeTile.descKey) }}</p>
+      <div class="bo-embed">
+        <component :is="activeEditor" v-if="activeEditor" :key="activeKey" />
+      </div>
     </div>
 
     <p v-else class="bo-empty">{{ $t('backOffice.noMatch') }}</p>
@@ -48,7 +51,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
@@ -57,8 +60,8 @@ const auth = useAuthStore()
 const { t } = useI18n()
 
 // Every back-office surface the review names. `titleKey`/`descKey` resolve to
-// backOffice.tiles.*; `to` is the existing page that owns the setting, so the
-// browser never duplicates an editor — it routes to the one that exists.
+// backOffice.tiles.*; `to` is the standalone page behind the editor, kept only
+// as the "open in full page" escape hatch (EDITORS below mounts it inline).
 const ALL_TILES = [
   {
     key: 'hotel-info',
@@ -131,6 +134,23 @@ const ALL_TILES = [
     to: { name: 'hotel-import' },
   },
 ]
+
+// The editor behind each tile, loaded on demand and rendered inline in the
+// detail paper. Opening a leaf never leaves the page; the "open in full page"
+// link is only an escape hatch to the standalone route. The pages are
+// self-contained (none read route params), so mounting them here is safe.
+const EDITORS = {
+  'hotel-info': defineAsyncComponent(() => import('@/pages/settings/HotelSettingsPage.vue')),
+  rates: defineAsyncComponent(() => import('@/pages/rooms/RoomListPage.vue')),
+  printer: defineAsyncComponent(() => import('@/pages/printer/PrinterSettingsPage.vue')),
+  'store-settings': defineAsyncComponent(() => import('@/pages/store/StoreSettingsPage.vue')),
+  departments: defineAsyncComponent(() => import('@/pages/inventory/DepartmentListPage.vue')),
+  categories: defineAsyncComponent(() => import('@/pages/inventory/CategoryListPage.vue')),
+  suppliers: defineAsyncComponent(() => import('@/pages/suppliers/SupplierListPage.vue')),
+  staff: defineAsyncComponent(() => import('@/pages/staff/StaffListPage.vue')),
+  'trusted-devices': defineAsyncComponent(() => import('@/pages/settings/TrustedDevicesPage.vue')),
+  import: defineAsyncComponent(() => import('@/pages/imports/ImportPage.vue')),
+}
 
 // Keep a tile only when the signed-in role is allowed on the page behind it.
 // The mapping mirrors config/modules so a denied page is never linked.
@@ -215,6 +235,8 @@ watch(
 
 const activeTile = computed(() => tilesByKey[activeKey.value] || null)
 
+const activeEditor = computed(() => EDITORS[activeKey.value] || null)
+
 const activeGroupLabel = computed(() => {
   const group = GROUPS.find((g) => activeTile.value && g.tileKeys.includes(activeTile.value.key))
   return group ? t(group.titleKey) : ''
@@ -283,19 +305,21 @@ function onSearch(term) {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 18px;
+  padding: 8px 14px;
   border-radius: 8px;
-  background: #005eb8;
-  color: #fff;
+  border: 1px solid #cbd5e1;
+  background: transparent;
+  color: #005eb8;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .bo-open:hover {
-  background: #004b93;
+  background: #eef4fb;
+  border-color: #005eb8;
 }
 
 .bo-detail-desc {
@@ -303,6 +327,39 @@ function onSearch(term) {
   font-size: 15px;
   line-height: 1.6;
   color: #475569;
+}
+
+.bo-embed {
+  margin-top: 4px;
+}
+
+/* The embedded editor is a full standalone page. Flatten its own page chrome
+   so only its content shows inside the detail paper: drop its page padding and
+   background, and hide its title/subtitle (the detail header above already
+   names the editor) while keeping its action row (New, Refresh, Export). */
+.bo-embed :deep(.dashboard-page) {
+  padding: 0;
+  background: transparent;
+  min-height: 0;
+}
+
+.bo-embed :deep(.page-content) {
+  padding: 0;
+}
+
+.bo-embed :deep(.page-head h1),
+.bo-embed :deep(.page-head p) {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .bo-open-label {
+    display: none;
+  }
+
+  .bo-open {
+    padding: 8px 10px;
+  }
 }
 
 .bo-empty {

@@ -3087,8 +3087,8 @@ html[data-theme='dark'] .bo-detail-group { color:#8696a0; }
    does not glare on the dark sheet. */
 html[data-theme='dark'] .bo-detail-title { color:#e9edef; }
 html[data-theme='dark'] .bo-detail-desc { color:#aebac1; }
-html[data-theme='dark'] .bo-open { background:#2563eb; }
-html[data-theme='dark'] .bo-open:hover { background:#1d4ed8; }
+html[data-theme='dark'] .bo-open { border-color:#3a4a54; color:#7cc0ff; }
+html[data-theme='dark'] .bo-open:hover { background:#2a3942; border-color:#7cc0ff; }
 html[data-theme='dark'] .bo-empty { color:#aebac1; }
 html[data-theme='dark'] .h-text .hotel { color:#7cc0ff; }
 html[data-theme='dark'] .h-text h1 { color:#7cc0ff; }
