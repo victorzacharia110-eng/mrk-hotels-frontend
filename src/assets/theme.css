@@ -3080,11 +3080,16 @@ html[data-theme='dark'] .pin-key-action { color:#aebac1; }
 html[data-theme='dark'] .section-divider::before, html[data-theme='dark'] .section-divider::after { background:#202c33; }
 html[data-theme='dark'] .section-divider span { color:#aebac1; }
 html[data-theme='dark'] .auth-success { background:#202c33; color:#7ee2a8; }
-html[data-theme='dark'] .bo-tile { background:#202c33; }
-html[data-theme='dark'] .bo-tile-icon { background:#202c33; color:#7cc0ff; }
-html[data-theme='dark'] .bo-tile-title { color:#7cc0ff; }
-html[data-theme='dark'] .bo-tile-desc { color:#7cc0ff; }
-html[data-theme='dark'] .bo-tile-go { color:#aebac1; }
+html[data-theme='dark'] .bo-detail-head { border-bottom-color:#2f3b43; }
+html[data-theme='dark'] .bo-detail-icon { background:#2a3942; color:#7cc0ff; }
+html[data-theme='dark'] .bo-detail-group { color:#8696a0; }
+/* The detail heading is deliberately the palette near-white, not #fff, so it
+   does not glare on the dark sheet. */
+html[data-theme='dark'] .bo-detail-title { color:#e9edef; }
+html[data-theme='dark'] .bo-detail-desc { color:#aebac1; }
+html[data-theme='dark'] .bo-open { background:#2563eb; }
+html[data-theme='dark'] .bo-open:hover { background:#1d4ed8; }
+html[data-theme='dark'] .bo-empty { color:#aebac1; }
 html[data-theme='dark'] .h-text .hotel { color:#7cc0ff; }
 html[data-theme='dark'] .h-text h1 { color:#7cc0ff; }
 html[data-theme='dark'] .meta b { color:#7cc0ff; }

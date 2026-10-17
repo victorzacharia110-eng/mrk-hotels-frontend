@@ -135,6 +135,16 @@ describe('dark theme stylesheet', () => {
     expect(themeCss).toMatch(/html\[data-theme='dark'\] \.rb-report-head h2,[\s\S]*?color: #e9edef/)
   })
 
+  it('repaints the Back Office detail, whose heading is a soft near-white', () => {
+    // The detail title ships #0f172a (near-black); on the dark sheet it would
+    // vanish. It is lifted to the palette near-white on purpose — not #fff,
+    // which the client found too bright.
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.bo-detail-title \{ color:#e9edef; \}/)
+    expect(themeCss).toContain("html[data-theme='dark'] .bo-detail-icon")
+    expect(themeCss).toContain("html[data-theme='dark'] .bo-detail-desc")
+    expect(themeCss).not.toMatch(/html\[data-theme='dark'\] \.bo-detail-title \{ color:#fff/)
+  })
+
   it('repaints the other report pages too', () => {
     expect(themeCss).toContain("html[data-theme='dark'] .rp-section")
     expect(themeCss).toContain("html[data-theme='dark'] .tab-btn")

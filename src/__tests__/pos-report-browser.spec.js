@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { cwd } from 'node:process'
 import { mount } from '@vue/test-utils'
+import { createPinia } from 'pinia'
 import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
 import en from '@/locales/en.json'
 import sw from '@/locales/sw.json'
@@ -66,7 +67,7 @@ describe('ReportBrowserLayout POS-print button', () => {
   const mountLayout = (posPrint = false) =>
     mount(ReportBrowserLayout, {
       props: { categories: [], active: 'cashier-report', title: 'POS Reports', posPrint },
-      global: { mocks: { $t: (key) => key } },
+      global: { plugins: [createPinia()], mocks: { $t: (key) => key } },
     })
 
   it('is hidden unless the active report asks for a POS printer', () => {

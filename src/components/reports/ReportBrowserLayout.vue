@@ -6,6 +6,10 @@
   Back Office / Audit / Statistical / Graphs), a filter toolbar across the
   top of the content, and a printable report body with a help-guide panel.
 
+  The header also carries the shared light/dark switch, so the reports and
+  Back Office pages — which are otherwise only reachable through the profile
+  menu — offer it right on the page.
+
   Props:
     categories   - [{ key, label, icon, reports: [{ key, label, icon? }] }]
     active       - key of the currently selected report
@@ -62,6 +66,7 @@
             <i v-else class="fas fa-download" aria-hidden="true"></i>
           </button>
         </template>
+        <ThemeToggle class="rb-theme" />
       </div>
     </div>
 
@@ -100,6 +105,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const props = defineProps({
   categories: { type: Array, required: true },
@@ -252,6 +258,12 @@ function toggleCat(key) {
 
 .rb-tool-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.15);
+}
+
+/* The shared switch sits with the header tools; match their height. */
+.rb-tools .rb-theme {
+  height: 32px;
+  padding: 0 12px;
 }
 
 /* ── Body ───────────────────────────────────────────────── */

@@ -46,3 +46,15 @@ describe.each(Object.entries(PANELS))('%s panel has the theme switch', (_label, 
     expect(layout).toContain('<ThemeToggle />')
   })
 })
+
+describe('the reports / Back Office shell has the theme switch', () => {
+  // The report browser and Back Office pages live inside StoreLayout, where the
+  // switch is buried in the profile menu; they carry it in their own header so
+  // it is reachable right on the page.
+  const shell = read('src/components/reports/ReportBrowserLayout.vue')
+
+  it('imports and renders the shared ThemeToggle', () => {
+    expect(shell).toMatch(/import ThemeToggle from '@\/components\/ThemeToggle\.vue'/)
+    expect(shell).toContain('<ThemeToggle')
+  })
+})
