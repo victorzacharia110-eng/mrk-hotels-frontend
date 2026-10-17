@@ -5,9 +5,9 @@ import { resolve } from 'node:path'
 /**
  * Guards that every panel which does not use StoreLayout's profile menu still
  * offers the light/dark switch. Those shells (cashier/bartender, store manager,
- * superadmin, owner) shipped the dark stylesheet but no way to reach it, so the
- * setting looked absent on exactly those roles. They all share one ThemeToggle
- * component wired to the single theme store.
+ * superadmin, owner, the customer portal) shipped the dark stylesheet but no way
+ * to reach it, so the setting looked absent on exactly those roles. They all
+ * share one ThemeToggle component wired to the single theme store.
  */
 
 const read = (p) => readFileSync(resolve(process.cwd(), p), 'utf8')
@@ -19,6 +19,7 @@ const PANELS = {
   'store manager / inventory': 'src/layouts/StoreManagerLayout.vue',
   superadmin: 'src/layouts/SuperadminLayout.vue',
   owner: 'src/layouts/OwnerLayout.vue',
+  'customer portal': 'src/layouts/CustomerLayout.vue',
 }
 
 describe('shared ThemeToggle component', () => {
@@ -56,5 +57,22 @@ describe('the reports / Back Office shell has the theme switch', () => {
   it('imports and renders the shared ThemeToggle', () => {
     expect(shell).toMatch(/import ThemeToggle from '@\/components\/ThemeToggle\.vue'/)
     expect(shell).toContain('<ThemeToggle')
+  })
+})
+
+describe('the guest / public storefront header has the theme switch', () => {
+  // The public storefront (home, hotel detail, booking, and the /guest portal)
+  // shares StoreLayout, whose only desktop switch was buried in the staff
+  // profile menu. The public branch of the header now renders the shared toggle.
+  const layout = read('src/layouts/StoreLayout.vue')
+
+  it('imports and renders the shared ThemeToggle in the public header', () => {
+    expect(layout).toMatch(/import ThemeToggle from '@\/components\/ThemeToggle\.vue'/)
+    expect(layout).toContain('<ThemeToggle class="public-theme" />')
+  })
+
+  it('drops the header pill on phones, where the mobile menu already carries it', () => {
+    expect(layout).toMatch(/\.public-theme\s*\{\s*display:\s*none/)
+    expect(layout).toContain('class="mobile-link theme-toggle"')
   })
 })

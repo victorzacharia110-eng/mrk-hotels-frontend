@@ -114,6 +114,7 @@
           <h1 class="sa-page-title">{{ pageTitle }}</h1>
         </div>
         <div class="sa-header-right">
+          <ThemeToggle />
           <span v-if="tenantName" class="sa-tenant-badge">
             <i class="fas fa-building"></i> {{ tenantName }}
           </span>
@@ -132,6 +133,7 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const router = useRouter()
 const route = useRoute()

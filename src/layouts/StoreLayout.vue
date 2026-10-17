@@ -174,6 +174,7 @@
                 <i class="fas fa-user" aria-hidden="true"></i>
                 <span class="action-label">{{ $t('nav.signIn') }}</span>
               </router-link>
+              <ThemeToggle class="public-theme" />
               <div class="lang-switch" role="group" :aria-label="$t('topBar.language')">
                 <button type="button" class="lang-option" :class="{ active: locale === 'en' }" @click="setLocale('en')"
                   :title="$t('topBar.switchToEnglish')" :aria-pressed="locale === 'en'">
@@ -571,6 +572,7 @@ import { useWorkingDateStore } from '@/stores/workingDate'
 import { useOutletContext } from '@/composables/useOutletContext'
 import { useThemeStore } from '@/stores/theme'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -2805,6 +2807,13 @@ function formatNotifTime(iso) {
 
   .header-actions .action-link {
     gap: 0;
+  }
+
+  /* The mobile dropdown already carries the theme switch (and the language
+     button), so the header pill is dropped below the phone breakpoint to keep
+     the row from overflowing. */
+  .public-theme {
+    display: none;
   }
 
   .bo-back {
