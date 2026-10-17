@@ -9,75 +9,52 @@
   zone, Printer Configurations | HOTEL INFO such as name, logo, business motto,
   mode of payments settings, registering of LIPA NO and Bank Acc."
 
-  Follow-up review: the sidebar Back Office dropdown used to expand only in the
-  drawer, and each of its entries redirected to one editor. It now opens this
-  page instead, and every editor is grouped here under an accordion — the same
-  way the POS Reports browser keeps its categories on the page.
+  The sidebar Back Office entry opens this page, which presents every editor in
+  the same Reports-browser shell the POS Reports page uses: a category tree on
+  the left and a detail paper on the right. Selecting an editor shows what it
+  controls and an Open action that routes to the real page — the browser never
+  duplicates an editor, it only points at the one that exists.
 
-  Tiles are filtered by the same feature gates the sidebar uses, so a property
-  that does not run a module never sees a dead tile.
+  Tiles are filtered by the same role gates the sidebar uses, so a property
+  that does not run a module never sees a dead item.
 -->
 <template>
-  <div class="dashboard-page container">
-    <div class="page-head">
-      <div>
-        <h1>{{ $t('backOffice.title') }}</h1>
-        <p class="muted">{{ $t('backOffice.subtitle') }}</p>
-      </div>
-    </div>
-
-    <div class="bo-accordions">
-      <section
-        v-for="group in groups"
-        :key="group.key"
-        class="bo-acc"
-        :class="{ open: openKey === group.key }"
-      >
-        <button
-          type="button"
-          class="bo-acc-head"
-          :aria-expanded="openKey === group.key"
-          @click="toggle(group.key)"
-        >
-          <i
-            class="fas bo-acc-caret"
-            :class="openKey === group.key ? 'fa-chevron-down' : 'fa-chevron-right'"
-            aria-hidden="true"
-          ></i>
-          <span class="bo-acc-icon"><i :class="group.icon" aria-hidden="true"></i></span>
-          <span class="bo-acc-title">{{ $t(group.titleKey) }}</span>
-          <span class="bo-acc-count">{{ group.tiles.length }}</span>
-        </button>
-
-        <div class="bo-acc-body" :class="{ open: openKey === group.key }">
-          <div class="bo-acc-body-inner">
-            <div class="bo-grid">
-              <router-link
-                v-for="tile in group.tiles"
-                :key="tile.key"
-                :to="tile.to"
-                class="bo-tile"
-              >
-                <span class="bo-tile-icon"><i :class="tile.icon" aria-hidden="true"></i></span>
-                <span class="bo-tile-body">
-                  <strong class="bo-tile-title">{{ $t(tile.titleKey) }}</strong>
-                  <span class="bo-tile-desc">{{ $t(tile.descKey) }}</span>
-                </span>
-                <i class="fas fa-chevron-right bo-tile-go" aria-hidden="true"></i>
-              </router-link>
-            </div>
-          </div>
+  <ReportBrowserLayout
+    :categories="categories"
+    :active="activeKey"
+    :title="$t('backOffice.title')"
+    :subtitle="$t('backOffice.subtitle')"
+    :report-tools="false"
+    @select="selectTile"
+    @search="onSearch"
+  >
+    <div v-if="activeTile" class="bo-detail">
+      <div class="bo-detail-head">
+        <span class="bo-detail-icon"><i :class="activeTile.icon" aria-hidden="true"></i></span>
+        <div class="bo-detail-titles">
+          <span class="bo-detail-group">{{ activeGroupLabel }}</span>
+          <h2 class="bo-detail-title">{{ $t(activeTile.titleKey) }}</h2>
         </div>
-      </section>
+        <router-link :to="activeTile.to" class="bo-open">
+          <i class="fas fa-arrow-right" aria-hidden="true"></i>
+          {{ $t('backOffice.open') }}
+        </router-link>
+      </div>
+      <p class="bo-detail-desc">{{ $t(activeTile.descKey) }}</p>
     </div>
-  </div>
+
+    <p v-else class="bo-empty">{{ $t('backOffice.noMatch') }}</p>
+  </ReportBrowserLayout>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
 
 const auth = useAuthStore()
+const { t } = useI18n()
 
 // Every back-office surface the review names. `titleKey`/`descKey` resolve to
 // backOffice.tiles.*; `to` is the existing page that owns the setting, so the
@@ -163,8 +140,8 @@ const ROLE_GATES = {
   import: ['hotel_admin'],
 }
 
-// The accordions the editors are filed under, mirroring how the POS Reports
-// browser groups its categories. Order matters: the first group opens on load.
+// The categories the editors are filed under, mirroring how the POS Reports
+// browser groups its reports. Order matters: the first group opens on load.
 const GROUPS = [
   {
     key: 'property',
@@ -199,169 +176,137 @@ const roleAllowed = (tile) => {
   return !gate || gate.includes(auth.user?.user_role)
 }
 
-const groups = computed(() =>
-  GROUPS.map((group) => ({
-    ...group,
-    tiles: group.tileKeys.map((key) => tilesByKey[key]).filter(Boolean).filter(roleAllowed),
-  })).filter((group) => group.tiles.length),
+const searchTerm = ref('')
+
+const matches = (tile, term) =>
+  t(tile.titleKey).toLowerCase().includes(term) ||
+  t(tile.descKey).toLowerCase().includes(term)
+
+// The Reports-browser tree: categories are the groups, each report is an
+// editor. Hollow branches (all gated out, or filtered out by the search) are
+// dropped so the tree never shows an empty group.
+const categories = computed(() => {
+  const term = searchTerm.value.trim().toLowerCase()
+  return GROUPS.map((group) => ({
+    key: group.key,
+    label: group.titleKey,
+    icon: group.icon,
+    reports: group.tileKeys
+      .map((key) => tilesByKey[key])
+      .filter(Boolean)
+      .filter(roleAllowed)
+      .filter((tile) => !term || matches(tile, term))
+      .map((tile) => ({ key: tile.key, label: tile.titleKey, icon: tile.icon })),
+  })).filter((group) => group.reports.length)
+})
+
+// Keep a selection visible: default to the first editor, and re-home it when a
+// search filters the current one out.
+const activeKey = ref('')
+
+watch(
+  categories,
+  (cats) => {
+    const keys = cats.flatMap((cat) => cat.reports.map((r) => r.key))
+    if (!keys.includes(activeKey.value)) activeKey.value = keys[0] || ''
+  },
+  { immediate: true },
 )
 
-// One accordion open at a time, the first by default, matching the POS Reports
-// browser. An empty string closes every group.
-const openKey = ref(GROUPS[0].key)
+const activeTile = computed(() => tilesByKey[activeKey.value] || null)
 
-function toggle(key) {
-  openKey.value = openKey.value === key ? '' : key
+const activeGroupLabel = computed(() => {
+  const group = GROUPS.find((g) => activeTile.value && g.tileKeys.includes(activeTile.value.key))
+  return group ? t(group.titleKey) : ''
+})
+
+function selectTile(key) {
+  activeKey.value = key
+}
+
+function onSearch(term) {
+  searchTerm.value = term
 }
 </script>
 
 <style scoped>
-.bo-accordions {
+.bo-detail {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 8px;
+  gap: 18px;
 }
 
-.bo-acc {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #fff;
-}
-
-.bo-acc.open {
-  border-color: #cfe0f3;
-  box-shadow: 0 6px 18px rgba(0, 94, 184, 0.06);
-}
-
-.bo-acc-head {
-  width: 100%;
+.bo-detail-head {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 18px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  text-align: left;
-}
-
-.bo-acc-head:hover {
-  background: #f4f8fd;
-}
-
-.bo-acc-caret {
-  font-size: 12px;
-  color: #7c8db0;
-}
-
-.bo-acc-icon {
-  flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border-radius: 9px;
-  background: #eef4fb;
-  color: #005eb8;
-  font-size: 15px;
-}
-
-.bo-acc-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.bo-acc-count {
-  margin-left: auto;
-  font-size: 11px;
-  font-weight: 700;
-  color: #005eb8;
-  background: #e8f1fa;
-  border-radius: 999px;
-  padding: 2px 9px;
-}
-
-.bo-acc-body {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.3s ease;
-}
-
-.bo-acc-body.open {
-  grid-template-rows: 1fr;
-}
-
-.bo-acc-body-inner {
-  overflow: hidden;
-  min-height: 0;
-  padding: 0 18px;
-}
-
-.bo-acc-body.open .bo-acc-body-inner {
-  padding-bottom: 18px;
-}
-
-.bo-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.bo-tile {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 18px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  text-decoration: none;
-  color: inherit;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
-}
-
-.bo-tile:hover {
-  border-color: #005eb8;
-  box-shadow: 0 6px 18px rgba(0, 94, 184, 0.12);
-  transform: translateY(-1px);
-}
-
-.bo-tile-icon {
+.bo-detail-icon {
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #eef4fb;
   color: #005eb8;
-  font-size: 18px;
+  font-size: 24px;
 }
 
-.bo-tile-body {
+.bo-detail-titles {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
 }
 
-.bo-tile-title {
-  font-size: 15px;
+.bo-detail-group {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #7c8db0;
+}
+
+.bo-detail-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
   color: #0f172a;
 }
 
-.bo-tile-desc {
-  font-size: 12.5px;
-  line-height: 1.4;
-  color: #64748b;
+.bo-open {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: #005eb8;
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.15s ease;
 }
 
-.bo-tile-go {
-  margin-left: auto;
-  color: #94a3b8;
-  font-size: 12px;
+.bo-open:hover {
+  background: #004b93;
+}
+
+.bo-detail-desc {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #475569;
+}
+
+.bo-empty {
+  margin: 0;
+  color: #64748b;
 }
 </style>

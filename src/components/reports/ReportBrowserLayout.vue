@@ -12,6 +12,9 @@
     title        - page title shown in the header
     subtitle     - optional muted subtitle
     exporting    - when true shows a busy state in the export row
+    reportTools  - show the report-only toolbar buttons (open-window / POS
+                   print / print / export); false keeps just the jump-to
+                   dropdown, which a non-report browser still uses
 
   Emits:
     select    - (reportKey) when a report in the tree is clicked
@@ -42,21 +45,23 @@
             <option v-for="r in cat.reports" :key="r.key" :value="r.key">{{ $t(r.label) }}</option>
           </optgroup>
         </select>
-        <button type="button" class="rb-tool-btn" :title="$t('reportBrowser.openWindow')" @click="$emit('open-window')">
-          <i class="fas fa-window-restore" aria-hidden="true"></i>
-        </button>
-        <button v-if="posPrint" type="button" class="rb-tool-btn" :title="$t('reportBrowser.posPrint')"
-          @click="$emit('pos-print')">
-          <i class="fas fa-receipt" aria-hidden="true"></i>
-        </button>
-        <button type="button" class="rb-tool-btn" :title="$t('reportBrowser.print')" @click="$emit('print')">
-          <i class="fas fa-print" aria-hidden="true"></i>
-        </button>
-        <button type="button" class="rb-tool-btn" :disabled="exporting" :title="$t('reportBrowser.export')"
-          @click="$emit('export')">
-          <i v-if="exporting" class="fas fa-spinner fa-spin" aria-hidden="true"></i>
-          <i v-else class="fas fa-download" aria-hidden="true"></i>
-        </button>
+        <template v-if="reportTools">
+          <button type="button" class="rb-tool-btn" :title="$t('reportBrowser.openWindow')" @click="$emit('open-window')">
+            <i class="fas fa-window-restore" aria-hidden="true"></i>
+          </button>
+          <button v-if="posPrint" type="button" class="rb-tool-btn" :title="$t('reportBrowser.posPrint')"
+            @click="$emit('pos-print')">
+            <i class="fas fa-receipt" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="rb-tool-btn" :title="$t('reportBrowser.print')" @click="$emit('print')">
+            <i class="fas fa-print" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="rb-tool-btn" :disabled="exporting" :title="$t('reportBrowser.export')"
+            @click="$emit('export')">
+            <i v-if="exporting" class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+            <i v-else class="fas fa-download" aria-hidden="true"></i>
+          </button>
+        </template>
       </div>
     </div>
 
@@ -104,6 +109,7 @@ const props = defineProps({
   exporting: { type: Boolean, default: false },
   posPrint: { type: Boolean, default: false },
   showBack: { type: Boolean, default: false },
+  reportTools: { type: Boolean, default: true },
 })
 
 const emit = defineEmits(['select', 'print', 'pos-print', 'open-window', 'export', 'search', 'back'])

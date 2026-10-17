@@ -5831,6 +5831,8 @@
     "rates": "Bei na Viwango",
     "printerConfig": "Mipangilio ya Printa",
     "receiptSettings": "Mipangilio ya Risiti na Kodi",
+    "open": "Fungua",
+    "noMatch": "Hakuna mipangilio inayolingana na utafutaji wako.",
     "groups": {
       "property": "Mali na Chapa",
       "operations": "Uendeshaji",

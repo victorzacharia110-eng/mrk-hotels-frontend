@@ -5,15 +5,18 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
+import { nextTick } from 'vue'
 import i18n from '@/locales/i18n'
 import { moduleByKey } from '@/config/modules'
 import BackOfficePage from '@/pages/backoffice/BackOfficePage.vue'
+import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
 
 /**
- * The Back Office follow-up: the sidebar dropdown used to expand only inside
- * the drawer and each of its entries redirected to one editor. It now opens a
- * page that files every editor under an accordion — the pattern the POS
- * Reports browser uses — and the sidebar carries one link instead of a group.
+ * The Back Office opens in the same Reports-browser shell the POS Reports page
+ * uses: a category tree on the left (Property / Operations / Staff & Access /
+ * Data) and a detail paper on the right. Picking an editor shows what it
+ * controls plus an Open action that routes to the real page — the sidebar
+ * carries one link instead of a dropdown.
  */
 
 const STORE_LAYOUT_SRC = readFileSync(
@@ -45,90 +48,113 @@ async function mountAs(role) {
   return { wrapper }
 }
 
-const sections = (wrapper) => wrapper.findAll('.bo-acc')
-const heads = (wrapper) => wrapper.findAll('.bo-acc-head')
-const openIndices = (wrapper) =>
-  sections(wrapper).map((s, i) => (s.classes().includes('open') ? i : -1)).filter((i) => i !== -1)
+const cats = (wrapper) => wrapper.findAll('.rb-cat')
+const catHeads = (wrapper) => wrapper.findAll('.rb-cat-head')
+const leaves = (wrapper) => wrapper.findAll('.rb-report')
+const activeLeaf = (wrapper) => wrapper.find('.rb-report.active')
 
-describe('Back Office page holds the accordion groups', () => {
+describe('Back Office presents the editors in the Reports-browser shell', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('files the editors under accordions instead of a flat tile grid', async () => {
+  it('files the editors under the report categories instead of a flat grid', async () => {
     const { wrapper } = await mountAs('hotel_admin')
 
     // Property & Brand / Operations / Staff & Access / Data.
-    const labels = heads(wrapper).map((h) => h.text())
-    expect(sections(wrapper).length).toBe(4)
+    const labels = catHeads(wrapper).map((h) => h.text())
+    expect(cats(wrapper).length).toBe(4)
     expect(labels[0]).toContain('Property & Brand')
     expect(labels[2]).toContain('Staff & Access')
     expect(labels[3]).toContain('Data')
   })
 
-  it('opens the first group on load, like the POS Reports browser', async () => {
+  it('opens the first category and selects the first editor on load', async () => {
     const { wrapper } = await mountAs('hotel_admin')
 
-    expect(openIndices(wrapper)).toEqual([0])
+    expect(cats(wrapper)[0].classes()).toContain('open')
+    expect(activeLeaf(wrapper).text()).toContain('Hotel Business Details')
+    expect(wrapper.find('.bo-detail-desc').text()).toContain('Name, logo, motto')
   })
 
-  it('keeps exactly one accordion open, and a second click closes it', async () => {
+  it('shows the picked editor with a group label and an Open action', async () => {
     const { wrapper } = await mountAs('hotel_admin')
 
-    await heads(wrapper)[2].trigger('click')
-    expect(openIndices(wrapper)).toEqual([2])
+    // Property → Rates & Prices is the second Editor leaf.
+    await leaves(wrapper)[1].trigger('click')
+    await nextTick()
 
-    await heads(wrapper)[2].trigger('click')
-    expect(openIndices(wrapper)).toEqual([])
+    expect(wrapper.find('.bo-detail-title').text()).toBe('Rates & Prices')
+    expect(wrapper.find('.bo-detail-group').text()).toBe('Property & Brand')
+    expect(wrapper.findComponent(RouterLinkStub).props('to')).toEqual({ name: 'hotel-rooms' })
   })
 
-  it('reports the open state to assistive tech', async () => {
+  it('keeps only the jump-to tool, dropping the report-only buttons', async () => {
     const { wrapper } = await mountAs('hotel_admin')
 
-    expect(heads(wrapper)[0].attributes('aria-expanded')).toBe('true')
-    expect(heads(wrapper)[1].attributes('aria-expanded')).toBe('false')
+    expect(wrapper.find('.rb-quick').exists()).toBe(true)
+    expect(wrapper.find('button[title="reportBrowser.print"]').exists()).toBe(false)
+    expect(wrapper.find('button[title="reportBrowser.export"]').exists()).toBe(false)
+    expect(wrapper.find('button[title="reportBrowser.openWindow"]').exists()).toBe(false)
   })
 
-  it('points every tile at a page that exists in the real route table', async () => {
+  it('filters the tree from the search box', async () => {
+    const { wrapper } = await mountAs('hotel_admin')
+    const layout = wrapper.findComponent(ReportBrowserLayout)
+
+    layout.vm.$emit('search', 'printer')
+    await nextTick()
+
+    expect(cats(wrapper).length).toBe(1)
+    expect(leaves(wrapper).length).toBe(1)
+    expect(leaves(wrapper)[0].text()).toContain('Printer')
+  })
+
+  it('points every Open action at a page that exists in the real route table', async () => {
     const { wrapper } = await mountAs('hotel_admin')
     const appRouter = (await import('@/router')).default
 
-    const links = wrapper.findAllComponents(RouterLinkStub)
-    expect(links.length).toBeGreaterThan(0)
+    const count = leaves(wrapper).length
+    expect(count).toBeGreaterThan(0)
 
     // A tile whose target failed to resolve, or landed outside /app, would be a
     // dead link; the offenders are named rather than left to a bare `true`.
-    const dead = links
-      .map((link) => link.props('to'))
-      .filter((to) => {
-        const resolved = appRouter.resolve(to)
-        return resolved.matched.length === 0 || !resolved.path.startsWith('/app/')
-      })
+    const dead = []
+    for (let i = 0; i < count; i += 1) {
+      await leaves(wrapper)[i].trigger('click')
+      await nextTick()
 
-    expect(dead.map((to) => JSON.stringify(to))).toEqual([])
+      const to = wrapper.findComponent(RouterLinkStub).props('to')
+      const resolved = appRouter.resolve(to)
+      if (resolved.matched.length === 0 || !resolved.path.startsWith('/app/')) {
+        dead.push(JSON.stringify(to))
+      }
+    }
+
+    expect(dead).toEqual([])
   })
 })
 
-describe('Back Office accordions keep the role gates', () => {
+describe('Back Office browser keeps the role gates', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('withholds Staff & Access and Data from the accountant', async () => {
     // staff / trusted-devices admit hotel_admin + manager, import admits
     // hotel_admin, so the accountant is left with the first two groups.
     const { wrapper } = await mountAs('accountant')
-    const labels = heads(wrapper).map((h) => h.text())
+    const labels = catHeads(wrapper).map((h) => h.text())
 
-    expect(sections(wrapper).length).toBe(2)
+    expect(cats(wrapper).length).toBe(2)
     expect(labels.some((l) => l.includes('Staff & Access'))).toBe(false)
     expect(labels.some((l) => l.includes('Data'))).toBe(false)
   })
 
   it('gives a manager every group but Data, which is hotel_admin-only', async () => {
     const { wrapper: admin } = await mountAs('hotel_admin')
-    expect(sections(admin).length).toBe(4)
-    expect(heads(admin).map((h) => h.text())[3]).toContain('Data')
+    expect(cats(admin).length).toBe(4)
+    expect(catHeads(admin).map((h) => h.text())[3]).toContain('Data')
 
     const { wrapper: manager } = await mountAs('manager')
-    const labels = heads(manager).map((h) => h.text())
-    expect(sections(manager).length).toBe(3)
+    const labels = catHeads(manager).map((h) => h.text())
+    expect(cats(manager).length).toBe(3)
     expect(labels.some((l) => l.includes('Data'))).toBe(false)
   })
 })

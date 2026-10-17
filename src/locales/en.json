@@ -5831,6 +5831,8 @@
     "rates": "Rates & Prices",
     "printerConfig": "Printer Configuration",
     "receiptSettings": "Receipt & Tax Settings",
+    "open": "Open",
+    "noMatch": "No settings match your search.",
     "groups": {
       "property": "Property & Brand",
       "operations": "Operations",
