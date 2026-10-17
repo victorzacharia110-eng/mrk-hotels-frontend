@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { nextTick } from 'vue'
 import i18n from '@/locales/i18n'
+import en from '@/locales/en.json'
+import sw from '@/locales/sw.json'
 import { moduleByKey } from '@/config/modules'
 import BackOfficePage from '@/pages/backoffice/BackOfficePage.vue'
 import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
@@ -156,6 +158,24 @@ describe('Back Office browser keeps the role gates', () => {
     const labels = catHeads(manager).map((h) => h.text())
     expect(cats(manager).length).toBe(3)
     expect(labels.some((l) => l.includes('Data'))).toBe(false)
+  })
+})
+
+describe('the header offers a way back to the Back Office', () => {
+  it('shows a chip that routes to the Back Office browser', () => {
+    const chipLine = STORE_LAYOUT_SRC.split('\n').find((line) => line.includes('class="bo-back"'))
+    expect(chipLine, 'Back Office return chip').toBeDefined()
+    expect(chipLine).toContain("name: 'hotel-back-office'")
+  })
+
+  it('only shows it after leaving the Back Office, and clears on return', () => {
+    expect(STORE_LAYOUT_SRC).toContain("else if (from === '/app/back-office') backToBackOffice.value = true")
+    expect(STORE_LAYOUT_SRC).toContain("if (to === '/app/back-office') backToBackOffice.value = false")
+  })
+
+  it('has the return label in both languages', () => {
+    expect(en.backOffice.backToBackOffice).toBeTruthy()
+    expect(sw.backOffice.backToBackOffice).toBeTruthy()
   })
 })
 

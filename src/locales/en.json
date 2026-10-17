@@ -5833,6 +5833,7 @@
     "receiptSettings": "Receipt & Tax Settings",
     "open": "Open",
     "noMatch": "No settings match your search.",
+    "backToBackOffice": "Back to Back Office",
     "groups": {
       "property": "Property & Brand",
       "operations": "Operations",

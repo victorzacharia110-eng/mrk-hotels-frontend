@@ -48,6 +48,17 @@
             <HolidayDecor v-if="holiday" :holiday="holiday" />
           </router-link>
 
+          <!--
+            Return cue for the Back Office browser. Its editors are separate
+            routes, so once you click Open there was no obvious way back. This
+            shows only right after leaving the Back Office and clears once you
+            are on it again.
+          -->
+          <router-link v-if="isAppMode && backToBackOffice" :to="{ name: 'hotel-back-office' }" class="bo-back">
+            <i class="fas fa-arrow-left" aria-hidden="true"></i>
+            <span class="bo-back-label">{{ $t('backOffice.backToBackOffice') }}</span>
+          </router-link>
+
           <div v-if="isDirectory" class="search-bar">
             <div class="search-input-wrap">
               <label for="directory-search" class="visually-hidden">{{ $t('common.search') }}</label>
@@ -605,6 +616,17 @@ watch(
   () => route.fullPath,
   () => {
     profileOpen.value = false
+  },
+)
+// Return cue for the Back Office browser: its editors are separate routes, so
+// after clicking Open there was no obvious way back. The chip shows once the
+// user leaves the Back Office and clears when they reach it again.
+const backToBackOffice = ref(false)
+watch(
+  () => route.path,
+  (to, from) => {
+    if (to === '/app/back-office') backToBackOffice.value = false
+    else if (from === '/app/back-office') backToBackOffice.value = true
   },
 )
 const notifSettingsStore = useNotificationSettingsStore()
@@ -1519,6 +1541,34 @@ function formatNotifTime(iso) {
   align-items: center;
   gap: 20px;
   margin-left: auto;
+}
+
+/* Back Office return chip: a slim pill beside the logo that only appears after
+   leaving the Back Office browser. */
+.bo-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--brand, #005eb8);
+  color: var(--brand, #005eb8);
+  background: rgba(0, 94, 184, 0.06);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.bo-back:hover {
+  background: var(--brand, #005eb8);
+  color: #fff;
+}
+
+.bo-back i {
+  font-size: 12px;
 }
 
 /* Outlet picker. Sits in the header row with the account chip so the working
@@ -2757,6 +2807,14 @@ function formatNotifTime(iso) {
     gap: 0;
   }
 
+  .bo-back {
+    padding: 8px 10px;
+  }
+
+  .bo-back-label {
+    display: none;
+  }
+
   .logo-text {
     font-size: 17px;
   }
@@ -2820,6 +2878,14 @@ function formatNotifTime(iso) {
 
   .header-actions .action-link {
     gap: 0;
+  }
+
+  .bo-back {
+    padding: 8px 10px;
+  }
+
+  .bo-back-label {
+    display: none;
   }
 
   .header-actions {
