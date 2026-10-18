@@ -124,9 +124,12 @@ test('fixed: a bartender bar ticket appears in the cashier summary and settles t
     timeout: 20_000,
   })
 
-  page.locator('.sm-table tbody tr', { hasText: orderNumber }).first()
-    .getByRole('button', { name: /Settle/i })
-    .click()
+  // The row action column is gone: tick the ticket's checkbox, then settle
+  // from the action bar above the table.
+  await page.locator('.sm-table tbody tr', { hasText: orderNumber }).first()
+    .locator('td.col-check input[type="checkbox"]')
+    .check()
+  await page.locator('.table-actions').getByRole('button', { name: /Settle/i }).click()
   await expect(page.locator('.pay-modal')).toBeVisible()
 
   const paid = page.waitForResponse(

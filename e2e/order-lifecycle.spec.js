@@ -93,12 +93,14 @@ test.describe('Cashier order lifecycle', () => {
     const summaryRow = page.locator('tr').filter({ hasText: order.order_number }).first()
     await expect(summaryRow).toBeVisible({ timeout: 20_000 })
 
-    // 3) Void from the row, then confirm in the drawer.
-    await summaryRow.locator('button:has(i.fa-ban)').first().click()
-    const reason = page.locator('.drawer-void input[type="text"]')
+    // 3) Tick the order's checkbox, void it from the action bar above the
+    //    table (the row action column is gone), then confirm in the modal.
+    await summaryRow.locator('td.col-check input[type="checkbox"]').check()
+    await page.locator('.table-actions button:has(i.fa-ban)').first().click()
+    const reason = page.locator('.pay-modal input[type="text"]')
     await expect(reason).toBeVisible()
     await reason.fill('E2E verification void')
-    await page.locator('.drawer .drawer-void-actions button.danger').click()
+    await page.locator('.pay-modal .pay-modal-foot button.btn-primary').click()
 
     // Authoritative outcome: the order is cancelled on the backend.
     await expect.poll(async () => (await findOrder(page, guest))?.status, {

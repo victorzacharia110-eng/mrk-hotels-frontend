@@ -98,15 +98,39 @@ describe('cashier summary: void-all button', () => {
 })
 
 describe('cashier summary: void selected (multi-select)', () => {
-  it('adds a row checkbox gated to running tickets', () => {
+  it('adds a row checkbox on every ticket, with a header select-all', () => {
+    // The checkboxes now drive every action (view/settle/freeze/reprint/void),
+    // not just voiding running tickets, so no row is disabled out of them.
     expect(cashier).toMatch(/v-model="selected"/)
-    expect(cashier).toMatch(/:disabled="!isRunning\(order\)"/)
+    expect(cashier).not.toMatch(/:disabled="!isRunning\(order\)"/)
+    expect(cashier).toMatch(/@change="toggleSelectAll"/)
+    expect(cashier).toMatch(/:indeterminate\.prop="somePageSelected"/)
   })
 
-  it('offers a void-selected button only when something is ticked', () => {
-    expect(cashier).toMatch(/v-if="selectedOrders\.length"/)
+  it('moves every action into the bar above the table — the action column is gone', () => {
+    expect(cashier).toMatch(/class="table-actions"/)
+    expect(cashier).toMatch(/@click="actOnSingle\(settle\)"/)
+    expect(cashier).toMatch(/@click="actOnSingle\(freeze\)"/)
+    expect(cashier).toMatch(/@click="actOnSingle\(unfreeze\)"/)
+    expect(cashier).toMatch(/@click="actOnSingle\(reprint\)"/)
+    expect(cashier).toMatch(/@click="actOnSingle\(reprintKot\)"/)
+    expect(cashier).toMatch(/@click="actOnSingle\(recall\)"/)
+    expect(cashier).toMatch(/@click="actOnSingle\(openDrawer\)"/)
+    // Single-ticket actions arm only when exactly one order is ticked.
+    expect(cashier).toMatch(/:disabled="!singleSelected"/)
+    expect(cashier).not.toMatch(/cashier\.summary\.actions/)
+  })
+
+  it('enables the void-selected button only when something voidable is ticked', () => {
+    expect(cashier).toMatch(/:disabled="!selectedOrders\.length"/)
     expect(cashier).toMatch(/@click="openSelectedVoid"/)
     expect(cashier).toMatch(/cashier\.summary\.voidSelected/)
+    // Void-selected offers exactly the tickets this role may void (running,
+    // plus settled for the counter roles), same scope as void-all.
+    const at = cashier.indexOf('const selectedOrders = computed')
+    expect(at, 'selectedOrders not found').toBeGreaterThan(-1)
+    const body = cashier.slice(at, cashier.indexOf('\n\n', at))
+    expect(body).toMatch(/canVoid\(order\)/)
   })
 
   it('shows the ticked numbers and voids each through voidOrder', () => {

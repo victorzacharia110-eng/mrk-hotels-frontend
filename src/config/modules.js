@@ -65,8 +65,9 @@ export const MODULES = [
   { key: 'menu-activity', to: '/app/menu/activity', icon: 'fas fa-clock-rotate-left', labelKey: 'nav.menuActivity', roles: ['hotel_admin', 'manager', 'cashier', 'bartender'], feature: 'menu' },
   // POS outlets (restaurant/bar) cashiers work from.
   { key: 'outlets', to: '/app/outlets', icon: 'fas fa-store', labelKey: 'nav.outlets', roles: ['hotel_admin', 'manager'] },
-  // Till printer connection for direct thermal printing.
-  { key: 'printer', to: '/app/printer', icon: 'fas fa-print', labelKey: 'nav.printer', roles: ['hotel_admin', 'manager'] },
+  // Till printer connection for direct thermal printing. The accountant is in
+  // too: management panels mirror everything the cashier does.
+  { key: 'printer', to: '/app/printer', icon: 'fas fa-print', labelKey: 'nav.printer', roles: ['hotel_admin', 'manager', 'accountant'] },
   // Laundry orders; additionally gated by the manage_laundry permission.
   { key: 'laundry', to: '/app/laundry', icon: 'fas fa-jug-detergent', labelKey: 'laundry.title', roles: ['hotel_admin', 'manager', 'housekeeping'], permission: 'manage_laundry', feature: 'laundry' },
   // Guest fun-game activities.
@@ -93,8 +94,9 @@ export const MODULES = [
   { key: 'staff', to: '/app/staff', icon: 'fas fa-user-tie', labelKey: 'nav.staff', roles: ['hotel_admin', 'manager'], feature: 'staff' },
   // Business reporting (the classic PMS report browser).
   { key: 'reports', to: '/app/reports', icon: 'fas fa-chart-pie', labelKey: 'nav.reportBrowser', roles: ['hotel_admin', 'manager', 'receptionist', 'bartender'], feature: 'reports' },
-  // Department-scoped F&B report for floor staff, cashiers and bartenders.
-  { key: 'staff-reports', to: '/app/staff-reports', icon: 'fas fa-chart-simple', labelKey: 'nav.staffReports', roles: ['hotel_admin', 'manager', 'waiter', 'bartender', 'staff'] },
+  // Department-scoped F&B report for floor staff, cashiers and bartenders. The
+  // accountant is in too: management panels mirror everything the cashier does.
+  { key: 'staff-reports', to: '/app/staff-reports', icon: 'fas fa-chart-simple', labelKey: 'nav.staffReports', roles: ['hotel_admin', 'manager', 'accountant', 'waiter', 'bartender', 'staff'] },
   // Food & beverage POS report browser (iPOS-style catalogue: menu item sales,
   // back office, inventory, audit...). Seen by every staff panel except the
   // waiter (orders through Take Order) and the kitchen (cooks from the Kitchen
@@ -129,9 +131,10 @@ export const MODULES = [
   { key: 'imports', to: '/app/import', icon: 'fas fa-file-import', labelKey: 'nav.importData', roles: ['hotel_admin'] },
   // POS manager screens shared with the cashier panel (Item Lookup, Shift
   // Manager and Blocked Devices) surfaced in the Restaurant & Bar Manager sub.
-  { key: 'item-lookup', to: '/app/pos/item-lookup', icon: 'fas fa-magnifying-glass', labelKey: 'nav.itemLookup', roles: ['hotel_admin', 'manager'] },
-  { key: 'shift', to: '/app/pos/shift', icon: 'fas fa-user-clock', labelKey: 'nav.shiftManager', roles: ['hotel_admin', 'manager'] },
-  { key: 'devices', to: '/app/pos/devices', icon: 'fas fa-tablet-screen-button', labelKey: 'nav.blockedDevices', roles: ['hotel_admin', 'manager'] },
+  // The accountant is included: management panels mirror the cashier's tools.
+  { key: 'item-lookup', to: '/app/pos/item-lookup', icon: 'fas fa-magnifying-glass', labelKey: 'nav.itemLookup', roles: ['hotel_admin', 'manager', 'accountant'] },
+  { key: 'shift', to: '/app/pos/shift', icon: 'fas fa-user-clock', labelKey: 'nav.shiftManager', roles: ['hotel_admin', 'manager', 'accountant'] },
+  { key: 'devices', to: '/app/pos/devices', icon: 'fas fa-tablet-screen-button', labelKey: 'nav.blockedDevices', roles: ['hotel_admin', 'manager', 'accountant'] },
   // Store management screens shared with the store-manager panel, surfaced in
   // the Inventory & Procurement accordion (Dashboard, Expenses, Cash Register,
   // Reports, Physical Stock, Stock Adjustment, Back Office).

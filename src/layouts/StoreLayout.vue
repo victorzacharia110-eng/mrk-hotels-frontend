@@ -944,10 +944,12 @@ const visibleModules = computed(() => {
   // The management panel (hotel_admin / manager / accountant) follows the
   // client's "Panel Menu Design" drawing: DASHBOARD sits alone at the top as
   // a single menu item (not an accordion), then the Front Desk, Restaurant &
-  // Bar, Inventory & Procurement and Communication accordions. Restaurant &
-  // Bar nests the Ordering, Manager and Inventory sub accordions plus the
-  // Printer link, and deliberately carries no Communication sub — communication
-  // is its own top-level accordion.
+  // Bar, Housekeeping & Services, Inventory & Procurement and Communication
+  // accordions. Restaurant & Bar nests the Ordering, Manager and Inventory
+  // sub accordions plus the Printer link, and deliberately carries no
+  // Communication sub — communication is its own top-level accordion. The
+  // Ordering/Manager subs mirror the cashier panel, so management can do
+  // everything the cashier does.
   if (isManagement.value) {
     const pick = (keys) => keys.map((k) => byKey[k]).filter(Boolean)
     const link = (k, label) => {
@@ -1005,51 +1007,64 @@ const visibleModules = computed(() => {
     if (frontDesk.length) out.push(accordionGroup('front-desk', 'fas fa-bed', 'accordion.frontDesk', frontDesk))
 
     // 3. RESTAURANT & BAR — Ordering / Manager / Inventory / Printer sub
-    // accordions, no Communication sub. Laundry / housekeeping / fun-games /
-    // issue reports keep living under this group as before.
+    // accordions, no Communication sub. ORDERING now mirrors the cashier
+    // panel page-for-page: the old F&B Orders queue (/app/orders) is removed
+    // — Order Summary is its replacement — and admin / manager / accountant
+    // work the same Dine In, Take Away, Room Service, Delivery and No Charge
+    // pages the cashier does (the /cashier routes admit all three roles).
+    // Housekeeping, laundry and fun-games moved out into their own
+    // HOUSEKEEPING & SERVICES accordion below.
     const restaurantBar = []
-    const ordering = pick(['take-order', 'orders'])
-    if (ordering.length) restaurantBar.push(subGroup('fnb-ordering', 'fas fa-cash-register', t('accordion.ordering'), ordering))
+    if (byKey.orders || byKey['take-order']) {
+      restaurantBar.push(subGroup('fnb-ordering', 'fas fa-cash-register', t('accordion.ordering'), [
+        { key: 'dine-in', to: { name: 'cashier-dine-in' }, icon: 'fas fa-chair', label: t('cashier.nav.dineIn') },
+        { key: 'take-away', to: { name: 'cashier-take-away' }, icon: 'fas fa-bag-shopping', label: t('cashier.nav.takeAway') },
+        { key: 'room-service', to: { name: 'cashier-room-service' }, icon: 'fas fa-bed', label: t('cashier.nav.roomService') },
+        { key: 'delivery', to: { name: 'cashier-delivery' }, icon: 'fas fa-motorcycle', label: t('cashier.nav.delivery') },
+        { key: 'no-charge', to: { name: 'cashier-no-charge' }, icon: 'fas fa-gift', label: t('cashier.nav.noCharge') },
+        { key: 'waiter-assignment', to: { name: 'cashier-waiter-assignment' }, icon: 'fas fa-user-group', label: t('cashier.nav.waiterAssignment') },
+        // Management panel review: management gets the same Restaurant & Bar
+        // UX as the cashier/bartender, "plus more authority such as void
+        // order". Voiding lives on the POS order summary (`canVoidSettled`
+        // already admits hotel_admin/manager).
+        { key: 'order-summary', to: { name: 'cashier-order-summary' }, icon: 'fas fa-receipt', label: t('cashier.nav.orderSummary') },
+      ]))
+    }
     // `reports` (the Report Browser) is deliberately absent: it belongs to the
     // FRONT DESK administration submenu above, per the manager review. POS
     // Reports stays here as the department-scoped F&B browser.
     const manager = pick(['menu', 'outlets', 'staff-reports', 'pos-reports', 'item-lookup', 'shift', 'devices'])
-    // Day Close / Expense Voucher / Income Voucher are the accounting
-    // workbench (day close report) and the store expense (voucher) ledger.
-    if (byKey.accounting) manager.push({ key: 'day-close', to: byKey.accounting.to, icon: 'fas fa-person-running', label: t('nav.dayClose') })
+    // Day Close is the cashier panel's F&B business-day close (it used to
+    // point at the accounting report); Expense / Income Voucher stay the
+    // store expense ledger and the accounting workbench.
+    manager.push({ key: 'day-close', to: { name: 'cashier-day-close' }, icon: 'fas fa-calendar-check', label: t('nav.dayClose') })
     if (byKey['store-expenses']) manager.push({ key: 'expense-voucher', to: byKey['store-expenses'].to, icon: 'fas fa-file-invoice-dollar', label: t('nav.expenseVoucher') })
     if (byKey.accounting) manager.push({ key: 'income-voucher', to: byKey.accounting.to, icon: 'fas fa-sack-dollar', label: t('nav.incomeVoucher') })
-    // Review item 7: an account has to be registered before it can be picked on
-    // a no-charge order, but the registry page only had a home in the cashier
-    // sidebar — so the back office (which is where the review says creditor
-    // accounts belong) could not reach it. The page is role-guarded, so the
-    // link is offered to the roles it actually admits.
-    if (['hotel_admin', 'manager'].includes(authStore.user?.user_role)) {
-      manager.push({
-        key: 'credit-accounts',
-        to: { name: 'cashier-account-lookup' },
-        icon: 'fas fa-users',
-        label: t('cashier.nav.accountLookup'),
-      })
-      // Management panel review: management gets the same Restaurant & Bar UX as
-      // the cashier/bartender, "plus more authority such as void order". Voiding
-      // lives on the POS order summary (`canVoidSettled` already admits
-      // hotel_admin/manager), so surface that page here for the authority.
-      manager.push({
-        key: 'order-summary',
-        to: { name: 'cashier-order-summary' },
-        icon: 'fas fa-receipt',
-        label: t('cashier.nav.orderSummary'),
-      })
-    }
+    // The rest of the cashier panel's Manager group, offered to every
+    // management role — the accountant included, since management does
+    // everything the cashier does. Review item 7: an account has to be
+    // registered before it can be picked on a no-charge order, so the
+    // creditors registry stays reachable from here.
+    manager.push(
+      { key: 'ingredients', to: { name: 'cashier-ingredients' }, icon: 'fas fa-flask', label: t('cashier.nav.ingredients') },
+      { key: 'transaction-lock', to: { name: 'cashier-transaction-lock' }, icon: 'fas fa-lock', label: t('cashier.nav.transactionLock') },
+      { key: 'credit-accounts', to: { name: 'cashier-account-lookup' }, icon: 'fas fa-users', label: t('cashier.nav.accountLookup') },
+    )
     if (manager.length) restaurantBar.push(subGroup('fnb-manager', 'fas fa-user-gear', t('accordion.manager'), manager))
     const rbInventory = pick(['requisitions', 'stock-counts', 'stock-adjust'])
     if (rbInventory.length) restaurantBar.push(subGroup('fnb-inventory', 'fas fa-boxes-stacked', t('accordion.inventory'), rbInventory))
-    if (byKey.printer) restaurantBar.push(byKey.printer)
-    for (const extra of ['housekeeping', 'laundry', 'fun-games', 'issue-reports']) {
-      if (byKey[extra]) restaurantBar.push(byKey[extra])
+    if (byKey.printer) {
+      restaurantBar.push(byKey.printer)
+      restaurantBar.push({ key: 'print-settings', to: { name: 'cashier-print-settings' }, icon: 'fas fa-cloud-arrow-up', label: t('cashier.nav.printSettings') })
     }
+    if (byKey['issue-reports']) restaurantBar.push(byKey['issue-reports'])
     if (restaurantBar.length) out.push(accordionGroup('restaurant-bar', 'fas fa-utensils', 'accordion.foodBeverage', restaurantBar))
+
+    // 3b. HOUSEKEEPING & SERVICES — housekeeping, laundry and fun & games get
+    // their own accordion on the management panels instead of hiding at the
+    // bottom of Restaurant & Bar.
+    const guestServices = pick(['housekeeping', 'laundry', 'fun-games'])
+    if (guestServices.length) out.push(accordionGroup('guest-services', 'fas fa-broom', 'accordion.guestServices', guestServices))
 
     // 4. INVENTORY & PROCUREMENT — the store/procurement workbench. Per the
     // management panel review, DEPARTMENTS & CATEGORIES move to BACK OFFICE and

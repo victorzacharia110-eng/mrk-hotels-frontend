@@ -1,8 +1,9 @@
 <!--
   CashierOrderSummaryPage — the working day's ticket list.
-  Filter tabs for Running / Settled / Voided with search; each row offers
-  freeze/unfreeze (running only), reprint receipt/KOT, recall of a frozen
-  ticket back to its table, and settlement for running tickets.
+  Filter tabs for Running / Settled / Voided with search. There is no per-row
+  action column: every action (view, settle, freeze/unfreeze, recall, reprint
+  receipt/KOT, void) lives in the action bar above the table and runs on the
+  orders ticked through the row checkboxes (or the header's select-all box).
 -->
 
 <template>
@@ -22,26 +23,6 @@
         <i class="fas fa-search" aria-hidden="true"></i>
         <input v-model="search" type="search" :placeholder="$t('common.search')" />
       </div>
-      <button
-        v-if="bulkVoidable.length"
-        type="button"
-        class="sm-btn sm danger-ghost"
-        :title="$t('cashier.summary.voidAll')"
-        :aria-label="$t('cashier.summary.voidAll')"
-        @click="openBulkVoid"
-      >
-        <i class="fas fa-xmark" aria-hidden="true"></i> {{ $t('cashier.summary.voidAll') }}
-      </button>
-      <button
-        v-if="selectedOrders.length"
-        type="button"
-        class="sm-btn sm danger-ghost"
-        :title="$t('cashier.summary.voidSelected')"
-        :aria-label="$t('cashier.summary.voidSelected')"
-        @click="openSelectedVoid"
-      >
-        <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.summary.voidSelected') }} ({{ selectedOrders.length }})
-      </button>
     </div>
 
     <div v-if="error" class="alert alert-error">{{ error }}</div>
@@ -55,12 +36,71 @@
     </div>
 
     <section class="panel">
+      <!--
+        Action bar: every order action lives here at the top of the table.
+        Tick one order's checkbox (or the header's select-all box) to enable
+        the buttons — single-ticket actions need exactly one ticked order,
+        void-selected works on every ticked order this role may void.
+      -->
+      <div class="table-actions">
+        <button type="button" class="sm-btn sm" :disabled="!singleSelected"
+          :title="$t('cashier.summary.viewOrder')" @click="actOnSingle(openDrawer)">
+          <i class="fas fa-eye" aria-hidden="true"></i> {{ $t('cashier.summary.view') }}
+        </button>
+        <button type="button" class="sm-btn sm ghost" :disabled="!canSettleSelected"
+          :title="$t('cashier.summary.settle')" @click="actOnSingle(settle)">
+          <i class="fas fa-money-bill" aria-hidden="true"></i> {{ $t('cashier.summary.settle') }}
+        </button>
+        <button type="button" class="sm-btn sm" :disabled="!canFreezeSelected"
+          :title="$t('storeManager.common.freeze')" @click="actOnSingle(freeze)">
+          <i class="fas fa-snowflake" aria-hidden="true"></i> {{ $t('storeManager.common.freeze') }}
+        </button>
+        <button type="button" class="sm-btn sm success" :disabled="!canUnfreezeSelected"
+          :title="$t('storeManager.common.unfreeze')" @click="actOnSingle(unfreeze)">
+          <i class="fas fa-sun" aria-hidden="true"></i> {{ $t('storeManager.common.unfreeze') }}
+        </button>
+        <button type="button" class="sm-btn sm ghost" :disabled="!canRecallSelected"
+          :title="$t('cashier.summary.recall')" @click="actOnSingle(recall)">
+          <i class="fas fa-clock-rotate-left" aria-hidden="true"></i> {{ $t('cashier.summary.recall') }}
+        </button>
+        <button type="button" class="sm-btn sm ghost" :disabled="!singleSelected"
+          :title="$t('cashier.summary.reprintReceipt')" @click="actOnSingle(reprint)">
+          <i class="fas fa-print" aria-hidden="true"></i> {{ $t('cashier.summary.reprintReceipt') }}
+        </button>
+        <button type="button" class="sm-btn sm ghost" :disabled="!singleSelected"
+          :title="$t('cashier.summary.reprintKot')" @click="actOnSingle(reprintKot)">
+          <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('cashier.summary.reprintKot') }}
+        </button>
+        <span class="spacer"></span>
+        <button type="button" class="sm-btn sm danger-ghost" :disabled="!selectedOrders.length"
+          :title="$t('cashier.summary.voidSelected')" @click="openSelectedVoid">
+          <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.summary.voidSelected') }}<template v-if="selectedOrders.length"> ({{ selectedOrders.length }})</template>
+        </button>
+        <button v-if="bulkVoidable.length" type="button" class="sm-btn sm danger-ghost"
+          :title="$t('cashier.summary.voidAll')" :aria-label="$t('cashier.summary.voidAll')"
+          @click="openBulkVoid">
+          <i class="fas fa-xmark" aria-hidden="true"></i> {{ $t('cashier.summary.voidAll') }}
+        </button>
+      </div>
+      <p v-if="!selected.length && !loading" class="table-actions-hint">
+        <i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.summary.selectToAct') }}
+      </p>
       <div class="table-scroll">
       <SkeletonLoader v-if="loading" variant="table" :count="8" :cols="7" />
       <table class="sm-table" v-else>
         <thead>
           <tr>
-            <th class="col-check"></th>
+            <th class="col-check">
+              <input
+                type="checkbox"
+                :checked="allPageSelected"
+                :indeterminate.prop="somePageSelected"
+                :disabled="!pagedOrders.length"
+                :aria-label="$t('cashier.summary.selectAll')"
+                :title="$t('cashier.summary.selectAll')"
+                @change="toggleSelectAll"
+              />
+            </th>
             <th>{{ $t('cashier.summary.order') }}</th>
             <th>{{ $t('cashier.summary.waiter') }}</th>
             <th>{{ $t('cashier.summary.dateTime') }}</th>
@@ -68,7 +108,6 @@
             <th>{{ $t('cashier.summary.type') }}</th>
             <th>{{ $t('common.status') }}</th>
             <th>{{ $t('cashier.summary.amount') }}</th>
-            <th>{{ $t('cashier.summary.actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -79,8 +118,7 @@
                 type="checkbox"
                 :value="order.order_id"
                 v-model="selected"
-                :disabled="!isRunning(order)"
-                :aria-label="$t('cashier.summary.voidSelected')"
+                :aria-label="$t('cashier.summary.selectOrder')"
               />
             </td>
             <td>
@@ -98,43 +136,9 @@
             <td>{{ typeLabel(order.order_type) }}</td>
             <td><span class="chip" :class="chipFor(order)">{{ statusLabel(order) }}</span></td>
             <td>{{ money(order.total_amount) }}</td>
-            <td>
-              <div class="row-actions">
-                <button class="sm-btn sm" @click="openDrawer(order)"
-                  :title="$t('cashier.summary.viewOrder')">
-                  <i class="fas fa-eye" aria-hidden="true"></i> {{ $t('cashier.summary.view') }}
-                </button>
-                <button v-if="canVoid(order)" class="sm-btn sm danger-ghost" @click="openVoid(order)"
-                  :title="$t('cashier.summary.voidOrder')">
-                  <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.summary.voidOrder') }}
-                </button>
-                <template v-if="isRunning(order)">
-                  <button v-if="!order.is_frozen" class="sm-btn sm" @click="freeze(order)"
-                    :title="$t('storeManager.common.freeze')">
-                    <i class="fas fa-snowflake" aria-hidden="true"></i> {{ $t('storeManager.common.freeze') }}
-                  </button>
-                  <button v-else class="sm-btn sm success" @click="unfreeze(order)"
-                    :title="$t('storeManager.common.unfreeze')">
-                    <i class="fas fa-sun" aria-hidden="true"></i> {{ $t('storeManager.common.unfreeze') }}
-                  </button>
-                  <button class="sm-btn sm ghost" @click="settle(order)">
-                    <i class="fas fa-money-bill" aria-hidden="true"></i> {{ $t('cashier.summary.settle') }}
-                  </button>
-                </template>
-                <button class="sm-btn sm ghost" @click="reprint(order)">
-                  <i class="fas fa-print" aria-hidden="true"></i> {{ $t('cashier.summary.reprintReceipt') }}
-                </button>
-                <button class="sm-btn sm ghost" @click="reprintKot(order)">
-                  <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('cashier.summary.reprintKot') }}
-                </button>
-                <button v-if="order.is_frozen" class="sm-btn sm ghost" @click="recall(order)">
-                  <i class="fas fa-clock-rotate-left" aria-hidden="true"></i> {{ $t('cashier.summary.recall') }}
-                </button>
-              </div>
-            </td>
           </tr>
           <tr v-if="!filteredOrders.length">
-            <td colspan="9" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.summary.none') }}</td>
+            <td colspan="8" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.summary.none') }}</td>
           </tr>
         </tbody>
       </table>
@@ -704,9 +708,10 @@ async function load() {
     orders.value = params.date
       ? rows
       : rows.filter((o) => localDateOf(o.created_at || o.order_date) === date.value)
-    // Drop any ticked ids that are no longer on the board / no longer voidable.
+    // Drop any ticked ids that are no longer on the board (the checkboxes now
+    // drive every action, not just void, so any listed status stays tickable).
     selected.value = selected.value.filter((id) =>
-      orders.value.some((o) => o.order_id === id && isRunning(o)),
+      orders.value.some((o) => o.order_id === id),
     )
   } catch (err) {
     error.value = err.response?.data?.message || t('common.loadError')
@@ -771,13 +776,6 @@ function closeDrawer() {
   if (savingItem.value || savingVoid.value) return
   drawerOpen.value = false
   drawerOrder.value = null
-}
-
-/** Opens the ticket drawer with the void prompt already armed. */
-async function openVoid(order) {
-  await openDrawer(order)
-  voidReason.value = ''
-  voidConfirming.value = true
 }
 
 /** Settling from the drawer reuses the existing payment modal. */
@@ -930,11 +928,47 @@ const savingSelectedVoid = ref(false)
 const selectedVoidError = ref('')
 
 const selectedOrders = computed(() =>
-  filteredOrders.value.filter((order) => selected.value.includes(order.order_id) && isRunning(order)),
+  filteredOrders.value.filter((order) => selected.value.includes(order.order_id) && canVoid(order)),
 )
 const selectedVoidTotal = computed(() =>
   selectedOrders.value.reduce((sum, order) => sum + Number(order.total_amount || 0), 0),
 )
+
+/* ---------------- Checkbox-driven table actions ----------------
+ * The table carries no action column: every button sits in the action bar
+ * above it and runs on the ticked orders. Single-ticket actions (view,
+ * settle, freeze/unfreeze, recall, reprints) arm only when exactly one
+ * listed order is ticked; void-selected takes every ticked, voidable order. */
+const pickedOrders = computed(() =>
+  filteredOrders.value.filter((order) => selected.value.includes(order.order_id)),
+)
+const singleSelected = computed(() => (pickedOrders.value.length === 1 ? pickedOrders.value[0] : null))
+const canSettleSelected = computed(() => !!singleSelected.value && isRunning(singleSelected.value))
+const canFreezeSelected = computed(() => canSettleSelected.value && !singleSelected.value.is_frozen)
+const canUnfreezeSelected = computed(() => canSettleSelected.value && !!singleSelected.value.is_frozen)
+const canRecallSelected = computed(() => !!singleSelected.value?.is_frozen)
+
+/** Runs a single-ticket action from the action bar on the one ticked order. */
+function actOnSingle(action) {
+  if (singleSelected.value) action(singleSelected.value)
+}
+
+// Header select-all: ticks (or unticks) every order on the current page.
+const allPageSelected = computed(() =>
+  pagedOrders.value.length > 0 && pagedOrders.value.every((order) => selected.value.includes(order.order_id)),
+)
+const somePageSelected = computed(() =>
+  !allPageSelected.value && pagedOrders.value.some((order) => selected.value.includes(order.order_id)),
+)
+
+function toggleSelectAll() {
+  if (allPageSelected.value) {
+    const pageIds = new Set(pagedOrders.value.map((order) => order.order_id))
+    selected.value = selected.value.filter((id) => !pageIds.has(id))
+  } else {
+    selected.value = [...new Set([...selected.value, ...pagedOrders.value.map((order) => order.order_id)])]
+  }
+}
 
 function openSelectedVoid() {
   if (!selectedOrders.value.length) return
@@ -1217,6 +1251,25 @@ onUnmounted(() => {
 .frozen-tag { margin-left: 8px; font-size: 11px; color: #00468c; background: #e8f1fa; border-radius: 999px; padding: 2px 8px; font-weight: 700; }
 .nc-tag { margin-left: 6px; font-size: 11px; color: #333333; background: #ececec; border-radius: 999px; padding: 2px 8px; font-weight: 700; }
 .sm-inline-label { font-size: 13px; color: #475569; font-weight: 600; }
+
+/* Action bar above the table: every order action runs on the ticked rows. */
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.table-actions .spacer { flex: 1; }
+.table-actions-hint {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+}
+.table-actions-hint i { margin-right: 6px; }
 
 /* Multi-select void: row tick boxes + the confirm modal's order list. */
 .col-check { width: 36px; text-align: center; }

@@ -295,10 +295,12 @@ const routes = [
     ],
   },
   // Cashier POS panel: outlet-gated ordering, summary and item lookup (role-guarded).
+  // Management (hotel_admin / manager / accountant) is in too: the panel review
+  // asks that everything the cashier does stays reachable from their panels.
   {
     path: '/cashier',
     component: () => import('@/layouts/CashierLayout.vue'),
-    meta: { requiresAuth: true, role: ['cashier', 'bartender', 'hotel_admin', 'manager'] },
+    meta: { requiresAuth: true, role: ['cashier', 'bartender', 'hotel_admin', 'manager', 'accountant'] },
     children: [
       // Dine In floor map with running-order timers.
       {
@@ -411,7 +413,7 @@ const routes = [
         // waiter already holds.
         meta: {
           titleKey: 'cashier.nav.dayClose',
-          role: ['cashier', 'bartender', 'waiter', 'hotel_admin', 'manager'],
+          role: ['cashier', 'bartender', 'waiter', 'hotel_admin', 'manager', 'accountant'],
         },
       },
       {
