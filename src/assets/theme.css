@@ -3968,3 +3968,49 @@ html[data-theme='dark'] .mobile-link.logout,
 html[data-theme='dark'] .mobile-link.logout:hover {
   color: #ff9b9b;
 }
+
+
+/* Outlet gate (StoreLayout) dark mode */
+html[data-theme='dark'] .outlet-gate-backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+html[data-theme='dark'] .outlet-gate {
+  background: #202c33;
+  border: 1px solid #2f3b43;
+  color: #e9edef;
+}
+html[data-theme='dark'] .outlet-gate-head h3 {
+  color: #e9edef;
+}
+html[data-theme='dark'] .outlet-gate-head p {
+  color: #aebac1;
+}
+html[data-theme='dark'] .outlet-gate-option {
+  background: #26343c;
+  border-color: #2f3b43;
+  color: #e9edef;
+}
+html[data-theme='dark'] .outlet-gate-option:hover {
+  background: #2f3b43;
+  border-color: #3f5c67;
+}
+html[data-theme='dark'] .outlet-gate-option i {
+  color: #7cc0ff;
+}
+
+/* Store manager outlet gate dark mode */
+html[data-theme='dark'] .sm-gate-hint {
+  color: #aebac1;
+}
+html[data-theme='dark'] .sm-outlet-option {
+  background: #26343c;
+  border-color: #2f3b43;
+  color: #e9edef;
+}
+html[data-theme='dark'] .sm-outlet-option:hover {
+  background: #2f3b43;
+  border-color: #3f5c67;
+}
+html[data-theme='dark'] .sm-outlet-option i {
+  color: #7cc0ff;
+}
