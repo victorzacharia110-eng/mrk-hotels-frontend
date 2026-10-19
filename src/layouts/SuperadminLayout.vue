@@ -138,7 +138,7 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 // Sidebar UI state: collapsed on desktop, or open as an overlay on mobile.
-const sidebarCollapsed = ref(false)
+const sidebarCollapsed = ref(true)
 const sidebarMobileOpen = ref(false)
 
 /** Title shown in the header, derived from the current route name. */

@@ -277,7 +277,7 @@ const workingDateStore = useWorkingDateStore()
 // the same list rather than keeping a private copy that could disagree with it.
 const { outlets, loadOutlets: loadOutletList, selectOutlet } = useOutletContext()
 const gateOpen = ref(false)
-const sidebarCollapsed = ref(false)
+const sidebarCollapsed = ref(true)
 const mobileOpen = ref(false)
 // Accordion groups in the sidebar are exclusive: opening one smoothly closes
 // the others, so only the targeted group ever stays expanded. An empty string

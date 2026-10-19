@@ -138,7 +138,7 @@ import ThemeToggle from '@/components/ThemeToggle.vue'
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
-const sidebarCollapsed = ref(false)
+const sidebarCollapsed = ref(true)
 const sidebarMobileOpen = ref(false)
 
 const tenantName = computed(() => authStore.user?.tenant?.hotel_name)

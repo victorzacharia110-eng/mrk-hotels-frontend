@@ -156,7 +156,7 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 const notifStore = useNotificationStore()
 const workingDateStore = useWorkingDateStore()
-const sidebarCollapsed = ref(false)
+const sidebarCollapsed = ref(true)
 const mobileOpen = ref(false)
 const showNotifDropdown = ref(false)
 
