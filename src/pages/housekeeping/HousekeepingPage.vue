@@ -787,7 +787,10 @@ async function loadBoard() {
 async function loadDashboard() {
   dashLoading.value = true
   try {
-    const { data } = await housekeepingApi.dashboard()
+    // The KPI strip follows the same business date as the board, so the
+    // arrivals/departures and completed-today figures move with the calendar.
+    const day = selectedDate.value || undefined
+    const { data } = await housekeepingApi.dashboard({ from: day, to: day })
     dash.value = data
   } catch {
     dash.value = null
