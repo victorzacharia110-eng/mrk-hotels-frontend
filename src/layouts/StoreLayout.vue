@@ -724,12 +724,8 @@ async function openOutletGateIfNeeded() {
   await loadOutletList()
   if (!authStore.isAuthenticated || !roleCanSelectOutlet(authStore.user?.user_role)) return
   if (outlets.value.length === 0 || selectedOutlet.value) return
-  // A single-outlet property has nothing to choose, so it is auto-selected so
-  // every order / report still gets stamped to it.
-  if (outlets.value.length === 1) {
-    selectOutlet(outlets.value[0])
-    return
-  }
+  // The review asks for the prompt on every login, so even a single-outlet
+  // property confirms its outlet here instead of being silently auto-selected.
   outletGateOpen.value = true
 }
 

@@ -55,6 +55,20 @@
         </button>
         <h1 class="sm-page-title">{{ pageTitle }}</h1>
         <div class="sm-topbar-right">
+          <!-- Outlet picker: same control as the staff panel and till, so the
+               store manager's stock work is stamped to one outlet. -->
+          <div v-if="showOutletPicker" class="sm-outlet-picker">
+            <i class="fas fa-store" aria-hidden="true"></i>
+            <select
+              class="sm-outlet-select"
+              :aria-label="$t('outlet.switchLabel')"
+              :value="selectedOutlet?.outlet_id || ''"
+              @change="onOutletChange($event.target.value)"
+            >
+              <option value="">{{ $t('outlet.choosePlaceholder') }}</option>
+              <option v-for="o in outlets" :key="o.outlet_id" :value="o.outlet_id">{{ o.name }}</option>
+            </select>
+          </div>
           <ThemeToggle />
           <button class="sm-icon-btn sm-notif-bell" :title="$t('notifications.title')"
             :aria-label="$t('notifications.unreadCount', { count: notifStore.unreadCount })"
@@ -136,6 +150,24 @@
       :can-proceed-roles="DAY_CLOSE_ROLES"
       :role="authStore.user?.user_role"
     />
+
+    <!-- Post-login outlet gate: the store manager panel reports and stocks
+         against one outlet, so it holds the panel until one is chosen. -->
+    <div v-if="outletGateOpen" class="sm-modal-backdrop">
+      <div class="sm-modal" role="dialog" aria-modal="true">
+        <div class="sm-modal-head">
+          <h3><i class="fas fa-store" aria-hidden="true"></i> {{ $t('outlet.gateTitle') }}</h3>
+        </div>
+        <p class="sm-gate-hint">{{ $t('outlet.gateHint') }}</p>
+        <div class="sm-outlet-gate-list">
+          <button v-for="o in outlets" :key="o.outlet_id" type="button" class="sm-outlet-option"
+            @click="chooseOutlet(o)">
+            <i class="fas fa-store" aria-hidden="true"></i>
+            <span>{{ o.name }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -149,6 +181,7 @@ import { useWorkingDateStore } from '@/stores/workingDate'
 import RoleBadge from '@/components/RoleBadge.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import DayCloseReminderModal from '@/components/cashier/DayCloseReminderModal.vue'
+import { useOutletContext } from '@/composables/useOutletContext'
 
 const route = useRoute()
 const router = useRouter()
@@ -156,6 +189,41 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 const notifStore = useNotificationStore()
 const workingDateStore = useWorkingDateStore()
+
+// Outlet selection, shared with the staff panel and the till so one pick covers
+// the whole app. The store manager picks the outlet whose stock and reports
+// they are working on.
+const {
+  outlets,
+  selectedOutlet,
+  hasChoice,
+  loadOutlets: loadOutletList,
+  selectOutlet,
+  roleCanSelectOutlet,
+} = useOutletContext()
+
+const showOutletPicker = computed(() => hasChoice.value && roleCanSelectOutlet(authStore.user?.user_role))
+const outletGateOpen = ref(false)
+
+/** Opens the picker on sign-in when the role may choose and nothing is picked. */
+async function openOutletGateIfNeeded() {
+  await loadOutletList()
+  if (!roleCanSelectOutlet(authStore.user?.user_role)) return
+  if (outlets.value.length === 0 || selectedOutlet.value) return
+  outletGateOpen.value = true
+}
+
+/** Confirms the outlet the user will work in and closes the gate. */
+function chooseOutlet(outlet) {
+  selectOutlet(outlet)
+  outletGateOpen.value = false
+}
+
+/** Activates a different outlet from the header picker. */
+function onOutletChange(outletId) {
+  selectOutlet(outlets.value.find((o) => o.outlet_id === outletId) || null)
+}
+
 const sidebarCollapsed = ref(true)
 const mobileOpen = ref(false)
 const showNotifDropdown = ref(false)
@@ -287,9 +355,16 @@ function formatNotifTime(iso) {
   return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
+// The profile can resolve after mount (token restored on a refresh), so once
+// the role is known re-check whether the outlet gate should open.
+watch(() => authStore.user?.user_role, (role) => {
+  if (role) openOutletGateIfNeeded()
+})
+
 onMounted(() => {
   notifStore.init()
   workingDateStore.initDayCloseReminder()
+  openOutletGateIfNeeded()
 })
 
 onUnmounted(() => {
@@ -427,6 +502,27 @@ const DAY_CLOSE_ROLES = ['store_manager', 'cashier', 'bartender', 'waiter', 'hot
 .sm-collapse:hover { background: var(--sm-blue-light); }
 .sm-page-title { font-size: 18px; font-weight: 700; margin: 0; flex: 1; color: var(--sm-blue-dark); }
 .sm-topbar-right { display: flex; align-items: center; gap: 14px; }
+.sm-outlet-picker {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 10px; height: 38px; border-radius: 10px;
+  background: var(--sm-blue-light); color: var(--sm-blue);
+}
+.sm-outlet-select {
+  border: none; background: transparent; color: var(--sm-blue-dark);
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  max-width: 180px;
+}
+.sm-outlet-select:focus-visible { outline: 2px solid var(--sm-blue); outline-offset: 2px; }
+.sm-gate-hint { margin: 4px 0 14px; color: var(--sm-muted); font-size: 13px; line-height: 1.5; }
+.sm-outlet-gate-list { display: flex; flex-direction: column; gap: 10px; }
+.sm-outlet-option {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 12px;
+  background: #fff; color: var(--sm-blue-dark); font: inherit; font-weight: 600;
+  text-align: left; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.sm-outlet-option:hover { border-color: var(--sm-blue); background: var(--sm-blue-light); }
+.sm-outlet-option i { color: var(--sm-blue); font-size: 16px; }
 .sm-icon-btn {
   width: 38px; height: 38px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
