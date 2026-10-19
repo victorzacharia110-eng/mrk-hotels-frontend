@@ -152,6 +152,8 @@
                   :title="room.status" aria-hidden="true"></i>
                 <i v-if="room.status === 'maintenance'" class="fas fa-screwdriver-wrench sv-room-flag"
                   :title="room.status" aria-hidden="true"></i>
+                <i v-if="room.stop_sell" class="fas fa-ban sv-room-flag sv-room-flag-stop"
+                  :title="$t('stayview.stopSell')" aria-hidden="true"></i>
                 <button v-if="(hkByRoom[room.room_id] || []).length" type="button" class="sv-hk-badge"
                   :class="{ active: hkTip && hkTip.room.room_id === room.room_id }"
                   :aria-label="hkByRoom[room.room_id].length + ' ' + $t('housekeeping.title').toLowerCase()" title=""
@@ -6360,6 +6362,10 @@ const bookingOnBusinessDate = computed(
  *  already covered by a blocking stay that overlaps [check-in, check-out). */
 function roomAvailableForRange(room, checkInIso, checkOutIso, excludeReservationId = null) {
   if (!room || room.status === 'maintenance') return false
+  // A room under STOP SELL is blocked for sale: it must not be offered in the
+  // new-booking or walk-in pickers (review: "when a room is set at STOP SELL
+  // it should appear on the receptionist dashboard that the room is blocked").
+  if (room.stop_sell) return false
   if (!checkInIso || !checkOutIso) return true
   const inDate = parseDate(checkInIso)
   const outDate = parseDate(checkOutIso)
@@ -6451,6 +6457,8 @@ watch(
 function isVacantCell(room, iso) {
   // Maintenance rooms are never bookable from the chart.
   if (room?.status === 'maintenance') return false
+  // A stop-sell block freezes the room: it is shown but not bookable.
+  if (room?.stop_sell) return false
   const idx = days.value.findIndex((d) => d.iso === iso)
   if (idx < 0) return false
   // While reservations are still being paginated in, the bar track is empty, so
@@ -6465,7 +6473,7 @@ function isVacantCell(room, iso) {
 
 /** Clicking a vacant day opens the booking form with that arrival date. */
 function bookVacantDay(room, iso) {
-  if (room?.status === 'maintenance') return
+  if (room?.status === 'maintenance' || room?.stop_sell) return
   const arrival = parseDate(iso)
   const today = businessToday()
   if (arrival < today) return
@@ -7589,6 +7597,11 @@ onUnmounted(() => clearInterval(refreshTimer))
 .sv-room-flag {
   color: #9e9e9e;
   font-size: 12px;
+}
+
+/* Stop-sell: the room is frozen for sale, so the flag reads as a red ban. */
+.sv-room-flag-stop {
+  color: #dc2626;
 }
 
 /* Housekeeping task badge on the room cell (opens the floating card). */

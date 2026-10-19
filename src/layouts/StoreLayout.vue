@@ -539,6 +539,35 @@
       </div>
     </Transition>
 
+    <!-- Outlet gate: the review asks every operating role (manager, admin,
+         accountant, cashier, waiter, bar tender) to choose the outlet they work
+         in as soon as they sign in, exactly like the cashier login. Until a
+         choice is made the panel is held behind this bar; the header select
+         stays available to switch later. -->
+    <div v-if="outletGateOpen" class="outlet-gate-backdrop">
+      <div class="outlet-gate" role="dialog" aria-modal="true" :aria-label="$t('outlet.gateTitle')">
+        <div class="outlet-gate-head">
+          <i class="fas fa-store" aria-hidden="true"></i>
+          <div>
+            <h3>{{ $t('outlet.gateTitle') }}</h3>
+            <p>{{ $t('outlet.gateHint') }}</p>
+          </div>
+        </div>
+        <div class="outlet-gate-list">
+          <button
+            v-for="o in outlets"
+            :key="o.outlet_id"
+            type="button"
+            class="outlet-gate-option"
+            @click="chooseOutlet(o)"
+          >
+            <i class="fas fa-utensils" aria-hidden="true"></i>
+            <span>{{ o.name }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Review item 18: the staff order pad lives in this shell, so the waiter
          and bar-tender panels get the Day Close reminder from here now that
          the page no longer carries its own copy. -->
@@ -685,6 +714,30 @@ const {
 const showOutletPicker = computed(
   () => isAppMode.value && authStore.isAuthenticated && hasChoice.value && roleCanSelectOutlet(authStore.user?.user_role),
 )
+
+// The post-login outlet gate. It opens once the outlet list has loaded and the
+// signed-in role still has no outlet for the session.
+const outletGateOpen = ref(false)
+
+/** Opens the picker on sign-in when the role may choose and nothing is picked. */
+async function openOutletGateIfNeeded() {
+  await loadOutletList()
+  if (!authStore.isAuthenticated || !roleCanSelectOutlet(authStore.user?.user_role)) return
+  if (outlets.value.length === 0 || selectedOutlet.value) return
+  // A single-outlet property has nothing to choose, so it is auto-selected so
+  // every order / report still gets stamped to it.
+  if (outlets.value.length === 1) {
+    selectOutlet(outlets.value[0])
+    return
+  }
+  outletGateOpen.value = true
+}
+
+/** Confirms the outlet the user will work in and closes the gate. */
+function chooseOutlet(outlet) {
+  selectOutlet(outlet)
+  outletGateOpen.value = false
+}
 
 /** Activates the chosen outlet for the rest of the session. */
 function onOutletChange(outletId) {
@@ -1334,12 +1387,18 @@ function syncPresence() {
 // arrives).
 watch(() => authStore.isAuthenticated, syncPresence)
 watch(() => authStore.user?.tenant_id, syncPresence)
+// The profile can resolve after mount (token restored on a refresh), so once
+// the role is known re-check whether the outlet gate should open.
+watch(() => authStore.user?.user_role, (role) => {
+  if (role && isAppMode.value) openOutletGateIfNeeded()
+})
 
 onMounted(() => {
   syncPresence()
-  // Fetched once here so the header can decide whether to show the picker; the
+  // Fetched once here so the header can decide whether to show the picker AND
+  // so the post-login outlet gate can hold the panel until one is chosen; the
   // cashier layout reuses the same loaded list rather than requesting it again.
-  if (isAppMode.value) loadOutletList()
+  if (isAppMode.value) openOutletGateIfNeeded()
   notifStore.init()
   workingDateStore.initDayCloseReminder()
   // Hide the transition skeleton once the newly resolved page has mounted and
@@ -3170,5 +3229,82 @@ function formatNotifTime(iso) {
 .notif-sound-wrap {
   padding: 0 16px 14px;
   border-top: 1px dashed #e2e8f0;
+}
+
+/* ---- Post-login outlet gate ---- */
+.outlet-gate-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.outlet-gate {
+  width: 100%;
+  max-width: 460px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+}
+
+.outlet-gate-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.outlet-gate-head > i {
+  color: #005eb8;
+  font-size: 22px;
+  margin-top: 2px;
+}
+
+.outlet-gate-head h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.outlet-gate-head p {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.outlet-gate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.outlet-gate-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.outlet-gate-option:hover {
+  border-color: #005eb8;
+  background: #e8f1fa;
+}
+
+.outlet-gate-option i {
+  color: #005eb8;
 }
 </style>

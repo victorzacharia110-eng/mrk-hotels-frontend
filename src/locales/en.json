@@ -1177,8 +1177,14 @@
     "roomStatus": "Room status",
     "roomStatusCheckedOut": "Checked out",
     "roomStatusArrivingToday": "Arriving today",
+    "roomStatusDeparture": "Departure",
     "roomStatusInHouse": "In house",
     "roomStatusVacant": "Vacant",
+    "roomStatusMaintenance": "Maintenance",
+    "occupiedNeedsClean": "Occupied room to be cleaned",
+    "selectUser": "Select user",
+    "calendar": "Calendar",
+    "calendarHint": "Rooms to clean on the business date",
     "pax": "Guests (pax)",
     "arrival": "Arrival (date & time)",
     "departure": "Departure",
@@ -3971,6 +3977,7 @@
     "occupied": "Occupied",
     "reserved": "Reserved",
     "blocked": "Blocked",
+    "stopSell": "Stop sell — blocked for sale",
     "dueOut": "Due Out",
     "dirty": "Dirty",
     "availability": "Availability",
@@ -5760,7 +5767,9 @@
   },
   "outlet": {
     "switchLabel": "Outlet to work in",
-    "choosePlaceholder": "Choose an outlet"
+    "choosePlaceholder": "Choose an outlet",
+    "gateTitle": "Select your outlet",
+    "gateHint": "Choose the outlet you want to work in. Orders, stocks, adjustments and reports will follow this selection."
   },
   "menuAudit": {
     "title": "Menu activity",

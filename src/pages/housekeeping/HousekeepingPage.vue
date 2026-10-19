@@ -17,6 +17,18 @@
         <p class="muted">{{ $t('housekeeping.subtitle') }}</p>
       </div>
       <div class="head-actions">
+        <!-- Universal calendar: defaults to the hotel's business date so the
+             board always shows the rooms to clean for the current day. -->
+        <div class="hsk-calendar">
+          <i class="fas fa-calendar-day" aria-hidden="true"></i>
+          <input
+            v-model="selectedDate"
+            type="date"
+            class="input"
+            :aria-label="$t('housekeeping.calendar')"
+            :title="$t('housekeeping.calendarHint')"
+          />
+        </div>
         <button class="btn btn-secondary" @click="load">
           <i class="fas fa-rotate"></i> {{ $t('housekeeping.refresh') }}
         </button>
@@ -187,6 +199,12 @@
           <tr v-for="task in tasks" :key="task.task_id">
             <td v-if="task.room">
               <strong>{{ $t('housekeeping.room') }} {{ task.room.room_number }}</strong>
+              <!-- Icon indication that an occupied room still needs cleaning. -->
+              <i
+                v-if="task.room_status === 'in_house'"
+                class="fas fa-broom hk-occupied-flag"
+                :title="$t('housekeeping.occupiedNeedsClean')"
+              ></i>
               <div class="muted capitalize">{{ task.room.room_type }}</div>
               <div v-if="task.remarks" class="muted">{{ task.remarks }}</div>
             </td>
@@ -223,36 +241,20 @@
             </td>
             <td>
               <div class="actions">
+                <!-- Assign (labelled SELECT USER per the review). Assigning
+                     moves the task straight to in-progress; there is no
+                     separate START step. -->
                 <button
-                  v-if="canManage && task.status === 'dirty'"
+                  v-if="canManage && ['dirty', 'confirmed'].includes(task.status)"
                   class="btn btn-sm btn-secondary"
                   @click="openAssign(task)"
                 >
-                  <i class="fas fa-user-plus"></i> {{ $t('housekeeping.assign') }}
+                  <i class="fas fa-user-plus"></i> {{ $t('housekeeping.selectUser') }}
                 </button>
+                <!-- Once assigned the only next step is COMPLETE, which also
+                     performs the verification and confirmation. -->
                 <button
-                  v-if="task.status === 'dirty'"
-                  class="btn btn-sm btn-primary"
-                  @click="start(task)"
-                >
-                  <i class="fas fa-play"></i> {{ $t('housekeeping.start') }}
-                </button>
-                <button
-                  v-if="task.status === 'in_progress' && canConfirm"
-                  class="btn btn-sm btn-secondary"
-                  @click="confirm(task)"
-                >
-                  <i class="fas fa-check-double"></i> {{ $t('housekeeping.confirm') }}
-                </button>
-                <button
-                  v-if="task.status === 'confirmed' && canVerify"
-                  class="btn btn-sm btn-secondary"
-                  @click="verify(task)"
-                >
-                  <i class="fas fa-clipboard-check"></i> {{ $t('housekeeping.verify') }}
-                </button>
-                <button
-                  v-if="task.status === 'verified'"
+                  v-if="task.status === 'in_progress'"
                   class="btn btn-sm btn-success"
                   @click="complete(task)"
                 >
@@ -335,24 +337,42 @@
                 required
               />
             </div>
+            <!-- Room category is derived from the guest's stay; the review
+                 removed the room-status dropdown. -->
             <div class="form-group">
-              <label>{{ $t('housekeeping.roomStatus') }} *</label>
-              <SearchableSelect v-model="form.room_status" :options="roomStatusOptions" required />
+              <label>{{ $t('housekeeping.roomStatus') }}</label>
+              <input :value="roomStatusLabel(form.room_status)" class="input" disabled />
             </div>
             <div class="form-group">
-              <label>{{ $t('housekeeping.arrival') }} *</label>
-              <input v-model="form.arrival_at" type="datetime-local" class="input" required />
+              <label>{{ $t('housekeeping.arrival') }}</label>
+              <input
+                v-model="form.arrival_at"
+                type="datetime-local"
+                class="input"
+                :disabled="form.room_status === 'vacant'"
+              />
             </div>
             <div class="form-group">
-              <label>{{ $t('housekeeping.departure') }} *</label>
-              <input v-model="form.departure_at" type="date" class="input" required />
+              <label>{{ $t('housekeeping.departure') }}</label>
+              <input
+                v-model="form.departure_at"
+                type="date"
+                class="input"
+                :disabled="form.room_status === 'vacant'"
+              />
             </div>
             <div class="form-group">
-              <label>{{ $t('housekeeping.nights') }} *</label>
-              <input v-model.number="form.nights" type="number" min="1" class="input" required />
+              <label>{{ $t('housekeeping.nights') }}</label>
+              <input
+                v-model.number="form.nights"
+                type="number"
+                min="1"
+                class="input"
+                :disabled="form.room_status === 'vacant'"
+              />
             </div>
             <div class="form-group">
-              <label>{{ $t('housekeeping.assignTo') }}</label>
+              <label>{{ $t('housekeeping.selectUser') }}</label>
               <SearchableSelect
                 v-model="form.assigned_to"
                 :options="userOptions"
@@ -445,11 +465,11 @@
         <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
         <form @submit.prevent="assignTask">
           <div class="form-group">
-            <label>{{ $t('housekeeping.assignTo') }} *</label>
+            <label>{{ $t('housekeeping.selectUser') }} *</label>
             <SearchableSelect
               v-model="assignUserId"
               :options="userOptions"
-              :empty-label="$t('housekeeping.selectRoom')"
+              :empty-label="$t('housekeeping.selectUser')"
               required
             />
           </div>
@@ -469,9 +489,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useBusinessDateStore } from '@/stores/businessDate'
 import { housekeepingApi, inventoryApi, roomApi, userApi } from '@/api'
 import { collectAllRows } from '@/utils/export'
 import { toast } from '@/utils/toast'
@@ -480,16 +501,20 @@ import TableExportButton from '@/components/TableExportButton.vue'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
+const businessDateStore = useBusinessDateStore()
 // Permission flags: task management requires module 40 access plus the ability to operate.
 const canManage = computed(() => authStore.can(40) && authStore.canOperate)
-const canVerify = computed(() => authStore.can(40) && authStore.canOperate)
-const canConfirm = computed(() => authStore.can(40) && authStore.canOperate)
 
 // List/table state: task rows, lookups for rooms and users, pagination and filter criteria.
 const tasks = ref([])
 const rooms = ref([])
 const users = ref([])
 const stockItems = ref([])
+// Stays in the visible business-date window, used to classify rooms and to
+// auto-fill the New Task form from the guest's booking.
+const stays = ref([])
+// The universal calendar's chosen day, defaulting to the hotel's business date.
+const selectedDate = ref('')
 const page = ref(1)
 const meta = ref({
   total: 0,
@@ -525,7 +550,7 @@ const form = reactive({
   room_id: '',
   pax: 1,
   house_status: 'dirty',
-  room_status: 'in_house',
+  room_status: 'vacant',
   arrival_at: '',
   departure_at: '',
   nights: 1,
@@ -535,11 +560,12 @@ const form = reactive({
   consumables: [],
 })
 
+// The review trimmed the status column: DIRTY is already shown by the house
+// status, and the separate confirm / verify sign-offs were folded into a single
+// Complete action. Only "in progress" (assigned, awaiting completion) and
+// COMPLETED read as statuses now.
 const statusOptions = [
-  { value: 'dirty', label: t('housekeeping.statusDirty') },
   { value: 'in_progress', label: t('housekeeping.statusInProgress') },
-  { value: 'confirmed', label: t('housekeeping.statusConfirmed') },
-  { value: 'verified', label: t('housekeeping.statusVerified') },
   { value: 'completed', label: t('housekeeping.statusCompleted') },
 ]
 
@@ -548,24 +574,57 @@ const houseStatusOptions = [
   { value: 'clean', label: t('housekeeping.houseClean') },
 ]
 
+// Room statuses the review asks for: a vacant room is the default for an
+// unoccupied room; a checked-out guest's room reads as checked out/departure.
 const roomStatusOptions = [
+  { value: 'vacant', label: t('housekeeping.roomStatusVacant') },
   { value: 'checked_out', label: t('housekeeping.roomStatusCheckedOut') },
   { value: 'arriving_today', label: t('housekeeping.roomStatusArrivingToday') },
+  { value: 'departure', label: t('housekeeping.roomStatusDeparture') },
   { value: 'in_house', label: t('housekeeping.roomStatusInHouse') },
-  { value: 'vacant', label: t('housekeeping.roomStatusVacant') },
+  { value: 'maintenance', label: t('housekeeping.roomStatusMaintenance') },
 ]
 
 const roomFilterOptions = computed(() =>
   rooms.value.map((room) => ({ value: room.room_id, label: room.room_number })),
 )
 
+/** Current stay for a room within the visible window, if any. */
+function stayForRoom(roomId) {
+  return stays.value.find((stay) => String(stay.room_id) === String(roomId)) || null
+}
+
+/**
+ * The front-office category of a room, used to label the New Task picker:
+ * VACANT, UPCOMING ARRIVAL, DEPARTURE, IN HOUSE or MAINTENANCE.
+ */
+function roomCategory(room) {
+  if (room.status === 'maintenance') return t('housekeeping.roomStatusMaintenance')
+  const stay = stayForRoom(room.room_id)
+  if (!stay) return t('housekeeping.roomStatusVacant')
+  if (stay.status === 'checked_in') {
+    return sameDay(stay.check_out_date, selectedDate.value)
+      ? t('housekeeping.roomStatusDeparture')
+      : t('housekeeping.roomStatusInHouse')
+  }
+  return t('housekeeping.roomStatusArrivingToday')
+}
+
+/** Compares two dates by their calendar day only. */
+function sameDay(a, b) {
+  if (!a || !b) return false
+  return String(a).slice(0, 10) === String(b).slice(0, 10)
+}
+
 const roomOptions = computed(() =>
   rooms.value.map((room) => ({
     value: room.room_id,
-    label: `${t('housekeeping.room')} ${room.room_number} · ${room.status}`,
+    label: `${t('housekeeping.room')} ${room.room_number} · ${roomCategory(room)}`,
   })),
 )
 
+// Only housekeeping staff can be assigned cleaning work (review: "only users
+// whose role is house keeping staff appear on the ASSIGN TO").
 const userOptions = computed(() =>
   users.value.map((user) => ({ value: user.user_id, label: user.full_name })),
 )
@@ -580,25 +639,26 @@ const stockItemOptions = computed(() =>
   })),
 )
 
-/** Maps a task status key to its translated display label. */
+/**
+ * Maps a task status key to its translated display label. The review dropped
+ * DIRTY (it is the HOUSE STATUS column's job), VERIFIED and CONFIRMED, so an
+ * unassigned task simply carries no status badge of its own.
+ */
 function statusLabel(status) {
   const map = {
-    dirty: t('housekeeping.statusDirty'),
     in_progress: t('housekeeping.statusInProgress'),
-    confirmed: t('housekeeping.statusConfirmed'),
-    verified: t('housekeeping.statusVerified'),
     completed: t('housekeeping.statusCompleted'),
   }
-  return map[status] || status
+  return map[status] || ''
 }
 
 /** Returns the CSS badge class appropriate for the given task status. */
 function statusBadge(status) {
   const map = {
-    dirty: 'badge-red',
+    dirty: 'badge-gray',
     in_progress: 'badge-blue',
-    confirmed: 'badge-yellow',
     verified: 'badge-blue',
+    confirmed: 'badge-yellow',
     completed: 'badge-green',
   }
   return map[status] || 'badge-gray'
@@ -609,8 +669,10 @@ function roomStatusLabel(status) {
   const map = {
     checked_out: t('housekeeping.roomStatusCheckedOut'),
     arriving_today: t('housekeeping.roomStatusArrivingToday'),
+    departure: t('housekeeping.roomStatusDeparture'),
     in_house: t('housekeeping.roomStatusInHouse'),
     vacant: t('housekeeping.roomStatusVacant'),
+    maintenance: t('housekeeping.roomStatusMaintenance'),
   }
   return map[status] || status
 }
@@ -637,6 +699,7 @@ async function load() {
       house_status: filters.house_status,
       room_status: filters.room_status,
       room_id: filters.room_id,
+      date: selectedDate.value || undefined,
       page: page.value,
       per_page: 15,
     })
@@ -648,6 +711,24 @@ async function load() {
     loading.value = false
   }
   loadDashboard()
+}
+
+/**
+ * Loads the rooms-and-stays tape for the selected day so the New Task picker
+ * can classify each room (vacant / upcoming arrival / departure / in house /
+ * maintenance) and auto-fill dates, nights and guests from the booking.
+ */
+async function loadBoard() {
+  if (!selectedDate.value) return
+  try {
+    const { data } = await housekeepingApi.board({
+      window_start: selectedDate.value,
+      window_end: selectedDate.value,
+    })
+    stays.value = data.stays || []
+  } catch {
+    stays.value = []
+  }
 }
 
 /** Loads the housekeeping board statistics that drive the KPI strip. */
@@ -712,6 +793,7 @@ const loadAllTasks = () =>
       house_status: filters.house_status,
       room_status: filters.room_status,
       room_id: filters.room_id,
+      date: selectedDate.value || undefined,
       page,
       per_page: perPage,
     }),
@@ -756,15 +838,25 @@ async function loadOptions() {
     // ignore
   }
   try {
-    users.value = (await userApi.index({ per_page: 100 })).data.data || []
+    // Only housekeeping staff are offered as assignees.
+    users.value = (await userApi.index({ role: 'housekeeping', per_page: 100 })).data.data || []
   } catch {
     // ignore
   }
   try {
-    const res = await inventoryApi.index({ per_page: 100 })
-    stockItems.value = res.data.data?.data || res.data.data || []
+    // Supplies are the items registered to the HOUSEKEEPING shelf; the
+    // requisition-items endpoint resolves that shelf for the caller.
+    const res = await inventoryApi.requisitionItems({ per_page: 100 })
+    const rows = res.data.data?.data || res.data.data || []
+    stockItems.value = rows
   } catch {
-    // ignore
+    // Fall back to the whole store when the shelf list is unavailable.
+    try {
+      const res = await inventoryApi.index({ per_page: 100 })
+      stockItems.value = res.data.data?.data || res.data.data || []
+    } catch {
+      // ignore
+    }
   }
 }
 
@@ -789,7 +881,7 @@ function resetForm() {
   form.room_id = ''
   form.pax = 1
   form.house_status = 'dirty'
-  form.room_status = 'in_house'
+  form.room_status = 'vacant'
   form.arrival_at = ''
   form.departure_at = ''
   form.nights = 1
@@ -819,6 +911,78 @@ function stockHint(itemId) {
   const item = stockItems.value.find((i) => i.item_id === itemId)
   return item ? `${Number(item.quantity_in_stock)} ${item.unit} ${t('housekeeping.inStock')}` : ''
 }
+
+/** The housekeeping category implied by a guest's stay. */
+function roomStatusFromStay(stay) {
+  if (stay.status === 'checked_in') {
+    return sameDay(stay.check_out_date, selectedDate.value) ? 'departure' : 'in_house'
+  }
+  if (stay.status === 'checked_out') return 'checked_out'
+  return 'arriving_today'
+}
+
+/** Nights between two dates, at least one. */
+function nightsBetween(a, b) {
+  if (!a || !b) return 1
+  const ms = new Date(b) - new Date(a)
+  return Math.max(1, Math.round(ms / 86400000))
+}
+
+/**
+ * Guests on a booking: couple = 2, single = 1, family / group = 3+, otherwise
+ * the booked adults plus children (the review's rule).
+ */
+function guestsForStay(stay) {
+  const booked = (Number(stay.num_adults) || 0) + (Number(stay.num_children) || 0)
+  if (booked > 0) return booked
+  if (stay.booking_type === 'single') return 1
+  if (stay.booking_type === 'couple') return 2
+  if (['family', 'group'].includes(stay.booking_type)) return 3
+  return 1
+}
+
+/**
+ * Seeds the New Task form from the chosen room:
+ *  - VACANT   → no date/time needed.
+ *  - IN HOUSE / DEPARTURE / UPCOMING ARRIVAL → check-in and departure dates,
+ *    nights and guests filled from the guest's booking.
+ *  - MAINTENANCE → just the category.
+ */
+function applyRoomSelection(roomId) {
+  const room = rooms.value.find((r) => r.room_id === roomId)
+  if (!room) return
+
+  if (room.status === 'maintenance') {
+    form.room_status = 'maintenance'
+    return
+  }
+
+  const stay = stayForRoom(roomId)
+  if (!stay) {
+    form.room_status = 'vacant'
+    form.arrival_at = ''
+    form.departure_at = ''
+    form.nights = 1
+    form.pax = 1
+    return
+  }
+
+  form.room_status = roomStatusFromStay(stay)
+  form.arrival_at = stay.check_in_date ? `${String(stay.check_in_date).slice(0, 10)}T14:00` : ''
+  form.departure_at = stay.check_out_date ? String(stay.check_out_date).slice(0, 10) : ''
+  form.nights = Math.max(1, Number(stay.num_days) || nightsBetween(stay.check_in_date, stay.check_out_date))
+  form.pax = guestsForStay(stay)
+}
+
+// Picking a room in a fresh task seeds the form from the booking. Edit mode
+// keeps the values already stored on the task.
+watch(
+  () => form.room_id,
+  (roomId) => {
+    if (!showModal.value || editing.value || !roomId) return
+    applyRoomSelection(roomId)
+  },
+)
 
 /** Prepares the modal for creating a brand-new task. */
 function openCreate() {
@@ -863,7 +1027,14 @@ async function save() {
   saving.value = true
   try {
     const payload = { ...form }
-    payload.departure_at = form.departure_at || form.arrival_at?.slice(0, 10)
+    if (form.room_status === 'vacant') {
+      // A vacant room has no stay behind it: no dates are required.
+      payload.arrival_at = null
+      payload.departure_at = null
+      payload.nights = 1
+    } else {
+      payload.departure_at = form.departure_at || form.arrival_at?.slice(0, 10)
+    }
     payload.consumables = form.consumables
       .filter((line) => line.item_id)
       .map((line) => ({ item_id: line.item_id, quantity: line.quantity }))
@@ -920,10 +1091,9 @@ async function runAction(task, fn, message) {
   }
 }
 
-// One-liner wrappers that bind each housekeeping API action to the shared runAction helper.
-const start = (task) => runAction(task, housekeepingApi.start, t('housekeeping.started'))
-const confirm = (task) => runAction(task, housekeepingApi.confirm, t('housekeeping.confirmed'))
-const verify = (task) => runAction(task, housekeepingApi.verify, t('housekeeping.verified'))
+// One-liner wrappers that bind the housekeeping workflow actions to the shared
+// runAction helper. Assigning starts the work; COMPLETE is the single final
+// step (verification and confirmation folded in — see the review).
 const complete = (task) => runAction(task, housekeepingApi.complete, t('housekeeping.completed'))
 const remove = (task) => runAction(task, housekeepingApi.destroy, t('housekeeping.deleteSuccess'))
 
@@ -939,7 +1109,18 @@ function flattenError(err) {
     : err.response?.data?.message || t('common.actionFailed')
 }
 
-onMounted(() => {
+// The universal calendar follows the hotel's business date (night-audit rule):
+// changing the day reloads both the task board and the stays behind the picker.
+watch(selectedDate, () => {
+  page.value = 1
+  loadBoard()
+  load()
+})
+
+onMounted(async () => {
+  await businessDateStore.ensureLoaded()
+  selectedDate.value = businessDateStore.current
+  loadBoard()
   load()
   loadOptions()
 })
@@ -1049,9 +1230,34 @@ onMounted(() => {
   font-weight: 800;
 }
 
+.hk-occupied-flag {
+  margin-left: 6px;
+  color: #d97706;
+}
+
 .head-actions {
   display: flex;
   gap: 10px;
+}
+
+/* Universal calendar: business-date picker in the page header. */
+.hsk-calendar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #005eb8;
+}
+
+.hsk-calendar .input {
+  border: none;
+  padding: 0;
+  width: auto;
+  min-width: 130px;
+  background: transparent;
 }
 
 .filter-bar {

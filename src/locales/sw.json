@@ -1177,8 +1177,14 @@
     "roomStatus": "Hali ya chumba",
     "roomStatusCheckedOut": "Ameondoka",
     "roomStatusArrivingToday": "Anafika leo",
+    "roomStatusDeparture": "Anaondoka",
     "roomStatusInHouse": "Yuko ndani",
     "roomStatusVacant": "Bure",
+    "roomStatusMaintenance": "Matengenezo",
+    "occupiedNeedsClean": "Chumba kilichokaliwa kusafishwa",
+    "selectUser": "Chagua mtumiaji",
+    "calendar": "Kalenda",
+    "calendarHint": "Vyumba vya kusafisha kwa siku ya biashara",
     "pax": "Wageni (pax)",
     "arrival": "Kuwasili (tarehe na saa)",
     "departure": "Kuondoka",
@@ -3971,6 +3977,7 @@
     "occupied": "Imejaa",
     "reserved": "Imehifadhiwa",
     "blocked": "Zilizofungwa",
+    "stopSell": "Kuzuia mauzo — chumba kimefungwa",
     "dueOut": "Wanaotoka Leo",
     "dirty": "Chafu",
     "availability": "Upatikanaji",
@@ -5760,7 +5767,9 @@
   },
   "outlet": {
     "switchLabel": "Kituo cha kufanya kazi",
-    "choosePlaceholder": "Chagua kituo"
+    "choosePlaceholder": "Chagua kituo",
+    "gateTitle": "Chagua kituo chako",
+    "gateHint": "Chagua kituo unachotaka kufanyia kazi. Oda, hisa, marekebisho na ripoti zitafuata kituo hiki."
   },
   "menuAudit": {
     "title": "Shughuli za Menyu",
