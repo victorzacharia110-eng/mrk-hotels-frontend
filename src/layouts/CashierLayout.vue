@@ -349,6 +349,9 @@ function isActive(to) {
 /** Loads outlets and opens the gate when the cashier has not picked one. */
 async function loadOutlets() {
   await loadOutletList()
+  // Nothing to confirm when the property has no active outlet; otherwise the
+  // cashier always confirms the outlet on login, even a single-outlet one.
+  if (outlets.value.length === 0) return
   if (!selectedOutlet.value) gateOpen.value = true
 }
 
