@@ -9,11 +9,21 @@
 
 <template>
   <div class="dashboard-page container">
-    <!-- Page header: refresh plus permission-gated "new order" button -->
+    <!-- Page header: back link, refresh plus permission-gated "new order" button -->
     <div class="page-head">
-      <div>
-        <h1>{{ $t('laundry.title') }}</h1>
-        <p class="muted">{{ $t('laundry.subtitle') }}</p>
+      <div class="head-left">
+        <button
+          type="button"
+          class="btn btn-secondary btn-back"
+          :title="$t('common.back')"
+          @click="$router.back()"
+        >
+          <i class="fas fa-arrow-left" aria-hidden="true"></i>
+        </button>
+        <div>
+          <h1>{{ $t('laundry.title') }}</h1>
+          <p class="muted">{{ $t('laundry.subtitle') }}</p>
+        </div>
       </div>
       <div class="head-actions">
         <div class="hsk-calendar">
@@ -124,7 +134,67 @@
     <div v-if="loading" class="alert alert-info">{{ $t('laundry.loading') }}</div>
 
     <!-- Orders table with status workflow actions and payment badges -->
-    <div v-else class="table-scroll">
+    <div v-else>
+      <!-- Manual (room + customer) vs automated hotel-linen runs -->
+      <div class="source-switch" role="tablist" :aria-label="$t('laundry.guestType')">
+        <button
+          type="button"
+          role="tab"
+          class="source-btn"
+          :class="{ active: sourceView === 'manual' }"
+          :aria-selected="sourceView === 'manual'"
+          @click="sourceView = 'manual'"
+        >
+          <i class="fas fa-jug-detergent" aria-hidden="true"></i> {{ $t('laundry.manualOrders') }}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="source-btn"
+          :class="{ active: sourceView === 'automated' }"
+          :aria-selected="sourceView === 'automated'"
+          @click="sourceView = 'automated'"
+        >
+          <i class="fas fa-layer-group" aria-hidden="true"></i> {{ $t('laundry.automatedOrders') }}
+        </button>
+      </div>
+
+      <!-- Cashier-style action bar: runs against the single selected order -->
+      <div class="table-actions">
+        <button
+          type="button"
+          class="sm-btn sm"
+          :disabled="!singleSelected"
+          :title="$t('laundry.viewOrder')"
+          @click="openDrawer(singleSelected)"
+        >
+          <i class="fas fa-eye" aria-hidden="true"></i> {{ $t('laundry.viewOrder') }}
+        </button>
+        <button
+          type="button"
+          class="sm-btn sm ghost"
+          :disabled="!canSettleSelected"
+          :title="$t('laundry.settle')"
+          @click="openSettle(singleSelected)"
+        >
+          <i class="fas fa-money-bill" aria-hidden="true"></i> {{ $t('laundry.settle') }}
+        </button>
+        <button
+          type="button"
+          class="sm-btn sm danger-ghost"
+          :disabled="!canVoidSelected"
+          :title="$t('laundry.voidOrder')"
+          @click="openDrawer(singleSelected); promptVoid()"
+        >
+          <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('laundry.void') }}
+        </button>
+        <span class="spacer"></span>
+        <p v-if="!singleSelected" class="table-actions-hint">
+          <i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.summary.selectToAct') }}
+        </p>
+      </div>
+
+      <div class="table-scroll">
       <table class="table">
         <thead>
           <tr>
@@ -143,109 +213,59 @@
             <th scope="col">{{ $t('laundry.room') }}</th>
             <th scope="col">{{ $t('laundry.tableService') }}</th>
             <th scope="col">{{ $t('laundry.items') }}</th>
-            <th scope="col">{{ $t('laundry.totalCharge') }}</th>
             <th scope="col">{{ $t('laundry.attendant') }}</th>
             <th scope="col">{{ $t('laundry.status') }}</th>
             <th scope="col">{{ $t('orders.payment') }}</th>
             <th scope="col">{{ $t('laundry.orderDate') }}</th>
-            <th scope="col">{{ $t('common.actions') }}</th>
+            <th scope="col">{{ $t('laundry.totalCharge') }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="order in orders" :key="order.laundry_order_id">
-            <td class="bulk-col">
-              <input
-                v-if="canManage"
-                type="checkbox"
-                :checked="bulk.isSelected(order.laundry_order_id)"
-                @change="bulk.toggle(order.laundry_order_id)"
-              />
-            </td>
-            <td>
-              <button type="button" class="btn-link" @click="openEdit(order)">
-                <strong>{{ order.order_number }}</strong>
-              </button>
-            </td>
-            <td>{{ order.guest_name || '-' }}</td>
-            <td>{{ order.room_number || '-' }}</td>
-            <td class="capitalize">{{ serviceLabel(order.service) }}</td>
-            <td>
-              {{ order.items_count || '-' }}
-              <div v-if="order.consumables?.length" class="muted consumables-summary">
-                <i class="fas fa-jug-detergent"></i>
-                {{
-                  order.consumables
-                    .map((l) => `${l.item_name} x${l.quantity}`)
-                    .join(', ')
-                }}
-              </div>
-            </td>
-            <td>
-              <span class="price">{{ curCode() }} {{ Number(order.total_charge).toLocaleString() }}</span>
-            </td>
-            <td>{{ order.attendant?.full_name || '-' }}</td>
-            <td>
-              <span class="badge" :class="statusBadge(order.status)">{{
-                statusLabel(order.status)
-              }}</span>
-              <div v-if="order.ready_at" class="muted">
-                {{ $t('laundry.readyAt') }} {{ formatDateTime(order.ready_at) }}
-              </div>
-              <div v-if="order.delivered_at" class="muted">
-                {{ $t('laundry.deliveredAt') }} {{ formatDateTime(order.delivered_at) }}
-              </div>
-            </td>
-            <td>
-              <span class="badge" :class="paymentBadge(order.payment_status)">{{
-                order.payment_status.replace('_', ' ')
-              }}</span>
-            </td>
-            <td>{{ order.order_date || '-' }}</td>
-            <td>
-              <div class="actions" v-if="canManage">
-                <button
-                  v-if="order.payment_status === 'unpaid'"
-                  class="btn btn-sm btn-primary"
-                  @click="openSettle(order)"
-                >
-                  <i class="fas fa-money-bill-wave"></i> {{ $t('laundry.settle') }}
+          <template v-if="sourceView === 'manual'">
+            <tr v-for="order in orders" :key="order.laundry_order_id">
+              <td class="bulk-col">
+                <input
+                  v-if="canManage"
+                  type="checkbox"
+                  :checked="bulk.isSelected(order.laundry_order_id)"
+                  @change="bulk.toggle(order.laundry_order_id)"
+                />
+              </td>
+              <td>
+                <button type="button" class="btn-link" @click="openDrawer(order)">
+                  <strong>{{ order.order_number }}</strong>
                 </button>
-                <button
-                  v-if="order.status === 'pending'"
-                  class="btn btn-sm btn-secondary"
-                  @click="setStatus(order, 'ready')"
-                >
-                  <i class="fas fa-check-double"></i> {{ $t('laundry.statusReady') }}
-                </button>
-                <button
-                  v-if="order.status === 'ready'"
-                  class="btn btn-sm btn-success"
-                  @click="setStatus(order, 'delivered')"
-                >
-                  <i class="fas fa-truck"></i> {{ $t('laundry.statusDelivered') }}
-                </button>
-                <button
-                  v-if="order.status === 'pending'"
-                  class="btn btn-sm btn-danger"
-                  @click="setStatus(order, 'cancelled')"
-                >
-                  <i class="fas fa-ban"></i> {{ $t('laundry.statusCancelled') }}
-                </button>
-                <button class="btn btn-sm btn-secondary" @click="openEdit(order)">
-                  <i class="fas fa-pen"></i> {{ $t('common.edit') }}
-                </button>
-                <button class="btn btn-sm btn-danger" @click="remove(order)">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-              <span v-else class="muted">—</span>
-            </td>
-          </tr>
-          <tr v-if="!orders.length && !loading">
-            <td colspan="12" class="muted">{{ $t('laundry.empty') }}</td>
+              </td>
+              <td>{{ order.guest_name || '-' }}</td>
+              <td>{{ order.room_number || '-' }}</td>
+              <td class="capitalize">{{ serviceLabel(order.service) }}</td>
+              <td>{{ order.items_count || '-' }}</td>
+              <td>{{ order.attendant?.full_name || '-' }}</td>
+              <td>
+                <span class="badge" :class="displayStatus(order).badge">{{
+                  displayStatus(order).label
+                }}</span>
+              </td>
+              <td>
+                <span class="badge" :class="paymentBadge(order.payment_status)">{{
+                  paymentLabel(order.payment_status)
+                }}</span>
+              </td>
+              <td>{{ order.order_date || '-' }}</td>
+              <td>
+                <span class="price">{{ curCode() }} {{ Number(order.total_charge).toLocaleString() }}</span>
+              </td>
+            </tr>
+            <tr v-if="!orders.length && !loading">
+              <td colspan="11" class="muted">{{ $t('laundry.empty') }}</td>
+            </tr>
+          </template>
+          <tr v-else>
+            <td colspan="11" class="muted">{{ $t('laundry.automatedEmpty') }}</td>
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <!-- Pagination controls (shown when there is more than one page of orders) -->
@@ -283,10 +303,37 @@
         <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
 
         <form @submit.prevent="save">
+          <!-- Two major modes: an in-house guest (auto-filled) or a walk-in customer -->
+          <div class="guest-type" role="radiogroup" :aria-label="$t('laundry.guestType')">
+            <label class="guest-type-option" :class="{ active: guestType === 'in_house' }">
+              <input v-model="guestType" type="radio" value="in_house" />
+              <i class="fas fa-bed" aria-hidden="true"></i> {{ $t('laundry.inHouseGuest') }}
+            </label>
+            <label class="guest-type-option" :class="{ active: guestType === 'customer' }">
+              <input v-model="guestType" type="radio" value="customer" />
+              <i class="fas fa-user" aria-hidden="true"></i> {{ $t('laundry.customer') }}
+            </label>
+          </div>
+
           <div class="form-grid">
+            <!-- IN HOUSE: pick the stay, room + guest auto-fill from the booking -->
+            <div v-if="guestType === 'in_house'" class="form-group form-full">
+              <label>{{ $t('laundry.selectInHouseGuest') }}</label>
+              <SearchableSelect
+                v-model="selectedGuestId"
+                :options="inHouseOptions"
+                :empty-label="$t('laundry.selectInHouseGuest')"
+                @change="onGuestSelect"
+              />
+            </div>
             <div class="form-group">
               <label>{{ $t('laundry.guestName') }}</label>
-              <input v-model="form.guest_name" type="text" class="input" />
+              <input
+                v-model="form.guest_name"
+                type="text"
+                class="input"
+                :readonly="guestType === 'in_house'"
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('laundry.service') }} *</label>
@@ -298,12 +345,9 @@
                 v-model="form.room_number"
                 type="text"
                 class="input"
+                :readonly="guestType === 'in_house'"
                 :placeholder="$t('laundry.roomNumberPlaceholder')"
               />
-            </div>
-            <div class="form-group">
-              <label>{{ $t('laundry.status') }}</label>
-              <SearchableSelect v-model="form.status" :options="statusOptions" />
             </div>
             <div class="form-group">
               <label>{{ $t('laundry.orderDate') }}</label>
@@ -317,7 +361,7 @@
               <label>{{ $t('laundry.attendant') }}</label>
               <SearchableSelect
                 v-model="form.attendant_id"
-                :options="userOptions"
+                :options="attendantOptions"
                 :empty-label="$t('common.none')"
               />
             </div>
@@ -378,54 +422,6 @@
             }}
           </p>
 
-          <!-- Consumables: the registered stock issued to the wash -->
-          <div class="items-head">
-            <h3>{{ $t('laundry.consumables') }}</h3>
-            <button
-              v-if="!consumablesLocked"
-              type="button"
-              class="btn btn-sm btn-secondary"
-              @click="addConsumable"
-            >
-              <i class="fas fa-plus"></i> {{ $t('laundry.addConsumable') }}
-            </button>
-          </div>
-          <p v-if="consumablesLocked && !form.consumables.length" class="muted">
-            {{ $t('laundry.noConsumables') }}
-          </p>
-          <div v-for="(line, idx) in form.consumables" :key="`cons-${idx}`" class="item-row">
-            <div class="item-grid consumable-grid">
-              <div class="form-group">
-                <label>{{ $t('laundry.stockItem') }}</label>
-                <SearchableSelect
-                  v-model="line.item_id"
-                  :options="stockItemOptions"
-                  :empty-label="$t('laundry.selectStockItem')"
-                  :disabled="consumablesLocked"
-                />
-                <div v-if="stockHint(line.item_id)" class="muted">
-                  {{ stockHint(line.item_id) }}
-                </div>
-              </div>
-              <div class="form-group">
-                <label>{{ $t('orders.quantity') }}</label>
-                <input
-                  v-model.number="line.quantity"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  class="input"
-                  :disabled="consumablesLocked"
-                />
-              </div>
-              <div v-if="!consumablesLocked" class="form-group item-remove">
-                <button type="button" class="btn btn-sm btn-danger" @click="removeConsumable(idx)">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-
           <div class="form-group form-full">
             <label>{{ $t('laundry.notes') }}</label>
             <textarea v-model="form.notes" rows="2" class="textarea"></textarea>
@@ -456,6 +452,122 @@
       :busy="deleting"
       @confirm="bulkDelete"
     />
+
+    <!-- Order-detail drawer: items, total and settle / edit / void actions -->
+    <div v-if="drawerOrder" class="modal-overlay" @click.self="closeDrawer">
+      <div class="modal drawer">
+        <div class="modal-head">
+          <h2><i class="fas fa-receipt" aria-hidden="true"></i> {{ drawerOrder.order_number }}</h2>
+          <button class="modal-close" :aria-label="$t('common.close')" @click="closeDrawer">
+            <i class="fas fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <p class="settle-order">
+          {{ drawerOrder.guest_name || '-' }}
+          <template v-if="drawerOrder.room_number"> · Room {{ drawerOrder.room_number }}</template>
+          · <span class="capitalize">{{ serviceLabel(drawerOrder.service) }}</span>
+        </p>
+
+        <table class="drawer-items">
+          <thead>
+            <tr>
+              <th>{{ $t('laundry.itemName') }}</th>
+              <th>{{ $t('orders.quantity') }}</th>
+              <th>{{ $t('laundry.unitPrice') }}</th>
+              <th>{{ $t('laundry.totalCharge') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(item, i) in drawerOrder.items || []" :key="i">
+              <td>{{ item.item_name }}</td>
+              <td>{{ item.quantity }}</td>
+              <td>{{ curCode() }} {{ Number(item.unit_price).toLocaleString() }}</td>
+              <td>{{ curCode() }} {{ Number(item.subtotal ?? item.unit_price * item.quantity).toLocaleString() }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p class="drawer-total">
+          {{ $t('laundry.totalCharge') }}:
+          <span class="price">{{ curCode() }} {{ Number(drawerOrder.total_charge).toLocaleString() }}</span>
+        </p>
+        <p>
+          {{ $t('laundry.status') }}:
+          <span class="badge" :class="displayStatus(drawerOrder).badge">{{ displayStatus(drawerOrder).label }}</span>
+        </p>
+        <p v-if="!isEditable(drawerOrder)" class="muted settled-hint">
+          <i class="fas fa-lock" aria-hidden="true"></i> {{ $t('laundry.settledHint') }}
+        </p>
+
+        <div class="drawer-actions">
+          <!-- Operational wash steps (unsettled orders only) -->
+          <template v-if="isEditable(drawerOrder)">
+            <button
+              v-if="drawerOrder.status === 'pending'"
+              type="button"
+              class="sm-btn sm ghost"
+              @click="setStatus(drawerOrder, 'ready')"
+            >
+              <i class="fas fa-check-double" aria-hidden="true"></i> {{ $t('laundry.markReady') }}
+            </button>
+            <button
+              v-if="drawerOrder.status === 'ready'"
+              type="button"
+              class="sm-btn sm success"
+              @click="setStatus(drawerOrder, 'delivered')"
+            >
+              <i class="fas fa-truck" aria-hidden="true"></i> {{ $t('laundry.markDelivered') }}
+            </button>
+            <button
+              v-if="drawerOrder.payment_status === 'unpaid'"
+              type="button"
+              class="sm-btn sm primary"
+              @click="openSettle(drawerOrder)"
+            >
+              <i class="fas fa-money-bill" aria-hidden="true"></i> {{ $t('laundry.settle') }}
+            </button>
+            <button type="button" class="sm-btn sm ghost" @click="openEdit(drawerOrder)">
+              <i class="fas fa-pen" aria-hidden="true"></i> {{ $t('common.edit') }}
+            </button>
+            <span class="spacer"></span>
+            <button
+              v-if="drawerOrder.status !== 'cancelled'"
+              type="button"
+              class="sm-btn sm danger-ghost"
+              @click="promptVoid"
+            >
+              <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('laundry.voidOrder') }}
+            </button>
+          </template>
+        </div>
+
+        <div v-if="voidConfirming" class="drawer-void">
+          <label :for="'void-reason'">{{ $t('laundry.voidReason') }}</label>
+          <input
+            id="void-reason"
+            v-model.trim="voidReason"
+            type="text"
+            maxlength="255"
+            class="input"
+          />
+          <div class="drawer-actions">
+            <button type="button" class="sm-btn sm ghost" @click="voidConfirming = false">
+              {{ $t('common.cancel') }}
+            </button>
+            <button
+              type="button"
+              class="sm-btn sm danger"
+              :disabled="voiding"
+              @click="confirmVoid"
+            >
+              <i class="fas fa-ban" aria-hidden="true"></i>
+              {{ voiding ? $t('common.saving') : $t('laundry.voidOrder') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Settlement modal: mark the order paid or post it to the guest's room -->
     <div v-if="showSettleModal" class="modal-overlay" @click.self="closeSettle">
@@ -520,7 +632,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { inventoryApi, laundryApi, clothTypeApi, userApi } from '@/api'
+import { laundryApi, clothTypeApi, userApi, orderApi } from '@/api'
 import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
@@ -540,7 +652,6 @@ const canManage = computed(() => authStore.can(40) && authStore.canOperate)
 const orders = ref([])
 const users = ref([])
 const clothTypes = ref([])
-const stockItems = ref([])
 const page = ref(1)
 const meta = ref({
   total: 0,
@@ -559,23 +670,40 @@ const bulk = useBulkSelection(() => orders.value, { idKey: 'laundry_order_id' })
 const showBulkDelete = ref(false)
 const deleting = ref(false)
 
+// The order currently ticked for the cashier-style action bar. Single-ticket
+// actions (view / settle / void) need exactly one selected order.
+const singleSelected = computed(() => {
+  const rows = orders.value.filter((o) => bulk.isSelected(o.laundry_order_id))
+  return rows.length === 1 ? rows[0] : null
+})
+const canSettleSelected = computed(
+  () => singleSelected.value?.payment_status === 'unpaid',
+)
+const canVoidSelected = computed(
+  () => singleSelected.value && isEditable(singleSelected.value) && singleSelected.value.status !== 'cancelled',
+)
+
 // Create/edit modal state.
 const showModal = ref(false)
 const editing = ref(false)
 const editingId = ref(null)
 const saving = ref(false)
 const modalError = ref('')
-// Consumables can no longer change once the wash is booked (order ready+).
-const consumablesLocked = computed(
-  () => editing.value && ['ready', 'delivered'].includes(form.status),
-)
+// The new-order page offers two major modes: an in-house guest (auto-filled
+// from the active stay) or a walk-in customer typed by hand.
+const guestType = ref('in_house')
+const inHouseGuests = ref([])
+const selectedGuestId = ref('')
+// Order-detail drawer (cashier-style view with settle / void / edit actions).
+const drawerOrder = ref(null)
+// Toggle between the manual orders (room + customer) and automated linen runs.
+const sourceView = ref('manual')
 // Form model bound to the order modal, including dynamic line items.
 const form = reactive({
   guest_name: '',
   service: 'wash',
   room_number: '',
   items: [],
-  consumables: [],
   status: 'pending',
   payment_status: 'unpaid',
   order_date: '',
@@ -605,10 +733,23 @@ const paymentStatusOptions = [
   { value: 'billed_to_room', label: t('orders.paymentBilledToRoom') },
 ]
 
-// Attendant dropdown options derived from the loaded user list.
-const userOptions = computed(() =>
-  users.value.map((user) => ({ value: user.user_id, label: user.full_name })),
-)
+// Attendant options: registered laundry personnel first, otherwise housekeeping
+// staff — matching the PDF's "laundry personnel, else housekeeping" rule. Each
+// option carries the user's role/department so the table can badge them.
+const attendantOptions = computed(() => {
+  const pool = users.value.filter((u) => {
+    const role = (u.user_role || '').toLowerCase()
+    const dept = (u.department || '').toLowerCase()
+    return role === 'housekeeping' || dept === 'laundry' || dept === 'housekeeping'
+  })
+  const list = pool.length ? pool : users.value
+  return list.map((user) => ({
+    value: user.user_id,
+    label: user.full_name,
+    role: user.user_role,
+    department: user.department,
+  }))
+})
 
 // Registered cloth/linen types for the searchable item picker.
 const clothTypeOptions = computed(() =>
@@ -621,16 +762,6 @@ const clothTypeOptions = computed(() =>
       iron_price: Number(cloth.iron_price),
       dry_clean_price: Number(cloth.dry_clean_price),
     })),
-)
-
-/** Available registered stock items for the consumables picker. */
-const stockItemOptions = computed(() =>
-  stockItems.value.map((item) => ({
-    value: item.item_id,
-    label: `${item.item_name} (${item.unit})`,
-    unit: item.unit,
-    quantity_in_stock: Number(item.quantity_in_stock),
-  })),
 )
 
 /** Price of a cloth type for the currently chosen service, or 0. */
@@ -660,32 +791,24 @@ watch(
   },
 )
 
-/** Maps an order status key to its translated display label. */
-function statusLabel(status) {
-  const map = {
-    pending: t('laundry.statusPending'),
-    ready: t('laundry.statusReady'),
-    delivered: t('laundry.statusDelivered'),
-    cancelled: t('laundry.statusCancelled'),
-  }
-  return map[status] || status
-}
-
-/** Returns the CSS badge class for the given order status. */
-function statusBadge(status) {
-  const map = {
-    pending: 'badge-yellow',
-    ready: 'badge-blue',
-    delivered: 'badge-green',
-    cancelled: 'badge-red',
-  }
-  return map[status] || 'badge-gray'
-}
-
 /** Returns the CSS badge class for the given payment status. */
 function paymentBadge(status) {
   const map = { unpaid: 'badge-red', paid: 'badge-green', billed_to_room: 'badge-blue' }
   return map[status] || 'badge-gray'
+}
+
+/**
+ * Settlement-driven status shown in the STATUS column. Per the resolution the
+ * guest only ever sees two conditions: PENDING (not yet settled) or COMPLETE
+ * (settled by payment or posted to a room). The internal ready/delivered
+ * workflow still drives the operational buttons, but the column the guest reads
+ * reflects settlement.
+ */
+function displayStatus(order) {
+  const settled = ['paid', 'billed_to_room'].includes(order.payment_status)
+  return settled
+    ? { key: 'complete', label: t('laundry.statusComplete'), badge: 'badge-green' }
+    : { key: 'pending', label: t('laundry.statusPending'), badge: 'badge-yellow' }
 }
 
 /** Maps a payment status key to its translated display label. */
@@ -726,27 +849,6 @@ function addItem() {
 /** Removes the line item at the given index from the form. */
 function removeItem(idx) {
   form.items.splice(idx, 1)
-}
-
-/** Creates a blank consumable supply line for the supplies list. */
-function emptyConsumable() {
-  return { item_id: '', quantity: 1 }
-}
-
-/** Appends a blank consumable supply line to the form. */
-function addConsumable() {
-  form.consumables.push(emptyConsumable())
-}
-
-/** Removes the consumable line at the given index from the form. */
-function removeConsumable(idx) {
-  form.consumables.splice(idx, 1)
-}
-
-/** Human-readable stock of a consumable item (e.g. "12 litres in stock"). */
-function stockHint(itemId) {
-  const item = stockItems.value.find((i) => i.item_id === itemId)
-  return item ? `${Number(item.quantity_in_stock)} ${item.unit} ${t('laundry.inStock')}` : ''
 }
 
 /** Computes the estimated total charge from the entered line items. */
@@ -805,8 +907,6 @@ const exportColumns = [
   { key: 'service', label: 'Service' },
   { key: 'items', label: 'Items' },
   { key: 'items_count', label: 'Items Count' },
-  { key: 'consumables', label: 'Consumables' },
-  { key: 'total_charge', label: 'Total Charge' },
   { key: 'status', label: 'Status' },
   { key: 'payment_status', label: 'Payment' },
   { key: 'order_date', label: 'Order Date' },
@@ -814,6 +914,7 @@ const exportColumns = [
   { key: 'ready_at', label: 'Ready' },
   { key: 'delivered_at', label: 'Delivered' },
   { key: 'created_at', label: 'Created' },
+  { key: 'total_charge', label: 'Amount' },
 ]
 
 /** Turns a raw API order into a flat, export-ready row (no nested objects). */
@@ -828,17 +929,14 @@ function toExportRow(order) {
       .filter(Boolean)
       .join('; '),
     items_count: order.items_count,
-    consumables: (order.consumables || [])
-      .map((line) => `${line.item_name} x${line.quantity}`)
-      .join('; '),
-    total_charge: Number(order.total_charge || 0).toFixed(2),
-    status: statusLabel(order.status),
+    status: displayStatus(order).label,
     payment_status: paymentLabel(order.payment_status),
     order_date: order.order_date || '',
     notes: order.notes || '',
     ready_at: formatDateTime(order.ready_at),
     delivered_at: formatDateTime(order.delivered_at),
     created_at: formatDateTime(order.created_at),
+    total_charge: Number(order.total_charge || 0).toFixed(2),
   }
 }
 
@@ -868,21 +966,47 @@ async function loadUsers() {
   }
 }
 
+/**
+ * Loads the currently in-house guests (rooms with an active stay) so the
+ * "IN HOUSE GUEST" mode can auto-fill room number and guest name. The same
+ * endpoint the F&B order pad uses; failures are silently ignored.
+ */
+async function loadInHouseGuests() {
+  try {
+    const res = await orderApi.formOptions()
+    inHouseGuests.value = res.data.in_house_guests || []
+  } catch {
+    inHouseGuests.value = []
+  }
+}
+
+/** In-house guest picker options keyed by reservation for stable selection. */
+const inHouseOptions = computed(() =>
+  inHouseGuests.value.map((g) => ({
+    value: String(g.reservation_id || g.room_number),
+    label: `${g.guest_name} · Room ${g.room_number}`,
+  })),
+)
+
+/**
+ * Auto-fills room number and guest name when an in-house guest is picked.
+ * The stay's own reservation is stamped so "bill to room" posting resolves.
+ */
+function onGuestSelect(value) {
+  const guest = inHouseGuests.value.find(
+    (g) => String(g.reservation_id || g.room_number) === String(value),
+  )
+  if (!guest) return
+  form.guest_name = guest.guest_name || ''
+  form.room_number = guest.room_number || ''
+  form.reservation_id = guest.reservation_id || undefined
+}
+
 /** Loads the registered cloth types feeding the item picker. */
 async function loadClothTypes() {
   try {
     const res = await clothTypeApi.index({ per_page: 100 })
     clothTypes.value = res.data.cloth_types?.data || res.data.data?.data || []
-  } catch {
-    // ignore
-  }
-}
-
-/** Loads the registered stock items feeding the consumables picker. */
-async function loadStockItems() {
-  try {
-    const res = await inventoryApi.index({ per_page: 100 })
-    stockItems.value = res.data.data?.data || res.data.data || []
   } catch {
     // ignore
   }
@@ -913,11 +1037,13 @@ function triggerSearch() {
 
 /** Restores the order form to its default empty state with one blank line item. */
 async function resetForm() {
+  guestType.value = 'in_house'
+  selectedGuestId.value = ''
   form.guest_name = ''
   form.service = 'wash'
   form.room_number = ''
+  form.reservation_id = undefined
   form.items = [emptyItem()]
-  form.consumables = []
   form.status = 'pending'
   form.payment_status = 'unpaid'
   form.order_date = ''
@@ -939,25 +1065,29 @@ async function openCreate() {
   editing.value = false
   editingId.value = null
   showModal.value = true
+  loadInHouseGuests()
 }
 
-/** Fills the form with an existing order's data and opens the modal in edit mode. */
+/**
+ * Fills the form with an existing order's data and opens the modal in edit mode.
+ * Only unsettled orders may be edited — a settled order is view-only, so the
+ * edit path is only reached for unpaid orders.
+ */
 function openEdit(order) {
   modalError.value = ''
   editing.value = true
   editingId.value = order.laundry_order_id
+  guestType.value = order.room_number || order.reservation_id ? 'in_house' : 'customer'
+  selectedGuestId.value = ''
   form.guest_name = order.guest_name || ''
   form.service = order.service
   form.room_number = order.room_number || ''
+  form.reservation_id = order.reservation_id || undefined
   form.items = (order.items || []).map((item) => ({
     cloth_type_id: item.cloth_type_id || '',
     item_name: item.item_name,
     quantity: item.quantity,
     unit_price: Number(item.unit_price),
-  }))
-  form.consumables = (order.consumables || []).map((line) => ({
-    item_id: line.item_id,
-    quantity: Number(line.quantity),
   }))
   form.status = order.status
   form.payment_status = order.payment_status || 'unpaid'
@@ -965,6 +1095,7 @@ function openEdit(order) {
   form.attendant_id = order.attendant_id || ''
   form.notes = order.notes || ''
   showModal.value = true
+  loadInHouseGuests()
 }
 
 /** Hides the create/edit modal. */
@@ -980,7 +1111,8 @@ function buildPayload() {
   return {
     guest_name: form.guest_name,
     service: form.service,
-    room_number: form.room_number,
+    room_number: form.room_number || undefined,
+    reservation_id: form.reservation_id || undefined,
     items: form.items
       .filter((item) => item.item_name)
       .map((item) => ({
@@ -989,9 +1121,6 @@ function buildPayload() {
         quantity: item.quantity,
         unit_price: item.unit_price,
       })),
-    consumables: form.consumables
-      .filter((line) => line.item_id)
-      .map((line) => ({ item_id: line.item_id, quantity: line.quantity })),
     status: form.status,
     payment_status: form.payment_status,
     order_date: form.order_date,
@@ -1022,25 +1151,17 @@ async function save() {
   }
 }
 
-/** Updates an order's status directly from the table (e.g. ready/delivered/cancelled) and reloads. */
+/**
+ * Moves an order along the internal wash workflow (ready / delivered). These
+ * operational steps live in the order drawer, not the table — the STATUS column
+ * the guest reads is settlement-driven (PENDING / COMPLETE).
+ */
 async function setStatus(order, status) {
   error.value = ''
   try {
     await laundryApi.update(order.laundry_order_id, { status })
-    success.value = t('laundry.statusChanged', { status: statusLabel(status) })
-    await load()
-  } catch (err) {
-    error.value = flattenError(err)
-  }
-}
-
-/** Deletes an order after a confirmation prompt, then reloads the list. */
-async function remove(order) {
-  if (!window.confirm(t('common.delete'))) return
-  error.value = ''
-  try {
-    await laundryApi.destroy(order.laundry_order_id)
-    success.value = t('laundry.deleteSuccess')
+    success.value = t('laundry.statusChanged', { status: t(`laundry.status${status.charAt(0).toUpperCase()}${status.slice(1)}`) })
+    drawerOrder.value = null
     await load()
   } catch (err) {
     error.value = flattenError(err)
@@ -1083,11 +1204,66 @@ async function confirmSettle() {
     await laundryApi.update(settleOrder.value.laundry_order_id, payload)
     success.value = t('laundry.settled')
     closeSettle()
+    drawerOrder.value = null
     await load()
   } catch (err) {
     settleError.value = flattenError(err)
   } finally {
     settling.value = false
+  }
+}
+
+// Order-detail drawer (cashier-style) state.
+const voidReason = ref('')
+const voidConfirming = ref(false)
+const voiding = ref(false)
+
+/** Opens the order-detail drawer (view / settle / edit / void live here). */
+function openDrawer(order) {
+  drawerOrder.value = order
+  voidConfirming.value = false
+  voidReason.value = ''
+}
+
+/** Closes the order-detail drawer. */
+function closeDrawer() {
+  drawerOrder.value = null
+  voidConfirming.value = false
+  voidReason.value = ''
+}
+
+/**
+ * True when the order may still be edited or voided. A settled order (paid or
+ * posted) is view-only — no edit, no void, matching the "once settled, just
+ * VIEW" rule.
+ */
+function isEditable(order) {
+  return !['paid', 'billed_to_room'].includes(order.payment_status)
+}
+
+/** Asks for confirmation before voiding an order. */
+function promptVoid() {
+  voidReason.value = ''
+  voidConfirming.value = true
+}
+
+/**
+ * Voids an unsettled order by moving it to the terminal cancelled state (the
+ * backend's existing transition), then reloads the list and closes the drawer.
+ */
+async function confirmVoid() {
+  if (!drawerOrder.value || voiding.value) return
+  error.value = ''
+  voiding.value = true
+  try {
+    await laundryApi.update(drawerOrder.value.laundry_order_id, { status: 'cancelled' })
+    success.value = t('laundry.statusChanged', { status: t('laundry.statusCancelled') })
+    closeDrawer()
+    await load()
+  } catch (err) {
+    error.value = flattenError(err)
+  } finally {
+    voiding.value = false
   }
 }
 
@@ -1126,11 +1302,20 @@ function flattenError(err) {
     : err.response?.data?.message || t('common.actionFailed')
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // Default the list to the front-desk business date so the "current" orders
+  // show first; the universal calendar steps back to earlier days.
+  try {
+    const bd = (await import('@/stores/businessDate')).useBusinessDateStore()
+    await bd.ensureLoaded()
+    filters.date = bd.current || ''
+  } catch {
+    // ignore
+  }
   load()
   loadUsers()
   loadClothTypes()
-  loadStockItems()
+  loadInHouseGuests()
 })
 </script>
 
@@ -1369,6 +1554,149 @@ onMounted(() => {
 
 .settle-room {
   margin-top: 14px;
+}
+
+.head-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.btn-back {
+  padding: 10px 12px;
+}
+
+/* Two major modes on the new-order form: in-house guest vs customer. */
+.guest-type {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.guest-type-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #e2e2e2;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #fafafa;
+  font-weight: 600;
+}
+
+.guest-type-option input {
+  display: none;
+}
+
+.guest-type-option.active {
+  border-color: #005eb8;
+  background: #eaf3ff;
+  color: #005eb8;
+}
+
+/* Manual vs automated (hotel linen) source switch above the table. */
+.source-switch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 14px;
+  background: #f0f0f0;
+  border-radius: 10px;
+}
+
+.source-btn {
+  border: none;
+  background: transparent;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #555;
+}
+
+.source-btn.active {
+  background: #fff;
+  color: #005eb8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* Cashier-style action bar above the table. */
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.table-actions .spacer {
+  flex: 1;
+}
+
+.table-actions-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #757575;
+}
+
+/* Order-detail drawer (wider panel on the right of the overlay). */
+.drawer {
+  max-width: 620px;
+}
+
+.drawer-items {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.drawer-items th,
+.drawer-items td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.drawer-total {
+  text-align: right;
+  font-size: 15px;
+  margin: 10px 0;
+}
+
+.drawer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.drawer-actions .spacer {
+  flex: 1;
+}
+
+.drawer-void {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+}
+
+.drawer-void label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.drawer-void .input {
+  width: 100%;
+}
+
+.settled-hint {
+  color: #7a6a00;
 }
 
 /* Tablets: 768px is the classic iPad portrait width, so the phone
