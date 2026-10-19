@@ -15,6 +15,7 @@ import { resolve } from 'node:path'
 
 const read = (rel) => readFileSync(resolve(process.cwd(), rel), 'utf8')
 const page = read('src/pages/laundry/LaundryListPage.vue')
+const clothPage = read('src/pages/laundry/ClothTypesPage.vue')
 const en = JSON.parse(read('src/locales/en.json'))
 const sw = JSON.parse(read('src/locales/sw.json'))
 
@@ -162,5 +163,51 @@ describe('locale parity for the new laundry keys', () => {
       expect(en.laundry[key], `en.laundry.${key}`).toBeTruthy()
       expect(sw.laundry[key], `sw.laundry.${key}`).toBeTruthy()
     }
+  })
+})
+
+describe('settlement: room orders post, customer orders pay', () => {
+  it('defaults in-house (room) orders to posting and customer orders to paid', () => {
+    expect(page).toMatch(/function isInHouse/)
+    const at = page.indexOf('function openSettle')
+    expect(at, 'openSettle not found').toBeGreaterThan(-1)
+    const body = page.slice(at, page.indexOf('\n}', at))
+    // Room orders post to the folio; walk-in customers pay directly.
+    expect(body).toMatch(/isInHouse\(order\) \? 'billed_to_room' : 'paid'/)
+  })
+
+  it('offers the posting option only for in-house (room) orders', () => {
+    expect(page).toMatch(/<label v-if="isInHouse\(settleOrder\)"[^>]*>[\s\S]*?value="billed_to_room"/)
+  })
+})
+
+describe('cloth registry: two tabs (compositions + priced items)', () => {
+  it('exposes a Cloth Types and a Cloth Items tab', () => {
+    expect(clothPage).toMatch(/activeTab === 'types'/)
+    expect(clothPage).toMatch(/activeTab === 'items'/)
+    expect(clothPage).toMatch(/function switchTab/)
+    expect(en.clothTypes.tabTypes).toBeTruthy()
+    expect(en.clothTypes.tabItems).toBeTruthy()
+    expect(sw.clothTypes.tabTypes).toBeTruthy()
+    expect(sw.clothTypes.tabItems).toBeTruthy()
+  })
+
+  it('offers a back button to the laundry orders page', () => {
+    expect(clothPage).toMatch(/\$router\.push\('\/app\/laundry'\)/)
+  })
+
+  it('links a priced cloth item to a composition via the API', () => {
+    expect(clothPage).toMatch(/cloth_composition_id/)
+    expect(clothPage).toMatch(/clothCompositionApi/)
+    expect(clothPage).toMatch(/compositionOptions/)
+  })
+
+  it('registers composition name + description and item prices per service', () => {
+    expect(clothPage).toMatch(/form\.description/)
+    expect(clothPage).toMatch(/form\.wash_price/)
+    expect(clothPage).toMatch(/form\.iron_price/)
+    expect(clothPage).toMatch(/form\.dry_clean_price/)
+    expect(en.clothTypes.description).toBeTruthy()
+    expect(sw.clothTypes.description).toBeTruthy()
   })
 })

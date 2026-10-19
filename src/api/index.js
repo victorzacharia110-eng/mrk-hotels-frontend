@@ -2221,6 +2221,46 @@ export const clothTypeApi = {
   },
 }
 
+/**
+ * Cloth compositions ("cloth types": the material a garment is made of, e.g.
+ * Denim / Cotton). Priced garment items may optionally belong to one.
+ */
+export const clothCompositionApi = {
+  /**
+   * Paginated list of cloth compositions.
+   * @param {object} params - Query params (search, pagination).
+   * @returns {Promise} Axios response with `cloth_compositions` list.
+   */
+  index(params) {
+    return api.get(`${v1}/laundry-cloth-compositions`, { params })
+  },
+  /**
+   * Creates a cloth composition.
+   * @param {object} data - { name, description?, is_active? }.
+   * @returns {Promise} Axios response with the created composition.
+   */
+  store(data) {
+    return api.post(`${v1}/laundry-cloth-compositions`, data)
+  },
+  /**
+   * Updates a cloth composition's name and/or description.
+   * @param {string|number} id - Composition identifier.
+   * @param {object} data - Fields to change.
+   * @returns {Promise} Axios response with the updated composition.
+   */
+  update(id, data) {
+    return api.put(`${v1}/laundry-cloth-compositions/${id}`, data)
+  },
+  /**
+   * Deletes a cloth composition (its items are kept, just unlinked).
+   * @param {string|number} id - Composition identifier.
+   * @returns {Promise} Axios response confirming deletion.
+   */
+  destroy(id) {
+    return api.delete(`${v1}/laundry-cloth-compositions/${id}`)
+  },
+}
+
 /** Staff attendance: clock-in/out, current status and per-user history. */
 export const attendanceApi = {
   /**

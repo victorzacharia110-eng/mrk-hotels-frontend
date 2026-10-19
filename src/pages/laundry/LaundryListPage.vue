@@ -589,23 +589,19 @@
         </p>
         <p class="muted">{{ $t('laundry.settleChoice') }}</p>
 
+        <!-- Room (in-house) orders settle by posting to the guest's folio. -->
+        <label v-if="isInHouse(settleOrder)" class="settle-option">
+          <input v-model="settleMode" type="radio" value="billed_to_room" />
+          <span>
+            <i class="fas fa-bed"></i> {{ $t('laundry.settleRoom') }}
+            <small class="muted">{{ $t('orders.paymentBilledToRoom') }}</small>
+          </span>
+        </label>
         <label class="settle-option">
           <input v-model="settleMode" type="radio" value="paid" />
           <span>
             <i class="fas fa-cash-register"></i> {{ $t('laundry.settlePaid') }}
             <small class="muted">{{ $t('orders.paymentPaid') }}</small>
-          </span>
-        </label>
-        <label class="settle-option" :class="{ 'is-disabled': !settleOrder?.reservation_id && !settleOrder?.room_number }">
-          <input
-            v-model="settleMode"
-            type="radio"
-            value="billed_to_room"
-            :disabled="!settleOrder?.reservation_id && !settleOrder?.room_number"
-          />
-          <span>
-            <i class="fas fa-bed"></i> {{ $t('laundry.settleRoom') }}
-            <small class="muted">{{ $t('orders.paymentBilledToRoom') }}</small>
           </span>
         </label>
 
@@ -1176,10 +1172,19 @@ const settleRoomNumber = ref('')
 const settleError = ref('')
 const settling = ref(false)
 
-/** Opens the settlement modal for an unpaid order. */
+/** True when the order belongs to an in-house guest (has a room or stay). */
+function isInHouse(order) {
+  return Boolean(order?.reservation_id || order?.room_number)
+}
+
+/**
+ * Opens the settlement modal. Room (in-house) orders settle by POSTING to the
+ * guest's folio, so posting is the default; walk-in customer orders settle by
+ * direct payment. A customer order has no room, so posting is unavailable.
+ */
 function openSettle(order) {
   settleOrder.value = order
-  settleMode.value = 'paid'
+  settleMode.value = isInHouse(order) ? 'billed_to_room' : 'paid'
   settleRoomNumber.value = order.room_number || ''
   settleError.value = ''
   showSettleModal.value = true

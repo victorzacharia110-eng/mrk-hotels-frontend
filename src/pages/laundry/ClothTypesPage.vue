@@ -1,26 +1,64 @@
 <!--
   ClothTypesPage.vue
-  Laundry price registry: one row per registered garment/linen type with its
-  wash / iron / dry-clean unit prices. These feeds the New Laundry Order item
-  picker so unit prices auto-fill instead of being typed each time.
-  Management actions gated by module 40 permissions.
+  Laundry registry with two tabs per the resolution:
+    - "Cloth Types" register a composition — the material a garment is made of
+      (e.g. Denim, Cotton) plus a short description of what it is composed of.
+    - "Cloth Items" register the priced garment/linen (e.g. jeans trousers,
+      cadet suits) with wash / iron / dry-clean prices, each optionally
+      belonging to a cloth type. These feed the New Laundry Order item picker
+      so unit prices auto-fill instead of being typed each time.
+  A back button returns to the laundry orders. Management gated by module 40.
 -->
 
 <template>
   <div class="dashboard-page container">
     <div class="page-head">
-      <div>
-        <h1>{{ $t('clothTypes.title') }}</h1>
-        <p class="muted">{{ $t('clothTypes.subtitle') }}</p>
+      <div class="head-left">
+        <button
+          type="button"
+          class="btn btn-secondary btn-back"
+          :title="$t('common.back')"
+          @click="$router.push('/app/laundry')"
+        >
+          <i class="fas fa-arrow-left" aria-hidden="true"></i>
+        </button>
+        <div>
+          <h1>{{ $t('clothTypes.title') }}</h1>
+          <p class="muted">{{ $t('clothTypes.subtitle') }}</p>
+        </div>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" @click="load">
+        <button class="btn btn-secondary" @click="reloadActiveTab">
           <i class="fas fa-rotate"></i> {{ $t('laundry.refresh') }}
         </button>
         <button v-if="canManage" class="btn btn-primary" @click="openCreate">
-          <i class="fas fa-plus"></i> {{ $t('clothTypes.new') }}
+          <i class="fas fa-plus"></i> {{ activeTab === 'types' ? $t('clothTypes.newComposition') : $t('clothTypes.new') }}
         </button>
       </div>
+    </div>
+
+    <!-- Two registry tabs: cloth type (composition) vs cloth item (priced) -->
+    <div class="reg-tabs" role="tablist" :aria-label="$t('clothTypes.title')">
+      <button
+        type="button"
+        role="tab"
+        class="reg-tab"
+        :class="{ active: activeTab === 'types' }"
+        :aria-selected="activeTab === 'types'"
+        @click="switchTab('types')"
+      >
+        <i class="fas fa-layer-group" aria-hidden="true"></i> {{ $t('clothTypes.tabTypes') }}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="reg-tab"
+        :class="{ active: activeTab === 'items' }"
+        :aria-selected="activeTab === 'items'"
+        @click="switchTab('items')"
+      >
+        <i class="fas fa-shirt" aria-hidden="true"></i> {{ $t('clothTypes.tabItems') }}
+      </button>
     </div>
 
     <div v-if="success" class="alert alert-success">{{ success }}</div>
@@ -43,11 +81,54 @@
 
     <div v-if="loading" class="alert alert-info">{{ $t('laundry.loading') }}</div>
 
+    <!-- CLOTH TYPES: compositions (name + what it is composed of) -->
+    <div v-else-if="activeTab === 'types'" class="table-scroll">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">{{ $t('clothTypes.name') }}</th>
+            <th scope="col">{{ $t('clothTypes.description') }}</th>
+            <th scope="col">{{ $t('clothTypes.itemsCount') }}</th>
+            <th scope="col">{{ $t('common.status') }}</th>
+            <th scope="col">{{ $t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="comp in compositions" :key="comp.cloth_composition_id">
+            <td><strong>{{ comp.name }}</strong></td>
+            <td>{{ comp.description || '—' }}</td>
+            <td>{{ comp.cloth_types_count ?? 0 }}</td>
+            <td>
+              <span class="badge" :class="comp.is_active ? 'badge-green' : 'badge-gray'">{{
+                comp.is_active ? $t('clothTypes.active') : $t('clothTypes.inactive')
+              }}</span>
+            </td>
+            <td>
+              <div class="actions" v-if="canManage">
+                <button class="btn btn-sm btn-secondary" @click="openEdit(comp)">
+                  <i class="fas fa-pen"></i> {{ $t('common.edit') }}
+                </button>
+                <button class="btn btn-sm btn-danger" @click="removeComposition(comp)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+              <span v-else class="muted">—</span>
+            </td>
+          </tr>
+          <tr v-if="!compositions.length && !loading">
+            <td colspan="5" class="muted">{{ $t('clothTypes.emptyCompositions') }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CLOTH ITEMS: priced garments/linens, each linked to a cloth type -->
     <div v-else class="table-scroll">
       <table class="table">
         <thead>
           <tr>
             <th scope="col">{{ $t('clothTypes.name') }}</th>
+            <th scope="col">{{ $t('clothTypes.composition') }}</th>
             <th scope="col">{{ $t('clothTypes.washPrice') }}</th>
             <th scope="col">{{ $t('clothTypes.ironPrice') }}</th>
             <th scope="col">{{ $t('clothTypes.dryCleanPrice') }}</th>
@@ -58,6 +139,7 @@
         <tbody>
           <tr v-for="cloth in clothTypes" :key="cloth.cloth_type_id">
             <td><strong>{{ cloth.name }}</strong></td>
+            <td>{{ cloth.composition?.name || '—' }}</td>
             <td><span class="price">{{ curCode() }} {{ Number(cloth.wash_price).toLocaleString() }}</span></td>
             <td><span class="price">{{ curCode() }} {{ Number(cloth.iron_price).toLocaleString() }}</span></td>
             <td>
@@ -73,7 +155,7 @@
                 <button class="btn btn-sm btn-secondary" @click="openEdit(cloth)">
                   <i class="fas fa-pen"></i> {{ $t('common.edit') }}
                 </button>
-                <button class="btn btn-sm btn-danger" @click="remove(cloth)">
+                <button class="btn btn-sm btn-danger" @click="removeItem(cloth)">
                   <i class="fas fa-trash"></i>
                 </button>
               </div>
@@ -81,29 +163,77 @@
             </td>
           </tr>
           <tr v-if="!clothTypes.length && !loading">
-            <td colspan="6" class="muted">{{ $t('clothTypes.empty') }}</td>
+            <td colspan="7" class="muted">{{ $t('clothTypes.empty') }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
+    <!-- Create/edit modal: fields differ per active tab -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal">
         <div class="modal-head">
           <h2>
-            <i class="fas fa-shirt"></i>
-            {{ editing ? $t('clothTypes.edit') : $t('clothTypes.new') }}
+            <i :class="activeTab === 'types' ? 'fas fa-layer-group' : 'fas fa-shirt'"></i>
+            {{ modalTitle }}
           </h2>
           <button class="modal-close" @click="closeModal"><i class="fas fa-xmark"></i></button>
         </div>
 
         <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
 
-        <form @submit.prevent="save">
+        <!-- Cloth type (composition) form -->
+        <form v-if="activeTab === 'types'" @submit.prevent="save">
           <div class="form-grid">
             <div class="form-group form-full">
               <label>{{ $t('clothTypes.name') }} *</label>
               <input v-model="form.name" type="text" class="input" required />
+            </div>
+            <div class="form-group form-full">
+              <label>{{ $t('clothTypes.description') }}</label>
+              <input
+                v-model="form.description"
+                type="text"
+                class="input"
+                :placeholder="$t('clothTypes.descriptionPlaceholder')"
+              />
+            </div>
+            <div class="form-group">
+              <label>{{ $t('common.status') }}</label>
+              <SearchableSelect
+                v-model="form.is_active"
+                :options="[
+                  { value: true, label: t('clothTypes.active') },
+                  { value: false, label: t('clothTypes.inactive') },
+                ]"
+              />
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button type="button" class="btn btn-secondary" @click="closeModal">
+              {{ $t('common.cancel') }}
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="saving">
+              <i class="fas fa-check"></i>
+              {{ saving ? $t('common.saving') : $t('clothTypes.save') }}
+            </button>
+          </div>
+        </form>
+
+        <!-- Cloth item (priced garment) form -->
+        <form v-else @submit.prevent="save">
+          <div class="form-grid">
+            <div class="form-group form-full">
+              <label>{{ $t('clothTypes.name') }} *</label>
+              <input v-model="form.name" type="text" class="input" required />
+            </div>
+            <div class="form-group form-full">
+              <label>{{ $t('clothTypes.composition') }}</label>
+              <SearchableSelect
+                v-model="form.cloth_composition_id"
+                :options="compositionOptions"
+                :empty-label="$t('common.none')"
+              />
             </div>
             <div class="form-group">
               <label>{{ $t('clothTypes.washPrice') }} *</label>
@@ -168,7 +298,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { clothTypeApi } from '@/api'
+import { clothTypeApi, clothCompositionApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 
 import { useTenantCurrency } from '@/utils/currency'
@@ -179,7 +309,11 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 const canManage = computed(() => authStore.can(40) && authStore.canOperate)
 
+// Which registry is shown: "types" (compositions) or "items" (priced garments).
+const activeTab = ref('items')
+
 const clothTypes = ref([])
+const compositions = ref([])
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
@@ -190,19 +324,65 @@ const editing = ref(false)
 const editingId = ref(null)
 const saving = ref(false)
 const modalError = ref('')
-const form = reactive({ name: '', wash_price: 0, iron_price: 0, dry_clean_price: 0, is_active: true })
+const form = reactive({
+  name: '',
+  description: '',
+  cloth_composition_id: '',
+  wash_price: 0,
+  iron_price: 0,
+  dry_clean_price: 0,
+  is_active: true,
+})
+
+const modalTitle = computed(() => {
+  if (activeTab.value === 'types') {
+    return editing.value ? t('clothTypes.editComposition') : t('clothTypes.newComposition')
+  }
+  return editing.value ? t('clothTypes.edit') : t('clothTypes.new')
+})
+
+/** Composition options for the item form's "belongs to" picker. */
+const compositionOptions = computed(() =>
+  compositions.value.map((c) => ({ value: c.cloth_composition_id, label: c.name })),
+)
 
 async function load() {
   loading.value = true
   error.value = ''
   try {
-    const res = await clothTypeApi.index({ search: search.value, per_page: 100 })
-    clothTypes.value = res.data.cloth_types?.data || res.data.data?.data || []
+    if (activeTab.value === 'types') {
+      const res = await clothCompositionApi.index({ search: search.value, per_page: 100 })
+      compositions.value = res.data.cloth_compositions?.data || res.data.data?.data || []
+    } else {
+      const res = await clothTypeApi.index({ search: search.value, per_page: 100 })
+      clothTypes.value = res.data.cloth_types?.data || res.data.data?.data || []
+    }
   } catch (err) {
     error.value = err.response?.data?.message || t('clothTypes.loadError')
   } finally {
     loading.value = false
   }
+}
+
+/** Loads both registries so the item form's composition picker is populated. */
+async function loadCompositions() {
+  try {
+    const res = await clothCompositionApi.index({ per_page: 100 })
+    compositions.value = res.data.cloth_compositions?.data || res.data.data?.data || []
+  } catch {
+    // ignore
+  }
+}
+
+function reloadActiveTab() {
+  if (activeTab.value === 'items') loadCompositions()
+  load()
+}
+
+function switchTab(tab) {
+  activeTab.value = tab
+  search.value = ''
+  load()
 }
 
 function triggerSearch() {
@@ -211,6 +391,8 @@ function triggerSearch() {
 
 function resetForm() {
   form.name = ''
+  form.description = ''
+  form.cloth_composition_id = ''
   form.wash_price = 0
   form.iron_price = 0
   form.dry_clean_price = 0
@@ -225,16 +407,24 @@ function openCreate() {
   showModal.value = true
 }
 
-function openEdit(cloth) {
+function openEdit(row) {
   modalError.value = ''
   editing.value = true
-  editingId.value = cloth.cloth_type_id
-  form.name = cloth.name
-  form.wash_price = Number(cloth.wash_price)
-  form.iron_price = Number(cloth.iron_price)
-  form.dry_clean_price = Number(cloth.dry_clean_price)
-  form.is_active = Boolean(cloth.is_active)
   showModal.value = true
+  if (activeTab.value === 'types') {
+    editingId.value = row.cloth_composition_id
+    form.name = row.name
+    form.description = row.description || ''
+    form.is_active = Boolean(row.is_active)
+  } else {
+    editingId.value = row.cloth_type_id
+    form.name = row.name
+    form.cloth_composition_id = row.cloth_composition_id || ''
+    form.wash_price = Number(row.wash_price)
+    form.iron_price = Number(row.iron_price)
+    form.dry_clean_price = Number(row.dry_clean_price)
+    form.is_active = Boolean(row.is_active)
+  }
 }
 
 function closeModal() {
@@ -245,19 +435,31 @@ async function save() {
   modalError.value = ''
   saving.value = true
   try {
-    const payload = {
-      name: form.name,
-      wash_price: form.wash_price,
-      iron_price: form.iron_price,
-      dry_clean_price: form.dry_clean_price,
-      is_active: form.is_active,
-    }
-    if (editing.value) {
-      await clothTypeApi.update(editingId.value, payload)
-      success.value = t('clothTypes.updated')
+    if (activeTab.value === 'types') {
+      const payload = { name: form.name, description: form.description, is_active: form.is_active }
+      if (editing.value) {
+        await clothCompositionApi.update(editingId.value, payload)
+        success.value = t('clothTypes.updated')
+      } else {
+        await clothCompositionApi.store(payload)
+        success.value = t('clothTypes.created')
+      }
     } else {
-      await clothTypeApi.store(payload)
-      success.value = t('clothTypes.created')
+      const payload = {
+        name: form.name,
+        cloth_composition_id: form.cloth_composition_id || null,
+        wash_price: form.wash_price,
+        iron_price: form.iron_price,
+        dry_clean_price: form.dry_clean_price,
+        is_active: form.is_active,
+      }
+      if (editing.value) {
+        await clothTypeApi.update(editingId.value, payload)
+        success.value = t('clothTypes.updated')
+      } else {
+        await clothTypeApi.store(payload)
+        success.value = t('clothTypes.created')
+      }
     }
     showModal.value = false
     await load()
@@ -268,7 +470,19 @@ async function save() {
   }
 }
 
-async function remove(cloth) {
+async function removeComposition(comp) {
+  if (!window.confirm(t('common.delete'))) return
+  error.value = ''
+  try {
+    await clothCompositionApi.destroy(comp.cloth_composition_id)
+    success.value = t('clothTypes.deleted')
+    await load()
+  } catch (err) {
+    error.value = flattenError(err)
+  }
+}
+
+async function removeItem(cloth) {
   if (!window.confirm(t('common.delete'))) return
   error.value = ''
   try {
@@ -287,7 +501,10 @@ function flattenError(err) {
     : err.response?.data?.message || t('common.actionFailed')
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  loadCompositions()
+})
 </script>
 
 <style scoped>
@@ -300,7 +517,7 @@ onMounted(load)
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .page-head h1 {
@@ -308,9 +525,45 @@ onMounted(load)
   font-weight: 800;
 }
 
+.head-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.btn-back {
+  padding: 10px 12px;
+}
+
 .head-actions {
   display: flex;
   gap: 10px;
+}
+
+/* Two registry tabs: cloth type (composition) vs cloth item (priced). */
+.reg-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 16px;
+  background: #f0f0f0;
+  border-radius: 10px;
+}
+
+.reg-tab {
+  border: none;
+  background: transparent;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #555;
+}
+
+.reg-tab.active {
+  background: #fff;
+  color: #005eb8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 
 .filter-bar {
