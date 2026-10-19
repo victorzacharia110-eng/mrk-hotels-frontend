@@ -16,6 +16,34 @@
         <p class="muted">{{ $t('laundry.subtitle') }}</p>
       </div>
       <div class="head-actions">
+        <div class="hsk-calendar">
+          <button
+            type="button"
+            class="hsk-cal-step"
+            :aria-label="$t('housekeeping.prevDay')"
+            :title="$t('housekeeping.prevDay')"
+            @click="stepDate(-1)"
+          >
+            <i class="fas fa-chevron-left" aria-hidden="true"></i>
+          </button>
+          <i class="fas fa-calendar-day" aria-hidden="true"></i>
+          <input
+            v-model="filters.date"
+            type="date"
+            class="input"
+            :aria-label="$t('housekeeping.calendar')"
+            @change="load"
+          />
+          <button
+            type="button"
+            class="hsk-cal-step"
+            :aria-label="$t('housekeeping.nextDay')"
+            :title="$t('housekeeping.nextDay')"
+            @click="stepDate(1)"
+          >
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
         <button class="btn btn-secondary" @click="load">
           <i class="fas fa-rotate"></i> {{ $t('laundry.refresh') }}
         </button>
@@ -134,7 +162,9 @@
               />
             </td>
             <td>
-              <strong>{{ order.order_number }}</strong>
+              <button type="button" class="btn-link" @click="openEdit(order)">
+                <strong>{{ order.order_number }}</strong>
+              </button>
             </td>
             <td>{{ order.guest_name || '-' }}</td>
             <td>{{ order.room_number || '-' }}</td>
@@ -277,7 +307,7 @@
             </div>
             <div class="form-group">
               <label>{{ $t('laundry.orderDate') }}</label>
-              <input v-model="form.order_date" type="date" class="input" />
+              <input v-model="form.order_date" type="date" class="input" readonly />
             </div>
             <div class="form-group">
               <label>{{ $t('laundry.paymentStatus') }}</label>
@@ -815,6 +845,20 @@ function toExportRow(order) {
 /** Fetches every order and maps it to the flat, human-readable export shape. */
 const laundryExportRows = async () => (await loadAllOrders()).map(toExportRow)
 
+function toISODate(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function stepDate(days) {
+  const base = filters.date ? new Date(`${filters.date}T00:00:00`) : new Date()
+  base.setDate(base.getDate() + days)
+  filters.date = toISODate(base)
+  load()
+}
+
 /** Loads the list of users for the attendant selector; failures are silently ignored. */
 async function loadUsers() {
   try {
@@ -868,7 +912,7 @@ function triggerSearch() {
 }
 
 /** Restores the order form to its default empty state with one blank line item. */
-function resetForm() {
+async function resetForm() {
   form.guest_name = ''
   form.service = 'wash'
   form.room_number = ''
@@ -879,11 +923,18 @@ function resetForm() {
   form.order_date = ''
   form.attendant_id = ''
   form.notes = ''
+  try {
+    const bd = (await import('@/stores/businessDate')).useBusinessDateStore()
+    await bd.ensureLoaded()
+    form.order_date = bd.current || new Date().toISOString().slice(0, 10)
+  } catch {
+    // ignore
+  }
 }
 
 /** Prepares the modal for creating a brand-new order. */
-function openCreate() {
-  resetForm()
+async function openCreate() {
+  await resetForm()
   modalError.value = ''
   editing.value = false
   editingId.value = null
