@@ -57,3 +57,4 @@ playwright-report/
 # Printer-bridge local config (per-machine printer address, written by the
 # setup page at http://localhost:9720/ or the set-network-printer helper)
 printer-bridge/config.local.json
+MRK-PRINTER/
