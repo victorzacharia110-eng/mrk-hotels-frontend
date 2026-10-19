@@ -85,16 +85,25 @@
               Panel review: the corner shows the BUSINESS DATE as a number
               figure (09/10/2026) rather than the words "Business Date", and
               the figure is clickable — it opens a calendar that jumps the
-              board to a chosen day.
+              board to a chosen day. The figure follows the leftmost column,
+              so the chevrons below move it too (review: "the business date
+              must change also when the chevron arrows are selected").
             -->
             <button type="button" class="sv-today-btn sv-bizdate-btn" :class="{ active: calOpen }"
-              :title="businessDateDisplay" :aria-label="$t('stayview.businessDate')" :aria-expanded="calOpen"
+              :title="selectedDateDisplay" :aria-label="$t('stayview.businessDate')" :aria-expanded="calOpen"
               @click="toggleCal($event)">
-              <span class="sv-bizdate-text">{{ businessDateDisplay || $t('stayview.businessDate') }}</span>
+              <span class="sv-bizdate-text">{{ selectedDateDisplay || $t('stayview.businessDate') }}</span>
               <i class="fas fa-calendar-days" aria-hidden="true"></i>
             </button>
             <button type="button" class="sv-nav-btn" :aria-label="$t('stayview.next')" @click="shift(7)">
               <i class="fas fa-chevron-right" aria-hidden="true"></i>
+            </button>
+            <!-- One click back to the hotel's business date after stepping away
+                 with the chevrons, so the board never gets stuck on another day. -->
+            <button v-if="!isOnBusinessDate" type="button" class="sv-bizdate-back"
+              :title="$t('stayview.businessDateToday')" :aria-label="$t('stayview.businessDateToday')"
+              @click="goToday()">
+              <i class="fas fa-rotate-left" aria-hidden="true"></i>
             </button>
             <div v-if="calOpen" class="sv-cal-backdrop" @click="calOpen = false"></div>
             <div v-if="calOpen" class="sv-cal" :style="{ left: calRect.left + 'px', top: calRect.top + 'px' }">
@@ -2983,16 +2992,23 @@ const calOpen = ref(false)
 const calMonth = ref(new Date(2000, 0, 1))
 const calRect = ref({ left: 0, top: 0 })
 
-/** The business date as a number figure in DD/MM/YYYY (panel review format). */
-const businessDateDisplay = computed(() => {
-  const d = parseDate(businessDateStore.current)
+/**
+ * The date shown in the corner pill as a DD/MM/YYYY figure (panel review
+ * format). It tracks the leftmost visible column, which opens on the business
+ * date but follows the chevrons once the user steps the window.
+ */
+const selectedDateDisplay = computed(() => {
+  const d = windowStart.value
   if (!d) return ''
   const dd = String(d.getDate()).padStart(2, '0')
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   return `${dd}/${mm}/${d.getFullYear()}`
 })
 
-/** Opens the calendar under the date figure, anchored on the business date. */
+/** True while the pill still sits on the hotel's real business date. */
+const isOnBusinessDate = computed(() => isoKey(windowStart.value) === businessTodayKey())
+
+/** Opens the calendar under the date figure, anchored on the shown date. */
 function toggleCal(event) {
   calOpen.value = !calOpen.value
   if (calOpen.value) {
@@ -3001,7 +3017,7 @@ function toggleCal(event) {
       left: Math.max(8, Math.min(rect.left, window.innerWidth - 272)),
       top: rect.bottom + 8,
     }
-    const base = businessToday()
+    const base = windowStart.value || businessToday()
     calMonth.value = startOfDay(new Date(base.getFullYear(), base.getMonth(), 1))
   }
 }
@@ -7370,6 +7386,24 @@ onUnmounted(() => clearInterval(refreshTimer))
   border-color: #005eb8;
   background: #eaf3fb;
   color: #005eb8;
+}
+
+/* Quick "back to business date" shown once the chevrons have stepped the
+   window off the hotel's real business date. */
+.sv-bizdate-back {
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #005eb8;
+  flex: none;
+}
+
+.sv-bizdate-back:hover {
+  border-color: #005eb8;
+  background: #eaf3fb;
 }
 
 /* Click-away layer for the corner calendar. */

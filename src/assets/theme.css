@@ -3138,6 +3138,8 @@ html[data-theme='dark'] .sv-pill.dirty { background:#202c33; color:#ff9b9b; }
 html[data-theme='dark'] .sv-nav-btn, html[data-theme='dark'] .sv-today-btn { background:#202c33; color:#e9edef; }
 html[data-theme='dark'] .sv-nav-btn:hover, html[data-theme='dark'] .sv-today-btn:hover { color:#7cc0ff; }
 html[data-theme='dark'] .sv-bizdate-btn.active { background:#202c33; color:#7cc0ff; }
+html[data-theme='dark'] .sv-bizdate-back { background:#202c33; color:#7cc0ff; }
+html[data-theme='dark'] .sv-bizdate-back:hover { background:#202c33; color:#7cc0ff; }
 html[data-theme='dark'] .sv-cal-day:hover:not(.blank):not(:disabled) { background:#202c33; color:#7cc0ff; }
 html[data-theme='dark'] .sv-cal-day.weekend:not(.business) { color:#ffd27a; }
 html[data-theme='dark'] .sv-hk-status.dirty, html[data-theme='dark'] .sv-hk-status.confirmed { background:#202c33; color:#ff9b9b; }

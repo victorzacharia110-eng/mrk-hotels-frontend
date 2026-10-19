@@ -12,13 +12,31 @@ vi.mock('@/api', () => ({
   roomApi: { index: (...a) => roomIndex(...a), counts: () => roomIndex(), availability: () => roomIndex() },
   reservationApi: { index: () => Promise.resolve({ data: { data: [] } }) },
   guestApi: { index: () => Promise.resolve({ data: { data: [] } }) },
-  housekeepingApi: { index: () => Promise.resolve({ data: { data: [] } }) },
-  laundryApi: { index: () => Promise.resolve({ data: { data: [] } }) },
+  housekeepingApi: {
+    index: () => Promise.resolve({ data: { data: [] } }),
+    board: () => Promise.resolve({ data: { rooms: [], stays: [], tasks: [], laundry_orders: [] } }),
+  },
+  laundryApi: {
+    index: () => Promise.resolve({ data: { data: [] } }),
+    board: () => Promise.resolve({ data: { orders: [] } }),
+  },
   invoiceApi: { index: () => Promise.resolve({ data: { data: [] } }) },
   inventoryApi: { index: () => Promise.resolve({ data: { data: [] } }) },
   paymentApi: { index: () => Promise.resolve({ data: { data: [] } }) },
   companyApi: { index: () => Promise.resolve({ data: { data: [] } }) },
   hotelSettingsApi: { show: (...a) => settingsShow(...a) },
+  businessDateApi: {
+    show: () =>
+      Promise.resolve({
+        data: {
+          business_date: '2026-10-09',
+          today: '2026-10-09',
+          timezone: 'Africa/Dar_es_Salaam',
+          latest_closed_date: '2026-10-08',
+          auto_advanced: false,
+        },
+      }),
+  },
   // Still mocked so a reintroduced call is observable rather than a hard failure.
   reportApi: {
     occupancy: (...a) => reportOccupancy(...a),
@@ -88,5 +106,62 @@ describe('HotelDashboard — no management card band', () => {
     // The grid and toolbar are what managers keep using from here.
     expect(wrapper.find('.sv-toolbar').exists()).toBe(true)
     expect(wrapper.find('.stayview-page').exists()).toBe(true)
+  })
+})
+
+/**
+ * Panel review: the corner date figure must change when the chevron arrows are
+ * used, and there must be an easy way to jump back to the real business date.
+ */
+describe('HotelDashboard — business date pill follows the chevrons', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    i18n.global.locale.value = 'en'
+    can.mockReturnValue(true)
+    // One room so the tape chart (and its corner) actually renders.
+    roomIndex.mockResolvedValue({
+      data: {
+        data: [
+          { room_id: 1, room_number: '101', room_type: 'standard', status: 'vacant', price_per_night: 100 },
+        ],
+      },
+    })
+    settingsShow.mockResolvedValue({ data: { hotel: {} } })
+    user.user_role = 'receptionist'
+  })
+
+  it('opens on the business date without a back button', async () => {
+    const wrapper = mountDashboard()
+    await flushPromises()
+
+    expect(wrapper.find('.sv-bizdate-text').text()).toBe('09/10/2026')
+    expect(wrapper.find('.sv-bizdate-back').exists()).toBe(false)
+  })
+
+  it('steps the pill with the chevrons and offers a jump back', async () => {
+    const wrapper = mountDashboard()
+    await flushPromises()
+
+    // Wait for the DOM to stabilize.
+    await flushPromises()
+
+    // First chevron in the corner is the "previous days" arrow.
+    const prev = wrapper.find('.sv-corner > .sv-nav-btn')
+    if (!prev.exists()) {
+      // Debug
+      console.log(wrapper.html())
+    }
+    await prev.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.sv-bizdate-text').text()).toBe('02/10/2026')
+    const back = wrapper.find('.sv-bizdate-back')
+    expect(back.exists()).toBe(true)
+
+    await back.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.sv-bizdate-text').text()).toBe('09/10/2026')
+    expect(wrapper.find('.sv-bizdate-back').exists()).toBe(false)
   })
 })
