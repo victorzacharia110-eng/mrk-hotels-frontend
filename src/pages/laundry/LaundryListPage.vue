@@ -143,7 +143,7 @@
           class="source-btn"
           :class="{ active: sourceView === 'manual' }"
           :aria-selected="sourceView === 'manual'"
-          @click="sourceView = 'manual'"
+          @click="switchSource('manual')"
         >
           <i class="fas fa-jug-detergent" aria-hidden="true"></i> {{ $t('laundry.manualOrders') }}
         </button>
@@ -153,7 +153,7 @@
           class="source-btn"
           :class="{ active: sourceView === 'automated' }"
           :aria-selected="sourceView === 'automated'"
-          @click="sourceView = 'automated'"
+          @click="switchSource('automated')"
         >
           <i class="fas fa-layer-group" aria-hidden="true"></i> {{ $t('laundry.automatedOrders') }}
         </button>
@@ -871,6 +871,7 @@ async function load() {
       search: filters.search,
       page: page.value,
       per_page: 15,
+      order_type: sourceView.value === 'automated' ? 'automated' : 'manual',
     })
     orders.value = res.data.data || []
     meta.value = res.data
@@ -883,15 +884,16 @@ async function load() {
 
 /** Fetches every laundry order page for export, honouring the active filters. */
 const loadAllOrders = () =>
-  collectAllRows((page, perPage) =>
+  collectAllRows((pageParam, perPageParam) =>
     laundryApi.index({
       service: filters.service,
       status: filters.status,
       payment_status: filters.payment_status,
       date: filters.date,
       search: filters.search,
-      page,
-      per_page: perPage,
+      order_type: sourceView.value === 'automated' ? 'automated' : 'manual',
+      page: pageParam,
+      per_page: perPageParam,
     }),
   )
 
@@ -1025,8 +1027,9 @@ function clearFilters() {
   load()
 }
 
-/** Debounces search input by resetting to page 1 and reloading. */
-function triggerSearch() {
+/** Reloads when the source (manual/automated) changes. */
+function switchSource(s) {
+  sourceView.value = s
   page.value = 1
   load()
 }
