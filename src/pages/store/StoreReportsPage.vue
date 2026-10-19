@@ -116,6 +116,7 @@ import { useCategoriesStore } from '@/stores/categories'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { restorePrinter, buildReportLines } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
+import { selectedOutlet } from '@/composables/useOutletContext'
 import '@/pages/store/store-shared.css'
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -292,6 +293,7 @@ async function generate() {
         from: params.from,
         to: params.to,
         ...(params.category ? { category: params.category } : {}),
+        ...(departmentId.value ? { department_id: departmentId.value } : {}),
       })
       const items = (res.data?.items || []).map((it) => {
         const moves = it.movements || []
@@ -478,6 +480,17 @@ async function printToMachine() {
   if (!sent) printReport()
 }
 
+// The department that backs the outlet the user chose at login. The manager
+// review asks for "reports / stocks / adjustment ... directed to that
+// individual OUTLET"; each outlet keeps its own stock shelf (an ordinary
+// department), so scoping the report to that shelf is what routes it to the
+// outlet. Returns null when no outlet is selected or it has no shelf yet.
+function outletDepartmentId() {
+  const outletId = selectedOutlet.value?.outlet_id
+  if (!outletId) return null
+  return departments.value.find((d) => d.outlet_id === outletId)?.department_id || null
+}
+
 // Load the inventory departments available for filtering and the hotel logo.
 async function loadReportData() {
   try {
@@ -487,6 +500,14 @@ async function loadReportData() {
     }
   } catch {
     departments.value = []
+  }
+  // Default the report's department scope to the chosen outlet's shelf.
+  const scoped = outletDepartmentId()
+  if (scoped && scoped !== departmentId.value) {
+    departmentId.value = scoped
+    // A ?view= report generates during setup, before the shelves load, so
+    // re-run it now that the outlet scope is known.
+    if (data.value) generate()
   }
   await loadLogo()
 }
@@ -506,7 +527,7 @@ onMounted(async () => {
     from.value = workingDateStore.workingDate
     to.value = workingDateStore.workingDate
   }
-  loadReportData()
+  await loadReportData()
   restorePrinter()
   if (!route.query.view) generate()
 })
@@ -518,6 +539,15 @@ watch(() => route.query.view, (view) => {
     generate()
   }
 }, { immediate: true })
+
+// Switching outlet re-scopes the report to that outlet's stock shelf.
+watch(() => selectedOutlet.value?.outlet_id, () => {
+  const scoped = outletDepartmentId()
+  if (scoped && scoped !== departmentId.value) {
+    departmentId.value = scoped
+    if (data.value) generate()
+  }
+})
 </script>
 
 <style scoped>

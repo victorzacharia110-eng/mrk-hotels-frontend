@@ -20,6 +20,15 @@
         <!-- Universal calendar: defaults to the hotel's business date so the
              board always shows the rooms to clean for the current day. -->
         <div class="hsk-calendar">
+          <button
+            type="button"
+            class="hsk-cal-step"
+            :aria-label="$t('housekeeping.prevDay')"
+            :title="$t('housekeeping.prevDay')"
+            @click="stepDate(-1)"
+          >
+            <i class="fas fa-chevron-left" aria-hidden="true"></i>
+          </button>
           <i class="fas fa-calendar-day" aria-hidden="true"></i>
           <input
             v-model="selectedDate"
@@ -28,6 +37,26 @@
             :aria-label="$t('housekeeping.calendar')"
             :title="$t('housekeeping.calendarHint')"
           />
+          <button
+            type="button"
+            class="hsk-cal-step"
+            :aria-label="$t('housekeeping.nextDay')"
+            :title="$t('housekeeping.nextDay')"
+            @click="stepDate(1)"
+          >
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+          </button>
+          <!-- One click back to the business date after stepping away with the
+               chevrons, so the board never gets stuck on another day. -->
+          <button
+            v-if="!isBusinessDate"
+            type="button"
+            class="hsk-cal-today"
+            @click="jumpToBusinessDate"
+          >
+            <i class="fas fa-rotate-left" aria-hidden="true"></i>
+            {{ $t('housekeeping.backToBusinessDate') }}
+          </button>
         </div>
         <button class="btn btn-secondary" @click="load">
           <i class="fas fa-rotate"></i> {{ $t('housekeeping.refresh') }}
@@ -515,6 +544,29 @@ const stockItems = ref([])
 const stays = ref([])
 // The universal calendar's chosen day, defaulting to the hotel's business date.
 const selectedDate = ref('')
+// True while the board still points at the hotel's business date, so the
+// "back to business date" shortcut only shows once the user has stepped away.
+const isBusinessDate = computed(() => selectedDate.value === businessDateStore.current)
+
+/** Formats a Date as a local YYYY-MM-DD (avoids the UTC shift of toISOString). */
+function toISODate(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+/** Moves the calendar a day forward or back; the board reloads via the watch. */
+function stepDate(days) {
+  const base = selectedDate.value ? new Date(`${selectedDate.value}T00:00:00`) : new Date()
+  base.setDate(base.getDate() + days)
+  selectedDate.value = toISODate(base)
+}
+
+/** Snaps the calendar straight back to the hotel's business date. */
+function jumpToBusinessDate() {
+  selectedDate.value = businessDateStore.current
+}
 const page = ref(1)
 const meta = ref({
   total: 0,
@@ -1259,6 +1311,36 @@ onMounted(async () => {
   min-width: 130px;
   background: transparent;
 }
+
+.hsk-cal-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: var(--mrk-blue-light, #e8f1fa);
+  color: #005eb8;
+  cursor: pointer;
+}
+.hsk-cal-step:hover { background: #d6e6f7; }
+
+.hsk-cal-today {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  background: #005eb8;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.hsk-cal-today:hover { background: #00468c; }
 
 .filter-bar {
   margin-bottom: 16px;

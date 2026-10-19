@@ -328,9 +328,18 @@ export async function printToPrinter(lines, opts = {}) {
       }
     }
     const text = buildRecipt(lines)
-    const merged = new Uint8Array((raster ? raster.length : 0) + text.length)
-    if (raster) merged.set(raster, 0)
-    merged.set(text, raster ? raster.length : 0)
+    // The logo sits at the very top and must be centred on the roll: ESC a 1
+    // centres the raster block, then ESC a 0 returns the text below to the left.
+    const centre = raster ? [0x1b, 0x61, 0x01] : []
+    const reset = raster ? [0x1b, 0x61, 0x00] : []
+    const merged = new Uint8Array(centre.length + (raster ? raster.length : 0) + reset.length + text.length)
+    let offset = 0
+    if (raster) {
+      merged.set(centre, offset); offset += centre.length
+      merged.set(raster, offset); offset += raster.length
+      merged.set(reset, offset); offset += reset.length
+    }
+    merged.set(text, offset)
 
     await qzPrintRaw(target, merged)
     printerState.connected = true
