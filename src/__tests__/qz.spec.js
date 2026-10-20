@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 /**
  * The QZ Tray wrapper is the only place the app talks to the local printing
@@ -103,5 +103,51 @@ describe('qz wrapper', () => {
     expect(qz.print).toHaveBeenCalledWith({ target: { host: '10.0.0.9', port: 9100 } }, [
       { type: 'pixel', format: 'pdf', flavor: 'base64', data: 'JVBERg==' },
     ])
+  })
+})
+
+describe('qz signing diagnostics', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  // configureSecurity is guarded to run once per module load, so each case
+  // re-imports the module fresh and captures the certificate handler it installs.
+  async function withCertFetch(fetchImpl) {
+    vi.resetModules()
+    vi.stubEnv('VITE_API_URL', 'https://api.test')
+    vi.doMock('qz-tray', () => ({ default: qz }))
+    qz.security.setCertificatePromise.mockImplementation((handler) => {
+      qz.__certHandler = handler
+    })
+    global.fetch = fetchImpl
+    const mod = await import('@/utils/qz')
+    await mod.qzConnect()
+    // In real QZ Tray the helper invokes the certificate handler when it needs
+    // to verify a message; the mock simply captures it, so drive it here.
+    qz.__certHandler?.(
+      () => {},
+      () => {},
+    )
+    return mod
+  }
+
+  it('records success when the certificate endpoint returns a PEM', async () => {
+    const mod = await withCertFetch(
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve('-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----'),
+      }),
+    )
+
+    await vi.waitFor(() => expect(mod.qzSigningStatus.ok).toBe(true))
+    expect(mod.qzSigningStatus.reason).toBe('')
+  })
+
+  it('explains the one-time prompt when the certificate cannot be loaded', async () => {
+    const mod = await withCertFetch(vi.fn().mockRejectedValue(new Error('network down')))
+
+    // `ok` starts false, so wait for the failure REASON to land, not for `ok`.
+    await vi.waitFor(() => expect(mod.qzSigningStatus.reason).toMatch(/ask for permission once/i))
+    expect(mod.qzSigningStatus.ok).toBe(false)
   })
 })

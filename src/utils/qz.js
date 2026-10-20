@@ -25,6 +25,16 @@ let qz = null
 /** Whether the (optional) signing handlers have been installed on the instance. */
 let securityConfigured = false
 
+/**
+ * Why the last signing attempt failed, if it did. Silent printing is only
+ * possible when QZ Tray can verify every message; when the certificate or
+ * signature fetch fails we still connect (so the operator can print after
+ * allowing once), but we record the cause here so the UI can explain the
+ * unexpected "Allow" dialog instead of leaving the operator guessing.
+ * @type {{ ok: boolean, reason: string }}
+ */
+export const qzSigningStatus = { ok: false, reason: '' }
+
 /** Loads and caches the qz-tray library. Only ever called from the async API. */
 async function loadQz() {
   if (!qz) {
@@ -67,11 +77,34 @@ function configureSecurity(instance) {
   const signUrl = import.meta.env?.VITE_QZ_SIGN_URL || qzSigningUrl('sign')
   if (!certUrl || !signUrl) return
 
-  instance.security.setCertificatePromise((resolve, reject) => {
-    fetch(certUrl, { cache: 'no-store' })
-      .then((resp) => (resp.ok ? resp.text().then(resolve) : reject(new Error('QZ certificate unavailable'))))
-      .catch(reject)
-  }, { rejectOnFailure: false })
+  // Record signing health so a failure is diagnosable. QZ Tray falls back to
+  // its interactive "Allow" prompt whenever a signed request cannot be verified,
+  // so a silent fetch failure otherwise presents as a mysterious dialog.
+  instance.security.setCertificatePromise(
+    (resolve, reject) => {
+      fetch(certUrl, { cache: 'no-store' })
+        .then((resp) => {
+          if (!resp.ok) throw new Error(`QZ certificate unavailable (HTTP ${resp.status})`)
+          return resp.text()
+        })
+        .then((pem) => {
+          if (!String(pem).includes('BEGIN CERTIFICATE')) {
+            throw new Error('QZ certificate endpoint did not return a PEM')
+          }
+          qzSigningStatus.ok = true
+          qzSigningStatus.reason = ''
+          resolve(pem)
+        })
+        .catch((err) => {
+          qzSigningStatus.ok = false
+          qzSigningStatus.reason =
+            'Could not load the QZ signing certificate, so QZ Tray will ask for permission once. ' +
+            'Check this till can reach the sign-in API.'
+          reject(err)
+        })
+    },
+    { rejectOnFailure: false },
+  )
 
   instance.security.setSignatureAlgorithm('SHA512')
   instance.security.setSignaturePromise((toSign) => (resolve, reject) => {

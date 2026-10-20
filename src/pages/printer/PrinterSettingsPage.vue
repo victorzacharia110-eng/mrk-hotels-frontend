@@ -270,6 +270,7 @@ import {
   targetLabel,
   targetUsable,
 } from '@/utils/printer'
+import { qzSigningStatus } from '@/utils/qz'
 import { testPrintLines } from '@/utils/receipts'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { menuCategoryApi } from '@/api'
@@ -483,10 +484,25 @@ async function connect() {
   try {
     const ok = await connectPrinter(tillTarget.value)
     connected.value = ok
-    if (!ok) error.value = printerState.reason || t('printer.connectFailed')
-    else await refreshPrinters()
+    if (!ok) {
+      error.value = printerState.reason || t('printer.connectFailed')
+    } else {
+      await refreshPrinters()
+      warnIfSigningBroken()
+    }
   } finally {
     connecting.value = false
+  }
+}
+
+/**
+ * Silent printing needs QZ Tray to verify a signed request. If the app could not
+ * load the signing certificate, QZ Tray still connects but pops its one-time
+ * "Allow" dialog — which looks like a bug unless we explain it here.
+ */
+function warnIfSigningBroken() {
+  if (!qzSigningStatus.ok && qzSigningStatus.reason) {
+    error.value = qzSigningStatus.reason
   }
 }
 
@@ -497,6 +513,7 @@ async function refreshPrinters() {
     const printers = await listPrinters()
     availablePrinters.value = [...new Set(printers)].sort()
     connected.value = true
+    warnIfSigningBroken()
   } catch (err) {
     connected.value = false
     error.value = printerState.reason || err?.message || t('printer.connectFailed')
@@ -512,8 +529,12 @@ async function test() {
   testing.value = true
   try {
     const sent = await printToPrinter(testPrintLines(), { printer: tillTarget.value })
-    if (!sent) error.value = printerState.reason || t('printer.testFailed')
-    else testPassed.value = true
+    if (!sent) {
+      error.value = printerState.reason || t('printer.testFailed')
+    } else {
+      testPassed.value = true
+      warnIfSigningBroken()
+    }
   } finally {
     testing.value = false
   }
