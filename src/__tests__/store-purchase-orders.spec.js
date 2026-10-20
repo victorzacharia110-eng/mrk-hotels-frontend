@@ -41,6 +41,12 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }))
 
+// Silent report printing is exercised by its own suite; here we only care that
+// the page falls back to the browser dialog when no printer can take the job.
+vi.mock('@/utils/reportPrint', () => ({
+  printElementSilently: vi.fn().mockResolvedValue(false),
+}))
+
 const stubs = {
   CalendarInput: { template: '<div />', props: ['modelValue', 'placeholder', 'min'] },
   SearchableSelect: { template: '<div />', props: ['modelValue', 'options', 'placeholder', 'searchPlaceholder', 'emptyLabel', 'required'] },
@@ -157,16 +163,21 @@ describe('StorePurchaseOrdersPage', () => {
     expect(line.unit_price).toBe(72000)
   })
 
-  it('opens the browser print dialog for a purchase order', async () => {
+  it('falls back to the browser print dialog when no till printer is configured', async () => {
     vi.useFakeTimers()
     const wrapper = mountPage()
     const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {})
 
     wrapper.vm.detail = { po_id: 5, po_number: 'PO-0005', items: [] }
     wrapper.vm.printDetail()
-    vi.advanceTimersByTime(60)
+    // Let the async silent-print attempt resolve, then run the fallback timer.
+    await flushPromises()
+    await vi.runAllTimersAsync()
+    await flushPromises()
 
     expect(printSpy).toHaveBeenCalledOnce()
     expect(wrapper.vm.printData.po_number).toBe('PO-0005')
+    printSpy.mockRestore()
+    vi.useRealTimers()
   })
 })

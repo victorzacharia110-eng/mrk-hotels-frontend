@@ -197,7 +197,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { purchaseOrderApi, purchaseRequisitionApi, supplierApi, inventoryApi } from '@/api'
@@ -205,6 +205,8 @@ import CalendarInput from '@/components/CalendarInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { useAuthStore } from '@/stores/auth'
+import { usePrintSettingsStore } from '@/stores/printSettings'
+import { printElementSilently } from '@/utils/reportPrint'
 
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -213,6 +215,7 @@ const { curCode } = useTenantCurrency()
 const { t } = useI18n()
 const workingDateStore = useWorkingDateStore()
 const router = useRouter()
+const printStore = usePrintSettingsStore()
 
 const auth = useAuthStore()
 const orders = ref([])
@@ -485,11 +488,20 @@ async function openDetail(po) {
   detail.value = res.data.purchase_order || res.data.data || res.data
 }
 
-// Opens the browser print dialog against the hidden printable document, so
-// staff can send the PO to any printer (matching the Goods Received page).
+// Prints the PO silently through QZ Tray when a till printer is configured
+// (no browser dialog on Windows); otherwise opens the browser print dialog
+// against the hidden printable document, as before.
 function printDetail() {
   printData.value = detail.value
-  setTimeout(() => window.print(), 50)
+  nextTick(async () => {
+    const area = document.querySelector('.print-area')
+    const ok = await printElementSilently(area, {
+      printer: printStore.resolveTillPrinter(),
+      landscape: false,
+      title: detail.value?.po_number,
+    })
+    if (!ok) setTimeout(() => window.print(), 50)
+  })
 }
 
 function receiveGoods() {

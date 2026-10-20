@@ -2357,6 +2357,8 @@ import {
 } from '@/utils/formValidation'
 import { useCategoriesStore } from '@/stores/categories'
 import { useBusinessDateStore } from '@/stores/businessDate'
+import { usePrintSettingsStore } from '@/stores/printSettings'
+import { printHtmlSilently } from '@/utils/reportPrint'
 
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -5063,6 +5065,20 @@ const hotelLogo = ref('')
  * @returns {boolean} True when the print window was opened.
  */
 function printReceptionDocument(html) {
+  // Silent A4 print through QZ Tray when a till printer is configured, so
+  // Windows tills never see the browser print dialog. Falls back to the
+  // self-printing window when no printer is set up.
+  printHtmlSilently(html, {
+    printer: printStore.resolveTillPrinter(),
+    landscape: false,
+  }).then((ok) => {
+    if (!ok) openPrintWindow(html)
+  })
+  return true
+}
+
+/** Opens the (self-printing) A4 document in a popup window — the fallback path. */
+function openPrintWindow(html) {
   const win = window.open('', '_blank', 'width=860,height=1000')
   if (!win) {
     actionError.value = t('stayview.printEntryInvoiceBlocked')
@@ -5535,6 +5551,7 @@ async function printInvoiceBreakdown() {
 /* ---------------- Stock ledger report ---------------- */
 
 const authStore = useAuthStore()
+const printStore = usePrintSettingsStore()
 
 // Hotel name and staff identity used in the report header/footer.
 const hotelName = computed(() => authStore.user?.tenant?.hotel_name || 'MRK Hotels')

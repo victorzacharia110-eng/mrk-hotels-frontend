@@ -593,6 +593,8 @@ import TableExportButton from '@/components/TableExportButton.vue'
 import { fmtLedgerMoney, fmtQty, unitSuffix, fmtLedgerDateTime, ledgerTypeLabel, buildLedgerGroups } from '@/utils/ezeeLedger'
 import { collectAllRows, exportCSV } from '@/utils/export'
 import { useAuthStore } from '@/stores/auth'
+import { usePrintSettingsStore } from '@/stores/printSettings'
+import { printElementSilently } from '@/utils/reportPrint'
 
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -600,6 +602,7 @@ const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()
+const printStore = usePrintSettingsStore()
 const reportHotel = computed(() => authStore.user?.tenant?.hotel_name || 'MRK Hotels')
 const reportUser = computed(() => authStore.user?.name || authStore.user?.full_name || '—')
 const reportLogo = ref('')
@@ -690,9 +693,16 @@ const costMethodLabel = computed(() =>
     : String(stockData.value.cost_method).replace(/_/g, ' '),
 )
 
-/** Opens the browser print dialog scoped to the ledger area. */
+/** Prints the ledger silently via QZ Tray when a till printer is set up;
+ *  otherwise falls back to the browser print dialog scoped to the ledger. */
 function printLedger() {
-  window.print()
+  printElementSilently('#stock-ledger-print', {
+    printer: printStore.resolveTillPrinter(),
+    landscape: true,
+    title: t('reports.stockLedger'),
+  }).then((ok) => {
+    if (!ok) window.print()
+  })
 }
 
 

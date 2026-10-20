@@ -29,7 +29,7 @@ const qz = vi.hoisted(() => {
 
 vi.mock('qz-tray', () => ({ default: qz }))
 
-const { qzConnect, qzIsActive, qzListPrinters, qzPrintRaw, qzSupported, qzConfigFor } = await import(
+const { qzConnect, qzIsActive, qzListPrinters, qzPrintRaw, qzPrintPdf, qzSupported, qzConfigFor } = await import(
   '@/utils/qz'
 )
 
@@ -87,5 +87,21 @@ describe('qz wrapper', () => {
 
   it('refuses to print when the target is incomplete', async () => {
     await expect(qzPrintRaw({ kind: 'system' }, new Uint8Array([0x1b]))).rejects.toThrow('No printer selected')
+  })
+
+  it('sends a PDF as base64 pixel data for silent A4 printing', async () => {
+    await qzPrintPdf({ kind: 'system', printer: 'Front desk' }, new Uint8Array([0x25, 0x50, 0x44, 0x46]))
+
+    expect(qz.print).toHaveBeenCalledWith({ target: 'Front desk' }, [
+      { type: 'pixel', format: 'pdf', flavor: 'base64', data: 'JVBERg==' },
+    ])
+  })
+
+  it('accepts an already-encoded PDF string without re-encoding', async () => {
+    await qzPrintPdf({ kind: 'socket', host: '10.0.0.9', port: 9100 }, 'JVBERg==')
+
+    expect(qz.print).toHaveBeenCalledWith({ target: { host: '10.0.0.9', port: 9100 } }, [
+      { type: 'pixel', format: 'pdf', flavor: 'base64', data: 'JVBERg==' },
+    ])
   })
 })

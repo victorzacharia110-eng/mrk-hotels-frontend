@@ -184,3 +184,26 @@ export async function qzPrintRaw(target, bytes) {
   ])
   return true
 }
+
+/**
+ * Prints a PDF document to a target through QZ Tray, silently.
+ *
+ * QZ Tray's "pixel" mode accepts a base64 PDF (or image) and hands it to the
+ * printer's OS driver. That is the whole trick behind dialog-free A4 printing:
+ * a browser can never silence `window.print()`, but QZ Tray can render a PDF we
+ * generated client-side without any UI at all — on Windows and Linux alike.
+ *
+ * @param {object} target  { kind: 'system'|'socket', printer|host, port }.
+ * @param {Uint8Array|string} pdf  The PDF bytes, or an already base64 string.
+ * @returns {Promise<boolean>} True when the job was handed to the printer.
+ */
+export async function qzPrintPdf(target, pdf) {
+  const instance = await qzConnect()
+  const config = qzConfigFor(instance, target)
+  if (!config) throw new Error('No printer selected')
+  const data = typeof pdf === 'string' ? pdf : bytesToBase64(pdf)
+  await instance.print(config, [
+    { type: 'pixel', format: 'pdf', flavor: 'base64', data },
+  ])
+  return true
+}

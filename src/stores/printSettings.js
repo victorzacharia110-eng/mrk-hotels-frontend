@@ -14,7 +14,8 @@
 
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import { printerState, printToPrinter, targetUsable, targetLabel, listPrinters, connectReason } from "@/utils/printer";
+import { printerState, printToPrinter, printPdfToPrinter, targetUsable, targetLabel, listPrinters, connectReason } from "@/utils/printer";
+import { htmlToPdf } from "@/utils/reportPrint";
 
 // localStorage key for the whole settings blob.
 const STORAGE_KEY = "mrk_print_settings";
@@ -183,6 +184,37 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
   }
 
   /**
+   * Sends a client-generated PDF (A4 report or document) to the till printer
+   * through QZ Tray, silently. Returns true when the job was handed over.
+   *
+   * @param {Uint8Array|string} pdf  PDF bytes (or base64).
+   * @param {object} [opts]  Passed through (e.g. a specific `printer` target).
+   */
+  async function printPdf(pdf, opts = {}) {
+    return printPdfToPrinter(pdf, { ...opts, printer: opts.printer || resolveTillPrinter() });
+  }
+
+  /**
+   * Renders a standalone HTML report to PDF and prints it silently through QZ
+   * Tray. Returns false when no printer is configured, so callers can fall back
+   * to the browser dialog rather than dropping the print.
+   *
+   * @param {string} html  A full HTML document.
+   * @param {object} [opts]  { landscape?, printer? }.
+   * @returns {Promise<boolean>}
+   */
+  async function printHtml(html, opts = {}) {
+    const target = opts.printer || resolveTillPrinter();
+    if (!targetUsable(target)) return false;
+    try {
+      const pdf = await htmlToPdf(html, { landscape: opts.landscape !== false });
+      return await printPdfToPrinter(pdf, { printer: target });
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Connects to QZ Tray and confirms the configured printer is present, so the
    * UI can say "ready" without having to print a test slip.
    *
@@ -330,6 +362,8 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
     reset,
     resolveTillPrinter,
     print,
+    printPdf,
+    printHtml,
     probePrinter,
     resolveTicketPrinter,
     addTicketPrinter,

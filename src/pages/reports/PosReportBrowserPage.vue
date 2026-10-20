@@ -402,6 +402,8 @@ import ReportCharts from '@/components/reports/ReportCharts.vue'
 import { reportApi, outletApi, departmentApi, hotelSettingsApi } from '@/api'
 import { exportCSV } from '@/utils/export'
 import { useAuthStore } from '@/stores/auth'
+import { usePrintSettingsStore } from '@/stores/printSettings'
+import { printHtmlSilently } from '@/utils/reportPrint'
 import { formatNumber, isIdentifierKey } from '@/utils/numbers'
 import { fmtLedgerMoney, fmtQty, unitSuffix, fmtLedgerDateTime, ledgerTypeLabel, buildLedgerGroups, INVENTORY_CATEGORIES } from '@/utils/ezeeLedger'
 
@@ -409,6 +411,7 @@ const { t, te } = useI18n()
 
 /* ── Branding for the printable A4 document ── */
 const authStore = useAuthStore()
+const printStore = usePrintSettingsStore()
 const reportHotel = computed(() => authStore.user?.tenant?.hotel_name || 'MRK Hotels')
 const userName = computed(() => authStore.user?.full_name || '—')
 const reportAddress = computed(() => {
@@ -1019,6 +1022,20 @@ async function run() {
 }
 
 function printReport() {
+  const html = buildPosReportDocument()
+  if (!html) return
+  // Silent A4 print through QZ Tray when a till printer is configured (no
+  // Windows dialog); otherwise open the print window with the browser dialog.
+  printHtmlSilently(html, {
+    printer: printStore.resolveTillPrinter(),
+    landscape: true,
+  }).then((ok) => {
+    if (!ok) printReportViaWindow()
+  })
+}
+
+/** The old behaviour: open a print window and let the browser dialog handle it. */
+function printReportViaWindow() {
   const win = openReportWindow()
   if (!win) return
   win.addEventListener('afterprint', () => win.close())
@@ -1077,7 +1094,24 @@ ${head}
 ${lineRows.join('\n')}${totalsBlock}
 ------------------------------
 Generated ${new Date().toLocaleString()}
-===============================`.trim()
+ ===============================`.trim()
+
+  // Print the narrow 80mm receipt silently to the till thermal printer when one
+  // is configured (no browser dialog); otherwise open the receipt window.
+  const lines = body.split('\n').map((line) => [line])
+  printStore.print(lines).then((sent) => {
+    if (!sent) writePosReceiptWindow(body)
+  })
+}
+
+/** Opens the 80mm receipt in a window for the browser print dialog (fallback). */
+function writePosReceiptWindow(body) {
+  const win = window.open('', '_blank')
+  if (!win) {
+    error.value = t('reportBrowser.openWindowBlocked')
+    return
+  }
+  win.opener = null
 
   win.document.open()
   win.document.write(
@@ -1131,18 +1165,15 @@ function reportBodyHtml(inner, prune = '') {
  * KPI summary boxes, a wide professional table and a repeating footer — so
  * the printed sheet reads like a business report, not a web-page copy.
  */
-function openReportWindow() {
+/** Builds the standalone A4 report document (or null when there is nothing to
+ *  print), so it can be sent silently through QZ Tray or written into a
+ *  print window. */
+function buildPosReportDocument() {
   const paper = document.querySelector('.rb-paper')
   if (!paper || !paper.innerText.trim()) {
     error.value = t('reportBrowser.openWindowEmpty')
-    return
+    return null
   }
-  const win = window.open('', '_blank')
-  if (!win) {
-    error.value = t('reportBrowser.openWindowBlocked')
-    return
-  }
-  win.opener = null
 
   const meta = printMetaPairs()
     .map(([k, v]) => (v ? `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>` : ''))
@@ -1160,9 +1191,7 @@ function openReportWindow() {
   const rowCount = isStockLedger.value ? stockLedgerRowCount.value : (engine.value?.rows?.length ?? 0)
   const body = reportBodyHtml(paper.innerHTML, '.rb-report-head')
 
-  win.document.open()
-  win.document.write(
-    `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>${title} — ${hotel}</title>
 <style>
   @page { size: A4 landscape; margin: 13mm 10mm 16mm 10mm; }
@@ -1276,8 +1305,20 @@ function openReportWindow() {
 
     <div class="page-foot"><span>${hotel} — ${title} · ${period}</span><span>${madeBy}</span></div>
   </div>
-</body></html>`,
-  )
+</body></html>`
+}
+
+function openReportWindow() {
+  const html = buildPosReportDocument()
+  if (!html) return null
+  const win = window.open('', '_blank')
+  if (!win) {
+    error.value = t('reportBrowser.openWindowBlocked')
+    return null
+  }
+  win.opener = null
+  win.document.open()
+  win.document.write(html)
   win.document.close()
   return win
 }

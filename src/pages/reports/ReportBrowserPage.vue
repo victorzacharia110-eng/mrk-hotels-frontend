@@ -518,9 +518,12 @@ import { currencyCode } from '@/utils/currency'
 import { formatNumber, isIdentifierKey } from '@/utils/numbers'
 import { nightAuditApi, guestReportApi, reportApi, hotelSettingsApi } from '@/api'
 import { exportCSV } from '@/utils/export'
+import { usePrintSettingsStore } from '@/stores/printSettings'
+import { printHtmlSilently } from '@/utils/reportPrint'
 
 const { t, te } = useI18n()
 const authStore = useAuthStore()
+const printStore = usePrintSettingsStore()
 
 /* ── Report catalogue (matches the reference screenshot tree) ── */
 const categories = [
@@ -1469,7 +1472,16 @@ async function closeDay() {
 
 function printPaper() {
   printedAt.value = new Date().toLocaleString()
-  window.print()
+  // Silent A4 print through QZ Tray when a till printer is configured (no
+  // Windows dialog); otherwise fall back to the browser print dialog.
+  const paper = document.querySelector('.rb-paper')
+  const html = buildReportDocument(paper ? paper.innerHTML : '')
+  printHtmlSilently(html, {
+    printer: printStore.resolveTillPrinter(),
+    landscape: true,
+  }).then((ok) => {
+    if (!ok) window.print()
+  })
 }
 
 /** Opens a clean, print-ready copy of the current report in a second window.

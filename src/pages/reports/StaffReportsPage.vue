@@ -205,10 +205,13 @@ import CalendarInput from '@/components/CalendarInput.vue'
 
 import { useTenantCurrency } from '@/utils/currency'
 import { formatNumber } from '@/utils/numbers'
+import { usePrintSettingsStore } from '@/stores/printSettings'
+import { printElementSilently } from '@/utils/reportPrint'
 
 const { curCode } = useTenantCurrency()
 
 const authStore = useAuthStore()
+const printStore = usePrintSettingsStore()
 const { d, t } = useI18n()
 
 function nowDate() {
@@ -270,7 +273,16 @@ async function loadReport() {
 }
 
 function printReport() {
-  window.print()
+  // Silent A4 print through QZ Tray when a till printer is configured, so
+  // Windows tills never see the browser print dialog. Falls back to the dialog
+  // on a till with no printer set up, so the report is never un-printable.
+  printElementSilently('#staff-reports', {
+    printer: printStore.resolveTillPrinter(),
+    landscape: false,
+    title: t('staffDashboard.summaryTitle'),
+  }).then((ok) => {
+    if (!ok) window.print()
+  })
 }
 
 function money(value) {

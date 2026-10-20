@@ -266,11 +266,14 @@ import { inventoryOpsApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import CalendarInput from '@/components/CalendarInput.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
+import { usePrintSettingsStore } from '@/stores/printSettings'
+import { printElementSilently } from '@/utils/reportPrint'
 import { selectedOutlet } from '@/composables/useOutletContext'
 
 const { t } = useI18n()
 const auth = useAuthStore()
 const workingDateStore = useWorkingDateStore()
+const printStore = usePrintSettingsStore()
 
 const KEEPER_ROLES = ['store_manager', 'hotel_admin', 'manager', 'owner', 'superadmin']
 
@@ -712,9 +715,16 @@ function openDetail(indent) {
 }
 
 function printDetail() {
-  // Send the user to the browser print setup page on the ready print layout
-  // instead of silently downloading the PDF.
-  window.print()
+  // Print the requisition silently through QZ Tray when a till printer is set
+  // up (no Windows dialog); otherwise fall back to the browser print setup page
+  // on the ready print layout.
+  printElementSilently('#rq-print', {
+    printer: printStore.resolveTillPrinter(),
+    landscape: false,
+    title: editing.value?.indent_id,
+  }).then((ok) => {
+    if (!ok) window.print()
+  })
 }
 
 async function emailDetail() {

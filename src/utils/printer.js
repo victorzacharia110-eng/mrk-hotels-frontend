@@ -18,7 +18,7 @@
  */
 
 import { reactive } from 'vue'
-import { qzConnect, qzDisconnect, qzIsActive, qzListPrinters, qzPrintRaw, qzSupported } from './qz'
+import { qzConnect, qzDisconnect, qzIsActive, qzListPrinters, qzPrintRaw, qzPrintPdf, qzSupported } from './qz'
 
 /**
  * Shared connection state so any page sees whether the till printer is usable.
@@ -359,6 +359,43 @@ export async function printToPrinter(lines, opts = {}) {
 /** Is a printer available right now? (Only true once a print has been verified.) */
 export function printerReady() {
   return printerState.connected
+}
+
+/**
+ * Prints a client-generated PDF (A4 reports, documents) to a target through
+ * QZ Tray, with no browser or OS print dialog.
+ *
+ * A browser can never silence `window.print()`; the only way to print a report
+ * without a dialog is to build the PDF ourselves and hand the bytes to the
+ * local helper. This is the A4 counterpart of printToPrinter (which sends raw
+ * ESC/POS to a thermal roll).
+ *
+ * @param {Uint8Array|string} pdf  PDF bytes (or base64) to print.
+ * @param {object} [opts]  Options.
+ * @param {object} [opts.printer]  The QZ target to print to.
+ * @returns {Promise<boolean>} True when the job was handed to the printer.
+ */
+export async function printPdfToPrinter(pdf, opts = {}) {
+  const target = opts.printer
+  if (!targetUsable(target)) {
+    printerState.connected = false
+    printerState.reason = 'No printer is set up yet. Open Printer Settings, install QZ Tray and choose your printer.'
+    return false
+  }
+  try {
+    await qzPrintPdf(target, pdf)
+    printerState.connected = true
+    printerState.reason = ''
+    printerState.info = targetLabel(target)
+    return true
+  } catch (err) {
+    printerState.connected = false
+    const msg = String(err?.message || err || '')
+    printerState.reason = /printer|not found|invalid/i.test(msg)
+      ? `The printer “${targetLabel(target)}” was not found. Check it is switched on, then re-select it in Printer Settings.`
+      : connectReason(err)
+    return false
+  }
 }
 
 /**

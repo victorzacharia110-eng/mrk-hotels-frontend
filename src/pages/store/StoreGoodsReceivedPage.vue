@@ -316,6 +316,8 @@ import CalendarInput from '@/components/CalendarInput.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { useAuthStore } from '@/stores/auth'
+import { usePrintSettingsStore } from '@/stores/printSettings'
+import { printElementSilently } from '@/utils/reportPrint'
 
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -326,6 +328,7 @@ const router = useRouter()
 const { t } = useI18n()
 const workingDateStore = useWorkingDateStore()
 const auth = useAuthStore()
+const printStore = usePrintSettingsStore()
 
 const grns = ref([])
 const { q, status, statuses, paged } = useClientTable(grns, { pageSize: 15, searchFields: ['grn_number', 'status', (r) => r.po?.po_number] })
@@ -623,13 +626,20 @@ async function refreshDetail(id) {
   detail.value = res.data.grn
 }
 
-// PRINT opens the browser print-setup page (via the print-area styles) with
-// the GRN laid out inside A4 boundaries — no silent PDF download.
+// PRINT sends the GRN silently through QZ Tray when a till printer is
+// configured (no Windows dialog), otherwise opens the browser print-setup page
+// with the GRN laid out inside A4 boundaries — no silent PDF download.
 async function printDetail() {
   const grn = detail.value
   printData.value = grn
   await new Promise((resolve) => setTimeout(resolve, 60))
-  window.print()
+  const area = document.querySelector('.print-area')
+  const ok = await printElementSilently(area, {
+    printer: printStore.resolveTillPrinter(),
+    landscape: false,
+    title: grn?.grn_number,
+  })
+  if (!ok) window.print()
 }
 
 async function emailSupplier() {

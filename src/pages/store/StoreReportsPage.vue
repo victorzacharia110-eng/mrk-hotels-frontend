@@ -323,7 +323,15 @@ async function generate() {
   }
 }
 
-function printReport() { window.print() }
+function printReport() {
+  // Silent A4 print through QZ Tray when a till printer is configured; otherwise
+  // fall back to the browser print dialog (which is unavoidable then).
+  printStore
+    .printHtml(buildReportHtml(), { landscape: true, title: t(cfg.value.labelKey) })
+    .then((ok) => {
+      if (!ok) window.print()
+    })
+}
 
 /** Opens the current report in a second window, Ezee-style, ready to print. */
 function openReportWindow() {
