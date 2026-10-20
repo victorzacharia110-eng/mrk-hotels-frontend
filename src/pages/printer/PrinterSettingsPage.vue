@@ -352,12 +352,6 @@ const canAddPrinter = computed(() => {
   return newPrinter.value.kind === 'socket' ? Boolean(newPrinter.value.host.trim()) : true
 })
 
-/** Every service line pointed at a printer, or a default to catch them all. */
-const routesDone = computed(() => {
-  if (!ticketPrinters.value.length) return false
-  return serviceLines.value.every((line) => routingFor(line)) || Boolean(defaultTicketPrinterId.value)
-})
-
 /**
  * The four setup steps with a live status chip each. `chip` drives both the
  * colour and the label: done / todo / optional (skip freely) / notNeeded
