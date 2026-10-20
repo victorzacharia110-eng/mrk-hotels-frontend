@@ -189,6 +189,42 @@
       </div>
     </div>
 
+    <!-- Notify modal (send the requisition by e-mail and/or SMS) -->
+    <div v-if="modal === 'notify'" class="rq-overlay" @click.self="modal = null">
+      <div class="rq-modal">
+        <div class="rq-modal-head">
+          <h3><i class="fas fa-paper-plane"></i> {{ $t('requisitionPanel.notifyTitle') }} — {{ notifyIndent?.indent_number }}</h3>
+          <button class="rq-x" @click="modal = null">×</button>
+        </div>
+        <div class="rq-modal-body">
+          <div v-if="notifyErr" class="rq-banner bad">{{ notifyErr }}</div>
+          <p class="rq-hint">{{ $t('requisitionPanel.notifyHint') }}</p>
+          <div class="rq-channels">
+            <label v-for="ch in channels" :key="ch.key" class="rq-channel" :class="{ on: notifyChannel === ch.key }">
+              <input type="radio" name="rq-channel" :value="ch.key" v-model="notifyChannel" />
+              <i :class="ch.icon"></i> {{ $t(ch.label) }}
+            </label>
+          </div>
+          <label v-if="notifyChannel !== 'both'" class="rq-fld">
+            <span>{{ notifyChannel === 'sms' ? $t('requisitionPanel.phone') : $t('common.email') }}</span>
+            <input
+              v-model="notifyTo"
+              class="rq-input"
+              :type="notifyChannel === 'sms' ? 'tel' : 'email'"
+              :placeholder="$t('requisitionPanel.recipientPlaceholder')"
+            />
+          </label>
+          <p v-else class="rq-hint">{{ $t('requisitionPanel.bothHint') }}</p>
+        </div>
+        <div class="rq-modal-foot">
+          <button class="rq-btn ghost" @click="modal = null">{{ $t('common.cancel') }}</button>
+          <button class="rq-btn primary" :disabled="notifySending" @click="submitNotify">
+            <i class="fas fa-paper-plane"></i> {{ notifySending ? $t('common.saving') : $t('requisitionPanel.send') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Reason modal (void / reject) -->
     <div v-if="modal === 'reason'" class="rq-overlay" @click.self="modal = null">
       <div class="rq-modal">
@@ -250,7 +286,7 @@
         </div>
         <div class="rq-modal-foot">
           <button class="rq-btn ghost" @click="modal = null">{{ $t('common.cancel') }}</button>
-          <button class="rq-btn ghost" @click="emailDetail"><i class="fas fa-envelope"></i> {{ $t('common.email') }}</button>
+          <button class="rq-btn ghost" @click="emailDetail"><i class="fas fa-paper-plane"></i> {{ $t('requisitionPanel.notify') }}</button>
           <button class="rq-btn primary" @click="printDetail"><i class="fas fa-print"></i> {{ $t('requisitionPanel.print') }}</button>
         </div>
       </div>
@@ -330,6 +366,21 @@ const modal = ref(null)
 const editing = ref(null)
 const editingAction = ref(null)
 const reasonText = ref('')
+
+// Notify (send by e-mail / SMS / both) — a requisition can be pushed to a
+// recipient on demand. `notifyIndent` is the requisition being sent, and
+// `notifyChannel` picks the transport.
+const notifyIndent = ref(null)
+const notifyChannel = ref('email')
+const notifyTo = ref('')
+const notifySending = ref(false)
+const notifyErr = ref('')
+
+const channels = [
+  { key: 'email', label: 'common.email', icon: 'fas fa-envelope' },
+  { key: 'sms', label: 'requisitionPanel.sms', icon: 'fas fa-comment-sms' },
+  { key: 'both', label: 'requisitionPanel.both', icon: 'fas fa-share-nodes' },
+]
 
 const departments = ref([])
 const items = ref([])
@@ -567,8 +618,18 @@ async function save(forStatus) {
       await inventoryOpsApi.updateIndent(editing.value.indent_id, payload)
       notice.value = t('requisitionPanel.updated')
     } else {
-      await inventoryOpsApi.storeIndent(payload)
+      const res = await inventoryOpsApi.storeIndent(payload)
       notice.value = payloadStatus === 'draft' ? t('requisitionPanel.savedDraft') : t('requisitionPanel.created')
+      // A saved draft is not ready to notify; a submitted request is — offer to
+      // push it out right away (the operator can still cancel and send later).
+      const created = res.data?.data ?? res.data
+      if (payloadStatus === 'pending' && created?.indent_id) {
+        modal.value = null
+        await load()
+        saving.value = false
+        openNotify(created)
+        return
+      }
     }
     modal.value = null
     await load()
@@ -587,6 +648,10 @@ async function send(indent) {
     await inventoryOpsApi.sendIndent(indent.indent_id)
     notice.value = t('requisitionPanel.sent')
     await load()
+    // Sending is exactly when the recipient must hear about it, so offer the
+    // notify dialog straight away.
+    saving.value = false
+    openNotify(indent)
   } catch (e) { err.value = loadMessage(e) } finally { saving.value = false }
 }
 
@@ -727,13 +792,44 @@ function printDetail() {
   })
 }
 
-async function emailDetail() {
-  const indent = editing.value
+// Open the notify dialog for a requisition, defaulting to e-mail with no
+// explicit recipient: leaving it blank lets the backend use the hotel's
+// registered e-mail/phone, which is what most operators want.
+function openNotify(indent) {
+  notifyIndent.value = indent
+  notifyChannel.value = 'email'
+  notifyTo.value = ''
+  notifyErr.value = ''
+  modal.value = 'notify'
+}
+
+// Kept for the detail footer button; routes through the channel-aware dialog.
+function emailDetail() {
+  openNotify(editing.value)
+}
+
+async function submitNotify() {
+  const indent = notifyIndent.value
+  if (!indent) return
+  const to = notifyTo.value.trim()
+  notifySending.value = true
+  notifyErr.value = ''
   try {
-    const res = await inventoryOpsApi.emailIndent(indent.indent_id)
-    window.alert(t('requisitionPanel.emailSuccess', { recipient: res.data?.message || '' }))
+    // "both" has no single recipient field; the backend sends to the hotel's
+    // e-mail and phone. For a single channel an optional address/number wins.
+    const res = await inventoryOpsApi.emailIndent(
+      indent.indent_id,
+      notifyChannel.value === 'both' ? null : (to || null),
+      notifyChannel.value,
+    )
+    modal.value = null
+    notice.value = res.data?.message || t('requisitionPanel.notifySent')
+    // After a create/send flow there is no detail modal to fall back to.
+    if (editing.value?.indent_id === indent.indent_id) editing.value = null
   } catch (e) {
-    window.alert(t('requisitionPanel.emailError', { message: e.response?.data?.message || '' }))
+    notifyErr.value = e.response?.data?.message || loadMessage(e)
+  } finally {
+    notifySending.value = false
   }
 }
 
@@ -820,6 +916,13 @@ watch(() => selectedOutlet.value?.outlet_id, loadItems)
 .rq-loading, .rq-empty { padding: 40px; text-align: center; color: #64748b; font-size: 14px; }
 .rq-empty-inline { text-align: center; color: #94a3b8; padding: 20px; }
 .rq-hint { color: #64748b; font-size: 12px; margin: 4px 0 10px; }
+.rq-channels { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.rq-channel {
+  display: flex; align-items: center; gap: 8px; padding: 9px 14px; border: 1px solid #e2e8f0;
+  border-radius: 8px; font-size: 13px; font-weight: 600; color: #334155; cursor: pointer;
+}
+.rq-channel.on { border-color: #005eb8; background: #eff6ff; color: #005eb8; }
+.rq-channel input { margin: 0; }
 .rq-overlay {
   position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: flex;
   align-items: flex-start; justify-content: center; z-index: 1000; padding: 40px 20px; overflow-y: auto;

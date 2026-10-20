@@ -1352,7 +1352,12 @@ export const inventoryOpsApi = {
   rejectIndent: (id, reason) => api.post(`${v1}/inventory-indents/${id}/reject`, { reason }),
   voidIndent: (id, reason) => api.post(`${v1}/inventory-indents/${id}/void`, { reason }),
   printIndentPdf: (id) => api.get(`${v1}/inventory-indents/${id}/pdf`, { responseType: 'blob' }),
-  emailIndent: (id, to) => api.post(`${v1}/inventory-indents/${id}/email`, to ? { to } : {}),
+  emailIndent: (id, to, channel) => {
+    const body = {}
+    if (to) body.to = to
+    if (channel) body.channel = channel
+    return api.post(`${v1}/inventory-indents/${id}/email`, body)
+  },
   requisitionItems: (params) => api.get(`${v1}/inventory-requisition-items`, { params }),
 
   marketLists: (params) => api.get(`${v1}/inventory-market-lists`, { params }),

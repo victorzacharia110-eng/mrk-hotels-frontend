@@ -2014,7 +2014,16 @@
     "emptyReceived": "Hakuna maombi kutoka idara yanayosubiri kujibiwa sasa hivi.",
     "printError": "Imeshindikana kuunda PDF ya ombi.",
     "emailSuccess": "Ombi limetumwa kwa barua pepe kwa {recipient}.",
-    "emailError": "Imeshindikana kutuma ombi kwa barua pepe. {message}"
+    "emailError": "Imeshindikana kutuma ombi kwa barua pepe. {message}",
+    "notify": "Tuma taarifa",
+    "notifyTitle": "Tuma ombi",
+    "notifyHint": "Tuma ombi hili kwa barua pepe, SMS, au zote mbili. Acha mpokeaji wazi ili kutumia anwani ya hoteli iliyohifadhiwa.",
+    "notifySent": "Taarifa ya ombi imetumwa.",
+    "recipientPlaceholder": "Acha wazi ili kutumia anwani ya hoteli",
+    "sms": "SMS",
+    "both": "Zote mbili",
+    "phone": "Namba ya simu",
+    "bothHint": "Hutuma barua pepe kwa anwani ya hoteli na SMS kwa namba yake ya simu iliyohifadhiwa."
   },
   "purchaseOrders": {
     "title": "Oda za Ununuzi",

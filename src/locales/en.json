@@ -2014,7 +2014,16 @@
     "emptyReceived": "No requisitions from departments are waiting to be answered right now.",
     "printError": "Could not generate the requisition PDF.",
     "emailSuccess": "Requisition e-mailed to {recipient}.",
-    "emailError": "Could not e-mail the requisition. {message}"
+    "emailError": "Could not e-mail the requisition. {message}",
+    "notify": "Notify",
+    "notifyTitle": "Send requisition",
+    "notifyHint": "Send this requisition by e-mail, SMS, or both. Leave the recipient blank to use the hotel's contact on file.",
+    "notifySent": "Requisition notification sent.",
+    "recipientPlaceholder": "Leave blank to use the hotel's contact",
+    "sms": "SMS",
+    "both": "Both",
+    "phone": "Phone number",
+    "bothHint": "Sends the e-mail to the hotel's e-mail address and the SMS to its phone number on file."
   },
   "purchaseOrders": {
     "title": "Purchase Orders",
