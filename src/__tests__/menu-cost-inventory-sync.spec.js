@@ -45,7 +45,7 @@ describe('menu item cost is owned by the synced inventory record', () => {
     expect(source).toContain('watch(() => form.inventory_item_id, syncCostFromInventory)')
     // The option list loads after the edit modal opens, so the same fill has
     // to run again once the record is actually in hand.
-    expect(source).toMatch(/await inventoryApi\.index[\s\S]{0,400}syncCostFromInventory\(\)/)
+    expect(source).toMatch(/async function loadInventoryOptions[\s\S]{0,200}syncCostFromInventory\(\)/)
   })
 
   it('restores an editable cost when the link is removed', () => {
@@ -81,13 +81,26 @@ describe('menu item cost is owned by the synced inventory record', () => {
     expect(picker).toContain('@search="searchInventory"')
   })
 
-  it('debounces the stock search and restores the first page on an empty query', () => {
+  it('debounces the stock search and restores the full catalogue on an empty query', () => {
     const search = source.slice(
       source.indexOf('function searchInventory'),
       source.indexOf('const syncedToStock'),
     )
     expect(search).toMatch(/setTimeout\([\s\S]*350\)/)
     expect(search).toMatch(/if \(!q\)[\s\S]{0,120}loadInventoryOptions\(\)/)
-    expect(search).toContain('inventoryApi.index({ search: q, per_page: 100 })')
+    expect(search).toContain('fetchAllInventory({ search: q })')
+  })
+
+  it('walks every inventory page so the full catalogue is in the picker', () => {
+    // The list endpoint pages at 100 rows; loading one page hid every item
+    // past the first hundred, which is what made added stock look missing.
+    const fetchAll = source.slice(
+      source.indexOf('async function fetchAllInventory'),
+      source.indexOf('async function loadInventoryOptions'),
+    )
+    expect(fetchAll).toContain('per_page: INVENTORY_PAGE_SIZE')
+    expect(fetchAll).toContain('meta?.last_page')
+    expect(fetchAll).toMatch(/page \+= 1/)
+    expect(source).toMatch(/loadInventoryOptions\(\)\s*\{[\s\S]{0,160}fetchAllInventory\(\)/)
   })
 })

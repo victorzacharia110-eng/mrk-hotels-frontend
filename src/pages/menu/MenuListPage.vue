@@ -723,18 +723,52 @@ function inventoryRows(res) {
   return body?.data || []
 }
 
+/** The pagination block of an inventory response, when the endpoint sends one. */
+function inventoryMeta(res) {
+  return res?.data?.meta || null
+}
+
+// How many stock items the picker loads per request. The endpoint caps this at
+// 100, so a larger catalogue is stitched together from several pages.
+const INVENTORY_PAGE_SIZE = 100
+
 /**
- * Loads the first page of stock items for the picker.
+ * Loads the whole stock catalogue into the picker.
  *
- * A hotel with more than one page of stock will not see everything here — that
- * is fine, because the picker also searches the endpoint as the manager types
- * (see searchInventory), so items beyond this page stay reachable instead of
- * silently missing from the "sync to stock" list.
+ * The list endpoint pages at 100 rows, so loading a single page left every
+ * item past the first hundred invisible — which is exactly what made newly
+ * added stock seem "missing" from the sync-to-stock dropdown. This walks every
+ * page and concatenates them, so the picker holds the full catalogue. A page
+ * limit guards against an unbounded loop if the API ever misreports last_page.
+ *
+ * @param {object} [filters] - Extra query params (e.g. a `search` term).
+ */
+async function fetchAllInventory(filters = {}) {
+  const all = []
+  let page = 1
+  const maxPages = 50
+
+  while (page <= maxPages) {
+    const res = await inventoryApi.index({ ...filters, per_page: INVENTORY_PAGE_SIZE, page })
+    const rows = inventoryRows(res)
+    all.push(...rows)
+
+    const meta = inventoryMeta(res)
+    const lastPage = meta?.last_page ?? 1
+    if (page >= lastPage || !rows.length) break
+    page += 1
+  }
+
+  return all
+}
+
+/**
+ * Loads stock items for the picker. The whole catalogue is fetched (paged
+ * under the hood) so nothing is hidden behind the first page.
  */
 async function loadInventoryOptions() {
   try {
-    const res = await inventoryApi.index({ per_page: 100 })
-    inventoryItems.value = inventoryRows(res)
+    inventoryItems.value = await fetchAllInventory()
   } catch {
     inventoryItems.value = []
   }
@@ -745,7 +779,7 @@ async function loadInventoryOptions() {
 let inventorySearchTimer
 /**
  * Searches stock items by name as the manager types in the "sync to stock"
- * picker. An empty query restores the default first page.
+ * picker. An empty query restores the full catalogue.
  *
  * @param {string} query - The search text.
  */
@@ -759,8 +793,7 @@ function searchInventory(query) {
   inventorySearchTimer = setTimeout(async () => {
     inventorySearching.value = true
     try {
-      const res = await inventoryApi.index({ search: q, per_page: 100 })
-      inventoryItems.value = inventoryRows(res)
+      inventoryItems.value = await fetchAllInventory({ search: q })
     } catch {
       // Keep the current list if the search fails.
     } finally {
