@@ -130,6 +130,12 @@ html[data-theme='dark'] textarea::placeholder {
   color: #8696a0;
 }
 
+html[data-theme='dark'] .input:disabled,
+html[data-theme='dark'] .textarea:disabled {
+  background: #202c33;
+  color: #aebac1;
+}
+
 html[data-theme='dark'] .modal-overlay {
   background: rgba(2, 6, 16, 0.72);
 }

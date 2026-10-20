@@ -1363,6 +1363,7 @@
     "showAccompaniment": "Show",
     "syncToStock": "Sync to stock",
     "syncToStockHint": "Link this item to a registered inventory item so the waiter sees live availability and out-of-stock items can't be ordered.",
+    "costSyncedHint": "Cost is taken from the linked stock record and can only be changed on the inventory panel.",
     "syncedTo": "Synced to stock:",
     "outOfStock": "Out of stock",
     "searchItems": "Search registered items...",

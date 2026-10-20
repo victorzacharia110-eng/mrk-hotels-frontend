@@ -312,7 +312,24 @@
             </div>
             <div class="form-group">
               <label>{{ $t('menu.cost', { currency: curCode() }) }}</label>
-              <input v-model.number="form.cost" type="number" min="0" step="0.01" class="input" />
+              <!--
+                A synced item's cost is the inventory record's unit cost: that
+                number is maintained on the inventory panel and is not editable
+                anywhere else, so this box becomes read-only instead of being a
+                second place to change the same figure.
+              -->
+              <input
+                v-model.number="form.cost"
+                type="number"
+                min="0"
+                step="0.01"
+                class="input"
+                :disabled="syncedToStock"
+                :title="syncedToStock ? $t('menu.costSyncedHint') : ''"
+              />
+              <p v-if="syncedToStock" class="muted">
+                <i class="fas fa-link" aria-hidden="true"></i> {{ $t('menu.costSyncedHint') }}
+              </p>
             </div>
             <div class="form-group">
               <label>{{ $t('menu.available') }}</label>
@@ -590,7 +607,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { menuItemApi, menuCategoryApi, menuSubCategoryApi, inventoryApi } from '@/api'
@@ -703,7 +720,42 @@ async function loadInventoryOptions() {
   } catch {
     inventoryItems.value = []
   }
+  syncCostFromInventory()
 }
+
+// The inventory record owns the cost: the unit cost is maintained on the
+// inventory panel and cannot be edited from any other screen, so a synced
+// item only ever displays it (read-only in the form, auto-filled on select).
+const syncedToStock = computed(() => Boolean(form.inventory_item_id))
+
+/**
+ * Fills the read-only cost box from the linked stock record. Runs when the
+ * sync link is picked and again once the option list has loaded, because an
+ * edit modal opens before that request lands.
+ */
+async function syncCostFromInventory() {
+  if (!form.inventory_item_id) return
+
+  let stock = inventoryItems.value.find((item) => item.item_id === form.inventory_item_id)
+
+  // The picker is capped at one page; a linked item beyond it still needs
+  // its cost, so ask for that record directly rather than leaving the box
+  // blank or holding the previous item's number.
+  if (!stock) {
+    try {
+      const res = await inventoryApi.show(form.inventory_item_id)
+      stock = res.data?.item || res.data?.data || res.data || null
+    } catch {
+      stock = null
+    }
+  }
+
+  if (stock && stock.unit_cost !== undefined && stock.unit_cost !== null) {
+    form.cost = Number(stock.unit_cost)
+  }
+}
+
+watch(() => form.inventory_item_id, syncCostFromInventory)
 
 // Static dropdown options for department and availability filters.
 const departmentOptions = [

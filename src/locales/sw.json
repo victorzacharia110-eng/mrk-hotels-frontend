@@ -1363,6 +1363,7 @@
     "showAccompaniment": "Onyesha",
     "syncToStock": "Sawazisha na stoo",
     "syncToStockHint": "Unganisha bidhaa hii na bidhaa iliyosajiliwa ili wataalamu waone upatikanaji wa muda halisi na bidhaa zilizokwisha zisiweze kuagizwa.",
+    "costSyncedHint": "Gharama hutoka kwenye rekodi ya bidhaa iliyoungwanishwa na inaweza kubadilishwa tu kwenye paneli ya stoo.",
     "syncedTo": "Imeunganishwa na stoo:",
     "outOfStock": "Imekwisha",
     "searchItems": "Tafuta bidhaa zilizosajiliwa...",

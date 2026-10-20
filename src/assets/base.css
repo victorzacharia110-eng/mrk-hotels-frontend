@@ -340,6 +340,16 @@ button {
   box-shadow: 0 0 0 3px rgba(0, 94, 184, 0.15);
 }
 
+/* A field whose value is owned by another panel (a cost read from the
+   inventory record, a code that cannot be changed here) must read as
+   locked rather than as a box that silently ignores what is typed in it. */
+.input:disabled,
+.textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  background: #f4f6f8;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
