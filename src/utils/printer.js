@@ -26,8 +26,10 @@ import { qzConnect, qzDisconnect, qzIsActive, qzListPrinters, qzPrintRaw, qzPrin
  *                printer, or a connect/probe confirmed the target exists.
  * - info      -> human-readable label for the connected target.
  * - reason    -> why printing is unavailable (empty when it can).
+ * - printing  -> a job is in flight; used by the version guard so a stale-bundle
+ *                reload never interrupts a print.
  */
-export const printerState = reactive({ connected: false, info: '', reason: '' })
+export const printerState = reactive({ connected: false, info: '', reason: '', printing: false })
 
 /** Does this browser have the WebSocket + btoa QZ Tray needs? (all desktops do.) */
 export function printerSupported() {
@@ -317,6 +319,7 @@ export async function printToPrinter(lines, opts = {}) {
     printerState.reason = 'No printer is set up yet. Open Printer Settings, install QZ Tray and choose your printer.'
     return false
   }
+  printerState.printing = true
   try {
     let raster = null
     if (opts.logo) {
@@ -353,6 +356,8 @@ export async function printToPrinter(lines, opts = {}) {
       ? `The printer “${targetLabel(target)}” was not found. Check it is switched on, then re-select it in Printer Settings.`
       : connectReason(err)
     return false
+  } finally {
+    printerState.printing = false
   }
 }
 
@@ -382,6 +387,7 @@ export async function printPdfToPrinter(pdf, opts = {}) {
     printerState.reason = 'No printer is set up yet. Open Printer Settings, install QZ Tray and choose your printer.'
     return false
   }
+  printerState.printing = true
   try {
     await qzPrintPdf(target, pdf)
     printerState.connected = true
@@ -395,6 +401,8 @@ export async function printPdfToPrinter(pdf, opts = {}) {
       ? `The printer “${targetLabel(target)}” was not found. Check it is switched on, then re-select it in Printer Settings.`
       : connectReason(err)
     return false
+  } finally {
+    printerState.printing = false
   }
 }
 

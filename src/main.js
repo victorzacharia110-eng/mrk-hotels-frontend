@@ -22,6 +22,8 @@ import { initA11y } from './utils/a11y'
 import './utils/toast'
 import { primeNotificationAudio } from './utils/notificationTone'
 import { applyTheme, resolveStoredTheme } from './stores/theme'
+import { watchForUpdates } from './utils/versionCheck'
+import { printerState } from './utils/printer'
 
 // Paint the remembered theme before the first render, so a dark-mode user does
 // not see a flash of the light theme while the app boots.
@@ -46,3 +48,8 @@ app.mount('#app')
 initA11y()
 // One-time audio unlock so in-app ringtones can play after the first tap.
 primeNotificationAudio()
+
+// Reload the tab when a newer deploy lands, so no till keeps running a stale
+// bundle (a stale bundle is what makes QZ Tray show the wrong certificate).
+// Never reload while a print job is in flight.
+watchForUpdates({ isSafeToReload: () => !printerState.printing })
