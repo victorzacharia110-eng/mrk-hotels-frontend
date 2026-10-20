@@ -68,4 +68,26 @@ describe('menu item cost is owned by the synced inventory record', () => {
     expect(sw.menu.costSyncedHint, 'sw.menu.costSyncedHint').toBeTruthy()
     expect(en.menu.costSyncedHint).not.toBe(sw.menu.costSyncedHint)
   })
+
+  it('searches stock on the server so items beyond the first page are reachable', () => {
+    // A hotel with more than one page of stock would otherwise only ever see
+    // the first 100 items in the picker, which is what made newly added stock
+    // appear to be missing.
+    const picker = source.slice(
+      source.indexOf('v-model="form.inventory_item_id"'),
+      source.indexOf('syncToStockHint'),
+    )
+    expect(picker).toContain(':searching="inventorySearching"')
+    expect(picker).toContain('@search="searchInventory"')
+  })
+
+  it('debounces the stock search and restores the first page on an empty query', () => {
+    const search = source.slice(
+      source.indexOf('function searchInventory'),
+      source.indexOf('const syncedToStock'),
+    )
+    expect(search).toMatch(/setTimeout\([\s\S]*350\)/)
+    expect(search).toMatch(/if \(!q\)[\s\S]{0,120}loadInventoryOptions\(\)/)
+    expect(search).toContain('inventoryApi.index({ search: q, per_page: 100 })')
+  })
 })

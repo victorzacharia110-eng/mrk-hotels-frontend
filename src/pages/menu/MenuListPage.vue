@@ -250,7 +250,9 @@
                 :options="inventoryOptions"
                 :empty-label="$t('menu.none')"
                 :placeholder="$t('menu.searchItems')"
+                :searching="inventorySearching"
                 force-search
+                @search="searchInventory"
               >
                 <template #option="{ option }">
                   <span>{{ option.item_name }}</span>
@@ -703,6 +705,7 @@ const printerStationOptions = computed(() => [
 // Registered inventory items offered in the "sync to stock" picker so a
 // beverage menu item's live quantity can gate waiter orders (best-effort).
 const inventoryItems = ref([])
+const inventorySearching = ref(false)
 const inventoryOptions = computed(() =>
   inventoryItems.value.map((item) => ({
     value: item.item_id,
@@ -713,14 +716,57 @@ const inventoryOptions = computed(() =>
   })),
 )
 
+/** Normalises the paginated / array shapes the inventory endpoint returns. */
+function inventoryRows(res) {
+  const body = res?.data
+  if (Array.isArray(body)) return body
+  return body?.data || []
+}
+
+/**
+ * Loads the first page of stock items for the picker.
+ *
+ * A hotel with more than one page of stock will not see everything here — that
+ * is fine, because the picker also searches the endpoint as the manager types
+ * (see searchInventory), so items beyond this page stay reachable instead of
+ * silently missing from the "sync to stock" list.
+ */
 async function loadInventoryOptions() {
   try {
     const res = await inventoryApi.index({ per_page: 100 })
-    inventoryItems.value = Array.isArray(res.data) ? res.data : res.data?.data || []
+    inventoryItems.value = inventoryRows(res)
   } catch {
     inventoryItems.value = []
   }
   syncCostFromInventory()
+}
+
+// Debounced so typing in the picker does not fire a request per keystroke.
+let inventorySearchTimer
+/**
+ * Searches stock items by name as the manager types in the "sync to stock"
+ * picker. An empty query restores the default first page.
+ *
+ * @param {string} query - The search text.
+ */
+function searchInventory(query) {
+  clearTimeout(inventorySearchTimer)
+  const q = String(query || '').trim()
+  if (!q) {
+    loadInventoryOptions()
+    return
+  }
+  inventorySearchTimer = setTimeout(async () => {
+    inventorySearching.value = true
+    try {
+      const res = await inventoryApi.index({ search: q, per_page: 100 })
+      inventoryItems.value = inventoryRows(res)
+    } catch {
+      // Keep the current list if the search fails.
+    } finally {
+      inventorySearching.value = false
+    }
+  }, 350)
 }
 
 // The inventory record owns the cost: the unit cost is maintained on the
