@@ -4020,3 +4020,43 @@ html[data-theme='dark'] .sm-outlet-option:hover {
 html[data-theme='dark'] .sm-outlet-option i {
   color: #7cc0ff;
 }
+
+/* Menu page: category manager modal. Its scoped styles carry light surfaces
+   (white/off-white rows, dashed sub-category panels and pill toggles) that the
+   generic dark modal skin does not reach, so it stayed a white sheet in dark
+   mode. Skinned here with the same palette as the other dark modals. */
+html[data-theme='dark'] .cat-dept-toggle button {
+  background: #2a3942;
+  border-color: #374248;
+  color: #aebac1;
+}
+html[data-theme='dark'] .cat-dept-toggle button.active {
+  background: #005eb8;
+  border-color: #005eb8;
+  color: #fff;
+}
+html[data-theme='dark'] .cat-row {
+  background: #26343c;
+  border-color: #374248;
+  color: #e9edef;
+}
+html[data-theme='dark'] .sub-panel {
+  background: #202c33;
+  border-color: #374248;
+}
+html[data-theme='dark'] .sub-list li {
+  border-top-color: #374248;
+  color: #e9edef;
+}
+html[data-theme='dark'] .cat-name .muted,
+html[data-theme='dark'] .sub-head {
+  color: #aebac1;
+}
+html[data-theme='dark'] .icon-btn {
+  color: #aebac1;
+}
+html[data-theme='dark'] .icon-btn:hover:not(:disabled) {
+  background: #374248;
+  border-color: #3f5c67;
+  color: #7cc0ff;
+}

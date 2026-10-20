@@ -229,6 +229,16 @@ describe('dark theme stylesheet', () => {
     expect(themeCss).toMatch(/html\[data-theme='dark'\] \.staff-drawer,[\s\S]*?background: #0b141a/)
   })
 
+  it('repaints the menu category manager, whose white surfaces outlived the modal skin', () => {
+    // The category manager ships its own light scoped surfaces (white/off-white
+    // rows, dashed sub-category panels, pill toggles) that the generic dark
+    // modal skin never reached, so it stayed a white sheet in dark mode.
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.cat-row \{[\s\S]*?background: #26343c/)
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.sub-panel \{[\s\S]*?background: #202c33/)
+    expect(themeCss).toContain("html[data-theme='dark'] .cat-dept-toggle button")
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.sub-list li \{[\s\S]*?border-top-color: #374248/)
+  })
+
   it('is loaded and applied before the app mounts', () => {
     expect(main).toMatch(/import '\.\/assets\/theme\.css'/)
     const applyAt = main.indexOf('applyTheme(resolveStoredTheme())')
