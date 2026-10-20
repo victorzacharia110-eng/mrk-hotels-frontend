@@ -139,6 +139,7 @@ import {
   targetUsable,
 } from '@/utils/printer'
 import { testPrintLines } from '@/utils/receipts'
+import { qzSigningStatus } from '@/utils/qz'
 import { toast } from '@/utils/toast'
 
 const { t } = useI18n()
@@ -196,10 +197,26 @@ async function connect() {
   try {
     const ok = await connectPrinter(tillTarget.value)
     connected.value = ok
-    if (!ok) error.value = printerState.reason || t('cashier.printSettings.connectFailed')
-    else await refreshPrinters()
+    if (!ok) {
+      error.value = printerState.reason || t('cashier.printSettings.connectFailed')
+    } else {
+      await refreshPrinters()
+      warnIfSigningBroken()
+    }
   } finally {
     connecting.value = false
+  }
+}
+
+/**
+ * Silent printing needs QZ Tray to verify a signed request. If the signing
+ * certificate could not be loaded, QZ Tray still connects but pops its
+ * one-time "Allow" dialog — explain that here instead of letting it surprise
+ * the operator.
+ */
+function warnIfSigningBroken() {
+  if (!qzSigningStatus.ok && qzSigningStatus.reason) {
+    error.value = qzSigningStatus.reason
   }
 }
 
@@ -208,6 +225,7 @@ async function refreshPrinters() {
   try {
     availablePrinters.value = [...new Set(await listPrinters())].sort()
     connected.value = true
+    warnIfSigningBroken()
   } catch (err) {
     connected.value = false
     error.value = printerState.reason || err?.message || t('cashier.printSettings.connectFailed')
@@ -237,8 +255,12 @@ async function testNetwork() {
   endpointHelp.value = ''
   try {
     const sent = await printToPrinter(testPrintLines(), { printer: tillTarget.value })
-    if (!sent) { error.value = printerState.reason || t('printer.testFailed') }
-    else { toast(t('cashier.printSettings.testOk'), 'success') }
+    if (!sent) {
+      error.value = printerState.reason || t('printer.testFailed')
+    } else {
+      toast(t('cashier.printSettings.testOk'), 'success')
+      warnIfSigningBroken()
+    }
   } finally {
     testing.value = false
   }
