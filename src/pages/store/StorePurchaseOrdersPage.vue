@@ -406,6 +406,9 @@ async function openCreate() {
 async function startEdit() {
   const po = detail.value
   if (!po) return
+  // The edit form is its own modal: close the detail modal first so the two
+  // never stack on screen.
+  detail.value = null
   editingId.value = po.po_id
   Object.assign(form, {
     supplier_id: po.supplier_id || '',
@@ -492,20 +495,26 @@ async function openDetail(po) {
 // (no browser dialog on Windows); otherwise opens the browser print dialog
 // against the hidden printable document, as before.
 function printDetail() {
-  printData.value = detail.value
+  // Capture the PO, then close the detail modal so the browser print preview
+  // is not layered over an open modal.
+  const po = detail.value
+  printData.value = po
+  detail.value = null
   nextTick(async () => {
     const area = document.querySelector('.print-area')
     const ok = await printElementSilently(area, {
       printer: printStore.resolveTillPrinter(),
       landscape: false,
-      title: detail.value?.po_number,
+      title: po?.po_number,
     })
     if (!ok) setTimeout(() => window.print(), 50)
   })
 }
 
 function receiveGoods() {
-  router.push({ name: 'store-goods-received', query: { po_id: detail.value.po_id, create: '1' } })
+  const poId = detail.value.po_id
+  detail.value = null
+  router.push({ name: 'store-goods-received', query: { po_id: poId, create: '1' } })
 }
 
 async function sendToSupplier(channel) {
@@ -525,9 +534,17 @@ async function sendToSupplier(channel) {
 async function voidPo() {
   const po = detail.value
   if (!window.confirm(t('purchaseOrders.voidConfirm', { reference: po.po_number }))) return
+  // Only close the detail modal once the operator has committed to voiding, so
+  // cancelling the confirm leaves it open; the reason prompt then has no modal
+  // behind it.
+  detail.value = null
   const reason = window.prompt(t('purchaseOrders.voidReason'))
-  if (reason === null) return
+  if (reason === null) {
+    detail.value = po
+    return
+  }
   if (!reason.trim()) {
+    detail.value = po
     formError.value = t('common.error')
     return
   }

@@ -149,6 +149,50 @@ describe('StorePurchaseOrdersPage', () => {
     expect(api.purchaseOrderApi.email).toHaveBeenCalledWith(7, null, 'both')
   })
 
+  it('closes the detail modal before opening the edit form', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    // primeForm() runs on edit; give the pickers real (empty) lists so the
+    // item options computed resolves to an array.
+    api.inventoryApi.index.mockResolvedValue({ data: { data: [] } })
+    api.supplierApi.index.mockResolvedValue({ data: { data: [] } })
+    api.purchaseRequisitionApi.index.mockResolvedValue({ data: { data: [] } })
+    wrapper.vm.detail = { po_id: 3, po_number: 'PO-0003', items: [] }
+
+    await wrapper.vm.startEdit()
+    await flushPromises()
+
+    expect(wrapper.vm.detail).toBeNull()
+    expect(wrapper.vm.showForm).toBe(true)
+    expect(wrapper.vm.editingId).toBe(3)
+  })
+
+  it('keeps the detail modal open when voiding is cancelled', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    wrapper.vm.detail = { po_id: 4, po_number: 'PO-0004', items: [] }
+
+    await wrapper.vm.voidPo()
+
+    expect(wrapper.vm.detail).toEqual({ po_id: 4, po_number: 'PO-0004', items: [] })
+    expect(api.purchaseOrderApi.void).not.toHaveBeenCalled()
+  })
+
+  it('closes the detail modal when voiding is confirmed', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    vi.spyOn(window, 'prompt').mockReturnValue('Damaged stock')
+    api.purchaseOrderApi.void.mockResolvedValue({ data: { purchase_order: { po_id: 5, po_number: 'PO-0005', status: 'voided' } } })
+    wrapper.vm.detail = { po_id: 5, po_number: 'PO-0005', items: [] }
+
+    await wrapper.vm.voidPo()
+    await flushPromises()
+
+    expect(api.purchaseOrderApi.void).toHaveBeenCalledWith(5, { reason: 'Damaged stock' })
+  })
+
   it('scales the inherited price by the selected SI unit factor', async () => {
     const wrapper = mountPage()
     await flushPromises()
