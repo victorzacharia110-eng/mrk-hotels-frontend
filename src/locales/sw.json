@@ -1031,7 +1031,9 @@
     "vipStatus": "Hali ya VIP",
     "typeDriverLicense": "Leseni ya kuuendesha",
     "typeNationalId": "Kitambulisho cha Taifa",
-    "typePassport": "Pasapoti"
+    "typePassport": "Pasapoti",
+    "returningGuest": "Mgeni wa kurudia amepatikana",
+    "selectExisting": "Chagua mgeni aliyepo tayari"
   },
   "reservations": {
     "title": "Uhifadhi",

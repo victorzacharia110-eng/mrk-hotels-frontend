@@ -1031,7 +1031,9 @@
     "vipStatus": "VIP status",
     "typeNationalId": "National ID",
     "typePassport": "Passport",
-    "typeDriverLicense": "Driving license"
+    "typeDriverLicense": "Driving license",
+    "returningGuest": "Returning guest found",
+    "selectExisting": "Select existing guest"
   },
   "reservations": {
     "title": "Reservations",
