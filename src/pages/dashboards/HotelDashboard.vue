@@ -1791,10 +1791,10 @@
                       class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.last_name }}</span>
                 </label>
               </div>
-              <div v-if="bookingGuestLookup.matches && bookingGuestLookup.matches.length > 0 && !bookingGuestLookup.found" class="sv-field" style="gap:4px;">
+              <div v-if="bookingGuestLookup.matches && bookingGuestLookup.matches.length > 0 && !bookingGuestLookup.found" class="sv-field" style="gap:4px; grid-column: 1 / -1;">
                 <span class="sv-field-hint muted">{{ $t('guests.selectExisting') || 'Select existing guest' }}</span>
                 <input :placeholder="$t('common.search') || 'Search'" type="text" class="input" @input="(e)=>{ bookingGuestLookup._filter = e.target.value || '' }" />
-                <div style="display:flex; flex-direction:column; gap:4px; max-height:160px; overflow:auto; border:1px solid var(--sv-border,#d7dde8); border-radius:6px; padding:4px;">
+                <div style="display:flex; flex-direction:column; gap:4px; max-height:200px; overflow:auto; border:1px solid var(--sv-border,#d7dde8); border-radius:6px; padding:4px;">
                   <button v-for="gm in (bookingGuestLookup.matches || []).filter(gm => {
                     const f = (bookingGuestLookup._filter || '').toLowerCase()
                     if (!f) return true
@@ -5112,6 +5112,7 @@ function openPrintWindow(html) {
     actionError.value = t('stayview.printEntryInvoiceBlocked')
     return false
   }
+  win.document.open()
   win.document.write(html)
   win.document.close()
   return true
@@ -5138,8 +5139,8 @@ async function printEntryInvoice(e) {
 <meta charset="utf-8">
 <title>${t('stayview.printEntryInvoice')} · ${(e.entry_code || e.entryId)}</title>
 <style>
-  @page { size: A4 portrait; margin: 14mm; }
-  body { font-family: Arial, Helvetica, sans-serif; margin: 0; color: #111; font-size: 12px; line-height: 1.5; }
+  @page { size: A4 portrait; margin: 12mm; }
+  body { font-family: Arial, Helvetica, sans-serif; margin: 0; color: #111; font-size: 12px; line-height: 1.5; padding: 0; }
   .band { height: 8px; background: #062a52; }
   .accent { height: 3px; background: #005eb8; }
   .h { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 18px 0 14px; border-bottom: 3px double #062a52; margin-bottom: 14px; }
@@ -5502,8 +5503,8 @@ async function printInvoiceBreakdown() {
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>${esc(t('stayview.printInvoiceBreakdownTitle'))} · ${esc(header.code)}</title>
 <style>
-  @page { size: A4 portrait; margin: 0; }
-  body { font-family: Arial, Helvetica, sans-serif; margin: 0; color: #111; font-size: 12px; line-height: 1.5; padding: 14mm; }
+  @page { size: A4 portrait; margin: 12mm; }
+  body { font-family: Arial, Helvetica, sans-serif; margin: 0; color: #111; font-size: 12px; line-height: 1.5; padding: 0; }
   .band { height: 8px; background: #062a52; }
   .accent { height: 3px; background: #005eb8; }
   .h { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 16px 0 12px; border-bottom: 3px double #062a52; }
