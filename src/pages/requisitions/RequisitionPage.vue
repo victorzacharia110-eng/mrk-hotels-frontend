@@ -109,7 +109,7 @@
 
     <!-- Create / edit modal -->
     <div v-if="modal === 'create' || modal === 'edit'" class="rq-overlay" @click.self="modal = null">
-      <div class="rq-modal">
+      <div class="rq-modal wide">
         <div class="rq-modal-head">
           <h3><i class="fas fa-file-signature"></i> {{ modal === 'edit' ? $t('requisitionPanel.edit') : $t('requisitionPanel.new') }}</h3>
           <button class="rq-x" @click="modal = null">×</button>
