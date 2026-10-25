@@ -1298,7 +1298,7 @@ html[data-theme='dark'] .sv-cell-bg.vacant:hover {
 }
 
 html[data-theme='dark'] .sv-day-mid {
-  border-color: #2f3b43;
+  border-left-color: transparent;
 }
 
 html[data-theme='dark'] .sv-auto {

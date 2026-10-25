@@ -8089,7 +8089,7 @@ onUnmounted(() => clearInterval(refreshTimer))
    bar ends here and the arriving guest's bar starts here on the lane below. */
 .sv-day-mid {
   grid-row: 1 / -1;
-  border-left: 1px dashed #e2e8f0;
+  border-left: 1px solid transparent;
   pointer-events: none;
   z-index: 0;
 }
