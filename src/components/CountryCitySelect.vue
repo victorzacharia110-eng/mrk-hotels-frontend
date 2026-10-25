@@ -18,6 +18,7 @@
       :empty-label="$t('location.selectCountry')"
       :required="required"
       :disabled="disabled"
+      :force-search="true"
       @update:model-value="onCountryChange"
     />
   </div>
@@ -37,6 +38,7 @@
       :empty-label="$t('location.selectCity')"
       :required="required"
       :disabled="disabled || !countryCode"
+      :force-search="true"
       @update:model-value="$emit('update:city', $event)"
     />
     <input

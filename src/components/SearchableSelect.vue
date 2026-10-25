@@ -100,7 +100,7 @@ const resolvedListboxLabel = computed(
 
 // A tiny list does not need a search box, unless the caller forces one.
 const showSearch = computed(
-  () => props.searchable && (props.options.length > 7 || props.forceSearch),
+  () => props.searchable && (props.options.length >= 0 || props.forceSearch),
 )
 
 // The panel scrolls internally, so every loaded option is rendered: slicing

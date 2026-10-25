@@ -1793,8 +1793,16 @@
               </div>
               <div v-if="bookingGuestLookup.matches && bookingGuestLookup.matches.length > 0 && !bookingGuestLookup.found" class="sv-field" style="gap:4px;">
                 <span class="sv-field-hint muted">{{ $t('guests.selectExisting') || 'Select existing guest' }}</span>
+                <input :placeholder="$t('common.search') || 'Search'" type="text" class="input" @input="(e)=>{ bookingGuestLookup._filter = e.target.value || '' }" />
                 <div style="display:flex; flex-direction:column; gap:4px; max-height:160px; overflow:auto; border:1px solid var(--sv-border,#d7dde8); border-radius:6px; padding:4px;">
-                  <button v-for="gm in bookingGuestLookup.matches" :key="gm.guest_id" type="button" class="btn btn-ghost btn-sm" style="justify-content:flex-start; text-align:left;" @click="applyGuestToBooking(gm)">
+                  <button v-for="gm in (bookingGuestLookup.matches || []).filter(gm => {
+                    const f = (bookingGuestLookup._filter || '').toLowerCase()
+                    if (!f) return true
+                    const name = (gm.full_name || ((gm.first_name||'') + ' ' + (gm.last_name||'')).trim()).toLowerCase()
+                    const phone = String(gm.phone || gm.phone_number || '').toLowerCase()
+                    const email = String(gm.email || '').toLowerCase()
+                    return name.includes(f) || phone.includes(f) || email.includes(f)
+                  })" :key="gm.guest_id" type="button" class="btn btn-ghost btn-sm" style="justify-content:flex-start; text-align:left;" @click="applyGuestToBooking(gm)">
                     <span style="font-weight:600;">{{ gm.full_name || ((gm.first_name||'') + ' ' + (gm.last_name||'')).trim() }}</span>
                     <span class="muted" style="margin-left:8px;">{{ gm.phone || gm.phone_number || '' }}</span>
                     <span v-if="gm.email" class="muted" style="margin-left:8px;">{{ gm.email }}</span>
@@ -6240,10 +6248,10 @@ let bookingNameTimer
 function applyGuestToBooking(g) {
   if (!g) return
   bookingGuestLookup.value = { loading: false, found: g, matches: [] }
-  if (!bookingForm.value.first_name && g.first_name) bookingForm.value.first_name = g.first_name
-  if (!bookingForm.value.last_name && g.last_name) bookingForm.value.last_name = g.last_name
+  if (g.first_name) bookingForm.value.first_name = g.first_name
+  if (g.last_name) bookingForm.value.last_name = g.last_name
   if (g.phone) bookingForm.value.guest_phone = g.phone
-  if (g.email && !bookingForm.value.guest_email) bookingForm.value.guest_email = g.email
+  if (g.email) bookingForm.value.guest_email = g.email
   if (g.guest_id) bookingForm.value.guest_id = g.guest_id
   if (g.country_code) bookingForm.value.country_code = g.country_code
   if (g.city) bookingForm.value.city = g.city
