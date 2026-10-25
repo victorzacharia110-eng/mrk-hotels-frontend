@@ -1795,6 +1795,8 @@
                 <span>{{ $t('reservations.guestPhone') }}</span>
                 <PhoneInput v-model="bookingForm.guest_phone" v-model:countryCode="bookingForm.country_code"
                   :error="bookingErrors.guest_phone" required />
+                <span v-if="bookingGuestLookup.loading" class="sv-field-hint muted"><i class="fas fa-spinner fa-spin"></i> {{ $t('common.searching') }}</span>
+                <span v-else-if="bookingGuestLookup.found" class="sv-field-hint" style="color:#16a34a;"><i class="fas fa-circle-check"></i> {{ $t('guests.returningGuest') || 'Returning guest found' }}: {{ bookingGuestLookup.found.full_name }}</span>
               </label>
               <div class="sv-field-row">
                 <label class="sv-field">
@@ -1843,7 +1845,7 @@
               </div>
               <div class="sv-field-row">
                 <CountryCitySelect v-model:countryCode="bookingForm.country_code" v-model:city="bookingForm.city"
-                  :required="false" city-as-dropdown />
+                  :required="false" city-as-dropdown class="sv-cc-full" />
               </div>
               <div class="sv-field-row">
                 <label class="sv-field">
@@ -1896,30 +1898,38 @@
                         <option v-for="opt in roomSortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
                       </select>
                     </div>
-                    <div style="display:flex;flex-wrap:wrap;gap:4px;max-height:120px;overflow:auto;padding:4px;border:1px solid #eee;border-radius:4px;">
-                      <label v-for="r in bookingRoomOptionsSorted" :key="r.value" style="display:flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:12px;background:#fff;">
-                        <input type="checkbox" :value="r.value" :checked="roomSelectionsArray.some(s => s.room_id === r.value)" @change="toggleRoomSelection(r)" />
-                        <span>{{ r.label }}</span>
-                        <span v-if="bookingForm.primary_room_id === r.value" style="color:#005eb8;font-weight:bold;">(P)</span>
-                      </label>
+                    <div class="sv-group-rooms">
+                      <div class="sv-group-col">
+                        <div class="sv-group-col-head"><i class="fas fa-door-open"></i> {{ $t('stayview.availableRooms') || 'Vacant rooms' }}</div>
+                        <div class="sv-group-list">
+                          <label v-for="r in bookingRoomOptionsSorted" :key="r.value" :class="['sv-group-item', { selected: roomSelectionsArray.some(s => s.room_id === r.value) }]" style="display:flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:12px;background:#fff;">
+                            <input type="checkbox" :value="r.value" :checked="roomSelectionsArray.some(s => s.room_id === r.value)" @change="toggleRoomSelection(r)" />
+                            <span>{{ r.label }}</span>
+                            <span v-if="bookingForm.primary_room_id === r.value" style="color:#005eb8;font-weight:bold;">(P)</span>
+                          </label>
+                          <div v-if="!bookingRoomOptionsSorted.length" class="sv-group-empty muted">{{ $t('stayview.noRoomsAvailable') }}</div>
+                        </div>
+                      </div>
+                      <div class="sv-group-col">
+                        <div class="sv-group-col-head"><i class="fas fa-list-check"></i> {{ $t('stayview.selectedRooms') }} ({{ roomSelectionsArray.length }})</div>
+                        <div class="sv-group-list">
+                          <div v-for="(sel, si) in roomSelectionsArray" :key="sel.room_id" class="sv-group-selected">
+                            <div>
+                              <div style="font-weight:600;">{{ sel.room_number }} · {{ roomTypeLabel(sel.room_type) }}</div>
+                              <div class="muted" style="font-size:11px;">{{ curCode() }} {{ formatPrice(sel.price_per_night) }}</div>
+                            </div>
+                            <div class="sv-room-summary-tags">
+                              <button v-if="bookingForm.primary_room_id !== sel.room_id" type="button" class="btn btn-xs" @click="setPrimaryRoom(sel.room_id)">{{ $t('stayview.makePrimary') || 'Make primary' }}</button>
+                              <span v-else class="sv-tag-primary">{{ $t('stayview.primaryRoom') }}</span>
+                              <button type="button" class="sv-room-summary-x" @click="removeRoomFromSelection(si)" :aria-label="$t('common.delete')">
+                                <i class="fas fa-times" aria-hidden="true"></i>
+                              </button>
+                            </div>
+                          </div>
+                          <div v-if="!roomSelectionsArray.length" class="sv-group-empty muted">{{ $t('stayview.selectRoomsFromLeft') || 'Select rooms from left' }}</div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div v-if="roomSelectionsArray.length > 0" class="sv-room-summary">
-                    <div class="sv-room-summary-head">
-                      <i class="fas fa-list-check" aria-hidden="true"></i>
-                      {{ $t('stayview.selectedRooms') }} ({{ roomSelectionsArray.length }})
-                    </div>
-                    <ul>
-                      <li v-for="(sel, si) in roomSelectionsArray" :key="sel.room_id">
-                        <span>{{ sel.room_number }} · {{ roomTypeLabel(sel.room_type) }} · {{ curCode() }} {{ formatPrice(sel.price_per_night) }}</span>
-                        <span class="sv-room-summary-tags">
-                          <span v-if="bookingForm.primary_room_id === sel.room_id" class="sv-tag-primary">{{ $t('stayview.primaryRoom') }}</span>
-                          <button type="button" class="sv-room-summary-x" @click="removeRoomFromSelection(si)" :aria-label="$t('common.delete')">
-                            <i class="fas fa-times" aria-hidden="true"></i>
-                          </button>
-                        </span>
-                      </li>
-                    </ul>
                   </div>
                   <span v-if="bookingErrors.room_id" class="sv-field-msg" role="alert"><i
                       class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.room_id }}</span>
@@ -1945,12 +1955,12 @@
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.total') }}</span>
-                  <input v-model.number="bookingForm.total_amount" type="number" min="0" class="input" required />
+                  <input v-model.number="bookingForm.total_amount" type="number" min="0" step="0.01" class="input" required @wheel.prevent @keydown="(e) => ['e','E','+','-'].includes(e.key) && e.preventDefault()" />
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.advancePaid') }}</span>
-                  <input v-model.number="bookingForm.advance_payment" type="number" min="0" class="input"
-                    data-field="advance_payment" :class="{ 'sv-input-error': bookingErrors.advance_payment }" />
+                  <input v-model.number="bookingForm.advance_payment" type="number" min="0" step="0.01" class="input"
+                    data-field="advance_payment" :class="{ 'sv-input-error': bookingErrors.advance_payment }" @wheel.prevent @keydown="(e) => ['e','E','+','-'].includes(e.key) && e.preventDefault()" />
                   <span v-if="bookingErrors.advance_payment" class="sv-field-msg" role="alert"><i
                       class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.advance_payment
                     }}</span>
@@ -6212,6 +6222,47 @@ const bookingForm = ref({})
 const bookingErrors = ref({})
 const bookingTouched = ref(false)
 const bookingSnapshot = ref({})
+const bookingGuestLookup = ref({ loading: false, found: null })
+
+let bookingPhoneTimer
+watch(
+  () => [bookingForm.value.guest_phone, bookingForm.value.country_code],
+  () => {
+    clearTimeout(bookingPhoneTimer)
+    bookingPhoneTimer = setTimeout(async () => {
+      const digits = String(bookingForm.value.guest_phone || '').replace(/\D/g, '')
+      if (digits.length < 8) {
+        bookingGuestLookup.value = { loading: false, found: null }
+        return
+      }
+      bookingGuestLookup.value = { loading: true, found: null }
+      try {
+        const phone = formatPhoneNational(bookingForm.value.guest_phone, bookingForm.value.country_code || 'TZ')
+        const res = await guestApi.lookup(phone || digits)
+        const matches = res.data.guests || res.data.data || []
+        if (Array.isArray(matches) && matches.length === 1) {
+          const g = matches[0]
+          bookingGuestLookup.value = { loading: false, found: g }
+          // Prefill guest details (only fill if empty to avoid overwriting user edits)
+          if (!bookingForm.value.first_name && g.first_name) bookingForm.value.first_name = g.first_name
+          if (!bookingForm.value.last_name && g.last_name) bookingForm.value.last_name = g.last_name
+          if (g.phone && !bookingForm.value.guest_phone) bookingForm.value.guest_phone = g.phone
+          if (g.email && !bookingForm.value.guest_email) bookingForm.value.guest_email = g.email
+          if (g.guest_id) bookingForm.value.guest_id = g.guest_id
+          if (g.country_code) bookingForm.value.country_code = g.country_code
+          if (g.city) bookingForm.value.city = g.city
+          if (g.nationality) bookingForm.value.nationality = g.nationality
+          if (g.id_type) bookingForm.value.id_type = g.id_type
+          if (g.id_number) bookingForm.value.id_number = g.id_number
+        } else {
+          bookingGuestLookup.value = { loading: false, found: null }
+        }
+      } catch {
+        bookingGuestLookup.value = { loading: false, found: null }
+      }
+    }, 400)
+  },
+)
 
 const roomSelectionsArray = ref([])
 const roomSelectionIndex = ref(0)
@@ -6243,6 +6294,7 @@ function resetBookingForm() {
     first_name: '',
     last_name: '',
     guest_phone: '',
+    guest_email: '',
     country_code: 'TZ',
     city: '',
     booking_type: 'single',
@@ -6263,12 +6315,14 @@ function resetBookingForm() {
     id_type: '',
     id_number: '',
     vip_status: false,
+    guest_id: null,
   }
   bookingErrors.value = {}
   bookingTouched.value = false
   bookingSnapshot.value = { ...bookingForm.value }
   roomSelectionIndex.value = 0
   roomSelectionsArray.value = []
+  bookingGuestLookup.value = { loading: false, found: null }
 }
 
 /** Nights between the selected arrival and departure dates. */

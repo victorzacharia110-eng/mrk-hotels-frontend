@@ -178,10 +178,6 @@
             <span class="kpi-label">{{ $t('nightAudit.cashInHand') }}</span>
           </div>
           <div class="kpi">
-            <span class="kpi-value" :class="{ 'text-green': report.net_profit > 0, 'text-red': report.net_profit < 0 }">{{ fmtMoney(report.net_profit) }}</span>
-            <span class="kpi-label">{{ $t('nightAudit.netProfit') }}</span>
-          </div>
-          <div class="kpi">
             <span class="kpi-value">{{ fmtMoney(report.outstanding) }}</span>
             <span class="kpi-label">{{ $t('nightAudit.outstanding') }}</span>
           </div>
@@ -545,13 +541,22 @@ function openCloseConfirm() {
 async function confirmCloseDay() {
   closing.value = true
   error.value = ''
+  success.value = ''
   try {
-    await nightAuditApi.close({ date: selectedDate.value })
-    success.value = t('nightAudit.closeSuccess')
+    const res = await nightAuditApi.close({ date: selectedDate.value })
+    success.value = res.data?.message || t('nightAudit.closeSuccess')
     showClose.value = false
+    // Update business date instantly so stayview reflects new business date
+    try {
+      await businessDateStore.load()
+    } catch (_) {
+      /* ignore */
+    }
     await load()
   } catch (err) {
+    // Show blocker/result in modal-like message; avoid top-of-page spam confusion
     error.value = err.response?.data?.message || t('common.actionFailed')
+    showClose.value = false
   } finally {
     closing.value = false
   }
