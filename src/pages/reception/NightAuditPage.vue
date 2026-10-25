@@ -222,10 +222,13 @@
               <span><i class="fas fa-calendar-day" aria-hidden="true"></i> {{ $t('nightAudit.departure') }} {{ guest.departure }}</span>
               <span class="dueout-bal">{{ $t('nightAudit.dueAmount') }}: {{ fmtMoney(guest.balance) }}</span>
             </div>
-            <span class="dueout-badge" :class="guest.overdue ? 'badge-overdue' : 'badge-due'">
-              <i class="fas" :class="guest.overdue ? 'fa-triangle-exclamation' : 'fa-hourglass-half'" aria-hidden="true"></i>
-              {{ guest.overdue ? $t('nightAudit.overdue') : $t('nightAudit.dueToday') }}
-            </span>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span class="dueout-badge" :class="guest.overdue ? 'badge-overdue' : 'badge-due'">
+                <i class="fas" :class="guest.overdue ? 'fa-triangle-exclamation' : 'fa-hourglass-half'" aria-hidden="true"></i>
+                {{ guest.overdue ? $t('nightAudit.overdue') : $t('nightAudit.dueToday') }}
+              </span>
+              <button type="button" class="btn btn-sm btn-primary" @click="goToStayviewForGuest(guest)">{{ $t('nightAudit.goToStayview') || 'Go to Stayview' }}</button>
+            </div>
           </div>
         </div>
       </div>
@@ -297,12 +300,14 @@
 <script setup>
 
 import { ref, computed, watch, onMounted } from 'vue'
-import { nightAuditApi } from '@/api'
+import { useRouter } from 'vue-router'
+import { nightAuditApi, reservationApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import { useBusinessDateStore } from '@/stores/businessDate'
 import { useTenantCurrency } from '@/utils/currency'
 
+const router = useRouter()
 const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
@@ -558,6 +563,16 @@ async function confirmCloseDay() {
     showClose.value = false
   } finally {
     closing.value = false
+  }
+}
+
+function goToStayviewForGuest(guest) {
+  try {
+    router.push({ name: 'hotel-dashboard' })
+  } catch (_) {
+    try {
+      window.location.href = '/app'
+    } catch (_) {}
   }
 }
 
