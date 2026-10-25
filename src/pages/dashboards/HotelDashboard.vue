@@ -6259,8 +6259,8 @@ let bookingNameTimer
 function applyGuestToBooking(g) {
   if (!g) return
   bookingGuestLookup.value = { loading: false, found: g, matches: [] }
-  if (g.first_name) bookingForm.value.first_name = g.first_name
-  if (g.last_name) bookingForm.value.last_name = g.last_name
+  bookingForm.value.first_name = g.first_name || ''
+  bookingForm.value.last_name = g.last_name || ''
   if (g.phone) bookingForm.value.guest_phone = g.phone
   if (g.email) bookingForm.value.guest_email = g.email
   if (g.guest_id) bookingForm.value.guest_id = g.guest_id
@@ -6309,9 +6309,10 @@ watch(
       const first = String(bookingForm.value.first_name || '').trim()
       const last = String(bookingForm.value.last_name || '').trim()
       if (first.length < 2 && last.length < 2) {
-        if (!bookingGuestLookup.value.matches?.length) {
-          bookingGuestLookup.value = { ...bookingGuestLookup.value, matches: [] }
+        if (bookingGuestLookup.value.found) {
+          // If user cleared name after selecting, don't auto-clear full form; just clear matches
         }
+        bookingGuestLookup.value = { loading: false, found: null, matches: [], _filter: '' }
         return
       }
       // Don't override if phone lookup already found a match
@@ -6321,14 +6322,14 @@ watch(
         const res = await guestApi.lookup(term)
         const matches = res.data.guests || res.data.data || []
         if (Array.isArray(matches) && matches.length > 0) {
-          bookingGuestLookup.value = { loading: false, found: null, matches }
+          bookingGuestLookup.value = { loading: false, found: null, matches, _filter: '' }
         } else {
-          bookingGuestLookup.value = { loading: false, found: null, matches: [] }
+          bookingGuestLookup.value = { loading: false, found: null, matches: [], _filter: '' }
         }
       } catch {
-        bookingGuestLookup.value = { loading: false, found: null, matches: [] }
+        bookingGuestLookup.value = { loading: false, found: null, matches: [], _filter: '' }
       }
-    }, 400)
+    }, 300)
   },
 )
 
