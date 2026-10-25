@@ -1862,8 +1862,18 @@
                 </label>
               </div>
               <div class="sv-field-row">
-                <CountryCitySelect v-model:countryCode="bookingForm.country_code" v-model:city="bookingForm.city"
-                  :required="false" city-as-dropdown class="sv-cc-full" />
+                <label class="sv-field" style="grid-column: 1 / -1; width: 100%;">
+                  <span>{{ $t('location.country') }}</span>
+                  <CountryCitySelect v-model:countryCode="bookingForm.country_code" v-model:city="bookingForm.city"
+                    :required="false" city-as-dropdown class="sv-cc-full" style="width:100%;" />
+                </label>
+              </div>
+              <div class="sv-field-row">
+                <label class="sv-field" style="grid-column: 1 / -1;">
+                  <span>{{ $t('location.city') }}</span>
+                  <input v-model="bookingForm.city" type="text" class="input" data-field="city"
+                    :placeholder="$t('stayview.optional')" style="width:100%;" />
+                </label>
               </div>
               <div class="sv-field-row">
                 <label class="sv-field">
@@ -1916,11 +1926,11 @@
                         <option v-for="opt in roomSortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
                       </select>
                     </div>
-                    <div class="sv-group-rooms">
-                      <div class="sv-group-col">
+                    <div class="sv-group-rooms" style="display:flex; gap:12px; width:100%;">
+                      <div class="sv-group-col" style="flex:1; min-width:0;">
                         <div class="sv-group-col-head"><i class="fas fa-door-open"></i> {{ $t('stayview.availableRooms') || 'Vacant rooms' }}</div>
-                        <div class="sv-group-list">
-                          <label v-for="r in bookingRoomOptionsSorted" :key="r.value" :class="['sv-group-item', { selected: roomSelectionsArray.some(s => s.room_id === r.value) }]" style="display:flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:12px;background:#fff;">
+                        <div class="sv-group-list" style="display:flex; flex-direction:column; gap:4px;">
+                          <label v-for="r in bookingRoomOptionsSorted" :key="r.value" :class="['sv-group-item', { selected: roomSelectionsArray.some(s => s.room_id === r.value) }]" style="display:flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:12px;background:#fff; width:100%;">
                             <input type="checkbox" :value="r.value" :checked="roomSelectionsArray.some(s => s.room_id === r.value)" @change="toggleRoomSelection(r)" />
                             <span>{{ r.label }}</span>
                             <span v-if="bookingForm.primary_room_id === r.value" style="color:#005eb8;font-weight:bold;">(P)</span>
@@ -1928,10 +1938,10 @@
                           <div v-if="!bookingRoomOptionsSorted.length" class="sv-group-empty muted">{{ $t('stayview.noRoomsAvailable') }}</div>
                         </div>
                       </div>
-                      <div class="sv-group-col">
+                      <div class="sv-group-col" style="flex:1; min-width:0;">
                         <div class="sv-group-col-head"><i class="fas fa-list-check"></i> {{ $t('stayview.selectedRooms') }} ({{ roomSelectionsArray.length }})</div>
-                        <div class="sv-group-list">
-                          <div v-for="(sel, si) in roomSelectionsArray" :key="sel.room_id" class="sv-group-selected">
+                        <div class="sv-group-list" style="display:flex; flex-direction:column; gap:4px;">
+                          <div v-for="(sel, si) in roomSelectionsArray" :key="sel.room_id" class="sv-group-selected" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;border:1px solid #cfe2ff;background:#f8fbff;border-radius:4px;">
                             <div>
                               <div style="font-weight:600;">{{ sel.room_number }} · {{ roomTypeLabel(sel.room_type) }}</div>
                               <div class="muted" style="font-size:11px;">{{ curCode() }} {{ formatPrice(sel.price_per_night) }}</div>

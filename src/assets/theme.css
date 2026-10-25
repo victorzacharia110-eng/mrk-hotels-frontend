@@ -3127,6 +3127,22 @@ html[data-theme='dark'] .sv-folio-row-type { color:#7cc0ff; }
 html[data-theme='dark'] .sv-folio-print-btn { background:#202c33; color:#7cc0ff; }
 html[data-theme='dark'] .sv-folio-print-btn:hover { background:#202c33; color:#7cc0ff; }
 html[data-theme='dark'] .sv-folio-view-btn:disabled, html[data-theme='dark'] .sv-folio-print-btn:disabled { background:rgba(124,192,255,0.14); }
+
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+html[data-theme='dark'] input[type="checkbox"],
+html[data-theme='dark'] input[type="radio"] {
+  accent-color: #4f9bff;
+  background-color: var(--bg-input, #1f2937);
+}
 html[data-theme='dark'] .sv-folio-now-viewing { background:#202c33; color:#ffd27a; }
 html[data-theme='dark'] .sv-folio-now-viewing i { color:#ffd27a; }
 html[data-theme='dark'] .sv-folio-now-viewing strong { color:#ffd27a; }

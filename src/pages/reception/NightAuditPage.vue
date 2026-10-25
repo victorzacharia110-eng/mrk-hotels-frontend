@@ -277,7 +277,6 @@
             <th>{{ $t('nightAudit.date') }}</th>
             <th>{{ $t('nightAudit.totalRevenue') }}</th>
             <th>{{ $t('nightAudit.totalCollected') }}</th>
-            <th>{{ $t('nightAudit.netProfit') }}</th>
             <th>{{ $t('nightAudit.closedBy') }}</th>
           </tr>
         </thead>
@@ -286,7 +285,6 @@
             <td>{{ d.close_date }}</td>
             <td>{{ fmtMoney(d.total_revenue) }}</td>
             <td>{{ fmtMoney(d.total_collected) }}</td>
-            <td :class="{ 'text-green': d.net_profit > 0, 'text-red': d.net_profit < 0 }">{{ fmtMoney(d.net_profit) }}</td>
             <td>{{ d.closed_by?.full_name || '—' }}</td>
           </tr>
         </tbody>
@@ -549,6 +547,7 @@ async function confirmCloseDay() {
     // Update business date instantly so stayview reflects new business date
     try {
       await businessDateStore.load()
+      await businessDateStore.reload?.()
     } catch (_) {
       /* ignore */
     }
