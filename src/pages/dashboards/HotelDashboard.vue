@@ -1791,6 +1791,16 @@
                       class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.last_name }}</span>
                 </label>
               </div>
+              <div v-if="bookingGuestLookup.matches && bookingGuestLookup.matches.length > 0 && !bookingGuestLookup.found" class="sv-field" style="gap:4px;">
+                <span class="sv-field-hint muted">{{ $t('guests.selectExisting') || 'Select existing guest' }}</span>
+                <div style="display:flex; flex-direction:column; gap:4px; max-height:160px; overflow:auto; border:1px solid var(--sv-border,#d7dde8); border-radius:6px; padding:4px;">
+                  <button v-for="gm in bookingGuestLookup.matches" :key="gm.guest_id" type="button" class="btn btn-ghost btn-sm" style="justify-content:flex-start; text-align:left;" @click="applyGuestToBooking(gm)">
+                    <span style="font-weight:600;">{{ gm.full_name || ((gm.first_name||'') + ' ' + (gm.last_name||'')).trim() }}</span>
+                    <span class="muted" style="margin-left:8px;">{{ gm.phone || gm.phone_number || '' }}</span>
+                    <span v-if="gm.email" class="muted" style="margin-left:8px;">{{ gm.email }}</span>
+                  </button>
+                </div>
+              </div>
               <label class="sv-field">
                 <span>{{ $t('reservations.guestPhone') }}</span>
                 <PhoneInput v-model="bookingForm.guest_phone" v-model:countryCode="bookingForm.country_code"
@@ -6222,9 +6232,26 @@ const bookingForm = ref({})
 const bookingErrors = ref({})
 const bookingTouched = ref(false)
 const bookingSnapshot = ref({})
-const bookingGuestLookup = ref({ loading: false, found: null })
+const bookingGuestLookup = ref({ loading: false, found: null, matches: [] })
 
 let bookingPhoneTimer
+let bookingNameTimer
+
+function applyGuestToBooking(g) {
+  if (!g) return
+  bookingGuestLookup.value = { loading: false, found: g, matches: [] }
+  if (!bookingForm.value.first_name && g.first_name) bookingForm.value.first_name = g.first_name
+  if (!bookingForm.value.last_name && g.last_name) bookingForm.value.last_name = g.last_name
+  if (g.phone) bookingForm.value.guest_phone = g.phone
+  if (g.email && !bookingForm.value.guest_email) bookingForm.value.guest_email = g.email
+  if (g.guest_id) bookingForm.value.guest_id = g.guest_id
+  if (g.country_code) bookingForm.value.country_code = g.country_code
+  if (g.city) bookingForm.value.city = g.city
+  if (g.nationality) bookingForm.value.nationality = g.nationality
+  if (g.id_type) bookingForm.value.id_type = g.id_type
+  if (g.id_number) bookingForm.value.id_number = g.id_number
+}
+
 watch(
   () => [bookingForm.value.guest_phone, bookingForm.value.country_code],
   () => {
@@ -6232,33 +6259,55 @@ watch(
     bookingPhoneTimer = setTimeout(async () => {
       const digits = String(bookingForm.value.guest_phone || '').replace(/\D/g, '')
       if (digits.length < 8) {
-        bookingGuestLookup.value = { loading: false, found: null }
+        bookingGuestLookup.value = { loading: false, found: null, matches: [] }
         return
       }
-      bookingGuestLookup.value = { loading: true, found: null }
+      bookingGuestLookup.value = { loading: true, found: null, matches: [] }
       try {
         const phone = formatPhoneNational(bookingForm.value.guest_phone, bookingForm.value.country_code || 'TZ')
         const res = await guestApi.lookup(phone || digits)
         const matches = res.data.guests || res.data.data || []
         if (Array.isArray(matches) && matches.length === 1) {
           const g = matches[0]
-          bookingGuestLookup.value = { loading: false, found: g }
-          // Prefill guest details (only fill if empty to avoid overwriting user edits)
-          if (!bookingForm.value.first_name && g.first_name) bookingForm.value.first_name = g.first_name
-          if (!bookingForm.value.last_name && g.last_name) bookingForm.value.last_name = g.last_name
-          if (g.phone && !bookingForm.value.guest_phone) bookingForm.value.guest_phone = g.phone
-          if (g.email && !bookingForm.value.guest_email) bookingForm.value.guest_email = g.email
-          if (g.guest_id) bookingForm.value.guest_id = g.guest_id
-          if (g.country_code) bookingForm.value.country_code = g.country_code
-          if (g.city) bookingForm.value.city = g.city
-          if (g.nationality) bookingForm.value.nationality = g.nationality
-          if (g.id_type) bookingForm.value.id_type = g.id_type
-          if (g.id_number) bookingForm.value.id_number = g.id_number
+          applyGuestToBooking(g)
+        } else if (Array.isArray(matches) && matches.length > 1) {
+          bookingGuestLookup.value = { loading: false, found: null, matches }
         } else {
-          bookingGuestLookup.value = { loading: false, found: null }
+          bookingGuestLookup.value = { loading: false, found: null, matches: [] }
         }
       } catch {
-        bookingGuestLookup.value = { loading: false, found: null }
+        bookingGuestLookup.value = { loading: false, found: null, matches: [] }
+      }
+    }, 400)
+  },
+)
+
+watch(
+  () => [bookingForm.value.first_name, bookingForm.value.last_name],
+  () => {
+    clearTimeout(bookingNameTimer)
+    bookingNameTimer = setTimeout(async () => {
+      const first = String(bookingForm.value.first_name || '').trim()
+      const last = String(bookingForm.value.last_name || '').trim()
+      if (first.length < 2 && last.length < 2) {
+        if (!bookingGuestLookup.value.matches?.length) {
+          bookingGuestLookup.value = { ...bookingGuestLookup.value, matches: [] }
+        }
+        return
+      }
+      // Don't override if phone lookup already found a match
+      if (bookingGuestLookup.value.found || bookingGuestLookup.value.loading) return
+      try {
+        const term = `${first} ${last}`.trim()
+        const res = await guestApi.lookup(term)
+        const matches = res.data.guests || res.data.data || []
+        if (Array.isArray(matches) && matches.length > 0) {
+          bookingGuestLookup.value = { loading: false, found: null, matches }
+        } else {
+          bookingGuestLookup.value = { loading: false, found: null, matches: [] }
+        }
+      } catch {
+        bookingGuestLookup.value = { loading: false, found: null, matches: [] }
       }
     }, 400)
   },
@@ -6322,7 +6371,7 @@ function resetBookingForm() {
   bookingSnapshot.value = { ...bookingForm.value }
   roomSelectionIndex.value = 0
   roomSelectionsArray.value = []
-  bookingGuestLookup.value = { loading: false, found: null }
+  bookingGuestLookup.value = { loading: false, found: null, matches: [] }
 }
 
 /** Nights between the selected arrival and departure dates. */
