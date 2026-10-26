@@ -301,8 +301,8 @@
           </li>
         </ul>
         <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; margin-top:12px;">
-          <button type="button" class="btn" @click="showIssues = false">{{ $t('common.close') }}</button>
-          <button type="button" class="btn btn-primary" :disabled="closing || !canClose" @click="showIssues=false; showClose=true">{{ $t('nightAudit.closeDay') }}</button>
+          <button type="button" class="btn" @click="showIssues = false">{{ $t('common.cancel') || $t('common.close') }}</button>
+          <button type="button" class="btn btn-primary" :disabled="closing || !canClose" @click="showIssues=false; showClose=true">{{ $t('nightAudit.confirmClose') || $t('nightAudit.closeDay') }}</button>
         </div>
       </div>
     </AlertModal>
@@ -578,11 +578,12 @@ const closeConfirmBody = computed(() => {
 
 function openCloseConfirm() {
   error.value = ''
-  // Show issues modal if there are items to act on (due outs / stale arrivals / warnings)
-  if (dueOuts.value.length || staleArrivals.value.count || (closeWarnings.value && closeWarnings.value.length)) {
+  // If there are unfinished businesses/issues, show issues modal with actions
+  if (dueOuts.value.length || staleArrivals.value.count) {
     showIssues.value = true
     return
   }
+  // Always show confirm modal
   showClose.value = true
 }
 
