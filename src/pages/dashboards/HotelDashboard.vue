@@ -2364,7 +2364,10 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { useNotificationStore } from '@/stores/notifications'
+
+const route = useRoute()
 import { roomApi, reservationApi, guestApi, housekeepingApi, laundryApi, invoiceApi, inventoryApi, paymentApi, companyApi, hotelSettingsApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import AlertModal from '@/components/AlertModal.vue'
@@ -6903,6 +6906,24 @@ onMounted(async () => {
   await businessDateStore.ensureLoaded()
   if (!windowPinned) windowStart.value = defaultWindowStart()
   load()
+  try {
+    const q = route.query || {}
+    if (q.reservation_id || q.room_id || q.room || q.guest_id) {
+      setTimeout(() => {
+        try {
+          const list = bars.value || []
+          const found = list.find(b => {
+            if (q.reservation_id && String(b.reservation_id) === String(q.reservation_id)) return true
+            if (q.room_id && String(b.room_id) === String(q.room_id)) return true
+            if (q.room && String(b.room_number) === String(q.room)) return true
+            if (q.guest_id && String(b.guest_id) === String(q.guest_id)) return true
+            return false
+          })
+          if (found) openBar(found)
+        } catch (_) {}
+      }, 400)
+    }
+  } catch (_) {}
   refreshTimer = setInterval(() => {
     businessDateStore.reload().then(() => {
       if (!windowPinned) windowStart.value = defaultWindowStart()

@@ -568,11 +568,25 @@ async function confirmCloseDay() {
 
 function goToStayviewForGuest(guest) {
   try {
-    router.push({ name: 'hotel-dashboard' })
+    const query = {}
+    if (guest?.reservation_id) query.reservation_id = guest.reservation_id
+    if (guest?.room_id) query.room_id = guest.room_id
+    if (guest?.room_number) query.room = guest.room_number
+    if (guest?.guest_id) query.guest_id = guest.guest_id
+    router.push({ name: 'hotel-dashboard', query })
   } catch (_) {
     try {
-      window.location.href = '/app'
-    } catch (_) {}
+      const params = new URLSearchParams()
+      if (guest?.reservation_id) params.set('reservation_id', guest.reservation_id)
+      if (guest?.room_id) params.set('room_id', guest.room_id)
+      if (guest?.room_number) params.set('room', guest.room_number)
+      if (guest?.guest_id) params.set('guest_id', guest.guest_id)
+      window.location.href = '/app' + (params.toString() ? '?' + params.toString() : '')
+    } catch (_) {
+      try {
+        window.location.href = '/app'
+      } catch (_) {}
+    }
   }
 }
 
