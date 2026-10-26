@@ -272,6 +272,7 @@
     <AlertModal
       :show="showIssues"
       :title="t('nightAudit.title') || 'Night Audit'"
+      wide
       @dismiss="showIssues = false"
     >
       <div class="na-issues">
@@ -762,12 +763,33 @@ onMounted(async () => {
 .dueout-badge { white-space: nowrap; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
 .badge-due { background: #fef3c7; color: #92400e; }
 .badge-overdue { background: #fee2e2; color: #b91c1c; }
-.na-issues { text-align: left; }
-.na-issue-block { border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; margin-bottom: 12px; background: #fff; }
+.na-issues { text-align: left; display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.na-issues > p { flex: 1 1 100%; margin: 0; }
+.na-issue-block {
+  flex: 1 1 360px;
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+  max-height: 46vh;
+  overflow-y: auto;
+}
 .na-issue-block h4 { margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
-.na-issue-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid #f1f5f9; border-radius: 8px; margin-bottom: 8px; }
-.na-issue-main { display: grid; gap: 4px; }
-.na-warn-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.na-issue-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+.na-issue-item:last-child { margin-bottom: 0; }
+.na-issue-main { display: grid; gap: 4px; min-width: 0; flex: 1 1 220px; }
+.na-warn-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; flex: 1 1 100%; }
 .na-warn { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 8px; border: 1px solid #e5e7eb; }
 .na-warn--danger { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
 .na-warn--warning { background: #fffbeb; border-color: #fbd38d; color: #92400e; }

@@ -16,7 +16,7 @@
   <Teleport to="body">
     <Transition name="modal-fade">
       <div v-if="show" class="alert-modal-overlay" @click.self="$emit('dismiss')">
-        <div class="alert-modal" role="dialog" aria-modal="true" :aria-labelledby="headingId">
+        <div class="alert-modal" :class="{ 'alert-modal--wide': wide }" role="dialog" aria-modal="true" :aria-labelledby="headingId">
           <div class="alert-modal-head" :class="`alert-modal-head--${type}`">
             <span class="alert-modal-icon" aria-hidden="true">
               <i :class="iconClass"></i>
@@ -64,6 +64,9 @@ const props = defineProps({
   details: { type: Array, default: () => [] },
   timestamp: { type: String, default: '' },
   type: { type: String, default: 'info' },
+  // Fewer than a handful of alerts read fine in the 480px default. Operational
+  // boards with several actionable items need the full working width instead.
+  wide: { type: Boolean, default: false },
 })
 
 defineEmits(['dismiss'])
@@ -112,6 +115,23 @@ function formatTime(iso) {
   max-width: 480px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
   overflow: hidden;
+}
+
+.alert-modal--wide {
+  width: calc(100vw - 32px);
+  max-width: 1400px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 32px);
+}
+
+.alert-modal--wide .alert-modal-body {
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+.alert-modal--wide .alert-modal-foot {
+  flex-shrink: 0;
 }
 
 .alert-modal-head {
