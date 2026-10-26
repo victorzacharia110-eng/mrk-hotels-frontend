@@ -304,6 +304,7 @@ import { useRouter } from 'vue-router'
 import { nightAuditApi, reservationApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import AlertModal from '@/components/AlertModal.vue'
 import { useBusinessDateStore } from '@/stores/businessDate'
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -501,6 +502,7 @@ const staleArrivals = ref({ count: 0, items: [] })
 const loading = ref(false)
 const closing = ref(false)
 const showClose = ref(false)
+const showIssues = ref(false)
 const error = ref('')
 const success = ref('')
 
@@ -538,6 +540,10 @@ const closeConfirmBody = computed(() => {
 
 function openCloseConfirm() {
   error.value = ''
+  if (dueOuts.value.length || staleArrivals.value.count || closeWarnings.value.some(w => w.level === 'danger')) {
+    showIssues.value = true
+    return
+  }
   showClose.value = true
 }
 
@@ -573,7 +579,9 @@ function goToStayviewForGuest(guest) {
     if (guest?.room_id) query.room_id = guest.room_id
     if (guest?.room_number) query.room = guest.room_number
     if (guest?.guest_id) query.guest_id = guest.guest_id
+    if (guest?.reservation_id) query.res_id = guest.reservation_id
     router.push({ name: 'hotel-dashboard', query })
+    showIssues.value = false
   } catch (_) {
     try {
       const params = new URLSearchParams()
@@ -581,10 +589,13 @@ function goToStayviewForGuest(guest) {
       if (guest?.room_id) params.set('room_id', guest.room_id)
       if (guest?.room_number) params.set('room', guest.room_number)
       if (guest?.guest_id) params.set('guest_id', guest.guest_id)
+      if (guest?.reservation_id) params.set('res_id', guest.reservation_id)
       window.location.href = '/app' + (params.toString() ? '?' + params.toString() : '')
+      showIssues.value = false
     } catch (_) {
       try {
         window.location.href = '/app'
+        showIssues.value = false
       } catch (_) {}
     }
   }
@@ -681,6 +692,16 @@ onMounted(async () => {
 .dueout-badge { white-space: nowrap; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
 .badge-due { background: #fef3c7; color: #92400e; }
 .badge-overdue { background: #fee2e2; color: #b91c1c; }
+.na-issues { text-align: left; }
+.na-issue-block { border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; margin-bottom: 12px; background: #fff; }
+.na-issue-block h4 { margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+.na-issue-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid #f1f5f9; border-radius: 8px; margin-bottom: 8px; }
+.na-issue-main { display: grid; gap: 4px; }
+.na-warn-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.na-warn { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 8px; border: 1px solid #e5e7eb; }
+.na-warn--danger { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+.na-warn--warning { background: #fffbeb; border-color: #fbd38d; color: #92400e; }
+.na-warn--info { background: #f8fafc; color: #475569; }
 .text-red { color: #DC2626 !important; }
 .text-green { color: #16A34A !important; }
 .capitalize { text-transform: capitalize; }
