@@ -578,7 +578,8 @@ const closeConfirmBody = computed(() => {
 
 function openCloseConfirm() {
   error.value = ''
-  if (dueOuts.value.length || staleArrivals.value.count || closeWarnings.value.some(w => w.level === 'danger')) {
+  // Always show issues modal if there are items to act on, else show confirm
+  if (dueOuts.value.length || staleArrivals.value.count) {
     showIssues.value = true
     return
   }
