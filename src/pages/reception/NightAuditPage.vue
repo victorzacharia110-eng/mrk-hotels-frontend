@@ -269,6 +269,44 @@
       @cancel="showClose = false"
     />
 
+    <AlertModal
+      :show="showIssues"
+      :title="t('nightAudit.title') || 'Night Audit'"
+      @close="showIssues = false"
+    >
+      <div class="na-issues">
+        <p style="margin:0 0 12px; color:#475569;">{{ $t('nightAudit.closePrompt') }}</p>
+        <div v-if="dueOuts.length" class="na-issue-block">
+          <h4><i class="fas fa-hourglass-half" style="color:#d97706;"></i> {{ $t('nightAudit.dueOuts') }}</h4>
+          <div v-for="guest in dueOuts" :key="guest.reservation_id" class="na-issue-item">
+            <div class="na-issue-main">
+              <div><strong>{{ guest.guest_name }}</strong> · {{ guest.room_number || '—' }} · {{ $t('nightAudit.departure') }} {{ guest.departure }}</div>
+              <div>{{ $t('nightAudit.dueAmount') }}: {{ fmtMoney(guest.balance) }}</div>
+            </div>
+            <button type="button" class="btn btn-sm btn-primary" @click="goToStayviewForGuest(guest)">{{ $t('nightAudit.goToStayview') || 'Go to Stayview' }}</button>
+          </div>
+        </div>
+        <div v-if="staleArrivals.count" class="na-issue-block">
+          <h4><i class="fas fa-triangle-exclamation" style="color:#dc2626;"></i> {{ $t('nightAudit.warnStaleRemain') }}</h4>
+          <div class="na-issue-item">
+            <div class="na-issue-main">
+              <div>{{ $t('nightAudit.warnStaleRemain', { count: staleArrivals.count }) }}</div>
+            </div>
+          </div>
+        </div>
+        <ul v-if="closeWarnings.length" class="na-warn-list">
+          <li v-for="w in closeWarnings" :key="w.key" :class="['na-warn', `na-warn--${w.level}`]">
+            <i :class="w.level === 'danger' ? 'fas fa-circle-exclamation' : w.level === 'warning' ? 'fas fa-triangle-exclamation' : 'fas fa-circle-info'" aria-hidden="true"></i>
+            <span>{{ $t(w.key, w.params) }}</span>
+          </li>
+        </ul>
+        <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; margin-top:12px;">
+          <button type="button" class="btn" @click="showIssues = false">{{ $t('common.close') }}</button>
+          <button type="button" class="btn btn-primary" :disabled="closing || !canClose" @click="showIssues=false; showClose=true">{{ $t('nightAudit.closeDay') }}</button>
+        </div>
+      </div>
+    </AlertModal>
+
     <!-- Close history -->
     <div class="card" style="padding: 20px; margin-top: 16px;">
       <h3 style="margin: 0 0 12px;"><i class="fas fa-clock-rotate-left" style="color: var(--mrk-blue);"></i> {{ $t('nightAudit.history') }}</h3>
