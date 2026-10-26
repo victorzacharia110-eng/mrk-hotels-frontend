@@ -100,7 +100,7 @@
             <!-- The dish IS the button: one tap = status change (functionality unchanged) -->
             <div class="kb-items">
               <button
-                v-for="item in order.items || []"
+                v-for="item in filteredOrderItems(order)"
                 :key="item.order_item_id"
                 type="button"
                 class="kb-item"
@@ -228,7 +228,7 @@ async function loadClosed() {
 
 /** Item lines (quantities summed) on a closed ticket. */
 function itemCount(order) {
-  const items = order.items || []
+  const items = filteredOrderItems(order)
   if (!items.length) return 0
   return items.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0)
 }
@@ -244,8 +244,8 @@ const OPEN_STATUSES = ['pending', 'in_progress', 'processing', 'preparing', 'rea
 
 const openOrders = computed(() =>
   orders.value.filter((o) => {
-    const items = o.items || []
-    const stillCooking = items.some((i) => i.status !== 'served')
+  const items = filteredOrderItems(o)
+  const stillCooking = items.some((i) => i.status !== 'served')
     return OPEN_STATUSES.includes(o.status) && stillCooking
   }),
 )
@@ -286,7 +286,7 @@ const sections = computed(() => {
 const visibleCount = computed(() => filteredOrders.value.length)
 
 function allDone(order) {
-  const items = order.items || []
+  const items = filteredOrderItems(order)
   return items.length > 0 && items.every((i) => i.status === 'served')
 }
 
@@ -375,8 +375,28 @@ onMounted(() => {
 const { stop: stopOrderUpdates } = useOrderRealtime(() => {
   if (autoRefresh.value) load()
 })
+function orderItemDepartment(item) {
+  const dep = item?.department || item?.menu_department || item?.category_department || item?.dept || item?.section
+  if (!dep) return null
+  const d = String(dep).toLowerCase()
+  if (d === 'restaurant' || d === 'bar') return d
+  if (d.includes('restaurant')) return 'restaurant'
+  if (d.includes('bar')) return 'bar'
+  return null
+}
+
+function filteredOrderItems(order) {
+  const items = Array.isArray(order?.items) ? order.items : []
+  if (department.value === 'all') return items
+  return items.filter((it) => {
+    const d = orderItemDepartment(it) || order?.department
+    if (!d) return true
+    return d === department.value
+  })
+}
+
 onUnmounted(() => {
-  stopOrderUpdates()
+  if (pollTimer) clearInterval(pollTimer)
 })
 </script>
 
