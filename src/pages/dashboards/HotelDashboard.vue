@@ -2799,6 +2799,7 @@ function toPanelBar(r, colorClass = '') {
   const fmt = (d) => `${d.getDate()}/${d.getMonth() + 1}/${String(d.getFullYear()).slice(2)}`
   return {
     id: r.reservation_id,
+    guest_id: r.guest_id,
     roomId: reservationRoomId(r),
     arrivalIso: arrival ? isoKey(arrival) : '',
     departureIso: departure ? isoKey(departure) : '',
@@ -6899,6 +6900,48 @@ function formatPrice(value) {
 // Background refresh keeps the stay view current without a spinner flash.
 let refreshTimer = null
 
+/**
+ * Night Audit's "Go to Stayview" / due-out links land here with the stay to
+ * resolve in the query string. The board loads asynchronously, so retry until
+ * the bar is on the tape, then open that exact stay instead of dumping the user
+ * on today's board to search for it again.
+ */
+async function focusReservationFromQuery(attempt = 0) {
+  const q = route.query || {}
+  const targetId = q.reservation_id || q.res_id
+  const hasTarget = targetId || q.room_id || q.room || q.guest_id
+  if (!hasTarget) return
+  const list = Object.values(barsByRoom.value).flat()
+  let found = null
+  // Prefer the reservation itself so a shared room never opens the wrong stay.
+  if (targetId) found = list.find((b) => String(b.id) === String(targetId))
+  if (!found && q.guest_id) found = list.find((b) => String(b.guest_id) === String(q.guest_id))
+  if (!found && !targetId && q.room_id) {
+    found = list.find((b) => String(b.roomId) === String(q.room_id))
+  }
+  if (!found && !targetId && q.room) {
+    found = list.find((b) => String(b.room_number) === String(q.room))
+  }
+  if (found) {
+    openBarModal(found)
+    return
+  }
+  if (attempt < 12) {
+    setTimeout(() => focusReservationFromQuery(attempt + 1), 200)
+    return
+  }
+  // The stay may sit outside the current 14-day window (an overdue or stale
+  // arrival). Fetch it directly so the link still opens the right guest.
+  if (!targetId || attempt > 12) return
+  try {
+    const resp = await reservationApi.show(targetId)
+    const r = resp?.data?.reservation
+    if (r) openBarModal({ ...toPanelBar(r), halfStart: 0, halfEnd: 1, start: 2, span: 1, lane: 1 })
+  } catch (_) {
+    /* leave the user on the board */
+  }
+}
+
 onMounted(async () => {
   wireLogoAccent()
   // Resolve the hotel's business date before the first paint of the window,
@@ -6906,24 +6949,7 @@ onMounted(async () => {
   await businessDateStore.ensureLoaded()
   if (!windowPinned) windowStart.value = defaultWindowStart()
   load()
-  try {
-    const q = route.query || {}
-    if (q.reservation_id || q.room_id || q.room || q.guest_id) {
-      setTimeout(() => {
-        try {
-          const list = bars.value || []
-          const found = list.find(b => {
-            if (q.reservation_id && String(b.reservation_id) === String(q.reservation_id)) return true
-            if (q.room_id && String(b.room_id) === String(q.room_id)) return true
-            if (q.room && String(b.room_number) === String(q.room)) return true
-            if (q.guest_id && String(b.guest_id) === String(q.guest_id)) return true
-            return false
-          })
-          if (found) openBar(found)
-        } catch (_) {}
-      }, 400)
-    }
-  } catch (_) {}
+  focusReservationFromQuery()
   refreshTimer = setInterval(() => {
     businessDateStore.reload().then(() => {
       if (!windowPinned) windowStart.value = defaultWindowStart()

@@ -272,10 +272,11 @@
     <AlertModal
       :show="showIssues"
       :title="t('nightAudit.title') || 'Night Audit'"
-      @close="showIssues = false"
+      @dismiss="showIssues = false"
     >
       <div class="na-issues">
         <p style="margin:0 0 12px; color:#475569;">{{ $t('nightAudit.closePrompt') }}</p>
+        <p v-if="issueError" class="alert alert-error" style="margin:0 0 12px;">{{ issueError }}</p>
         <div v-if="dueOuts.length" class="na-issue-block">
           <h4><i class="fas fa-hourglass-half" style="color:#d97706;"></i> {{ $t('nightAudit.dueOuts') }}</h4>
           <div v-for="guest in dueOuts" :key="guest.reservation_id" class="na-issue-item">
@@ -283,15 +284,23 @@
               <div><strong>{{ guest.guest_name }}</strong> · {{ guest.room_number || '—' }} · {{ $t('nightAudit.departure') }} {{ guest.departure }}</div>
               <div>{{ $t('nightAudit.dueAmount') }}: {{ fmtMoney(guest.balance) }}</div>
             </div>
-            <button type="button" class="btn btn-sm btn-primary" @click="goToStayviewForGuest(guest)">{{ $t('nightAudit.goToStayview') || 'Go to Stayview' }}</button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="btn btn-sm btn-primary" :disabled="checkingOutId === guest.reservation_id" @click="checkOutDueOut(guest)">
+                <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+                {{ checkingOutId === guest.reservation_id ? $t('common.saving') : ($t('nightAudit.checkOut') || 'Check out') }}
+              </button>
+              <button type="button" class="btn btn-sm btn-secondary" @click="goToStayviewForGuest(guest)">{{ $t('nightAudit.goToStayview') || 'Go to Stayview' }}</button>
+            </div>
           </div>
         </div>
         <div v-if="staleArrivals.count" class="na-issue-block">
           <h4><i class="fas fa-triangle-exclamation" style="color:#dc2626;"></i> {{ $t('nightAudit.warnStaleRemain') }}</h4>
-          <div class="na-issue-item">
+          <div v-for="arr in staleArrivals.items || []" :key="arr.reservation_id" class="na-issue-item">
             <div class="na-issue-main">
-              <div>{{ $t('nightAudit.warnStaleRemain', { count: staleArrivals.count }) }}</div>
+              <div><strong>{{ arr.guest_name }}</strong> · {{ $t('nightAudit.staleArrivalRoom', { room: arr.room_number || '—' }) }}</div>
+              <div>{{ $t('nightAudit.staleArrivalDate', { date: arr.check_in_date }) }}</div>
             </div>
+            <button type="button" class="btn btn-sm btn-secondary" @click="goToStayviewForGuest(arr)">{{ $t('nightAudit.goToStayview') || 'Go to Stayview' }}</button>
           </div>
         </div>
         <ul v-if="closeWarnings.length" class="na-warn-list">
@@ -300,11 +309,11 @@
             <span>{{ $t(w.key, w.params) }}</span>
           </li>
         </ul>
-        <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; margin-top:12px;">
-          <button type="button" class="btn" @click="showIssues = false">{{ $t('common.cancel') || $t('common.close') }}</button>
-          <button type="button" class="btn btn-primary" :disabled="closing || !canClose" @click="showIssues=false; showClose=true">{{ $t('nightAudit.confirmClose') || $t('nightAudit.closeDay') }}</button>
-        </div>
       </div>
+      <template #footer>
+        <button type="button" class="btn" @click="showIssues = false">{{ $t('common.cancel') || $t('common.close') }}</button>
+        <button type="button" class="btn btn-primary" :disabled="closing || !canClose" @click="showIssues=false; showClose=true">{{ $t('nightAudit.confirmClose') || $t('nightAudit.closeDay') }}</button>
+      </template>
     </AlertModal>
 
     <!-- Close history -->
@@ -541,6 +550,8 @@ const loading = ref(false)
 const closing = ref(false)
 const showClose = ref(false)
 const showIssues = ref(false)
+const checkingOutId = ref(null)
+const issueError = ref('')
 const error = ref('')
 const success = ref('')
 
@@ -609,6 +620,25 @@ async function confirmCloseDay() {
     showClose.value = false
   } finally {
     closing.value = false
+  }
+}
+
+/**
+ * Resolve a due-out straight from the audit modal. The desk should not have to
+ * leave the page (and lose the audit context) just to clear a blocker.
+ */
+async function checkOutDueOut(guest) {
+  if (!guest?.reservation_id || checkingOutId.value) return
+  checkingOutId.value = guest.reservation_id
+  issueError.value = ''
+  try {
+    await reservationApi.checkOut(guest.reservation_id, {})
+    await load()
+    if (!dueOuts.value.length && !staleArrivals.value.count) showIssues.value = false
+  } catch (err) {
+    issueError.value = err.response?.data?.message || t('common.actionFailed')
+  } finally {
+    checkingOutId.value = null
   }
 }
 

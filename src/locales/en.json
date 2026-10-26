@@ -2399,6 +2399,7 @@
     "closeConfirm": "Are you sure you want to close this business day? The data will be frozen permanently.",
     "closeSuccess": "Business day closed successfully.",
     "goToStayview": "Go to Stayview",
+    "checkOut": "Check out",
     "noSheet": "No audit sheet is available for this date yet. Run the report again or check the selected business date.",
     "run": "Run Night Audit",
     "log": "Night Audit Log",

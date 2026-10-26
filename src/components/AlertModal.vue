@@ -27,22 +27,26 @@
             </button>
           </div>
           <div class="alert-modal-body">
-            <p class="alert-modal-message">{{ body }}</p>
-            <div v-if="details && details.length" class="alert-modal-details">
-              <div v-for="(d, i) in details" :key="i" class="alert-modal-detail-row">
-                <span class="alert-modal-detail-label">{{ d.label }}</span>
-                <span class="alert-modal-detail-value">{{ d.value }}</span>
+            <slot>
+              <p class="alert-modal-message">{{ body }}</p>
+              <div v-if="details && details.length" class="alert-modal-details">
+                <div v-for="(d, i) in details" :key="i" class="alert-modal-detail-row">
+                  <span class="alert-modal-detail-label">{{ d.label }}</span>
+                  <span class="alert-modal-detail-value">{{ d.value }}</span>
+                </div>
               </div>
-            </div>
-            <p v-if="timestamp" class="alert-modal-time">
-              <i class="fas fa-clock" aria-hidden="true"></i>
-              {{ formatTime(timestamp) }}
-            </p>
+              <p v-if="timestamp" class="alert-modal-time">
+                <i class="fas fa-clock" aria-hidden="true"></i>
+                {{ formatTime(timestamp) }}
+              </p>
+            </slot>
           </div>
           <div class="alert-modal-foot">
-            <button class="btn btn-primary" @click="$emit('dismiss')">
-              {{ $t('common.gotIt') }}
-            </button>
+            <slot name="footer">
+              <button class="btn btn-primary" @click="$emit('dismiss')">
+                {{ $t('common.gotIt') }}
+              </button>
+            </slot>
           </div>
         </div>
       </div>
@@ -229,6 +233,8 @@ function formatTime(iso) {
   border-top: 1px solid #e2e8f0;
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 /* Transition */
