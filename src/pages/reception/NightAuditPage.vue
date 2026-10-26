@@ -345,7 +345,7 @@ const today = computed(() => businessDateStore.calendarToday || localToday())
  * the reason shown instead.
  */
 const dateHasPassed = computed(
-  () => Boolean(selectedDate.value) && selectedDate.value < today.value,
+  () => Boolean(selectedDate.value) && selectedDate.value <= today.value,
 )
 
 /** The calendar day before the hotel's today, as YYYY-MM-DD. */
@@ -494,7 +494,7 @@ const topCloseWarning = computed(() => closeWarnings.value.find((w) => w.level =
 /** The day to close first: the oldest still missing, keeping the run in order. */
 const oldestMissedDay = computed(() => missedDays.value[missedDays.value.length - 1] || '')
 
-const canClose = computed(() => dateHasPassed.value && !report.value?.closed)
+const canClose = computed(() => Boolean(selectedDate.value) && !report.value?.closed && selectedDate.value <= today.value)
 const report = ref(null)
 const dueOuts = ref([])
 const history = ref([])
