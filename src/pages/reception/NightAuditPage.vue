@@ -276,7 +276,7 @@
       @dismiss="showIssues = false"
     >
       <div class="na-issues">
-        <p style="margin:0 0 12px; color:#475569;">{{ $t('nightAudit.closePrompt') }}</p>
+        <p class="na-intro">{{ $t('nightAudit.closePrompt') }}</p>
         <p v-if="issueError" class="alert alert-error" style="margin:0 0 12px;">{{ issueError }}</p>
         <div v-if="dueOuts.length" class="na-issue-block">
           <h4><i class="fas fa-hourglass-half" style="color:#d97706;"></i> {{ $t('nightAudit.dueOuts') }}</h4>
@@ -765,6 +765,7 @@ onMounted(async () => {
 .badge-overdue { background: #fee2e2; color: #b91c1c; }
 .na-issues { text-align: left; display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
 .na-issues > p { flex: 1 1 100%; margin: 0; }
+.na-intro { margin: 0 0 12px; color: #475569; }
 .na-issue-block {
   flex: 1 1 360px;
   min-width: 0;
@@ -794,6 +795,17 @@ onMounted(async () => {
 .na-warn--danger { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
 .na-warn--warning { background: #fffbeb; border-color: #fbd38d; color: #92400e; }
 .na-warn--info { background: #f8fafc; color: #475569; }
+/* The issues modal reuses the shared AlertModal shell, but these blocks are
+   night-audit specific and were painted light-only. In dark mode they must sit
+   on the raised slate panel instead of punching a white hole in the modal. */
+html[data-theme='dark'] .na-intro { color: #95a3ab; }
+html[data-theme='dark'] .na-issue-block { background: #202c33; border-color: #2f3b43; color: #e9edef; }
+html[data-theme='dark'] .na-issue-item { border-color: #2f3b43; }
+html[data-theme='dark'] .na-issue-main { color: #e9edef; }
+html[data-theme='dark'] .na-warn { border-color: #2f3b43; }
+html[data-theme='dark'] .na-warn--danger { background: #3a1f22; border-color: #5b2a2f; color: #ffb4b4; }
+html[data-theme='dark'] .na-warn--warning { background: #3a2f18; border-color: #5b4a24; color: #ffd48a; }
+html[data-theme='dark'] .na-warn--info { background: #1b262c; color: #aebac1; }
 .text-red { color: #DC2626 !important; }
 .text-green { color: #16A34A !important; }
 .capitalize { text-transform: capitalize; }
