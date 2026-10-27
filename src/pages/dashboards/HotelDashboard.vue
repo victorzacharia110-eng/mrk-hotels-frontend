@@ -1829,78 +1829,30 @@
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.room') }}</span>
-                  <div style="display:flex;align-items:center;gap:6px;">
-                    <button v-if="roomSelectionsArray.length > 0" type="button" class="btn btn-sm btn-ghost" @click="prevRoomSelection" :disabled="roomSelectionIndex === 0">
-                      <i class="fas fa-chevron-left"></i>
+                  <div v-if="bookingForm.booking_type === 'group' || roomSelectionsArray.length > 0" class="sv-room-picker-shell">
+                    <button type="button" class="btn btn-primary sv-room-picker-trigger"
+                      data-testid="group-room-picker-trigger" @click="openRoomPicker">
+                      <span class="sv-room-picker-trigger-main">
+                        <i class="fas fa-door-open" aria-hidden="true"></i>
+                        <span>{{ roomSelectionsArray.length ? $t('stayview.editRooms') : $t('stayview.selectRooms') }}</span>
+                      </span>
+                      <span v-if="roomSelectionsArray.length" class="sv-room-picker-count">
+                        {{ $t('stayview.roomsSelected', { count: roomSelectionsArray.length }) }}
+                      </span>
                     </button>
-                    <div v-if="roomSelectionsArray.length > 0" style="flex:1;min-width:0;">
-                      <select class="input" :value="currentRoomSelection?.room_id" disabled>
-                        <option :value="currentRoomSelection?.room_id">{{ currentRoomSelection?.room_number }} ({{ currentRoomSelection?.room_type }})</option>
-                      </select>
+                    <div v-if="roomSelectionsArray.length" class="sv-room-picker-summary">
+                      <span v-for="sel in roomSelectionsArray" :key="sel.room_id" class="sv-room-picker-chip"
+                        :class="{ primary: bookingForm.primary_room_id === sel.room_id }">
+                        {{ sel.room_number }}
+                        <span v-if="bookingForm.primary_room_id === sel.room_id" class="sv-room-picker-chip-primary">
+                          {{ $t('stayview.primaryRoom') }}
+                        </span>
+                      </span>
                     </div>
-                    <SearchableSelect v-else v-model="bookingForm.room_id" :options="bookingRoomOptions"
-                      :search-placeholder="$t('stayview.searchRoom')" force-search style="flex:1;min-width:0;" />
-                    <button v-if="roomSelectionsArray.length > 0" type="button" class="btn btn-sm btn-ghost" @click="nextRoomSelection" :disabled="roomSelectionIndex === roomSelectionsArray.length - 1">
-                      <i class="fas fa-chevron-right"></i>
-                    </button>
-                    <button v-if="bookingForm.booking_type === 'group'" type="button" class="btn btn-sm btn-primary"
-                      @click="addRoomToSelection" :disabled="!bookingForm.room_id" title="Add room">
-                      <i class="fas fa-plus"></i>
-                    </button>
-                    <button v-if="bookingForm.booking_type === 'group' && roomSelectionsArray.length > 0" type="button"
-                      class="btn btn-sm btn-danger" @click="removeRoomFromSelection(roomSelectionIndex)"
-                      title="Remove room">
-                      <i class="fas fa-minus"></i>
-                    </button>
+                    <div v-else class="sv-field-hint muted">{{ $t('stayview.selectAtLeastOneRoom') }}</div>
                   </div>
-                  <div v-if="roomSelectionsArray.length > 0" style="margin-top:4px;font-size:12px;color:#666;">
-                    Room {{ roomSelectionIndex + 1 }} of {{ roomSelectionsArray.length }}
-                    <label style="margin-left:8px;cursor:pointer;">
-                      <input type="checkbox" :checked="bookingForm.primary_room_id === currentRoomSelection?.room_id" @change="setPrimaryRoom(currentRoomSelection?.room_id)" />
-                      Primary
-                    </label>
-                  </div>
-                  <div v-if="roomSelectionsArray.length > 0 || bookingForm.booking_type === 'group'" style="margin-top:8px;">
-                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-                      <i class="fas fa-arrow-down-wide-short" style="color:#005eb8;font-size:12px;"></i>
-                      <label style="font-size:12px;color:#555;">{{ $t('stayview.sortBy') }}</label>
-                      <select v-model="roomSort" class="input" style="max-width:190px;padding:2px 6px;font-size:12px;">
-                        <option v-for="opt in roomSortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                      </select>
-                    </div>
-                    <div class="sv-group-rooms" style="display:flex; gap:12px; width:100%;">
-                      <div class="sv-group-col" style="flex:1; min-width:0;">
-                        <div class="sv-group-col-head"><i class="fas fa-door-open"></i> {{ $t('stayview.availableRooms') || 'Vacant rooms' }}</div>
-                        <div class="sv-group-list" style="display:flex; flex-direction:column; gap:4px;">
-                          <label v-for="r in bookingRoomOptionsSorted" :key="r.value" :class="['sv-group-item', { selected: roomSelectionsArray.some(s => s.room_id === r.value) }]" style="display:flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:12px;background:#fff; width:100%;">
-                            <input type="checkbox" :value="r.value" :checked="roomSelectionsArray.some(s => s.room_id === r.value)" @change="toggleRoomSelection(r)" />
-                            <span>{{ r.label }}</span>
-                            <span v-if="bookingForm.primary_room_id === r.value" style="color:#005eb8;font-weight:bold;">(P)</span>
-                          </label>
-                          <div v-if="!bookingRoomOptionsSorted.length" class="sv-group-empty muted">{{ $t('stayview.noRoomsAvailable') }}</div>
-                        </div>
-                      </div>
-                      <div class="sv-group-col" style="flex:1; min-width:0;">
-                        <div class="sv-group-col-head"><i class="fas fa-list-check"></i> {{ $t('stayview.selectedRooms') }} ({{ roomSelectionsArray.length }})</div>
-                        <div class="sv-group-list" style="display:flex; flex-direction:column; gap:4px;">
-                          <div v-for="(sel, si) in roomSelectionsArray" :key="sel.room_id" class="sv-group-selected" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;border:1px solid #cfe2ff;background:#f8fbff;border-radius:4px;">
-                            <div>
-                              <div style="font-weight:600;">{{ sel.room_number }} · {{ roomTypeLabel(sel.room_type) }}</div>
-                              <div class="muted" style="font-size:11px;">{{ curCode() }} {{ formatPrice(sel.price_per_night) }}</div>
-                            </div>
-                            <div class="sv-room-summary-tags">
-                              <button v-if="bookingForm.primary_room_id !== sel.room_id" type="button" class="btn btn-xs" @click="setPrimaryRoom(sel.room_id)">{{ $t('stayview.makePrimary') || 'Make primary' }}</button>
-                              <span v-else class="sv-tag-primary">{{ $t('stayview.primaryRoom') }}</span>
-                              <button type="button" class="sv-room-summary-x" @click="removeRoomFromSelection(si)" :aria-label="$t('common.delete')">
-                                <i class="fas fa-times" aria-hidden="true"></i>
-                              </button>
-                            </div>
-                          </div>
-                          <div v-if="!roomSelectionsArray.length" class="sv-group-empty muted">{{ $t('stayview.selectRoomsFromLeft') || 'Select rooms from left' }}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <SearchableSelect v-else v-model="bookingForm.room_id" :options="bookingRoomOptions"
+                    :search-placeholder="$t('stayview.searchRoom')" force-search style="flex:1;min-width:0;" />
                   <span v-if="bookingErrors.room_id" class="sv-field-msg" role="alert"><i
                       class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.room_id }}</span>
                 </label>
@@ -1974,6 +1926,95 @@
                 @click="submitBooking('reservation')">
                 <i class="fas" :class="actionBusy ? 'fa-spinner fa-spin' : 'fa-calendar-check'" aria-hidden="true"></i>
                 {{ actionBusy ? $t('common.loading') : $t('stayview.reservationAction') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <Teleport to="body">
+      <Transition name="sv-modal">
+        <div v-if="roomPickerOpen && bookingModal" class="sv-modal-backdrop sv-room-picker-backdrop"
+          @click.self="roomPickerOpen = false">
+          <div class="sv-modal sv-modal-lg sv-room-picker-modal" role="dialog" aria-modal="true"
+            :aria-label="$t('stayview.selectRooms')">
+            <div class="sv-modal-head bar-blue">
+              <span class="sv-modal-head-icon"><i class="fas fa-door-open" aria-hidden="true"></i></span>
+              <div class="sv-modal-head-text">
+                <h3>{{ $t('stayview.selectRooms') }}</h3>
+              </div>
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')"
+                @click="roomPickerOpen = false">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="sv-modal-body">
+              <div class="sv-room-picker-bar">
+                <div class="sv-room-picker-sort">
+                  <i class="fas fa-arrow-down-wide-short" aria-hidden="true"></i>
+                  <label>{{ $t('stayview.sortBy') }}</label>
+                  <select v-model="roomSort" class="input">
+                    <option v-for="opt in roomSortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                  </select>
+                </div>
+                <span class="sv-room-picker-count">
+                  {{ $t('stayview.roomsSelected', { count: roomSelectionsArray.length }) }}
+                </span>
+              </div>
+              <div class="sv-group-rooms">
+                <div class="sv-group-col">
+                  <div class="sv-group-col-head">
+                    <i class="fas fa-door-open" aria-hidden="true"></i>
+                    {{ $t('stayview.availableRooms') || 'Vacant rooms' }}
+                  </div>
+                  <div class="sv-group-list">
+                    <label v-for="r in bookingRoomOptionsSorted" :key="r.value"
+                      :class="['sv-group-item', { selected: roomSelectionsArray.some(s => s.room_id === r.value) }]">
+                      <input type="checkbox" :value="r.value"
+                        :checked="roomSelectionsArray.some(s => s.room_id === r.value)"
+                        @change="toggleRoomSelection(r)" />
+                      <span>{{ r.label }}</span>
+                      <span v-if="bookingForm.primary_room_id === r.value" class="sv-group-primary-mark">(P)</span>
+                    </label>
+                    <div v-if="!bookingRoomOptionsSorted.length" class="sv-group-empty muted">
+                      {{ $t('stayview.noRoomsAvailable') }}
+                    </div>
+                  </div>
+                </div>
+                <div class="sv-group-col">
+                  <div class="sv-group-col-head">
+                    <i class="fas fa-list-check" aria-hidden="true"></i>
+                    {{ $t('stayview.selectedRooms') }} ({{ roomSelectionsArray.length }})
+                  </div>
+                  <div class="sv-group-list">
+                    <div v-for="(sel, si) in roomSelectionsArray" :key="sel.room_id" class="sv-group-selected">
+                      <div>
+                        <div class="sv-group-selected-name">{{ sel.room_number }} · {{ roomTypeLabel(sel.room_type) }}</div>
+                        <div class="muted sv-group-selected-price">{{ curCode() }} {{ formatPrice(sel.price_per_night) }}</div>
+                      </div>
+                      <div class="sv-room-summary-tags">
+                        <button v-if="bookingForm.primary_room_id !== sel.room_id" type="button" class="btn btn-xs"
+                          @click="setPrimaryRoom(sel.room_id)">
+                          {{ $t('stayview.makePrimary') || 'Make primary' }}
+                        </button>
+                        <span v-else class="sv-tag-primary">{{ $t('stayview.primaryRoom') }}</span>
+                        <button type="button" class="sv-room-summary-x" @click="removeRoomFromSelection(si)"
+                          :aria-label="$t('common.delete')">
+                          <i class="fas fa-times" aria-hidden="true"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div v-if="!roomSelectionsArray.length" class="sv-group-empty muted">
+                      {{ $t('stayview.selectRoomsFromLeft') || 'Select rooms from left' }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="sv-modal-actions">
+              <button type="button" class="btn btn-primary sv-modal-manage" @click="roomPickerOpen = false">
+                <i class="fas fa-check" aria-hidden="true"></i> {{ $t('stayview.done') }}
               </button>
             </div>
           </div>
@@ -6405,7 +6446,7 @@ watch(
 )
 
 const roomSelectionsArray = ref([])
-const roomSelectionIndex = ref(0)
+const roomPickerOpen = ref(false)
 // Order of the room checkboxes in the New Booking modal.
 const roomSort = ref('room')
 
@@ -6460,8 +6501,8 @@ function resetBookingForm() {
   bookingErrors.value = {}
   bookingTouched.value = false
   bookingSnapshot.value = { ...bookingForm.value }
-  roomSelectionIndex.value = 0
   roomSelectionsArray.value = []
+  roomPickerOpen.value = false
   bookingGuestLookup.value = { loading: false, found: null, matches: [] }
 }
 
@@ -6482,49 +6523,22 @@ const bookingRate = computed(() => {
 /** Suggested total based on nights × rate. */
 const bookingTotal = computed(() => bookingNights.value * bookingRate.value)
 
-/** Current room being viewed in carousel */
-const currentRoomSelection = computed(() => {
-  if (roomSelectionIndex.value < 0 || roomSelectionIndex.value >= roomSelectionsArray.value.length) {
-    return null
-  }
-  return roomSelectionsArray.value[roomSelectionIndex.value]
-})
+function openRoomPicker() {
+  roomPickerOpen.value = true
+}
 
-/** Add selected room to group selections */
-function addRoomToSelection() {
-  const roomId = bookingForm.value.room_id
-  if (!roomId) return
-  const room = rooms.value.find((r) => r.room_id === roomId)
-  if (!room) return
-  const exists = roomSelectionsArray.value.some((r) => r.room_id === roomId)
-  if (exists) return
-  const sel = {
-    room_id: room.room_id,
-    room_number: room.room_number,
-    room_type: room.room_type,
-    price_per_night: room.price_per_night,
+function keepPrimaryRoomValid() {
+  const selected = roomSelectionsArray.value.some((r) => r.room_id === bookingForm.value.primary_room_id)
+  if (!selected) {
+    bookingForm.value.primary_room_id = roomSelectionsArray.value[0]?.room_id || null
   }
-  roomSelectionsArray.value.push(sel)
-  if (roomSelectionsArray.value.length === 1) {
-    bookingForm.value.primary_room_id = roomId
-  }
-  roomSelectionIndex.value = roomSelectionsArray.value.length - 1
-  bookingForm.value.room_id = null
 }
 
 /** Remove room from selection */
 function removeRoomFromSelection(idx) {
   if (idx < 0 || idx >= roomSelectionsArray.value.length) return
   roomSelectionsArray.value.splice(idx, 1)
-  if (roomSelectionIndex.value >= roomSelectionsArray.value.length && roomSelectionsArray.value.length > 0) {
-    roomSelectionIndex.value = roomSelectionsArray.value.length - 1
-  } else if (roomSelectionsArray.value.length === 0) {
-    roomSelectionIndex.value = 0
-    bookingForm.value.primary_room_id = null
-  }
-  if (roomSelectionsArray.value.length === 1) {
-    bookingForm.value.primary_room_id = roomSelectionsArray.value[0].room_id
-  }
+  keepPrimaryRoomValid()
 }
 
 /** Set as primary room */
@@ -6532,35 +6546,11 @@ function setPrimaryRoom(roomId) {
   bookingForm.value.primary_room_id = roomId
 }
 
-/** Navigate carousel */
-function prevRoomSelection() {
-  if (roomSelectionIndex.value > 0) {
-    roomSelectionIndex.value--
-  }
-}
-function nextRoomSelection() {
-  if (roomSelectionIndex.value < roomSelectionsArray.value.length - 1) {
-    roomSelectionIndex.value++
-  }
-}
-
 function toggleRoomSelection(opt) {
   const roomId = opt.value
   const existsIdx = roomSelectionsArray.value.findIndex((r) => r.room_id === roomId)
   if (existsIdx >= 0) {
     roomSelectionsArray.value.splice(existsIdx, 1)
-    if (roomSelectionIndex.value >= roomSelectionsArray.value.length && roomSelectionsArray.value.length > 0) {
-      roomSelectionIndex.value = roomSelectionsArray.value.length - 1
-    } else if (roomSelectionsArray.value.length === 0) {
-      roomSelectionIndex.value = 0
-      bookingForm.value.primary_room_id = null
-    }
-    if (roomSelectionsArray.value.length === 1) {
-      bookingForm.value.primary_room_id = roomSelectionsArray.value[0].room_id
-    }
-    if (bookingForm.value.primary_room_id === roomId) {
-      bookingForm.value.primary_room_id = roomSelectionsArray.value[0]?.room_id || null
-    }
   } else {
     const room = rooms.value.find((r) => r.room_id === roomId)
     if (!room) return
@@ -6570,11 +6560,8 @@ function toggleRoomSelection(opt) {
       room_type: room.room_type,
       price_per_night: room.price_per_night,
     })
-    if (roomSelectionsArray.value.length === 1) {
-      bookingForm.value.primary_room_id = roomId
-    }
-    roomSelectionIndex.value = roomSelectionsArray.value.length - 1
   }
+  keepPrimaryRoomValid()
 }
 
 /**
@@ -6613,7 +6600,7 @@ function roomAvailableForRange(room, checkInIso, checkOutIso, excludeReservation
  *  every available room is offered so the type can be chosen freely. */
 const bookingRoomOptions = computed(() => {
   const f = bookingForm.value
-  const selected = rooms.value.find((r) => r.room_id === f.room_id)
+  const selected = f.booking_type === 'group' ? null : rooms.value.find((r) => r.room_id === f.room_id)
   const type = selected?.room_type
   const list = rooms.value
     .filter((room) => (!type || room.room_type === type) && roomAvailableForRange(room, f.check_in_date, f.check_out_date))
@@ -8977,6 +8964,179 @@ onUnmounted(() => clearInterval(refreshTimer))
   color: #dc2626;
 }
 
+.sv-room-picker-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sv-room-picker-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+}
+
+.sv-room-picker-trigger-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sv-room-picker-count {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sv-room-picker-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.sv-room-picker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #cfe2ff;
+  background: #f8fbff;
+  color: #0f172a;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sv-room-picker-chip.primary {
+  border-color: #005eb8;
+  background: #eaf4ff;
+}
+
+.sv-room-picker-chip-primary {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  color: #005eb8;
+}
+
+.sv-room-picker-backdrop {
+  z-index: 1300;
+}
+
+.sv-room-picker-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.sv-room-picker-sort {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #555;
+}
+
+.sv-room-picker-sort .input {
+  max-width: 190px;
+  padding: 2px 6px;
+  font-size: 12px;
+}
+
+.sv-room-picker-modal .sv-group-rooms {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+}
+
+.sv-room-picker-modal .sv-group-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.sv-room-picker-modal .sv-group-col-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+  color: #005eb8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+}
+
+.sv-room-picker-modal .sv-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 52vh;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.sv-room-picker-modal .sv-group-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.sv-room-picker-modal .sv-group-item.selected {
+  border-color: #005eb8;
+  background: #eaf4ff;
+}
+
+.sv-group-primary-mark {
+  color: #005eb8;
+  font-weight: 700;
+}
+
+.sv-room-picker-modal .sv-group-selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #cfe2ff;
+  border-radius: 4px;
+  background: #f8fbff;
+}
+
+.sv-group-selected-name {
+  font-weight: 600;
+}
+
+.sv-group-selected-price {
+  font-size: 11px;
+}
+
+.sv-room-picker-modal .sv-group-empty {
+  padding: 8px;
+  font-size: 12px;
+}
+
 /* Summary of rooms picked for a multi-room / group booking */
 .sv-room-summary {
   margin-top: 8px;
@@ -10299,6 +10459,16 @@ onUnmounted(() => clearInterval(refreshTimer))
   /* Summary cards drop to two columns, then one on very small screens. */
   .sv-panel-cards {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .sv-room-picker-modal .sv-group-rooms {
+    flex-direction: column;
+  }
+
+  .sv-room-picker-modal .sv-group-list {
+    max-height: 32vh;
   }
 }
 
