@@ -9,6 +9,7 @@ import i18n from '@/locales/i18n'
 const close = vi.fn()
 const report = vi.fn()
 const history = vi.fn()
+const checkOut = vi.fn()
 
 vi.mock('@/api', () => ({
   nightAuditApi: {
@@ -16,6 +17,7 @@ vi.mock('@/api', () => ({
     history: (...a) => history(...a),
     close: (...a) => close(...a),
   },
+  reservationApi: { checkOut: (...a) => checkOut(...a) },
   fbDayCloseApi: { index: vi.fn().mockResolvedValue({ data: {} }) },
   businessDateApi: { show: vi.fn().mockResolvedValue({ data: {} }) },
 }))
@@ -313,11 +315,12 @@ describe('NightAuditPage — layout, auto-dismiss and consequences', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     history.mockResolvedValue({ data: { day_closes: [] } })
     close.mockResolvedValue({ data: {} })
+    checkOut.mockResolvedValue({ data: {} })
   })
 
   afterEach(() => {
     vi.useRealTimers()
-    document.querySelectorAll('.confirm-modal').forEach((n) => n.remove())
+    document.querySelectorAll('.confirm-modal, .alert-modal-overlay').forEach((n) => n.remove())
   })
 
   function todayIso() {
@@ -393,6 +396,94 @@ describe('NightAuditPage — layout, auto-dismiss and consequences', () => {
 
     release({ data: {} })
     await flushPromises()
+  })
+
+  it('keeps a blocked-close error inside the confirm dialog', async () => {
+    const message = 'Night audit blocked: 6 guests are still in-house and due out.'
+    close.mockRejectedValue({ response: { data: { message } } })
+
+    const wrapper = await mountPage()
+    await wrapper.find('input[type="date"]').setValue(shift(todayIso(), -1))
+    await flushPromises()
+    await closeButton(wrapper).trigger('click')
+    await flushPromises()
+
+    const confirm = confirmButton()
+    confirm.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushPromises()
+
+    const modal = document.querySelector('.confirm-modal')
+    expect(modal).not.toBeNull()
+    expect(document.querySelector('.confirm-modal-error').textContent).toContain(message)
+
+    // A failed close is not something to dismiss automatically.
+    vi.advanceTimersByTime(13000)
+    await flushPromises()
+    expect(document.querySelector('.confirm-modal')).not.toBeNull()
+  })
+
+  it('shows blocker progress, then a five-second success message once the last issue clears', async () => {
+    const blocker = {
+      reservation_id: 'R-9',
+      guest_name: 'Amina Said',
+      room_number: '101',
+      departure: shift(todayIso(), -1),
+      balance: 0,
+      overdue: true,
+    }
+    report.mockResolvedValue({ data: { report: REPORT_OPEN, closed: false, due_outs: [blocker] } })
+
+    const wrapper = await mountPage()
+    await wrapper.find('input[type="date"]').setValue(shift(todayIso(), -1))
+    await flushPromises()
+    await closeButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(document.querySelector('.na-progress').textContent).toContain('0 of 1')
+
+    // The checkout succeeds and the refreshed report has no remaining blockers.
+    report.mockResolvedValue({ data: { report: REPORT_OPEN, closed: false, due_outs: [] } })
+    document.querySelector('.na-issue-item .btn-primary')
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushPromises()
+
+    const success = document.querySelector('.na-success')
+    expect(success).not.toBeNull()
+    expect(success.textContent).toContain('All done successfully')
+
+    vi.advanceTimersByTime(4000)
+    await flushPromises()
+    expect(document.querySelector('.alert-modal')).not.toBeNull()
+
+    vi.advanceTimersByTime(1500)
+    await flushPromises()
+    expect(document.querySelector('.alert-modal')).toBeNull()
+  })
+
+  it('shows the close success inside the dialog for five seconds', async () => {
+    close.mockResolvedValue({ data: { message: 'Business day closed successfully.' } })
+
+    const wrapper = await mountPage()
+    await wrapper.find('input[type="date"]').setValue(shift(todayIso(), -1))
+    await flushPromises()
+    await closeButton(wrapper).trigger('click')
+    await flushPromises()
+
+    confirmButton().dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushPromises()
+
+    const success = document.querySelector('.confirm-modal-success')
+    expect(success).not.toBeNull()
+    expect(success.textContent).toContain('All done successfully')
+    expect(success.textContent).toContain('Business day closed successfully.')
+
+    vi.advanceTimersByTime(4000)
+    await flushPromises()
+    expect(document.querySelector('.confirm-modal')).not.toBeNull()
+
+    vi.advanceTimersByTime(1500)
+    await flushPromises()
+    expect(document.querySelector('.confirm-modal')).toBeNull()
   })
 
   it('warns before closing a day out of order', async () => {

@@ -261,21 +261,40 @@
     <ConfirmModal
       :show="showClose"
       :title="t('nightAudit.closeDay')"
-      :body="closeConfirmBody"
+      :body="closeSuccessTitle ? closeSuccessBody : closeConfirmBody"
+      :error="closeError"
+      :success="closeSuccessTitle"
       :busy="closing"
-      :auto-close-ms="CLOSE_MODAL_MS"
+      :auto-close-ms="closeError || closeSuccessTitle ? 0 : CLOSE_MODAL_MS"
       :confirm-label="t('nightAudit.closeDay')"
       @confirm="confirmCloseDay"
-      @cancel="showClose = false"
+      @cancel="cancelCloseConfirm"
     />
 
     <AlertModal
       :show="showIssues"
-      :title="t('nightAudit.title') || 'Night Audit'"
+      :title="t('nightAudit.closeDay')"
       wide
-      @dismiss="showIssues = false"
+      @dismiss="dismissIssues"
     >
-      <div class="na-issues">
+      <div class="na-issues" :class="{ 'na-issues--success': issueSuccess }">
+        <div v-if="issueSuccess" class="na-success" role="status" aria-live="polite">
+          <span class="na-success-icon" aria-hidden="true"><i class="fas fa-check"></i></span>
+          <h3>{{ $t('nightAudit.allIssuesResolved') }}</h3>
+          <p>{{ $t('nightAudit.allIssuesResolvedHint') }}</p>
+        </div>
+        <template v-else>
+          <div v-if="issueTotal > 0" class="na-progress">
+            <div class="na-progress-head">
+              <span><i class="fas fa-person-running" aria-hidden="true"></i> {{ $t('nightAudit.almostThere') }}</span>
+              <strong>{{ resolvedIssueCount }} / {{ issueTotal }}</strong>
+            </div>
+            <div class="na-progress-track" role="progressbar" :aria-valuenow="issueProgress"
+              aria-valuemin="0" aria-valuemax="100">
+              <div class="na-progress-fill" :style="{ width: issueProgress + '%' }"></div>
+            </div>
+            <p class="na-progress-label">{{ $t('nightAudit.issuesProgress', { resolved: resolvedIssueCount, total: issueTotal }) }}</p>
+          </div>
         <p class="na-intro">{{ $t('nightAudit.closePrompt') }}</p>
         <p v-if="issueError" class="alert alert-error" style="margin:0 0 12px;">{{ issueError }}</p>
         <div v-if="dueOuts.length" class="na-issue-block">
@@ -310,10 +329,14 @@
             <span>{{ $t(w.key, w.params) }}</span>
           </li>
         </ul>
+        </template>
       </div>
       <template #footer>
-        <button type="button" class="btn" @click="showIssues = false">{{ $t('common.cancel') || $t('common.close') }}</button>
-        <button type="button" class="btn btn-primary" :disabled="closing || !canClose" @click="showIssues=false; showClose=true">{{ $t('nightAudit.confirmClose') || $t('nightAudit.closeDay') }}</button>
+        <template v-if="!issueSuccess">
+          <button type="button" class="btn" @click="dismissIssues">{{ $t('common.cancel') || $t('common.close') }}</button>
+          <button type="button" class="btn btn-primary" :disabled="closing || !canClose" @click="proceedToCloseConfirm">{{ $t('nightAudit.confirmClose') || $t('nightAudit.closeDay') }}</button>
+        </template>
+        <span v-else class="na-success-return">{{ $t('nightAudit.returning') }}</span>
       </template>
     </AlertModal>
 
@@ -347,7 +370,7 @@
 
 <script setup>
 
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { nightAuditApi, reservationApi } from '@/api'
 import { useI18n } from 'vue-i18n'
@@ -550,7 +573,23 @@ const staleArrivals = ref({ count: 0, items: [] })
 const loading = ref(false)
 const closing = ref(false)
 const showClose = ref(false)
+const closeError = ref('')
+const closeSuccessTitle = ref('')
+const closeSuccessBody = ref('')
+const CLOSE_SUCCESS_MS = 5000
+let closeSuccessTimer = null
 const showIssues = ref(false)
+const issueTotal = ref(0)
+const issueSuccess = ref(false)
+const ISSUE_SUCCESS_MS = 5000
+let issueSuccessTimer = null
+const openIssueCount = computed(() => dueOuts.value.length + Number(staleArrivals.value.count || 0))
+const resolvedIssueCount = computed(() =>
+  Math.max(0, issueTotal.value - openIssueCount.value),
+)
+const issueProgress = computed(() =>
+  issueTotal.value ? Math.min(100, Math.round((resolvedIssueCount.value / issueTotal.value) * 100)) : 100,
+)
 const checkingOutId = ref(null)
 const issueError = ref('')
 const error = ref('')
@@ -588,10 +627,79 @@ const closeConfirmBody = computed(() => {
   return topCloseWarning.value ? `${base} ${t(topCloseWarning.value.key, topCloseWarning.value.params)}` : base
 })
 
+function clearIssueSuccessTimer() {
+  if (issueSuccessTimer) clearTimeout(issueSuccessTimer)
+  issueSuccessTimer = null
+}
+
+function clearCloseSuccessTimer() {
+  if (closeSuccessTimer) clearTimeout(closeSuccessTimer)
+  closeSuccessTimer = null
+}
+
+function dismissCloseSuccess() {
+  clearCloseSuccessTimer()
+  closeSuccessTitle.value = ''
+  closeSuccessBody.value = ''
+  showClose.value = false
+}
+
+function dismissIssues() {
+  clearIssueSuccessTimer()
+  issueSuccess.value = false
+  issueTotal.value = 0
+  issueError.value = ''
+  showIssues.value = false
+}
+
+function startIssueSuccess() {
+  if (issueSuccess.value) return
+  issueSuccess.value = true
+  issueError.value = ''
+  clearIssueSuccessTimer()
+  issueSuccessTimer = setTimeout(() => {
+    issueSuccessTimer = null
+    issueSuccess.value = false
+    issueTotal.value = 0
+    showIssues.value = false
+  }, ISSUE_SUCCESS_MS)
+}
+
+watch(openIssueCount, (count) => {
+  if (!showIssues.value || issueSuccess.value || !issueTotal.value) return
+  if (count === 0) startIssueSuccess()
+})
+
+onUnmounted(() => {
+  clearIssueSuccessTimer()
+  clearCloseSuccessTimer()
+})
+
+function cancelCloseConfirm() {
+  clearCloseSuccessTimer()
+  closeSuccessTitle.value = ''
+  closeSuccessBody.value = ''
+  showClose.value = false
+  closeError.value = ''
+}
+
+function proceedToCloseConfirm() {
+  closeError.value = ''
+  dismissIssues()
+  showClose.value = true
+}
+
 function openCloseConfirm() {
   error.value = ''
+  closeError.value = ''
+  clearCloseSuccessTimer()
+  closeSuccessTitle.value = ''
+  closeSuccessBody.value = ''
   // If there are unfinished businesses/issues, show issues modal with actions
   if (dueOuts.value.length || staleArrivals.value.count) {
+    issueTotal.value = openIssueCount.value
+    issueSuccess.value = false
+    clearIssueSuccessTimer()
     showIssues.value = true
     return
   }
@@ -602,11 +710,15 @@ function openCloseConfirm() {
 async function confirmCloseDay() {
   closing.value = true
   error.value = ''
+  closeError.value = ''
   success.value = ''
   try {
     const res = await nightAuditApi.close({ date: selectedDate.value })
-    success.value = res.data?.message || t('nightAudit.closeSuccess')
-    showClose.value = false
+    closeSuccessBody.value = res.data?.message || t('nightAudit.closeSuccess')
+    closeSuccessTitle.value = t('nightAudit.allIssuesResolved')
+    success.value = closeSuccessBody.value
+    clearCloseSuccessTimer()
+    closeSuccessTimer = setTimeout(dismissCloseSuccess, CLOSE_SUCCESS_MS)
     // Update business date instantly so stayview reflects new business date
     try {
       await businessDateStore.load()
@@ -616,9 +728,8 @@ async function confirmCloseDay() {
     }
     await load()
   } catch (err) {
-    // Show blocker/result in modal-like message; avoid top-of-page spam confusion
-    error.value = err.response?.data?.message || t('common.actionFailed')
-    showClose.value = false
+    // Keep the dialog open so the blocker stays where the user acted on it.
+    closeError.value = err.response?.data?.message || t('common.actionFailed')
   } finally {
     closing.value = false
   }
@@ -635,7 +746,6 @@ async function checkOutDueOut(guest) {
   try {
     await reservationApi.checkOut(guest.reservation_id, {})
     await load()
-    if (!dueOuts.value.length && !staleArrivals.value.count) showIssues.value = false
   } catch (err) {
     issueError.value = err.response?.data?.message || t('common.actionFailed')
   } finally {
@@ -652,7 +762,7 @@ function goToStayviewForGuest(guest) {
     if (guest?.guest_id) query.guest_id = guest.guest_id
     if (guest?.reservation_id) query.res_id = guest.reservation_id
     router.push({ name: 'hotel-dashboard', query })
-    showIssues.value = false
+    dismissIssues()
   } catch {
     try {
       const params = new URLSearchParams()
@@ -767,6 +877,43 @@ onMounted(async () => {
 .badge-overdue { background: #fee2e2; color: #b91c1c; }
 .na-issues { text-align: left; display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
 .na-issues > p { flex: 1 1 100%; margin: 0; }
+.na-issues--success { display: block; }
+.na-progress {
+  flex: 1 1 100%; padding: 14px 16px; border-radius: 10px;
+  background: #f0f9ff; border: 1px solid #bae6fd; margin-bottom: 12px;
+}
+.na-progress-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-bottom: 9px; font-size: 13px; font-weight: 700; color: #075985;
+}
+.na-progress-head span { display: inline-flex; align-items: center; gap: 7px; }
+.na-progress-track {
+  height: 10px; border-radius: 999px; background: #dbeafe; overflow: hidden;
+}
+.na-progress-fill {
+  height: 100%; border-radius: inherit;
+  background: linear-gradient(90deg, #0ea5e9, #22c55e);
+  transition: width 0.35s ease;
+}
+.na-progress-label { margin: 7px 0 0; font-size: 12px; color: #0369a1; }
+.na-success {
+  min-height: 280px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px;
+  text-align: center; padding: 20px;
+}
+.na-success-icon {
+  width: 76px; height: 76px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center;
+  background: #dcfce7; color: #16a34a; font-size: 32px;
+  animation: na-success-pop 0.35s ease;
+}
+.na-success h3 { margin: 0; color: #166534; font-size: 22px; }
+.na-success p { margin: 0; max-width: 420px; color: #475569; font-size: 14px; }
+.na-success-return { color: #64748b; font-size: 13px; }
+@keyframes na-success-pop {
+  from { transform: scale(0.7); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
 .na-intro { margin: 0 0 12px; color: #475569; }
 .na-issue-block {
   flex: 1 1 360px;
@@ -801,6 +948,14 @@ onMounted(async () => {
    night-audit specific and were painted light-only. In dark mode they must sit
    on the raised slate panel instead of punching a white hole in the modal. */
 html[data-theme='dark'] .na-intro { color: #95a3ab; }
+html[data-theme='dark'] .na-progress { background: #172a36; border-color: #245166; }
+html[data-theme='dark'] .na-progress-head { color: #8fd3ff; }
+html[data-theme='dark'] .na-progress-track { background: #20343f; }
+html[data-theme='dark'] .na-progress-label { color: #9fcbe6; }
+html[data-theme='dark'] .na-success h3 { color: #86efac; }
+html[data-theme='dark'] .na-success p { color: #aebac1; }
+html[data-theme='dark'] .na-success-icon { background: #143a24; color: #4ade80; }
+html[data-theme='dark'] .na-success-return { color: #95a3ab; }
 html[data-theme='dark'] .na-issue-block { background: #202c33; border-color: #2f3b43; color: #e9edef; }
 html[data-theme='dark'] .na-issue-item { border-color: #2f3b43; }
 html[data-theme='dark'] .na-issue-main { color: #e9edef; }

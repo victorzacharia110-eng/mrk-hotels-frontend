@@ -6,6 +6,9 @@
     show       — Boolean controlling visibility.
     title      — Modal heading.
     body       — Descriptive text or a renderable string (supports {name}).
+    error      — Optional error message shown inside the dialog after a failed action.
+    success    — Optional success heading. Replaces the body and actions with a
+                 centred success state; the caller decides when to close it.
     confirmLabel — Optional override for the confirm button text.
     cancelLabel  — Optional override for the cancel button text.
     danger     — Renders the confirm button with a destructive style.
@@ -32,11 +35,24 @@
               <i class="fas fa-xmark"></i>
             </button>
           </div>
-          <div class="confirm-modal-body">
+          <div v-if="success" class="confirm-modal-body confirm-modal-body--success">
+            <div class="confirm-modal-success" role="status" aria-live="polite">
+              <span class="confirm-modal-success-icon" aria-hidden="true">
+                <i class="fas fa-check"></i>
+              </span>
+              <h3>{{ success }}</h3>
+              <p v-if="body">{{ body }}</p>
+            </div>
+          </div>
+          <div v-else class="confirm-modal-body">
             <p class="confirm-modal-message">{{ body }}</p>
+            <div v-if="error" class="confirm-modal-error" role="alert">
+              <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
+              <span>{{ error }}</span>
+            </div>
             <p v-if="remaining !== null" class="confirm-modal-hint">{{ t('common.autoClosesIn', { seconds: remaining }) }}</p>
           </div>
-          <div class="confirm-modal-foot">
+          <div v-if="!success" class="confirm-modal-foot">
             <button class="btn btn-secondary" @click="onCancel" :disabled="busy">{{ cancelLabelText }}</button>
             <button class="btn" :class="danger ? 'btn-danger' : 'btn-primary'" @click="$emit('confirm')" :disabled="busy">
               <i v-if="busy" class="fas fa-spinner fa-spin"></i>
@@ -58,6 +74,8 @@ const props = defineProps({
   show: { type: Boolean, default: false },
   title: { type: String, default: '' },
   body: { type: String, default: '' },
+  error: { type: String, default: '' },
+  success: { type: String, default: '' },
   confirmLabel: { type: String, default: '' },
   cancelLabel: { type: String, default: '' },
   danger: { type: Boolean, default: false },
@@ -73,9 +91,15 @@ const headingId = computed(() => `confirm-modal-${Math.random().toString(36).sli
 const confirmLabelText = computed(() => props.confirmLabel || t('common.confirm'))
 const cancelLabelText = computed(() => props.cancelLabel || t('common.cancel'))
 
-const headClass = computed(() => (props.danger ? 'confirm-modal-head--danger' : 'confirm-modal-head--info'))
+const headClass = computed(() => {
+  if (props.success) return 'confirm-modal-head--success'
+  return props.danger ? 'confirm-modal-head--danger' : 'confirm-modal-head--info'
+})
 
-const iconClass = computed(() => (props.danger ? 'fas fa-triangle-exclamation' : 'fas fa-circle-question'))
+const iconClass = computed(() => {
+  if (props.success) return 'fas fa-check'
+  return props.danger ? 'fas fa-triangle-exclamation' : 'fas fa-circle-question'
+})
 
 const confirmIcon = computed(() => (props.danger ? 'fas fa-trash' : 'fas fa-check'))
 
@@ -106,7 +130,7 @@ function stopTicker() {
 
 function startTicker() {
   stopTicker()
-  if (!props.autoCloseMs || props.busy) return
+  if (!props.autoCloseMs || props.busy || props.success) return
 
   let left = Math.ceil(props.autoCloseMs / 1000)
   remaining.value = left
@@ -122,7 +146,7 @@ function startTicker() {
 }
 
 watch(
-  () => [props.show, props.autoCloseMs, props.busy],
+  () => [props.show, props.autoCloseMs, props.busy, props.success],
   ([show]) => {
     if (show && !props.busy) startTicker()
     else stopTicker()
@@ -185,6 +209,8 @@ onBeforeUnmount(stopTicker)
 
 .confirm-modal-head--info .confirm-modal-icon { background: #6366f1; }
 .confirm-modal-head--danger .confirm-modal-icon { background: #dc2626; }
+.confirm-modal-head--success { background: linear-gradient(135deg, #dcfce7, #86efac); }
+.confirm-modal-head--success .confirm-modal-icon { background: #16a34a; }
 
 .confirm-modal-title {
   flex: 1;
@@ -218,6 +244,64 @@ onBeforeUnmount(stopTicker)
   font-size: 14px;
   color: #334155;
   line-height: 1.5;
+}
+
+.confirm-modal-body--success { padding: 28px 24px; }
+.confirm-modal-success {
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+}
+.confirm-modal-success-icon {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 32px;
+  animation: confirm-success-pop 0.35s ease;
+}
+.confirm-modal-success h3 {
+  margin: 0;
+  font-size: 22px;
+  color: #166534;
+}
+.confirm-modal-success p {
+  margin: 0;
+  max-width: 320px;
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.5;
+}
+@keyframes confirm-success-pop {
+  from { transform: scale(0.7); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.confirm-modal-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.confirm-modal-error i {
+  margin-top: 2px;
+  color: #dc2626;
 }
 
 .confirm-modal-hint {

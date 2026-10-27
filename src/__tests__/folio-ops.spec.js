@@ -65,8 +65,8 @@ function folioPayload() {
       { folio_entry_id: 3, type: 'early_departure_refund', amount: -80000, date: '2026-11-03', description: 'Refund for unused nights' },
     ],
     payments: [
-      { payment_id: 7, amount: 150000, payment_method: 'cash', transaction_reference: 'T-101', date: '2026-11-01' },
-      { payment_id: null, amount: 0, payment_method: 'cash', transaction_reference: '', date: '2026-11-02' },
+      { payment_id: 7, amount: 150000, payment_method: 'cash', payment_status: 'completed', transaction_reference: 'T-101', date: '2026-11-01' },
+      { payment_id: null, amount: 0, payment_method: 'cash', payment_status: 'pending', transaction_reference: '', date: '2026-11-02' },
     ],
   }
 }
@@ -137,6 +137,49 @@ describe('folio operations on the stay view', () => {
     expect(menu.textContent).toContain(i18n.global.t('stayview.paymentEdit'))
   })
 
+  it('opens a real deposit form and records the money as a completed payment', async () => {
+    await mountDashboard()
+    wrapper.vm.openFolioOp('deposit')
+    await wrapper.vm.$nextTick()
+
+    const modal = document.querySelector('.sv-modal-op')
+    expect(modal.textContent).toContain(i18n.global.t('stayview.addDeposit'))
+    expect(modal.querySelector('input[type="file"]')).toBeNull()
+
+    wrapper.vm.folioOpForm.amount = 50000
+    wrapper.vm.folioOpForm.payment_method = 'cash'
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.submitFolioOp()
+    await flushPromises()
+
+    expect(api.paymentApi.store).toHaveBeenCalledWith(expect.objectContaining({
+      reservation_id: 501,
+      amount: 50000,
+      payment_method: 'cash',
+      payment_status: 'completed',
+    }))
+  })
+
+  it('lists completed payments and refunds the selected one', async () => {
+    await mountDashboard()
+    const { useAuthStore } = await import('@/stores/auth')
+    useAuthStore().user = { user_role: 'manager', full_name: 'Manager', role_level: 80 }
+    wrapper.vm.openFolioOp('refund')
+    await wrapper.vm.$nextTick()
+
+    const modal = document.querySelector('.sv-modal-op')
+    expect(modal.textContent).toContain(i18n.global.t('stayview.refundHint'))
+    expect(modal.querySelectorAll('input[type="radio"]')).toHaveLength(1)
+    expect(modal.querySelector('input[type="file"]')).toBeNull()
+
+    wrapper.vm.folioOpForm.payment_id = 7
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.submitFolioOp()
+    await flushPromises()
+
+    expect(api.paymentApi.refund).toHaveBeenCalledWith(7, {})
+  })
+
   it('shows the editor identity under an edited payment', async () => {
     await mountDashboard()
     const payload = folioPayload()
@@ -150,6 +193,20 @@ describe('folio operations on the stay view', () => {
     expect(note.textContent).toContain('edited by')
     expect(note.textContent).toContain('Receptionist Vanessa')
     expect(note.textContent).toMatch(/\d{2}\/\d{2}\/\d{4}/)
+  })
+
+  it('shows a refunded payment as history without counting it twice', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    payload.payments[0].payment_status = 'refunded'
+    payload.folio.advance_payment = 0
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    const row = wrapper.vm.folioEntries.find((e) => e.kind === 'refunded')
+    expect(row.balanceNeutral).toBe(true)
+    expect(wrapper.vm.folioTotals.paid).toBe(0)
   })
 
   it('puts the payment edit for the targeted payment', async () => {

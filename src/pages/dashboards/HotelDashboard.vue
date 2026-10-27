@@ -792,12 +792,12 @@
                         <i class="fas fa-repeat" aria-hidden="true"></i> {{ $t('stayview.transferFolio') }}
                       </button>
                     </li>
-                    <li v-if="canPostRoomPostings">
+                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
                       <button type="button" @click.stop="openFolioOp('deposit'); moreOpen = false">
                         <i class="fas fa-coins" aria-hidden="true"></i> {{ $t('stayview.addDeposit') }}
                       </button>
                     </li>
-                    <li v-if="canPostRoomPostings">
+                    <li v-if="canRefundPayments">
                       <button type="button" @click.stop="openFolioOp('refund'); moreOpen = false">
                         <i class="fas fa-rotate-left" aria-hidden="true"></i> {{ $t('stayview.refund') }}
                       </button>
@@ -1321,6 +1321,35 @@
                     data-field="amount" :placeholder="$t('stayview.inclusionAmountHint', { currency: curCode() })" />
                 </label>
                 <p class="sv-cap sv-note">{{ $t('stayview.inclusionHint') }}</p>
+              </template>
+              <template v-else-if="folioOp === 'deposit'">
+                <label class="sv-field">
+                  <span>{{ $t('stayview.paymentAmount', { currency: curCode() }) }}</span>
+                  <input v-model.number="folioOpForm.amount" type="number" min="0" step="0.01" class="input"
+                    data-field="amount" required />
+                </label>
+                <div class="sv-field">
+                  <PaymentMethodSelect v-model:method="folioOpForm.payment_method"
+                    v-model:provider="folioOpForm.payment_provider" />
+                </div>
+                <p class="sv-cap sv-note">{{ $t('stayview.depositHint') }}</p>
+              </template>
+              <template v-else-if="folioOp === 'refund'">
+                <p class="sv-cap sv-note">{{ $t('stayview.refundHint') }}</p>
+                <div v-if="!refundablePayments.length" class="sv-modal-row muted">
+                  <span>{{ $t('stayview.noRefundablePayments') }}</span>
+                </div>
+                <div v-else class="sv-split-ops">
+                  <label v-for="p in refundablePayments" :key="p.payment_id" class="sv-split-op"
+                    :class="{ checked: folioOpForm.payment_id === p.payment_id }">
+                    <input type="radio" :value="p.payment_id" v-model="folioOpForm.payment_id" />
+                    <span class="sv-split-op-text">
+                      <span class="sv-cap">{{ formatDateDMY(p.date) }} · {{ paymentDescription(p) }}</span>
+                      <span class="sv-cap sv-muted">{{ p.transaction_reference || '—' }}</span>
+                    </span>
+                    <strong class="num">{{ curCode() }} {{ fmtNum(p.amount, 2) }}</strong>
+                  </label>
+                </div>
               </template>
               <template v-else-if="folioOp === 'move'">
                 <div class="sv-move-switch">
@@ -3976,17 +4005,23 @@ function buildLedgerEntries(src) {
     })
   }
   for (const p of f.payments || []) {
+    const refunded = p.payment_status === 'refunded'
     entries.push({
       key: `p${p.payment_id ?? p.transaction_reference}`,
       date: p.date,
       time: p.posted_at || p.date || '',
-      particular: t('folio.payment'),
-      description: paymentDescription(p),
+      particular: refunded ? t('stayview.refundLine') : t('folio.payment'),
+      description: refunded
+        ? `${paymentDescription(p)} · ${t('paymentFields.statuses.refunded')}`
+        : paymentDescription(p),
       detail: '',
       user: p.user || '—',
       amount: Number(p.amount ?? 0),
       credit: true,
-      kind: 'payment',
+      // A refunded payment already released its credit from the advance; the
+      // row stays visible as history but must not move the ledger again.
+      balanceNeutral: refunded,
+      kind: refunded ? 'refunded' : 'payment',
       payment: p,
       editableByPayment: p.payment_id != null,
     })
@@ -4726,6 +4761,8 @@ const folioOpTitle = computed(() => {
   if (folioOp.value === 'adjustment') return t('stayview.folioAdjustmentTitle')
   if (folioOp.value === 'inclusion') return t('stayview.folioInclusionTitle')
   if (folioOp.value === 'move') return t('stayview.folioMoveTitle')
+  if (folioOp.value === 'deposit') return t('stayview.addDeposit')
+  if (folioOp.value === 'refund') return t('stayview.refundTitle')
   return t('stayview.folioUploadTitle')
 })
 
@@ -4734,8 +4771,16 @@ const folioOpPostLabel = computed(() => {
   if (folioOp.value === 'adjustment') return t('stayview.postAdjustment')
   if (folioOp.value === 'inclusion') return t('stayview.postInclusion')
   if (folioOp.value === 'move') return t('stayview.postMove')
+  if (folioOp.value === 'deposit') return t('stayview.addDeposit')
+  if (folioOp.value === 'refund') return t('stayview.refundPayment')
   return t('stayview.postUpload')
 })
+
+const refundablePayments = computed(() =>
+  (viewingFolio.value?.payments || folio.value?.payments || []).filter(
+    (p) => p.payment_id != null && p.payment_status === 'completed',
+  ),
+)
 
 const folioOpCanPost = computed(() => {
   const f = folioOpForm.value
@@ -4743,6 +4788,11 @@ const folioOpCanPost = computed(() => {
   if (folioOp.value === 'adjustment') return f.amount !== '' && Number(f.amount) !== 0
   if (folioOp.value === 'inclusion') return !!(f.description && f.description.trim()) && Number(f.amount) >= 0
   if (folioOp.value === 'move') return moveSelected.value.length > 0 && !!moveTarget.value
+  if (folioOp.value === 'deposit') {
+    return Number(f.amount) > 0 && !!f.payment_method &&
+      (!requiresProvider(f.payment_method) || !!f.payment_provider)
+  }
+  if (folioOp.value === 'refund') return !!f.payment_id
   return f.files && f.files.length > 0
 })
 
@@ -4753,7 +4803,16 @@ function openFolioOp(op, mode = 'transfer') {
   if (op === 'move') viewingFolio.value = null
   folioOp.value = op
   folioMoveMode.value = mode
-  folioOpForm.value = { amount: null, description: '', target_reservation_id: '', new_room_id: '', files: [] }
+  folioOpForm.value = {
+    amount: null,
+    description: '',
+    payment_method: 'cash',
+    payment_provider: '',
+    payment_id: '',
+    target_reservation_id: '',
+    new_room_id: '',
+    files: [],
+  }
   moveSelected.value = []
   moveTarget.value = ''
   moveTargetSearch.value = ''
@@ -4784,6 +4843,14 @@ async function submitFolioOp() {
       description: f.description,
       amount: Number.isFinite(Number(f.amount)) && Number(f.amount) > 0 ? Number(f.amount) : 0,
     }
+  } else if (op === 'deposit') {
+    payload = {
+      reservation_id: target,
+      amount: f.amount,
+      payment_method: f.payment_method,
+      payment_provider: f.payment_provider || null,
+      payment_status: 'completed',
+    }
   } else if (op === 'move') {
     await moveSelectedOps()
     return
@@ -4793,6 +4860,8 @@ async function submitFolioOp() {
     if (op === 'discount') return reservationApi.folioDiscount(target, payload)
     if (op === 'adjustment') return reservationApi.folioAdjustment(target, payload)
     if (op === 'inclusion') return reservationApi.folioInclusion(target, payload)
+    if (op === 'deposit') return paymentApi.store(payload)
+    if (op === 'refund') return paymentApi.refund(f.payment_id, {})
     if (op === 'move') return reservationApi.folioTransfer(bar.id, payload)
     return reservationApi.folioAttachments(target, f.files)
   })
@@ -5644,6 +5713,7 @@ const canVoidReservation = computed(() =>
 // rows is manager/accountant work. A closed (checked-out) folio is a final
 // record too: after the guest leaves, every correction is management's job.
 const canManageFolioOps = computed(() => authStore.can(70))
+const canRefundPayments = computed(() => authStore.can(80))
 
 const folioLocked = computed(() => activeBar.value?.rawStatus === 'checked_out')
 
