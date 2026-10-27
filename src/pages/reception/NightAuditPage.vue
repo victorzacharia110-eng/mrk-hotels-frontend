@@ -393,7 +393,7 @@ const today = computed(() => businessDateStore.calendarToday || localToday())
  * the reason shown instead.
  */
 const dateHasPassed = computed(
-  () => Boolean(selectedDate.value) && selectedDate.value <= today.value,
+  () => Boolean(selectedDate.value) && selectedDate.value < today.value,
 )
 
 /** The calendar day before the hotel's today, as YYYY-MM-DD. */
@@ -542,7 +542,7 @@ const topCloseWarning = computed(() => closeWarnings.value.find((w) => w.level =
 /** The day to close first: the oldest still missing, keeping the run in order. */
 const oldestMissedDay = computed(() => missedDays.value[missedDays.value.length - 1] || '')
 
-const canClose = computed(() => Boolean(selectedDate.value) && !report.value?.closed && selectedDate.value <= today.value)
+const canClose = computed(() => Boolean(selectedDate.value) && !report.value?.closed && dateHasPassed.value)
 const report = ref(null)
 const dueOuts = ref([])
 const history = ref([])
@@ -611,7 +611,7 @@ async function confirmCloseDay() {
     try {
       await businessDateStore.load()
       await businessDateStore.reload?.()
-    } catch (_) {
+    } catch {
       /* ignore */
     }
     await load()
@@ -653,7 +653,7 @@ function goToStayviewForGuest(guest) {
     if (guest?.reservation_id) query.res_id = guest.reservation_id
     router.push({ name: 'hotel-dashboard', query })
     showIssues.value = false
-  } catch (_) {
+  } catch {
     try {
       const params = new URLSearchParams()
       if (guest?.reservation_id) params.set('reservation_id', guest.reservation_id)
@@ -663,11 +663,13 @@ function goToStayviewForGuest(guest) {
       if (guest?.reservation_id) params.set('res_id', guest.reservation_id)
       window.location.href = '/app' + (params.toString() ? '?' + params.toString() : '')
       showIssues.value = false
-    } catch (_) {
+    } catch {
       try {
         window.location.href = '/app'
         showIssues.value = false
-      } catch (_) {}
+      } catch {
+        /* ignore */
+      }
     }
   }
 }

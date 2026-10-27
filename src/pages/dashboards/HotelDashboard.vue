@@ -432,12 +432,6 @@
                               @click="openInvoicePreview(r)">
                               <i class="fas fa-print" aria-hidden="true"></i>
                             </button>
-                            <button type="button" class="sv-folio-send-btn"
-                              :title="folioRowEmail(r) ? $t('stayview.sendInvoice') : $t('stayview.noGuestEmail')"
-                              :disabled="sendBusy"
-                              @click="sendFolioInvoice(r)">
-                              <i class="fas fa-paper-plane" aria-hidden="true"></i>
-                            </button>
                             <button type="button" class="sv-folio-view-btn" :disabled="folioLoading"
                               :aria-label="$t('common.view') + ' ' + (r.folio_code || ledgerHeader.code)"
                               @click="switchFolio(r)">
@@ -513,37 +507,10 @@
                           <td>{{ e.user }}</td>
                           <td class="num">{{ e.credit ? '−' : '' }}{{ curCode() }} {{ fmtNum(e.amount, 2) }}</td>
                           <td class="sv-cell-actions">
-                            <button type="button" class="sv-icon-link" :title="$t('folio.view')" @click="viewEntry(e)">
-                              <i data-testid="sv-entry-view" class="fas fa-eye" aria-hidden="true"></i>
-                            </button>
-                            <button v-if="activeBar?.id && e.entryId" type="button" class="sv-icon-link"
-                              :title="$t('stayview.printEntryInvoice')"
-                              :disabled="entryPrintBusy === e.entryId || printBusy" @click="printEntryInvoice(e)">
-                              <i data-testid="sv-entry-print" class="fas fa-print" aria-hidden="true"></i>
-                            </button>
-                            <button v-if="e.editable" type="button" class="sv-icon-link" :title="$t('folio.edit')"
-                              :disabled="actionBusy" @click="openEditEntry(e)">
-                              <i class="fas fa-pen" aria-hidden="true"></i>
-                            </button>
-                            <button v-if="e.kind === 'payment' && e.payment?.payment_id && canSeeFrontDesk"
-                              type="button" class="sv-folio-payment-edit" :title="$t('stayview.paymentEdit')"
-                              :disabled="actionBusy" @click="openPaymentEdit(e)">
-                              <i class="fas fa-pen" aria-hidden="true"></i> {{ $t('stayview.paymentEdit') }}
-                            </button>
-                            <button v-if="activeBar?.id" type="button" class="sv-icon-link"
-                              :title="currentFolioTarget.email ? $t('stayview.sendInvoice') : $t('stayview.noGuestEmail')"
-                              :disabled="sendBusy" @click="sendFolioInvoice(currentFolioTarget)">
-                              <i class="fas fa-paper-plane" aria-hidden="true"></i>
-                            </button>
-                            <a v-if="e.entryUrl" :href="e.entryUrl" target="_blank" rel="noopener" class="sv-icon-link"
-                              :title="$t('folio.download')">
-                              <i class="fas fa-download" aria-hidden="true"></i>
-                            </a>
-                            <button v-if="e.entryId && !e.moveLine && (canManageFolioOps || (e.type !== 'room_charge' && !folioLocked))"
-                            type="button" class="sv-icon-link"
-                            :title="e.entryUrl ? $t('folio.remove') : $t('folio.void')" :disabled="actionBusy"
-                            @click="e.entryUrl ? removeFolioAttachment(e) : voidFolioEntry(e)">
-                              <i class="fas fa-trash-can" aria-hidden="true"></i>
+                            <button type="button" class="sv-icon-link sv-row-menu-btn"
+                              :aria-label="$t('folio.actions')" :aria-expanded="entryMenu?.entry === e"
+                              @click.stop="toggleEntryMenu(e, $event)">
+                              <i class="fas fa-ellipsis-vertical" aria-hidden="true"></i>
                             </button>
                           </td>
                         </tr>
@@ -689,12 +656,6 @@
               <div v-else-if="stayTab === 'tasks'" class="sv-tab-panel" role="tabpanel">
                 <div class="sv-tab-head">
                   <span class="sv-tab-section">{{ $t('stayview.tasksForRoom') }}</span>
-                  <button v-if="canSeeFrontDesk" type="button" class="btn btn-secondary btn-sm"
-                    :disabled="actionBusy || isStayClosed"
-                    :title="isStayClosed ? $t('stayview.tasksLockedAfterCheckout') : ''"
-                    @click="openTasksModal(activeBar.roomId)">
-                    <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('stayview.taskAdd') }}
-                  </button>
                 </div>
                 <p v-if="isStayClosed" class="sv-cap sv-note">{{ $t('stayview.tasksLockedAfterCheckout') }}</p>
                 <div v-if="roomTasksLoading" class="sv-modal-row muted">
@@ -779,43 +740,6 @@
                 <i class="fas fa-print" aria-hidden="true"></i>
                 {{ printBusy ? $t('invoices.preparing') : $t('stayview.printInvoice') }}
               </button>
-              <button type="button" class="btn btn-secondary sv-modal-manage"
-                :disabled="sendBusy"
-                :title="currentFolioTarget.email ? currentFolioTarget.email : $t('stayview.noGuestEmail')"
-                @click="sendFolioInvoice(currentFolioTarget)">
-                <i class="fas fa-paper-plane" aria-hidden="true"></i>
-                {{ sendBusy ? $t('invoices.preparing') : $t('stayview.sendInvoice') }}
-              </button>
-              <div class="sv-dropdown">
-                <button type="button" class="btn btn-secondary sv-modal-manage" :disabled="sendBusy"
-                  @click.stop="invoiceMenuOpen = !invoiceMenuOpen">
-                  <i class="fas fa-chevron-down" aria-hidden="true"></i>
-                </button>
-                <Transition name="sv-pop">
-                  <ul v-if="invoiceMenuOpen" class="sv-dropdown-menu">
-                    <li>
-                      <button type="button" :disabled="sendBusy"
-                        :title="currentFolioTarget.phone ? currentFolioTarget.phone : $t('stayview.noGuestPhone')"
-                        @click.stop="sendFolioInvoiceSms(currentFolioTarget); invoiceMenuOpen = false">
-                        <i class="fas fa-comment-sms" aria-hidden="true"></i> {{ $t('stayview.sendInvoiceSms') }}
-                      </button>
-                    </li>
-                    <li>
-                      <button type="button" :disabled="sendBusy"
-                        :title="currentFolioTarget.email ? currentFolioTarget.email : $t('stayview.noGuestEmail')"
-                        @click.stop="sendFolioInvoiceEmail(currentFolioTarget); invoiceMenuOpen = false">
-                        <i class="fas fa-envelope" aria-hidden="true"></i> {{ $t('stayview.sendInvoiceEmail') }}
-                      </button>
-                    </li>
-                    <li>
-                      <button type="button" :disabled="sendBusy"
-                        @click.stop="sendFolioInvoiceBoth(currentFolioTarget); invoiceMenuOpen = false">
-                        <i class="fas fa-paper-plane" aria-hidden="true"></i> {{ $t('stayview.sendInvoiceBoth') }}
-                      </button>
-                    </li>
-                  </ul>
-                </Transition>
-              </div>
               <div class="sv-dropdown">
                 <button type="button" class="btn btn-secondary sv-modal-manage" :disabled="actionBusy"
                   @click.stop="moreOpen = !moreOpen">
@@ -1010,10 +934,6 @@
                     role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{
                       paymentErrors.payment_method || paymentErrors.payment_provider }}</span>
                 </div>
-                <label class="sv-field">
-                  <span>{{ $t('stayview.paymentRef') }}</span>
-                  <input v-model="paymentForm.transaction_reference" type="text" class="input" />
-                </label>
               </template>
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
             </div>
@@ -1082,10 +1002,6 @@
                   <option v-for="opt in paymentStatusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}
                   </option>
                 </select>
-              </label>
-              <label class="sv-field">
-                <span>{{ $t('stayview.paymentRef') }}</span>
-                <input v-model="paymentEditForm.transaction_reference" type="text" class="input" />
               </label>
               <label class="sv-field">
                 <span>{{ $t('common.notes') }}</span>
@@ -1244,7 +1160,7 @@
                   </label>
                 </div>
                 <div style="margin-top:4px;font-size:11px;color:#888;">
-                  <i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('stayview.releaseHint') }}
+                  <i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('stayview.amendIndividualHint') }}
                 </div>
                 <span v-if="amendErrors.room_id" class="sv-field-msg" role="alert"><i class="fas fa-circle-exclamation"
                     aria-hidden="true"></i> {{ amendErrors.room_id }}</span>
@@ -1864,15 +1780,9 @@
               <div class="sv-field-row">
                 <label class="sv-field" style="grid-column: 1 / -1; width: 100%;">
                   <span>{{ $t('location.country') }}</span>
-                  <CountryCitySelect v-model:countryCode="bookingForm.country_code" v-model:city="bookingForm.city"
-                    :required="false" city-as-dropdown class="sv-cc-full" style="width:100%;" />
-                </label>
-              </div>
-              <div class="sv-field-row">
-                <label class="sv-field" style="grid-column: 1 / -1;">
-                  <span>{{ $t('location.city') }}</span>
-                  <input v-model="bookingForm.city" type="text" class="input" data-field="city"
-                    :placeholder="$t('stayview.optional')" style="width:100%;" />
+                  <CountryCitySelect v-model:countryCode="bookingForm.country_code"
+                    v-model:country="bookingForm.nationality" v-model:city="bookingForm.city" :required="false"
+                    city-as-dropdown class="sv-cc-full" style="width:100%;" />
                 </label>
               </div>
               <div class="sv-field-row">
@@ -1904,10 +1814,13 @@
                     <button v-if="roomSelectionsArray.length > 0" type="button" class="btn btn-sm btn-ghost" @click="nextRoomSelection" :disabled="roomSelectionIndex === roomSelectionsArray.length - 1">
                       <i class="fas fa-chevron-right"></i>
                     </button>
-                    <button type="button" class="btn btn-sm btn-primary" @click="addRoomToSelection" :disabled="!bookingForm.room_id" title="Add room">
+                    <button v-if="bookingForm.booking_type === 'group'" type="button" class="btn btn-sm btn-primary"
+                      @click="addRoomToSelection" :disabled="!bookingForm.room_id" title="Add room">
                       <i class="fas fa-plus"></i>
                     </button>
-                    <button v-if="roomSelectionsArray.length > 0" type="button" class="btn btn-sm btn-danger" @click="removeRoomFromSelection(roomSelectionIndex)" title="Remove room">
+                    <button v-if="bookingForm.booking_type === 'group' && roomSelectionsArray.length > 0" type="button"
+                      class="btn btn-sm btn-danger" @click="removeRoomFromSelection(roomSelectionIndex)"
+                      title="Remove room">
                       <i class="fas fa-minus"></i>
                     </button>
                   </div>
@@ -2147,31 +2060,12 @@
                 <span class="sv-task-type sv-cap">{{ (task.task_type || 'cleaning').replace('_', ' ') }}</span>
                 <span class="sv-task-status">{{ task.status.replace('_', ' ') }}</span>
               </div>
-              <div class="sv-modal-section">{{ $t('stayview.newTask') }}</div>
-              <div class="sv-field-row">
-                <label class="sv-field">
-                  <span>{{ $t('stayview.room') }}</span>
-                  <select v-model="taskForm.room_id" class="input">
-                    <option v-for="room in rooms" :key="room.room_id" :value="room.room_id">
-                      {{ room.room_number }}
-                    </option>
-                  </select>
-                </label>
-                <label class="sv-field">
-                  <span>{{ $t('stayview.priority') }}</span>
-                  <select v-model="taskForm.priority" class="input">
-                    <option value="low">{{ $t('stayview.priorityLow') }}</option>
-                    <option value="normal">{{ $t('stayview.priorityNormal') }}</option>
-                    <option value="high">{{ $t('stayview.priorityHigh') }}</option>
-                  </select>
-                </label>
-              </div>
+              <p class="sv-cap sv-note">{{ $t('stayview.tasksAutoHint') }}</p>
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
             </div>
             <div class="sv-modal-actions">
-              <button type="button" class="btn btn-primary sv-modal-manage" :disabled="actionBusy" @click="submitTask">
-                <i class="fas fa-check" aria-hidden="true"></i>
-                {{ actionBusy ? $t('common.loading') : $t('stayview.createTask') }}
+              <button type="button" class="btn btn-secondary" @click="tasksModal = false">
+                {{ $t('common.close') }}
               </button>
             </div>
           </div>
@@ -2212,12 +2106,33 @@
                   <span>{{ $t('stayview.' + rule.key) }}</span>
                 </li>
               </ul>
-              <div class="sv-modal-section">{{ $t('stayview.setStatus') }}</div>
+              <div class="sv-modal-section">{{ $t('stayview.baseStatus') }}</div>
               <div class="sv-status-grid">
-                <button v-for="s in roomStatuses" :key="s" type="button" class="sv-status-btn"
-                  :class="{ active: roomModal.status === s }" :disabled="actionBusy" @click="setRoomStatus(s)">
-                  <span class="sv-room-dot" :class="s" aria-hidden="true"></span>
-                  <span class="sv-cap">{{ s }}</span>
+                <div v-for="s in roomBaseStatusOptions" :key="s.key" class="sv-status-btn sv-status-static"
+                  :class="{ active: roomBaseStatus(roomModal) === s.key }">
+                  <span class="sv-room-dot" :class="s.key === 'due_out' ? 'dueout' : s.key"
+                    aria-hidden="true"></span>
+                  <span class="sv-cap">{{ s.label }}</span>
+                </div>
+              </div>
+              <p class="sv-field-hint muted">{{ $t('stayview.baseStatusHint') }}</p>
+
+              <div class="sv-modal-section">{{ $t('stayview.housekeepingStatus') }}</div>
+              <div class="sv-status-grid">
+                <button type="button" class="sv-status-btn" :class="{ active: !roomIsDirty(roomModal) }"
+                  :disabled="actionBusy" @click="setRoomClean">
+                  <span class="sv-room-dot available" aria-hidden="true"></span>
+                  <span class="sv-cap">{{ $t('stayview.clean') }}</span>
+                </button>
+                <button type="button" class="sv-status-btn" :class="{ active: roomIsDirty(roomModal) }"
+                  :disabled="actionBusy" @click="setRoomDirty">
+                  <span class="sv-room-dot dirty" aria-hidden="true"></span>
+                  <span class="sv-cap">{{ $t('stayview.dirty') }}</span>
+                </button>
+                <button type="button" class="sv-status-btn" @click="toggleRoomBlocked" :disabled="actionBusy">
+                  <span class="sv-room-dot maintenance" aria-hidden="true"></span>
+                  <span class="sv-cap">{{ roomModal.status === 'maintenance' ? $t('stayview.unblockRoom') :
+                    $t('stayview.blockRoom') }}</span>
                 </button>
               </div>
               <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
@@ -2225,6 +2140,51 @@
           </div>
         </div>
       </Transition>
+    </Teleport>
+
+    <!-- Per-row folio actions, opened from the three-dot button. -->
+    <Teleport to="body">
+      <div v-if="entryMenu" class="sv-row-menu-layer" @click="closeEntryMenu">
+        <ul class="sv-row-menu" role="menu" :style="{ top: entryMenu.y + 'px', left: entryMenu.x + 'px' }"
+          @click.stop>
+          <li>
+            <button type="button" role="menuitem" @click="closeEntryMenu(); viewEntry(entryMenu.entry)">
+              <i class="fas fa-eye" aria-hidden="true"></i> {{ $t('folio.view') }}
+            </button>
+          </li>
+          <li v-if="activeBar?.id && entryMenu.entry.entryId">
+            <button type="button" role="menuitem" :disabled="entryPrintBusy === entryMenu.entry.entryId || printBusy"
+              @click="closeEntryMenu(); printEntryInvoice(entryMenu.entry)">
+              <i class="fas fa-print" aria-hidden="true"></i> {{ $t('stayview.printEntryInvoice') }}
+            </button>
+          </li>
+          <li v-if="entryMenu.entry.editable">
+            <button type="button" role="menuitem" :disabled="actionBusy"
+              @click="closeEntryMenu(); openEditEntry(entryMenu.entry)">
+              <i class="fas fa-pen" aria-hidden="true"></i> {{ $t('folio.edit') }}
+            </button>
+          </li>
+          <li v-if="entryMenu.entry.kind === 'payment' && entryMenu.entry.payment?.payment_id && canSeeFrontDesk">
+            <button type="button" role="menuitem" :disabled="actionBusy"
+              @click="closeEntryMenu(); openPaymentEdit(entryMenu.entry)">
+              <i class="fas fa-pen" aria-hidden="true"></i> {{ $t('stayview.paymentEdit') }}
+            </button>
+          </li>
+          <li v-if="entryMenu.entry.entryUrl">
+            <a :href="entryMenu.entry.entryUrl" target="_blank" rel="noopener" role="menuitem"
+              @click="closeEntryMenu">
+              <i class="fas fa-download" aria-hidden="true"></i> {{ $t('folio.download') }}
+            </a>
+          </li>
+          <li v-if="entryMenu.entry.entryId && !entryMenu.entry.moveLine && (canManageFolioOps || (entryMenu.entry.type !== 'room_charge' && !folioLocked))">
+            <button type="button" role="menuitem" class="danger" :disabled="actionBusy"
+              @click="closeEntryMenu(); entryMenu.entry.entryUrl ? removeFolioAttachment(entryMenu.entry) : voidFolioEntry(entryMenu.entry)">
+              <i class="fas fa-trash-can" aria-hidden="true"></i>
+              {{ entryMenu.entry.entryUrl ? $t('folio.remove') : $t('folio.void') }}
+            </button>
+          </li>
+        </ul>
+      </div>
     </Teleport>
 
     <!-- Stock ledger modal: build and print the ledger report without leaving the chart -->
@@ -2368,7 +2328,7 @@ import { useRoute } from 'vue-router'
 import { useNotificationStore } from '@/stores/notifications'
 
 const route = useRoute()
-import { roomApi, reservationApi, guestApi, housekeepingApi, laundryApi, invoiceApi, inventoryApi, paymentApi, companyApi, hotelSettingsApi } from '@/api'
+import { roomApi, reservationApi, guestApi, housekeepingApi, laundryApi, inventoryApi, paymentApi, companyApi, hotelSettingsApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import AlertModal from '@/components/AlertModal.vue'
 import CancelReservationModal from '@/components/CancelReservationModal.vue'
@@ -2381,6 +2341,7 @@ import { requiresProvider, providersFor, PAYMENT_METHODS, PAYMENT_STATUSES } fro
 
 import { folioBreakdown, isFolioRefundEntry } from '@/utils/folio'
 import { roomOccupiedToday } from '@/utils/roomOccupancy'
+import { getCountryName } from '@/utils/locations'
 import { toast } from '@/utils/toast'
 import { formatDateDMY, formatDateTime } from '@/utils/dates'
 import { formatPhoneGaps, formatPhoneNational, validatePhoneNumber } from '@/utils/phone'
@@ -2449,6 +2410,32 @@ const loading = ref(true)
 const loaded = ref(false)
 const error = ref('')
 
+// Stays returned by the API for the current search term. The tape only holds
+// the visible window, so without this a checked-out or far-future reservation
+// can never be found from the toolbar.
+const remoteReservations = ref([])
+let searchTimer = null
+
+watch(search, (value) => {
+  window.clearTimeout(searchTimer)
+  const q = String(value || '').trim()
+  if (q.length < 2) {
+    remoteReservations.value = []
+    return
+  }
+  searchTimer = window.setTimeout(async () => {
+    try {
+      const res = await reservationApi.index({ search: q, per_page: 8 })
+      const rows = res.data?.data ?? []
+      remoteReservations.value = rows.filter(
+        (r) => !['cancelled', 'no_show'].includes(r.status),
+      )
+    } catch {
+      remoteReservations.value = []
+    }
+  }, 250)
+})
+
 // Live results for the toolbar search: matching stays (guest, room or
 // reference) followed by matching rooms, so reception can jump straight to
 // the stay/room instead of only filtering the tape.
@@ -2456,12 +2443,11 @@ const searchResults = computed(() => {
   const q = search.value.trim().toLowerCase()
   if (q.length < 2) return []
   const hits = []
-  for (const r of reservations.value) {
-    if (hits.length >= 6) break
-    const name = String(r.guest_name || '').toLowerCase()
+  const seen = new Set()
+  const addStay = (r) => {
+    if (!r || seen.has(r.reservation_id) || hits.length >= 6) return
+    seen.add(r.reservation_id)
     const room = String(r.room?.room_number || '')
-    const ref = String(r.booking_reference || '').toLowerCase()
-    if (!name.includes(q) && !room.includes(q) && !ref.includes(q)) continue
     hits.push({
       key: `res-${r.reservation_id}`,
       kind: 'reservation',
@@ -2472,6 +2458,16 @@ const searchResults = computed(() => {
         .join(' · '),
       reservation: r,
     })
+  }
+  // Results from outside the tape window (checked-out, reserved, future).
+  for (const r of remoteReservations.value) addStay(r)
+  for (const r of reservations.value) {
+    if (hits.length >= 6) break
+    const name = String(r.guest_name || '').toLowerCase()
+    const room = String(r.room?.room_number || '')
+    const ref = String(r.booking_reference || '').toLowerCase()
+    if (!name.includes(q) && !room.includes(q) && !ref.includes(q)) continue
+    addStay(r)
   }
   for (const room of rooms.value) {
     if (hits.length >= 8) break
@@ -2965,12 +2961,31 @@ const inHouseReservations = computed(() => {
  *  the toolbar circle shows where the signed-in user's name used to be
  *  (panel review: NUMBER OF GUESTS). */
 const totalGuestsInHouse = computed(() =>
-  inHouseReservations.value.reduce((sum, r) => {
-    const adults = Number(r.num_adults) || 0
-    const children = Number(r.num_children) || 0
-    return sum + Math.max(0, adults + children)
-  }, 0),
+  inHouseReservations.value.reduce((sum, r) => sum + guestsForStay(r), 0),
 )
+
+/**
+ * Guests a stay contributes to the in-house total.
+ * Panel review: single = 1, couple = 2, family = up to 4 per room and a group
+ * booking counts one guest per room (each room is its own reservation).
+ */
+function guestsForStay(r) {
+  const adults = Number(r.num_adults) || 0
+  const children = Number(r.num_children) || 0
+  const entered = Math.max(0, adults + children)
+  switch (r.booking_type) {
+    case 'single':
+      return 1
+    case 'couple':
+      return 2
+    case 'family':
+      return Math.min(4, Math.max(1, entered))
+    case 'group':
+      return 1
+    default:
+      return entered
+  }
+}
 
 /** Summary pill counts shown above the chart. */
 const pills = computed(() => {
@@ -3240,6 +3255,20 @@ function paymentMethodLabel(method) {
   if (!method) return '—'
   const key = `paymentFields.methods.${method}`
   return te(key) ? t(key) : String(method).replace(/_/g, ' ')
+}
+
+/** Human-readable provider label (M-Pesa, Tigo Pesa, ...). */
+function paymentProviderLabel(provider) {
+  if (!provider) return ''
+  const key = `paymentFields.providers.${provider}`
+  return te(key) ? t(key) : String(provider).replace(/_/g, ' ')
+}
+
+/** Payment description that keeps the provider identifier visible in the ledger. */
+function paymentDescription(payment) {
+  const method = paymentMethodLabel(payment?.payment_method)
+  const provider = paymentProviderLabel(payment?.payment_provider)
+  return provider ? `${method} · ${provider}` : method
 }
 
 /**
@@ -3630,7 +3659,16 @@ const bookingGrid = computed(() => {
     { label: t('reservations.bookingType'), value: show(String(src.booking_type || '').replace('_', ' ')) },
     { label: t('reservations.bookingSource'), value: show(String(src.booking_source || src.source || '').replace('_', ' ')) },
     { label: t('reservations.bookingDate'), value: show(fmtDay(src.booking_date)) },
+    {
+      label: t('stayview.advancePaid'),
+      value: Number(src.advance_payment || 0) > 0
+        ? `${curCode()} ${fmtNum(src.advance_payment, 2)}${src.advance_payment_method ? ` · ${paymentMethodLabel(src.advance_payment_method)}` : ''}`
+        : '—',
+    },
     { label: t('stayview.reference'), value: show(src.booking_reference || src.reference) },
+    ...(src.channel || src.external_ref
+      ? [{ label: t('reservations.channel'), value: `${show(src.channel)}${src.external_ref ? ` · ${src.external_ref}` : ''}` }]
+      : []),
     { label: t('stayview.company'), value: show(src.company_name) },
     { label: t('reservations.businessSource'), value: show(String(src.business_source || '').replace('_', ' ')) },
     { label: t('stayview.rate'), value: `${curCode()} ${fmtNum(src.rate ?? src.room?.price_per_night ?? 0, 2)}` },
@@ -3647,7 +3685,6 @@ const bookingGrid = computed(() => {
     { label: t('reservations.adultsLabel'), value: show(src.num_adults ?? '') },
     { label: t('reservations.childrenLabel'), value: show(src.num_children ?? '') },
     { label: t('stayview.total'), value: `${curCode()} ${fmtNum(src.total_amount ?? src.total ?? 0, 2)}` },
-    { label: t('stayview.advancePaid'), value: `${curCode()} ${fmtNum(src.advance_payment ?? src.advance ?? 0, 2)}` },
     { label: t('stayview.balance'), value: `${curCode()} ${fmtNum(src.balance_due ?? src.balance ?? 0, 2)}` },
   ]
 })
@@ -3875,8 +3912,16 @@ function buildLedgerEntries(src) {
       date: e.date,
       time: e.posted_at || e.date || '',
       type: e.type,
-      particular: isRefund ? t('stayview.refundLine') : folioEntryLabel(e.type),
-      description: isRefund ? (e.description || t('stayview.refundLine')) : (e.description || folioEntryLabel(e.type)),
+      // Desk-added charges (add charge, adjustment, inclusion) all read as
+      // EXTRA CHARGES on the folio; their own label stays in the description.
+      particular: isRefund
+        ? t('stayview.refundLine')
+        : (['extra_charge', 'adjustment', 'inclusion'].includes(e.type)
+          ? t('folio.extraCharges')
+          : folioEntryLabel(e.type)),
+      description: isRefund
+        ? (e.description || t('stayview.refundLine'))
+        : (e.description || folioEntryLabel(e.type)),
       detail: e.reference || '',
       user: e.user || '—',
       amount: Math.abs(amount),
@@ -3936,8 +3981,8 @@ function buildLedgerEntries(src) {
       date: p.date,
       time: p.posted_at || p.date || '',
       particular: t('folio.payment'),
-      description: paymentMethodLabel(p.payment_method),
-      detail: p.transaction_reference || '',
+      description: paymentDescription(p),
+      detail: '',
       user: p.user || '—',
       amount: Number(p.amount ?? 0),
       credit: true,
@@ -4259,7 +4304,7 @@ function openPaymentModal(mode = 'collect') {
   // to the current folio behind their back, which is exactly what used to turn
   // the current balance negative when settling a related bill.
   payMode.value = mode
-  paymentForm.value = { amount: null, payment_method: 'cash', payment_provider: '', transaction_reference: '', company_id: '', note: '', request_id: genReqId() }
+  paymentForm.value = { amount: null, payment_method: 'cash', payment_provider: '', company_id: '', note: '', request_id: genReqId() }
   paymentErrors.value = {}
   paymentTouched.value = false
   paymentSnapshot.value = { ...paymentForm.value }
@@ -4345,7 +4390,9 @@ async function submitPayment() {
       amount: f.amount,
       payment_method: f.payment_method,
       payment_provider: f.payment_provider || null,
-      transaction_reference: f.transaction_reference || null,
+      // Desk-taken payments are settled there and then; the old
+      // "awaiting confirmation" step is removed for mobile money.
+      payment_status: 'completed',
     }
     await runStayAction(() => paymentApi.store(payload))
   }
@@ -4373,7 +4420,10 @@ const paymentProviderOptions = computed(() =>
   providersFor(paymentEditForm.value.payment_method).map((p) => ({ value: p, label: t(`paymentFields.providers.${p}`) })),
 )
 const paymentStatusOptions = computed(() =>
-  PAYMENT_STATUSES.map((s) => ({ value: s, label: t(`paymentFields.statuses.${s}`) })),
+  PAYMENT_STATUSES.filter((s) => s !== 'awaiting_confirmation').map((s) => ({
+    value: s,
+    label: t(`paymentFields.statuses.${s}`),
+  })),
 )
 
 const payEditSubmitDisabled = computed(() => actionBusy.value || !(Number(paymentEditForm.value.amount) > 0))
@@ -4389,7 +4439,6 @@ function openPaymentEdit(entry) {
     payment_provider: p.payment_provider || '',
     payment_status: p.payment_status || 'completed',
     notes: p.notes || '',
-    transaction_reference: p.transaction_reference || '',
   }
   paymentEditErrors.value = {}
   paymentEditTouched.value = false
@@ -4419,9 +4468,9 @@ async function submitPaymentEdit() {
   const payload = {
     amount: Number(f.amount),
     payment_method: f.payment_method,
+    payment_provider: f.payment_provider || null,
     payment_status: f.payment_status || null,
     notes: f.notes?.trim() || null,
-    transaction_reference: f.transaction_reference?.trim() || null,
   }
   await runStayAction(() => paymentApi.paymentEdit(target.payment.payment_id, payload))
   if (actionError.value) {
@@ -4814,6 +4863,27 @@ const tenantContact = computed(() => {
 })
 const tenantPlace = computed(() => Boolean(tenantAddress.value || tenantContact.value))
 
+/** Per-row three-dot action menu, anchored to the clicked button. */
+const entryMenu = ref(null)
+
+function toggleEntryMenu(entry, event) {
+  if (entryMenu.value?.entry === entry) {
+    entryMenu.value = null
+    return
+  }
+  const rect = event.currentTarget.getBoundingClientRect()
+  const width = 220
+  entryMenu.value = {
+    entry,
+    x: Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8)),
+    y: Math.min(rect.bottom + 4, window.innerHeight - 60),
+  }
+}
+
+function closeEntryMenu() {
+  entryMenu.value = null
+}
+
 /** Opens the entry read-only and briefly highlights the row. */
 function viewEntry(e) {
   folioView.value = e
@@ -4914,26 +4984,28 @@ async function loadAmendGroupRooms(reservationId) {
   if (!reservationId) return
   const local = reservations.value.find((r) => r.reservation_id === reservationId)?.group?.rooms
   if (Array.isArray(local) && local.length > 1) {
-    setAmendGroupRooms(local)
+    setAmendGroupRooms(local, reservationId)
     return
   }
   try {
     const resp = await reservationApi.show(reservationId)
     const rooms = resp?.data?.reservation?.group?.rooms || []
-    if (amendModal.value && rooms.length > 1) setAmendGroupRooms(rooms)
+    if (amendModal.value && rooms.length > 1) setAmendGroupRooms(rooms, reservationId)
   } catch {
     /* no group (or not readable) — treat as a single-room amend */
   }
 }
 
-/** Seeds the group room list and ticks every room for the shared amend. */
-function setAmendGroupRooms(rooms) {
+/** Seeds the group room list and ticks the stay being amended. */
+function setAmendGroupRooms(rooms, activeId = null) {
   amendGroupRooms.value = rooms
-  // Tick only the live rooms; a released room stays listed (so it can be
-  // ticked again to re-include it) but starts unticked.
-  amendSelectedRoomIds.value = rooms
-    .filter((r) => !r.released_at && r.status !== 'cancelled')
-    .map((r) => r.reservation_id)
+  // Amending one guest's stay must not silently rewrite the whole party, so
+  // only the viewed stay starts ticked. The desk can tick more rooms when the
+  // change really applies to everyone; released rooms stay listed.
+  const current = rooms.find((r) => String(r.reservation_id) === String(activeId))
+  amendSelectedRoomIds.value = current && !current.released_at && current.status !== 'cancelled'
+    ? [current.reservation_id]
+    : []
 }
 
 function openAmendModal(roomMove = false) {
@@ -5016,15 +5088,10 @@ async function submitAmend() {
       amendErrors.value = { ...amendErrors.value, room_id: t('stayview.selectAtLeastOneRoom') }
       return
     }
-    const groupPayload = { ...payload, room_ids: ids }
+    // Never release the unticked rooms: amending one guest's stay must leave
+    // the rest of the party exactly as it was. Cancelling is a separate action.
+    const groupPayload = { ...payload, room_ids: ids, release_unselected: false }
     delete groupPayload.room_id
-    // Releasing frees the room and revokes its charges, so make the desk
-    // confirm before we save it.
-    if (amendReleaseNames.value) {
-      amendPendingPayload.value = groupPayload
-      amendReleaseConfirm.value = true
-      return
-    }
     amendModal.value = false
     await runStayAction(() => reservationApi.groupAmend(activeBar.value.id, groupPayload))
     if (actionError.value) amendModal.value = true
@@ -5075,7 +5142,6 @@ async function confirmVoid() {
 /* ---------------- Invoice printing ---------------- */
 
 const printBusy = ref(false)
-const sendBusy = ref(false)
 // Per-row busy flag for the single-entry invoice print: holds the entryId of
 // the row currently being printed so its button (and only its button) greys.
 const entryPrintBusy = ref(null)
@@ -5247,15 +5313,6 @@ const currentFolioTarget = computed(() => {
   }
 })
 
-/** Guest e-mail for a switcher row (the stay's own bar or a related folio). */
-function folioRowEmail(r) {
-  return r?.guest_email || r?.guestEmail || r?.guest?.email || (r === activeBar.value ? activeBar.value?.guestEmail : '') || ''
-}
-
-function folioRowPhone(r) {
-  return r?.guest_phone || r?.guestPhone || r?.guest?.phone || (r === activeBar.value ? activeBar.value?.guestPhone || activeBar.value?.phone : '') || ''
-}
-
 /**
  * Prints the invoice for the folio currently on screen. Instead of opening the
  * raw backend PDF, it renders the folio invoice breakdown into a print page of
@@ -5279,66 +5336,6 @@ async function printInvoice(bar) {
   } finally {
     printBusy.value = false
   }
-}
-
-async function sendInvoiceTo(r, channel = 'email') {
-  const id = r?.reservation_id ?? r?.id
-  if (!id || sendBusy.value) return
-  const email = folioRowEmail(r) || currentFolioTarget.value?.email
-  const phone = folioRowPhone(r) || currentFolioTarget.value?.phone
-
-  if (channel === 'email' || channel === 'both') {
-    if (!email) {
-      actionError.value = t('stayview.noGuestEmail')
-      return
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
-      actionError.value = t('stayview.invoiceEmailInvalid')
-      return
-    }
-  }
-  if (channel === 'sms' || channel === 'both') {
-    if (!phone) {
-      actionError.value = t('stayview.noGuestPhone')
-      return
-    }
-    const digits = String(phone).replace(/\D/g, '')
-    if (digits.length < 8) {
-      actionError.value = t('stayview.noGuestPhone')
-      return
-    }
-  }
-
-  sendBusy.value = true
-  actionError.value = ''
-  try {
-    const res = await invoiceApi.send(id, channel)
-    toast(res.data.message || t('stayview.invoiceSent'))
-    invoiceMenuOpen.value = false
-  } catch (err) {
-    const status = Number(err?.response?.status || 0)
-    const backendMsg = err?.response?.data?.message
-    if (status >= 500) actionError.value = t('stayview.invoiceEmailServer')
-    else if (status === 422) actionError.value = backendMsg || t('stayview.invoiceError')
-    else if (!status && String(err?.message || '').toLowerCase().includes('network')) {
-      actionError.value = t('stayview.invoiceEmailNetwork')
-    } else actionError.value = backendMsg || t('stayview.invoiceError')
-  } finally {
-    sendBusy.value = false
-  }
-}
-
-function sendFolioInvoice(r) {
-  return sendInvoiceTo(r, 'email')
-}
-function sendFolioInvoiceSms(r) {
-  return sendInvoiceTo(r, 'sms')
-}
-function sendFolioInvoiceEmail(r) {
-  return sendInvoiceTo(r, 'email')
-}
-function sendFolioInvoiceBoth(r) {
-  return sendInvoiceTo(r, 'both')
 }
 
 /* ----- Folio invoice print preview (switcher per-row action) ----- */
@@ -5453,7 +5450,7 @@ function buildInvoiceLines(f) {
   for (const p of f?.payments || []) {
     const amount = Number(p.amount ?? 0)
     paymentsShown += amount
-    push(p.posted_at || p.date, t('folio.payment'), paymentMethodLabel(p.payment_method), -amount)
+    push(p.posted_at || p.date, t('folio.payment'), paymentDescription(p), -amount)
   }
   const deposit = Math.round((advancePaid - paymentsShown) * 100) / 100
   if (deposit > 0) {
@@ -5517,8 +5514,8 @@ async function printInvoiceBreakdown() {
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>${esc(t('stayview.printInvoiceBreakdownTitle'))} · ${esc(header.code)}</title>
 <style>
-  @page { size: A4 portrait; margin: 12mm; }
-  body { font-family: Arial, Helvetica, sans-serif; margin: 0; color: #111; font-size: 12px; line-height: 1.5; padding: 0; }
+  @page { size: A4 portrait; margin: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; margin: 0; color: #111; font-size: 12px; line-height: 1.5; padding: 14mm 12mm; }
   .band { height: 8px; background: #062a52; }
   .accent { height: 3px; background: #005eb8; }
   .h { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 16px 0 12px; border-bottom: 3px double #062a52; }
@@ -6384,7 +6381,7 @@ function resetBookingForm() {
     advance_payment_date: today,
     company_name: '',
     business_source: 'walk_in',
-    nationality: '',
+    nationality: getCountryName('TZ'),
     id_type: '',
     id_number: '',
     vip_status: false,
@@ -6522,6 +6519,8 @@ const bookingOnBusinessDate = computed(
  *  already covered by a blocking stay that overlaps [check-in, check-out). */
 function roomAvailableForRange(room, checkInIso, checkOutIso, excludeReservationId = null) {
   if (!room || room.status === 'maintenance') return false
+  // A dirty/cleaning room cannot be sold until housekeeping releases it.
+  if (['dirty', 'cleaning'].includes(room.status)) return false
   // A room under STOP SELL is blocked for sale: it must not be offered in the
   // new-booking or walk-in pickers (review: "when a room is set at STOP SELL
   // it should appear on the receptionist dashboard that the room is blocked").
@@ -6770,6 +6769,13 @@ bindBlurValidation(
 
 const guestModal = ref(false)
 const guestForm = ref({})
+// Nationality follows the country picked for the guest's phone/address.
+watch(
+  () => guestForm.value.country_code,
+  (code) => {
+    if (code) guestForm.value.nationality = getCountryName(code)
+  },
+)
 const guestErrors = ref({})
 const guestTouched = ref(false)
 const guestSnapshot = ref({})
@@ -6782,7 +6788,7 @@ function openGuestModal() {
     phone: '',
     country_code: 'TZ',
     email: '',
-    nationality: '',
+    nationality: getCountryName('TZ'),
     id_type: '',
     id_number: '',
     vip_status: false,
@@ -6822,11 +6828,9 @@ bindBlurValidation(watch, () => guestForm.value, guestSnapshot, guestTouched, gu
 
 const tasksModal = ref(false)
 const tasks = ref([])
-const taskForm = ref({})
 
 /** Opens the housekeeping panel and loads open tasks. */
 async function openTasksModal(roomId = null) {
-  taskForm.value = { room_id: roomId || rooms.value[0]?.room_id || null, priority: 'normal' }
   actionError.value = ''
   tasksModal.value = true
   try {
@@ -6841,20 +6845,9 @@ async function openTasksModal(roomId = null) {
   }
 }
 
-/** Creates a cleaning task for the selected room. */
-async function submitTask() {
-  if (!taskForm.value.room_id) return
-  await runAction(() =>
-    housekeepingApi.store({ ...taskForm.value, task_type: 'cleaning' }),
-  )
-  await openTasksModal()
-}
-
 /* ---------------- Room status modal ---------------- */
 
 const roomModal = ref(null)
-const roomStatuses = ['available', 'occupied', 'dirty', 'cleaning', 'maintenance']
-
 /** Opens the room details / status panel for the clicked room cell. */
 function openRoomModal(room, event = null) {
   if (isHousekeepingStaff.value) {
@@ -6876,11 +6869,68 @@ function openRoomModal(room, event = null) {
   roomModal.value = room
 }
 
-/** Changes the room's housekeeping status. */
-async function setRoomStatus(status) {
-  if (!roomModal.value || roomModal.value.status === status) return
+/**
+ * Automatic base status of a room. Occupancy comes from the stays (a checked-in
+ * guest still occupies the room after their departure time until check-out),
+ * stop-sell/maintenance is the blocked state, and a future booking reserves it.
+ */
+function roomBaseStatus(room) {
+  if (!room) return 'vacant'
+  if (room.status === 'maintenance') return 'blocked'
+  const today = businessToday()
+  const inRoom = (reservations.value || []).filter((r) => reservationRoomId(r) === room.room_id)
+  const staying = inRoom.find((r) => {
+    const { arrival, departure } = reservationDates(r)
+    return r.status === 'checked_in' && arrival && arrival <= today && (!departure || departure > today)
+  })
+  if (staying) return 'occupied'
+  const dueOut = inRoom.find((r) => {
+    const { arrival, departure } = reservationDates(r)
+    return r.status === 'checked_in' && arrival && arrival <= today && departure && departure <= today
+  })
+  if (dueOut) return 'due_out'
+  const reserved = inRoom.find((r) => {
+    const { arrival } = reservationDates(r)
+    return ['pending', 'confirmed'].includes(r.status) && arrival && arrival >= today
+  })
+  return reserved ? 'reserved' : 'vacant'
+}
+
+const roomBaseStatusOptions = computed(() => [
+  { key: 'occupied', label: t('stayview.occupied') },
+  { key: 'vacant', label: t('stayview.vacant') },
+  { key: 'due_out', label: t('stayview.dueOut') },
+  { key: 'reserved', label: t('stayview.reserved') },
+  { key: 'blocked', label: t('stayview.blocked') },
+])
+
+function roomIsDirty(room) {
+  return ['dirty', 'cleaning'].includes(room?.status)
+}
+
+/** Marks the room clean: occupied rooms stay occupied, vacant ones go available. */
+async function setRoomClean() {
+  if (!roomModal.value) return
+  const base = roomBaseStatus(roomModal.value)
+  const status = ['occupied', 'due_out'].includes(base) ? 'occupied' : 'available'
+  if (roomModal.value.status === status) return
   await runAction(() => roomApi.updateStatus(roomModal.value.room_id, { status }))
-  if (!actionError.value) roomModal.value = null
+  if (!actionError.value) roomModal.value = { ...roomModal.value, status }
+}
+
+/** Marks the room dirty without touching the automatic base status. */
+async function setRoomDirty() {
+  if (!roomModal.value || roomIsDirty(roomModal.value)) return
+  await runAction(() => roomApi.updateStatus(roomModal.value.room_id, { status: 'dirty' }))
+  if (!actionError.value) roomModal.value = { ...roomModal.value, status: 'dirty' }
+}
+
+/** Blocks/unblocks a room for maintenance. */
+async function toggleRoomBlocked() {
+  if (!roomModal.value) return
+  const status = roomModal.value.status === 'maintenance' ? 'available' : 'maintenance'
+  await runAction(() => roomApi.updateStatus(roomModal.value.room_id, { status }))
+  if (!actionError.value) roomModal.value = { ...roomModal.value, status }
 }
 
 /** Translates a room type with a graceful fallback to the raw value. */
@@ -6907,7 +6957,7 @@ let refreshTimer = null
  * on today's board to search for it again.
  */
 async function focusReservationFromQuery(attempt = 0) {
-  const q = route.query || {}
+  const q = route?.query || {}
   const targetId = q.reservation_id || q.res_id
   const hasTarget = targetId || q.room_id || q.room || q.guest_id
   if (!hasTarget) return
@@ -6937,7 +6987,7 @@ async function focusReservationFromQuery(attempt = 0) {
     const resp = await reservationApi.show(targetId)
     const r = resp?.data?.reservation
     if (r) openBarModal({ ...toPanelBar(r), halfStart: 0, halfEnd: 1, start: 2, span: 1, lane: 1 })
-  } catch (_) {
+  } catch {
     /* leave the user on the board */
   }
 }
@@ -8178,7 +8228,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   display: grid;
   grid-template-columns: repeat(28, 1fr);
   grid-template-rows: 1fr;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f6f8fa;
   min-height: 36px;
   height: 100%;
   position: relative;
@@ -8187,7 +8237,7 @@ onUnmounted(() => clearInterval(refreshTimer))
 
 .sv-cell-bg {
   height: 100%;
-  border-right: 1px solid #f5f5f5;
+  border-right: 1px dotted #e8edf2;
   grid-row: 1 / -1;
 }
 
@@ -8205,7 +8255,7 @@ onUnmounted(() => clearInterval(refreshTimer))
    bar ends here and the arriving guest's bar starts here on the lane below. */
 .sv-day-mid {
   grid-row: 1 / -1;
-  border-left: 1px solid transparent;
+  border-left: 1px dotted #f1f4f7;
   pointer-events: none;
   z-index: 0;
 }
@@ -9036,6 +9086,15 @@ onUnmounted(() => clearInterval(refreshTimer))
 
 .sv-status-btn:hover {
   border-color: #005eb8;
+}
+
+.sv-status-static {
+  cursor: default;
+  pointer-events: none;
+}
+
+.sv-status-static:hover {
+  border-color: #e5e7eb;
 }
 
 .sv-status-btn.active {
@@ -9925,6 +9984,73 @@ onUnmounted(() => clearInterval(refreshTimer))
 
 .sv-task-status {
   text-transform: capitalize;
+}
+
+/* Per-row three-dot action menu (teleported so the table can never clip it). */
+.sv-row-menu-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+}
+
+.sv-row-menu {
+  position: fixed;
+  min-width: 220px;
+  padding: 6px;
+  margin: 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
+}
+
+.sv-row-menu li {
+  margin: 0;
+  padding: 0;
+}
+
+.sv-row-menu li button,
+.sv-row-menu li a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+}
+
+.sv-row-menu li button i,
+.sv-row-menu li a i {
+  width: 16px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.sv-row-menu li button:hover,
+.sv-row-menu li a:hover {
+  background: #f0f6fc;
+  color: #005eb8;
+}
+
+.sv-row-menu li button.danger {
+  color: #c0392b;
+}
+
+.sv-row-menu li button.danger i {
+  color: #c0392b;
+}
+
+.sv-row-menu li button.danger:hover {
+  background: #fdecec;
+  color: #c0392b;
 }
 
 /* More actions dropdown. */

@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import HotelDashboard from '@/pages/dashboards/HotelDashboard.vue'
 import i18n from '@/locales/i18n'
@@ -79,7 +79,7 @@ async function mountDashboard() {
   const auth = useAuthStore()
   auth.user = { user_role: 'receptionist', full_name: 'Receptionist Vanessa' }
   vi.spyOn(window, 'open').mockImplementation(() => ({
-    document: { write: vi.fn(), close: vi.fn() },
+    document: { open: vi.fn(), write: vi.fn(), close: vi.fn() },
   }))
   for (const fn of api.created) fn.mockReset().mockResolvedValue({ data: {} })
   wrapper = mount(HotelDashboard, { global: { plugins: [i18n] } })
@@ -108,11 +108,11 @@ describe('folioBreakdown', () => {
 })
 
 describe('folio operations on the stay view', () => {
-  it('renders one view/print/send action per switcher row', async () => {
+  it('renders one view/print action per switcher row and no send action', async () => {
     await mountDashboard()
     expect(document.querySelectorAll('.sv-folio-view-btn')).toHaveLength(2)
     expect(document.querySelectorAll('.sv-folio-print-btn')).toHaveLength(2)
-    expect(document.querySelectorAll('.sv-folio-send-btn')).toHaveLength(2)
+    expect(document.querySelectorAll('.sv-folio-send-btn')).toHaveLength(0)
   })
 
   it('skips print buttons when the folio is still loading', async () => {
@@ -122,9 +122,19 @@ describe('folio operations on the stay view', () => {
     expect(document.querySelector('.sv-folio-print-btn').disabled).toBe(true)
   })
 
-  it('shows an edit button only for payment rows with a payment id', async () => {
+  it('offers payment edit from the row menu only when the payment has an id', async () => {
     await mountDashboard()
-    expect(document.querySelectorAll('.sv-folio-payment-edit')).toHaveLength(1)
+    const payments = wrapper.vm.folioEntries.filter((e) => e.kind === 'payment' && e.payment?.payment_id)
+    expect(payments).toHaveLength(1)
+
+    wrapper.vm.toggleEntryMenu(payments[0], {
+      currentTarget: { getBoundingClientRect: () => ({ right: 300, bottom: 100 }) },
+    })
+    await wrapper.vm.$nextTick()
+
+    const menu = document.querySelector('.sv-row-menu')
+    expect(menu).toBeTruthy()
+    expect(menu.textContent).toContain(i18n.global.t('stayview.paymentEdit'))
   })
 
   it('shows the editor identity under an edited payment', async () => {
@@ -149,14 +159,13 @@ describe('folio operations on the stay view', () => {
     wrapper.vm.paymentEditForm.amount = 120000
     wrapper.vm.paymentEditForm.payment_status = 'completed'
     wrapper.vm.paymentEditForm.notes = 'Corrected after re-count'
-    wrapper.vm.paymentEditForm.transaction_reference = 'T-101'
     await wrapper.vm.submitPaymentEdit()
     expect(api.paymentApi.paymentEdit).toHaveBeenCalledWith(7, {
       amount: 120000,
       payment_method: 'cash',
       payment_status: 'completed',
+      payment_provider: null,
       notes: 'Corrected after re-count',
-      transaction_reference: 'T-101',
     })
   })
 
@@ -289,7 +298,7 @@ describe('folio operations on the stay view', () => {
       amount: 25000,
       payment_method: 'cash',
       payment_provider: null,
-      transaction_reference: null,
+      payment_status: 'completed',
     })
   })
 
@@ -340,21 +349,11 @@ describe('folio operations on the stay view', () => {
     expect(wrapper.vm.transferredAway(501).size).toBe(0)
   })
 
-  it('refuses to send an invoice to a malformed guest e-mail', async () => {
+  it('does not expose a send-invoice action anywhere on the stay view', async () => {
     await mountDashboard()
-    wrapper.vm.activeBar = { ...activeBar, guestEmail: 'not-an-email' }
-    await wrapper.vm.$nextTick()
-    await wrapper.vm.sendFolioInvoice(wrapper.vm.activeBar)
+    expect(wrapper.vm.sendFolioInvoice).toBeUndefined()
+    expect(document.querySelector('.sv-folio-send-btn')).toBeNull()
     expect(api.invoiceApi.send).not.toHaveBeenCalled()
-    expect(wrapper.vm.actionError).toBeTruthy()
-  })
-
-  it('shows a readable message instead of a raw server error when the e-mail fails', async () => {
-    await mountDashboard()
-    api.invoiceApi.send.mockRejectedValueOnce({ response: { status: 500 } })
-    await wrapper.vm.sendFolioInvoice(activeBar)
-    expect(api.invoiceApi.send).toHaveBeenCalledWith(501, 'email')
-    expect(wrapper.vm.actionError).toContain('e-mail settings')
   })
 
   it('blocks post-to-creditors when the amount exceeds the folio balance', async () => {
@@ -560,6 +559,7 @@ describe('folio operations on the stay view', () => {
     expect(table).toBeTruthy()
     expect(table.textContent).toContain('TZS')
     await wrapper.vm.printInvoiceBreakdown()
+    await flushPromises()
     expect(window.open).toHaveBeenCalled()
     const win = window.open.mock.results[0].value
     const html = win.document.write.mock.calls[0][0]
@@ -584,6 +584,7 @@ describe('folio operations on the stay view', () => {
     }
     await wrapper.vm.openInvoicePreview(activeBar)
     await wrapper.vm.printInvoiceBreakdown()
+    await flushPromises()
     const html = window.open.mock.results[0].value.document.write.mock.calls[0][0]
     expect(html).toContain('Azure Bay Resort')
     expect(html).toContain('Bagamoyo, Tanzania')

@@ -850,7 +850,7 @@
           <dl class="detail-grid">
             <div>
               <dt>{{ $t('guests.fullName') }}</dt>
-              <dd>{{ detail.guest?.full_name || detail.guest_name || '—' }}</dd>
+              <dd>{{ detail.guest_name || detail.guest?.full_name || '—' }}</dd>
             </div>
             <div>
               <dt>{{ $t('guests.phone') }}</dt>

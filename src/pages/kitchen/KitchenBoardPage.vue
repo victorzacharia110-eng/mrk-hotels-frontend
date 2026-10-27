@@ -396,7 +396,7 @@ function filteredOrderItems(order) {
 }
 
 onUnmounted(() => {
-  if (pollTimer) clearInterval(pollTimer)
+  stopOrderUpdates?.()
 })
 </script>
 

@@ -28,7 +28,7 @@
     <div class="card" style="padding: 14px 20px; margin-bottom: 16px;">
       <div class="form-group" style="margin: 0;">
         <label>{{ $t('nightAudit.businessDate') }}</label>
-        <input v-model="selectedDate" type="date" class="input" style="max-width: 220px;" @change="load" />
+        <input v-model="selectedDate" type="date" class="input" style="max-width: 220px;" @change="userPickedDate = true; load" />
       </div>
     </div>
 
@@ -97,16 +97,7 @@
                 {{ statusLabel(p.payment_status) }}
               </span>
             </td>
-            <td>
-              <button
-                v-if="p.awaiting_confirmation"
-                class="btn btn-sm btn-primary"
-                :disabled="busy === p.payment_id"
-                @click="confirmPayment(p)"
-              >
-                <i class="fas fa-check"></i> {{ $t('payments.actionConfirm') }}
-              </button>
-            </td>
+            <td></td>
           </tr>
           <tr v-if="!payments.length && !loading">
             <td colspan="6" class="muted">{{ $t('payments.empty') }}</td>
@@ -125,7 +116,7 @@
           </button>
         </div>
         <div class="modal-body">
-          <div class="form-group">
+          <div v-if="!form.company_id" class="form-group">
             <label>{{ $t('payments.guest') }}</label>
             <select v-model="form.reservation_id" class="input" @change="form.company_id = null">
               <option :value="null">{{ $t('cashiering.selectGuest') }}</option>
@@ -138,7 +129,7 @@
             <label>{{ $t('cashiering.creditor') }}</label>
             <select v-model="form.company_id" class="input" @change="form.reservation_id = null">
               <option :value="null">{{ $t('cashiering.selectCreditor') }}</option>
-              <option v-for="c in companies.filter((x) => Number(x.current_balance ?? 0) > 0)" :key="c.company_id" :value="c.company_id">
+              <option v-for="c in companies.filter((x) => Number(x.current_balance ?? 0) > 1)" :key="c.company_id" :value="c.company_id">
                 {{ c.name }} · {{ $t('cashiering.owed') }} {{ fmt(c.current_balance) }}
               </option>
             </select>
@@ -159,10 +150,6 @@
               <option v-for="p in providersFor(form.payment_method)" :key="p" :value="p">{{ p.replace('_', ' ') }}</option>
             </select>
           </div>
-          <div v-if="form.payment_method === 'bank'" class="form-group">
-            <label>{{ $t('payments.transactionReference') }}</label>
-            <input v-model="form.transaction_reference" type="text" class="input" />
-          </div>
           <div class="form-group">
             <label>{{ $t('payments.paidBy') }}</label>
             <input v-model="form.paid_by" type="text" class="input" />
@@ -181,10 +168,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { companyApi, paymentApi, reservationApi } from '@/api'
 import { METHOD_CASH, requiresProvider, providersFor } from '@/utils/payments'
+import { useBusinessDateStore } from '@/stores/businessDate'
 
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -192,14 +180,14 @@ const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 
-const today = new Date().toISOString().slice(0, 10)
-const selectedDate = ref(today)
+const businessDateStore = useBusinessDateStore()
+const selectedDate = ref(businessDateStore.current)
+let userPickedDate = false
 const payments = ref([])
 const reservations = ref([])
 const companies = ref([])
 const loading = ref(false)
 const saving = ref(false)
-const busy = ref(null)
 const success = ref('')
 const error = ref('')
 const showModal = ref(false)
@@ -213,18 +201,18 @@ const methodOptions = [
   { value: 'clickpesa', label: 'ClickPesa' },
 ]
 
-const form = ref({ reservation_id: null, company_id: null, amount: null, payment_method: METHOD_CASH, payment_provider: null, paid_by: '', transaction_reference: '' })
+const form = ref({ reservation_id: null, company_id: null, amount: null, payment_method: METHOD_CASH, payment_provider: null, paid_by: '' })
 
 // Companies with an outstanding posted-folio balance — the creditors the
 // Cashiering Center is owed money by and can settle.
 const creditorsOwed = computed(() =>
-  companies.value.filter((c) => Number(c.current_balance ?? 0) > 0),
+  companies.value.filter((c) => Number(c.current_balance ?? 0) > 1),
 )
 
 const totals = computed(() => {
   const map = {}
   for (const p of payments.value) {
-    if (p.payment_status === 'completed' || p.payment_status === 'awaiting_confirmation') {
+    if (p.payment_status === 'completed') {
       map[p.payment_method] = (map[p.payment_method] || 0) + Number(p.amount)
     }
   }
@@ -253,7 +241,7 @@ function methodChanged() {
 
 function openRecord() {
   error.value = ''
-  form.value = { reservation_id: reservations.value[0]?.reservation_id || null, company_id: null, amount: null, payment_method: METHOD_CASH, payment_provider: null, paid_by: '', transaction_reference: '' }
+  form.value = { reservation_id: reservations.value[0]?.reservation_id || null, company_id: null, amount: null, payment_method: METHOD_CASH, payment_provider: null, paid_by: '' }
   showModal.value = true
 }
 
@@ -261,7 +249,7 @@ function openRecord() {
 // settlement can be received against a specific posted folio balance.
 function openSettleCreditor(c) {
   error.value = ''
-  form.value = { reservation_id: null, company_id: c.company_id, amount: Number(c.current_balance ?? 0) || null, payment_method: METHOD_CASH, payment_provider: null, paid_by: c.name, transaction_reference: '' }
+  form.value = { reservation_id: null, company_id: c.company_id, amount: Number(c.current_balance ?? 0) || null, payment_method: METHOD_CASH, payment_provider: null, paid_by: c.name }
   showModal.value = true
 }
 
@@ -297,7 +285,6 @@ async function savePayment() {
         amount,
         payment_method: form.value.payment_method,
         payment_provider: form.value.payment_provider ?? undefined,
-        transaction_reference: form.value.transaction_reference || undefined,
         paid_by: form.value.paid_by || undefined,
       })
     } else {
@@ -315,19 +302,16 @@ async function savePayment() {
   }
 }
 
-async function confirmPayment(p) {
-  busy.value = p.payment_id
-  error.value = ''
-  try {
-    await paymentApi.confirm(p.payment_id, {})
-    await load()
-    success.value = t('payments.confirmed')
-  } catch (err) {
-    error.value = err.response?.data?.message || t('payments.confirmReferencePrompt')
-  } finally {
-    busy.value = null
-  }
-}
+watch(
+  () => businessDateStore.current,
+  (date) => {
+    if (!userPickedDate && date) selectedDate.value = date
+  },
+)
 
-onMounted(load)
+onMounted(async () => {
+  await businessDateStore.ensureLoaded()
+  if (!userPickedDate) selectedDate.value = businessDateStore.current
+  await load()
+})
 </script>

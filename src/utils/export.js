@@ -9,7 +9,7 @@
 
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
 import { saveBlob } from './download'
 
 // Keys that add no value to a human-readable export sheet.
@@ -272,7 +272,7 @@ export function exportPDF(filename, rows, columns, title, options = {}) {
   const landscape = cols.length > 7
   const doc = new jsPDF({ orientation: landscape ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' })
   const startY = pdfHeading(doc, options.header, options.title || title, filename)
-  doc.autoTable({
+  autoTable(doc, {
     head: [cols.map((c) => c.label)],
     body: rows.map((row) =>
       cols.map((c) => {

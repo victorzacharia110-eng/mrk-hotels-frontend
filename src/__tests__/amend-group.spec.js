@@ -101,6 +101,8 @@ describe('Amend stay for a grouped booking', () => {
     wrapper.vm.amendForm.check_out_date = '2026-11-05'
     expect(wrapper.vm.amendIsGroup).toBe(true)
     expect(wrapper.vm.amendGroupRooms.map((r) => r.reservation_id)).toEqual(['r1', 'r2'])
+    // Ticking both rooms applies the new dates to the whole party.
+    wrapper.vm.amendSelectedRoomIds = ['r1', 'r2']
     await wrapper.vm.submitAmend()
 
     expect(api.reservationApi.groupAmend).toHaveBeenCalledTimes(1)
@@ -162,21 +164,16 @@ describe('Amend stay for a grouped booking', () => {
     wrapper.vm.openAmendModal(false)
     await wrapper.vm.$nextTick()
 
-    // Untick the primary so only the second room is amended. It is released,
-    // so the desk must confirm before anything is saved.
+    // Amending one room must not release the rest of the party.
     wrapper.vm.amendSelectedRoomIds = ['r2']
     wrapper.vm.amendForm.check_out_date = '2026-11-06'
     await wrapper.vm.submitAmend()
-
-    expect(api.reservationApi.groupAmend).not.toHaveBeenCalled()
-    expect(wrapper.vm.amendReleaseConfirm).toBe(true)
-
-    await wrapper.vm.confirmAmendRelease()
 
     expect(api.reservationApi.groupAmend).toHaveBeenCalledTimes(1)
     const [anchorId, payload] = api.reservationApi.groupAmend.mock.calls[0]
     expect(anchorId).toBe('r1')
     expect(payload.room_ids).toEqual(['r2'])
+    expect(payload.release_unselected).toBe(false)
   })
 
   it('leaves a released room unticked and re-includes it when ticked again', async () => {

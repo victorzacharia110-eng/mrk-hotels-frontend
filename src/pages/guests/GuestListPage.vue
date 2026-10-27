@@ -75,6 +75,23 @@
             @input="triggerSearch"
           />
         </div>
+        <div class="form-group">
+          <label>{{ $t('guests.alphabet') }}</label>
+          <SearchableSelect
+            v-model="filters.letter"
+            :options="letterOptions"
+            :empty-label="$t('common.all')"
+            @change="searchImmediately"
+          />
+        </div>
+        <div class="form-group">
+          <label>{{ $t('guests.registeredFrom') }}</label>
+          <input v-model="filters.created_from" type="date" class="input" @change="triggerSearch" />
+        </div>
+        <div class="form-group">
+          <label>{{ $t('guests.registeredTo') }}</label>
+          <input v-model="filters.created_to" type="date" class="input" @change="triggerSearch" />
+        </div>
         <div class="filter-actions">
           <button class="btn btn-secondary btn-sm" @click="clearFilters">
             <i class="fas fa-filter-circle-xmark"></i> {{ $t('common.clear') }}
@@ -202,6 +219,7 @@
               v-model:country-code="form.country_code"
               v-model:country="form.country"
               v-model:city="form.city"
+              city-as-dropdown
             />
 
             <!-- Identification is optional, but both halves go together. -->
@@ -368,7 +386,15 @@ const meta = ref({
   prev_page_url: null,
   next_page_url: null,
 })
-const filters = reactive({ search: '', vip: '', nationality: '' })
+const filters = reactive({ search: '', vip: '', nationality: '', letter: '', created_from: '', created_to: '' })
+
+const letterOptions = [
+  ...Array.from({ length: 26 }, (_, i) => {
+    const letter = String.fromCharCode(65 + i)
+    return { value: letter, label: letter }
+  }),
+  { value: '#', label: '#' },
+]
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
@@ -431,6 +457,9 @@ async function load(isCurrent = () => true) {
       search: filters.search,
       vip: filters.vip || undefined,
       nationality: filters.nationality,
+      letter: filters.letter || undefined,
+      created_from: filters.created_from || undefined,
+      created_to: filters.created_to || undefined,
       page: page.value,
       per_page: 15,
     })
@@ -451,6 +480,9 @@ function loadAllGuests() {
       search: filters.search,
       vip: filters.vip || undefined,
       nationality: filters.nationality,
+      letter: filters.letter || undefined,
+      created_from: filters.created_from || undefined,
+      created_to: filters.created_to || undefined,
       page,
       per_page: perPage,
     }),
@@ -472,6 +504,9 @@ function clearFilters() {
   filters.search = ''
   filters.vip = ''
   filters.nationality = ''
+  filters.letter = ''
+  filters.created_from = ''
+  filters.created_to = ''
   load()
 }
 
