@@ -190,6 +190,16 @@ describe('dark theme stylesheet', () => {
     }
   })
 
+  it('repaints the group-booking room picker, whose modal rows stayed white', () => {
+    // The picker styles live in HotelDashboard's scoped block, so their
+    // [data-v-…] attribute outranks the generic .sv-group-* dark rules.
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.sv-room-picker-modal \.sv-group-item \{[\s\S]*?background: #2a3942/)
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.sv-room-picker-modal \.sv-group-item\.selected \{[\s\S]*?background: #25323c/)
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.sv-room-picker-modal \.sv-group-selected \{[\s\S]*?background: #2a3942/)
+    expect(themeCss).toMatch(/html\[data-theme='dark'\] \.sv-room-picker-shell \.sv-room-picker-chip \{[\s\S]*?background: #2a3942/)
+    expect(themeCss).toContain("html[data-theme='dark'] .sv-room-picker-bar .sv-room-picker-count")
+  })
+
   it('repaints the shared neutral buttons, which were the last white surfaces', () => {
     expect(themeCss).toMatch(/html\[data-theme='dark'\] \.btn-secondary \{[\s\S]*?background: #2a3942/)
     expect(themeCss).toContain("html[data-theme='dark'] .btn-white")

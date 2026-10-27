@@ -1156,6 +1156,58 @@ html[data-theme='dark'] .sv-group-item { background: #2a3942; border-color: #374
 html[data-theme='dark'] .sv-group-item.selected { background: #25323c; border-color: #475569; }
 html[data-theme='dark'] .sv-group-selected { background: #2a3942; border-color: #374248; color: #e9edef; }
 
+html[data-theme='dark'] .sv-room-picker-modal .sv-group-item {
+  background: #2a3942;
+  border-color: #374248;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-room-picker-modal .sv-group-item.selected {
+  background: #25323c;
+  border-color: #475569;
+}
+
+html[data-theme='dark'] .sv-room-picker-modal .sv-group-selected {
+  background: #2a3942;
+  border-color: #374248;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-room-picker-modal .sv-group-col-head {
+  background: #2a3942;
+  border-color: #2f3b43;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-room-picker-modal .sv-group-primary-mark {
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .sv-room-picker-modal .sv-room-picker-sort {
+  color: #8696a0;
+}
+
+html[data-theme='dark'] .sv-room-picker-shell .sv-room-picker-chip {
+  background: #2a3942;
+  border-color: #374248;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .sv-room-picker-shell .sv-room-picker-chip.primary {
+  background: #25323c;
+  border-color: #475569;
+}
+
+html[data-theme='dark'] .sv-room-picker-shell .sv-room-picker-chip-primary {
+  color: #7cc0ff;
+}
+
+html[data-theme='dark'] .sv-room-picker-trigger .sv-room-picker-count,
+html[data-theme='dark'] .sv-room-picker-bar .sv-room-picker-count {
+  background: #2a3942;
+  color: #7cc0ff;
+}
+
 html[data-theme='dark'] .sv-search-hit i {
   color: #8696a0;
 }
