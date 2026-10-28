@@ -43,6 +43,13 @@
             </button>
             <img src="/MRK_logo_transparent.png" alt="MRK Hotels" class="app-header-logo" />
           </div>
+          <div class="public-header-mobile" v-else>
+            <button class="hamburger" :class="{ active: navOpen }" @click="navOpen = !navOpen"
+              :aria-expanded="navOpen" :aria-label="$t('nav.menuToggle')" aria-controls="mobile-menu">
+              <span></span><span></span><span></span>
+            </button>
+            <img src="/MRK_logo_transparent.png" alt="MRK Hotels" class="app-header-logo" />
+          </div>
 
           <button v-if="isAppMode" class="hamburger side-hamburger app-header-desktop-toggle" :class="{ active: sideOpen }"
             @click="sideOpen = !sideOpen" :aria-expanded="sideOpen" :aria-label="$t('nav.menuToggle')"
@@ -3335,6 +3342,11 @@ function formatNotifTime(iso) {
 .app-header-desktop-toggle { display: inline-flex; }
 @media (max-width: 900px) {
   .app-header-mobile { display: flex; }
+  .public-header-mobile { display: flex; }
   .app-header-logo-link { display: none; }
   .app-header-desktop-toggle { display: none; }
+  .main-header .logo:not(.drawer-brand) { display: none; }
+  .main-header .search-bar { display: none; }
+  .header-actions .header-lang,
+  .header-actions .header-theme { display: none; }
 }
