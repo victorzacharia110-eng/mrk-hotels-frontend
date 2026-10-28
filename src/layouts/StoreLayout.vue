@@ -35,13 +35,22 @@
       <!-- Main header: logo, directory search and account/language actions. -->
       <div class="main-header">
         <div class="container main-header-inner">
-          <button v-if="isAppMode" class="hamburger side-hamburger" :class="{ active: sideOpen }"
+          <div class="app-header-mobile" v-if="isAppMode">
+            <button class="hamburger side-hamburger" :class="{ active: sideOpen }"
+              @click="sideOpen = !sideOpen" :aria-expanded="sideOpen" :aria-label="$t('nav.menuToggle')"
+              aria-controls="staff-drawer">
+              <span></span><span></span><span></span>
+            </button>
+            <img src="/MRK_logo_transparent.png" alt="MRK Hotels" class="app-header-logo" />
+          </div>
+
+          <button v-if="isAppMode" class="hamburger side-hamburger app-header-desktop-toggle" :class="{ active: sideOpen }"
             @click="sideOpen = !sideOpen" :aria-expanded="sideOpen" :aria-label="$t('nav.menuToggle')"
             aria-controls="staff-drawer">
             <span></span><span></span><span></span>
           </button>
 
-          <router-link :to="homeLink" class="logo" @click="navOpen = false"
+          <router-link :to="homeLink" class="logo app-header-logo-link" @click="navOpen = false"
             :aria-label="$t('nav.portal') + ' — MRK Hotels'">
             <span class="logo-icon" aria-hidden="true"><i class="fas fa-hotel"></i></span>
             <span class="logo-text">MRK<span>Hotels</span></span>
@@ -314,7 +323,7 @@
       <div v-if="isAppMode && sideOpen" class="drawer-overlay" aria-hidden="true" @click="sideOpen = false"></div>
     </Transition>
     <Transition name="drawer-slide">
-      <aside v-if="isAppMode && sideOpen" id="staff-drawer" class="staff-drawer" :aria-label="$t('common.navigation')">
+      <aside v-if="isAppMode && sideOpen" id="staff-drawer" class="staff-drawer staff-drawer-mobile" :aria-label="$t('common.navigation')">
         <div class="drawer-head">
           <router-link :to="homeLink" class="logo drawer-brand" :aria-label="$t('nav.portal') + ' — MRK Hotels'"
             @click="sideOpen = false">
@@ -3304,3 +3313,28 @@ function formatNotifTime(iso) {
   color: #005eb8;
 }
 </style>
+
+@media (max-width: 900px) {
+  .staff-drawer-mobile .drawer-nav .drawer-group-title,
+  .staff-drawer-mobile .drawer-nav .drawer-link span,
+  .staff-drawer-mobile .drawer-nav .drawer-acc-subchild span,
+  .staff-drawer-mobile .drawer-nav .drawer-sub-link span {
+    display: inline-block !important;
+  }
+  .staff-drawer-mobile .drawer-nav .drawer-link i,
+  .staff-drawer-mobile .drawer-nav .drawer-group-title i,
+  .staff-drawer-mobile .drawer-nav .drawer-acc-toggle i,
+  .staff-drawer-mobile .drawer-nav .drawer-acc-subchild i {
+    width: 18px;
+    text-align: center;
+  }
+}
+
+.app-header-mobile { display: none; align-items: center; gap: 10px; }
+.app-header-logo { height: 28px; width: auto; }
+.app-header-desktop-toggle { display: inline-flex; }
+@media (max-width: 900px) {
+  .app-header-mobile { display: flex; }
+  .app-header-logo-link { display: none; }
+  .app-header-desktop-toggle { display: none; }
+}

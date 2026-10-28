@@ -267,8 +267,12 @@ const showNotifDropdown = ref(false)
 const profileOpen = ref(false)
 
 function toggleSidebar() {
-  if (window.matchMedia('(max-width: 900px)').matches) mobileOpen.value = !mobileOpen.value
-  else sidebarCollapsed.value = !sidebarCollapsed.value
+  if (window.matchMedia('(max-width: 900px)').matches) {
+    mobileOpen.value = !mobileOpen.value
+    sidebarCollapsed.value = false
+    return
+  }
+  sidebarCollapsed.value = !sidebarCollapsed.value
 }
 
 watch(() => route.fullPath, () => {
