@@ -5717,6 +5717,14 @@
       "myProfile": "Wasifu Wangu",
       "darkMode": "Hali ya Giza",
       "logout": "Ondoka"
+    },
+    "modal": {
+      "close": "Funga",
+      "cancel": "Ghairi",
+      "save": "Hifadhi",
+      "confirm": "Thibitisha",
+      "submit": "Wasilisha",
+      "ok": "Sawa"
     }
   },
   "paymentInstructionCard": {

@@ -5430,6 +5430,14 @@
       "hint": "Select an outlet to continue",
       "barType": "Bar",
       "restaurantType": "Restaurant"
+    },
+    "modal": {
+      "close": "Close",
+      "cancel": "Cancel",
+      "save": "Save",
+      "confirm": "Confirm",
+      "submit": "Submit",
+      "ok": "OK"
     }
   },
   "paymentInstructionCard": {
