@@ -185,10 +185,6 @@
     <div class="pos-main">
       <header class="pos-topbar">
         <div class="pos-topbar-main">
-          <button class="pos-mobile-menu" @click="toggleSidebar" :aria-label="$t('nav.menuToggle')">
-            <i class="fas fa-bars" aria-hidden="true"></i>
-          </button>
-          <img src="/MRK_logo_transparent.png" alt="MRK Hotels" class="pos-topbar-logo" />
           <button class="pos-collapse" @click="toggleSidebar" :aria-label="$t('nav.menuToggle')">
             <i class="fas fa-bars" aria-hidden="true"></i>
           </button>
@@ -782,11 +778,7 @@ html[data-theme='dark'] .sm-lang-btn.active {
     background: rgba(33, 33, 33, 0.5);
   }
   .sm-user-meta { display: none; }
-  .pos-page-title { display: none; }
-  .pos-topbar-logo { display: inline-block; height: 26px; width: auto; }
-  .pos-mobile-menu { display: inline-flex; align-items: center; justify-content: center; }
-  .pos-collapse { display: none; }
-  .pos-topbar-main { gap: 6px; }
+  .pos-page-title { font-size: 16px; }
 
   /* Header collapses into two tidy rows: title/identity above, then the
      working controls (date · outlet · waiter assignment) below. */
