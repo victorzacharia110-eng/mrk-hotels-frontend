@@ -783,10 +783,10 @@ html[data-theme='dark'] .sm-lang-btn.active {
   }
   .sm-user-meta { display: none; }
   .pos-page-title { display: none; }
-  .pos-topbar-logo { display: inline-block; }
+  .pos-topbar-logo { display: inline-block; height: 26px; width: auto; }
   .pos-mobile-menu { display: inline-flex; align-items: center; justify-content: center; }
   .pos-collapse { display: none; }
-  .pos-topbar-main { gap: 8px; }
+  .pos-topbar-main { gap: 6px; }
 
   /* Header collapses into two tidy rows: title/identity above, then the
      working controls (date · outlet · waiter assignment) below. */
