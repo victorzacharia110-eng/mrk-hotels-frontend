@@ -5348,7 +5348,8 @@
       "voided": "VOIDED",
       "title": "No Charge Orders",
       "newOrder": "New No Charge Order",
-      "dateTime": "Date/Time"
+      "dateTime": "Date/Time",
+      "none": "None"
     },
     "ingredients": {
       "menuItems": "Menu Items",
