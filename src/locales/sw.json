@@ -5221,7 +5221,8 @@
       "blockedBy": "Aliezuia",
       "unblock": "Fungua",
       "noData": "Hakuna vifaa vilivyozuiwa.",
-      "records": "Rekodi {n}"
+      "records": "Rekodi {n}",
+      "muted": "Ukurasa umetulia."
     },
     "txlock": {
       "title": "Kufuli la Miamala",
@@ -5687,7 +5688,8 @@
       "reminderTitle": "Funga Siku",
       "reminderText": "Oda unazoingiza zitahifadhiwa chini ya tarehe ya kazi: {today}.",
       "proceed": "Endelea na Funga Siku",
-      "confirm": "Thibitisha"
+      "confirm": "Thibitisha",
+      "workingDate": "Tarehe ya Kazi"
     },
     "orderTypes": {
       "dineIn": "IN HOUSE",
@@ -5695,6 +5697,25 @@
       "roomService": "Room Service",
       "delivery": "Delivery",
       "noCharge": "No Charge"
+    },
+    "shiftManager": {
+      "title": "Msimamizi wa Zamu",
+      "workingDate": "Tarehe ya Kazi",
+      "history": "Historia",
+      "currentShift": "Zamu ya Sasa"
+    },
+    "requisitions": {
+      "title": "Maombi",
+      "newRequisition": "Ombi Jipya"
+    },
+    "printer": {
+      "title": "Kichapishaji"
+    },
+    "profile": {
+      "userManual": "Mwongozo wa Mtumiaji",
+      "myProfile": "Wasifu Wangu",
+      "darkMode": "Hali ya Giza",
+      "logout": "Ondoka"
     }
   },
   "paymentInstructionCard": {

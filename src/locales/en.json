@@ -5378,12 +5378,27 @@
       "quantityHint": "Use decimals up to 2"
     },
     "itemLookup": {},
-    "requisitions": {},
-    "shiftManager": {},
-    "dayClose": {},
+    "requisitions": {
+      "title": "Requisitions",
+      "newRequisition": "New Requisition"
+    },
+    "shiftManager": {
+      "title": "Shift Manager",
+      "workingDate": "Working Date",
+      "history": "History",
+      "currentShift": "Current Shift"
+    },
+    "dayClose": {
+      "title": "Day Close",
+      "workingDate": "Working Date"
+    },
     "blockedDevices": {},
-    "printer": {},
-    "printSettings": {},
+    "printer": {
+      "title": "Printer"
+    },
+    "printSettings": {
+      "title": "Print Settings"
+    },
     "accountLookup": {},
     "order": {
       "account": "Account"
@@ -5391,6 +5406,29 @@
     "panelTitle": "POS",
     "topbar": {
       "switchOutlet": "Switch Outlet"
+    },
+    "devices": {
+      "title": "Blocked Devices",
+      "muted": "Page muted as requested.",
+      "records": "{n} record(s)",
+      "deviceName": "Device Name",
+      "blockedAt": "Blocked At",
+      "blockedBy": "Blocked By",
+      "unblock": "Unblock",
+      "noData": "No data"
+    },
+    "accounts": {
+      "title": "Account Lookup"
+    },
+    "lookup": {
+      "menus": "Menus",
+      "title": "Product Library"
+    },
+    "outletGate": {
+      "title": "Select Outlet",
+      "hint": "Select an outlet to continue",
+      "barType": "Bar",
+      "restaurantType": "Restaurant"
     }
   },
   "paymentInstructionCard": {
