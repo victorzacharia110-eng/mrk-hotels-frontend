@@ -632,7 +632,10 @@ const authStore = useAuthStore()
 // Permission gate. The reasoning behind the role list lives with it in
 // utils/menuAccess.js, which the cashier panel also reads so its link can never
 // point at a page this would refuse to open.
-const canEdit = computed(() => canManageMenu(authStore.user))
+const canEdit = computed(() => {
+  const role = authStore.user?.user_role
+  return ['hotel_admin', 'manager'].includes(role)
+})
 
 // Options for the availability field in the create/edit form.
 const formAvailabilityOptions = computed(() => [

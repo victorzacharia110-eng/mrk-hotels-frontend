@@ -7,6 +7,7 @@
 
 <template>
   <div class="sm-page">
+    <div class="alert" style="background:#f8fafc;color:#475569;border:1px solid #cbd5e1;margin-bottom:12px;"><i class="fas fa-volume-xmark" aria-hidden="true"></i> {{ $t("cashier.devices.muted") || "Page muted as requested." }}</div>
     <section class="panel">
       <div class="panel-head">
         <h2><i class="fas fa-shield-halved" aria-hidden="true"></i> {{ $t('cashier.devices.title') }}</h2>

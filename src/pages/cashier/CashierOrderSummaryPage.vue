@@ -257,6 +257,12 @@
           <strong>{{ money(drawerOrder?.total_amount ?? 0) }}</strong>
         </div>
 
+        <div v-if="drawerOrder && drawerOrder.status === 'cancelled'" class="drawer-void-info">
+          <div><strong>{{ $t('storeManager.common.reason') }}:</strong> {{ drawerOrder.void_reason || '—' }}</div>
+          <div v-if="drawerOrder.voided_by_name"><strong>{{ $t('common.by') }}:</strong> {{ drawerOrder.voided_by_name }}</div>
+          <div v-if="drawerOrder.voided_at"><strong>{{ $t('common.at') }}:</strong> {{ formatDateTime(drawerOrder.voided_at) }}</div>
+        </div>
+
         <div v-if="drawerOrder && drawerOrder.status !== 'cancelled' && voidConfirming" class="drawer-void">
           <label :for="voidReasonId">{{ $t('storeManager.common.reason') }}</label>
           <input :id="voidReasonId" v-model.trim="voidReason" type="text" maxlength="255" :disabled="savingVoid"
@@ -322,6 +328,14 @@
               :disabled="savingPay" @click="switchMode('room')">
               <i class="fas fa-bed" aria-hidden="true"></i> {{ $t('cashier.summary.settleModeRoom') }}
             </button>
+            <button type="button" class="mode-btn" :class="{ active: settleMode === 'creditor' }"
+              :disabled="savingPay" @click="switchMode('creditor')">
+              <i class="fas fa-file-invoice-dollar" aria-hidden="true"></i> {{ $t('cashier.summary.settleModeCreditor') || 'CREDITORS' }}
+            </button>
+            <button type="button" class="mode-btn" :class="{ active: settleMode === 'nocharge' }"
+              :disabled="savingPay" @click="switchMode('nocharge')">
+              <i class="fas fa-gift" aria-hidden="true"></i> {{ $t('cashier.summary.settleModeNoCharge') || 'NO CHARGES' }}
+            </button>
           </div>
 
           <template v-if="settleMode === 'room'">
@@ -337,6 +351,28 @@
                 required
               />
               <p class="room-post-hint"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.summary.roomPostHint') }}</p>
+            </div>
+          </template>
+          <template v-else-if="settleMode === 'creditor'">
+            <div class="pay-room">
+              <label>{{ $t('cashier.summary.creditorAccount') || 'Credit Account' }}</label>
+              <select v-model="selectedCreditAccountId" class="sm-input" :disabled="savingPay" required>
+                <option value="">{{ $t('common.select') }}</option>
+                <option v-for="acc in creditAccounts.filter(a => a.type === 'creditor' && a.is_active !== false)" :key="acc.credit_account_id" :value="acc.credit_account_id">
+                  {{ acc.name }}
+                </option>
+              </select>
+            </div>
+          </template>
+          <template v-else-if="settleMode === 'nocharge'">
+            <div class="pay-room">
+              <label>{{ $t('cashier.summary.noChargeAccount') || 'No Charge Account' }}</label>
+              <select v-model="selectedCreditAccountId" class="sm-input" :disabled="savingPay" required>
+                <option value="">{{ $t('common.select') }}</option>
+                <option v-for="acc in creditAccounts.filter(a => a.type === 'no_charge' && a.is_active !== false)" :key="acc.credit_account_id" :value="acc.credit_account_id">
+                  {{ acc.name }}
+                </option>
+              </select>
             </div>
           </template>
           <template v-else>
@@ -364,9 +400,9 @@
               {{ $t('common.cancel') }}
             </button>
             <button type="submit" class="btn btn-primary"
-              :disabled="savingPay || (settleMode === 'collect' && needsRef && !payRef) || (settleMode === 'room' && !postRoom)">
+              :disabled="savingPay || (settleMode === 'collect' && needsRef && !payRef) || (settleMode === 'room' && !postRoom) || ((settleMode === 'creditor' || settleMode === 'nocharge') && !selectedCreditAccountId)">
               <i class="fas fa-check"></i>
-              {{ savingPay ? $t('common.saving') : settleMode === 'room' ? $t('cashier.summary.roomPostConfirm') : $t('cashier.summary.settleConfirm') }}
+              {{ savingPay ? $t('common.saving') : settleMode === 'room' ? $t('cashier.summary.roomPostConfirm') : (settleMode === 'creditor' || settleMode === 'nocharge') ? ($t('cashier.summary.postToAccount') || $t('common.confirm')) : $t('cashier.summary.settleConfirm') }}
             </button>
           </div>
         </form>
@@ -472,6 +508,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { useOrderRealtime } from '@/composables/useOrderRealtime'
 import { PAYMENT_METHODS } from '@/utils/payments'
+import { creditAccountApi } from '@/api'
 import { restorePrinter, printerState, printerSupported } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { orderPrintLines } from '@/utils/orderPrint'
@@ -551,6 +588,8 @@ const transferHint = computed(() =>
 /** "collect" takes cash/mobile/bank; "room" posts the ticket to a folio. */
 const settleMode = ref('collect')
 const rooms = ref([])
+const creditAccounts = ref([])
+const selectedCreditAccountId = ref('')
 const postRoom = ref('')
 const roomPickId = `room-pick-${Date.now()}`
 const roomOptions = computed(() =>
@@ -659,13 +698,13 @@ watch([search, activeTab], () => {
 })
 
 const filterTabs = computed(() => [
-  { key: 'running', label: t('cashier.summary.tabRunning'), count: orders.value.filter(isRunning).length },
+  { key: 'running', label: t('cashier.summary.tabRunning') || 'RUNNING', count: orders.value.filter(isRunning).length },
   {
     key: 'settled',
-    label: t('cashier.summary.tabSettled'),
+    label: t('cashier.summary.tabSettled') || 'SETTLED',
     count: orders.value.filter(isSettled).length,
   },
-  { key: 'voided', label: t('cashier.summary.tabVoided'), count: orders.value.filter((o) => o.status === 'cancelled').length },
+  { key: 'voided', label: t('cashier.summary.tabVoided') || 'VOIDED', count: orders.value.filter((o) => o.status === 'cancelled').length },
 ])
 
 function chipFor(order) {
@@ -1076,7 +1115,10 @@ async function confirmSplit() {
  */
 function switchMode(mode) {
   if (mode === 'room' && !rooms.value.length) loadRooms()
+  if ((mode === 'creditor' || mode === 'nocharge') && !creditAccounts.value.length) loadCreditAccounts()
   settleMode.value = mode
+  selectedCreditAccountId.value = ''
+  payError.value = ''
 }
 
 /** Loads the in-house rooms the Room Service list uses (occupied rooms). */
@@ -1086,6 +1128,15 @@ async function loadRooms() {
     rooms.value = data.in_house_guests || []
   } catch {
     rooms.value = []
+  }
+}
+
+async function loadCreditAccounts() {
+  try {
+    const { data } = await creditAccountApi.index()
+    creditAccounts.value = data.credit_accounts || data.data || []
+  } catch {
+    creditAccounts.value = []
   }
 }
 
@@ -1103,6 +1154,7 @@ function closePay() {
 async function confirmPay() {
   if (!payingOrder.value) return
   if (settleMode.value === 'room') return confirmRoomPost()
+  if (settleMode.value === 'creditor' || settleMode.value === 'nocharge') return confirmAccountSettle()
   payError.value = ''
   savingPay.value = true
   try {
@@ -1113,6 +1165,30 @@ async function confirmPay() {
     })
     const settled = data.order
     settled._payment = data.payment
+    if (!settled.items?.length) {
+      const { data: detail } = await orderApi.show(settled.order_id)
+      settled.items = detail.order.items
+    }
+    payOpen.value = false
+    payingOrder.value = null
+    if (printStore.printOnSettle) doPrint(settled, 'receipt')
+    await load()
+  } catch (err) {
+    payError.value = err.response?.data?.message || t('common.actionFailed')
+  } finally {
+    savingPay.value = false
+  }
+}
+
+async function confirmAccountSettle() {
+  if (!payingOrder.value || !selectedCreditAccountId.value) return
+  payError.value = ''
+  savingPay.value = true
+  try {
+    const { data } = await orderApi.settleCreditAccount(payingOrder.value.order_id, {
+      credit_account_id: selectedCreditAccountId.value,
+    })
+    const settled = data.order
     if (!settled.items?.length) {
       const { data: detail } = await orderApi.show(settled.order_id)
       settled.items = detail.order.items

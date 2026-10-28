@@ -1808,6 +1808,7 @@ async function loadDashboard() {
   try {
     const res = await reportApi.staffDashboard({
       department: department.value,
+      outlet_id: selectedOutlet.value?.outlet_id || undefined,
       from: dashFrom.value || undefined,
       to: dashTo.value || undefined,
     })

@@ -1834,6 +1834,15 @@ export const orderApi = {
     return api.post(`${v1}/orders/${id}/bill-to-room`, data)
   },
   /**
+   * Posts an order to a registered creditor or no-charge account.
+   * @param {string|number} id - Order identifier.
+   * @param {object} data - { credit_account_id }
+   * @returns {Promise}
+   */
+  settleCreditAccount(id, data) {
+    return api.post(`${v1}/orders/${id}/settle-credit-account`, data)
+  },
+  /**
    * Kitchen marks a single line item ready or served without moving the whole order.
    * @param {string|number} id - Order identifier.
    * @param {string|number} itemId - Order item identifier.

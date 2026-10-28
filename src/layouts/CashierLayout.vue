@@ -92,7 +92,7 @@
                menu page lives in StoreLayout, so from the till it was only
                reachable by typing the URL. Sits next to Ingredients because that
                is the third level of the same tree. -->
-          <router-link v-if="canManageMenu" :to="{ name: 'hotel-menu' }" class="pos-nav-link"
+          <router-link v-if="['hotel_admin','manager'].includes(authStore.user?.user_role)" :to="{ name: 'hotel-menu' }" class="pos-nav-link"
             :class="{ active: isActive('/app/menu') }" @click="mobileOpen = false">
             <i class="fas fa-book-open" aria-hidden="true"></i>
             <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.menu') }}</span>
@@ -190,12 +190,45 @@
           </button>
           <h1 class="pos-page-title">{{ pageTitle }}</h1>
           <ThemeToggle />
-          <div class="sm-user">
-            <span class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
-            <span class="sm-user-meta">
-              <strong>{{ authStore.user?.name }}</strong>
-              <RoleBadge />
-            </span>
+          <div class="sm-user" style="position: relative;">
+            <button type="button" class="sm-user-trigger" @click="toggleProfile" aria-haspopup="true" :aria-expanded="profileOpen">
+              <span class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
+              <span class="sm-user-meta">
+                <strong>{{ authStore.user?.name }}</strong>
+                <RoleBadge />
+              </span>
+              <i class="fas fa-chevron-down" aria-hidden="true"></i>
+            </button>
+            <div v-if="profileOpen" class="sm-profile-backdrop" @click="closeProfile"></div>
+            <div v-if="profileOpen" class="sm-profile-panel">
+              <div class="sm-profile-head">
+                <span class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
+                <div>
+                  <strong>{{ authStore.user?.name }}</strong>
+                  <small>{{ authStore.user?.email }}</small>
+                </div>
+              </div>
+              <button type="button" class="sm-profile-link" @click="goToUserManual">
+                <i class="fas fa-book" aria-hidden="true"></i>
+                {{ $t('cashier.profile.userManual') || 'User Manual' }}
+              </button>
+              <button type="button" class="sm-profile-link" @click="goToProfile">
+                <i class="fas fa-user" aria-hidden="true"></i>
+                {{ $t('cashier.profile.myProfile') || 'My Profile' }}
+              </button>
+              <button type="button" class="sm-profile-link" @click="toggleDarkMode">
+                <i class="fas fa-moon" aria-hidden="true"></i>
+                {{ $t('cashier.profile.darkMode') || 'Dark Mode' }}
+              </button>
+              <div class="sm-profile-lang">
+                <button type="button" class="sm-lang-btn" :class="{ active: locale === 'en' }" @click="switchLanguage('en')">EN</button>
+                <button type="button" class="sm-lang-btn" :class="{ active: locale === 'sw' }" @click="switchLanguage('sw')">SW</button>
+              </div>
+              <button type="button" class="sm-profile-link sm-profile-logout" @click="handleLogout">
+                <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+                {{ $t('cashier.profile.logout') || $t('common.logout') }}
+              </button>
+            </div>
           </div>
         </div>
         <div class="pos-topbar-sub">
@@ -261,17 +294,19 @@ import { useOutletContext } from '@/composables/useOutletContext'
 import { restorePrinter } from '@/utils/printer'
 import RoleBadge from '@/components/RoleBadge.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import { useThemeStore } from '@/stores/theme'
 import DayCloseReminderModal from '@/components/cashier/DayCloseReminderModal.vue'
 
 const route = useRoute()
 const router = useRouter()
-const { t, d } = useI18n()
+const { t, d, locale } = useI18n()
 const authStore = useAuthStore()
 
 // Same gate the menu page itself uses, so the link can never be offered to a role
 // that page would turn away.
 const canManageMenu = computed(() => canManageMenuFor(authStore.user))
 const workingDateStore = useWorkingDateStore()
+const themeStore = useThemeStore()
 
 // The panel and the POS now share one outlet selection, so this layout reads
 // the same list rather than keeping a private copy that could disagree with it.
@@ -283,6 +318,36 @@ const mobileOpen = ref(false)
 // the others, so only the targeted group ever stays expanded. An empty string
 // means every group is closed. Ordering starts expanded as the home section.
 const openGroup = ref('ordering')
+const profileOpen = ref(false)
+
+function toggleProfile() {
+  profileOpen.value = !profileOpen.value
+}
+
+function closeProfile() {
+  profileOpen.value = false
+}
+
+function goToUserManual() {
+  closeProfile()
+  router.push({ name: 'user-manual' })
+}
+
+function goToProfile() {
+  closeProfile()
+  router.push({ name: 'hotel-profile' })
+}
+
+function toggleDarkMode() {
+  closeProfile()
+  themeStore.toggle()
+}
+
+function switchLanguage(lang) {
+  closeProfile()
+  locale.value = lang
+  localStorage.setItem('locale', lang)
+}
 
 /** Whether the given accordion group is currently expanded. */
 function isOpen(key) {
@@ -561,6 +626,134 @@ onMounted(() => {
 .sm-user-meta { display: flex; flex-direction: column; line-height: 1.2; }
 .sm-user-meta strong { font-size: 14px; color: var(--mrk-charcoal); }
 .sm-user-meta small { color: #64748b; font-size: 12px; }
+
+.sm-user-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.sm-user-trigger i {
+  color: #64748b;
+  font-size: 12px;
+}
+.sm-profile-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  background: transparent;
+}
+.sm-profile-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 260px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+  z-index: 96;
+  overflow: hidden;
+}
+.sm-profile-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.sm-profile-head strong {
+  display: block;
+  font-size: 14px;
+  color: var(--mrk-charcoal);
+}
+.sm-profile-head small {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+}
+.sm-profile-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 13px;
+  color: #334155;
+  cursor: pointer;
+  font-family: inherit;
+}
+.sm-profile-link i {
+  width: 18px;
+  text-align: center;
+  color: #64748b;
+}
+.sm-profile-link:hover {
+  background: #f8fafc;
+}
+.sm-profile-lang {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+}
+.sm-lang-btn {
+  flex: 1;
+  padding: 6px 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sm-lang-btn.active {
+  background: var(--mrk-blue-pale);
+  border-color: var(--mrk-blue);
+  color: var(--mrk-blue-deep);
+}
+.sm-profile-logout {
+  color: #dc2626;
+}
+.sm-profile-logout i {
+  color: #dc2626;
+}
+html[data-theme='dark'] .sm-profile-panel {
+  background: #1e293b;
+  border-color: #334155;
+}
+html[data-theme='dark'] .sm-profile-head {
+  border-bottom-color: #334155;
+}
+html[data-theme='dark'] .sm-profile-head strong {
+  color: #e2e8f0;
+}
+html[data-theme='dark'] .sm-profile-link {
+  color: #cbd5e1;
+}
+html[data-theme='dark'] .sm-profile-link:hover {
+  background: #334155;
+}
+html[data-theme='dark'] .sm-profile-lang {
+  border-color: #334155;
+}
+html[data-theme='dark'] .sm-lang-btn {
+  background: #1e293b;
+  border-color: #475569;
+  color: #cbd5e1;
+}
+html[data-theme='dark'] .sm-lang-btn.active {
+  background: rgba(18, 105, 189, 0.3);
+  border-color: #60a5fa;
+  color: #bfdbfe;
+}
 .pos-content { flex: 1; min-height: 0; overflow-y: auto; padding: 24px; }
 .gate-hint { color: #64748b; font-size: 13px; margin: 4px 0 16px; }
 .pos-backdrop { display: none; }

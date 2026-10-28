@@ -10,7 +10,7 @@
     <div class="lookup-layout">
       <section class="panel">
         <div class="panel-head">
-          <h2><i class="fas fa-layer-group" aria-hidden="true"></i> {{ $t('cashier.lookup.menus') }}</h2>
+          <h2>Product Library <i class="fas fa-layer-group" aria-hidden="true"></i> {{ $t('cashier.lookup.menus') }}</h2>
           <select v-model="department" class="sm-select sm" @change="load">
             <option value="">{{ $t('cashier.lookup.allMenus') }}</option>
             <option value="restaurant">{{ $t('cashier.lookup.kitchenMenu') }}</option>
@@ -43,7 +43,7 @@
 
       <section class="panel">
         <div class="panel-head">
-          <h2><i class="fas fa-book-open" aria-hidden="true"></i> {{ $t('cashier.lookup.title') }}</h2>
+          <h2>Product Library <i class="fas fa-book-open" aria-hidden="true"></i> {{ $t('cashier.lookup.title') }}</h2>
           <span class="item-count">{{ items.length }} {{ $t('cashier.lookup.items') }}</span>
         </div>
         <div class="table-scroll">

@@ -124,6 +124,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
 import { useAuthStore } from '@/stores/auth'
 import { posApi } from '@/api'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'

@@ -5172,17 +5172,17 @@
       "summaryGroup": "Muhtasari",
       "orderSummary": "Muhtasari wa Oda",
       "managerGroup": "Meneja",
-      "itemLookup": "Utafutaji wa Bidhaa",
+      "itemLookup": "PRODUCT LIBRARY",
       "ingredients": "Viungo",
       "shiftManager": "Meneja wa Zamu",
       "blockedDevices": "Vifaa Vilivyozuiwa",
-      "transactionLock": "Kufuli la Miamala",
+      "transactionLock": "NET LOCK",
       "accountLookup": "Akaunti ya Wadawa",
       "printerGroup": "Printa",
       "printer": "Printa",
       "printSettings": "Mipangilio ya Uchapishaji",
       "waiterAssignment": "Mgawanyo wa Waiters",
-      "requisitions": "Maombi ya Bidhaa",
+      "requisitions": "REQUISITIONS",
       "reports": "Ripoti",
       "reportBrowser": "Kivinjari cha Ripoti",
       "posReports": "Ripoti za Mhasibu",
@@ -5339,30 +5339,7 @@
       "stockNone": "Haikusajiliwi",
       "stockCount": "Stock {qty} {unit}"
     },
-    "dineIn": {
-      "title": "Kula Ndani",
-      "occupied": "Inatumika",
-      "vacant": "Huru",
-      "dateTime": "Tarehe / Saa",
-      "today": "Leo",
-      "running": "Oda zinazoendelea",
-      "runningCount": "{n} Zinaendelea",
-      "guest": "Mgeni",
-      "hr": "Saa",
-      "noTables": "Hakuna meza za mgahawa bado. Muulize meneja aziumbe.",
-      "newOrderFor": "Oda Mpya — {table}",
-      "openTicket": "Fungua tikiti",
-      "noRunning": "Hakuna oda zinazoendelea kwa meza hii.",
-      "takeOrder": "Chukua oda",
-      "transfer": "Sogeza tikiti kwenye meza nyingine",
-      "transferTitle": "Sogeza tikiti kutoka {table}",
-      "transferHint": "Chagua meza huru au ile iliyo tayari chini ya mhudumu huyu. Meza lengwa haipaswi kuwa na tikiti ya mhudumu mwingine.",
-      "transferTarget": "Meza lengwa",
-      "transferPlaceholder": "Chagua meza",
-      "moveTicket": "Sogeza Tikiti",
-      "transferred": "Tikiti imesogezwa kwenye {table}.",
-      "noTransferTargets": "Hakuna meza huru za kusogezea tikiti hii."
-    },
+    "dineIn": "IN HOUSE",
     "waiters": {
       "title": "Waiters",
       "none": "Hajupangwa",
@@ -5418,29 +5395,7 @@
       "vsPrice": "dhidi ya bei ya mauzo",
       "noIngredients": "Hakuna viungo vilivyounganishwa bado. Ongeza ili kuanza kufuatilia hifadhi."
     },
-    "takeAway": {
-      "title": "Chukua Nje",
-      "newOrder": "Oda Mpya ya Kuchukua Nje",
-      "hint": "Mauzo ya kaunta bila meza. Bofya Oda Mpya ya Kuchukua Nje kutengeneza tiketi.",
-      "tabAll": "Zote",
-      "tabPreparing": "Zinazoandaliwa",
-      "tabReady": "Ziwe Tayari",
-      "tabCompleted": "Zimekamilika",
-      "guest": "Mteja",
-      "none": "Hakuna oda za kuchukua nje.",
-      "status": {
-        "pending": "Inasubiri",
-        "in_progress": "Inaendelea",
-        "processing": "Inachakatwa",
-        "preparing": "Inaandaliwa",
-        "ready": "Tayari",
-        "served": "Tayari",
-        "completed": "Imekamilika"
-      },
-      "dateTime": "Tarehe / Muda",
-      "previousOrders": "Maagizo ya awali",
-      "today": "Leo"
-    },
+    "takeAway": "TAKE OUT",
     "roomService": {
       "title": "Huduma ya Chumba — Wageni Ndani",
       "room": "Chumba",
@@ -5689,6 +5644,13 @@
       "reminderText": "Oda unazoingiza zitahifadhiwa chini ya tarehe ya kazi: {today}.",
       "proceed": "Endelea na Funga Siku",
       "confirm": "Thibitisha"
+    },
+    "orderTypes": {
+      "dineIn": "IN HOUSE",
+      "takeAway": "TAKE OUT",
+      "roomService": "Room Service",
+      "delivery": "Delivery",
+      "noCharge": "No Charge"
     }
   },
   "paymentInstructionCard": {

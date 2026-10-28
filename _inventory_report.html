@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Inventory Panel — Problems, Fixes and Where to Find Them</title>
+<style>
+@page {
+  size: A4;
+  margin: 18mm 16mm 17mm 16mm;
+  @top-left { content: "MRK Hotels · Inventory Panel"; font-size: 8pt; color: #94a3b8; }
+  @top-right { content: "v1.0.159 · 28 October 2026"; font-size: 8pt; color: #94a3b8; }
+  @bottom-center { content: "Page " counter(page) " of " counter(pages); font-size: 8pt; color: #94a3b8; }
+}
+@page cover {
+  margin: 0;
+  @top-left { content: none; } @top-right { content: none; } @bottom-center { content: none; }
+}
+* { box-sizing: border-box; }
+html { font-size: 10pt; }
+body { font-family: 'DejaVu Sans', 'Noto Sans', sans-serif; color: #1e293b; line-height: 1.38; margin: 0; }
+.cover {
+  page: cover; height: 297mm; padding: 28mm 24mm; color: #fff;
+  background: linear-gradient(160deg, #005EB8 0%, #003d77 68%, #062a52 100%);
+  display: flex; flex-direction: column; justify-content: center; text-align: center;
+}
+.cover .logo { width: 108px; height: 108px; margin: 0 auto 20px; background: #fff; border-radius: 50%; padding: 14px; box-shadow: 0 12px 30px rgba(0,0,0,.25); }
+.cover .logo img { width: 100%; height: 100%; display: block; }
+.cover .kicker { font-size: 10pt; letter-spacing: 3px; text-transform: uppercase; color: #bfdbfe; }
+.cover h1 { color: #fff; font-size: 30pt; margin: 8pt 0 4pt; }
+.cover .subtitle { font-size: 15pt; color: #e2e8f0; }
+.cover .rule { width: 90px; height: 3px; background: #60a5fa; margin: 17pt auto; border-radius: 2px; }
+.cover p { color: #e2e8f0; font-size: 10.5pt; margin: 4pt 0; }
+.cover .edition { display: inline-block; margin-top: 16pt; padding: 6pt 16pt; border: 1px solid rgba(255,255,255,.4); border-radius: 20px; font-size: 9.5pt; letter-spacing: 1px; color: #fff; }
+.section { page-break-before: always; }
+.section.first { page-break-before: auto; }
+h2 { font-size: 17pt; color: #005EB8; border-bottom: 2px solid #005EB8; padding-bottom: 3pt; margin: 0 0 6pt; }
+h3 { font-size: 12.5pt; color: #0f172a; margin: 11pt 0 4pt; }
+p { margin: 5pt 0 7pt; }
+.section-intro { color: #475569; margin-bottom: 7pt; }
+.doc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.eyebrow { font-size: 8pt; letter-spacing: 2px; text-transform: uppercase; color: #64748b; margin-bottom: 2pt; }
+.stamp { border: 1px solid #fcd34d; background: #fffbeb; color: #92400e; padding: 6pt 12pt; border-radius: 8px; text-align: center; font-size: 9pt; }
+.stamp b { font-size: 12pt; }
+.three { display: flex; gap: 8px; margin: 9pt 0 12pt; }
+.three > div { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 7px; padding: 8pt 9pt; }
+.three b { display: block; color: #005EB8; font-size: 8pt; letter-spacing: 1px; margin-bottom: 3pt; }
+.three span { font-size: 9.2pt; color: #475569; }
+.legend { margin: 7pt 0 12pt; }
+.path { margin: 5pt 0 2pt; }
+.step { display: inline-block; padding: 3pt 7pt; border-radius: 6px; background: #e0f2fe; color: #075985; border: 1px solid #7dd3fc; font-size: 8.2pt; line-height: 1.3; margin: 1.5pt 0; }
+.step.start { background: #005EB8; color: #fff; border-color: #005EB8; }
+.step.end { background: #dcfce7; color: #166534; border-color: #86efac; }
+.arrow { display: inline-block; color: #0284c7; font-weight: 700; margin: 0 5pt; }
+table { width: 100%; border-collapse: collapse; margin: 7pt 0; }
+th { background: #005EB8; color: #fff; text-align: left; padding: 5pt 7pt; font-size: 8.7pt; font-weight: 600; }
+td { border: 1px solid #e2e8f0; padding: 4pt 6pt; vertical-align: top; font-size: 8.7pt; }
+tr:nth-child(even) td { background: #f8fafc; }
+.summary td:last-child { white-space: nowrap; }
+.small-fixed, .small-partial { display: inline-block; padding: 2pt 7pt; border-radius: 10px; font-size: 8pt; font-weight: 700; }
+.small-fixed { background: #dcfce7; color: #166534; }
+.small-partial { background: #fef3c7; color: #92400e; }
+.issue { border: 1px solid #dbe3ee; border-radius: 9px; margin: 5pt 0 6pt; page-break-inside: avoid; overflow: hidden; }
+.issue-head { background: #f1f5f9; border-bottom: 1px solid #dbe3ee; padding: 4.5pt 8pt; display: flex; align-items: center; gap: 7px; }
+.issue-no { width: 20px; height: 20px; border-radius: 50%; background: #005EB8; color: #fff; font-weight: 700; text-align: center; line-height: 20px; font-size: 8.8pt; flex: none; }
+.issue-title { font-size: 10.7pt; font-weight: 700; color: #0f172a; flex: 1; }
+.badge { padding: 1.5pt 6pt; border-radius: 10px; font-size: 7.3pt; font-weight: 700; letter-spacing: .4px; }
+.badge.fixed { background: #dcfce7; color: #166534; }
+.badge.verified { background: #e0f2fe; color: #075985; }
+.badge.partial { background: #fef3c7; color: #92400e; }
+.source { color: #64748b; font-size: 7.7pt; white-space: nowrap; }
+.issue-table th { width: 98px; background: #f8fafc; color: #005EB8; border-bottom: 1px solid #e2e8f0; font-size: 7.4pt; letter-spacing: .4px; vertical-align: top; }
+.issue-table td { border-left: 0; border-right: 0; }
+.issue-table tr:last-child td { border-bottom: 0; }
+.note { margin-top: 4pt; background: #eff6ff; border-left: 3px solid #005EB8; padding: 5pt 7pt; color: #1e40af; font-size: 8.2pt; border-radius: 0 5px 5px 0; }
+.note.wide { margin: 10pt 0; }
+.worked-table th { background: #166534; }
+.worked-table td { background: #f0fdf4; }
+.deploy-line { margin-top: 10pt; background: #f1f5f9; border: 1px solid #dbe3ee; border-radius: 7px; padding: 7pt 9pt; font-size: 8.8pt; color: #334155; }
+.tech td, .verify td { font-size: 8.0pt; padding: 4pt 6pt; }
+.tech th, .verify th { font-size: 8.0pt; padding: 4pt 6pt; }
+.tech tr, .verify tr { page-break-inside: avoid; }
+.tech code, .verify code, .deploy-line code { font-family: 'DejaVu Sans Mono', monospace; font-size: 7.8pt; background: #f1f5f9; padding: 1pt 3pt; border-radius: 3px; }
+.small { color: #64748b; font-size: 8.4pt; }
+</style></head><body>
+
+    <section class="cover">
+      <div class="logo"><img src="file:///home/victor/Documents/Projects/Frontends/VueFrontends/mrk-hotels-frontend/docs/MRK_logo.png" alt="MRK Hotels"></div>
+      <div class="kicker">MRK Hotels · Inventory</div>
+      <h1>Inventory Panel</h1>
+      <div class="subtitle">Problems, Fixes and — Where to Find Them — in the system</div>
+      <div class="rule"></div>
+      <p>A plain-language guide for store managers, store keepers and management.<br>Every item from the inventory review, with the screen path to reach the change.</p>
+      <div class="edition">v1.0.159 &nbsp;·&nbsp; 28 October 2026</div>
+    </section>
+
+    <section class="section first">
+      <div class="doc-head">
+        <div><div class="eyebrow">Review report</div><h2>What this document covers</h2></div>
+        <div class="stamp">REVIEW<br><b>BUILD</b></div>
+      </div>
+      <p>This report follows the original <b>Inventory Panel</b> review. Each issue is shown in three parts:</p>
+      <div class="three">
+        <div><b>THE PROBLEM</b><span>What was wrong in the store.</span></div>
+        <div><b>THE FIX</b><span>What changed in the system.</span></div>
+        <div><b>WHERE TO FIND IT</b><span>The buttons to click after deployment.</span></div>
+      </div>
+      <h3>How to read the arrow paths</h3>
+      <p>The blue boxes show the order of clicks. Dark blue is where you start; the green box is what you should see or do last.</p>
+      <div class="legend">
+        <span class="step start">Store Manager</span><span class="arrow">→</span><span class="step">Inventory</span><span class="arrow">→</span><span class="step">Stock Adjustment</span><span class="arrow">→</span><span class="step end">Add</span>
+      </div>
+      <h3>At a glance</h3>
+      <table class="summary">
+        <tr><th>Area</th><th>What changed</th><th>Result</th></tr>
+        <tr><td>Dashboard &amp; sidebar</td><td>Profile menu, outlet gating, quick actions, low-stock cap</td><td><span class="small-fixed">Fixed</span></td></tr>
+        <tr><td>Purchase orders</td><td>Business/delivery dates, PO numbering, item picker, voided print</td><td><span class="small-fixed">Fixed</span></td></tr>
+        <tr><td>Goods received</td><td>Supplier search, date, GRN numbering, open-PO filter</td><td><span class="small-fixed">Fixed</span></td></tr>
+        <tr><td>Expenses</td><td>One date, categories, void reason, particular, reference</td><td><span class="small-fixed">Fixed</span></td></tr>
+        <tr><td>Cash register</td><td>Business date, cash-expense filter, floats, Current Cash removed</td><td><span class="small-fixed">Fixed</span></td></tr>
+        <tr><td>Department indents</td><td>One date, outlet filter, In Stock column, detail actions</td><td><span class="small-fixed">Fixed</span></td></tr>
+        <tr><td>Low stock</td><td>Calendar removed, filters, mass reorder to purchase order</td><td><span class="small-fixed">Fixed</span></td></tr>
+        <tr><td>Stock count</td><td>Business-date filter, category column, item search, variance reasons, dirty guard</td><td><span class="small-fixed">Fixed</span></td></tr>
+        <tr><td>Stock adjustment</td><td>Sheet list, reason filter, AD numbering, print/share/void</td><td><span class="small-fixed">Fixed</span></td></tr>
+        <tr><td>Stock transfers</td><td>Outlet-to-outlet, full item picker, SI units, cost value, signatures</td><td><span class="small-fixed">Fixed</span></td></tr>
+        <tr><td>Reports &amp; Back Office</td><td>Flat navigation, category, SI-unit and expense-category masters</td><td><span class="small-fixed">Fixed</span></td></tr>
+      </table>
+      <div class="note wide"><b>All review areas are now closed.</b> The follow-up pass finished the stock-count date filter, category column, item search, variance reasons and Save guard, and replaced department transfers with outlet-to-outlet transfers, a full item picker, SI-unit conversion, Cost Value and the three signature lines. The implementation passes the full frontend and API suites; nothing here is marked Partial.</div>
+      <div class="deploy-line"><b>Build status:</b> implemented, tested, committed and pushed — <b>not yet deployed</b>. Frontend commit <code>279141b</code>; API commit <code>29e885e</code>. The live site remains on the previously deployed version until the release is approved.</div>
+    </section>
+
+    <section class="section">
+      <h2>1. Dashboard and navigation</h2>
+      <p class="section-intro">These fixes cover the top bar, the outlet picker, the dashboard shortcuts and the low-stock summary.</p>
+      
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">1</div>
+        <div class="issue-title">Top-right profile menu</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Dashboard</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>Log out, user manual, language and dark mode were split around the top bar, and the words <b>STORE MANAGER</b> took space without adding an action.</td></tr>
+        <tr><th>THE FIX</th><td>The label is gone. The avatar now opens one menu with <b>User Manual</b>, <b>My Profile</b>, <b>Dark Mode</b>, <b>English / Swahili</b> and <b>Log Out</b>, matching the front-desk panel.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Store Manager</span><span class="arrow">→</span><span class="step">Top-right avatar</span><span class="arrow">→</span><span class="step end">User Manual / My Profile / Dark Mode / EN–SW / Log Out</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">2</div>
+        <div class="issue-title">Outlet selection only when it matters</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Dashboard</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The outlet picker appeared even when the property had only one store outlet, where it cannot change anything.</td></tr>
+        <tr><th>THE FIX</th><td>The header picker and the post-login outlet gate now appear only when the property has <b>more than one outlet</b>. A single outlet is selected silently. The Stock Transfers link is also hidden until a second outlet exists.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Store Manager</span><span class="arrow">→</span><span class="step">Header outlet picker</span><span class="arrow">→</span><span class="step end">Shown only for multi-outlet properties</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">3</div>
+        <div class="issue-title">Dashboard quick actions</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Dashboard</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The dashboard offered <b>New Requisition</b>, which sends the store manager into the requisition screen even though the store receives requisitions rather than writing them.</td></tr>
+        <tr><th>THE FIX</th><td>The button is replaced with <b>New Purchase Order</b>. New Item, Record Goods Received and New Supplier remain, so the four shortcuts match the store manager’s actual work.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Store Manager → Dashboard</span><span class="arrow">→</span><span class="step">Quick actions</span><span class="arrow">→</span><span class="step end">New Purchase Order</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">4</div>
+        <div class="issue-title">Low-stock table length</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Dashboard</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The dashboard low-stock table was long and pushed the rest of the page down.</td></tr>
+        <tr><th>THE FIX</th><td>The dashboard shows the first <b>5 low-stock items</b>. <b>View all</b> opens the full Low Stock page. The KPI cards are clickable and lead to the relevant lists.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Dashboard</span><span class="arrow">→</span><span class="step">Low Stock alerts</span><span class="arrow">→</span><span class="step">First 5 rows</span><span class="arrow">→</span><span class="step end">View all → Low Stock page</span></div></td></tr>
+      </table>
+    </article>
+    </section>
+
+    <section class="section">
+      <h2>2. Purchase orders</h2>
+      <p class="section-intro">Purchase orders now follow the business date, use a simple sequential reference, offer every registered item and print voided orders clearly.</p>
+      
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">5</div>
+        <div class="issue-title">Business date and delivery date</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Purchase Orders</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The purchase-order business date had to be set by hand, and the <b>X</b> beside the date cleared it and crashed the flow. The delivery date had the same clear control.</td></tr>
+        <tr><th>THE FIX</th><td>The business date now defaults from the shared <b>day-close</b> date, follows the calendar, and has no clear <b>X</b>. The list is filtered by the selected date. The delivery-date <b>X</b> is also removed and the calendar stays fully visible as <b>DD/MM/YYYY</b>.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Store Manager → Purchase Orders</span><span class="arrow">→</span><span class="step">Business date / Delivery date</span><span class="arrow">→</span><span class="step">No clear X</span><span class="arrow">→</span><span class="step end">List follows the selected date</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">6</div>
+        <div class="issue-title">Purchase-order numbering</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Purchase Orders</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>References used the property code and a random-looking suffix, for example <b>PO-MGH-2026-0016K</b>.</td></tr>
+        <tr><th>THE FIX</th><td>Purchase orders now use a sequential per-hotel, per-year reference: <b>PO-2026-0001</b>. The format continues cleanly into the next year.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Purchase Orders</span><span class="arrow">→</span><span class="step">New purchase order</span><span class="arrow">→</span><span class="step">Save</span><span class="arrow">→</span><span class="step end">Reference: PO-2026-0001</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">7</div>
+        <div class="issue-title">Item picker and voided print</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Purchase Orders</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>Some registered items could not be found in the purchase-order dropdown, and a voided purchase order printed like a normal one.</td></tr>
+        <tr><th>THE FIX</th><td>The item picker loads every registered item through the paginated inventory endpoint and remains searchable. A voided order now prints with a clear <b>VOIDED</b> stamp and the void reason, so it cannot be mistaken for a live order.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">New Purchase Order</span><span class="arrow">→</span><span class="step">Add item → search any registered item</span><span class="arrow">→</span><span class="step end">Print a voided PO → VOIDED stamp</span></div></td></tr>
+      </table>
+    </article>
+    </section>
+
+    <section class="section">
+      <h2>3. Goods received</h2>
+      <p class="section-intro">Goods received is searchable by supplier, follows the business date, uses the GRN-year-number format and only offers orders that can still receive stock.</p>
+      
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">8</div>
+        <div class="issue-title">Search by supplier</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Goods Received</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The goods-received search did not find a GRN by supplier name, which is easier to remember than the reference number.</td></tr>
+        <tr><th>THE FIX</th><td>Search now runs on the server and matches <b>GRN number</b>, <b>supplier name</b> and <b>purchase-order number</b>. It is debounced and loads up to 100 records per request, then filters the result set in the table.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Store Manager → Goods Received</span><span class="arrow">→</span><span class="step">Search</span><span class="arrow">→</span><span class="step">Type the supplier name</span><span class="arrow">→</span><span class="step end">Open the GRN</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">9</div>
+        <div class="issue-title">Business date and calendar</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Goods Received</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The goods-received business date did not follow the day close, was cut off as “OCT 22…”, and had a clear <b>X</b> that disrupted the page.</td></tr>
+        <tr><th>THE FIX</th><td>The business date now follows the shared day close, is fully visible as <b>DD/MM/YYYY</b>, has no clear <b>X</b>, and filters the GRN list to the selected date.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Goods Received</span><span class="arrow">→</span><span class="step">Business date</span><span class="arrow">→</span><span class="step">Full date shown</span><span class="arrow">→</span><span class="step end">List follows the date</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">10</div>
+        <div class="issue-title">GRN numbering</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Goods Received</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>GRN references used the property code and an inconsistent suffix, for example <b>GRN-MGH-2026-00153</b>.</td></tr>
+        <tr><th>THE FIX</th><td>New GRNs use <b>GRN-2026-0001</b>: GRN, business year, then a four-digit sequential number that resets each year.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Goods Received</span><span class="arrow">→</span><span class="step">Record goods received</span><span class="arrow">→</span><span class="step">Save</span><span class="arrow">→</span><span class="step end">Reference: GRN-2026-0001</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">11</div>
+        <div class="issue-title">Purchase-order dropdown</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Goods Received</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The receive screen listed every purchase order, including orders that were already received, cancelled or voided.</td></tr>
+        <tr><th>THE FIX</th><td>The dropdown now offers only orders that can still receive stock: <b>pending</b>, <b>manager_approved</b>, <b>approved</b> and <b>partially_received</b>. Closed orders are excluded.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Record Goods Received</span><span class="arrow">→</span><span class="step">Purchase order dropdown</span><span class="arrow">→</span><span class="step end">Only open orders appear</span></div></td></tr>
+      </table>
+    </article>
+    </section>
+
+    <section class="section">
+      <h2>4. Expenses</h2>
+      <p class="section-intro">Expenses now sit on one business date, use registered categories, carry a reference and particular, and are voided with a reason.</p>
+      
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">12</div>
+        <div class="issue-title">One business date</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Expenses</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The expense calendar had blank intervals, so the user had to set the date by hand, and the list was not tied to the date selected.</td></tr>
+        <tr><th>THE FIX</th><td>The interval picker is replaced by one calendar that defaults to the shared <b>day-close</b> date. The expense list is filtered by that date and the total follows the same selection.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Store Manager → Expenses</span><span class="arrow">→</span><span class="step">Business date</span><span class="arrow">→</span><span class="step end">List and total follow the date</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">13</div>
+        <div class="issue-title">Categories and registration</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Expenses</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The category dropdown was cramped, and there was no clear place to register the categories that should appear in it.</td></tr>
+        <tr><th>THE FIX</th><td>The category control is a searchable selector with room for the full label. Categories are registered in <b>Back Office → Expense Categories</b>; the expense form also has a <b>New category</b> shortcut. The same list feeds validation and every expense dropdown.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Expenses → Category</span><span class="arrow">→</span><span class="step">New category</span><span class="arrow">→</span><span class="step end">or Back Office → Expense Categories</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">14</div>
+        <div class="issue-title">Void with a reason, not “type DELETE”</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Expenses</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>Deleting an expense required typing the word DELETE, gave no audit reason, and could not be done in bulk.</td></tr>
+        <tr><th>THE FIX</th><td>The delete action is now a <b>void</b>. It asks for a reason, keeps the record with void metadata, removes it from totals through the not-voided scope, and supports <b>bulk void</b> from the row selection.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Expenses</span><span class="arrow">→</span><span class="step">Select a row / rows</span><span class="arrow">→</span><span class="step">Delete selected</span><span class="arrow">→</span><span class="step">Enter the void reason</span><span class="arrow">→</span><span class="step end">Confirm</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">15</div>
+        <div class="issue-title">Particular, reference and search</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Expenses</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>Each expense had no reference code and no dedicated particular column; search only covered the description.</td></tr>
+        <tr><th>THE FIX</th><td>Expenses now carry <b>EXP-2026-0001</b> references and a <b>Particular</b> column. Search matches description, particular and reference, so a receipt can be found by any of them.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Expenses</span><span class="arrow">→</span><span class="step">Reference / Particular columns</span><span class="arrow">→</span><span class="step end">Search any of the three</span></div></td></tr>
+      </table>
+    </article>
+    </section>
+
+    <section class="section">
+      <h2>5. Cash register</h2>
+      <p class="section-intro">The register now follows the business date, exposes cash expenses for that date, and records every float with its own reference.</p>
+      
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">16</div>
+        <div class="issue-title">Business date and cash expenses</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Cash Register</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The cash register had no business-date calendar, and the cash-expense summary was not tied to the selected date.</td></tr>
+        <tr><th>THE FIX</th><td>A calendar now defaults to the shared <b>day-close</b> date. The cash-expense table and its total are loaded for that date, so <b>float − expenses = remaining</b> stays visible and consistent.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Store Manager → Cash Register</span><span class="arrow">→</span><span class="step">Business date</span><span class="arrow">→</span><span class="step end">Cash expenses for that date</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">17</div>
+        <div class="issue-title">Floats and the removed Current Cash</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Cash Register</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>There was no way to add a float, floats had no reference, and <b>Current Cash</b> duplicated figures without a clear purpose.</td></tr>
+        <tr><th>THE FIX</th><td><b>Current Cash</b> is removed. An <b>Add Float</b> button records each top-up with a sequential <b>FLT-2026-0001</b> reference. The summary shows Opening Float, Float Added, Cash Expenses and Remaining Float. Expected cash and remaining cash include the floats.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Cash Register → Add Float</span><span class="arrow">→</span><span class="step">Amount + optional reference</span><span class="arrow">→</span><span class="step">Float pills and KPI update</span><span class="arrow">→</span><span class="step end">Close register shows remaining float</span></div></td></tr>
+      </table>
+    </article>
+    </section>
+
+    <section class="section">
+      <h2>6. Department indents</h2>
+      <p class="section-intro">The requisition and indent-forward screens now share one date, an outlet filter, a Pending/Complete switch, an In Stock column and a single detail view for every action.</p>
+      
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">18</div>
+        <div class="issue-title">One business date</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Department Indents</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The date range used two calendars and a clear <b>X</b>, and did not follow the day close.</td></tr>
+        <tr><th>THE FIX</th><td>The page now has one calendar, no clear <b>X</b>, and the date is synced to the shared business date. The same date drives both the requisition and indent-forward lists.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Store Manager → Department Indents</span><span class="arrow">→</span><span class="step">Business date</span><span class="arrow">→</span><span class="step end">One calendar, synced to day close</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">19</div>
+        <div class="issue-title">Pending / Complete, outlet and columns</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Department Indents</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>Status was a dropdown, there was no outlet filter, and every row carried an Action column that crowded the table.</td></tr>
+        <tr><th>THE FIX</th><td>Status is a <b>Pending / Complete</b> segmented filter. Pending covers draft and pending; Complete covers forwarded, approved, fulfilled, rejected and voided. An <b>outlet dropdown</b> filters the list. The table shows S/N, date, department, outlet, items, cost value and status — no Action column.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Department Indents</span><span class="arrow">→</span><span class="step">Pending / Complete</span><span class="arrow">→</span><span class="step">Outlet filter</span><span class="arrow">→</span><span class="step end">Click the S/N reference to open a row</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">20</div>
+        <div class="issue-title">Requested, In Stock and supplied</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Department Indents</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The Answer & Forward screen showed only Requested and Reply, so the store keeper could not see what was actually on the shelf.</td></tr>
+        <tr><th>THE FIX</th><td>An <b>IN STOCK</b> column now sits between Requested and Supplied. It reads the selected outlet’s shelf balance, so the store keeper can answer against real stock.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Department Indents → Inbox</span><span class="arrow">→</span><span class="step">Open a pending request</span><span class="arrow">→</span><span class="step">Answer &amp; Forward</span><span class="arrow">→</span><span class="step end">Requested → IN STOCK → Supplied</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">21</div>
+        <div class="issue-title">Actions in the detail view</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Department Indents</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>View and Approve sat beside every row, while the actions that matter were split between the list and the detail screen.</td></tr>
+        <tr><th>THE FIX</th><td>The row action column and the <b>View</b> and <b>Approve</b> actions are removed. Clicking the reference or row opens the detail, where the applicable actions appear: Edit, Send, Recall, <b>Answer & Forward</b>, Accept, Reject, Void and Cancel. <b>Requested by</b>, outlet and cost value are visible in the same view.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Department Indents</span><span class="arrow">→</span><span class="step">Click the S/N reference</span><span class="arrow">→</span><span class="step">Detail actions</span><span class="arrow">→</span><span class="step end">Answer &amp; Forward / Accept / Reject / Void / Cancel</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">22</div>
+        <div class="issue-title">Cost value</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Department Indents</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The list had no reliable cost value for a requisition, and there was no way to show the value of what was actually sent.</td></tr>
+        <tr><th>THE FIX</th><td>Each line now exposes unit cost, requested cost value, supplied cost value and current stock. The list shows the requested value; once a request is forwarded, approved or fulfilled it shows the <b>supplied</b> value. The detail shows the same figure.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Department Indents</span><span class="arrow">→</span><span class="step">Cost value column</span><span class="arrow">→</span><span class="step end">Open a forwarded request → supplied value</span></div></td></tr>
+      </table>
+    </article>
+    </section>
+
+    <section class="section">
+      <h2>7. Low stock</h2>
+      <p class="section-intro">Low stock is now a focused reorder screen: no calendar, useful filters, row selection and a hand-off straight into a purchase order.</p>
+      
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">23</div>
+        <div class="issue-title">Remove the calendar, add filters</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Low Stock</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The Low Stock page carried a business-date calendar that had no effect, and there was no way to separate out-of-stock items from items below reorder level or by category.</td></tr>
+        <tr><th>THE FIX</th><td>The calendar is removed. Two filters are added: <b>All alerts / Out of stock / Below reorder</b>, plus a searchable <b>category</b> filter. The KPI cards show the counts for each state.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Inventory → Low Stock</span><span class="arrow">→</span><span class="step">Stock filter + Category filter</span><span class="arrow">→</span><span class="step end">List narrows immediately</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">24</div>
+        <div class="issue-title">Mass reorder to a purchase order</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Low Stock</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>Each row had a single Reorder action, and it linked to the requisition page instead of creating a purchase order.</td></tr>
+        <tr><th>THE FIX</th><td>The Action column is replaced by row checkboxes and a top <b>Reorder</b> button. Selected items are carried into a new <b>Purchase Order</b> with their quantities pre-filled; the user is no longer sent to a requisition.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Low Stock</span><span class="arrow">→</span><span class="step">Tick the items</span><span class="arrow">→</span><span class="step">Reorder</span><span class="arrow">→</span><span class="step end">New Purchase Order opens with the selected items</span></div></td></tr>
+      </table>
+    </article>
+    </section>
+
+    <section class="section">
+      <h2>8. Stock count</h2>
+      <p class="section-intro">Count sheets now have a business date that filters the API and history, a Category column, item-level search, per-variance reasons in a Description tab, a Save guard, TKE numbering, a Saved/Submitted split, autosave and Enter-to-next.</p>
+      
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">25</div>
+        <div class="issue-title">Business date on the count page</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Count</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The stock-count page had no business date, so a count could not be tied to the day it belonged to.</td></tr>
+        <tr><th>THE FIX</th><td>A business-date calendar defaults from day close. The API filters takes by <b>business_date</b>, and the page opens an active sheet only for the current business day. Selecting an earlier closed day shows that day’s count history instead of reopening a sheet. New counts can only be started on the current business day.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Inventory → Stock Count</span><span class="arrow">→</span><span class="step">Business date</span><span class="arrow">→</span><span class="step end">Current-day sheet / earlier-day history</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">26</div>
+        <div class="issue-title">Category filter and column</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Count</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The count sheet did not show which category each item belonged to, and categories could not be used to narrow the count.</td></tr>
+        <tr><th>THE FIX</th><td>A searchable category filter is on the toolbar and the count table now has a <b>Category</b> column. The Variance and Description tabs show only counted rows that differ from the system.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Stock Count</span><span class="arrow">→</span><span class="step">Category filter / Category column</span><span class="arrow">→</span><span class="step end">All rows / Variance / Description</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">27</div>
+        <div class="issue-title">TKE numbering</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Count</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>Count sheets used the property code and an inconsistent suffix, for example <b>TKE-MGH-2026-00079</b>.</td></tr>
+        <tr><th>THE FIX</th><td>New counts use <b>TKE-2026-0001</b>: TKE, business year, then a four-digit sequential number.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Stock Count</span><span class="arrow">→</span><span class="step">New count</span><span class="arrow">→</span><span class="step end">Sheet reference: TKE-2026-0001</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">28</div>
+        <div class="issue-title">Saved / Submitted and autosave</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Count</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The old OPEN / POSTED status dropdown was unclear, and a browser refresh or power cut could lose manual counts.</td></tr>
+        <tr><th>THE FIX</th><td>The history uses a <b>Saved / Submitted</b> segmented switch. Open sheets are saved; posted and voided sheets are submitted. The active sheet <b>autosaves every 15 seconds</b> and shows the last autosave time.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Stock Count</span><span class="arrow">→</span><span class="step">Saved / Submitted</span><span class="arrow">→</span><span class="step">Autosave indicator</span><span class="arrow">→</span><span class="step end">Counts survive a refresh</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">29</div>
+        <div class="issue-title">Save, Submit, Enter and variance notes</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Count</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>Save also triggered Submit, Enter did not move between count inputs, and there was nowhere to explain a variance.</td></tr>
+        <tr><th>THE FIX</th><td>Save now only saves and Submit posts the take. <b>Enter</b> moves to the next quantity input. The <b>Description</b> tab lists only differing rows and gives each one a <b>Variance reason</b> field. Save is disabled until a count or reason changes, and autosave only writes when the sheet is dirty.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Stock Count</span><span class="arrow">→</span><span class="step">Enter a count → Enter</span><span class="arrow">→</span><span class="step">Description tab → Reason</span><span class="arrow">→</span><span class="step end">Save Counted Quantities vs Submit</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">30</div>
+        <div class="issue-title">Search on the count page</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Count</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The search bar did not help locate an item inside a long count sheet.</td></tr>
+        <tr><th>THE FIX</th><td>The toolbar search filters the take history, and a separate search above the active sheet filters its item rows live by item name, category and description. The sheet is paginated 20 rows at a time so a long count stays usable.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Stock Count</span><span class="arrow">→</span><span class="step">Open sheet</span><span class="arrow">→</span><span class="step">Item search</span><span class="arrow">→</span><span class="step end">Type an item name or category</span></div></td></tr>
+      </table>
+    </article>
+    </section>
+
+    <section class="section">
+      <h2>9. Stock adjustment</h2>
+      <p class="section-intro">Stock adjustments are now sheet-based documents with a reason filter, AD-WS / AD-CM / AD numbering, a printable signature block, share and void.</p>
+      
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">31</div>
+        <div class="issue-title">Calendar, type and voided filters</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Adjustment</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The old page was a per-item workbench. It had no business date, no reason filter and no way to see only voided sheets.</td></tr>
+        <tr><th>THE FIX</th><td>The page now has one business-date calendar synced to day close, a <b>type</b> filter (All / Wastage / Consumption / Adjustment), a search box and an <b>All / Voided</b> segmented filter.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Inventory → Stock Adjustment</span><span class="arrow">→</span><span class="step">Business date</span><span class="arrow">→</span><span class="step">Type filter</span><span class="arrow">→</span><span class="step end">All / Voided</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">32</div>
+        <div class="issue-title">Add a sheet from the top right</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Adjustment</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>There was no single place to create a stock-adjustment document, choose its reason and give the reason for each item.</td></tr>
+        <tr><th>THE FIX</th><td><b>Add</b> sits at the top right. It opens a wide sheet with a type dropdown, Items and Description tabs, a searchable item picker, a quantity/current-level panel and a per-line reason. Adjustment type treats the entered quantity as the <b>new absolute level</b>; wastage and consumption remove the entered quantity.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Stock Adjustment → Add</span><span class="arrow">→</span><span class="step">Choose type</span><span class="arrow">→</span><span class="step">Add item + quantity + reason</span><span class="arrow">→</span><span class="step">Description tab</span><span class="arrow">→</span><span class="step end">Save</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">33</div>
+        <div class="issue-title">The sheet list</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Adjustment</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The previous table listed individual stock items instead of the adjustment sheets that were actually created.</td></tr>
+        <tr><th>THE FIX</th><td>The list now shows <b>S/N (clickable reference)</b>, date, type, item count, <b>cost value</b> and status. Clicking the reference opens the sheet, its before/after quantities and its per-line notes. Voided sheets show the void reason.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Stock Adjustment</span><span class="arrow">→</span><span class="step">Click the AD reference</span><span class="arrow">→</span><span class="step end">Sheet detail with before / after / cost</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">34</div>
+        <div class="issue-title">AD-WS / AD-CM / AD numbering</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Adjustment</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>Adjusted items appeared in the ledger without a reference that said which adjustment sheet caused them.</td></tr>
+        <tr><th>THE FIX</th><td>Each sheet gets a sequential reference: <b>AD-WS-2026-0001</b> for wastage, <b>AD-CM-2026-0001</b> for consumption and <b>AD-2026-0001</b> for a manual reset. Stock movements point back to the sheet, so the ledger can be traced to the document.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Stock Adjustment</span><span class="arrow">→</span><span class="step">Save a sheet</span><span class="arrow">→</span><span class="step end">Reference: AD-WS / AD-CM / AD</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">35</div>
+        <div class="issue-title">Print, share, void and audit</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Adjustment</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>There was no printable sheet with signature space, no way to share it, and no controlled way to reverse a wrong adjustment.</td></tr>
+        <tr><th>THE FIX</th><td>The detail view has <b>Print</b> (creator, supervisor and authorized-by signature lines, plus a VOIDED banner), <b>Share</b> (API email to a chosen address) and <b>Void</b> (required reason). Voiding reverses every line by its before/after difference and writes an audit entry.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Open an adjustment sheet</span><span class="arrow">→</span><span class="step">Print / Share / Void</span><span class="arrow">→</span><span class="step end">Void requires a reason</span></div><div class="note">The Share action currently sends a plain-text email summary. A PDF attachment can be added if the client wants the printed sheet itself in the mailbox.</div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">36</div>
+        <div class="issue-title">Wider sheet and ledger visibility</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Adjustment</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The adjustment area was cramped compared with Purchase Orders, and the stock ledger did not make the adjustment easy to identify.</td></tr>
+        <tr><th>THE FIX</th><td>The sheet opens in a <b>1180px</b> modal with a scrollable item table, like the purchase-order screen. The stock ledger records the movement type as <b>adjustment</b> and carries the sheet reference, business date and time.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Stock Adjustment</span><span class="arrow">→</span><span class="step">Open a sheet</span><span class="arrow">→</span><span class="step">Wide Items / Description layout</span><span class="arrow">→</span><span class="step end">Stock ledger → adjustment reference</span></div></td></tr>
+      </table>
+    </article>
+    </section>
+
+    <section class="section">
+      <h2>10. Stock transfers</h2>
+      <p class="section-intro">Transfers are hidden for single-outlet properties and now move stock from outlet to outlet. They follow the business date, use DRAFT/SENT and ST numbering, show Cost Value, convert SI units, and can be printed with three signatures, shared or voided.</p>
+      
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">37</div>
+        <div class="issue-title">Only when there is more than one outlet</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Transfers</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The Stock Transfers page was always visible, even for a property that had only one store outlet and therefore nothing to transfer to.</td></tr>
+        <tr><th>THE FIX</th><td>The page and its navigation item are hidden unless the property has <b>more than one outlet</b>. A single-outlet property sees an explanatory message instead of an unusable form.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Store Manager</span><span class="arrow">→</span><span class="step">Inventory</span><span class="arrow">→</span><span class="step end">Stock Transfers appears only for multi-outlet properties</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">38</div>
+        <div class="issue-title">Outlet-to-outlet, not department-to-department</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Transfers</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The review asked for transfers between outlet stores, not between unrelated departments such as kitchen and bar.</td></tr>
+        <tr><th>THE FIX</th><td>The form now uses searchable <b>From outlet</b> and <b>To outlet</b> pickers. The API stores both outlet ids and resolves each outlet to its linked stock shelf for the ledger, keeping the ledger correct while the document reads outlet-to-outlet. Older department ids remain accepted as a fallback.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Stock Transfers</span><span class="arrow">→</span><span class="step">Add</span><span class="arrow">→</span><span class="step end">From outlet / To outlet</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">39</div>
+        <div class="issue-title">Business date and DRAFT / SENT</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Transfers</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The page had no business date, and the status model did not match the two states the store uses.</td></tr>
+        <tr><th>THE FIX</th><td>A calendar defaults from day close and filters the list by date. The visible statuses are <b>DRAFT</b> and <b>SENT</b>; a sent transfer is stored as completed by the API and displayed as SENT.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Stock Transfers</span><span class="arrow">→</span><span class="step">Business date</span><span class="arrow">→</span><span class="step end">Status: DRAFT / SENT</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">40</div>
+        <div class="issue-title">ST numbering and save/send</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Transfers</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>Transfer references used an unrelated prefix, and Save/Send did not cleanly separate a draft from a dispatched transfer.</td></tr>
+        <tr><th>THE FIX</th><td>New transfers use <b>ST-2026-0001</b>. <b>Save Draft</b> keeps the transfer editable; <b>Save &amp; Send</b> dispatches it immediately. A draft can also be sent later from its row.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Stock Transfers → Add</span><span class="arrow">→</span><span class="step">Save Draft / Save &amp; Send</span><span class="arrow">→</span><span class="step end">Reference: ST-2026-0001</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">41</div>
+        <div class="issue-title">Item picker</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Transfers</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The item dropdown did not behave like the purchase-order picker: it was not searchable and did not expose the full item list or cost information.</td></tr>
+        <tr><th>THE FIX</th><td>The picker uses the paginated all-items loader, so every registered item is reachable. Each option shows category, shelf stock and unit cost. The form offers the item’s SI units, converts the entered quantity to base units, and previews the live cost (base quantity × unit cost) before saving.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Stock Transfers → Add</span><span class="arrow">→</span><span class="step">Item → Unit</span><span class="arrow">→</span><span class="step">Quantity + Notes</span><span class="arrow">→</span><span class="step end">Live stock and cost preview</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">42</div>
+        <div class="issue-title">List, print and share</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Stock Transfers</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>The old table showed individual item rows, and the transfer sheet had no share, void or signature layout.</td></tr>
+        <tr><th>THE FIX</th><td>The list shows S/N, reference, date, item summary, from outlet, to outlet, quantity, <b>Cost Value</b> and status. Print includes unit cost, line cost, total, and a VOIDED banner when applicable. The signature block reads <b>Creator</b>, <b>Supervisor</b> and <b>Authorized by</b>. Share uses the device share sheet or email; Void requires a reason.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Stock Transfers</span><span class="arrow">→</span><span class="step">Cost Value column</span><span class="arrow">→</span><span class="step">Row Print</span><span class="arrow">→</span><span class="step end">Creator / Supervisor / Authorized by</span></div></td></tr>
+      </table>
+    </article>
+    </section>
+
+    <section class="section">
+      <h2>11. Reports and Back Office</h2>
+      <p class="section-intro">Reports is a flat link, and Back Office is a launchpad for the category, SI-unit and expense-category masters.</p>
+      
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">43</div>
+        <div class="issue-title">Reports is a flat section</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Sidebar</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>Reports was a dropdown, which added a second click and made the sidebar feel congested.</td></tr>
+        <tr><th>THE FIX</th><td>Reports is now a single flat navigation link, like the front-desk report browser, so the report screen is one click away.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Store Manager sidebar</span><span class="arrow">→</span><span class="step end">Reports</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">44</div>
+        <div class="issue-title">Back Office is a launchpad, not a dropdown</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Back Office</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>Back Office was a dropdown that mixed master data into the main navigation.</td></tr>
+        <tr><th>THE FIX</th><td>Back Office is a flat page with tiles for Items, Suppliers, Categories, Expense Categories and SI Units. The same masters are also reachable directly from the sidebar.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Store Manager sidebar → Back Office</span><span class="arrow">→</span><span class="step end">Choose a master tile</span></div></td></tr>
+      </table>
+    </article>
+    <article class="issue">
+      <div class="issue-head">
+        <div class="issue-no">45</div>
+        <div class="issue-title">Categories, SI units and expense categories</div>
+        <div class="badge fixed">Fixed</div>
+        <div class="source">Back Office</div>
+      </div>
+      <table class="issue-table">
+        <tr><th>THE PROBLEM</th><td>Item, supplier and expense categories and SI units could only be typed into forms; there was no registry to create, view or manage them.</td></tr>
+        <tr><th>THE FIX</th><td>The <b>Categories</b> page manages inventory, supplier and expense vocabularies with add, edit, activate/deactivate and delete. The <b>SI Units</b> page registers and manages units and groups. The <b>Expense Categories</b> page manages the expense list. These registries feed the dropdowns and backend validation.</td></tr>
+        <tr><th>WHERE TO FIND IT</th><td><div class="path"><span class="step start">Back Office → Categories</span><span class="arrow">→</span><span class="step">Back Office → SI Units</span><span class="arrow">→</span><span class="step">Back Office → Expense Categories</span><span class="arrow">→</span><span class="step end">Add / Edit / Manage</span></div></td></tr>
+      </table>
+    </article>
+    </section>
+
+    <section class="section">
+      <h2>Already working — checked and kept</h2>
+      <p class="section-intro">These items from the review were already working. They were checked during this pass and left in place.</p>
+      <table class="worked-table">
+        <tr><th>Item</th><th>What was checked</th><th>Where</th></tr>
+        <tr><td>Dashboard summary</td><td>Stock items, low stock and pending requisitions summary tiles are present and wired to live data.</td><td>Dashboard → KPI cards</td></tr>
+        <tr><td>Purchase-order supplier search and status filter</td><td>Searching by supplier name and filtering by status returns the matching purchase orders.</td><td>Purchase Orders → Search / Status</td></tr>
+        <tr><td>Purchase-order supplier, address, notes and item buttons</td><td>Supplier selection, delivery address, notes, Add Item, Remove Item, Save and Cancel are present and usable.</td><td>New Purchase Order</td></tr>
+        <tr><td>Goods-received attachments</td><td>Delivery notes can be attached to a GRN as supporting documents.</td><td>Record Goods Received → Attachment</td></tr>
+        <tr><td>Expense search</td><td>Searching by description finds the expense; the backend also searches particular and reference.</td><td>Expenses → Search</td></tr>
+        <tr><td>Indent refresh</td><td>Refresh reloads the requisition and indent-forward lists.</td><td>Department Indents → Refresh</td></tr>
+        <tr><td>Cash-register status and opening float</td><td>The register shows its open/closed state and the opening float, and the shift history is retained.</td><td>Cash Register → Summary / Shifts</td></tr>
+        <tr><td>Stock ledger</td><td>Stock movements from receipts, transfers, takes and adjustments are recorded and visible in the ledger.</td><td>Inventory → Stock ledger / reports</td></tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>Follow-ups closed in this pass</h2>
+      <p class="section-intro">The first draft of this report marked two areas Partial. Those follow-ups have now been implemented, tested and folded into the sections above. Nothing from the inventory review is left open.</p>
+      <table class="tech">
+        <tr><th>Area</th><th>What was added</th><th>Result</th></tr>
+        <tr><td>Stock count — date</td><td><code>business_date</code> on takes; API date filter; active sheet only on the current business day; earlier dates show history.</td><td>Fixed and covered by API tests.</td></tr>
+        <tr><td>Stock count — category</td><td>A visible Category column beside the existing searchable category filter.</td><td>Fixed.</td></tr>
+        <tr><td>Stock count — item search</td><td>A live item-name/category/description search over the open sheet, with 20-row pagination.</td><td>Fixed.</td></tr>
+        <tr><td>Stock count — variance reasons</td><td>A Description tab that lists only differing lines, each with a saved <code>variance_reason</code>.</td><td>Fixed and covered by API tests.</td></tr>
+        <tr><td>Stock count — save guard</td><td>A dirty flag; Save is disabled until a count or reason changes; autosave skips clean sheets.</td><td>Fixed.</td></tr>
+        <tr><td>Stock transfers — outlet model</td><td>Outlet columns alongside the legacy department shelf columns; outlet pickers; each outlet resolves to its stock shelf for ledger movement.</td><td>Fixed and covered by API tests.</td></tr>
+        <tr><td>Stock transfers — ledger</td><td>The out-movement now leaves the <b>source outlet shelf</b>, not the item’s home shelf.</td><td>Fixed and covered by API tests.</td></tr>
+        <tr><td>Stock transfers — list cost</td><td><code>total_cost</code> on the transfer and a Cost Value column in the list.</td><td>Fixed.</td></tr>
+        <tr><td>Stock transfers — item picker</td><td>Full paginated item loader, SI-unit selector, base-unit conversion and live cost preview.</td><td>Fixed.</td></tr>
+        <tr><td>Stock transfers — signatures</td><td>Print now reads Creator, Supervisor and Authorized by.</td><td>Fixed.</td></tr>
+        <tr><td>Deployment</td><td>All changes are committed and pushed; nothing has been deployed. Frontend <code>279141b</code>, API <code>29e885e</code>.</td><td>Pending approval. Run the six migrations, deploy the API, bump/deploy the frontend, then smoke-test the paths in this document.</td></tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>For the technical team</h2>
+      <p class="section-intro">The client guide above is the operational view. This page records where the changes live for support and future maintenance.</p>
+      <table class="tech">
+        <tr><th>Area</th><th>Files / endpoints touched</th></tr>
+        <tr><td>Dashboard, sidebar, profile menu, outlet gating</td><td><code>src/layouts/StoreManagerLayout.vue</code>, <code>src/pages/store/StoreDashboardPage.vue</code>, <code>src/composables/useOutletContext.js</code></td></tr>
+        <tr><td>Purchase orders</td><td><code>src/pages/store/StorePurchaseOrdersPage.vue</code>, <code>src/utils/inventoryItems.js</code>, <code>app/Http/Controllers/Api/V1/Procurement/PurchaseOrderController.php</code></td></tr>
+        <tr><td>Goods received</td><td><code>src/pages/store/StoreGoodsReceivedPage.vue</code>, <code>app/Http/Controllers/Api/V1/Procurement/GoodsReceivedNoteController.php</code></td></tr>
+        <tr><td>Expenses</td><td><code>src/pages/store/StoreExpensesPage.vue</code>, <code>app/Http/Controllers/Api/V1/Store/ExpenseController.php</code>, <code>app/Models/Store/StoreExpense.php</code></td></tr>
+        <tr><td>Cash register and floats</td><td><code>src/pages/store/StoreCashRegisterPage.vue</code>, <code>app/Http/Controllers/Api/V1/Store/CashRegisterController.php</code>, <code>app/Models/Store/StoreCashFloat.php</code></td></tr>
+        <tr><td>Department indents</td><td><code>src/pages/requisitions/RequisitionPage.vue</code>, <code>app/Http/Controllers/Api/V1/Inventory/IndentController.php</code>, <code>app/Http/Resources/Inventory/IndentResource.php</code></td></tr>
+        <tr><td>Low stock</td><td><code>src/pages/store/StoreLowStockPage.vue</code>, reorder hand-off in <code>StorePurchaseOrdersPage.vue</code></td></tr>
+        <tr><td>Stock count</td><td><code>src/pages/store/StoreStockCountsPage.vue</code>, <code>app/Http/Controllers/Api/V1/Inventory/PhysicalStockTakeController.php</code>, <code>app/Models/Inventory/PhysicalStockTake.php</code>, <code>app/Models/Inventory/PhysicalStockTakeItem.php</code></td></tr>
+        <tr><td>Stock adjustment</td><td><code>src/pages/store/StoreStockAdjustPage.vue</code>, <code>app/Http/Controllers/Api/V1/Inventory/StockAdjustmentController.php</code>, <code>app/Http/Resources/Inventory/StockAdjustmentResource.php</code>, <code>app/Models/Inventory/StockAdjustment.php</code></td></tr>
+        <tr><td>Stock transfers</td><td><code>src/pages/store/StoreTransfersPage.vue</code>, <code>app/Http/Controllers/Api/V1/Inventory/StockTransferController.php</code>, <code>app/Models/Inventory/StockTransfer.php</code>, <code>app/Services/Inventory/StockTransactionService.php</code></td></tr>
+        <tr><td>Back office, categories and units</td><td><code>src/pages/store/StoreBackOfficePage.vue</code>, <code>src/pages/store/StoreUnitsPage.vue</code>, <code>src/pages/inventory/CategoryListPage.vue</code></td></tr>
+        <tr><td>Numbering</td><td><code>app/Support/NumberGenerator.php</code>: PO, GRN, TKE, ST, EXP, FLT, AD-WS, AD-CM, AD</td></tr>
+        <tr><td>Stock adjustment API</td><td><code>GET /api/v1/inventory-stock-adjustments</code>, <code>GET /api/v1/inventory-stock-adjustments/{id}</code>, <code>POST /api/v1/inventory-stock-adjustments</code>, <code>POST /{id}/void</code>, <code>POST /{id}/email</code></td></tr>
+        <tr><td>Stock count API</td><td><code>GET /api/v1/inventory-stock-takes?date=YYYY-MM-DD</code>; counts accept <code>variance_reason</code> per line; takes store <code>business_date</code></td></tr>
+        <tr><td>Stock transfer API</td><td><code>GET /api/v1/inventory-transfers?date=YYYY-MM-DD&amp;outlet_id=…</code>; <code>POST /api/v1/inventory-transfers</code> accepts <code>from_outlet_id</code>, <code>to_outlet_id</code> and <code>business_date</code>; <code>POST /{id}/send</code>; <code>POST /{id}/void</code></td></tr>
+        <tr><td>Cash float API</td><td><code>POST /api/v1/store/cash-register/floats</code>; register response includes <code>floats</code>, <code>floats_total</code>, <code>remaining_float</code> and <code>expected_cash</code></td></tr>
+        <tr><td>Expense void API</td><td><code>DELETE /api/v1/store/expenses/{id}</code> with a required <code>reason</code>; the record is voided, not hard-deleted</td></tr>
+        <tr><td>Migrations</td><td><code>2026_10_27_000001_add_reference_and_void_columns_to_store_expenses.php</code><br><code>2026_10_27_000002_create_store_cash_floats_table.php</code><br><code>2026_10_27_000003_add_draft_and_sent_status_to_stock_transfers.php</code><br><code>2026_10_27_000004_create_stock_adjustment_sheets_tables.php</code><br><code>2026_10_27_000005_add_business_date_and_variance_reason_to_physical_stock_takes.php</code><br><code>2026_10_27_000006_add_outlets_and_business_date_to_stock_transfers.php</code></td></tr>
+      </table>
+
+      <h3>Verification and release</h3>
+      <table class="verify">
+        <tr><th>Check</th><th>Result</th></tr>
+        <tr><td>Frontend unit / component tests</td><td><b>82 files, 825 tests passed</b> (<code>npx vitest run</code>)</td></tr>
+        <tr><td>Frontend lint (changed files)</td><td><b>Passed</b> (<code>npx eslint</code> and <code>npx oxlint</code> on the changed stock-count and transfer pages)</td></tr>
+        <tr><td>Frontend production build</td><td><b>Passed</b> (<code>npx vite build</code>, 890 modules). Two existing esbuild CSS-minifier warnings remain; they do not fail the build.</td></tr>
+        <tr><td>API test suite</td><td><b>1,128 tests passed, 5,130 assertions</b> (<code>php artisan test</code>)</td></tr>
+        <tr><td>API syntax</td><td><b>Passed</b> (<code>php -l</code> on the changed controllers, models, service and migrations)</td></tr>
+        <tr><td>Migrations</td><td><b>Six new migrations</b> are pending until the API is deployed: expense reference/void, cash floats, transfer status enum, stock-adjustment sheets, stock-count business date/variance reasons and transfer outlet/business-date columns.</td></tr>
+        <tr><td>Frontend deployment</td><td><b>Pending</b> — commit <code>279141b</code> is pushed but not bumped or deployed. The live frontend remains the previously released build.</td></tr>
+        <tr><td>API deployment</td><td><b>Pending</b> — commit <code>29e885e</code> is pushed; the live API remains on <code>724616c</code>.</td></tr>
+        <tr><td>Transfer status note</td><td>The API keeps a dispatched transfer as <code>completed</code> for stock/ledger correctness; the frontend deliberately displays it as <b>SENT</b> so the screen still offers only DRAFT / SENT.</td></tr>
+      </table>
+      <div class="note wide"><b>Release order.</b> Run the migrations first, then deploy the API, then bump and deploy the frontend. The stock-adjustment, cash-float and expense-void screens call new endpoints; releasing the frontend before the API would make those actions fail.</div>
+    </section>
+</body></html>
