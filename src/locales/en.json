@@ -5388,7 +5388,10 @@
     "order": {
       "account": "Account"
     },
-    "panelTitle": "POS"
+    "panelTitle": "POS",
+    "topbar": {
+      "switchOutlet": "Switch Outlet"
+    }
   },
   "paymentInstructionCard": {
     "title": "How to pay",
