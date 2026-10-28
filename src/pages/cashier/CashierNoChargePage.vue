@@ -141,3 +141,8 @@ onMounted(async () => {
 .nc-head-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 </style>
 
+
+
+watch(() => selectedOutlet.value?.outlet_id, () => {
+  if (typeof load === 'function') load()
+}, { immediate: false })

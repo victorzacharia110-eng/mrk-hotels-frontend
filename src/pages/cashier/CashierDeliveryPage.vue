@@ -168,3 +168,8 @@ onMounted(async () => {
 <style scoped>
 .addr-cell { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
+
+
+watch(() => selectedOutlet.value?.outlet_id, () => {
+  if (typeof load === 'function') load()
+}, { immediate: false })

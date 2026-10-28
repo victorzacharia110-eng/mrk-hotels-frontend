@@ -159,3 +159,8 @@ onMounted(async () => {
   load()
 })
 </script>
+
+
+watch(() => selectedOutlet.value?.outlet_id, () => {
+  if (typeof load === 'function') load()
+}, { immediate: false })
