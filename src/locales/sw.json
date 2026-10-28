@@ -5345,7 +5345,14 @@
       "room": "Chumba",
       "guest": "Mgeni"
     },
-    "dineIn": "IN HOUSE",
+    "dineIn": {
+      "dateTime": "Tarehe/Saa",
+      "guest": "Mgeni",
+      "moveTicket": "Hamisha Tiketi",
+      "newOrderFor": "Agizo Jipya kwa {table}",
+      "noRunning": "Hakuna maagizo yanayoendelea",
+      "noTables": "Hakuna meza"
+    },
     "waiters": {
       "title": "Waiters",
       "none": "Hajupangwa",
@@ -5728,6 +5735,21 @@
       "confirm": "Thibitisha",
       "submit": "Wasilisha",
       "ok": "Sawa"
+    },
+    "accounts.statuses": {
+      "active": "Hai",
+      "blocked": "Imezuia",
+      "inactive": "Haifanyi kazi"
+    },
+    "waiterAssignment": {
+      "title": "KUTEUA MHUDUMU",
+      "assign": "Teua",
+      "unassign": "Ondoa",
+      "assignTo": "Mteua kwa",
+      "selectWaiter": "Chagua Mhudumu",
+      "noWaiters": "Hakuna wahudumu",
+      "tables": "Meza",
+      "history": "Historia"
     }
   },
   "paymentInstructionCard": {

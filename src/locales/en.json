@@ -5176,7 +5176,14 @@
       "delivery": "Delivery",
       "noCharge": "No Charge"
     },
-    "dineIn": "IN HOUSE",
+    "dineIn": {
+      "dateTime": "Date/Time",
+      "guest": "Guest",
+      "moveTicket": "Move Ticket",
+      "newOrderFor": "New Order for {table}",
+      "noRunning": "No running orders",
+      "noTables": "No tables"
+    },
     "takeAway": {
       "tabAll": "ALL",
       "tabPreparing": "PREPARING",
@@ -5334,7 +5341,8 @@
       "dateTime": "Date/Time",
       "phone": "Phone",
       "address": "Address",
-      "eta": "ETA"
+      "eta": "ETA",
+      "minutes": "Minutes"
     },
     "noCharge": {
       "tabAll": "ALL",
@@ -5391,7 +5399,46 @@
     },
     "dayClose": {
       "title": "Day Close",
-      "workingDate": "Working Date"
+      "workingDate": "Working Date",
+      "actions": "Actions",
+      "amount": "Amount",
+      "blockedHint": "Some orders are still running and must be settled first.",
+      "blockingCount": "Blocking orders",
+      "blockingHint": "These must be settled/voided before closing.",
+      "blockingTitle": "Orders blocking close",
+      "businessDate": "Business Date",
+      "canCloseHint": "All running orders are cleared.",
+      "closeDate": "Close Date",
+      "closeDay": "Close Day",
+      "closed": "Closed",
+      "closedAt": "Closed At",
+      "closedBy": "Closed By",
+      "confirmText": "Are you sure you want to close this business day?",
+      "confirmTitle": "Close Business Day",
+      "dateToClose": "Date to close",
+      "history": "History",
+      "liveHotelTime": "Live Hotel Time",
+      "method": "Method",
+      "notEndedHint": "Day not yet ended.",
+      "openDate": "Open Date",
+      "orderNo": "Order No.",
+      "provider": "Provider",
+      "reason": "Reason",
+      "reasonPlaceholder": "Enter reason",
+      "records": "{n} records",
+      "runningOrders": "Running Orders",
+      "settle": "Settle",
+      "settleText": "Settle these orders in Order Summary.",
+      "settleTitle": "Settle blocking orders",
+      "standardTime": "Standard Time",
+      "standardTimeHint": "Configured hotel timezone",
+      "table": "Table",
+      "timezone": "Timezone",
+      "unsettledOrders": "Unsettled Orders",
+      "voidOrder": "Void Order",
+      "voidText": "Void with reason.",
+      "voidTitle": "Void blocking order",
+      "waiter": "Waiter"
     },
     "blockedDevices": {},
     "printer": {
@@ -5423,7 +5470,38 @@
       "noData": "No data"
     },
     "accounts": {
-      "title": "Account Lookup"
+      "title": "Account Lookup",
+      "account": "Account",
+      "accountName": "Account Name",
+      "accountNumber": "Account Number",
+      "actions": "Actions",
+      "address": "Address",
+      "balance": "Balance",
+      "city": "City",
+      "contactPerson": "Contact Person",
+      "country": "Country",
+      "creditLimit": "Credit Limit",
+      "creditorName": "Creditor Name",
+      "creditorType": "Creditor Type",
+      "currentBalance": "Current Balance",
+      "editCreditor": "Edit Creditor",
+      "editNoChargeAccount": "Edit No Charge Account",
+      "email": "Email",
+      "mobile": "Mobile",
+      "name": "Name",
+      "newCreditor": "New Creditor",
+      "newNoChargeAccount": "New No Charge Account",
+      "noCreditors": "No creditors",
+      "noData": "No data",
+      "noNoChargeAccounts": "No no-charge accounts",
+      "notes": "Notes",
+      "organizationName": "Organization Name",
+      "paymentTerms": "Payment Terms",
+      "status": "Status",
+      "tabAccounts": "ACCOUNTS",
+      "tabCreditors": "CREDITORS",
+      "tabNoChargeAccounts": "NO CHARGE ACCOUNTS",
+      "type": "Type"
     },
     "lookup": {
       "menus": "Menus",
@@ -5442,6 +5520,21 @@
       "confirm": "Confirm",
       "submit": "Submit",
       "ok": "OK"
+    },
+    "accounts.statuses": {
+      "active": "Active",
+      "blocked": "Blocked",
+      "inactive": "Inactive"
+    },
+    "waiterAssignment": {
+      "title": "WAITER ASSIGNMENT",
+      "assign": "Assign",
+      "unassign": "Unassign",
+      "assignTo": "Assign to",
+      "selectWaiter": "Select Waiter",
+      "noWaiters": "No waiters",
+      "tables": "Tables",
+      "history": "History"
     }
   },
   "paymentInstructionCard": {
