@@ -5277,7 +5277,19 @@
       "total": "TOTAL",
       "items": "Items",
       "actions": "Actions"
-    }
+    },
+    "roomService": {},
+    "delivery": {},
+    "noCharge": {},
+    "ingredients": {},
+    "itemLookup": {},
+    "requisitions": {},
+    "shiftManager": {},
+    "dayClose": {},
+    "blockedDevices": {},
+    "printer": {},
+    "printSettings": {},
+    "accountLookup": {}
   },
   "paymentInstructionCard": {
     "title": "How to pay",
