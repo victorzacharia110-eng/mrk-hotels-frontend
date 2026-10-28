@@ -5206,6 +5206,25 @@
       "messages": "Messages",
       "statuses": "Statuses",
       "waiterAssignment": "WAITER ASSIGNMENT"
+    },
+    "txlock": {
+      "title": "NET LOCK",
+      "records": "{n} record(s)",
+      "orderNo": "Order No.",
+      "tableNo": "Table No.",
+      "type": "Type",
+      "amount": "Amount",
+      "lockedSince": "Locked Since",
+      "lockedBy": "Locked By",
+      "unlock": "Unfreeze",
+      "noData": "No frozen orders",
+      "orderTypes": {
+        "dine_in": "IN HOUSE",
+        "takeaway": "TAKE OUT",
+        "room_service": "Room Service",
+        "delivery": "Delivery",
+        "no_charge": "No Charge"
+      }
     }
   },
   "paymentInstructionCard": {
