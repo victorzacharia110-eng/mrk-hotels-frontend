@@ -8,10 +8,10 @@
  * directly.
  */
 
-import api from './axios'
+import api from "./axios";
 
 // API version segment prepended to every endpoint path below.
-const v1 = '/v1'
+const v1 = "/v1";
 
 /** Public storefront endpoints: hotel directory, availability, bookings and guest self-service. No auth required. */
 export const publicApi = {
@@ -21,7 +21,7 @@ export const publicApi = {
    * @returns {Promise} Axios response with the paginated hotel list.
    */
   hotels(params) {
-    return api.get(`${v1}/public/hotels`, { params })
+    return api.get(`${v1}/public/hotels`, { params });
   },
   /**
    * Fetches a single hotel's public-facing details.
@@ -29,7 +29,7 @@ export const publicApi = {
    * @returns {Promise} Axios response with the hotel record.
    */
   hotelShow(id) {
-    return api.get(`${v1}/public/hotels/${id}`)
+    return api.get(`${v1}/public/hotels/${id}`);
   },
   /**
    * Queries public room availability for a date range.
@@ -37,7 +37,7 @@ export const publicApi = {
    * @returns {Promise} Axios response with the available rooms.
    */
   availability(params) {
-    return api.get(`${v1}/public/availability`, { params })
+    return api.get(`${v1}/public/availability`, { params });
   },
   /**
    * Submits a booking requisition from the public site.
@@ -45,7 +45,7 @@ export const publicApi = {
    * @returns {Promise} Axios response with the created requisition.
    */
   bookingRequisition(data) {
-    return api.post(`${v1}/public/booking-requisitions`, data)
+    return api.post(`${v1}/public/booking-requisitions`, data);
   },
   /**
    * Places a public reservation directly.
@@ -53,7 +53,7 @@ export const publicApi = {
    * @returns {Promise} Axios response with the created reservation.
    */
   reservations(data) {
-    return api.post(`${v1}/public/reservations`, data)
+    return api.post(`${v1}/public/reservations`, data);
   },
   /**
    * Checks a booking requisition's status by reference.
@@ -61,7 +61,7 @@ export const publicApi = {
    * @returns {Promise} Axios response with the requisition status.
    */
   bookingStatus(params) {
-    return api.get(`${v1}/public/booking-requisitions/status`, { params })
+    return api.get(`${v1}/public/booking-requisitions/status`, { params });
   },
   /**
    * Downloads an invoice through the guest self-service flow; identity is
@@ -71,14 +71,14 @@ export const publicApi = {
    */
   // Guest self-service invoice download (booking reference + phone verified).
   invoiceDownload(params) {
-    return api.get(`${v1}/public/invoices/download`, { params, responseType: 'blob' })
+    return api.get(`${v1}/public/invoices/download`, { params, responseType: "blob" });
   },
   /**
    * Fetches public dropdown/select options used by the booking forms.
    * @returns {Promise} Axios response with the options data.
    */
   options() {
-    return api.get(`${v1}/public/options`)
+    return api.get(`${v1}/public/options`);
   },
   /**
    * Initiates a payment (e.g. ClickPesa) for a public booking.
@@ -86,9 +86,9 @@ export const publicApi = {
    * @returns {Promise} Axios response with the initiation result.
    */
   initiatePayment(data) {
-    return api.post(`${v1}/public/payments/initiate`, data)
+    return api.post(`${v1}/public/payments/initiate`, data);
   },
-}
+};
 
 /** Authentication: login/logout, the current user's profile and password. */
 export const authApi = {
@@ -98,7 +98,7 @@ export const authApi = {
    * @returns {Promise} Axios response with token, user and permissions.
    */
   login(data) {
-    return api.post(`${v1}/auth/login`, data)
+    return api.post(`${v1}/auth/login`, data);
   },
   /**
    * Confirms the one-time code when trusting a new device.
@@ -106,10 +106,10 @@ export const authApi = {
    * @returns {Promise} Axios response with token, user, device_key, trusted_until.
    */
   verifyDevice(data) {
-    return api.post(`${v1}/auth/login/verify-device`, data)
+    return api.post(`${v1}/auth/login/verify-device`, data);
   },
   verifyDeviceResend(data) {
-    return api.post(`${v1}/auth/login/verify-device/resend`, data)
+    return api.post(`${v1}/auth/login/verify-device/resend`, data);
   },
   /**
    * Authenticates a user with their 4-digit staff PIN and returns the token + profile.
@@ -118,21 +118,21 @@ export const authApi = {
    * @returns {Promise} Axios response with token, user and permissions.
    */
   loginPin(data) {
-    return api.post(`${v1}/auth/login-pin`, data)
+    return api.post(`${v1}/auth/login-pin`, data);
   },
   /**
    * Ends the authenticated session on the server.
    * @returns {Promise} Axios response confirming logout.
    */
   logout() {
-    return api.post(`${v1}/auth/logout`)
+    return api.post(`${v1}/auth/logout`);
   },
   /**
    * Fetches the current user's profile and permissions.
    * @returns {Promise} Axios response with the authenticated user.
    */
   me() {
-    return api.get(`${v1}/auth/me`)
+    return api.get(`${v1}/auth/me`);
   },
   /**
    * Changes the current user's password.
@@ -140,7 +140,7 @@ export const authApi = {
    * @returns {Promise} Axios response confirming the change.
    */
   changePassword(data) {
-    return api.post(`${v1}/auth/change-password`, data)
+    return api.post(`${v1}/auth/change-password`, data);
   },
   /**
    * Updates the current user's profile fields.
@@ -148,7 +148,7 @@ export const authApi = {
    * @returns {Promise} Axios response with the updated user.
    */
   updateProfile(data) {
-    return api.post(`${v1}/auth/update-profile`, data)
+    return api.post(`${v1}/auth/update-profile`, data);
   },
   /**
    * Self-service hotel registration (public, no auth required).
@@ -156,7 +156,7 @@ export const authApi = {
    * @returns {Promise} Axios response with tenant info and trial details.
    */
   register(data) {
-    return api.post(`${v1}/auth/register`, data)
+    return api.post(`${v1}/auth/register`, data);
   },
   /**
    * Sends a password reset link to the user's email.
@@ -164,7 +164,7 @@ export const authApi = {
    * @returns {Promise} Axios response with confirmation message.
    */
   forgotPassword(email) {
-    return api.post(`${v1}/auth/forgot-password`, { email })
+    return api.post(`${v1}/auth/forgot-password`, { email });
   },
   /**
    * Resets the user's password using the token from the email.
@@ -172,9 +172,9 @@ export const authApi = {
    * @returns {Promise} Axios response confirming password reset.
    */
   resetPassword(data) {
-    return api.post(`${v1}/auth/reset-password`, data)
+    return api.post(`${v1}/auth/reset-password`, data);
   },
-}
+};
 
 /** Hotel reporting: dashboard KPIs, overview, occupancy, revenue and audit trail. */
 export const reportApi = {
@@ -184,7 +184,7 @@ export const reportApi = {
    * @returns {Promise} Axios response with dashboard figures.
    */
   dashboard(params) {
-    return api.get(`${v1}/reports/dashboard`, { params })
+    return api.get(`${v1}/reports/dashboard`, { params });
   },
   /**
    * High-level operational overview figures.
@@ -192,7 +192,7 @@ export const reportApi = {
    * @returns {Promise} Axios response with overview data.
    */
   overview(params) {
-    return api.get(`${v1}/reports/overview`, { params })
+    return api.get(`${v1}/reports/overview`, { params });
   },
   /**
    * Room occupancy rates over the requested period.
@@ -200,7 +200,7 @@ export const reportApi = {
    * @returns {Promise} Axios response with occupancy data.
    */
   occupancy(params) {
-    return api.get(`${v1}/reports/occupancy`, { params })
+    return api.get(`${v1}/reports/occupancy`, { params });
   },
   /**
    * Revenue figures over the requested period.
@@ -208,7 +208,7 @@ export const reportApi = {
    * @returns {Promise} Axios response with revenue data.
    */
   revenue(params) {
-    return api.get(`${v1}/reports/revenue`, { params })
+    return api.get(`${v1}/reports/revenue`, { params });
   },
   /**
    * Current status of every room.
@@ -216,7 +216,7 @@ export const reportApi = {
    * @returns {Promise} Axios response with per-room status.
    */
   roomStatus(params) {
-    return api.get(`${v1}/reports/room-status`, { params })
+    return api.get(`${v1}/reports/room-status`, { params });
   },
   /**
    * Booking analytics: volumes, source mix, cancellation/no-show rates.
@@ -224,7 +224,7 @@ export const reportApi = {
    * @returns {Promise} Axios response with booking figures.
    */
   bookings(params) {
-    return api.get(`${v1}/reports/bookings`, { params })
+    return api.get(`${v1}/reports/bookings`, { params });
   },
   /**
    * Food & beverage analytics: department split, top items, per-waiter.
@@ -232,7 +232,7 @@ export const reportApi = {
    * @returns {Promise} Axios response with F&B figures.
    */
   fnb(params) {
-    return api.get(`${v1}/reports/fnb`, { params })
+    return api.get(`${v1}/reports/fnb`, { params });
   },
   /**
    * Staff (bar/cashier) dashboard: the signed-in member's department at a
@@ -242,7 +242,7 @@ export const reportApi = {
    * @returns {Promise} Axios response with the department dashboard figures.
    */
   staffDashboard(params) {
-    return api.get(`${v1}/reports/staff-dashboard`, { params })
+    return api.get(`${v1}/reports/staff-dashboard`, { params });
   },
   /**
    * Item-wise stock ledger with opening/running balances and valuation.
@@ -250,7 +250,7 @@ export const reportApi = {
    * @returns {Promise} Axios response with per-item ledger rows.
    */
   stockLedger(params) {
-    return api.get(`${v1}/reports/stock-ledger`, { params })
+    return api.get(`${v1}/reports/stock-ledger`, { params });
   },
   /**
    * Inventory report series (stock register family).
@@ -259,7 +259,7 @@ export const reportApi = {
    * @returns {Promise} Axios response shaped per template.
    */
   inventoryReport(report, params) {
-    return api.get(`${v1}/reports/inventory/${report}`, { params })
+    return api.get(`${v1}/reports/inventory/${report}`, { params });
   },
   /**
    * Paginated audit trail entries.
@@ -267,7 +267,7 @@ export const reportApi = {
    * @returns {Promise} Axios response with audit log entries.
    */
   auditLogs(params) {
-    return api.get(`${v1}/reports/audit-logs`, { params })
+    return api.get(`${v1}/reports/audit-logs`, { params });
   },
   /**
    * Expected/arrived/overdue arrivals within a date range, grouped by day.
@@ -275,7 +275,7 @@ export const reportApi = {
    * @returns {Promise} Axios response with { total, expected, arrived, overdue, by_date, rows }.
    */
   arrivals(params) {
-    return api.get(`${v1}/reports/arrivals`, { params })
+    return api.get(`${v1}/reports/arrivals`, { params });
   },
   /**
    * Generic wired report engine: serves any Report Browser catalogue key.
@@ -284,9 +284,9 @@ export const reportApi = {
    * @returns {Promise} Axios response with { data: { wired, legend, summary, columns, rows, totals } }.
    */
   wired(report, params) {
-    return api.get(`${v1}/reports/wired/${report}`, { params })
+    return api.get(`${v1}/reports/wired/${report}`, { params });
   },
-}
+};
 
 /** Accounting reports: general ledger, trial balance, balance sheet and night audit / day close. */
 export const accountingApi = {
@@ -296,7 +296,7 @@ export const accountingApi = {
    * @returns {Promise} Axios response with ledger entries.
    */
   generalLedger(params) {
-    return api.get(`${v1}/accounting/general-ledger`, { params })
+    return api.get(`${v1}/accounting/general-ledger`, { params });
   },
   /**
    * Fetches the trial balance report.
@@ -304,7 +304,7 @@ export const accountingApi = {
    * @returns {Promise} Axios response with the trial balance.
    */
   trialBalance(params) {
-    return api.get(`${v1}/accounting/trial-balance`, { params })
+    return api.get(`${v1}/accounting/trial-balance`, { params });
   },
   /**
    * Fetches the balance sheet report.
@@ -312,7 +312,7 @@ export const accountingApi = {
    * @returns {Promise} Axios response with the balance sheet.
    */
   balanceSheet(params) {
-    return api.get(`${v1}/accounting/balance-sheet`, { params })
+    return api.get(`${v1}/accounting/balance-sheet`, { params });
   },
   /**
    * Computes (or returns the frozen) night-audit / day-close summary for a date.
@@ -320,7 +320,7 @@ export const accountingApi = {
    * @returns {Promise} Axios response with { date, closed, day_close, report }.
    */
   dayCloseReport(params) {
-    return api.get(`${v1}/accounting/day-close`, { params })
+    return api.get(`${v1}/accounting/day-close`, { params });
   },
   /**
    * Closes a business day, freezing its night-audit snapshot.
@@ -328,7 +328,7 @@ export const accountingApi = {
    * @returns {Promise} Axios response with the frozen day-close (201, or 409 when already closed).
    */
   storeDayClose(data) {
-    return api.post(`${v1}/accounting/day-close`, data)
+    return api.post(`${v1}/accounting/day-close`, data);
   },
   /**
    * Lists every closed business day, newest first.
@@ -336,48 +336,81 @@ export const accountingApi = {
    * @returns {Promise} Axios response with { day_closes }.
    */
   dayCloses(params) {
-    return api.get(`${v1}/accounting/day-closes`, { params })
+    return api.get(`${v1}/accounting/day-closes`, { params });
   },
-}
+};
 
 /** Night audit — receptionist-accessible day close (level:60). */
 export const nightAuditApi = {
-  report(params) { return api.get(`${v1}/night-audit/report`, { params }) },
-  close(data) { return api.post(`${v1}/night-audit/close`, data) },
-  history(params) { return api.get(`${v1}/night-audit/history`, { params }) },
-  logs(params) { return api.get(`${v1}/night-audit/logs`, { params }) },
-  transactions(params) { return api.get(`${v1}/night-audit/transactions`, { params }) },
-  insertTransaction(data) { return api.post(`${v1}/night-audit/transactions`, data) },
-  deleteTransaction(id) { return api.delete(`${v1}/night-audit/transactions/${id}`) },
-}
+  report(params) {
+    return api.get(`${v1}/night-audit/report`, { params });
+  },
+  close(data) {
+    return api.post(`${v1}/night-audit/close`, data);
+  },
+  history(params) {
+    return api.get(`${v1}/night-audit/history`, { params });
+  },
+  logs(params) {
+    return api.get(`${v1}/night-audit/logs`, { params });
+  },
+  transactions(params) {
+    return api.get(`${v1}/night-audit/transactions`, { params });
+  },
+  insertTransaction(data) {
+    return api.post(`${v1}/night-audit/transactions`, data);
+  },
+  deleteTransaction(id) {
+    return api.delete(`${v1}/night-audit/transactions/${id}`);
+  },
+};
 
 /** Hotel-wide open business date (night-audit based, read by every board). */
 export const businessDateApi = {
-  show() { return api.get(`${v1}/business-date`) },
-}
+  show() {
+    return api.get(`${v1}/business-date`);
+  },
+};
 
 /** F&B Business-Day Close — cashier/bar/inventory panel day close. */
 export const fbDayCloseApi = {
-  index() { return api.get(`${v1}/fnb/day-close`) },
-  store(data) { return api.post(`${v1}/fnb/day-close`, data) },
-  history(params) { return api.get(`${v1}/fnb/day-closes`, { params }) },
-  updateTimezone(data) { return api.put(`${v1}/fnb/timezone`, data) },
-}
+  index() {
+    return api.get(`${v1}/fnb/day-close`);
+  },
+  store(data) {
+    return api.post(`${v1}/fnb/day-close`, data);
+  },
+  history(params) {
+    return api.get(`${v1}/fnb/day-closes`, { params });
+  },
+  updateTimezone(data) {
+    return api.put(`${v1}/fnb/timezone`, data);
+  },
+};
 
 /** Activity log report — daily/weekly/monthly with CSV download. */
 export const activityLogReportApi = {
-  index(params) { return api.get(`${v1}/activity-log-report`, { params }) },
-  csv(params) { return api.get(`${v1}/activity-log-report`, { params: { ...params, format: 'csv' }, responseType: 'blob' }) },
-  csvUrl(params) {
-    const qs = new URLSearchParams({ ...params, format: 'csv' }).toString()
-    return `${api.defaults.baseURL}/${v1}/activity-log-report?${qs}`
+  index(params) {
+    return api.get(`${v1}/activity-log-report`, { params });
   },
-}
+  csv(params) {
+    return api.get(`${v1}/activity-log-report`, {
+      params: { ...params, format: "csv" },
+      responseType: "blob",
+    });
+  },
+  csvUrl(params) {
+    const qs = new URLSearchParams({ ...params, format: "csv" }).toString();
+    return `${api.defaults.baseURL}/${v1}/activity-log-report?${qs}`;
+  },
+};
 
 /** Guest list report — front office report browser (level:60). */
 export const guestReportApi = {
-  guestList(params) { return api.get(`${v1}/guests/guest-list`, { params }) },
-}
+  guestList(params) {
+    return api.get(`${v1}/guests/guest-list`, { params });
+  },
+};
 
 /** Staff user management: CRUD plus activation, invites, resets and attachments. */
 export const userApi = {
@@ -387,7 +420,7 @@ export const userApi = {
    * @returns {Promise} Axios response with the user list.
    */
   index(params) {
-    return api.get(`${v1}/users`, { params })
+    return api.get(`${v1}/users`, { params });
   },
   /**
    * Creates a new user.
@@ -395,7 +428,7 @@ export const userApi = {
    * @returns {Promise} Axios response with the created user.
    */
   store(data) {
-    return api.post(`${v1}/users`, data)
+    return api.post(`${v1}/users`, data);
   },
   /**
    * Fetches a single user.
@@ -403,7 +436,7 @@ export const userApi = {
    * @returns {Promise} Axios response with the user record.
    */
   show(id) {
-    return api.get(`${v1}/users/${id}`)
+    return api.get(`${v1}/users/${id}`);
   },
   /**
    * Updates a user.
@@ -412,7 +445,7 @@ export const userApi = {
    * @returns {Promise} Axios response with the updated user.
    */
   update(id, data) {
-    return api.put(`${v1}/users/${id}`, data)
+    return api.put(`${v1}/users/${id}`, data);
   },
   /**
    * Deletes a user.
@@ -420,7 +453,7 @@ export const userApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/users/${id}`)
+    return api.delete(`${v1}/users/${id}`);
   },
   /**
    * Activates a previously deactivated user.
@@ -428,7 +461,7 @@ export const userApi = {
    * @returns {Promise} Axios response confirming activation.
    */
   activate(id) {
-    return api.post(`${v1}/users/${id}/activate`)
+    return api.post(`${v1}/users/${id}/activate`);
   },
   /**
    * Sends an invitation email to a user.
@@ -436,7 +469,7 @@ export const userApi = {
    * @returns {Promise} Axios response confirming the invite.
    */
   invite(id) {
-    return api.post(`${v1}/users/${id}/invite`)
+    return api.post(`${v1}/users/${id}/invite`);
   },
   /**
    * Triggers a password reset for a user.
@@ -444,7 +477,7 @@ export const userApi = {
    * @returns {Promise} Axios response confirming the reset.
    */
   resetPassword(id) {
-    return api.post(`${v1}/users/${id}/reset-password`)
+    return api.post(`${v1}/users/${id}/reset-password`);
   },
   /**
    * Sets (or replaces) a staff member's 4-digit login PIN. Admin/manager only.
@@ -453,7 +486,7 @@ export const userApi = {
    * @returns {Promise} Axios response confirming the PIN was set.
    */
   setPin(id, data) {
-    return api.post(`${v1}/users/${id}/set-pin`, data)
+    return api.post(`${v1}/users/${id}/set-pin`, data);
   },
   /**
    * Attaches a file (e.g. ID copy) to a user.
@@ -462,7 +495,7 @@ export const userApi = {
    * @returns {Promise} Axios response with the created attachment.
    */
   attach(id, data) {
-    return api.post(`${v1}/users/${id}/attachments`, data)
+    return api.post(`${v1}/users/${id}/attachments`, data);
   },
   /**
    * Removes an attachment from a user.
@@ -471,9 +504,9 @@ export const userApi = {
    * @returns {Promise} Axios response confirming removal.
    */
   removeAttachment(id, attachmentId) {
-    return api.delete(`${v1}/users/${id}/attachments/${attachmentId}`)
+    return api.delete(`${v1}/users/${id}/attachments/${attachmentId}`);
   },
-}
+};
 
 /** Staff issue reports with comment threads and management responses. */
 export const issueReportApi = {
@@ -483,7 +516,7 @@ export const issueReportApi = {
    * @returns {Promise} Axios response with the issue list.
    */
   index(params) {
-    return api.get(`${v1}/issue-reports`, { params })
+    return api.get(`${v1}/issue-reports`, { params });
   },
   /**
    * Fetches a single issue report with its thread.
@@ -491,7 +524,7 @@ export const issueReportApi = {
    * @returns {Promise} Axios response with the report.
    */
   show(id) {
-    return api.get(`${v1}/issue-reports/${id}`)
+    return api.get(`${v1}/issue-reports/${id}`);
   },
   /**
    * Creates a new issue report.
@@ -499,7 +532,7 @@ export const issueReportApi = {
    * @returns {Promise} Axios response with the created report.
    */
   store(data) {
-    return api.post(`${v1}/issue-reports`, data)
+    return api.post(`${v1}/issue-reports`, data);
   },
   /**
    * Adds a comment to an issue report thread.
@@ -508,7 +541,7 @@ export const issueReportApi = {
    * @returns {Promise} Axios response with the created comment.
    */
   comment(id, data) {
-    return api.post(`${v1}/issue-reports/${id}/comments`, data)
+    return api.post(`${v1}/issue-reports/${id}/comments`, data);
   },
   /**
    * Responds to (closes/acknowledges) an issue report.
@@ -517,9 +550,9 @@ export const issueReportApi = {
    * @returns {Promise} Axios response with the updated report.
    */
   respond(id, data) {
-    return api.post(`${v1}/issue-reports/${id}/respond`, data)
+    return api.post(`${v1}/issue-reports/${id}/respond`, data);
   },
-}
+};
 
 /** Room directory: CRUD plus operational status changes. */
 export const roomApi = {
@@ -529,7 +562,7 @@ export const roomApi = {
    * @returns {Promise} Axios response with the room list.
    */
   index(params) {
-    return api.get(`${v1}/rooms`, { params })
+    return api.get(`${v1}/rooms`, { params });
   },
   /**
    * Creates a new room.
@@ -537,7 +570,7 @@ export const roomApi = {
    * @returns {Promise} Axios response with the created room.
    */
   store(data) {
-    return api.post(`${v1}/rooms`, data)
+    return api.post(`${v1}/rooms`, data);
   },
   /**
    * Fetches a single room.
@@ -545,7 +578,7 @@ export const roomApi = {
    * @returns {Promise} Axios response with the room record.
    */
   show(id) {
-    return api.get(`${v1}/rooms/${id}`)
+    return api.get(`${v1}/rooms/${id}`);
   },
   /**
    * Updates a room.
@@ -554,7 +587,7 @@ export const roomApi = {
    * @returns {Promise} Axios response with the updated room.
    */
   update(id, data) {
-    return api.put(`${v1}/rooms/${id}`, data)
+    return api.put(`${v1}/rooms/${id}`, data);
   },
   /**
    * Room-type inventory + availability for a date window (INVENTORY tab).
@@ -562,7 +595,7 @@ export const roomApi = {
    * @returns {Promise} Axios response with per-type summaries and room rows.
    */
   inventory(params) {
-    return api.get(`${v1}/rooms/inventory`, { params })
+    return api.get(`${v1}/rooms/inventory`, { params });
   },
   /**
    * Bulk rate update for all rooms of one type (RATES tab).
@@ -570,7 +603,7 @@ export const roomApi = {
    * @returns {Promise} Axios response with the updated count.
    */
   updateRates(data) {
-    return api.put(`${v1}/rooms/rates`, data)
+    return api.put(`${v1}/rooms/rates`, data);
   },
   /**
    * Stop-sell blocks, narrowed to the window the calendar is showing.
@@ -581,7 +614,7 @@ export const roomApi = {
    * @returns {Promise} Axios response with the blocks list.
    */
   stopSell(params = {}) {
-    return api.get(`${v1}/rooms/stop-sell`, { params })
+    return api.get(`${v1}/rooms/stop-sell`, { params });
   },
   /**
    * Places stop-sell blocks for a room type across dates (STOPSELD tab).
@@ -589,7 +622,7 @@ export const roomApi = {
    * @returns {Promise} Axios response with the created blocks.
    */
   storeStopSell(data) {
-    return api.post(`${v1}/rooms/stop-sell`, data)
+    return api.post(`${v1}/rooms/stop-sell`, data);
   },
   /**
    * Lifts a stop-sell block (STOPSELD tab).
@@ -597,7 +630,7 @@ export const roomApi = {
    * @returns {Promise} Axios response confirming removal.
    */
   destroyStopSell(id) {
-    return api.delete(`${v1}/rooms/stop-sell/${id}`)
+    return api.delete(`${v1}/rooms/stop-sell/${id}`);
   },
   /**
    * Changes a room's status (dirty, clean, out of service).
@@ -606,7 +639,7 @@ export const roomApi = {
    * @returns {Promise} Axios response with the updated room.
    */
   updateStatus(id, data) {
-    return api.post(`${v1}/rooms/${id}/status`, data)
+    return api.post(`${v1}/rooms/${id}/status`, data);
   },
   /**
    * Deletes a room.
@@ -614,9 +647,9 @@ export const roomApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/rooms/${id}`)
+    return api.delete(`${v1}/rooms/${id}`);
   },
-}
+};
 
 /** Guest registry: CRUD plus the cross-hotel returning-guest lookup. */
 export const guestApi = {
@@ -626,7 +659,7 @@ export const guestApi = {
    * @returns {Promise} Axios response with the guest list.
    */
   index(params) {
-    return api.get(`${v1}/guests`, { params })
+    return api.get(`${v1}/guests`, { params });
   },
   /**
    * Searches for an existing guest by phone/name so data can be reused.
@@ -635,7 +668,7 @@ export const guestApi = {
    */
   // Recognises a returning guest across every hotel on the platform.
   lookup(search) {
-    return api.get(`${v1}/guests/lookup`, { params: { search } })
+    return api.get(`${v1}/guests/lookup`, { params: { search } });
   },
   /**
    * Creates a new guest record.
@@ -643,7 +676,7 @@ export const guestApi = {
    * @returns {Promise} Axios response with the created guest.
    */
   store(data) {
-    return api.post(`${v1}/guests`, data)
+    return api.post(`${v1}/guests`, data);
   },
   /**
    * Fetches a single guest.
@@ -651,7 +684,7 @@ export const guestApi = {
    * @returns {Promise} Axios response with the guest record.
    */
   show(id) {
-    return api.get(`${v1}/guests/${id}`)
+    return api.get(`${v1}/guests/${id}`);
   },
   /**
    * Updates a guest.
@@ -660,7 +693,7 @@ export const guestApi = {
    * @returns {Promise} Axios response with the updated guest.
    */
   update(id, data) {
-    return api.put(`${v1}/guests/${id}`, data)
+    return api.put(`${v1}/guests/${id}`, data);
   },
   /**
    * Deletes a guest.
@@ -668,7 +701,7 @@ export const guestApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/guests/${id}`)
+    return api.delete(`${v1}/guests/${id}`);
   },
   /**
    * Returns a summary of records that will be removed when a guest
@@ -677,41 +710,43 @@ export const guestApi = {
    * @returns {Promise} Axios response with preview data.
    */
   deletionPreview(id) {
-    return api.get(`${v1}/guests/${id}/deletion-preview`)
+    return api.get(`${v1}/guests/${id}/deletion-preview`);
   },
-}
+};
 
 /** Hotel business settings — manager/owner can view and edit. */
 export const hotelSettingsApi = {
   /** Fetches the current hotel's business details. */
   show() {
-    return api.get(`${v1}/hotel-settings`)
+    return api.get(`${v1}/hotel-settings`);
   },
   /** Updates the current hotel's business details. Supports FormData for logo upload. */
   update(data) {
     if (data instanceof FormData) {
-      data.append('_method', 'PUT')
-      return api.post(`${v1}/hotel-settings`, data, { headers: { 'Content-Type': 'multipart/form-data' } })
+      data.append("_method", "PUT");
+      return api.post(`${v1}/hotel-settings`, data, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
     }
-    return api.put(`${v1}/hotel-settings`, data)
+    return api.put(`${v1}/hotel-settings`, data);
   },
   /** Removes the hotel logo. */
   removeLogo() {
-    return api.delete(`${v1}/hotel-settings/logo`)
+    return api.delete(`${v1}/hotel-settings/logo`);
   },
-}
+};
 
 /** Trusted devices — computers/terminals allowed to sign in with a PIN. */
 export const deviceTrustApi = {
   /** Lists the hotel's trusted devices (hotel admins / managers only). */
   list() {
-    return api.get(`${v1}/auth/trusted-devices`)
+    return api.get(`${v1}/auth/trusted-devices`);
   },
   /** Revokes trust so the device must sign in with email + password again. */
   revoke(id) {
-    return api.delete(`${v1}/auth/trusted-devices/${id}`)
+    return api.delete(`${v1}/auth/trusted-devices/${id}`);
   },
-}
+};
 
 /** Reservations: CRUD plus the check-in / check-out / no-show lifecycle. */
 export const reservationApi = {
@@ -721,7 +756,7 @@ export const reservationApi = {
    * @returns {Promise} Axios response with the reservation list.
    */
   index(params) {
-    return api.get(`${v1}/reservations`, { params })
+    return api.get(`${v1}/reservations`, { params });
   },
   /**
    * Creates a new reservation.
@@ -729,7 +764,7 @@ export const reservationApi = {
    * @returns {Promise} Axios response with the created reservation.
    */
   store(data) {
-    return api.post(`${v1}/reservations`, data)
+    return api.post(`${v1}/reservations`, data);
   },
   /**
    * Fetches a single reservation.
@@ -737,7 +772,7 @@ export const reservationApi = {
    * @returns {Promise} Axios response with the reservation record.
    */
   show(id) {
-    return api.get(`${v1}/reservations/${id}`)
+    return api.get(`${v1}/reservations/${id}`);
   },
   /**
    * Updates a reservation.
@@ -746,7 +781,7 @@ export const reservationApi = {
    * @returns {Promise} Axios response with the updated reservation.
    */
   update(id, data) {
-    return api.put(`${v1}/reservations/${id}`, data)
+    return api.put(`${v1}/reservations/${id}`, data);
   },
   /**
    * Amends several rooms of one booking party in a single atomic call.
@@ -755,7 +790,7 @@ export const reservationApi = {
    * @returns {Promise} Axios response with the updated party.
    */
   groupAmend(id, data) {
-    return api.put(`${v1}/reservations/${id}/group`, data)
+    return api.put(`${v1}/reservations/${id}/group`, data);
   },
   /**
    * Cancels a reservation.
@@ -763,7 +798,7 @@ export const reservationApi = {
    * @returns {Promise} Axios response confirming the cancellation.
    */
   cancel(id) {
-    return api.post(`${v1}/reservations/${id}/cancel`)
+    return api.post(`${v1}/reservations/${id}/cancel`);
   },
   /**
    * Cancels several rooms of one booking party in a single action.
@@ -771,7 +806,7 @@ export const reservationApi = {
    * @returns {Promise} Axios response confirming the cancellations.
    */
   cancelGroup(reservationIds) {
-    return api.post(`${v1}/reservations/cancel-group`, { reservation_ids: reservationIds })
+    return api.post(`${v1}/reservations/cancel-group`, { reservation_ids: reservationIds });
   },
   /**
    * Hard-deletes a reservation; extra data can carry the reason.
@@ -780,7 +815,7 @@ export const reservationApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id, data) {
-    return api.delete(`${v1}/reservations/${id}`, { data })
+    return api.delete(`${v1}/reservations/${id}`, { data });
   },
   /**
    * Returns a summary of records that will be removed when a reservation
@@ -789,7 +824,7 @@ export const reservationApi = {
    * @returns {Promise} Axios response with preview data.
    */
   deletionPreview(id) {
-    return api.get(`${v1}/reservations/${id}/deletion-preview`)
+    return api.get(`${v1}/reservations/${id}/deletion-preview`);
   },
   /**
    * Fetches the full guest folio for a reservation: postings (payments,
@@ -798,7 +833,7 @@ export const reservationApi = {
    * @returns {Promise} Axios response with the folio payload.
    */
   folio(id) {
-    return api.get(`${v1}/reservations/${id}/folio`)
+    return api.get(`${v1}/reservations/${id}/folio`);
   },
   /**
    * Searches active folios for the split/transfer picker by guest name,
@@ -806,68 +841,68 @@ export const reservationApi = {
    * @param params - { q, exclude, limit }.
    */
   folioSearch(params) {
-    return api.get(`${v1}/folio/search`, { params })
+    return api.get(`${v1}/folio/search`, { params });
   },
   /**
    * Opens a brand-new folio for the same customer (split/new folio).
    * @param data - { new_room_id? }.
    */
   folioOpenNewFolio(id, data) {
-    return api.post(`${v1}/reservations/${id}/folio/open-new-folio`, data)
+    return api.post(`${v1}/reservations/${id}/folio/open-new-folio`, data);
   },
   /**
    * Posts a manual folio charge (Add Folio). @param data - { description, amount }.
    */
   folioCharge(id, data) {
-    return api.post(`${v1}/reservations/${id}/folio/charge`, data)
+    return api.post(`${v1}/reservations/${id}/folio/charge`, data);
   },
   /**
    * Applies a discount against the outstanding balance. @param data - { amount, description }.
    */
   folioDiscount(id, data) {
-    return api.post(`${v1}/reservations/${id}/folio/discount`, data)
+    return api.post(`${v1}/reservations/${id}/folio/discount`, data);
   },
   /**
    * Posts a signed adjustment (extra charge or credit). @param data - { amount, description }.
    */
   folioAdjustment(id, data) {
-    return api.post(`${v1}/reservations/${id}/folio/adjustment`, data)
+    return api.post(`${v1}/reservations/${id}/folio/adjustment`, data);
   },
   /**
    * Records a complimentary inclusion. @param data - { description }.
    */
   folioInclusion(id, data) {
-    return api.post(`${v1}/reservations/${id}/folio/inclusion`, data)
+    return api.post(`${v1}/reservations/${id}/folio/inclusion`, data);
   },
   /**
    * Moves part of the folio balance to another reservation (transfer/split/cut).
    * @param data - { mode, target_reservation_id, amount, description }.
    */
   folioTransfer(id, data) {
-    return api.post(`${v1}/reservations/${id}/folio/transfer`, data)
+    return api.post(`${v1}/reservations/${id}/folio/transfer`, data);
   },
   /**
    * Posts the outstanding balance (or a partial amount) to a corporate
    * company's credit. @param data - { company_id, amount?, note? }.
    */
   folioCreditors(id, data) {
-    return api.post(`${v1}/reservations/${id}/folio/creditors`, data)
+    return api.post(`${v1}/reservations/${id}/folio/creditors`, data);
   },
   /**
    * Uploads documents onto the folio (multipart files[]).
    * @param files - Array of File objects.
    */
   folioAttachments(id, files) {
-    const form = new FormData()
-    files.forEach((file) => form.append('files[]', file))
-    return api.post(`${v1}/reservations/${id}/folio/attachments`, form)
+    const form = new FormData();
+    files.forEach((file) => form.append("files[]", file));
+    return api.post(`${v1}/reservations/${id}/folio/attachments`, form);
   },
   /**
    * Voids a folio ledger entry, reversing its effect on the balance.
    * @param entryId - Folio entry identifier.
    */
   folioEntryVoid(entryId) {
-    return api.post(`${v1}/folio/entries/${entryId}/void`)
+    return api.post(`${v1}/folio/entries/${entryId}/void`);
   },
   /**
    * Edits an editable folio ledger entry (description and/or amount).
@@ -875,21 +910,21 @@ export const reservationApi = {
    * @param data - { description, amount }.
    */
   folioEntryUpdate(entryId, data) {
-    return api.put(`${v1}/folio/entries/${entryId}`, data)
+    return api.put(`${v1}/folio/entries/${entryId}`, data);
   },
   /**
    * Removes an uploaded folio attachment.
    * @param entryId - Folio entry identifier.
    */
   folioEntryDeleteAttachment(entryId) {
-    return api.delete(`${v1}/folio/entries/${entryId}/attachment`)
+    return api.delete(`${v1}/folio/entries/${entryId}/attachment`);
   },
   /**
    * URL used to download an uploaded folio attachment.
    * @param entryId - Folio entry identifier.
    */
   folioAttachmentUrl(entryId) {
-    return `${api.defaults.baseURL}${v1}/folio/entries/${entryId}/attachment`
+    return `${api.defaults.baseURL}${v1}/folio/entries/${entryId}/attachment`;
   },
   /**
    * Checks a guest into their reserved room.
@@ -897,7 +932,7 @@ export const reservationApi = {
    * @returns {Promise} Axios response confirming check-in.
    */
   checkIn(id, data = {}) {
-    return api.post(`${v1}/reservations/${id}/check-in`, data)
+    return api.post(`${v1}/reservations/${id}/check-in`, data);
   },
   /**
    * Checks a guest out and finalises the folio.
@@ -906,7 +941,7 @@ export const reservationApi = {
    * @returns {Promise} Axios response confirming check-out.
    */
   checkOut(id, data) {
-    return api.post(`${v1}/reservations/${id}/check-out`, data)
+    return api.post(`${v1}/reservations/${id}/check-out`, data);
   },
   /**
    * Marks a reservation as a no-show.
@@ -914,7 +949,7 @@ export const reservationApi = {
    * @returns {Promise} Axios response confirming the no-show.
    */
   noShow(id) {
-    return api.post(`${v1}/reservations/${id}/no-show`)
+    return api.post(`${v1}/reservations/${id}/no-show`);
   },
   /**
    * Posts an incidental POS charge to an in-house room's folio.
@@ -923,16 +958,16 @@ export const reservationApi = {
    * @returns {Promise} Axios response with the updated reservation.
    */
   postRoomCharge(id, data) {
-    return api.post(`${v1}/reservations/${id}/post-room-charge`, data)
+    return api.post(`${v1}/reservations/${id}/post-room-charge`, data);
   },
   /**
    * Fetches dropdown options for the reservation forms.
    * @returns {Promise} Axios response with form options.
    */
   options() {
-    return api.get(`${v1}/reservations/options`)
+    return api.get(`${v1}/reservations/options`);
   },
-}
+};
 
 /** Payments: capture, confirmation of guest-pushed transfers, refunds and ClickPesa. */
 export const paymentApi = {
@@ -942,7 +977,7 @@ export const paymentApi = {
    * @returns {Promise} Axios response with the payment list.
    */
   index(params) {
-    return api.get(`${v1}/payments`, { params })
+    return api.get(`${v1}/payments`, { params });
   },
   /**
    * Records a new payment.
@@ -950,7 +985,7 @@ export const paymentApi = {
    * @returns {Promise} Axios response with the created payment.
    */
   store(data) {
-    return api.post(`${v1}/payments`, data)
+    return api.post(`${v1}/payments`, data);
   },
   /**
    * Fetches a single payment.
@@ -958,7 +993,7 @@ export const paymentApi = {
    * @returns {Promise} Axios response with the payment record.
    */
   show(id) {
-    return api.get(`${v1}/payments/${id}`)
+    return api.get(`${v1}/payments/${id}`);
   },
   /**
    * Updates a payment's capture details. Only provided fields are changed.
@@ -968,7 +1003,7 @@ export const paymentApi = {
    * editor identity (edited_by) and ISO timestamp (edited_at).
    */
   paymentEdit(id, data) {
-    return api.put(`${v1}/payments/${id}`, data)
+    return api.put(`${v1}/payments/${id}`, data);
   },
   /**
    * Deletes a payment.
@@ -976,7 +1011,7 @@ export const paymentApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/payments/${id}`)
+    return api.delete(`${v1}/payments/${id}`);
   },
   /**
    * Refunds a completed payment.
@@ -985,7 +1020,7 @@ export const paymentApi = {
    * @returns {Promise} Axios response with the refund result.
    */
   refund(id, data) {
-    return api.post(`${v1}/payments/${id}/refund`, data)
+    return api.post(`${v1}/payments/${id}/refund`, data);
   },
   /**
    * Marks an awaiting-confirmation payment as verified and credited.
@@ -995,7 +1030,7 @@ export const paymentApi = {
    */
   // A receptionist verifies a mobile money transfer pushed by the guest.
   confirm(id, data) {
-    return api.post(`${v1}/payments/${id}/confirm`, data)
+    return api.post(`${v1}/payments/${id}/confirm`, data);
   },
   /**
    * Rejects a payment awaiting confirmation.
@@ -1004,7 +1039,7 @@ export const paymentApi = {
    * @returns {Promise} Axios response with the rejected payment.
    */
   reject(id, data) {
-    return api.post(`${v1}/payments/${id}/reject`, data)
+    return api.post(`${v1}/payments/${id}/reject`, data);
   },
   /**
    * Initiates a ClickPesa payment session.
@@ -1012,65 +1047,65 @@ export const paymentApi = {
    * @returns {Promise} Axios response with the checkout reference.
    */
   clickPesaInitiate(data) {
-    return api.post(`${v1}/payments/clickpesa/initiate`, data)
+    return api.post(`${v1}/payments/clickpesa/initiate`, data);
   },
   /**
    * Fetches dropdown options for the payment forms.
    * @returns {Promise} Axios response with form options.
    */
   options() {
-    return api.get(`${v1}/payments/options`)
+    return api.get(`${v1}/payments/options`);
   },
-}
+};
 
 /** Exchange rates for foreign-currency cashiering conversions. */
 export const currencyRateApi = {
   index() {
-    return api.get(`${v1}/currency-rates`)
+    return api.get(`${v1}/currency-rates`);
   },
   store(data) {
-    return api.post(`${v1}/currency-rates`, data)
+    return api.post(`${v1}/currency-rates`, data);
   },
   update(id, data) {
-    return api.put(`${v1}/currency-rates/${id}`, data)
+    return api.put(`${v1}/currency-rates/${id}`, data);
   },
   destroy(id) {
-    return api.delete(`${v1}/currency-rates/${id}`)
+    return api.delete(`${v1}/currency-rates/${id}`);
   },
-}
+};
 
 /** Hotel distribution channel list (business sources). */
 export const distributionSourceApi = {
   index() {
-    return api.get(`${v1}/distribution/sources`)
+    return api.get(`${v1}/distribution/sources`);
   },
   store(data) {
-    return api.post(`${v1}/distribution/sources`, data)
+    return api.post(`${v1}/distribution/sources`, data);
   },
   update(id, data) {
-    return api.put(`${v1}/distribution/sources/${id}`, data)
+    return api.put(`${v1}/distribution/sources/${id}`, data);
   },
   destroy(id) {
-    return api.delete(`${v1}/distribution/sources/${id}`)
+    return api.delete(`${v1}/distribution/sources/${id}`);
   },
   reorder(order) {
-    return api.put(`${v1}/distribution/sources/reorder`, { order })
+    return api.put(`${v1}/distribution/sources/reorder`, { order });
   },
-}
+};
 
 /** Company Database (corporate-client directory). */
 export const companyApi = {
   index(params) {
-    return api.get(`${v1}/companies`, { params })
+    return api.get(`${v1}/companies`, { params });
   },
   store(data) {
-    return api.post(`${v1}/companies`, data)
+    return api.post(`${v1}/companies`, data);
   },
   update(id, data) {
-    return api.put(`${v1}/companies/${id}`, data)
+    return api.put(`${v1}/companies/${id}`, data);
   },
   destroy(id) {
-    return api.delete(`${v1}/companies/${id}`)
+    return api.delete(`${v1}/companies/${id}`);
   },
   /**
    * The posted-folio statement for a company account within a date range —
@@ -1080,7 +1115,7 @@ export const companyApi = {
    * @returns {Promise} Axios response with { company, balance, total_posted, total_received, rows }.
    */
   postings(id, params) {
-    return api.get(`${v1}/companies/${id}/postings`, { params })
+    return api.get(`${v1}/companies/${id}/postings`, { params });
   },
   /**
    * Receives a settlement payment against a company account.
@@ -1089,9 +1124,9 @@ export const companyApi = {
    * @returns {Promise} Axios response with the updated company and payment.
    */
   settle(id, data) {
-    return api.post(`${v1}/companies/${id}/settle`, data)
+    return api.post(`${v1}/companies/${id}/settle`, data);
   },
-}
+};
 
 /** Invoices: listing, folio invoice generation and PDF download. */
 export const invoiceApi = {
@@ -1101,7 +1136,7 @@ export const invoiceApi = {
    * @returns {Promise} Axios response with the invoice list.
    */
   index(params) {
-    return api.get(`${v1}/invoices`, { params })
+    return api.get(`${v1}/invoices`, { params });
   },
   /**
    * Fetches a single invoice.
@@ -1109,7 +1144,7 @@ export const invoiceApi = {
    * @returns {Promise} Axios response with the invoice record.
    */
   show(id) {
-    return api.get(`${v1}/invoices/${id}`)
+    return api.get(`${v1}/invoices/${id}`);
   },
   /**
    * Generates (or refreshes) the folio invoice for a reservation.
@@ -1118,7 +1153,7 @@ export const invoiceApi = {
    */
   // Generates (or refreshes) the folio invoice for a reservation.
   generate(reservationId) {
-    return api.post(`${v1}/reservations/${reservationId}/invoice`)
+    return api.post(`${v1}/reservations/${reservationId}/invoice`);
   },
   /**
    * Refreshes the folio invoice and delivers the PDF via the selected channel.
@@ -1126,8 +1161,8 @@ export const invoiceApi = {
    * @param {('email'|'sms'|'both')} [channel='email'] - Delivery channel.
    * @returns {Promise} Axios response confirming the dispatch.
    */
-  send(reservationId, channel = 'email') {
-    return api.post(`${v1}/reservations/${reservationId}/invoice/send`, { channel })
+  send(reservationId, channel = "email") {
+    return api.post(`${v1}/reservations/${reservationId}/invoice/send`, { channel });
   },
   /**
    * Streams the PDF; the caller turns the blob into a browser download.
@@ -1136,9 +1171,9 @@ export const invoiceApi = {
    */
   // Streams the PDF; the caller turns the blob into a browser download.
   download(id) {
-    return api.get(`${v1}/invoices/${id}/download`, { responseType: 'blob' })
+    return api.get(`${v1}/invoices/${id}/download`, { responseType: "blob" });
   },
-}
+};
 
 /** Housekeeping tasks with the assign → start → confirm → verify → complete workflow. */
 export const housekeepingApi = {
@@ -1148,7 +1183,7 @@ export const housekeepingApi = {
    * @returns {Promise} Axios response with the task list.
    */
   index(params) {
-    return api.get(`${v1}/housekeeping-tasks`, { params })
+    return api.get(`${v1}/housekeeping-tasks`, { params });
   },
   /**
    * Housekeeping board dashboard: open-work buckets, room status counts with
@@ -1157,7 +1192,7 @@ export const housekeepingApi = {
    * @returns {Promise} Axios response with KPI statistics.
    */
   dashboard(params) {
-    return api.get(`${v1}/housekeeping/dashboard`, { params })
+    return api.get(`${v1}/housekeeping/dashboard`, { params });
   },
   /**
    * Stay-view board for housekeeping staff: rooms, guest stays in the visible
@@ -1167,7 +1202,7 @@ export const housekeepingApi = {
    * @returns {Promise} Axios response with { rooms, stays, tasks }.
    */
   board(params) {
-    return api.get(`${v1}/housekeeping/board`, { params })
+    return api.get(`${v1}/housekeeping/board`, { params });
   },
   /**
    * Creates a new housekeeping task.
@@ -1175,7 +1210,7 @@ export const housekeepingApi = {
    * @returns {Promise} Axios response with the created task.
    */
   store(data) {
-    return api.post(`${v1}/housekeeping-tasks`, data)
+    return api.post(`${v1}/housekeeping-tasks`, data);
   },
   /**
    * Fetches a single housekeeping task.
@@ -1183,7 +1218,7 @@ export const housekeepingApi = {
    * @returns {Promise} Axios response with the task record.
    */
   show(id) {
-    return api.get(`${v1}/housekeeping-tasks/${id}`)
+    return api.get(`${v1}/housekeeping-tasks/${id}`);
   },
   /**
    * Updates a housekeeping task.
@@ -1192,7 +1227,7 @@ export const housekeepingApi = {
    * @returns {Promise} Axios response with the updated task.
    */
   update(id, data) {
-    return api.put(`${v1}/housekeeping-tasks/${id}`, data)
+    return api.put(`${v1}/housekeeping-tasks/${id}`, data);
   },
   /**
    * Assigns a staff member to a task.
@@ -1201,7 +1236,7 @@ export const housekeepingApi = {
    * @returns {Promise} Axios response with the updated task.
    */
   assign(id, data) {
-    return api.post(`${v1}/housekeeping-tasks/${id}/assign`, data)
+    return api.post(`${v1}/housekeeping-tasks/${id}/assign`, data);
   },
   /**
    * Marks a task as started by the assignee.
@@ -1209,7 +1244,7 @@ export const housekeepingApi = {
    * @returns {Promise} Axios response with the updated task.
    */
   start(id) {
-    return api.post(`${v1}/housekeeping-tasks/${id}/start`)
+    return api.post(`${v1}/housekeeping-tasks/${id}/start`);
   },
   /**
    * Confirms the work is done.
@@ -1217,7 +1252,7 @@ export const housekeepingApi = {
    * @returns {Promise} Axios response with the updated task.
    */
   confirm(id) {
-    return api.post(`${v1}/housekeeping-tasks/${id}/confirm`)
+    return api.post(`${v1}/housekeeping-tasks/${id}/confirm`);
   },
   /**
    * Verifies the completed work (e.g. by a supervisor).
@@ -1225,7 +1260,7 @@ export const housekeepingApi = {
    * @returns {Promise} Axios response with the updated task.
    */
   verify(id) {
-    return api.post(`${v1}/housekeeping-tasks/${id}/verify`)
+    return api.post(`${v1}/housekeeping-tasks/${id}/verify`);
   },
   /**
    * Completes the task after verification.
@@ -1233,7 +1268,7 @@ export const housekeepingApi = {
    * @returns {Promise} Axios response with the updated task.
    */
   complete(id) {
-    return api.post(`${v1}/housekeeping-tasks/${id}/complete`)
+    return api.post(`${v1}/housekeeping-tasks/${id}/complete`);
   },
   /**
    * Deletes a housekeeping task.
@@ -1241,9 +1276,9 @@ export const housekeepingApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/housekeeping-tasks/${id}`)
+    return api.delete(`${v1}/housekeeping-tasks/${id}`);
   },
-}
+};
 
 /** Inventory items, stock adjustments and movement history. */
 export const inventoryApi = {
@@ -1253,7 +1288,7 @@ export const inventoryApi = {
    * @returns {Promise} Axios response with the inventory list.
    */
   index(params) {
-    return api.get(`${v1}/inventory`, { params })
+    return api.get(`${v1}/inventory`, { params });
   },
   /**
    * Creates a new inventory item.
@@ -1261,7 +1296,7 @@ export const inventoryApi = {
    * @returns {Promise} Axios response with the created item.
    */
   store(data) {
-    return api.post(`${v1}/inventory`, data)
+    return api.post(`${v1}/inventory`, data);
   },
   /**
    * Fetches a single inventory item.
@@ -1269,7 +1304,7 @@ export const inventoryApi = {
    * @returns {Promise} Axios response with the item record.
    */
   show(id) {
-    return api.get(`${v1}/inventory/${id}`)
+    return api.get(`${v1}/inventory/${id}`);
   },
   /**
    * Updates an inventory item.
@@ -1278,7 +1313,7 @@ export const inventoryApi = {
    * @returns {Promise} Axios response with the updated item.
    */
   update(id, data) {
-    return api.put(`${v1}/inventory/${id}`, data)
+    return api.put(`${v1}/inventory/${id}`, data);
   },
   /**
    * Records a stock adjustment (in/out) with a note.
@@ -1287,7 +1322,7 @@ export const inventoryApi = {
    * @returns {Promise} Axios response with the adjusted item.
    */
   adjust(id, data) {
-    return api.post(`${v1}/inventory/${id}/adjust`, data)
+    return api.post(`${v1}/inventory/${id}/adjust`, data);
   },
   /**
    * Fetches an item's stock movement history.
@@ -1296,7 +1331,7 @@ export const inventoryApi = {
    * @returns {Promise} Axios response with the movement list.
    */
   movements(id, params) {
-    return api.get(`${v1}/inventory/${id}/movements`, { params })
+    return api.get(`${v1}/inventory/${id}/movements`, { params });
   },
   /**
    * Deletes an inventory item.
@@ -1304,9 +1339,9 @@ export const inventoryApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/inventory/${id}`)
+    return api.delete(`${v1}/inventory/${id}`);
   },
-}
+};
 
 /**
  * Inventory transaction series: departments, transfers, physical counts,
@@ -1332,12 +1367,15 @@ export const inventoryOpsApi = {
   stockAdjustments: (params) => api.get(`${v1}/inventory-stock-adjustments`, { params }),
   showStockAdjustment: (id) => api.get(`${v1}/inventory-stock-adjustments/${id}`),
   storeStockAdjustment: (data) => api.post(`${v1}/inventory-stock-adjustments`, data),
-  voidStockAdjustment: (id, reason) => api.post(`${v1}/inventory-stock-adjustments/${id}/void`, { reason }),
-  emailStockAdjustment: (id, to) => api.post(`${v1}/inventory-stock-adjustments/${id}/email`, { to }),
+  voidStockAdjustment: (id, reason) =>
+    api.post(`${v1}/inventory-stock-adjustments/${id}/void`, { reason }),
+  emailStockAdjustment: (id, to) =>
+    api.post(`${v1}/inventory-stock-adjustments/${id}/email`, { to }),
 
   stockTakes: (params) => api.get(`${v1}/inventory-stock-takes`, { params }),
   openStockTake: (data) => api.post(`${v1}/inventory-stock-takes`, data),
-  updateStockTakeCounts: (id, counts) => api.put(`${v1}/inventory-stock-takes/${id}/counts`, { counts }),
+  updateStockTakeCounts: (id, counts) =>
+    api.put(`${v1}/inventory-stock-takes/${id}/counts`, { counts }),
   postStockTake: (id) => api.post(`${v1}/inventory-stock-takes/${id}/post`),
   voidStockTake: (id, reason) => api.post(`${v1}/inventory-stock-takes/${id}/void`, { reason }),
 
@@ -1345,7 +1383,8 @@ export const inventoryOpsApi = {
   storeRecipe: (data) => api.post(`${v1}/inventory-recipes`, data),
   productionRuns: (params) => api.get(`${v1}/inventory-production-runs`, { params }),
   storeProductionRun: (data) => api.post(`${v1}/inventory-production-runs`, data),
-  voidProductionRun: (id, reason) => api.post(`${v1}/inventory-production-runs/${id}/void`, { reason }),
+  voidProductionRun: (id, reason) =>
+    api.post(`${v1}/inventory-production-runs/${id}/void`, { reason }),
 
   indents: (params) => api.get(`${v1}/inventory-indents`, { params }),
   showIndent: (id) => api.get(`${v1}/inventory-indents/${id}`),
@@ -1358,12 +1397,12 @@ export const inventoryOpsApi = {
   approveIndent: (id) => api.post(`${v1}/inventory-indents/${id}/approve`),
   rejectIndent: (id, reason) => api.post(`${v1}/inventory-indents/${id}/reject`, { reason }),
   voidIndent: (id, reason) => api.post(`${v1}/inventory-indents/${id}/void`, { reason }),
-  printIndentPdf: (id) => api.get(`${v1}/inventory-indents/${id}/pdf`, { responseType: 'blob' }),
+  printIndentPdf: (id) => api.get(`${v1}/inventory-indents/${id}/pdf`, { responseType: "blob" }),
   emailIndent: (id, to, channel) => {
-    const body = {}
-    if (to) body.to = to
-    if (channel) body.channel = channel
-    return api.post(`${v1}/inventory-indents/${id}/email`, body)
+    const body = {};
+    if (to) body.to = to;
+    if (channel) body.channel = channel;
+    return api.post(`${v1}/inventory-indents/${id}/email`, body);
   },
   requisitionItems: (params) => api.get(`${v1}/inventory-requisition-items`, { params }),
 
@@ -1375,7 +1414,7 @@ export const inventoryOpsApi = {
   goodsReturns: (params) => api.get(`${v1}/inventory-goods-returns`, { params }),
   storeGoodsReturn: (data) => api.post(`${v1}/inventory-goods-returns`, data),
   voidGoodsReturn: (id, reason) => api.post(`${v1}/inventory-goods-returns/${id}/void`, { reason }),
-}
+};
 
 /** Store manager extended operations (POS, sales, categories, customers, etc.). */
 export const storeApi = {
@@ -1412,39 +1451,39 @@ export const storeApi = {
   activityLog: (params) => api.get(`${v1}/store/activity-log`, { params }),
   settings: () => api.get(`${v1}/store/settings`),
   updateSettings: (data) => api.put(`${v1}/store/settings`, data),
-}
+};
 
 /** Inventory departments/scope picker. */
 export const departmentApi = {
   index(params) {
-    return api.get(`${v1}/departments`, { params })
+    return api.get(`${v1}/departments`, { params });
   },
   store(data) {
-    return api.post(`${v1}/departments`, data)
+    return api.post(`${v1}/departments`, data);
   },
   update(id, data) {
-    return api.put(`${v1}/departments/${id}`, data)
+    return api.put(`${v1}/departments/${id}`, data);
   },
   destroy(id) {
-    return api.delete(`${v1}/departments/${id}`)
+    return api.delete(`${v1}/departments/${id}`);
   },
-}
+};
 
 /** SI-unit registry shared by item, PO and GRN forms. */
 export const unitsApi = {
   index(params) {
-    return api.get(`${v1}/units-of-measure`, { params })
+    return api.get(`${v1}/units-of-measure`, { params });
   },
   store(data) {
-    return api.post(`${v1}/units-of-measure`, data)
+    return api.post(`${v1}/units-of-measure`, data);
   },
   update(id, data) {
-    return api.put(`${v1}/units-of-measure/${id}`, data)
+    return api.put(`${v1}/units-of-measure/${id}`, data);
   },
   destroy(id) {
-    return api.delete(`${v1}/units-of-measure/${id}`)
+    return api.delete(`${v1}/units-of-measure/${id}`);
   },
-}
+};
 
 /** Supplier records for procurement. */
 export const supplierApi = {
@@ -1454,7 +1493,7 @@ export const supplierApi = {
    * @returns {Promise} Axios response with the supplier list.
    */
   index(params) {
-    return api.get(`${v1}/suppliers`, { params })
+    return api.get(`${v1}/suppliers`, { params });
   },
   /**
    * Creates a new supplier.
@@ -1462,7 +1501,7 @@ export const supplierApi = {
    * @returns {Promise} Axios response with the created supplier.
    */
   store(data) {
-    return api.post(`${v1}/suppliers`, data)
+    return api.post(`${v1}/suppliers`, data);
   },
   /**
    * Fetches a single supplier.
@@ -1470,7 +1509,7 @@ export const supplierApi = {
    * @returns {Promise} Axios response with the supplier record.
    */
   show(id) {
-    return api.get(`${v1}/suppliers/${id}`)
+    return api.get(`${v1}/suppliers/${id}`);
   },
   /**
    * Updates a supplier.
@@ -1479,7 +1518,7 @@ export const supplierApi = {
    * @returns {Promise} Axios response with the updated supplier.
    */
   update(id, data) {
-    return api.put(`${v1}/suppliers/${id}`, data)
+    return api.put(`${v1}/suppliers/${id}`, data);
   },
   /**
    * Deletes a supplier.
@@ -1487,9 +1526,9 @@ export const supplierApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/suppliers/${id}`)
+    return api.delete(`${v1}/suppliers/${id}`);
   },
-}
+};
 
 /** Food & beverage menu items. */
 export const menuItemApi = {
@@ -1499,7 +1538,7 @@ export const menuItemApi = {
    * @returns {Promise} Axios response with the menu item list.
    */
   index(params) {
-    return api.get(`${v1}/menu-items`, { params })
+    return api.get(`${v1}/menu-items`, { params });
   },
   /**
    * Creates a new menu item.
@@ -1507,7 +1546,7 @@ export const menuItemApi = {
    * @returns {Promise} Axios response with the created item.
    */
   store(data) {
-    return api.post(`${v1}/menu-items`, data)
+    return api.post(`${v1}/menu-items`, data);
   },
   /**
    * Fetches a single menu item.
@@ -1515,7 +1554,7 @@ export const menuItemApi = {
    * @returns {Promise} Axios response with the menu item record.
    */
   show(id) {
-    return api.get(`${v1}/menu-items/${id}`)
+    return api.get(`${v1}/menu-items/${id}`);
   },
   /**
    * Updates a menu item.
@@ -1524,7 +1563,7 @@ export const menuItemApi = {
    * @returns {Promise} Axios response with the updated item.
    */
   update(id, data) {
-    return api.put(`${v1}/menu-items/${id}`, data)
+    return api.put(`${v1}/menu-items/${id}`, data);
   },
   /**
    * Deletes a menu item.
@@ -1532,26 +1571,26 @@ export const menuItemApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/menu-items/${id}`)
+    return api.delete(`${v1}/menu-items/${id}`);
   },
-}
+};
 
 /** Managed restaurant/bar menu categories (buttons the point-of-sale shows). */
 /** Menu sub-categories: the second level, the items inside a category. */
 export const menuSubCategoryApi = {
   index(params) {
-    return api.get(`${v1}/menu-sub-categories`, { params })
+    return api.get(`${v1}/menu-sub-categories`, { params });
   },
   store(data) {
-    return api.post(`${v1}/menu-sub-categories`, data)
+    return api.post(`${v1}/menu-sub-categories`, data);
   },
   update(id, data) {
-    return api.put(`${v1}/menu-sub-categories/${id}`, data)
+    return api.put(`${v1}/menu-sub-categories/${id}`, data);
   },
   destroy(id) {
-    return api.delete(`${v1}/menu-sub-categories/${id}`)
+    return api.delete(`${v1}/menu-sub-categories/${id}`);
   },
-}
+};
 
 export const menuCategoryApi = {
   /**
@@ -1560,7 +1599,7 @@ export const menuCategoryApi = {
    * @returns {Promise} Axios response with the ordered category list.
    */
   index(params) {
-    return api.get(`${v1}/menu-categories`, { params })
+    return api.get(`${v1}/menu-categories`, { params });
   },
   /**
    * Creates a menu category.
@@ -1568,16 +1607,16 @@ export const menuCategoryApi = {
    * @returns {Promise} Axios response with the created category.
    */
   store(data) {
-    return api.post(`${v1}/menu-categories`, data)
+    return api.post(`${v1}/menu-categories`, data);
   },
   /**
    * Updates a menu category (name / sort_order / is_active).
-   * @param {string} id - Category 
+   * @param {string} id - Category
    * @param {object} data - Fields to update.
    * @returns {Promise} Axios response with the updated category.
    */
   update(id, data) {
-    return api.put(`${v1}/menu-categories/${id}`, data)
+    return api.put(`${v1}/menu-categories/${id}`, data);
   },
   /**
    * Persists the display order of a department's categories.
@@ -1585,7 +1624,7 @@ export const menuCategoryApi = {
    * @returns {Promise} Axios response confirming the order.
    */
   reorder(department, order) {
-    return api.put(`${v1}/menu-categories/reorder`, { department, order })
+    return api.put(`${v1}/menu-categories/reorder`, { department, order });
   },
   /**
    * Deletes a menu category (linked items are ungrouped, not deleted).
@@ -1593,9 +1632,9 @@ export const menuCategoryApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/menu-categories/${id}`)
+    return api.delete(`${v1}/menu-categories/${id}`);
   },
-}
+};
 
 /**
  * Who changed the menu, and when.
@@ -1615,7 +1654,7 @@ export const menuAuditApi = {
    * @returns {Promise} Axios response with a paginated list of audit rows.
    */
   index(params) {
-    return api.get(`${v1}/menu-audit`, { params })
+    return api.get(`${v1}/menu-audit`, { params });
   },
   /**
    * The whole history of a single menu record, newest first.
@@ -1625,9 +1664,9 @@ export const menuAuditApi = {
    * @returns {Promise} Axios response with the rows for that record (not paginated).
    */
   entity(entityType, entityId, params) {
-    return api.get(`${v1}/menu-audit/${entityType}/${entityId}`, { params })
+    return api.get(`${v1}/menu-audit/${entityType}/${entityId}`, { params });
   },
-}
+};
 
 /**
  * Registered "served with" accompaniments (wali, ugali, chips...) the hotel
@@ -1642,7 +1681,7 @@ export const menuAccompanimentApi = {
    * @returns {Promise} Axios response with the ordered accompaniment list.
    */
   index(params) {
-    return api.get(`${v1}/menu-accompaniments`, { params })
+    return api.get(`${v1}/menu-accompaniments`, { params });
   },
   /**
    * Registers a new accompaniment food.
@@ -1650,7 +1689,7 @@ export const menuAccompanimentApi = {
    * @returns {Promise} Axios response with the created accompaniment.
    */
   store(data) {
-    return api.post(`${v1}/menu-accompaniments`, data)
+    return api.post(`${v1}/menu-accompaniments`, data);
   },
   /**
    * Updates an accompaniment (rename / sort_order / is_active).
@@ -1659,7 +1698,7 @@ export const menuAccompanimentApi = {
    * @returns {Promise} Axios response with the updated accompaniment.
    */
   update(id, data) {
-    return api.put(`${v1}/menu-accompaniments/${id}`, data)
+    return api.put(`${v1}/menu-accompaniments/${id}`, data);
   },
   /**
    * Persists the display order of a department's accompaniment prompt.
@@ -1668,7 +1707,7 @@ export const menuAccompanimentApi = {
    * @returns {Promise} Axios response confirming the order.
    */
   reorder(department, order) {
-    return api.put(`${v1}/menu-accompaniments/reorder`, { department, order })
+    return api.put(`${v1}/menu-accompaniments/reorder`, { department, order });
   },
   /**
    * Deletes an accompaniment (blocked once recorded on any order line; hide it instead).
@@ -1676,9 +1715,9 @@ export const menuAccompanimentApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/menu-accompaniments/${id}`)
+    return api.delete(`${v1}/menu-accompaniments/${id}`);
   },
-}
+};
 
 /** Restaurant/bar tables (manager maintains the list; waiters pick one when ordering). */
 export const tableApi = {
@@ -1688,7 +1727,7 @@ export const tableApi = {
    * @returns {Promise} Axios response with the table list.
    */
   index(params) {
-    return api.get(`${v1}/tables`, { params })
+    return api.get(`${v1}/tables`, { params });
   },
   /**
    * Creates a table.
@@ -1696,7 +1735,7 @@ export const tableApi = {
    * @returns {Promise} Axios response with the created table.
    */
   store(data) {
-    return api.post(`${v1}/tables`, data)
+    return api.post(`${v1}/tables`, data);
   },
   /**
    * Updates a table.
@@ -1705,7 +1744,7 @@ export const tableApi = {
    * @returns {Promise} Axios response with the updated table.
    */
   update(id, data) {
-    return api.put(`${v1}/tables/${id}`, data)
+    return api.put(`${v1}/tables/${id}`, data);
   },
   /**
    * Deletes a table.
@@ -1713,9 +1752,9 @@ export const tableApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/tables/${id}`)
+    return api.delete(`${v1}/tables/${id}`);
   },
-}
+};
 
 /**
  * Registrable table locations (the Manage Table "second dropdown": instead of a
@@ -1729,7 +1768,7 @@ export const tableLocationApi = {
    * @returns {Promise} Axios response with the location list.
    */
   index() {
-    return api.get(`${v1}/table-locations`)
+    return api.get(`${v1}/table-locations`);
   },
   /**
    * Creates a new table location.
@@ -1737,7 +1776,7 @@ export const tableLocationApi = {
    * @returns {Promise} Axios response with the created location.
    */
   store(data) {
-    return api.post(`${v1}/table-locations`, data)
+    return api.post(`${v1}/table-locations`, data);
   },
   /**
    * Updates a table location.
@@ -1746,7 +1785,7 @@ export const tableLocationApi = {
    * @returns {Promise} Axios response with the updated location.
    */
   update(id, data) {
-    return api.put(`${v1}/table-locations/${id}`, data)
+    return api.put(`${v1}/table-locations/${id}`, data);
   },
   /**
    * Deletes a table location.
@@ -1754,9 +1793,9 @@ export const tableLocationApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/table-locations/${id}`)
+    return api.delete(`${v1}/table-locations/${id}`);
   },
-}
+};
 
 /** F&B orders: cash/room-folio settlement and per-item kitchen status. */
 export const orderApi = {
@@ -1766,11 +1805,11 @@ export const orderApi = {
    * @returns {Promise} Axios response with the order list.
    */
   index(params) {
-    return api.get(`${v1}/orders`, { params })
+    return api.get(`${v1}/orders`, { params });
   },
   /** Daily order summary (settlement buckets + waiter scoped). @param {object} params - date, department, waiter_id. */
   summary(params) {
-    return api.get(`${v1}/orders/summary`, { params })
+    return api.get(`${v1}/orders/summary`, { params });
   },
   /**
    * Fetches the order form's dropdown data.
@@ -1778,7 +1817,7 @@ export const orderApi = {
    */
   // In-house guests (to bill to a room) and serving staff (to record the waiter).
   formOptions() {
-    return api.get(`${v1}/orders/form-options`)
+    return api.get(`${v1}/orders/form-options`);
   },
   /**
    * Creates a new order.
@@ -1786,7 +1825,7 @@ export const orderApi = {
    * @returns {Promise} Axios response with the created order.
    */
   store(data) {
-    return api.post(`${v1}/orders`, data)
+    return api.post(`${v1}/orders`, data);
   },
   /**
    * Appends line items to an existing running order (a waiter continuing a
@@ -1796,7 +1835,7 @@ export const orderApi = {
    * @returns {Promise} Axios response with the updated order.
    */
   addItems(id, data) {
-    return api.post(`${v1}/orders/${id}/items`, data)
+    return api.post(`${v1}/orders/${id}/items`, data);
   },
   /**
    * Fetches a single order.
@@ -1804,7 +1843,7 @@ export const orderApi = {
    * @returns {Promise} Axios response with the order record.
    */
   show(id) {
-    return api.get(`${v1}/orders/${id}`)
+    return api.get(`${v1}/orders/${id}`);
   },
   /**
    * Updates an order.
@@ -1813,7 +1852,7 @@ export const orderApi = {
    * @returns {Promise} Axios response with the updated order.
    */
   update(id, data) {
-    return api.put(`${v1}/orders/${id}`, data)
+    return api.put(`${v1}/orders/${id}`, data);
   },
   /**
    * Settles an order in cash/mobile money.
@@ -1822,7 +1861,7 @@ export const orderApi = {
    * @returns {Promise} Axios response with the settled order.
    */
   pay(id, data) {
-    return api.post(`${v1}/orders/${id}/pay`, data)
+    return api.post(`${v1}/orders/${id}/pay`, data);
   },
   /**
    * Charges an in-house guest's order to their room folio.
@@ -1831,7 +1870,7 @@ export const orderApi = {
    * @returns {Promise} Axios response with the updated order.
    */
   billToRoom(id, data) {
-    return api.post(`${v1}/orders/${id}/bill-to-room`, data)
+    return api.post(`${v1}/orders/${id}/bill-to-room`, data);
   },
   /**
    * Posts an order to a registered creditor or no-charge account.
@@ -1840,7 +1879,7 @@ export const orderApi = {
    * @returns {Promise}
    */
   settleCreditAccount(id, data) {
-    return api.post(`${v1}/orders/${id}/settle-credit-account`, data)
+    return api.post(`${v1}/orders/${id}/settle-credit-account`, data);
   },
   /**
    * Kitchen marks a single line item ready or served without moving the whole order.
@@ -1851,7 +1890,7 @@ export const orderApi = {
    */
   // Kitchen marks a single line item ready or served without moving the whole order.
   markItemStatus(id, itemId, status) {
-    return api.patch(`${v1}/orders/${id}/items/${itemId}/status`, { status })
+    return api.patch(`${v1}/orders/${id}/items/${itemId}/status`, { status });
   },
   /**
    * Edits a running ticket's line quantity; stock adjusts live.
@@ -1861,7 +1900,7 @@ export const orderApi = {
    * @returns {Promise} Axios response with the updated order.
    */
   updateOrderItem(id, itemId, data) {
-    return api.put(`${v1}/orders/${id}/items/${itemId}`, data)
+    return api.put(`${v1}/orders/${id}/items/${itemId}`, data);
   },
   /**
    * Removes a line from a running ticket; stock is refunded.
@@ -1870,7 +1909,7 @@ export const orderApi = {
    * @returns {Promise} Axios response with the updated order.
    */
   removeOrderItem(id, itemId) {
-    return api.delete(`${v1}/orders/${id}/items/${itemId}`)
+    return api.delete(`${v1}/orders/${id}/items/${itemId}`);
   },
   /**
    * Explicitly voids a running ticket, returning its stock.
@@ -1879,7 +1918,7 @@ export const orderApi = {
    * @returns {Promise} Axios response with the voided order.
    */
   voidOrder(id, data = {}) {
-    return api.post(`${v1}/orders/${id}/void`, data)
+    return api.post(`${v1}/orders/${id}/void`, data);
   },
   /**
    * Moves a whole ticket onto another free or same-waiter table.
@@ -1888,7 +1927,7 @@ export const orderApi = {
    * @returns {Promise} Axios response with the transferred order.
    */
   transferOrder(id, data) {
-    return api.post(`${v1}/orders/${id}/transfer`, data)
+    return api.post(`${v1}/orders/${id}/transfer`, data);
   },
   /**
    * Moves/splits selected lines onto another table's ticket.
@@ -1897,7 +1936,7 @@ export const orderApi = {
    * @returns {Promise} Axios response with both orders.
    */
   transferOrderItems(id, data) {
-    return api.post(`${v1}/orders/${id}/items/transfer`, data)
+    return api.post(`${v1}/orders/${id}/items/transfer`, data);
   },
   /**
    * Splits a bill onto a fresh same-table ticket.
@@ -1906,7 +1945,7 @@ export const orderApi = {
    * @returns {Promise} Axios response with the new split order.
    */
   splitOrder(id, data) {
-    return api.post(`${v1}/orders/${id}/split`, data)
+    return api.post(`${v1}/orders/${id}/split`, data);
   },
   /**
    * Merges the whole bill onto another table so two tickets are paid as ONE
@@ -1916,9 +1955,9 @@ export const orderApi = {
    * @returns {Promise} Axios response with the merged order + closed source.
    */
   mergeOrder(id, data) {
-    return api.post(`${v1}/orders/${id}/merge`, data)
+    return api.post(`${v1}/orders/${id}/merge`, data);
   },
-}
+};
 
 /** POS outlets: the service points (restaurant/bar) a cashier works from. */
 export const outletApi = {
@@ -1927,7 +1966,7 @@ export const outletApi = {
    * @returns {Promise} Axios response with the outlet list.
    */
   index() {
-    return api.get(`${v1}/outlets`)
+    return api.get(`${v1}/outlets`);
   },
   /**
    * Creates an outlet.
@@ -1935,7 +1974,7 @@ export const outletApi = {
    * @returns {Promise} Axios response with the created outlet.
    */
   store(data) {
-    return api.post(`${v1}/outlets`, data)
+    return api.post(`${v1}/outlets`, data);
   },
   /**
    * Updates an outlet.
@@ -1944,7 +1983,7 @@ export const outletApi = {
    * @returns {Promise} Axios response with the updated outlet.
    */
   update(id, data) {
-    return api.put(`${v1}/outlets/${id}`, data)
+    return api.put(`${v1}/outlets/${id}`, data);
   },
   /**
    * Deactivates an outlet.
@@ -1952,9 +1991,9 @@ export const outletApi = {
    * @returns {Promise} Axios response confirming deactivation.
    */
   destroy(id) {
-    return api.delete(`${v1}/outlets/${id}`)
+    return api.delete(`${v1}/outlets/${id}`);
   },
-}
+};
 
 /** Cashier POS operations: waiter assignment board and freeze/unfreeze. */
 export const cashierApi = {
@@ -1963,7 +2002,7 @@ export const cashierApi = {
    * @returns {Promise} Axios response with waiters + unassigned table count.
    */
   waiters() {
-    return api.get(`${v1}/cashier/waiters`)
+    return api.get(`${v1}/cashier/waiters`);
   },
   /**
    * Assigns (or clears, when userId is null) the waiter responsible for a table.
@@ -1972,7 +2011,7 @@ export const cashierApi = {
    * @returns {Promise} Axios response with the updated table.
    */
   assignWaiter(tableId, userId) {
-    return api.put(`${v1}/cashier/tables/${tableId}/waiter`, { user_id: userId })
+    return api.put(`${v1}/cashier/tables/${tableId}/waiter`, { user_id: userId });
   },
   /**
    * Today's orders for a specific waiter (served + running).
@@ -1980,7 +2019,7 @@ export const cashierApi = {
    * @returns {Promise} Axios response with orders list.
    */
   waiterOrders(userId) {
-    return api.get(`${v1}/cashier/waiters/${userId}/orders`)
+    return api.get(`${v1}/cashier/waiters/${userId}/orders`);
   },
   /**
    * Today's orders for a specific table, with per-waiter summary.
@@ -1988,14 +2027,14 @@ export const cashierApi = {
    * @returns {Promise} Axios response with orders + summary.
    */
   tableTodayOrders(tableId) {
-    return api.get(`${v1}/cashier/tables/${tableId}/today-orders`)
+    return api.get(`${v1}/cashier/tables/${tableId}/today-orders`);
   },
   /**
    * Batch today's order summary for ALL tables in one request.
    * @returns {Promise} Axios response with { tables: { tableName: { waiters_count, last_at } } }
    */
   todayOrdersBatch() {
-    return api.get(`${v1}/cashier/tables/today-orders-batch`)
+    return api.get(`${v1}/cashier/tables/today-orders-batch`);
   },
   /**
    * Freezes a running order so it cannot be edited until unfrozen.
@@ -2004,7 +2043,7 @@ export const cashierApi = {
    * @returns {Promise} Axios response with the frozen order.
    */
   freeze(orderId, data = {}) {
-    return api.post(`${v1}/orders/${orderId}/freeze`, data)
+    return api.post(`${v1}/orders/${orderId}/freeze`, data);
   },
   /**
    * Releases a frozen order back into service.
@@ -2012,7 +2051,7 @@ export const cashierApi = {
    * @returns {Promise} Axios response with the unfrozen order.
    */
   unfreeze(orderId) {
-    return api.post(`${v1}/orders/${orderId}/unfreeze`)
+    return api.post(`${v1}/orders/${orderId}/unfreeze`);
   },
   /**
    * F&B inventory items (restaurant + bar) for building ingredient lists,
@@ -2020,7 +2059,7 @@ export const cashierApi = {
    * @returns {Promise} Axios response with the item list.
    */
   inventoryItems() {
-    return api.get(`${v1}/cashier/inventory-items`)
+    return api.get(`${v1}/cashier/inventory-items`);
   },
   /**
    * Lists every frozen (transaction-locked) order for the manager's screen.
@@ -2028,9 +2067,9 @@ export const cashierApi = {
    * @returns {Promise} Axios response with { orders, pagination }.
    */
   frozenOrders(params) {
-    return api.get(`${v1}/cashier/frozen-orders`, { params })
+    return api.get(`${v1}/cashier/frozen-orders`, { params });
   },
-}
+};
 
 /** Cashier manager screens: shift, devices and account lookup. */
 export const posApi = {
@@ -2039,7 +2078,7 @@ export const posApi = {
    * @returns {Promise} Axios response with the shift state.
    */
   shiftCurrent() {
-    return api.get(`${v1}/pos/shift/current`)
+    return api.get(`${v1}/pos/shift/current`);
   },
   /**
    * Historical POS shifts, newest first.
@@ -2047,7 +2086,7 @@ export const posApi = {
    * @returns {Promise} Axios response with paginated shifts.
    */
   shifts(params) {
-    return api.get(`${v1}/pos/shifts`, { params })
+    return api.get(`${v1}/pos/shifts`, { params });
   },
   /**
    * Opens a POS cash-drawer shift.
@@ -2055,7 +2094,7 @@ export const posApi = {
    * @returns {Promise} Axios response with the open shift.
    */
   shiftOpen(data) {
-    return api.post(`${v1}/pos/shift/open`, data)
+    return api.post(`${v1}/pos/shift/open`, data);
   },
   /**
    * Closes the open POS shift against counted cash.
@@ -2063,7 +2102,7 @@ export const posApi = {
    * @returns {Promise} Axios response with the closed shift.
    */
   shiftClose(data) {
-    return api.post(`${v1}/pos/shift/close`, data)
+    return api.post(`${v1}/pos/shift/close`, data);
   },
   /**
    * Lists the hotel's POS devices, optionally filtered by status.
@@ -2071,7 +2110,7 @@ export const posApi = {
    * @returns {Promise} Axios response with paginated devices.
    */
   devices(params) {
-    return api.get(`${v1}/pos/devices`, { params })
+    return api.get(`${v1}/pos/devices`, { params });
   },
   /**
    * Takes a POS device out of service.
@@ -2079,7 +2118,7 @@ export const posApi = {
    * @returns {Promise} Axios response with the blocked device.
    */
   blockDevice(id) {
-    return api.post(`${v1}/pos/devices/${id}/block`)
+    return api.post(`${v1}/pos/devices/${id}/block`);
   },
   /**
    * Puts a blocked POS device back into service.
@@ -2087,7 +2126,7 @@ export const posApi = {
    * @returns {Promise} Axios response with the unblocked device.
    */
   unblockDevice(id) {
-    return api.post(`${v1}/pos/devices/${id}/unblock`)
+    return api.post(`${v1}/pos/devices/${id}/unblock`);
   },
   /**
    * Cashier account lookup over the guest book with running balances.
@@ -2095,7 +2134,7 @@ export const posApi = {
    * @returns {Promise} Axios response with { accounts, pagination }.
    */
   accounts(params) {
-    return api.get(`${v1}/cashier/accounts`, { params })
+    return api.get(`${v1}/cashier/accounts`, { params });
   },
   /**
    * Cashier creditor lookup across the whole credit book: suppliers plus any
@@ -2106,21 +2145,21 @@ export const posApi = {
    * @returns {Promise} Axios response with { creditors, pagination }.
    */
   creditors(params) {
-    return api.get(`${v1}/cashier/creditors`, { params })
+    return api.get(`${v1}/cashier/creditors`, { params });
   },
   /** Registers an organization that can extend the hotel credit. */
   saveCreditor(payload) {
-    return api.post(`${v1}/cashier/creditors`, payload)
+    return api.post(`${v1}/cashier/creditors`, payload);
   },
   /** Updates a general creditor account. */
   updateCreditor(id, payload) {
-    return api.put(`${v1}/cashier/creditors/${id}`, payload)
+    return api.put(`${v1}/cashier/creditors/${id}`, payload);
   },
   /** Removes a general creditor account. */
   deleteCreditor(id) {
-    return api.delete(`${v1}/cashier/creditors/${id}`)
+    return api.delete(`${v1}/cashier/creditors/${id}`);
   },
-}
+};
 
 /**
  * F&B credit account registry: named no-charge accounts (and other creditor
@@ -2129,37 +2168,37 @@ export const posApi = {
 export const creditAccountApi = {
   /** Lists registered credit accounts. */
   index(params) {
-    return api.get(`${v1}/fnb/credit-accounts`, { params })
+    return api.get(`${v1}/fnb/credit-accounts`, { params });
   },
   /** Registers a new credit account (no_charge / creditor). */
   store(payload) {
-    return api.post(`${v1}/fnb/credit-accounts`, payload)
+    return api.post(`${v1}/fnb/credit-accounts`, payload);
   },
   /** Updates a registered credit account. */
   update(id, payload) {
-    return api.put(`${v1}/fnb/credit-accounts/${id}`, payload)
+    return api.put(`${v1}/fnb/credit-accounts/${id}`, payload);
   },
   /** Removes a registered credit account. */
   destroy(id) {
-    return api.delete(`${v1}/fnb/credit-accounts/${id}`)
+    return api.delete(`${v1}/fnb/credit-accounts/${id}`);
   },
-}
+};
 
 /** Menu item ingredients — links sellable items to tracked inventory stock. */
 export const menuItemIngredientApi = {
   index(menuItemId) {
-    return api.get(`${v1}/menu-items/${menuItemId}/ingredients`)
+    return api.get(`${v1}/menu-items/${menuItemId}/ingredients`);
   },
   store(menuItemId, data) {
-    return api.post(`${v1}/menu-items/${menuItemId}/ingredients`, data)
+    return api.post(`${v1}/menu-items/${menuItemId}/ingredients`, data);
   },
   update(menuItemId, ingredientId, data) {
-    return api.put(`${v1}/menu-items/${menuItemId}/ingredients/${ingredientId}`, data)
+    return api.put(`${v1}/menu-items/${menuItemId}/ingredients/${ingredientId}`, data);
   },
   destroy(menuItemId, ingredientId) {
-    return api.delete(`${v1}/menu-items/${menuItemId}/ingredients/${ingredientId}`)
+    return api.delete(`${v1}/menu-items/${menuItemId}/ingredients/${ingredientId}`);
   },
-}
+};
 
 /** Guest laundry orders. */
 export const laundryApi = {
@@ -2169,7 +2208,7 @@ export const laundryApi = {
    * @returns {Promise} Axios response with the laundry order list.
    */
   index(params) {
-    return api.get(`${v1}/laundry-orders`, { params })
+    return api.get(`${v1}/laundry-orders`, { params });
   },
   /**
    * Creates a new laundry order.
@@ -2177,7 +2216,7 @@ export const laundryApi = {
    * @returns {Promise} Axios response with the created order.
    */
   store(data) {
-    return api.post(`${v1}/laundry-orders`, data)
+    return api.post(`${v1}/laundry-orders`, data);
   },
   /**
    * Fetches a single laundry order.
@@ -2185,7 +2224,7 @@ export const laundryApi = {
    * @returns {Promise} Axios response with the order record.
    */
   show(id) {
-    return api.get(`${v1}/laundry-orders/${id}`)
+    return api.get(`${v1}/laundry-orders/${id}`);
   },
   /**
    * Updates a laundry order.
@@ -2194,7 +2233,7 @@ export const laundryApi = {
    * @returns {Promise} Axios response with the updated order.
    */
   update(id, data) {
-    return api.put(`${v1}/laundry-orders/${id}`, data)
+    return api.put(`${v1}/laundry-orders/${id}`, data);
   },
   /**
    * Deletes a laundry order.
@@ -2202,9 +2241,9 @@ export const laundryApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/laundry-orders/${id}`)
+    return api.delete(`${v1}/laundry-orders/${id}`);
   },
-}
+};
 
 /** Laundry cloth/linen types with their per-service prices. */
 export const clothTypeApi = {
@@ -2214,7 +2253,7 @@ export const clothTypeApi = {
    * @returns {Promise} Axios response with `cloth_types` list.
    */
   index(params) {
-    return api.get(`${v1}/laundry-cloth-types`, { params })
+    return api.get(`${v1}/laundry-cloth-types`, { params });
   },
   /**
    * Creates a cloth type with per-service prices.
@@ -2222,7 +2261,7 @@ export const clothTypeApi = {
    * @returns {Promise} Axios response with the created cloth type.
    */
   store(data) {
-    return api.post(`${v1}/laundry-cloth-types`, data)
+    return api.post(`${v1}/laundry-cloth-types`, data);
   },
   /**
    * Updates a cloth type's name and/or prices.
@@ -2231,7 +2270,7 @@ export const clothTypeApi = {
    * @returns {Promise} Axios response with the updated cloth type.
    */
   update(id, data) {
-    return api.put(`${v1}/laundry-cloth-types/${id}`, data)
+    return api.put(`${v1}/laundry-cloth-types/${id}`, data);
   },
   /**
    * Deletes a cloth type.
@@ -2239,9 +2278,9 @@ export const clothTypeApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/laundry-cloth-types/${id}`)
+    return api.delete(`${v1}/laundry-cloth-types/${id}`);
   },
-}
+};
 
 /**
  * Cloth compositions ("cloth types": the material a garment is made of, e.g.
@@ -2254,7 +2293,7 @@ export const clothCompositionApi = {
    * @returns {Promise} Axios response with `cloth_compositions` list.
    */
   index(params) {
-    return api.get(`${v1}/laundry-cloth-compositions`, { params })
+    return api.get(`${v1}/laundry-cloth-compositions`, { params });
   },
   /**
    * Creates a cloth composition.
@@ -2262,7 +2301,7 @@ export const clothCompositionApi = {
    * @returns {Promise} Axios response with the created composition.
    */
   store(data) {
-    return api.post(`${v1}/laundry-cloth-compositions`, data)
+    return api.post(`${v1}/laundry-cloth-compositions`, data);
   },
   /**
    * Updates a cloth composition's name and/or description.
@@ -2271,7 +2310,7 @@ export const clothCompositionApi = {
    * @returns {Promise} Axios response with the updated composition.
    */
   update(id, data) {
-    return api.put(`${v1}/laundry-cloth-compositions/${id}`, data)
+    return api.put(`${v1}/laundry-cloth-compositions/${id}`, data);
   },
   /**
    * Deletes a cloth composition (its items are kept, just unlinked).
@@ -2279,9 +2318,9 @@ export const clothCompositionApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/laundry-cloth-compositions/${id}`)
+    return api.delete(`${v1}/laundry-cloth-compositions/${id}`);
   },
-}
+};
 
 /** Staff attendance: clock-in/out, current status and per-user history. */
 export const attendanceApi = {
@@ -2291,7 +2330,7 @@ export const attendanceApi = {
    * @returns {Promise} Axios response with the attendance record.
    */
   clockIn(data) {
-    return api.post(`${v1}/attendance/clock-in`, data)
+    return api.post(`${v1}/attendance/clock-in`, data);
   },
   /**
    * Records the current user's clock-out.
@@ -2299,14 +2338,14 @@ export const attendanceApi = {
    * @returns {Promise} Axios response with the attendance record.
    */
   clockOut(data) {
-    return api.post(`${v1}/attendance/clock-out`, data)
+    return api.post(`${v1}/attendance/clock-out`, data);
   },
   /**
    * Fetches the current user's attendance status (on shift or not).
    * @returns {Promise} Axios response with the current status.
    */
   status() {
-    return api.get(`${v1}/attendance/status`)
+    return api.get(`${v1}/attendance/status`);
   },
   /**
    * Fetches the current hotel's clock-in requirements so the UI can prompt
@@ -2314,21 +2353,21 @@ export const attendanceApi = {
    * @returns {Promise} Axios response with the requirements flags.
    */
   requirements() {
-    return api.get(`${v1}/attendance/requirements`)
+    return api.get(`${v1}/attendance/requirements`);
   },
   /**
    * Mints a fresh rotating entrance QR token for the current hotel.
    * @returns {Promise} Axios response with the new token and expiry.
    */
   qrToken() {
-    return api.post(`${v1}/attendance/qr-token`)
+    return api.post(`${v1}/attendance/qr-token`);
   },
   /**
    * Fetches the hotel's attendance settings (office geofence + QR toggle).
    * @returns {Promise} Axios response with the attendance settings.
    */
   settings() {
-    return api.get(`${v1}/attendance/settings`)
+    return api.get(`${v1}/attendance/settings`);
   },
   /**
    * Updates the hotel's attendance settings.
@@ -2336,7 +2375,7 @@ export const attendanceApi = {
    * @returns {Promise} Axios response with the updated settings.
    */
   updateSettings(data) {
-    return api.put(`${v1}/attendance/settings`, data)
+    return api.put(`${v1}/attendance/settings`, data);
   },
   /**
    * Lists staff currently on shift.
@@ -2344,7 +2383,7 @@ export const attendanceApi = {
    * @returns {Promise} Axios response with the on-shift staff list.
    */
   onShift(params) {
-    return api.get(`${v1}/attendance/on-shift`, { params })
+    return api.get(`${v1}/attendance/on-shift`, { params });
   },
   /**
    * Fetches one staff member's attendance history.
@@ -2353,7 +2392,7 @@ export const attendanceApi = {
    * @returns {Promise} Axios response with the attendance history.
    */
   history(userId, params) {
-    return api.get(`${v1}/attendance/users/${userId}/history`, { params })
+    return api.get(`${v1}/attendance/users/${userId}/history`, { params });
   },
   /**
    * Registers the current user's device so it may clock in.
@@ -2361,14 +2400,14 @@ export const attendanceApi = {
    * @returns {Promise} Axios response with the registered device.
    */
   registerDevice(data) {
-    return api.post(`${v1}/attendance/devices/register`, data)
+    return api.post(`${v1}/attendance/devices/register`, data);
   },
   /**
    * Lists the current user's registered devices.
    * @returns {Promise} Axios response with the device list.
    */
   myDevices() {
-    return api.get(`${v1}/attendance/devices/mine`)
+    return api.get(`${v1}/attendance/devices/mine`);
   },
   /**
    * Lists every registered device in the hotel (managers).
@@ -2376,7 +2415,7 @@ export const attendanceApi = {
    * @returns {Promise} Axios response with the device list.
    */
   attendanceDevices(params) {
-    return api.get(`${v1}/attendance/devices`, { params })
+    return api.get(`${v1}/attendance/devices`, { params });
   },
   /**
    * Revokes a device so it can no longer clock in (managers).
@@ -2384,7 +2423,7 @@ export const attendanceApi = {
    * @returns {Promise} Axios response with the revoked device.
    */
   revokeDevice(deviceRowId) {
-    return api.post(`${v1}/attendance/devices/${deviceRowId}/revoke`)
+    return api.post(`${v1}/attendance/devices/${deviceRowId}/revoke`);
   },
   /**
    * Lists attendance records the anti-cheat scan flagged as suspicious.
@@ -2392,7 +2431,7 @@ export const attendanceApi = {
    * @returns {Promise} Axios response with the suspicious records.
    */
   suspicious(params) {
-    return api.get(`${v1}/attendance/suspicious`, { params })
+    return api.get(`${v1}/attendance/suspicious`, { params });
   },
   /**
    * Files an absence claim (sick/emergency/...) with location, device and
@@ -2401,14 +2440,14 @@ export const attendanceApi = {
    * @returns {Promise} Axios response with the created claim.
    */
   reportAbsence(data) {
-    return api.post(`${v1}/attendance/absences`, data)
+    return api.post(`${v1}/attendance/absences`, data);
   },
   /**
    * The current user's own absence claims.
    * @returns {Promise} Axios response with the paginated claims.
    */
   myAbsenceRequests() {
-    return api.get(`${v1}/attendance/absences/mine`)
+    return api.get(`${v1}/attendance/absences/mine`);
   },
   /**
    * Every absence claim in the hotel (manager verification).
@@ -2416,7 +2455,7 @@ export const attendanceApi = {
    * @returns {Promise} Axios response with the paginated claims.
    */
   absenceRequests(params) {
-    return api.get(`${v1}/attendance/absences`, { params })
+    return api.get(`${v1}/attendance/absences`, { params });
   },
   /**
    * Approves or rejects an absence claim.
@@ -2425,7 +2464,7 @@ export const attendanceApi = {
    * @returns {Promise} Axios response with the updated claim.
    */
   decideAbsenceRequest(requestId, data) {
-    return api.post(`${v1}/attendance/absences/${requestId}/decide`, data)
+    return api.post(`${v1}/attendance/absences/${requestId}/decide`, data);
   },
   /**
    * Streams a clock-in selfie from the private disk. The bearer token rides
@@ -2434,7 +2473,7 @@ export const attendanceApi = {
    * @returns {Promise} Axios response with the image blob.
    */
   photo(attendanceId) {
-    return api.get(`${v1}/attendance/photos/${attendanceId}`, { responseType: 'blob' })
+    return api.get(`${v1}/attendance/photos/${attendanceId}`, { responseType: "blob" });
   },
   /**
    * Streams an absence evidence attachment from the private disk. Same auth
@@ -2443,9 +2482,9 @@ export const attendanceApi = {
    * @returns {Promise} Axios response with the file blob.
    */
   attachment(attachmentId) {
-    return api.get(`${v1}/attendance/attachments/${attachmentId}`, { responseType: 'blob' })
+    return api.get(`${v1}/attendance/attachments/${attachmentId}`, { responseType: "blob" });
   },
-}
+};
 
 /** Guest fun-game activities. */
 export const funGameApi = {
@@ -2455,7 +2494,7 @@ export const funGameApi = {
    * @returns {Promise} Axios response with the game list.
    */
   index(params) {
-    return api.get(`${v1}/fun-games`, { params })
+    return api.get(`${v1}/fun-games`, { params });
   },
   /**
    * Creates a new fun game.
@@ -2463,7 +2502,7 @@ export const funGameApi = {
    * @returns {Promise} Axios response with the created game.
    */
   store(data) {
-    return api.post(`${v1}/fun-games`, data)
+    return api.post(`${v1}/fun-games`, data);
   },
   /**
    * Fetches a single fun game.
@@ -2471,7 +2510,7 @@ export const funGameApi = {
    * @returns {Promise} Axios response with the game record.
    */
   show(id) {
-    return api.get(`${v1}/fun-games/${id}`)
+    return api.get(`${v1}/fun-games/${id}`);
   },
   /**
    * Updates a fun game.
@@ -2480,7 +2519,7 @@ export const funGameApi = {
    * @returns {Promise} Axios response with the updated game.
    */
   update(id, data) {
-    return api.put(`${v1}/fun-games/${id}`, data)
+    return api.put(`${v1}/fun-games/${id}`, data);
   },
   /**
    * Deletes a fun game.
@@ -2488,9 +2527,9 @@ export const funGameApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/fun-games/${id}`)
+    return api.delete(`${v1}/fun-games/${id}`);
   },
-}
+};
 
 /** Purchase requisitions with the approve / reject / cancel workflow. */
 export const purchaseRequisitionApi = {
@@ -2500,7 +2539,7 @@ export const purchaseRequisitionApi = {
    * @returns {Promise} Axios response with the requisition list.
    */
   index(params) {
-    return api.get(`${v1}/purchase-requisitions`, { params })
+    return api.get(`${v1}/purchase-requisitions`, { params });
   },
   /**
    * Creates a new purchase requisition.
@@ -2508,7 +2547,7 @@ export const purchaseRequisitionApi = {
    * @returns {Promise} Axios response with the created requisition.
    */
   store(data) {
-    return api.post(`${v1}/purchase-requisitions`, data)
+    return api.post(`${v1}/purchase-requisitions`, data);
   },
   /**
    * Fetches a single purchase requisition.
@@ -2516,7 +2555,7 @@ export const purchaseRequisitionApi = {
    * @returns {Promise} Axios response with the requisition record.
    */
   show(id) {
-    return api.get(`${v1}/purchase-requisitions/${id}`)
+    return api.get(`${v1}/purchase-requisitions/${id}`);
   },
   /**
    * Cancels a purchase requisition.
@@ -2524,7 +2563,7 @@ export const purchaseRequisitionApi = {
    * @returns {Promise} Axios response confirming the cancellation.
    */
   cancel(id) {
-    return api.post(`${v1}/purchase-requisitions/${id}/cancel`)
+    return api.post(`${v1}/purchase-requisitions/${id}/cancel`);
   },
   /**
    * Approves a purchase requisition.
@@ -2532,7 +2571,7 @@ export const purchaseRequisitionApi = {
    * @returns {Promise} Axios response with the updated requisition.
    */
   approve(id) {
-    return api.post(`${v1}/purchase-requisitions/${id}/approve`)
+    return api.post(`${v1}/purchase-requisitions/${id}/approve`);
   },
   /**
    * Rejects a purchase requisition with a reason.
@@ -2541,9 +2580,9 @@ export const purchaseRequisitionApi = {
    * @returns {Promise} Axios response with the updated requisition.
    */
   reject(id, data) {
-    return api.post(`${v1}/purchase-requisitions/${id}/reject`, data)
+    return api.post(`${v1}/purchase-requisitions/${id}/reject`, data);
   },
-}
+};
 
 /** Purchase orders with two-level approval. */
 export const purchaseOrderApi = {
@@ -2553,7 +2592,7 @@ export const purchaseOrderApi = {
    * @returns {Promise} Axios response with the purchase order list.
    */
   index(params) {
-    return api.get(`${v1}/purchase-orders`, { params })
+    return api.get(`${v1}/purchase-orders`, { params });
   },
   /**
    * Creates a new purchase order (usually from an approved requisition).
@@ -2561,7 +2600,7 @@ export const purchaseOrderApi = {
    * @returns {Promise} Axios response with the created order.
    */
   store(data) {
-    return api.post(`${v1}/purchase-orders`, data)
+    return api.post(`${v1}/purchase-orders`, data);
   },
   /**
    * Fetches a single purchase order.
@@ -2569,7 +2608,7 @@ export const purchaseOrderApi = {
    * @returns {Promise} Axios response with the order record.
    */
   show(id) {
-    return api.get(`${v1}/purchase-orders/${id}`)
+    return api.get(`${v1}/purchase-orders/${id}`);
   },
   /**
    * Cancels a purchase order.
@@ -2577,7 +2616,7 @@ export const purchaseOrderApi = {
    * @returns {Promise} Axios response confirming the cancellation.
    */
   cancel(id) {
-    return api.post(`${v1}/purchase-orders/${id}/cancel`)
+    return api.post(`${v1}/purchase-orders/${id}/cancel`);
   },
   /**
    * First-level approval of a purchase order.
@@ -2585,7 +2624,7 @@ export const purchaseOrderApi = {
    * @returns {Promise} Axios response with the updated order.
    */
   approve(id) {
-    return api.post(`${v1}/purchase-orders/${id}/approve`)
+    return api.post(`${v1}/purchase-orders/${id}/approve`);
   },
   /**
    * Second-level (manager) approval of a purchase order.
@@ -2593,7 +2632,7 @@ export const purchaseOrderApi = {
    * @returns {Promise} Axios response with the updated order.
    */
   managerApprove(id) {
-    return api.post(`${v1}/purchase-orders/${id}/manager-approve`)
+    return api.post(`${v1}/purchase-orders/${id}/manager-approve`);
   },
   /**
    * Rejects a pending purchase order with an optional reason.
@@ -2602,7 +2641,7 @@ export const purchaseOrderApi = {
    * @returns {Promise} Axios response with the updated order.
    */
   reject(id, data) {
-    return api.post(`${v1}/purchase-orders/${id}/reject`, data)
+    return api.post(`${v1}/purchase-orders/${id}/reject`, data);
   },
   /**
    * Edits a pending/manager-approved purchase order (header + line items).
@@ -2611,7 +2650,7 @@ export const purchaseOrderApi = {
    * @returns {Promise} Axios response with the updated order.
    */
   update(id, data) {
-    return api.put(`${v1}/purchase-orders/${id}`, data)
+    return api.put(`${v1}/purchase-orders/${id}`, data);
   },
   /**
    * Voids a purchase order that has not been fully received.
@@ -2620,14 +2659,14 @@ export const purchaseOrderApi = {
    * @returns {Promise} Axios response with the updated order.
    */
   void(id, data) {
-    return api.post(`${v1}/purchase-orders/${id}/void`, data)
+    return api.post(`${v1}/purchase-orders/${id}/void`, data);
   },
   /**
    * Opens the purchase order as a printable PDF.
    * @param {string|number} id - Purchase order identifier.
    */
   printPdf(id) {
-    return api.get(`${v1}/purchase-orders/${id}/pdf`, { responseType: 'blob' })
+    return api.get(`${v1}/purchase-orders/${id}/pdf`, { responseType: "blob" });
   },
   /**
    * Sends the purchase order to the supplier by e-mail, SMS or both.
@@ -2637,12 +2676,12 @@ export const purchaseOrderApi = {
    * @returns {Promise} Axios response confirming the send.
    */
   email(id, to, channel) {
-    const body = {}
-    if (to) body.to = to
-    if (channel) body.channel = channel
-    return api.post(`${v1}/purchase-orders/${id}/email`, body)
+    const body = {};
+    if (to) body.to = to;
+    if (channel) body.channel = channel;
+    return api.post(`${v1}/purchase-orders/${id}/email`, body);
   },
-}
+};
 
 /** Goods received notes recorded against purchase orders. */
 export const goodsReceivedNoteApi = {
@@ -2652,7 +2691,7 @@ export const goodsReceivedNoteApi = {
    * @returns {Promise} Axios response with the GRN list.
    */
   index(params) {
-    return api.get(`${v1}/goods-received-notes`, { params })
+    return api.get(`${v1}/goods-received-notes`, { params });
   },
   /**
    * Records a goods received note against a purchase order.
@@ -2660,7 +2699,7 @@ export const goodsReceivedNoteApi = {
    * @returns {Promise} Axios response with the created GRN.
    */
   store(data) {
-    return api.post(`${v1}/goods-received-notes`, data)
+    return api.post(`${v1}/goods-received-notes`, data);
   },
   /**
    * Fetches a single goods received note.
@@ -2668,7 +2707,7 @@ export const goodsReceivedNoteApi = {
    * @returns {Promise} Axios response with the GRN record.
    */
   show(id) {
-    return api.get(`${v1}/goods-received-notes/${id}`)
+    return api.get(`${v1}/goods-received-notes/${id}`);
   },
   /**
    * Recalls (edits) a goods received note on/across its receiving day.
@@ -2677,7 +2716,7 @@ export const goodsReceivedNoteApi = {
    * @returns {Promise} Axios response with the updated GRN.
    */
   update(id, data) {
-    return api.put(`${v1}/goods-received-notes/${id}`, data)
+    return api.put(`${v1}/goods-received-notes/${id}`, data);
   },
   /**
    * Voids a goods received note and reverses the received stock.
@@ -2686,14 +2725,14 @@ export const goodsReceivedNoteApi = {
    * @returns {Promise} Axios response with the updated GRN.
    */
   void(id, data) {
-    return api.post(`${v1}/goods-received-notes/${id}/void`, data)
+    return api.post(`${v1}/goods-received-notes/${id}/void`, data);
   },
   /**
    * Opens the goods received note as a printable PDF.
    * @param {string|number} id - GRN identifier.
    */
   printPdf(id) {
-    return api.get(`${v1}/goods-received-notes/${id}/pdf`, { responseType: 'blob' })
+    return api.get(`${v1}/goods-received-notes/${id}/pdf`, { responseType: "blob" });
   },
   /**
    * E-mails the goods received note PDF to the hotel contact (or a custom `to`).
@@ -2702,9 +2741,9 @@ export const goodsReceivedNoteApi = {
    * @returns {Promise} Axios response confirming the send.
    */
   email(id, to) {
-    return api.post(`${v1}/goods-received-notes/${id}/email`, to ? { to } : {})
+    return api.post(`${v1}/goods-received-notes/${id}/email`, to ? { to } : {});
   },
-}
+};
 
 /** Booking requisitions sent by the public site, answered by the hotel. */
 export const bookingRequisitionApi = {
@@ -2714,7 +2753,7 @@ export const bookingRequisitionApi = {
    * @returns {Promise} Axios response with the requisition list.
    */
   index(params) {
-    return api.get(`${v1}/booking-requisitions`, { params })
+    return api.get(`${v1}/booking-requisitions`, { params });
   },
   /**
    * Fetches a single booking requisition.
@@ -2722,7 +2761,7 @@ export const bookingRequisitionApi = {
    * @returns {Promise} Axios response with the requisition record.
    */
   show(id) {
-    return api.get(`${v1}/booking-requisitions/${id}`)
+    return api.get(`${v1}/booking-requisitions/${id}`);
   },
   /**
    * Responds to a booking requisition (accept/decline).
@@ -2731,7 +2770,7 @@ export const bookingRequisitionApi = {
    * @returns {Promise} Axios response with the updated requisition.
    */
   respond(id, data) {
-    return api.post(`${v1}/booking-requisitions/${id}/respond`, data)
+    return api.post(`${v1}/booking-requisitions/${id}/respond`, data);
   },
   /**
    * Deletes a booking requisition.
@@ -2739,9 +2778,9 @@ export const bookingRequisitionApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/booking-requisitions/${id}`)
+    return api.delete(`${v1}/booking-requisitions/${id}`);
   },
-}
+};
 
 /** Superadmin tenant (hotel) management: lifecycle, subscription, branding and owners. */
 export const tenantApi = {
@@ -2751,7 +2790,7 @@ export const tenantApi = {
    * @returns {Promise} Axios response with the tenant list.
    */
   index(params) {
-    return api.get(`${v1}/tenants`, { params })
+    return api.get(`${v1}/tenants`, { params });
   },
   /**
    * Registers a new tenant hotel.
@@ -2759,7 +2798,7 @@ export const tenantApi = {
    * @returns {Promise} Axios response with the created tenant.
    */
   store(data) {
-    return api.post(`${v1}/tenants`, data)
+    return api.post(`${v1}/tenants`, data);
   },
   /**
    * Fetches a single tenant.
@@ -2767,7 +2806,7 @@ export const tenantApi = {
    * @returns {Promise} Axios response with the tenant record.
    */
   show(id) {
-    return api.get(`${v1}/tenants/${id}`)
+    return api.get(`${v1}/tenants/${id}`);
   },
   /**
    * Updates a tenant.
@@ -2776,7 +2815,7 @@ export const tenantApi = {
    * @returns {Promise} Axios response with the updated tenant.
    */
   update(id, data) {
-    return api.put(`${v1}/tenants/${id}`, data)
+    return api.put(`${v1}/tenants/${id}`, data);
   },
   /**
    * Approves a pending tenant application.
@@ -2784,7 +2823,7 @@ export const tenantApi = {
    * @returns {Promise} Axios response with the updated tenant.
    */
   approve(id) {
-    return api.post(`${v1}/tenants/${id}/approve`)
+    return api.post(`${v1}/tenants/${id}/approve`);
   },
   /**
    * Rejects a pending tenant application.
@@ -2792,7 +2831,7 @@ export const tenantApi = {
    * @returns {Promise} Axios response with the updated tenant.
    */
   reject(id) {
-    return api.post(`${v1}/tenants/${id}/reject`)
+    return api.post(`${v1}/tenants/${id}/reject`);
   },
   /**
    * Suspends an active tenant.
@@ -2800,7 +2839,7 @@ export const tenantApi = {
    * @returns {Promise} Axios response with the updated tenant.
    */
   suspend(id) {
-    return api.post(`${v1}/tenants/${id}/suspend`)
+    return api.post(`${v1}/tenants/${id}/suspend`);
   },
   /**
    * Reactivates a suspended tenant.
@@ -2808,7 +2847,7 @@ export const tenantApi = {
    * @returns {Promise} Axios response with the updated tenant.
    */
   reactivate(id) {
-    return api.post(`${v1}/tenants/${id}/reactivate`)
+    return api.post(`${v1}/tenants/${id}/reactivate`);
   },
   /**
    * Updates a tenant's subscription plan.
@@ -2817,7 +2856,7 @@ export const tenantApi = {
    * @returns {Promise} Axios response with the updated tenant.
    */
   updateSubscription(id, data) {
-    return api.post(`${v1}/tenants/${id}/subscription`, data)
+    return api.post(`${v1}/tenants/${id}/subscription`, data);
   },
   /**
    * Uploads the tenant's brand assets (logo, invoice signature/stamp images).
@@ -2827,14 +2866,14 @@ export const tenantApi = {
    */
   // Multipart: logo/signature/stamp image files, or remove_logo/remove_signature/remove_stamp flags.
   uploadBranding(id, formData) {
-    return api.post(`${v1}/tenants/${id}/branding`, formData)
+    return api.post(`${v1}/tenants/${id}/branding`, formData);
   },
   /**
    * Lists the platform's hotel owners.
    * @returns {Promise} Axios response with the owner list.
    */
   owners() {
-    return api.get(`${v1}/owners`)
+    return api.get(`${v1}/owners`);
   },
   /**
    * Creates a new hotel owner account.
@@ -2842,7 +2881,7 @@ export const tenantApi = {
    * @returns {Promise} Axios response with the created owner.
    */
   createOwner(data) {
-    return api.post(`${v1}/owners`, data)
+    return api.post(`${v1}/owners`, data);
   },
   /**
    * Downloads a JSON backup of a tenant's operational data.
@@ -2850,9 +2889,9 @@ export const tenantApi = {
    * @returns {Promise} Axios response with the backup JSON.
    */
   backup(id) {
-    return api.get(`${v1}/tenants/${id}/backup`)
+    return api.get(`${v1}/tenants/${id}/backup`);
   },
-}
+};
 
 /** Superadmin platform-wide reports and per-tenant analytics. */
 export const superadminReportApi = {
@@ -2861,7 +2900,7 @@ export const superadminReportApi = {
    * @returns {Promise} Axios response with the dashboard figures.
    */
   dashboard() {
-    return api.get(`${v1}/reports/superadmin/dashboard`)
+    return api.get(`${v1}/reports/superadmin/dashboard`);
   },
   /**
    * Analytics for a single tenant hotel.
@@ -2869,9 +2908,9 @@ export const superadminReportApi = {
    * @returns {Promise} Axios response with the tenant's analytics.
    */
   tenantAnalytics(id) {
-    return api.get(`${v1}/reports/tenants/${id}/analytics`)
+    return api.get(`${v1}/reports/tenants/${id}/analytics`);
   },
-}
+};
 
 /** Owner dashboard and owned-hotel views. */
 export const ownerApi = {
@@ -2880,14 +2919,14 @@ export const ownerApi = {
    * @returns {Promise} Axios response with the owner dashboard figures.
    */
   dashboard() {
-    return api.get(`${v1}/owner/dashboard`)
+    return api.get(`${v1}/owner/dashboard`);
   },
   /**
    * Lists the hotels the owner manages.
    * @returns {Promise} Axios response with the owned hotels.
    */
   hotels() {
-    return api.get(`${v1}/owner/hotels`)
+    return api.get(`${v1}/owner/hotels`);
   },
   /**
    * Fetches a single hotel's owner view.
@@ -2895,9 +2934,9 @@ export const ownerApi = {
    * @returns {Promise} Axios response with the hotel's owner data.
    */
   hotel(id) {
-    return api.get(`${v1}/owner/hotels/${id}`)
+    return api.get(`${v1}/owner/hotels/${id}`);
   },
-}
+};
 
 /** 1:1 staff conversations and their messages. */
 export const conversationApi = {
@@ -2907,7 +2946,7 @@ export const conversationApi = {
    * @returns {Promise} Axios response with the conversation list.
    */
   index(params) {
-    return api.get(`${v1}/messages/conversations`, { params })
+    return api.get(`${v1}/messages/conversations`, { params });
   },
   /**
    * Starts a new conversation with a user.
@@ -2915,7 +2954,7 @@ export const conversationApi = {
    * @returns {Promise} Axios response with the created conversation.
    */
   store(data) {
-    return api.post(`${v1}/messages/conversations`, data)
+    return api.post(`${v1}/messages/conversations`, data);
   },
   /**
    * Fetches a single conversation.
@@ -2923,7 +2962,7 @@ export const conversationApi = {
    * @returns {Promise} Axios response with the conversation record.
    */
   show(id) {
-    return api.get(`${v1}/messages/conversations/${id}`)
+    return api.get(`${v1}/messages/conversations/${id}`);
   },
   /**
    * Paginated messages within a conversation.
@@ -2932,7 +2971,7 @@ export const conversationApi = {
    * @returns {Promise} Axios response with the message list.
    */
   messages(id, params) {
-    return api.get(`${v1}/messages/conversations/${id}/messages`, { params })
+    return api.get(`${v1}/messages/conversations/${id}/messages`, { params });
   },
   /**
    * Sends a message in a conversation.
@@ -2941,7 +2980,7 @@ export const conversationApi = {
    * @returns {Promise} Axios response with the created message.
    */
   send(id, data) {
-    return api.post(`${v1}/messages/conversations/${id}/messages`, data)
+    return api.post(`${v1}/messages/conversations/${id}/messages`, data);
   },
   /**
    * Marks a conversation's messages as read.
@@ -2949,7 +2988,7 @@ export const conversationApi = {
    * @returns {Promise} Axios response confirming the read receipt.
    */
   markRead(id) {
-    return api.post(`${v1}/messages/conversations/${id}/read`)
+    return api.post(`${v1}/messages/conversations/${id}/read`);
   },
   /**
    * Searches users to start a conversation with.
@@ -2957,16 +2996,16 @@ export const conversationApi = {
    * @returns {Promise} Axios response with matching users.
    */
   users(params) {
-    return api.get(`${v1}/messages/users`, { params })
+    return api.get(`${v1}/messages/users`, { params });
   },
   /**
    * Total unread messages across conversations.
    * @returns {Promise} Axios response with the unread count.
    */
   unreadCount() {
-    return api.get(`${v1}/messages/unread-count`)
+    return api.get(`${v1}/messages/unread-count`);
   },
-}
+};
 
 /** Staff chat groups, their messages and membership. */
 export const groupApi = {
@@ -2976,15 +3015,15 @@ export const groupApi = {
    * @returns {Promise} Axios response with the group list.
    */
   index(params) {
-    return api.get(`${v1}/messages/groups`, { params })
-  }, 
+    return api.get(`${v1}/messages/groups`, { params });
+  },
   /**
    * Creates a new chat group.
    * @param {object} data - Group payload (name, member ids, ...).
    * @returns {Promise} Axios response with the created group.
    */
   store(data) {
-    return api.post(`${v1}/messages/groups`, data)
+    return api.post(`${v1}/messages/groups`, data);
   },
   /**
    * Fetches a single group.
@@ -2992,7 +3031,7 @@ export const groupApi = {
    * @returns {Promise} Axios response with the group record.
    */
   show(id) {
-    return api.get(`${v1}/messages/groups/${id}`)
+    return api.get(`${v1}/messages/groups/${id}`);
   },
   /**
    * Paginated messages within a group.
@@ -3001,7 +3040,7 @@ export const groupApi = {
    * @returns {Promise} Axios response with the message list.
    */
   messages(id, params) {
-    return api.get(`${v1}/messages/groups/${id}/messages`, { params })
+    return api.get(`${v1}/messages/groups/${id}/messages`, { params });
   },
   /**
    * Sends a message in a group.
@@ -3010,7 +3049,7 @@ export const groupApi = {
    * @returns {Promise} Axios response with the created message.
    */
   send(id, data) {
-    return api.post(`${v1}/messages/groups/${id}/messages`, data)
+    return api.post(`${v1}/messages/groups/${id}/messages`, data);
   },
   /**
    * Marks a group's messages as read.
@@ -3018,7 +3057,7 @@ export const groupApi = {
    * @returns {Promise} Axios response confirming the read receipt.
    */
   markRead(id) {
-    return api.post(`${v1}/messages/groups/${id}/read`)
+    return api.post(`${v1}/messages/groups/${id}/read`);
   },
   /**
    * Adds members to a group.
@@ -3027,7 +3066,7 @@ export const groupApi = {
    * @returns {Promise} Axios response with the updated group.
    */
   addMembers(id, data) {
-    return api.post(`${v1}/messages/groups/${id}/members`, data)
+    return api.post(`${v1}/messages/groups/${id}/members`, data);
   },
   /**
    * Removes a member from a group.
@@ -3036,9 +3075,9 @@ export const groupApi = {
    * @returns {Promise} Axios response confirming the removal.
    */
   removeMember(id, userId) {
-    return api.delete(`${v1}/messages/groups/${id}/members/${userId}`)
+    return api.delete(`${v1}/messages/groups/${id}/members/${userId}`);
   },
-}
+};
 
 /** Message-level actions: deletion, view-once and reactions. */
 export const messageActionApi = {
@@ -3052,7 +3091,7 @@ export const messageActionApi = {
   deleteConversationMessage(conversationId, messageId, scope) {
     return api.post(`${v1}/messages/conversations/${conversationId}/messages/${messageId}/delete`, {
       scope,
-    })
+    });
   },
   /**
    * Deletes a message in a group.
@@ -3062,7 +3101,7 @@ export const messageActionApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   deleteGroupMessage(groupId, messageId, scope) {
-    return api.post(`${v1}/messages/groups/${groupId}/messages/${messageId}/delete`, { scope })
+    return api.post(`${v1}/messages/groups/${groupId}/messages/${messageId}/delete`, { scope });
   },
   /**
    * Opens a view-once message in a conversation.
@@ -3073,7 +3112,7 @@ export const messageActionApi = {
   openViewOnce(conversationId, messageId) {
     return api.post(
       `${v1}/messages/conversations/${conversationId}/messages/${messageId}/view-once`,
-    )
+    );
   },
   /**
    * Opens a view-once message in a group.
@@ -3082,7 +3121,7 @@ export const messageActionApi = {
    * @returns {Promise} Axios response with the view-once content.
    */
   openGroupViewOnce(groupId, messageId) {
-    return api.post(`${v1}/messages/groups/${groupId}/messages/${messageId}/view-once`)
+    return api.post(`${v1}/messages/groups/${groupId}/messages/${messageId}/view-once`);
   },
   /**
    * Adds or removes a reaction on a message.
@@ -3096,9 +3135,9 @@ export const messageActionApi = {
       message_type: messageType,
       message_id: messageId,
       reaction,
-    })
+    });
   },
-}
+};
 
 /** Ephemeral staff status updates with views and reactions. */
 export const statusApi = {
@@ -3108,7 +3147,7 @@ export const statusApi = {
    * @returns {Promise} Axios response with the status list.
    */
   index(params) {
-    return api.get(`${v1}/statuses`, { params })
+    return api.get(`${v1}/statuses`, { params });
   },
   /**
    * Posts a new status update.
@@ -3116,7 +3155,7 @@ export const statusApi = {
    * @returns {Promise} Axios response with the created status.
    */
   store(data) {
-    return api.post(`${v1}/statuses`, data)
+    return api.post(`${v1}/statuses`, data);
   },
   /**
    * Fetches a single status.
@@ -3124,7 +3163,7 @@ export const statusApi = {
    * @returns {Promise} Axios response with the status record.
    */
   show(id) {
-    return api.get(`${v1}/statuses/${id}`)
+    return api.get(`${v1}/statuses/${id}`);
   },
   /**
    * Deletes a status.
@@ -3132,7 +3171,7 @@ export const statusApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/statuses/${id}`)
+    return api.delete(`${v1}/statuses/${id}`);
   },
   /**
    * Records that a user viewed a status.
@@ -3140,7 +3179,7 @@ export const statusApi = {
    * @returns {Promise} Axios response confirming the view.
    */
   view(id) {
-    return api.post(`${v1}/statuses/${id}/view`)
+    return api.post(`${v1}/statuses/${id}/view`);
   },
   /**
    * Adds/removes a reaction on a status.
@@ -3148,9 +3187,9 @@ export const statusApi = {
    * @returns {Promise} Axios response with the new reaction state.
    */
   react(id) {
-    return api.post(`${v1}/statuses/${id}/react`)
+    return api.post(`${v1}/statuses/${id}/react`);
   },
-}
+};
 
 /** Messaging extras: pins, stars, polls, search, export, translation and forwarding. */
 export const featuresApi = {
@@ -3160,7 +3199,7 @@ export const featuresApi = {
    * @returns {Promise} Axios response confirming the pin.
    */
   pin(data) {
-    return api.post(`${v1}/messages/pin`, data)
+    return api.post(`${v1}/messages/pin`, data);
   },
   /**
    * Unpins a pinned message.
@@ -3168,7 +3207,7 @@ export const featuresApi = {
    * @returns {Promise} Axios response confirming the unpin.
    */
   unpin(data) {
-    return api.post(`${v1}/messages/unpin`, data)
+    return api.post(`${v1}/messages/unpin`, data);
   },
   /**
    * Stars a message.
@@ -3176,7 +3215,7 @@ export const featuresApi = {
    * @returns {Promise} Axios response confirming the star.
    */
   star(data) {
-    return api.post(`${v1}/messages/star`, data)
+    return api.post(`${v1}/messages/star`, data);
   },
   /**
    * Unstars a starred message.
@@ -3184,7 +3223,7 @@ export const featuresApi = {
    * @returns {Promise} Axios response confirming the unstar.
    */
   unstar(data) {
-    return api.post(`${v1}/messages/unstar`, data)
+    return api.post(`${v1}/messages/unstar`, data);
   },
   /**
    * Lists pinned messages.
@@ -3192,7 +3231,7 @@ export const featuresApi = {
    * @returns {Promise} Axios response with the pinned message list.
    */
   pinned(params) {
-    return api.get(`${v1}/messages/pinned`, { params })
+    return api.get(`${v1}/messages/pinned`, { params });
   },
   /**
    * Lists starred messages.
@@ -3200,7 +3239,7 @@ export const featuresApi = {
    * @returns {Promise} Axios response with the starred message list.
    */
   starred(params) {
-    return api.get(`${v1}/messages/starred`, { params })
+    return api.get(`${v1}/messages/starred`, { params });
   },
   /**
    * Casts a vote in a message poll.
@@ -3208,7 +3247,7 @@ export const featuresApi = {
    * @returns {Promise} Axios response with the updated poll.
    */
   vote(data) {
-    return api.post(`${v1}/messages/polls/vote`, data)
+    return api.post(`${v1}/messages/polls/vote`, data);
   },
   /**
    * Full-text search across messages.
@@ -3216,7 +3255,7 @@ export const featuresApi = {
    * @returns {Promise} Axios response with matching messages.
    */
   search(params) {
-    return api.get(`${v1}/messages/search`, { params })
+    return api.get(`${v1}/messages/search`, { params });
   },
   /**
    * Exports messages to a CSV blob.
@@ -3224,7 +3263,7 @@ export const featuresApi = {
    * @returns {Promise} Axios response with the CSV blob.
    */
   exportCsv(params) {
-    return api.get(`${v1}/messages/export`, { params, responseType: 'blob' })
+    return api.get(`${v1}/messages/export`, { params, responseType: "blob" });
   },
   /**
    * Translates a message into another language.
@@ -3232,7 +3271,7 @@ export const featuresApi = {
    * @returns {Promise} Axios response with the translation.
    */
   translate(data) {
-    return api.post(`${v1}/messages/translate`, data)
+    return api.post(`${v1}/messages/translate`, data);
   },
   /**
    * Forwards a message to another conversation/group.
@@ -3240,9 +3279,9 @@ export const featuresApi = {
    * @returns {Promise} Axios response with the forwarded message.
    */
   forward(data) {
-    return api.post(`${v1}/messages/forward`, data)
+    return api.post(`${v1}/messages/forward`, data);
   },
-}
+};
 
 /** Reusable message templates. */
 export const templateApi = {
@@ -3252,7 +3291,7 @@ export const templateApi = {
    * @returns {Promise} Axios response with the template list.
    */
   index(params) {
-    return api.get(`${v1}/messages/templates`, { params })
+    return api.get(`${v1}/messages/templates`, { params });
   },
   /**
    * Creates a message template.
@@ -3260,7 +3299,7 @@ export const templateApi = {
    * @returns {Promise} Axios response with the created template.
    */
   store(data) {
-    return api.post(`${v1}/messages/templates`, data)
+    return api.post(`${v1}/messages/templates`, data);
   },
   /**
    * Updates a message template.
@@ -3269,7 +3308,7 @@ export const templateApi = {
    * @returns {Promise} Axios response with the updated template.
    */
   update(id, data) {
-    return api.put(`${v1}/messages/templates/${id}`, data)
+    return api.put(`${v1}/messages/templates/${id}`, data);
   },
   /**
    * Deletes a message template.
@@ -3277,9 +3316,9 @@ export const templateApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/messages/templates/${id}`)
+    return api.delete(`${v1}/messages/templates/${id}`);
   },
-}
+};
 
 /** Messages scheduled for later delivery. */
 export const scheduledApi = {
@@ -3288,7 +3327,7 @@ export const scheduledApi = {
    * @returns {Promise} Axios response with the scheduled message list.
    */
   index() {
-    return api.get(`${v1}/messages/scheduled`)
+    return api.get(`${v1}/messages/scheduled`);
   },
   /**
    * Schedules a message for a future time.
@@ -3296,7 +3335,7 @@ export const scheduledApi = {
    * @returns {Promise} Axios response with the created schedule.
    */
   store(data) {
-    return api.post(`${v1}/messages/scheduled`, data)
+    return api.post(`${v1}/messages/scheduled`, data);
   },
   /**
    * Cancels a scheduled message.
@@ -3304,9 +3343,9 @@ export const scheduledApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/messages/scheduled/${id}`)
+    return api.delete(`${v1}/messages/scheduled/${id}`);
   },
-}
+};
 
 /** Announcements with read acknowledgements. */
 export const announcementApi = {
@@ -3316,7 +3355,7 @@ export const announcementApi = {
    * @returns {Promise} Axios response with the announcement list.
    */
   index(params) {
-    return api.get(`${v1}/messages/announcements`, { params })
+    return api.get(`${v1}/messages/announcements`, { params });
   },
   /**
    * Creates a new announcement.
@@ -3324,7 +3363,7 @@ export const announcementApi = {
    * @returns {Promise} Axios response with the created announcement.
    */
   store(data) {
-    return api.post(`${v1}/messages/announcements`, data)
+    return api.post(`${v1}/messages/announcements`, data);
   },
   /**
    * Acknowledges having read an announcement.
@@ -3332,9 +3371,9 @@ export const announcementApi = {
    * @returns {Promise} Axios response confirming the acknowledgement.
    */
   acknowledge(id) {
-    return api.post(`${v1}/messages/announcements/${id}/acknowledge`)
+    return api.post(`${v1}/messages/announcements/${id}/acknowledge`);
   },
-}
+};
 
 /** Conversation escalations to higher support levels. */
 export const escalationApi = {
@@ -3343,7 +3382,7 @@ export const escalationApi = {
    * @returns {Promise} Axios response with the escalation list.
    */
   index() {
-    return api.get(`${v1}/messages/escalations`)
+    return api.get(`${v1}/messages/escalations`);
   },
   /**
    * Escalates a conversation to a higher level.
@@ -3351,7 +3390,7 @@ export const escalationApi = {
    * @returns {Promise} Axios response with the created escalation.
    */
   store(data) {
-    return api.post(`${v1}/messages/escalations`, data)
+    return api.post(`${v1}/messages/escalations`, data);
   },
   /**
    * Resolves an escalation.
@@ -3360,9 +3399,9 @@ export const escalationApi = {
    * @returns {Promise} Axios response with the updated escalation.
    */
   resolve(id, data) {
-    return api.post(`${v1}/messages/escalations/${id}/resolve`, data)
+    return api.post(`${v1}/messages/escalations/${id}/resolve`, data);
   },
-}
+};
 
 /** Shift handover notes with acknowledgement. */
 export const handoverApi = {
@@ -3372,7 +3411,7 @@ export const handoverApi = {
    * @returns {Promise} Axios response with the handover list.
    */
   index(params) {
-    return api.get(`${v1}/messages/handovers`, { params })
+    return api.get(`${v1}/messages/handovers`, { params });
   },
   /**
    * Creates a shift handover note.
@@ -3380,7 +3419,7 @@ export const handoverApi = {
    * @returns {Promise} Axios response with the created handover.
    */
   store(data) {
-    return api.post(`${v1}/messages/handovers`, data)
+    return api.post(`${v1}/messages/handovers`, data);
   },
   /**
    * Acknowledges a handover note as received.
@@ -3388,9 +3427,9 @@ export const handoverApi = {
    * @returns {Promise} Axios response confirming the acknowledgement.
    */
   acknowledge(id) {
-    return api.post(`${v1}/messages/handovers/${id}/acknowledge`)
+    return api.post(`${v1}/messages/handovers/${id}/acknowledge`);
   },
-}
+};
 
 /** Per-user messaging preferences. */
 export const preferenceApi = {
@@ -3399,7 +3438,7 @@ export const preferenceApi = {
    * @returns {Promise} Axios response with the preference list.
    */
   index() {
-    return api.get(`${v1}/messages/preferences`)
+    return api.get(`${v1}/messages/preferences`);
   },
   /**
    * Creates a messaging preference rule.
@@ -3407,7 +3446,7 @@ export const preferenceApi = {
    * @returns {Promise} Axios response with the created preference.
    */
   store(data) {
-    return api.post(`${v1}/messages/preferences`, data)
+    return api.post(`${v1}/messages/preferences`, data);
   },
   /**
    * Updates a messaging preference.
@@ -3416,7 +3455,7 @@ export const preferenceApi = {
    * @returns {Promise} Axios response with the updated preference.
    */
   update(id, data) {
-    return api.put(`${v1}/messages/preferences/${id}`, data)
+    return api.put(`${v1}/messages/preferences/${id}`, data);
   },
   /**
    * Deletes a messaging preference.
@@ -3424,9 +3463,9 @@ export const preferenceApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/messages/preferences/${id}`)
+    return api.delete(`${v1}/messages/preferences/${id}`);
   },
-}
+};
 
 /** Chat retention policies. */
 export const retentionApi = {
@@ -3435,7 +3474,7 @@ export const retentionApi = {
    * @returns {Promise} Axios response with the policy list.
    */
   index() {
-    return api.get(`${v1}/messages/retention-policies`)
+    return api.get(`${v1}/messages/retention-policies`);
   },
   /**
    * Creates a retention policy.
@@ -3443,7 +3482,7 @@ export const retentionApi = {
    * @returns {Promise} Axios response with the created policy.
    */
   store(data) {
-    return api.post(`${v1}/messages/retention-policies`, data)
+    return api.post(`${v1}/messages/retention-policies`, data);
   },
   /**
    * Deletes a retention policy.
@@ -3451,9 +3490,9 @@ export const retentionApi = {
    * @returns {Promise} Axios response confirming deletion.
    */
   destroy(id) {
-    return api.delete(`${v1}/messages/retention-policies/${id}`)
+    return api.delete(`${v1}/messages/retention-policies/${id}`);
   },
-}
+};
 
 /** Links between hotel rooms and chats. */
 export const roomLinkApi = {
@@ -3463,7 +3502,7 @@ export const roomLinkApi = {
    * @returns {Promise} Axios response with the room link list.
    */
   index(params) {
-    return api.get(`${v1}/messages/rooms`, { params })
+    return api.get(`${v1}/messages/rooms`, { params });
   },
   /**
    * Searches rooms to link to a chat.
@@ -3471,7 +3510,7 @@ export const roomLinkApi = {
    * @returns {Promise} Axios response with matching rooms.
    */
   searchRooms(search) {
-    return api.get(`${v1}/messages/rooms/search`, { params: { search } })
+    return api.get(`${v1}/messages/rooms/search`, { params: { search } });
   },
   /**
    * Links a room to a chat.
@@ -3479,7 +3518,7 @@ export const roomLinkApi = {
    * @returns {Promise} Axios response with the created link.
    */
   store(data) {
-    return api.post(`${v1}/messages/rooms`, data)
+    return api.post(`${v1}/messages/rooms`, data);
   },
   /**
    * Unlinks a room from a chat.
@@ -3487,9 +3526,9 @@ export const roomLinkApi = {
    * @returns {Promise} Axios response confirming the removal.
    */
   destroy(id) {
-    return api.delete(`${v1}/messages/rooms/${id}`)
+    return api.delete(`${v1}/messages/rooms/${id}`);
   },
-}
+};
 
 /** Tasks created from chat context. */
 export const taskGroupApi = {
@@ -3499,7 +3538,7 @@ export const taskGroupApi = {
    * @returns {Promise} Axios response with the created task.
    */
   store(data) {
-    return api.post(`${v1}/messages/task-groups`, data)
+    return api.post(`${v1}/messages/task-groups`, data);
   },
   /**
    * Converts a group message into a task.
@@ -3509,9 +3548,9 @@ export const taskGroupApi = {
    * @returns {Promise} Axios response with the created task.
    */
   convert(groupId, messageId, data) {
-    return api.post(`${v1}/messages/groups/${groupId}/messages/${messageId}/convert-task`, data)
+    return api.post(`${v1}/messages/groups/${groupId}/messages/${messageId}/convert-task`, data);
   },
-}
+};
 
 /** Staff location sharing and nearby lookup. */
 export const staffLocationApi = {
@@ -3521,7 +3560,7 @@ export const staffLocationApi = {
    * @returns {Promise} Axios response confirming the update.
    */
   update(data) {
-    return api.put(`${v1}/messages/location`, data)
+    return api.put(`${v1}/messages/location`, data);
   },
   /**
    * Lists staff members near a location.
@@ -3529,9 +3568,9 @@ export const staffLocationApi = {
    * @returns {Promise} Axios response with nearby staff.
    */
   nearby(params) {
-    return api.get(`${v1}/messages/nearby`, { params })
+    return api.get(`${v1}/messages/nearby`, { params });
   },
-}
+};
 
 /** In-room guest chat messages. */
 export const guestMessageApi = {
@@ -3541,7 +3580,7 @@ export const guestMessageApi = {
    * @returns {Promise} Axios response with the message list.
    */
   index(params) {
-    return api.get(`${v1}/messages/guest-messages`, { params })
+    return api.get(`${v1}/messages/guest-messages`, { params });
   },
   /**
    * Sends a message to a guest's in-room chat.
@@ -3549,9 +3588,9 @@ export const guestMessageApi = {
    * @returns {Promise} Axios response with the created message.
    */
   store(data) {
-    return api.post(`${v1}/messages/guest-messages`, data)
+    return api.post(`${v1}/messages/guest-messages`, data);
   },
-}
+};
 
 /** Automated guest-messaging toggles (booking, payment, reminder, checkout). */
 export const guestNotificationSettingsApi = {
@@ -3560,7 +3599,7 @@ export const guestNotificationSettingsApi = {
    * @returns {Promise} Axios response with { events }.
    */
   index() {
-    return api.get(`${v1}/messages/guest-notification-settings`)
+    return api.get(`${v1}/messages/guest-notification-settings`);
   },
   /**
    * Saves a hotel's automation toggles.
@@ -3568,9 +3607,9 @@ export const guestNotificationSettingsApi = {
    * @returns {Promise} Axios response with the refreshed settings list.
    */
   update(data) {
-    return api.put(`${v1}/messages/guest-notification-settings`, data)
+    return api.put(`${v1}/messages/guest-notification-settings`, data);
   },
-}
+};
 
 /** Staff meetings with invites and responses. */
 export const meetingApi = {
@@ -3580,7 +3619,7 @@ export const meetingApi = {
    * @returns {Promise} Axios response with the meeting list.
    */
   index(params) {
-    return api.get(`${v1}/messages/meetings`, { params })
+    return api.get(`${v1}/messages/meetings`, { params });
   },
   /**
    * Schedules a meeting.
@@ -3588,7 +3627,7 @@ export const meetingApi = {
    * @returns {Promise} Axios response with the created meeting.
    */
   store(data) {
-    return api.post(`${v1}/messages/meetings`, data)
+    return api.post(`${v1}/messages/meetings`, data);
   },
   /**
    * Accepts or declines a meeting invite.
@@ -3597,7 +3636,7 @@ export const meetingApi = {
    * @returns {Promise} Axios response with the updated meeting.
    */
   respond(id, status) {
-    return api.post(`${v1}/messages/meetings/${id}/respond`, { status })
+    return api.post(`${v1}/messages/meetings/${id}/respond`, { status });
   },
   /**
    * Searches users to invite to a meeting.
@@ -3605,9 +3644,9 @@ export const meetingApi = {
    * @returns {Promise} Axios response with matching users.
    */
   searchUsers(search) {
-    return api.get(`${v1}/messages/meetings/users`, { params: { search } })
+    return api.get(`${v1}/messages/meetings/users`, { params: { search } });
   },
-}
+};
 
 /** SOS alerts raised by staff. */
 export const sosApi = {
@@ -3617,7 +3656,7 @@ export const sosApi = {
    * @returns {Promise} Axios response with the alert list.
    */
   index(params) {
-    return api.get(`${v1}/messages/sos`, { params })
+    return api.get(`${v1}/messages/sos`, { params });
   },
   /**
    * Raises an SOS alert.
@@ -3625,7 +3664,7 @@ export const sosApi = {
    * @returns {Promise} Axios response with the created alert.
    */
   initiate(data) {
-    return api.post(`${v1}/messages/sos`, data)
+    return api.post(`${v1}/messages/sos`, data);
   },
   /**
    * Acknowledges an SOS alert as being handled.
@@ -3633,7 +3672,7 @@ export const sosApi = {
    * @returns {Promise} Axios response with the updated alert.
    */
   acknowledge(id) {
-    return api.post(`${v1}/messages/sos/${id}/acknowledge`)
+    return api.post(`${v1}/messages/sos/${id}/acknowledge`);
   },
   /**
    * Marks an SOS alert as resolved.
@@ -3641,9 +3680,9 @@ export const sosApi = {
    * @returns {Promise} Axios response with the updated alert.
    */
   resolve(id) {
-    return api.post(`${v1}/messages/sos/${id}/resolve`)
+    return api.post(`${v1}/messages/sos/${id}/resolve`);
   },
-}
+};
 
 /** WebRTC call lifecycle: initiate, signal, accept/decline, end/cancel. */
 export const callApi = {
@@ -3654,7 +3693,7 @@ export const callApi = {
    * @returns {Promise} Axios response with the created call.
    */
   initiate(kind, calleeId) {
-    return api.post(`${v1}/calls`, { kind, callee_id: calleeId })
+    return api.post(`${v1}/calls`, { kind, callee_id: calleeId });
   },
   /**
    * Relays a WebRTC signalling message through the server.
@@ -3664,7 +3703,7 @@ export const callApi = {
    * @returns {Promise} Axios response confirming the relay.
    */
   signal(callId, type, payload) {
-    return api.post(`${v1}/calls/${callId}/signal`, { type, payload })
+    return api.post(`${v1}/calls/${callId}/signal`, { type, payload });
   },
   /**
    * Accepts an incoming call.
@@ -3672,7 +3711,7 @@ export const callApi = {
    * @returns {Promise} Axios response with the accepted call.
    */
   accept(callId) {
-    return api.post(`${v1}/calls/${callId}/accept`)
+    return api.post(`${v1}/calls/${callId}/accept`);
   },
   /**
    * Declines an incoming call.
@@ -3680,7 +3719,7 @@ export const callApi = {
    * @returns {Promise} Axios response with the declined call.
    */
   decline(callId) {
-    return api.post(`${v1}/calls/${callId}/decline`)
+    return api.post(`${v1}/calls/${callId}/decline`);
   },
   /**
    * Ends an ongoing call.
@@ -3688,7 +3727,7 @@ export const callApi = {
    * @returns {Promise} Axios response with the ended call.
    */
   end(callId) {
-    return api.post(`${v1}/calls/${callId}/end`)
+    return api.post(`${v1}/calls/${callId}/end`);
   },
   /**
    * Cancels an outgoing call while still ringing.
@@ -3696,151 +3735,151 @@ export const callApi = {
    * @returns {Promise} Axios response with the cancelled call.
    */
   cancel(callId) {
-    return api.post(`${v1}/calls/${callId}/cancel`)
+    return api.post(`${v1}/calls/${callId}/cancel`);
   },
-}
+};
 
 /** Notifications: unread counts, alerts, mark-read. */
 export const notificationApi = {
   /** Paginated list of notifications. */
   index(params = {}) {
-    return api.get(`${v1}/notifications`, { params })
+    return api.get(`${v1}/notifications`, { params });
   },
   /** Returns { count, alert_count }. */
   unreadCount() {
-    return api.get(`${v1}/notifications/unread-count`)
+    return api.get(`${v1}/notifications/unread-count`);
   },
   /** Returns unread notifications requiring a dashboard alert modal. */
   alerts() {
-    return api.get(`${v1}/notifications/alerts`)
+    return api.get(`${v1}/notifications/alerts`);
   },
   /** Mark a single notification as read. */
   markRead(id) {
-    return api.post(`${v1}/notifications/${id}/read`)
+    return api.post(`${v1}/notifications/${id}/read`);
   },
   /** Mark all notifications as read. */
   markAllRead() {
-    return api.post(`${v1}/notifications/read-all`)
+    return api.post(`${v1}/notifications/read-all`);
   },
-}
+};
 
 /** Hotel feature plan management (superadmin). */
 export const planApi = {
   /** Returns plans config + feature labels. */
   index() {
-    return api.get(`${v1}/plans`)
+    return api.get(`${v1}/plans`);
   },
   /** Returns plans config + feature labels (public, no auth). */
   publicIndex() {
-    return api.get(`${v1}/public/plans`)
+    return api.get(`${v1}/public/plans`);
   },
   /** Show a single plan. */
   show(slug) {
-    return api.get(`${v1}/plans/${slug}`)
+    return api.get(`${v1}/plans/${slug}`);
   },
   /** Create a new plan. */
   store(data) {
-    return api.post(`${v1}/plans`, data)
+    return api.post(`${v1}/plans`, data);
   },
   /** Update an existing plan. */
   update(slug, data) {
-    return api.put(`${v1}/plans/${slug}`, data)
+    return api.put(`${v1}/plans/${slug}`, data);
   },
   /** Delete a plan. */
   destroy(slug) {
-    return api.delete(`${v1}/plans/${slug}`)
+    return api.delete(`${v1}/plans/${slug}`);
   },
   /** Updates a tenant's subscription plan and features. */
   updateTenantPlan(tenantId, data) {
-    return api.post(`${v1}/tenants/${tenantId}/subscription`, data)
+    return api.post(`${v1}/tenants/${tenantId}/subscription`, data);
   },
-}
+};
 
 /** Portal self-service subscription management. */
 export const portalSubscriptionApi = {
   show() {
-    return api.get(`${v1}/portal/subscription`)
+    return api.get(`${v1}/portal/subscription`);
   },
   update(data) {
-    return api.put(`${v1}/portal/subscription`, data)
+    return api.put(`${v1}/portal/subscription`, data);
   },
-}
+};
 
 /** Portal self-service payments. */
 export const portalPaymentApi = {
   index(params = {}) {
-    return api.get(`${v1}/portal/payments`, { params })
+    return api.get(`${v1}/portal/payments`, { params });
   },
   initiate(data) {
-    return api.post(`${v1}/portal/payments/initiate`, data)
+    return api.post(`${v1}/portal/payments/initiate`, data);
   },
   options() {
-    return api.get(`${v1}/portal/payments/options`)
+    return api.get(`${v1}/portal/payments/options`);
   },
-}
+};
 
 /** Superadmin integration dashboard (all hotels). */
 export const integrationDashboardApi = {
   index() {
-    return api.get(`${v1}/integrations/dashboard`)
+    return api.get(`${v1}/integrations/dashboard`);
   },
-}
+};
 
 /** Booking.com channel manager integration. */
 export const bookingComApi = {
   getSettings() {
-    return api.get(`${v1}/integrations/booking-com/settings`)
+    return api.get(`${v1}/integrations/booking-com/settings`);
   },
   updateSettings(data) {
-    return api.put(`${v1}/integrations/booking-com/settings`, data)
+    return api.put(`${v1}/integrations/booking-com/settings`, data);
   },
   testConnection() {
-    return api.post(`${v1}/integrations/booking-com/test`)
+    return api.post(`${v1}/integrations/booking-com/test`);
   },
   syncAvailability(data) {
-    return api.post(`${v1}/integrations/booking-com/sync/availability`, data)
+    return api.post(`${v1}/integrations/booking-com/sync/availability`, data);
   },
   syncRates(data) {
-    return api.post(`${v1}/integrations/booking-com/sync/rates`, data)
+    return api.post(`${v1}/integrations/booking-com/sync/rates`, data);
   },
   pullReservations(data) {
-    return api.post(`${v1}/integrations/booking-com/pull/reservations`, data)
+    return api.post(`${v1}/integrations/booking-com/pull/reservations`, data);
   },
   getLogs(params) {
-    return api.get(`${v1}/integrations/booking-com/logs`, { params })
+    return api.get(`${v1}/integrations/booking-com/logs`, { params });
   },
   disconnect() {
-    return api.delete(`${v1}/integrations/booking-com/disconnect`)
+    return api.delete(`${v1}/integrations/booking-com/disconnect`);
   },
-}
+};
 
 /** Channel distribution — auto stop-sell schedules and channel activity logs. */
 export const distributionApi = {
   getStopSellSchedules() {
-    return api.get(`${v1}/distribution/stop-sell-schedules`)
+    return api.get(`${v1}/distribution/stop-sell-schedules`);
   },
   updateStopSellSchedules(schedules) {
-    return api.post(`${v1}/distribution/stop-sell-schedules`, { schedules })
+    return api.post(`${v1}/distribution/stop-sell-schedules`, { schedules });
   },
   getLogs(params) {
-    return api.get(`${v1}/distribution/logs`, { params })
+    return api.get(`${v1}/distribution/logs`, { params });
   },
   getSources() {
-    return api.get(`${v1}/distribution/sources`)
+    return api.get(`${v1}/distribution/sources`);
   },
   createSource(data) {
-    return api.post(`${v1}/distribution/sources`, data)
+    return api.post(`${v1}/distribution/sources`, data);
   },
   updateSource(id, data) {
-    return api.put(`${v1}/distribution/sources/${id}`, data)
+    return api.put(`${v1}/distribution/sources/${id}`, data);
   },
   reorderSources(order) {
-    return api.put(`${v1}/distribution/sources/reorder`, { order })
+    return api.put(`${v1}/distribution/sources/reorder`, { order });
   },
   deleteSource(id) {
-    return api.delete(`${v1}/distribution/sources/${id}`)
+    return api.delete(`${v1}/distribution/sources/${id}`);
   },
-}
+};
 
 /** Bulk data importers — dry-run validation + commit of CSV batches. */
 export const importApi = {
@@ -3849,168 +3888,168 @@ export const importApi = {
    * accepted columns.
    */
   importers() {
-    return api.get(`${v1}/importers`)
+    return api.get(`${v1}/importers`);
   },
   /**
    * Dry-run validates an uploaded CSV. Never writes anything; returns the
    * per-row report so mistakes can be corrected before committing.
    */
   validate(importerKey, file) {
-    const form = new FormData()
-    form.append('file', file)
-    return api.post(`${v1}/importers/${importerKey}/validate`, form)
+    const form = new FormData();
+    form.append("file", file);
+    return api.post(`${v1}/importers/${importerKey}/validate`, form);
   },
   /**
    * Commits an uploaded CSV. Rows that fail validation are skipped and
    * listed in the returned report; writes are idempotent on natural keys.
    */
   run(importerKey, file) {
-    const form = new FormData()
-    form.append('file', file)
-    return api.post(`${v1}/importers/${importerKey}/run`, form)
+    const form = new FormData();
+    form.append("file", file);
+    return api.post(`${v1}/importers/${importerKey}/run`, form);
   },
-}
+};
 
 /** QuickBooks Online accounting integration. */
 export const quickbooksApi = {
   getAuthUrl() {
-    return api.get(`${v1}/integrations/quickbooks/auth-url`)
+    return api.get(`${v1}/integrations/quickbooks/auth-url`);
   },
   handleCallback(data) {
-    return api.post(`${v1}/integrations/quickbooks/callback`, data)
+    return api.post(`${v1}/integrations/quickbooks/callback`, data);
   },
   getSettings() {
-    return api.get(`${v1}/integrations/quickbooks/settings`)
+    return api.get(`${v1}/integrations/quickbooks/settings`);
   },
   updateSettings(data) {
-    return api.put(`${v1}/integrations/quickbooks/settings`, data)
+    return api.put(`${v1}/integrations/quickbooks/settings`, data);
   },
   testConnection() {
-    return api.post(`${v1}/integrations/quickbooks/test`)
+    return api.post(`${v1}/integrations/quickbooks/test`);
   },
   getAccounts() {
-    return api.get(`${v1}/integrations/quickbooks/accounts`)
+    return api.get(`${v1}/integrations/quickbooks/accounts`);
   },
   syncInvoices(data) {
-    return api.post(`${v1}/integrations/quickbooks/sync/invoices`, data)
+    return api.post(`${v1}/integrations/quickbooks/sync/invoices`, data);
   },
   syncPayments(data) {
-    return api.post(`${v1}/integrations/quickbooks/sync/payments`, data)
+    return api.post(`${v1}/integrations/quickbooks/sync/payments`, data);
   },
   getLogs(params) {
-    return api.get(`${v1}/integrations/quickbooks/logs`, { params })
+    return api.get(`${v1}/integrations/quickbooks/logs`, { params });
   },
   disconnect() {
-    return api.delete(`${v1}/integrations/quickbooks/disconnect`)
+    return api.delete(`${v1}/integrations/quickbooks/disconnect`);
   },
-}
+};
 
 /** Xero accounting integration. */
 export const xeroApi = {
   getAuthUrl() {
-    return api.get(`${v1}/integrations/xero/auth-url`)
+    return api.get(`${v1}/integrations/xero/auth-url`);
   },
   handleCallback(data) {
-    return api.post(`${v1}/integrations/xero/callback`, data)
+    return api.post(`${v1}/integrations/xero/callback`, data);
   },
   getSettings() {
-    return api.get(`${v1}/integrations/xero/settings`)
+    return api.get(`${v1}/integrations/xero/settings`);
   },
   updateSettings(data) {
-    return api.put(`${v1}/integrations/xero/settings`, data)
+    return api.put(`${v1}/integrations/xero/settings`, data);
   },
   testConnection() {
-    return api.post(`${v1}/integrations/xero/test`)
+    return api.post(`${v1}/integrations/xero/test`);
   },
   getAccounts() {
-    return api.get(`${v1}/integrations/xero/accounts`)
+    return api.get(`${v1}/integrations/xero/accounts`);
   },
   getReport(report, params) {
-    return api.get(`${v1}/integrations/xero/reports/${report}`, { params })
+    return api.get(`${v1}/integrations/xero/reports/${report}`, { params });
   },
   syncInvoices(data) {
-    return api.post(`${v1}/integrations/xero/sync/invoices`, data)
+    return api.post(`${v1}/integrations/xero/sync/invoices`, data);
   },
   syncPayments(data) {
-    return api.post(`${v1}/integrations/xero/sync/payments`, data)
+    return api.post(`${v1}/integrations/xero/sync/payments`, data);
   },
   getLogs(params) {
-    return api.get(`${v1}/integrations/xero/logs`, { params })
+    return api.get(`${v1}/integrations/xero/logs`, { params });
   },
   disconnect() {
-    return api.delete(`${v1}/integrations/xero/disconnect`)
+    return api.delete(`${v1}/integrations/xero/disconnect`);
   },
-}
+};
 
 /** Check-in override approvals (manager pre-authorizes unpaid check-ins). */
 export const checkinOverrideApi = {
   list(params) {
-    return api.get(`${v1}/checkin-overrides`, { params })
+    return api.get(`${v1}/checkin-overrides`, { params });
   },
   create(data) {
-    return api.post(`${v1}/checkin-overrides`, data)
+    return api.post(`${v1}/checkin-overrides`, data);
   },
   revoke(id) {
-    return api.post(`${v1}/checkin-overrides/${id}/revoke`)
+    return api.post(`${v1}/checkin-overrides/${id}/revoke`);
   },
   active() {
-    return api.get(`${v1}/checkin-overrides/active`)
+    return api.get(`${v1}/checkin-overrides/active`);
   },
   stats() {
-    return api.get(`${v1}/checkin-overrides/stats`)
+    return api.get(`${v1}/checkin-overrides/stats`);
   },
-}
+};
 
 /** Portal notification settings (email/SMS toggles per event). */
 export const portalNotificationSettingsApi = {
   index() {
-    return api.get(`${v1}/portal/notification-settings`)
+    return api.get(`${v1}/portal/notification-settings`);
   },
   update(data) {
-    return api.put(`${v1}/portal/notification-settings`, data)
+    return api.put(`${v1}/portal/notification-settings`, data);
   },
-}
+};
 
 /** Portal analytics (KPIs + revenue trend). */
 export const portalAnalyticsApi = {
   overview() {
-    return api.get(`${v1}/portal/analytics/overview`)
+    return api.get(`${v1}/portal/analytics/overview`);
   },
-}
+};
 
 /**
  * Guest self-service portal API.
  * Uses a separate axios instance with the guest token (not staff auth).
  */
-import guestPortalHttp from 'axios'
+import guestPortalHttp from "axios";
 
 const guestPortalAxios = guestPortalHttp.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
-  headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-})
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000/api",
+  headers: { Accept: "application/json", "Content-Type": "application/json" },
+});
 
 guestPortalAxios.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem('guest_token')
+  const token = sessionStorage.getItem("guest_token");
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+    config.headers.Authorization = `Bearer ${token}`;
   }
-  return config
-})
+  return config;
+});
 
 export const guestPortalApi = {
   authenticate(data) {
-    return guestPortalAxios.post(`${v1}/guest/portal/auth`, data).then(r => r.data)
+    return guestPortalAxios.post(`${v1}/guest/portal/auth`, data).then((r) => r.data);
   },
   booking() {
-    return guestPortalAxios.get(`${v1}/guest/portal/booking`).then(r => r.data)
+    return guestPortalAxios.get(`${v1}/guest/portal/booking`).then((r) => r.data);
   },
   folio() {
-    return guestPortalAxios.get(`${v1}/guest/portal/folio`).then(r => r.data)
+    return guestPortalAxios.get(`${v1}/guest/portal/folio`).then((r) => r.data);
   },
   requests() {
-    return guestPortalAxios.get(`${v1}/guest/portal/requests`).then(r => r.data)
+    return guestPortalAxios.get(`${v1}/guest/portal/requests`).then((r) => r.data);
   },
   createRequest(data) {
-    return guestPortalAxios.post(`${v1}/guest/portal/requests`, data).then(r => r.data)
+    return guestPortalAxios.post(`${v1}/guest/portal/requests`, data).then((r) => r.data);
   },
-}
+};
