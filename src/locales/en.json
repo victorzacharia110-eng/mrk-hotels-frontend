@@ -5285,9 +5285,42 @@
       "items": "Items",
       "actions": "Actions"
     },
-    "roomService": {},
-    "delivery": {},
-    "noCharge": {},
+    "roomService": {
+      "tabAll": "ALL",
+      "tabPreparing": "PREPARING",
+      "tabReady": "READY",
+      "tabCompleted": "COMPLETED",
+      "tabDispatched": "DISPATCHED",
+      "workingDate": "Working Date",
+      "today": "Today",
+      "pending": "PENDING",
+      "settled": "SETTLED",
+      "voided": "VOIDED"
+    },
+    "delivery": {
+      "tabAll": "ALL",
+      "tabPreparing": "PREPARING",
+      "tabReady": "READY",
+      "tabCompleted": "COMPLETED",
+      "tabDispatched": "DISPATCHED",
+      "workingDate": "Working Date",
+      "today": "Today",
+      "pending": "PENDING",
+      "settled": "SETTLED",
+      "voided": "VOIDED"
+    },
+    "noCharge": {
+      "tabAll": "ALL",
+      "tabPreparing": "PREPARING",
+      "tabReady": "READY",
+      "tabCompleted": "COMPLETED",
+      "tabDispatched": "DISPATCHED",
+      "workingDate": "Working Date",
+      "today": "Today",
+      "pending": "PENDING",
+      "settled": "SETTLED",
+      "voided": "VOIDED"
+    },
     "ingredients": {
       "menuItems": "Menu Items",
       "allMenus": "All Menus",

@@ -5419,7 +5419,16 @@
       "today": "Leo",
       "dateTime": "Tarehe / Muda",
       "items": "Bidhaa",
-      "newOrder": "Agizo Jipya"
+      "newOrder": "Agizo Jipya",
+      "tabAll": "ZOTE",
+      "tabPreparing": "ZINAANDALIWA",
+      "tabReady": "TAYARI",
+      "tabCompleted": "ZIMEKAMILIKA",
+      "tabDispatched": "IMETOKA",
+      "workingDate": "Tarehe ya Kazi",
+      "pending": "INASUBIRI",
+      "settled": "IMELIPWA",
+      "voided": "IMEBATILISHWA"
     },
     "delivery": {
       "addOrder": "+ Ongeza Oda ya Usafirishaji",
@@ -5445,7 +5454,12 @@
       },
       "dateTime": "Tarehe / Muda",
       "previousOrders": "Maagizo ya awali",
-      "today": "Leo"
+      "today": "Leo",
+      "tabReady": "TAYARI",
+      "workingDate": "Tarehe ya Kazi",
+      "pending": "INASUBIRI",
+      "settled": "IMELIPWA",
+      "voided": "IMEBATILISHWA"
     },
     "noCharge": {
       "title": "Oda Bila Malipo",
@@ -5455,7 +5469,15 @@
       "dateTime": "Tarehe / Muda",
       "previousOrders": "Maagizo ya awali",
       "today": "Leo",
-      "workingDate": "Tarehe ya Kazi"
+      "workingDate": "Tarehe ya Kazi",
+      "tabAll": "ZOTE",
+      "tabPreparing": "ZINAANDALIWA",
+      "tabReady": "TAYARI",
+      "tabCompleted": "ZIMEKAMILIKA",
+      "tabDispatched": "IMETOKA",
+      "pending": "INASUBIRI",
+      "settled": "IMELIPWA",
+      "voided": "IMEBATILISHWA"
     },
     "summary": {
       "tabRunning": "Zinazoendelea",
