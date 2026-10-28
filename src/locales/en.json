@@ -5402,7 +5402,11 @@
     },
     "accountLookup": {},
     "order": {
-      "account": "Account"
+      "account": "Account",
+      "waiter": "Waiter",
+      "table": "Table",
+      "room": "Room",
+      "guest": "Guest"
     },
     "panelTitle": "POS",
     "topbar": {

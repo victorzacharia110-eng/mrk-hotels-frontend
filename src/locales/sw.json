@@ -5340,7 +5340,10 @@
       "accountRequired": "Chagua akaunti inayohusika na agizo hili la bure.",
       "servingsLeft": "Zilizobaki: {qty}",
       "stockNone": "Haikusajiliwi",
-      "stockCount": "Stock {qty} {unit}"
+      "stockCount": "Stock {qty} {unit}",
+      "table": "Jedwali",
+      "room": "Chumba",
+      "guest": "Mgeni"
     },
     "dineIn": "IN HOUSE",
     "waiters": {
