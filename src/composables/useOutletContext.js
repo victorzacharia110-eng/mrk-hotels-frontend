@@ -43,21 +43,23 @@ const outletId = computed(() => selectedOutlet.value?.outlet_id)
  *
  * @returns {Promise<Array>} The outlets.
  */
-async function loadOutlets() {
+async function loadOutlets(opts = {}) {
+  const { sellingOnly = false } = opts
+
   if (inflight) return inflight
   inflight = (async () => {
     try {
       const { data } = await outletApi.index()
-      const list = data.outlets || data.data || []
-      // Cashier/Bar tender panel: show only selling outlets (restaurant/bar),
-      // exclude store/warehouse outlets.
-      outlets.value = list.filter((o) => {
-        const type = (o.type || '').toLowerCase()
-        if (type === 'store') return false
-        if (type === 'restaurant' || type === 'bar') return true
-        // Fallback: if type indicates selling point, include it
-        return !['laundry', 'housekeeping', 'maintenance', 'other'].includes(type)
-      })
+      let list = data.outlets || data.data || []
+      if (sellingOnly) {
+        list = list.filter((o) => {
+          const type = (o.type || '').toLowerCase()
+          if (type === 'store') return false
+          if (type === 'restaurant' || type === 'bar') return true
+          return !['laundry', 'housekeeping', 'maintenance', 'other'].includes(type)
+        })
+      }
+      outlets.value = list
       const savedId = sessionStorage.getItem(STORAGE_KEY)
       selectedOutlet.value = outlets.value.find((o) => o.outlet_id === savedId) || null
     } catch {
