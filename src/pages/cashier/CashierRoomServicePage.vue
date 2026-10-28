@@ -119,6 +119,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { orderApi } from '@/api'
+import { selectedOutlet } from '@/composables/useOutletContext'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'

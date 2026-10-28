@@ -63,6 +63,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { orderApi } from '@/api'
+import { selectedOutlet } from '@/composables/useOutletContext'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
 import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
@@ -125,6 +126,7 @@ async function load() {
   loading.value = true
   try {
     const params = { order_type: 'takeaway', per_page: 100 }
+    if (selectedOutlet.value?.outlet_id) params.outlet_id = selectedOutlet.value.outlet_id
     // "Previous orders" (a date before today) lists that whole date's tickets.
     if (date.value && date.value < todayISO()) params.date = date.value
     const { data } = await orderApi.index(params)

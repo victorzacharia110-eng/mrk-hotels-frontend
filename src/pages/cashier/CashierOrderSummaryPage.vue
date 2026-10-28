@@ -499,6 +499,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cashierApi, orderApi, hotelSettingsApi, tableApi } from '@/api'
+import { selectedOutlet } from '@/composables/useOutletContext'
 import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
@@ -736,7 +737,8 @@ function money(value) {
 async function load() {
   loading.value = true
   try {
-    const params = { per_page: 100 }
+    const params = { per_page: 100, outlet_id: selectedOutlet.value?.outlet_id || undefined }
+
     // "Previous orders" (a date before today) lists that whole date's tickets.
     if (date.value && date.value < todayISO()) params.date = date.value
     const { data } = await orderApi.index(params)
