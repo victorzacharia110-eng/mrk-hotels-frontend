@@ -5469,7 +5469,8 @@
       "voidOrder": "Void Order",
       "voidText": "Void with reason.",
       "voidTitle": "Void blocking order",
-      "waiter": "Waiter"
+      "waiter": "Waiter",
+      "unpaid": "Unpaid"
     },
     "blockedDevices": {},
     "printer": {
