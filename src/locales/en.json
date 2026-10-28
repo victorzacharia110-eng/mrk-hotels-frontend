@@ -131,7 +131,8 @@
     "autoClosesIn": "Closes on its own in {seconds}s",
     "share": "Share",
     "voided": "Voided",
-    "language": "Language"
+    "language": "Language",
+    "menuToggle": "Toggle menu"
   },
   "laundry": {
     "title": "Laundry",

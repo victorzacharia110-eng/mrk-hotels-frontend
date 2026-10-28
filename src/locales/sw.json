@@ -130,7 +130,8 @@
     "updateSuccess": "Imesasishwa.",
     "autoClosesIn": "Itafunga yenyewe kwa sekunde {seconds}",
     "share": "Shiriki",
-    "voided": "Imebatilishwa"
+    "voided": "Imebatilishwa",
+    "menuToggle": "Badilisha menyu"
   },
   "laundry": {
     "title": "Dobi",
