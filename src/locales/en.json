@@ -5180,7 +5180,32 @@
     "nav": {
       "transactionLock": "NET LOCK",
       "requisitions": "REQUISITIONS",
-      "itemLookup": "PRODUCT LIBRARY"
+      "itemLookup": "PRODUCT LIBRARY",
+      "panelTitle": "POS",
+      "ordering": "ORDERING",
+      "dineIn": "IN HOUSE",
+      "takeAway": "TAKE OUT",
+      "roomService": "Room Service",
+      "delivery": "Delivery",
+      "noCharge": "No Charge",
+      "orderSummary": "Order Summary",
+      "reports": "REPORTS",
+      "summaryReport": "Summary Report",
+      "posReports": "POS Reports",
+      "managerGroup": "MANAGER",
+      "ingredients": "Ingredients",
+      "menu": "Menu",
+      "shiftManager": "Shift Manager",
+      "dayClose": "Day Close",
+      "blockedDevices": "Blocked Devices",
+      "accountLookup": "Account Lookup",
+      "printerGroup": "PRINTER",
+      "printer": "Printer",
+      "printSettings": "Print Settings",
+      "communication": "COMMUNICATION",
+      "messages": "Messages",
+      "statuses": "Statuses",
+      "waiterAssignment": "WAITER ASSIGNMENT"
     }
   },
   "paymentInstructionCard": {
