@@ -128,7 +128,9 @@
     "deleteSuccess": "Imeondolewa.",
     "loadError": "Imeshindikana kupakia.",
     "updateSuccess": "Imesasishwa.",
-    "autoClosesIn": "Itafunga yenyewe kwa sekunde {seconds}"
+    "autoClosesIn": "Itafunga yenyewe kwa sekunde {seconds}",
+    "share": "Shiriki",
+    "voided": "Imebatilishwa"
   },
   "laundry": {
     "title": "Dobi",
@@ -2031,7 +2033,13 @@
     "sms": "SMS",
     "both": "Zote mbili",
     "phone": "Namba ya simu",
-    "bothHint": "Hutuma barua pepe kwa anwani ya hoteli na SMS kwa namba yake ya simu iliyohifadhiwa."
+    "bothHint": "Hutuma barua pepe kwa anwani ya hoteli na SMS kwa namba yake ya simu iliyohifadhiwa.",
+    "sn": "Namba",
+    "outlet": "Outlets",
+    "costValue": "Thamani ya gharama",
+    "allOutlets": "Outlets zote",
+    "statusComplete": "Zilizokamilika",
+    "answerForward": "Jibu na urudishe"
   },
   "purchaseOrders": {
     "title": "Oda za Ununuzi",
@@ -4627,7 +4635,9 @@
       "goodsReturns": "Marejesho",
       "backOffice": "Ofisi ya Nyuma",
       "stockAdjust": "Marekebisho ya Akiba",
-      "items": "Bidhaa"
+      "items": "Bidhaa",
+      "expenseCategories": "Makundi ya Matumizi",
+      "siUnits": "Vipimo vya SI"
     },
     "dashboard": {
       "totalItems": "Bidhaa ghala",
@@ -4637,6 +4647,7 @@
       "stockValue": "Thamani ya ghala",
       "newItem": "Bidhaa mpya",
       "newRequisition": "Ombi jipya",
+      "newPurchaseOrder": "Oda mpya ya manunuzi",
       "recordGrn": "Pokea bidhaa",
       "newSupplier": "Muuzaji mpya",
       "lowStockAlerts": "Tahadhari za bidhaa chache",
@@ -4701,6 +4712,23 @@
       "add": "Ongeza kundi",
       "deleteConfirm": "Futa kundi \"{name}\"?"
     },
+    "units": {
+      "add": "Ongeza kipimo cha SI",
+      "unit": "Kipimo",
+      "group": "Kundi",
+      "groupPlaceholder": "mf. uzito, ujazo, idadi",
+      "empty": "Hakuna vipimo vya SI vilivyosajiliwa bado.",
+      "created": "Kipimo cha SI kimesajiliwa.",
+      "updated": "Kipimo cha SI kimebadilishwa.",
+      "deleteConfirm": "Futa kipimo cha SI \"{unit}\"?"
+    },
+    "backOffice": {
+      "itemsDesc": "Bidhaa, bei, vipimo na viwango vya akiba.",
+      "suppliersDesc": "Taarifa za wauzaji zinazotumika kwenye oda za manunuzi.",
+      "categoriesDesc": "Makundi ya bidhaa, wauzaji na matumizi.",
+      "expenseCategoriesDesc": "Makundi yanayotolewa kwenye fomu ya matumizi.",
+      "siUnitsDesc": "Vipimo vinavyotumika kwenye bidhaa, oda na GRN."
+    },
     "customers": {
       "add": "Ongeza mteja",
       "purchases": "Manunuzi",
@@ -4751,7 +4779,16 @@
         "salaries": "Mishahara",
         "marketing": "Masoko",
         "other": "Mengineyo"
-      }
+      },
+      "particular": "Maelezo",
+      "newCategory": "Sajili kategoria mpya",
+      "categoryPrompt": "Jina la kategoria mpya ya matumizi",
+      "voidTitle": "Batilisha matumizi",
+      "voidMessage": "Batilisha matumizi {count} yaliyochaguliwa? Andika sababu hapa chini.",
+      "voidReason": "Sababu",
+      "voidReasonPlaceholder": "Kwa nini matumizi haya yanabatilishwa?",
+      "voidAction": "Batilisha",
+      "voidSuccess": "Matumizi {count} yamebatilishwa."
     },
     "register": {
       "status": "Hali ya kasha",
@@ -4769,7 +4806,12 @@
       "expected": "Inayotarajiwa",
       "counted": "Iliyohesabiwa",
       "difference": "Tofauti",
-      "empty": "Hakuna zamu zilizorekodiwa bado."
+      "empty": "Hakuna zamu zilizorekodiwa bado.",
+      "floatAdded": "Fedha zilizoongezwa",
+      "addFloat": "Ongeza fedha",
+      "floatAmount": "Kiasi cha fedha",
+      "optional": "hiari",
+      "autoReference": "Itatengenezwa ikiwa haitajazwa"
     },
     "discounts": {
       "add": "Ongeza punguzo",
@@ -4786,7 +4828,22 @@
       "add": "Uhamisho mpya",
       "from": "Kutoka",
       "to": "Kwenda",
-      "empty": "Hakuna uhamisho bado."
+      "empty": "Hakuna uhamisho bado.",
+      "multiOutletOnly": "Uhamishaji wa bidhaa unapatikana tu pale duka linapokuwa na maduka zaidi ya moja.",
+      "draft": "RASIMU",
+      "sent": "IMETUMWA",
+      "send": "Tuma uhamishaji",
+      "saveDraft": "Hifadhi rasimu",
+      "saveSend": "Hifadhi na utume",
+      "costValue": "Thamani ya gharama",
+      "creator": "Mwandishi",
+      "supervisor": "Msimamizi",
+      "authorizedBy": "Aliyethibitisha",
+      "onShelf": "{qty} {unit} shelfu",
+      "noShelf": "hakuna shelfu",
+      "sameOutlet": "Chagua maduka mawili tofauti.",
+      "itemRequired": "Chagua bidhaa.",
+      "quantityRequired": "Weka kiasi kikubwa kuliko sifuri."
     },
     "counts": {
       "new": "Uhesabuji mpya",
@@ -4800,7 +4857,18 @@
       "empty": "Hakuna uhesabuji bado.",
       "saveCounts": "Hifadhi hesabu",
       "resume": "Endelea",
-      "batch": "Vipima"
+      "batch": "Vipima",
+      "autosaved": "Imehifadhiwa {time}",
+      "autosaveHint": "Huhifadhi kila sekunde 15",
+      "allRows": "Bidhaa zote",
+      "varianceTab": "Tofauti",
+      "descriptionTab": "Maelezo",
+      "varianceReason": "Sababu ya tofauti",
+      "reasonPlaceholder": "Kwa nini hesabu inatofautiana?",
+      "nothingToSave": "Hakuna mabadiliko ya kuhifadhi",
+      "currentDayOnly": "Uhesabuji unaweza kuanza tu katika siku ya biashara ya sasa.",
+      "saved": "Zilizohifadhiwa",
+      "submitted": "Zilizowasilishwa"
     },
     "lowStock": {
       "outOfStock": "Zimeisha",
@@ -4811,7 +4879,8 @@
       "reorder": "Agiza",
       "empty": "Hakuna tahadhari za akiba. Kila kitu kiko sawa.",
       "onShelves": "Kwenye Rafuni",
-      "storeOnly": "Duka nzima"
+      "storeOnly": "Duka nzima",
+      "allAlerts": "Tahadhari zote"
     },
     "settings": {
       "tabs": {
@@ -4888,6 +4957,52 @@
     "returns": {
       "new": "Kurejesha bidhaa",
       "empty": "Hakuna marejesho bado."
+    },
+    "adjustType": {
+      "wastage": "Upotevu",
+      "consumption": "Matumizi",
+      "adjustment": "Marekebisho"
+    },
+    "adjustments": {
+      "add": "Marekebisho mapya",
+      "allTypes": "Aina zote za marekebisho",
+      "sn": "Namba",
+      "type": "Aina ya marekebisho",
+      "costValue": "Thamani ya gharama",
+      "filterAll": "Zote",
+      "filterVoided": "Zilizofutwa",
+      "empty": "Hakuna karatasi za marekebisho ya hisa kwa tarehe hii.",
+      "count": "Karatasi {count}",
+      "new": "Karatasi mpya ya marekebisho",
+      "createdBy": "Imeundwa na",
+      "itemsTab": "Bidhaa",
+      "descriptionTab": "Maelezo",
+      "quantityRemoved": "Kiasi kilichoondolewa",
+      "newLevel": "Kiwango kipya cha hisa",
+      "currentLevel": "Hisa zilizopo",
+      "addLine": "Ongeza bidhaa",
+      "before": "Kabla",
+      "after": "Baada",
+      "noLines": "Ongeza angalau bidhaa moja kwenye karatasi hii.",
+      "descriptionHint": "Eleza kwa nini bidhaa hizi zinarekebishwa, zinapotea au zinatumiwa. Kila bidhaa inaweza kuwa na sababu yake.",
+      "sheetDescription": "Maelezo ya karatasi",
+      "descriptionPlaceholder": "Eleza sababu ya marekebisho haya...",
+      "noItemReason": "Hakuna sababu maalum ya bidhaa iliyorekodiwa.",
+      "itemReasonPlaceholder": "Sababu ya bidhaa hii...",
+      "selectItemsError": "Ongeza angalau bidhaa moja kabla ya kuhifadhi.",
+      "saved": "Imehifadhiwa",
+      "savedMessage": "Marekebisho ya hisa {reference} yamehifadhiwa.",
+      "voidedMessage": "Marekebisho ya hisa yamefutwa na hisa zimerejeshwa.",
+      "voidTitle": "Futa {reference}",
+      "voidHint": "Kufuta karatasi hii kutarejesha kila mwendo wa hisa uliorekodiwa. Sababu inahitajika na itahifadhiwa kwenye kumbukumbu.",
+      "voidedBanner": "Karatasi hii imefutwa",
+      "emailTitle": "Shiriki {reference}",
+      "emailAddress": "Barua pepe ya mpokeaji",
+      "emailRequired": "Weka barua pepe ya mpokeaji.",
+      "emailSent": "Marekebisho ya hisa yametumwa kwa barua pepe.",
+      "hintWastage": "Upotevu huondoa hisa zilizoharibika au zilizoharibika kutoka ghala.",
+      "hintConsumption": "Matumizi huondoa hisa zilizotumika bila kusawazishwa kwenye karatasi ya hisa.",
+      "hintAdjustment": "Marekebisho huweka kila bidhaa kwenye kiwango kipya cha hisa unachoweka."
     }
   },
   "posReports": {

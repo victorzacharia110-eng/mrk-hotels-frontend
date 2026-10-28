@@ -13,7 +13,7 @@
       </router-link>
 
       <nav class="sm-nav">
-        <template v-for="item in navItems" :key="item.to">
+        <template v-for="item in visibleNavItems" :key="item.to">
           <div v-if="item.children" class="sm-nav-group">
             <button class="sm-nav-link sm-group" :class="{ active: groupActive(item), open: isOpen(item.labelKey) }"
               @click="toggleGroup(item.labelKey)">
@@ -69,7 +69,6 @@
               <option v-for="o in outlets" :key="o.outlet_id" :value="o.outlet_id">{{ o.name }}</option>
             </select>
           </div>
-          <ThemeToggle />
           <button class="sm-icon-btn sm-notif-bell" :title="$t('notifications.title')"
             :aria-label="$t('notifications.unreadCount', { count: notifStore.unreadCount })"
             @click="toggleNotifDropdown">
@@ -81,12 +80,43 @@
           <router-link :to="{ name: 'store-messages' }" class="sm-icon-btn" :title="$t('storeManager.nav.messages')">
             <i class="fas fa-comments" aria-hidden="true"></i>
           </router-link>
-          <div class="sm-user">
-            <span class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
-            <span class="sm-user-meta">
-              <strong>{{ authStore.user?.name }}</strong>
-              <RoleBadge />
-            </span>
+          <div class="sm-profile">
+            <button type="button" class="sm-user" :aria-expanded="profileOpen"
+              :aria-label="$t('nav.profile')" @click="profileOpen = !profileOpen">
+              <span class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
+            </button>
+            <div v-if="profileOpen" class="sm-profile-backdrop" @click="profileOpen = false"></div>
+            <div v-if="profileOpen" class="sm-profile-panel">
+              <div class="sm-profile-head">
+                <span class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
+                <strong>{{ accountName }}</strong>
+              </div>
+              <router-link :to="{ name: 'user-manual' }" class="sm-profile-link" @click="profileOpen = false">
+                <i class="fas fa-book-open" aria-hidden="true"></i> {{ $t('nav.userManual') }}
+              </router-link>
+              <router-link :to="{ name: 'store-profile' }" class="sm-profile-link" @click="profileOpen = false">
+                <i class="fas fa-user-circle" aria-hidden="true"></i> {{ $t('nav.profile') }}
+              </router-link>
+              <button type="button" class="sm-profile-link" :aria-pressed="themeStore.isDark"
+                :title="themeStore.isDark ? $t('topBar.lightMode') : $t('topBar.darkMode')"
+                @click="themeStore.toggleTheme()">
+                <i :class="themeStore.isDark ? 'fas fa-sun' : 'fas fa-moon'" aria-hidden="true"></i>
+                {{ themeStore.isDark ? $t('topBar.lightMode') : $t('topBar.darkMode') }}
+              </button>
+              <div class="sm-profile-lang" role="group" :aria-label="$t('topBar.language')">
+                <button type="button" class="lang-option" :class="{ active: locale === 'en' }"
+                  @click="setLocale('en')" :aria-pressed="locale === 'en'">
+                  <span aria-hidden="true">🇬🇧</span> EN
+                </button>
+                <button type="button" class="lang-option" :class="{ active: locale === 'sw' }"
+                  @click="setLocale('sw')" :aria-pressed="locale === 'sw'">
+                  <span aria-hidden="true">🇹🇿</span> SW
+                </button>
+              </div>
+              <button type="button" class="sm-profile-link" @click="profileOpen = false; handleLogout()">
+                <i class="fas fa-right-from-bracket" aria-hidden="true"></i> {{ $t('nav.logout') }}
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -178,17 +208,17 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notifications'
 import { useWorkingDateStore } from '@/stores/workingDate'
-import RoleBadge from '@/components/RoleBadge.vue'
-import ThemeToggle from '@/components/ThemeToggle.vue'
+import { useThemeStore } from '@/stores/theme'
 import DayCloseReminderModal from '@/components/cashier/DayCloseReminderModal.vue'
 import { useOutletContext } from '@/composables/useOutletContext'
 
 const route = useRoute()
 const router = useRouter()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const authStore = useAuthStore()
 const notifStore = useNotificationStore()
 const workingDateStore = useWorkingDateStore()
+const themeStore = useThemeStore()
 
 // Outlet selection, shared with the staff panel and the till so one pick covers
 // the whole app. The store manager picks the outlet whose stock and reports
@@ -210,6 +240,13 @@ async function openOutletGateIfNeeded() {
   await loadOutletList()
   if (!roleCanSelectOutlet(authStore.user?.user_role)) return
   if (outlets.value.length === 0 || selectedOutlet.value) return
+  // A single outlet is not a choice: use it silently and keep the picker and
+  // the post-login gate out of the way, as requested in the panel review.
+  if (!hasChoice.value) {
+    selectOutlet(outlets.value[0])
+    outletGateOpen.value = false
+    return
+  }
   outletGateOpen.value = true
 }
 
@@ -227,14 +264,16 @@ function onOutletChange(outletId) {
 const sidebarCollapsed = ref(true)
 const mobileOpen = ref(false)
 const showNotifDropdown = ref(false)
+const profileOpen = ref(false)
 
 function toggleSidebar() {
   if (window.matchMedia('(max-width: 900px)').matches) mobileOpen.value = !mobileOpen.value
   else sidebarCollapsed.value = !sidebarCollapsed.value
 }
 
-watch(() => route.path, () => {
+watch(() => route.fullPath, () => {
   mobileOpen.value = false
+  profileOpen.value = false
 })
 
 // Module navigation of the store manager panel, following the client's
@@ -247,20 +286,7 @@ const navItems = [
   { to: '/store-manager/goods-received', icon: 'fas fa-clipboard-check', labelKey: 'storeManager.nav.goodsReceived' },
   { to: '/store-manager/expenses', icon: 'fas fa-money-bill-wave', labelKey: 'storeManager.nav.expenses' },
   { to: '/store-manager/cash-register', icon: 'fas fa-vault', labelKey: 'storeManager.nav.cashRegister' },
-  {
-    to: '/store-manager/reports',
-    icon: 'fas fa-chart-line',
-    labelKey: 'storeManager.nav.reports',
-    children: [
-      { to: '/store-manager/reports?view=ledger-summary', icon: 'fas fa-book', labelKey: 'storeManager.reports.stockLedger' },
-      { to: '/store-manager/goods-received?view=ledger-detail', icon: 'fas fa-list', labelKey: 'storeManager.reports.movementDetail' },
-      { to: '/store-manager/reports?view=transfer-register', icon: 'fas fa-right-left', labelKey: 'storeManager.reports.transferSummary' },
-      { to: '/store-manager/reports?view=stock-take-detail', icon: 'fas fa-scale-balanced', labelKey: 'storeManager.reports.physicalStock' },
-      { to: '/store-manager/reports?view=closing-stock', icon: 'fas fa-warehouse', labelKey: 'storeManager.reports.closingStock' },
-      { to: '/store-manager/reports?view=stock-adjustment-report', icon: 'fas fa-sliders', labelKey: 'storeManager.reports.stockAdjustment' },
-      { to: '/store-manager/reports?view=goods-return-register', icon: 'fas fa-rotate-left', labelKey: 'storeManager.reports.goodsReturns' },
-    ],
-  },
+  { to: '/store-manager/reports', icon: 'fas fa-chart-line', labelKey: 'storeManager.nav.reports' },
   { to: '/store-manager/indents', icon: 'fas fa-file-import', labelKey: 'storeManager.nav.indents' },
   {
     to: '/store-manager/inventory',
@@ -273,16 +299,18 @@ const navItems = [
       { to: '/store-manager/stock-adjust', icon: 'fas fa-sliders', labelKey: 'storeManager.nav.stockAdjust' },
     ],
   },
-  {
-    to: '/store-manager/back-office',
-    icon: 'fas fa-address-book',
-    labelKey: 'storeManager.nav.backOffice',
-    children: [
-      { to: '/store-manager/items', icon: 'fas fa-boxes-stacked', labelKey: 'storeManager.nav.items' },
-      { to: '/store-manager/suppliers', icon: 'fas fa-truck-ramp-box', labelKey: 'storeManager.nav.suppliers' },
-    ],
-  },
+  { to: '/store-manager/items', icon: 'fas fa-boxes-stacked', labelKey: 'storeManager.nav.items' },
+  { to: '/store-manager/suppliers', icon: 'fas fa-truck-ramp-box', labelKey: 'storeManager.nav.suppliers' },
+  { to: '/store-manager/categories', icon: 'fas fa-tags', labelKey: 'storeManager.nav.categories' },
+  { to: '/store-manager/expense-categories', icon: 'fas fa-money-bill-wave', labelKey: 'storeManager.nav.expenseCategories' },
+  { to: '/store-manager/units', icon: 'fas fa-ruler-combined', labelKey: 'storeManager.nav.siUnits' },
+  { to: '/store-manager/back-office', icon: 'fas fa-address-book', labelKey: 'storeManager.nav.backOffice' },
 ]
+
+// Transfers need more than one outlet to make sense; hide the entry otherwise.
+const visibleNavItems = computed(() => navItems.map((item) => item.children
+  ? { ...item, children: item.children.filter((child) => child.to !== '/store-manager/transfers' || hasChoice.value) }
+  : item))
 
 // Sidebar groups are exclusive: opening one smoothly closes the others, so
 // only the targeted group stays expanded. Empty string = all closed.
@@ -321,10 +349,22 @@ watch(() => route.query, () => {
 }, { immediate: true })
 
 const pageTitle = computed(() => (route.meta.titleKey ? t(route.meta.titleKey) : t('storeManager.panelTitle')))
+const accountName = computed(() =>
+  authStore.user?.full_name ||
+  [authStore.user?.first_name, authStore.user?.last_name].filter(Boolean).join(' ') ||
+  authStore.user?.name ||
+  (authStore.user?.email || '').split('@')[0] ||
+  'Store Manager',
+)
 const userInitials = computed(() => {
-  const name = authStore.user?.name || ''
+  const name = accountName.value
   return name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || 'SM'
 })
+
+function setLocale(lang) {
+  locale.value = lang
+  localStorage.setItem('locale', lang)
+}
 
 async function handleLogout() {
   await authStore.logout()
@@ -529,16 +569,61 @@ const DAY_CLOSE_ROLES = ['store_manager', 'cashier', 'bartender', 'waiter', 'hot
   color: var(--sm-blue); background: var(--sm-blue-light);
   text-decoration: none; font-size: 16px;
 }
-.sm-user { display: flex; align-items: center; gap: 10px; }
+.sm-profile { position: relative; }
+.sm-user {
+  display: flex; align-items: center; justify-content: center;
+  padding: 0; border: 1px solid #e2e8f0; border-radius: 50%;
+  background: #f8fafc; cursor: pointer;
+}
+.sm-user:hover { border-color: var(--sm-blue); box-shadow: 0 2px 8px rgba(0, 94, 184, 0.18); }
+.sm-user:focus-visible { outline: 2px solid var(--sm-blue); outline-offset: 2px; }
 .sm-user-avatar {
   width: 38px; height: 38px; border-radius: 50%;
-  background: var(--sm-blue); color: #fff;
+  background: linear-gradient(135deg, #005eb8, #0a7ee8); color: #fff;
   display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 14px;
+  font-weight: 700; font-size: 14px; letter-spacing: 0.3px;
 }
-.sm-user-meta { display: flex; flex-direction: column; line-height: 1.2; }
-.sm-user-meta strong { font-size: 14px; }
-.sm-user-meta small { color: var(--sm-muted); font-size: 12px; }
+.sm-profile-backdrop { position: fixed; inset: 0; z-index: 94; }
+.sm-profile-panel {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 95;
+  min-width: 240px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 12px;
+  background: #fff; box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+}
+.sm-profile-head {
+  display: flex; align-items: center; gap: 12px; padding: 8px 10px 12px;
+  margin-bottom: 6px; border-bottom: 1px solid #f1f5f9;
+}
+.sm-profile-head .sm-user-avatar { width: 34px; height: 34px; font-size: 13px; }
+.sm-profile-head strong {
+  max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: #1e293b; font-size: 14px;
+}
+.sm-profile-link {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 10px; border: none; border-radius: 8px; background: none;
+  color: #334155; font: inherit; font-size: 13px; text-align: left;
+  text-decoration: none; cursor: pointer;
+}
+.sm-profile-link:hover { background: #f1f5f9; color: var(--sm-blue); }
+.sm-profile-link i { width: 18px; text-align: center; font-size: 14px; }
+.sm-profile-lang {
+  display: flex; gap: 6px; padding: 8px 10px 4px; margin-top: 4px;
+  border-top: 1px solid #f1f5f9;
+}
+.sm-profile-lang .lang-option {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px;
+  border: 1px solid #e2e8f0; border-radius: 8px; background: #fff;
+  color: #475569; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.sm-profile-lang .lang-option.active { border-color: var(--sm-blue); color: var(--sm-blue); background: var(--sm-blue-light); }
+html[data-theme='dark'] .sm-profile-panel { background: #1e293b; border-color: #334155; }
+html[data-theme='dark'] .sm-profile-head { border-bottom-color: #334155; }
+html[data-theme='dark'] .sm-profile-head strong { color: #e2e8f0; }
+html[data-theme='dark'] .sm-profile-link { color: #cbd5e1; }
+html[data-theme='dark'] .sm-profile-link:hover { background: #334155; color: #7cc0ff; }
+html[data-theme='dark'] .sm-profile-lang { border-top-color: #334155; }
+html[data-theme='dark'] .sm-profile-lang .lang-option { background: #0f172a; border-color: #334155; color: #cbd5e1; }
+html[data-theme='dark'] .sm-profile-lang .lang-option.active { border-color: #7cc0ff; color: #7cc0ff; background: #1e3a5f; }
 .sm-content { flex: 1; padding: 24px; overflow-y: auto; min-height: 0; }
 .sm-backdrop { display: none; }
 @media (max-width: 900px) {

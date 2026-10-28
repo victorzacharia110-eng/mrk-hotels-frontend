@@ -12,7 +12,7 @@
       <div class="sm-toolbar">
         <h2 class="ledger-title"><i class="fas fa-book"></i> {{ $t('storeManager.reports.movementDetail') }}</h2>
         <span class="spacer"></span>
-        <CalendarInput v-model="dateFilter" style="max-width: 150px" @change="loadMovements(dateFilter, 1)" />
+        <CalendarInput v-model="dateFilter" :clearable="false" @change="loadMovements(dateFilter, 1)" />
       </div>
       <section class="panel">
         <div v-if="movementsLoading" class="sm-loading"><i class="fas fa-circle-notch"></i> {{ $t('common.loading') }}</div>
@@ -57,7 +57,7 @@
     <div class="sm-toolbar">
       <div class="sm-search"><i class="fas fa-magnifying-glass"></i><input v-model="q" type="text" :placeholder="$t('common.search')" /></div>
       <select v-if="statuses.length" v-model="status" class="sm-select"><option value="">{{ $t('common.status') }}</option><option v-for="s in statuses" :key="s" :value="s">{{ s }}</option></select>
-      <CalendarInput v-model="dateFilter" style="max-width: 150px" @change="load(1)" />
+      <CalendarInput v-model="dateFilter" :clearable="false" @change="load(1)" />
       <span class="spacer"></span>
       <button class="sm-btn" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('storeManager.dashboard.recordGrn') }}</button>
     </div>
@@ -125,7 +125,7 @@
                 <option v-for="po in poOptions" :key="po.po_id" :value="po.po_id">{{ po.po_number }} — {{ po.supplier?.supplier_name || '' }}</option>
               </select>
             </div>
-            <div class="form-field"><label>{{ $t('goodsReceived.receivedDate') }}</label><CalendarInput v-model="form.received_date" :min="todayStr" /></div>
+            <div class="form-field"><label>{{ $t('goodsReceived.receivedDate') }}</label><CalendarInput v-model="form.received_date" :min="todayStr" :clearable="false" /></div>
             <div class="form-field"><label>{{ $t('goodsReceived.deliveryNote') }}</label><input v-model="form.delivery_note_number" class="sm-input" /></div>
             <div class="form-field full"><label>{{ $t('common.notes') }}</label><textarea v-model="form.notes" rows="2" class="sm-textarea"></textarea></div>
           </div>
@@ -276,6 +276,7 @@
 
     <!-- Printable GRN document -->
     <div v-if="printData" class="print-area">
+      <div v-if="printData.voided_by || printData.status === 'voided'" class="print-void">VOIDED</div>
       <h2>{{ printData.grn_number }}</h2>
       <table class="print-meta">
         <tbody>
@@ -308,7 +309,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { goodsReceivedNoteApi, purchaseOrderApi, storeApi } from '@/api'
@@ -331,7 +332,10 @@ const auth = useAuthStore()
 const printStore = usePrintSettingsStore()
 
 const grns = ref([])
-const { q, status, statuses, paged } = useClientTable(grns, { pageSize: 15, searchFields: ['grn_number', 'status', (r) => r.po?.po_number] })
+const { q, status, statuses, paged } = useClientTable(grns, {
+  pageSize: 15,
+  searchFields: ['grn_number', 'status', (r) => r.po?.po_number, (r) => r.purchase_order?.po_number, (r) => r.supplier?.supplier_name],
+})
 const poOptions = ref([])
 const meta = ref({ current_page: 1, last_page: 1 })
 const loading = ref(false)
@@ -346,6 +350,12 @@ const printData = ref(null)
 // Today's stock movement rows (date/time + reference per line) used to build
 // the Stock Ledger detail table when this page handles the ledger view.
 const movementRows = ref([])
+let searchTimer = null
+
+watch(q, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => load(1), 300)
+})
 const movementMeta = ref({ current_page: 1, last_page: 1 })
 const movementsLoading = ref(false)
 
@@ -447,8 +457,9 @@ function diffClass(value) {
 async function load(page = meta.value.current_page) {
   loading.value = true
   try {
-    const params = { page, per_page: 20 }
+    const params = { page, per_page: 100 }
     if (dateFilter.value) params.date = dateFilter.value
+    if (q.value.trim()) params.search = q.value.trim()
     const res = await goodsReceivedNoteApi.index(params)
     grns.value = res.data.data || res.data || []
     meta.value = res.data.meta || { current_page: 1, last_page: 1 }
@@ -482,7 +493,7 @@ async function openCreate() {
   try {
     const res = await purchaseOrderApi.index({ per_page: 100 })
     const all = res.data.data || res.data || []
-    poOptions.value = all.filter((po) => ['pending', 'manager_approved', 'approved', 'partially_received', 'received'].includes(po.status))
+    poOptions.value = all.filter((po) => ['pending', 'manager_approved', 'approved', 'partially_received'].includes(po.status))
   } catch {
     poOptions.value = []
   }
@@ -672,6 +683,7 @@ async function voidGrn() {
 
 onMounted(async () => {
   await workingDateStore.ensureLoaded()
+  dateFilter.value = workingDateStore.workingDate
   if (isLedgerView.value) {
     // Stock Ledger detail: today's movements by default; the universal
     // calendar (dateFilter) pulls past records.
@@ -704,6 +716,11 @@ onMounted(async () => {
 .recall-note { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
 .hint-note { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
 .print-area { display: none; }
+.print-void {
+  display: inline-block; margin-bottom: 10px; padding: 4px 14px;
+  border: 2px solid #b91c1c; color: #b91c1c; font-size: 22px;
+  font-weight: 800; letter-spacing: 3px;
+}
 @media print {
   @page { size: A4 portrait; margin: 12mm; }
   html, body { background: #ffffff !important; }

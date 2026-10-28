@@ -38,13 +38,16 @@ describe('shared ThemeToggle component', () => {
 
 describe.each(Object.entries(PANELS))('%s panel has the theme switch', (_label, path) => {
   const layout = read(path)
+  const inProfileMenu = path.includes('StoreManagerLayout')
 
-  it('imports the ThemeToggle component', () => {
-    expect(layout).toMatch(/import ThemeToggle from '@\/components\/ThemeToggle\.vue'/)
+  it('imports or wires the theme switch', () => {
+    if (inProfileMenu) expect(layout).toMatch(/import \{ useThemeStore \} from '@\/stores\/theme'/)
+    else expect(layout).toMatch(/import ThemeToggle from '@\/components\/ThemeToggle\.vue'/)
   })
 
   it('renders it in the shell', () => {
-    expect(layout).toContain('<ThemeToggle />')
+    if (inProfileMenu) expect(layout).toContain('themeStore.toggleTheme()')
+    else expect(layout).toContain('<ThemeToggle />')
   })
 })
 

@@ -9,7 +9,7 @@
   <div class="sm-page">
     <div class="sm-toolbar">
       <div class="sm-search"><i class="fas fa-magnifying-glass"></i><input v-model="q" type="text" :placeholder="$t('purchaseOrders.searchPlaceholder')" @input="scheduleSearch" /></div>
-      <CalendarInput v-model="dateFilter" style="max-width: 150px" @change="load(1)" />
+      <CalendarInput v-model="dateFilter" :clearable="false" @change="load(1)" />
       <select v-model="statusFilter" class="sm-select" @change="load(1)">
         <option value="">{{ $t('common.allStatuses') }}</option>
         <option value="pending">{{ $t('purchaseOrders.displayStatusPending') }}</option>
@@ -85,7 +85,7 @@
                 <option v-for="r in approvedReqs" :key="r.requisition_id" :value="r.requisition_id">{{ r.requisition_number }}</option>
               </select>
             </div>
-            <div class="form-field"><label>{{ $t('purchaseOrders.deliveryDate') }}</label><CalendarInput v-model="form.delivery_date" :min="todayStr" /></div>
+            <div class="form-field"><label>{{ $t('purchaseOrders.deliveryDate') }}</label><CalendarInput v-model="form.delivery_date" :min="todayStr" :clearable="false" /></div>
             <div class="form-field"><label>{{ $t('suppliers.paymentTerms') }}</label><input v-model="form.payment_terms" class="sm-input" placeholder="Net 30" /></div>
             <div class="form-field full"><label>{{ $t('purchaseOrders.deliveryAddress') }}</label><input v-model="form.delivery_address" class="sm-input" /></div>
             <div class="form-field full"><label>{{ $t('common.notes') }}</label><textarea v-model="form.notes" rows="2" class="sm-textarea"></textarea></div>
@@ -172,6 +172,7 @@
 
     <!-- Printable PO document -->
     <div v-if="printData" class="print-area">
+      <div v-if="isVoided(printData.status)" class="print-void">VOIDED</div>
       <h2>{{ printData.po_number }}</h2>
       <table class="print-meta">
         <tbody>
@@ -199,8 +200,9 @@
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
-import { purchaseOrderApi, purchaseRequisitionApi, supplierApi, inventoryApi } from '@/api'
+import { useRoute, useRouter } from 'vue-router'
+import { purchaseOrderApi, purchaseRequisitionApi, supplierApi } from '@/api'
+import { fetchAllInventoryItems } from '@/utils/inventoryItems'
 import CalendarInput from '@/components/CalendarInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
@@ -214,6 +216,7 @@ const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const workingDateStore = useWorkingDateStore()
+const route = useRoute()
 const router = useRouter()
 const printStore = usePrintSettingsStore()
 
@@ -353,6 +356,11 @@ const emptyText = computed(() => {
 const canEdit = computed(() => detail.value && ['pending', 'manager_approved', 'approved'].includes(detail.value.status))
 const canVoid = computed(() => auth.can(80) && detail.value && ['pending', 'manager_approved', 'approved'].includes(detail.value.status) && !detail.value.voided_by)
 
+/** Whether a PO should print with the VOIDED stamp. */
+function isVoided(status) {
+  return ['voided', 'cancelled', 'rejected'].includes(status)
+}
+
 function formatDate(d) {
   if (!d) return '-'
   return new Date(d).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
@@ -385,11 +393,11 @@ async function primeForm() {
   const [sup, req, inv] = await Promise.allSettled([
     supplierApi.index({ per_page: 100 }),
     purchaseRequisitionApi.index({ status: 'approved', per_page: 100 }),
-    inventoryApi.index({ per_page: 100 }),
+    fetchAllInventoryItems(),
   ])
   if (sup.status === 'fulfilled') suppliers.value = sup.value.data.data || sup.value.data || []
   if (req.status === 'fulfilled') approvedReqs.value = req.value.data.data || req.value.data || []
-  if (inv.status === 'fulfilled') inventoryItems.value = inv.value.data.data || inv.value.data || []
+  if (inv.status === 'fulfilled') inventoryItems.value = inv.value?.data?.data || inv.value?.data || inv.value || []
 }
 
 async function openCreate() {
@@ -557,7 +565,38 @@ async function voidPo() {
   }
 }
 
-onMounted(async () => { await workingDateStore.ensureLoaded(); load(1) })
+async function handleRouteIntent() {
+  const ids = String(route.query.reorder || '').split(',').map((id) => id.trim()).filter(Boolean)
+  if (route.query.create !== '1' && !ids.length) return
+  await openCreate()
+  if (ids.length) {
+    form.items = ids.map((id) => {
+      const found = inventoryItems.value.find((i) => String(i.item_id) === String(id))
+      const { names, factors } = normalizeSiUnits(found)
+      const gap = Math.max(1, Number(found?.reorder_level || 0) - Number(found?.quantity_in_stock || 0))
+      return {
+        ...emptyItem(),
+        item_id: id,
+        item_name: found?.item_name || '',
+        quantity: gap,
+        unit: found?.unit || '',
+        si_units: names,
+        si_factors: factors,
+        base_unit: found?.unit || '',
+        base_cost: Number(found?.unit_cost || 0),
+        unit_price: Number(found?.unit_cost || 0),
+      }
+    })
+  }
+  router.replace({ query: {} })
+}
+
+onMounted(async () => {
+  await workingDateStore.ensureLoaded()
+  dateFilter.value = workingDateStore.workingDate
+  await load(1)
+  await handleRouteIntent()
+})
 </script>
 
 <style scoped>
@@ -568,6 +607,11 @@ onMounted(async () => { await workingDateStore.ensureLoaded(); load(1) })
 .detail-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .void-note { background: #fff4ed; border: 1px solid #fed7aa; color: #9a3412; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
 .print-area { display: none; }
+.print-void {
+  display: inline-block; margin-bottom: 10px; padding: 4px 14px;
+  border: 2px solid #b91c1c; color: #b91c1c; font-size: 22px;
+  font-weight: 800; letter-spacing: 3px;
+}
 @media (max-width: 700px) { .item-grid { grid-template-columns: 1fr 1fr; } }
 @media print {
   html, body { background: #ffffff !important; }

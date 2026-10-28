@@ -39,6 +39,7 @@ vi.mock('@/stores/auth', () => ({
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRoute: () => ({ query: {} }),
 }))
 
 // Silent report printing is exercised by its own suite; here we only care that

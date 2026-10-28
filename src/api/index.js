@@ -1326,7 +1326,14 @@ export const inventoryOpsApi = {
 
   transfers: (params) => api.get(`${v1}/inventory-transfers`, { params }),
   storeTransfer: (data) => api.post(`${v1}/inventory-transfers`, data),
+  sendTransfer: (id) => api.post(`${v1}/inventory-transfers/${id}/send`),
   voidTransfer: (id, reason) => api.post(`${v1}/inventory-transfers/${id}/void`, { reason }),
+
+  stockAdjustments: (params) => api.get(`${v1}/inventory-stock-adjustments`, { params }),
+  showStockAdjustment: (id) => api.get(`${v1}/inventory-stock-adjustments/${id}`),
+  storeStockAdjustment: (data) => api.post(`${v1}/inventory-stock-adjustments`, data),
+  voidStockAdjustment: (id, reason) => api.post(`${v1}/inventory-stock-adjustments/${id}/void`, { reason }),
+  emailStockAdjustment: (id, to) => api.post(`${v1}/inventory-stock-adjustments/${id}/email`, { to }),
 
   stockTakes: (params) => api.get(`${v1}/inventory-stock-takes`, { params }),
   openStockTake: (data) => api.post(`${v1}/inventory-stock-takes`, data),
@@ -1387,9 +1394,10 @@ export const storeApi = {
   movements: (params) => api.get(`${v1}/store/stock-movements`, { params }),
   expenses: (params) => api.get(`${v1}/store/expenses`, { params }),
   storeExpense: (data) => api.post(`${v1}/store/expenses`, data),
-  destroyExpense: (id) => api.delete(`${v1}/store/expenses/${id}`),
+  destroyExpense: (id, data) => api.delete(`${v1}/store/expenses/${id}`, { data }),
   cashRegister: () => api.get(`${v1}/store/cash-register`),
   openRegister: (data) => api.post(`${v1}/store/cash-register/open`, data),
+  addFloat: (data) => api.post(`${v1}/store/cash-register/floats`, data),
   closeRegister: (data) => api.post(`${v1}/store/cash-register/close`, data),
   shifts: (params) => api.get(`${v1}/store/cash-register/shifts`, { params }),
   discounts: (params) => api.get(`${v1}/store/discounts`, { params }),

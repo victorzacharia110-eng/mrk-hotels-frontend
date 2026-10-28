@@ -11,25 +11,25 @@
         <div v-for="n in 3" :key="'kpi-' + n" class="sk sk-kpi" style="height: 62px"></div>
       </template>
       <template v-else>
-        <div class="kpi-card">
+        <router-link :to="{ name: 'store-items' }" class="kpi-card kpi-link">
           <span class="kpi-icon blue"><i class="fas fa-boxes-stacked"></i></span>
           <div><strong>{{ stats.totalItems }}</strong><small>{{ $t('storeManager.dashboard.totalItems') }}</small></div>
-        </div>
-        <div class="kpi-card">
+        </router-link>
+        <router-link :to="{ name: 'store-low-stock' }" class="kpi-card kpi-link">
           <span class="kpi-icon red"><i class="fas fa-triangle-exclamation"></i></span>
           <div><strong>{{ stats.lowStock }}</strong><small>{{ $t('storeManager.dashboard.lowStock') }}</small></div>
-        </div>
-        <div class="kpi-card">
+        </router-link>
+        <router-link :to="{ name: 'store-requisitions', query: { status: 'pending' } }" class="kpi-card kpi-link">
           <span class="kpi-icon amber"><i class="fas fa-file-signature"></i></span>
           <div><strong>{{ stats.pendingRequisitions }}</strong><small>{{ $t('storeManager.dashboard.pendingRequisitions') }}</small></div>
-        </div>
+        </router-link>
       </template>
     </section>
 
     <!-- Quick actions -->
     <section class="quick-actions">
       <router-link :to="{ name: 'store-items', query: { create: '1' } }" class="qa-btn"><i class="fas fa-plus"></i> {{ $t('storeManager.dashboard.newItem') }}</router-link>
-      <router-link :to="{ name: 'store-requisitions', query: { create: '1' } }" class="qa-btn"><i class="fas fa-file-signature"></i> {{ $t('storeManager.dashboard.newRequisition') }}</router-link>
+      <router-link :to="{ name: 'store-purchase-orders', query: { create: '1' } }" class="qa-btn"><i class="fas fa-file-invoice"></i> {{ $t('storeManager.dashboard.newPurchaseOrder') }}</router-link>
       <router-link :to="{ name: 'store-goods-received', query: { create: '1' } }" class="qa-btn"><i class="fas fa-clipboard-check"></i> {{ $t('storeManager.dashboard.recordGrn') }}</router-link>
       <router-link :to="{ name: 'store-suppliers', query: { create: '1' } }" class="qa-btn"><i class="fas fa-truck"></i> {{ $t('storeManager.dashboard.newSupplier') }}</router-link>
     </section>
@@ -124,7 +124,7 @@ const grns = ref([])
 // real number even when the table only carries the first page of rows.
 const totals = ref({ items: 0, lowStock: 0, pendingRequisitions: 0 })
 
-const lowStock = computed(() => lowStockAlerts.value.slice(0, 8))
+const lowStock = computed(() => lowStockAlerts.value.slice(0, 5))
 const pendingReqs = computed(() => requisitions.value.slice(0, 8))
 const recentGrns = computed(() => grns.value.slice(0, 3))
 

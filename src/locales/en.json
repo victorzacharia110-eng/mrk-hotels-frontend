@@ -128,7 +128,9 @@
     "time": "Time",
     "add": "Add",
     "update": "Update",
-    "autoClosesIn": "Closes on its own in {seconds}s"
+    "autoClosesIn": "Closes on its own in {seconds}s",
+    "share": "Share",
+    "voided": "Voided"
   },
   "laundry": {
     "title": "Laundry",
@@ -2031,7 +2033,13 @@
     "sms": "SMS",
     "both": "Both",
     "phone": "Phone number",
-    "bothHint": "Sends the e-mail to the hotel's e-mail address and the SMS to its phone number on file."
+    "bothHint": "Sends the e-mail to the hotel's e-mail address and the SMS to its phone number on file.",
+    "sn": "S/N",
+    "outlet": "Outlet",
+    "costValue": "Cost value",
+    "allOutlets": "All outlets",
+    "statusComplete": "Complete",
+    "answerForward": "Answer & forward"
   },
   "purchaseOrders": {
     "title": "Purchase Orders",
@@ -4627,7 +4635,9 @@
       "goodsReturns": "Goods Returns",
       "backOffice": "Back Office",
       "stockAdjust": "Stock Adjustment",
-      "items": "Items"
+      "items": "Items",
+      "expenseCategories": "Expense Categories",
+      "siUnits": "SI Units"
     },
     "dashboard": {
       "totalItems": "Stock items",
@@ -4637,6 +4647,7 @@
       "stockValue": "Stock value",
       "newItem": "New item",
       "newRequisition": "New requisition",
+      "newPurchaseOrder": "New purchase order",
       "recordGrn": "Record goods received",
       "newSupplier": "New supplier",
       "lowStockAlerts": "Low stock alerts",
@@ -4701,6 +4712,23 @@
       "add": "Add category",
       "deleteConfirm": "Delete category \"{name}\"?"
     },
+    "units": {
+      "add": "Add SI unit",
+      "unit": "Unit",
+      "group": "Group",
+      "groupPlaceholder": "e.g. weight, volume, count",
+      "empty": "No SI units registered yet.",
+      "created": "SI unit registered.",
+      "updated": "SI unit updated.",
+      "deleteConfirm": "Delete SI unit \"{unit}\"?"
+    },
+    "backOffice": {
+      "itemsDesc": "Items, prices, units and stock levels.",
+      "suppliersDesc": "Supplier records used on purchase orders.",
+      "categoriesDesc": "Inventory, supplier and expense vocabularies.",
+      "expenseCategoriesDesc": "Categories offered on the expense form.",
+      "siUnitsDesc": "Units shared by items, purchase orders and GRNs."
+    },
     "customers": {
       "add": "Add customer",
       "purchases": "Purchases",
@@ -4751,7 +4779,16 @@
         "salaries": "Salaries",
         "marketing": "Marketing",
         "other": "Other"
-      }
+      },
+      "particular": "Particular",
+      "newCategory": "Register new category",
+      "categoryPrompt": "New expense category name",
+      "voidTitle": "Void expense",
+      "voidMessage": "Void {count} selected expense(s)? Enter the reason below.",
+      "voidReason": "Reason",
+      "voidReasonPlaceholder": "Why is this expense being voided?",
+      "voidAction": "Void",
+      "voidSuccess": "{count} expense(s) voided."
     },
     "register": {
       "status": "Register status",
@@ -4769,7 +4806,12 @@
       "expected": "Expected",
       "counted": "Counted",
       "difference": "Difference",
-      "empty": "No shifts recorded yet."
+      "empty": "No shifts recorded yet.",
+      "floatAdded": "Float added",
+      "addFloat": "Add float",
+      "floatAmount": "Float amount",
+      "optional": "optional",
+      "autoReference": "Auto-generated if left blank"
     },
     "discounts": {
       "add": "Add discount",
@@ -4786,7 +4828,22 @@
       "add": "New transfer",
       "from": "From",
       "to": "To",
-      "empty": "No transfers yet."
+      "empty": "No transfers yet.",
+      "multiOutletOnly": "Stock transfers are available only when the store has more than one outlet.",
+      "draft": "DRAFT",
+      "sent": "SENT",
+      "send": "Send transfer",
+      "saveDraft": "Save draft",
+      "saveSend": "Save and send",
+      "costValue": "Cost value",
+      "creator": "Creator",
+      "supervisor": "Supervisor",
+      "authorizedBy": "Authorized by",
+      "onShelf": "{qty} {unit} on the shelf",
+      "noShelf": "no shelf",
+      "sameOutlet": "Choose two different outlets.",
+      "itemRequired": "Select an item.",
+      "quantityRequired": "Enter a quantity greater than zero."
     },
     "counts": {
       "new": "New stock count",
@@ -4800,7 +4857,18 @@
       "empty": "No stock counts yet.",
       "saveCounts": "Save counted quantities",
       "resume": "Resume",
-      "batch": "Batches"
+      "batch": "Batches",
+      "autosaved": "Saved {time}",
+      "autosaveHint": "Autosaves every 15s",
+      "allRows": "All items",
+      "varianceTab": "Variance",
+      "descriptionTab": "Description",
+      "varianceReason": "Variance reason",
+      "reasonPlaceholder": "Why does the count differ?",
+      "nothingToSave": "No changes to save",
+      "currentDayOnly": "Counts can only be started on the current business day.",
+      "saved": "Saved",
+      "submitted": "Submitted"
     },
     "lowStock": {
       "outOfStock": "Out of stock",
@@ -4811,7 +4879,8 @@
       "reorder": "Reorder",
       "empty": "No low stock alerts. Everything is well stocked.",
       "onShelves": "On Shelves",
-      "storeOnly": "Store-wide"
+      "storeOnly": "Store-wide",
+      "allAlerts": "All alerts"
     },
     "settings": {
       "tabs": {
@@ -4888,6 +4957,52 @@
     "returns": {
       "new": "New goods return",
       "empty": "No returns yet."
+    },
+    "adjustType": {
+      "wastage": "Wastage",
+      "consumption": "Consumption",
+      "adjustment": "Adjustment"
+    },
+    "adjustments": {
+      "add": "New adjustment",
+      "allTypes": "All adjustment types",
+      "sn": "S/N",
+      "type": "Type of adjustment",
+      "costValue": "Cost value",
+      "filterAll": "All",
+      "filterVoided": "Voided",
+      "empty": "No stock adjustment sheets found for this date.",
+      "count": "{count} sheets",
+      "new": "New stock adjustment",
+      "createdBy": "Created by",
+      "itemsTab": "Items",
+      "descriptionTab": "Description",
+      "quantityRemoved": "Quantity removed",
+      "newLevel": "New stock level",
+      "currentLevel": "Current stock",
+      "addLine": "Add item",
+      "before": "Before",
+      "after": "After",
+      "noLines": "Add at least one item to this sheet.",
+      "descriptionHint": "Explain why these items are being adjusted, wasted or consumed. Each item can carry its own reason.",
+      "sheetDescription": "Sheet description",
+      "descriptionPlaceholder": "Explain the reason for this adjustment...",
+      "noItemReason": "No item-specific reason recorded.",
+      "itemReasonPlaceholder": "Reason for this item...",
+      "selectItemsError": "Add at least one item before saving.",
+      "saved": "Saved",
+      "savedMessage": "Stock adjustment {reference} saved.",
+      "voidedMessage": "Stock adjustment voided and stock restored.",
+      "voidTitle": "Void {reference}",
+      "voidHint": "Voiding this sheet reverses every stock movement it posted. A reason is required and will be kept on the audit trail.",
+      "voidedBanner": "This sheet is voided",
+      "emailTitle": "Share {reference}",
+      "emailAddress": "Recipient e-mail",
+      "emailRequired": "Enter a recipient e-mail address.",
+      "emailSent": "Stock adjustment e-mailed.",
+      "hintWastage": "Wastage removes damaged or spoiled stock from the shelf.",
+      "hintConsumption": "Consumption removes stock that was used but never synced to the stock sheet.",
+      "hintAdjustment": "Adjustment resets each item to the new stock level you enter."
     }
   },
   "posReports": {

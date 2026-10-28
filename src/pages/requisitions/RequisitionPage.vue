@@ -33,15 +33,24 @@
       </button>
     </div>
 
-    <!-- Toolbar -->
+    <!-- Toolbar: one business date, outlet and Pending/Complete filter -->
     <div class="rq-toolbar">
-      <div class="rq-search"><i class="fas fa-magnifying-glass"></i><input v-model="q" :placeholder="$t('common.search')" /></div>
-      <select v-model="status" class="rq-select">
-        <option value="">{{ $t('common.all') }}</option>
-        <option v-for="s in statusList" :key="s" :value="s">{{ statusLabel(s) }}</option>
+      <CalendarInput v-model="businessDate" :clearable="false" @change="load" />
+      <select v-model="outletFilter" class="rq-select" @change="load">
+        <option value="">{{ $t('requisitionPanel.allOutlets') }}</option>
+        <option v-for="outlet in outlets" :key="outlet.outlet_id" :value="outlet.outlet_id">
+          {{ outlet.name }}
+        </option>
       </select>
-      <CalendarInput v-model="filterFrom" :placeholder="$t('requisitionPanel.fromDate')" @change="load" />
-      <CalendarInput v-model="filterTo" :placeholder="$t('requisitionPanel.toDate')" @change="load" />
+      <div class="rq-segmented">
+        <button :class="{ on: statusFilter === 'pending' }" @click="setStatusFilter('pending')">
+          {{ $t('requisitionPanel.statusPending') }}
+        </button>
+        <button :class="{ on: statusFilter === 'complete' }" @click="setStatusFilter('complete')">
+          {{ $t('requisitionPanel.statusComplete') }}
+        </button>
+      </div>
+      <div class="rq-search"><i class="fas fa-magnifying-glass"></i><input v-model="q" :placeholder="$t('common.search')" /></div>
       <span v-if="restricted" class="rq-dept-badge"><i class="fas fa-building"></i> {{ deptName }}</span>
     </div>
 
@@ -53,54 +62,26 @@
         <table class="rq-table">
           <thead>
             <tr>
+              <th>{{ $t('requisitionPanel.sn') }}</th>
               <th>{{ $t('common.date') }}</th>
-              <th>#</th>
-              <th v-if="showRequestCols">{{ $t('requisitionPanel.department') }}</th>
-              <th v-if="showRequestCols">{{ $t('requisitionPanel.requestedBy') }}</th>
+              <th>{{ $t('requisitionPanel.department') }}</th>
+              <th>{{ $t('requisitionPanel.outlet') }}</th>
               <th>{{ $t('requisitionPanel.items') }}</th>
+              <th>{{ $t('requisitionPanel.costValue') }}</th>
               <th>{{ $t('common.status') }}</th>
-              <th>{{ $t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="indent in filtered" :key="indent.indent_id">
-              <td>{{ fmtDate(indent.created_at) }}</td>
-              <td><strong>{{ indent.indent_number }}</strong></td>
-              <td v-if="showRequestCols">{{ indent.department || indent.department_name || '—' }}</td>
-              <td v-if="showRequestCols">{{ indent.requester_name || '—' }}</td>
-              <td :title="(indent.items || []).map((l) => l.item_name || l.name || `#${l.item_id}`).join(', ')">{{ lineSummary(indent.items) }}</td>
-              <td><span class="rq-chip" :class="statusChip(indent.status)">{{ statusLabel(indent.status) }}</span></td>
-              <td class="rq-actions">
-                <template v-if="canEdit(indent)">
-                  <button class="rq-btn sm ghost" @click="openEdit(indent)"><i class="fas fa-pen"></i> {{ $t('requisitionPanel.edit') }}</button>
-                  <button class="rq-btn sm ok" @click="send(indent)"><i class="fas fa-paper-plane"></i> {{ $t('requisitionPanel.send') }}</button>
-                </template>
-                <template v-if="canRecall(indent)">
-                  <button class="rq-btn sm ghost" @click="recall(indent)"><i class="fas fa-rotate-left"></i> {{ $t('requisitionPanel.recall') }}</button>
-                </template>
-                <template v-if="canSupply(indent)">
-                  <button class="rq-btn sm warning" @click="openSupply(indent)"><i class="fas fa-truck-ramp-box"></i> {{ $t('requisitionPanel.supply') }}</button>
-                </template>
-                <template v-if="canApprove(indent)">
-                  <button class="rq-btn sm ok" @click="approve(indent)"><i class="fas fa-check"></i> {{ $t('requisitionPanel.approve') }}</button>
-                  <button class="rq-btn sm ghost" @click="askReason(reject, indent)"><i class="fas fa-xmark"></i> {{ $t('requisitionPanel.reject') }}</button>
-                </template>
-                <template v-if="canAccept(indent)">
-                  <button class="rq-btn sm primary" @click="accept(indent)"><i class="fas fa-hand-holding"></i> {{ $t('requisitionPanel.accept') }}</button>
-                </template>
-                <template v-if="canRejectAnswer(indent)">
-                  <button class="rq-btn sm danger-text ghost" @click="askReason(reject, indent)"><i class="fas fa-xmark"></i> {{ $t('requisitionPanel.reject') }}</button>
-                </template>
-                <template v-if="canVoid(indent)">
-                  <button class="rq-btn sm ghost danger-text" @click="askReason(voidRequisition, indent)"><i class="fas fa-ban"></i> {{ $t('requisitionPanel.void') }}</button>
-                </template>
-                <!-- The requester cancels their OWN requisition before the store
-                     answers it (draft or pending). Mirrors the backend rule. -->
-                <template v-if="canCancel(indent)">
-                  <button class="rq-btn sm ghost danger-text" @click="askReason(cancelRequisition, indent)"><i class="fas fa-xmark"></i> {{ $t('requisitionPanel.cancel') }}</button>
-                </template>
-                <button class="rq-btn sm ghost" @click="openDetail(indent)"><i class="fas fa-eye"></i> {{ $t('common.view') }}</button>
+            <tr v-for="indent in filtered" :key="indent.indent_id" class="rq-row" @click="openDetail(indent)">
+              <td>
+                <button class="rq-ref" @click.stop="openDetail(indent)">{{ indent.indent_number }}</button>
               </td>
+              <td>{{ fmtDate(indent.created_at) }}</td>
+              <td>{{ indent.department_name || indent.department || '—' }}</td>
+              <td>{{ indent.outlet_name || '—' }}</td>
+              <td :title="(indent.items || []).map((l) => l.item_name || l.name || `#${l.item_id}`).join(', ')">{{ lineSummary(indent.items) }}</td>
+              <td><strong>{{ money(costValue(indent)) }}</strong></td>
+              <td><span class="rq-chip" :class="statusChip(indent.status)">{{ statusLabel(indent.status) }}</span></td>
             </tr>
           </tbody>
         </table>
@@ -167,6 +148,7 @@
                 <tr>
                   <th>{{ $t('requisitionPanel.items') }}</th>
                   <th>{{ $t('requisitionPanel.requested') }}</th>
+                  <th>{{ $t('requisitionPanel.inStock') }}</th>
                   <th>{{ $t('requisitionPanel.supplied') }}</th>
                 </tr>
               </thead>
@@ -174,6 +156,7 @@
                 <tr v-for="line in supplyLines" :key="line.indent_item_id">
                   <td><strong>{{ line.item_name }}</strong></td>
                   <td>{{ line.requested }}</td>
+                  <td><strong :class="{ 'rq-low': Number(line.stock) <= 0 }">{{ line.stock }}</strong></td>
                   <td><input v-model.number="line.supplied" type="number" min="0" step="any" class="rq-input slim" /></td>
                 </tr>
               </tbody>
@@ -253,10 +236,36 @@
         <div class="rq-modal-body">
           <div class="rq-meta">
             <span><strong>{{ $t('requisitionPanel.department') }}:</strong> {{ editing?.department_name || '—' }}</span>
+            <span><strong>{{ $t('requisitionPanel.outlet') }}:</strong> {{ editing?.outlet_name || '—' }}</span>
             <span><strong>{{ $t('requisitionPanel.requestedBy') }}:</strong> {{ editing?.requester_name || '—' }}</span>
+            <span><strong>{{ $t('requisitionPanel.costValue') }}:</strong> {{ money(costValue(editing)) }}</span>
             <span><strong>{{ $t('common.status') }}:</strong> {{ statusLabel(editing?.status) }}</span>
             <span v-if="editing?.notes"><strong>{{ $t('requisitionPanel.notes') }}:</strong> {{ editing.notes }}</span>
             <span v-if="editing?.void_reason"><strong>{{ $t('requisitionPanel.reasonTitle') }}:</strong> {{ editing.void_reason }}</span>
+          </div>
+          <div v-if="editing" class="rq-detail-actions">
+            <template v-if="canEdit(editing)">
+              <button class="rq-btn sm ghost" @click="openEdit(editing)"><i class="fas fa-pen"></i> {{ $t('requisitionPanel.edit') }}</button>
+              <button class="rq-btn sm ok" @click="send(editing)"><i class="fas fa-paper-plane"></i> {{ $t('requisitionPanel.send') }}</button>
+            </template>
+            <button v-if="canRecall(editing)" class="rq-btn sm ghost" @click="recall(editing)">
+              <i class="fas fa-rotate-left"></i> {{ $t('requisitionPanel.recall') }}
+            </button>
+            <button v-if="canSupply(editing)" class="rq-btn sm warning" @click="openSupply(editing)">
+              <i class="fas fa-truck-ramp-box"></i> {{ $t('requisitionPanel.answerForward') }}
+            </button>
+            <button v-if="canAccept(editing)" class="rq-btn sm primary" @click="accept(editing)">
+              <i class="fas fa-hand-holding"></i> {{ $t('requisitionPanel.accept') }}
+            </button>
+            <button v-if="canRejectAnswer(editing)" class="rq-btn sm ghost danger-text" @click="askReason(reject, editing)">
+              <i class="fas fa-xmark"></i> {{ $t('requisitionPanel.reject') }}
+            </button>
+            <button v-if="canVoid(editing)" class="rq-btn sm ghost danger-text" @click="askReason(voidRequisition, editing)">
+              <i class="fas fa-ban"></i> {{ $t('requisitionPanel.void') }}
+            </button>
+            <button v-if="canCancel(editing)" class="rq-btn sm ghost danger-text" @click="askReason(cancelRequisition, editing)">
+              <i class="fas fa-xmark"></i> {{ $t('requisitionPanel.cancel') }}
+            </button>
           </div>
           <div class="rq-table-scroll">
             <table class="rq-table">
@@ -304,12 +313,14 @@ import CalendarInput from '@/components/CalendarInput.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { printElementSilently } from '@/utils/reportPrint'
-import { selectedOutlet } from '@/composables/useOutletContext'
+import { selectedOutlet, outlets, useOutletContext } from '@/composables/useOutletContext'
+import { formatMoney } from '@/utils/currency'
 
 const { t } = useI18n()
 const auth = useAuthStore()
 const workingDateStore = useWorkingDateStore()
 const printStore = usePrintSettingsStore()
+const { loadOutlets } = useOutletContext()
 
 const KEEPER_ROLES = ['store_manager', 'hotel_admin', 'manager', 'owner', 'superadmin']
 
@@ -348,17 +359,16 @@ const tabs = computed(() => {
   return []
 })
 
-/** Universal calendar range — both default to the current working date, so
- * past requisitions and indents can be browsed within any from/to window. */
-const filterFrom = ref(workingDateStore.workingDate)
-const filterTo = ref(workingDateStore.workingDate)
+/** One business date, synced to day close, drives both lists. */
+const businessDate = ref(workingDateStore.workingDate)
+const outletFilter = ref('')
+const statusFilter = ref('pending')
 
 const tab = ref(isStoreManager.value ? 'received' : 'mine')
 const indents = ref([])
 const loading = ref(false)
 const saving = ref(false)
 const q = ref('')
-const status = ref('')
 const notice = ref('')
 const err = ref('')
 
@@ -387,7 +397,8 @@ const items = ref([])
 const form = reactive({ department_id: null, notes: '', lines: [{ item_id: null, quantity: 1 }] })
 const supplyLines = ref([])
 
-const statusList = ['draft', 'pending', 'forwarded', 'approved', 'fulfilled', 'rejected', 'voided']
+const pendingStatuses = ['draft', 'pending']
+const completeStatuses = ['forwarded', 'approved', 'fulfilled', 'rejected', 'voided']
 const statusKeyMap = {
   draft: 'requisitionPanel.statusDraft',
   pending: 'requisitionPanel.statusPending',
@@ -440,8 +451,6 @@ const itemOptions = computed(() =>
   })),
 )
 
-const showRequestCols = computed(() => tab.value !== 'mine')
-
 const emptyText = computed(() => {
   if (tab.value === 'received') return t('requisitionPanel.emptyReceived')
   if (tab.value === 'forward' || tab.value === 'inbox') return t('requisitionPanel.emptyInbox')
@@ -451,9 +460,11 @@ const emptyText = computed(() => {
 const filtered = computed(() => {
   let list = indents.value
   if (tab.value === 'inbox') list = list.filter((i) => i.status !== 'draft')
-  else if (tab.value === 'received') list = list.filter((i) => i.status === 'pending')
+  else if (tab.value === 'received') list = list.filter((i) => i.status !== 'draft')
   else if (tab.value === 'forward') list = list.filter((i) => ['forwarded', 'approved', 'fulfilled'].includes(i.status))
-  if (status.value) list = list.filter((i) => i.status === status.value)
+  const bucket = statusFilter.value === 'complete' ? completeStatuses : pendingStatuses
+  list = list.filter((i) => bucket.includes(i.status))
+  if (outletFilter.value) list = list.filter((i) => i.outlet_id === outletFilter.value)
   const term = q.value.trim().toLowerCase()
   if (term) {
     list = list.filter(
@@ -482,6 +493,15 @@ function lineSummary(lines) {
 function statusChip(s) {
   return statusChipClass[s] || 'muted'
 }
+function money(value) {
+  return formatMoney(value || 0)
+}
+function costValue(indent) {
+  if (!indent) return 0
+  return ['forwarded', 'approved', 'fulfilled'].includes(indent.status)
+    ? Number(indent.supplied_cost_value ?? indent.cost_value ?? 0)
+    : Number(indent.cost_value ?? 0)
+}
 function isRequester(indent) {
   return indent.requested_by === auth.user?.user_id || indent.requester?.user_id === auth.user?.user_id
 }
@@ -500,7 +520,6 @@ function canAccept(i) { return isRequester(i) && i.status === 'forwarded' }
 // request — that stays with the store keeper/management).
 function canRejectAnswer(i) { return isRequester(i) && i.status === 'forwarded' }
 function canSupply(i) { return isKeeper.value && !isRequester(i) && i.status === 'pending' }
-function canApprove(i) { return isKeeper.value && !isRequester(i) && i.status === 'pending' }
 function canVoid(i) {
   // Void is destructive, so only MANAGEMENT may void; and the store keeper can
   // no longer recall once the requester has accepted the forwarded answer.
@@ -554,8 +573,8 @@ async function load() {
   try {
     const params = { per_page: 250 }
     params.mine = tab.value === 'mine' ? 1 : 0
-    if (filterFrom.value) params.from = filterFrom.value
-    if (filterTo.value) params.to = filterTo.value
+    if (businessDate.value) params.date = businessDate.value
+    if (outletFilter.value) params.outlet_id = outletFilter.value
     const res = await inventoryOpsApi.indents(params)
     indents.value = res.data.indents || []
   } catch (e) {
@@ -568,6 +587,9 @@ async function load() {
 function switchTab(next) {
   tab.value = next
   load()
+}
+function setStatusFilter(next) {
+  statusFilter.value = next
 }
 
 function openCreate() {
@@ -721,17 +743,6 @@ async function accept(indent) {
   } catch (e) { err.value = loadMessage(e) } finally { saving.value = false }
 }
 
-async function approve(indent) {
-  if (!window.confirm(t('requisitionPanel.confirmApprove', { ref: indent.indent_number }))) return
-  saving.value = true
-  err.value = ''
-  try {
-    await inventoryOpsApi.approveIndent(indent.indent_id)
-    notice.value = t('requisitionPanel.approvedMsg')
-    await load()
-  } catch (e) { err.value = loadMessage(e) } finally { saving.value = false }
-}
-
 function askReason(action, indent) {
   editing.value = indent
   editingAction.value = action
@@ -834,9 +845,8 @@ async function submitNotify() {
 }
 
 onMounted(async () => {
-  await workingDateStore.ensureLoaded()
-  filterFrom.value = workingDateStore.workingDate
-  filterTo.value = workingDateStore.workingDate
+  await Promise.all([workingDateStore.ensureLoaded(), loadOutlets()])
+  businessDate.value = workingDateStore.workingDate
   // Guard against the auth user hydrating after setup: snap onto a real tab.
   if (!tabs.value.some((tb) => tb.key === tab.value)) {
     tab.value = tabs.value[0]?.key || 'mine'
@@ -943,6 +953,15 @@ watch(() => selectedOutlet.value?.outlet_id, loadItems)
 .rq-modal-foot { display: flex; justify-content: flex-end; gap: 10px; padding-top: 18px; }
 .rq-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: #334155; margin-bottom: 12px; }
 .rq-meta strong { color: #0f172a; }
+.rq-segmented { display: inline-flex; gap: 4px; background: #f1f5f9; border-radius: 8px; padding: 3px; }
+.rq-segmented button { border: 0; background: transparent; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; color: #475569; font-family: inherit; }
+.rq-segmented button.on { background: #fff; color: #0f172a; box-shadow: 0 1px 3px rgba(15,23,42,.12); font-weight: 700; }
+.rq-row { cursor: pointer; }
+.rq-row:hover td { background: #f8fafc; }
+.rq-ref { border: 0; background: none; padding: 0; color: #005eb8; font-weight: 700; font-family: inherit; font-size: 13px; cursor: pointer; }
+.rq-ref:hover { text-decoration: underline; }
+.rq-detail-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; }
+.rq-low { color: #b91c1c; }
 @media print {
   @page { size: A4 portrait; margin: 12mm; }
   body * { visibility: hidden; }

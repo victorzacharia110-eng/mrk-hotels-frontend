@@ -527,12 +527,26 @@ const routes = [
         component: () => import('@/pages/messages/MessagesPage.vue'),
         meta: { titleKey: 'storeManager.nav.messages' },
       },
-      // Inventory categories.
+      // Shared category vocabularies (inventory, supplier and expense).
       {
         path: 'categories',
         name: 'store-categories',
-        component: () => import('@/pages/store/StoreCategoriesPage.vue'),
+        component: () => import('@/pages/inventory/CategoryListPage.vue'),
         meta: { titleKey: 'storeManager.nav.categories' },
+      },
+      // Expense category vocabulary, opened on the expense tab.
+      {
+        path: 'expense-categories',
+        name: 'store-expense-categories',
+        component: () => import('@/pages/inventory/CategoryListPage.vue'),
+        meta: { titleKey: 'storeManager.nav.expenseCategories' },
+      },
+      // SI-unit registry shared by items, purchase orders and GRNs.
+      {
+        path: 'units',
+        name: 'store-units',
+        component: () => import('@/pages/store/StoreUnitsPage.vue'),
+        meta: { titleKey: 'storeManager.nav.siUnits' },
       },
       // Store customer database.
       {
@@ -613,6 +627,13 @@ const routes = [
         name: 'store-stock-adjust',
         component: () => import('@/pages/store/StoreStockAdjustPage.vue'),
         meta: { titleKey: 'storeManager.nav.stockAdjust' },
+      },
+      // Flat Back Office launchpad for the master-data screens.
+      {
+        path: 'back-office',
+        name: 'store-back-office',
+        component: () => import('@/pages/store/StoreBackOfficePage.vue'),
+        meta: { titleKey: 'storeManager.nav.backOffice' },
       },
       // The store manager's own account: personal info and password.
       {

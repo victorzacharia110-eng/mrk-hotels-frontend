@@ -150,12 +150,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { inventoryOpsApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoriesStore } from '@/stores/categories'
 
+const route = useRoute()
 const { t } = useI18n()
 const authStore = useAuthStore()
 const categoriesStore = useCategoriesStore()
@@ -167,8 +169,12 @@ const rows = ref([])
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
-const activeGroup = ref('inventory')
+const activeGroup = ref(GROUPS.includes(route.query.group) ? route.query.group : 'inventory')
 const search = ref('')
+
+watch(() => route.query.group, (group) => {
+  if (GROUPS.includes(group)) activeGroup.value = group
+})
 
 const showModal = ref(false)
 const editing = ref(false)
