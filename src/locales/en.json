@@ -5295,7 +5295,20 @@
       "today": "Today",
       "pending": "PENDING",
       "settled": "SETTLED",
-      "voided": "VOIDED"
+      "voided": "VOIDED",
+      "newOrder": "New Order",
+      "room": "Room",
+      "guest": "Guest",
+      "items": "Items",
+      "dateTime": "Date/Time",
+      "none": "None",
+      "title": "In-House Guests",
+      "checkOut": "Check Out",
+      "order": "Order",
+      "noneInHouse": "No in-house guests",
+      "newOrderFor": "New Order for {room} — {guest}",
+      "all": "ALL",
+      "completed": "COMPLETED"
     },
     "delivery": {
       "tabAll": "ALL",
