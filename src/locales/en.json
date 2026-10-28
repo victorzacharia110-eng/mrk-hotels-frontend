@@ -5176,7 +5176,14 @@
       "noCharge": "No Charge"
     },
     "dineIn": "IN HOUSE",
-    "takeAway": "TAKE OUT",
+    "takeAway": {
+      "tabAll": "ALL",
+      "tabPreparing": "PREPARING",
+      "tabReady": "READY",
+      "tabCompleted": "COMPLETED",
+      "workingDate": "Working Date",
+      "today": "Today"
+    },
     "nav": {
       "transactionLock": "NET LOCK",
       "requisitions": "REQUISITIONS",

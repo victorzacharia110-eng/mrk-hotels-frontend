@@ -5396,7 +5396,14 @@
       "vsPrice": "dhidi ya bei ya mauzo",
       "noIngredients": "Hakuna viungo vilivyounganishwa bado. Ongeza ili kuanza kufuatilia hifadhi."
     },
-    "takeAway": "TAKE OUT",
+    "takeAway": {
+      "tabAll": "ZOTE",
+      "tabPreparing": "ZINAANDALIWA",
+      "tabReady": "TAYARI",
+      "tabCompleted": "ZIMEKAMILIKA",
+      "workingDate": "Tarehe ya Kazi",
+      "today": "Leo"
+    },
     "roomService": {
       "title": "Huduma ya Chumba — Wageni Ndani",
       "room": "Chumba",
