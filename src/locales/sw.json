@@ -5402,7 +5402,11 @@
       "tabReady": "TAYARI",
       "tabCompleted": "ZIMEKAMILIKA",
       "workingDate": "Tarehe ya Kazi",
-      "today": "Leo"
+      "today": "Leo",
+      "guest": "Mgeni",
+      "dateTime": "Tarehe/Saa",
+      "newOrder": "Agizo Jipya",
+      "none": "Hakuna"
     },
     "roomService": {
       "title": "Huduma ya Chumba — Wageni Ndani",
@@ -5428,7 +5432,8 @@
       "workingDate": "Tarehe ya Kazi",
       "pending": "INASUBIRI",
       "settled": "IMELIPWA",
-      "voided": "IMEBATILISHWA"
+      "voided": "IMEBATILISHWA",
+      "ready": "TAYARI"
     },
     "delivery": {
       "addOrder": "+ Ongeza Oda ya Usafirishaji",

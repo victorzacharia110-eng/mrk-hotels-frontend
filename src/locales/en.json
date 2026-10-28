@@ -5182,7 +5182,11 @@
       "tabReady": "READY",
       "tabCompleted": "COMPLETED",
       "workingDate": "Working Date",
-      "today": "Today"
+      "today": "Today",
+      "guest": "Guest",
+      "dateTime": "Date/Time",
+      "newOrder": "New Takeaway",
+      "none": "None"
     },
     "nav": {
       "transactionLock": "NET LOCK",
@@ -5308,7 +5312,10 @@
       "noneInHouse": "No in-house guests",
       "newOrderFor": "New Order for {room} — {guest}",
       "all": "ALL",
-      "completed": "COMPLETED"
+      "completed": "COMPLETED",
+      "preparing": "PREPARING",
+      "served": "SERVED",
+      "ready": "READY"
     },
     "delivery": {
       "tabAll": "ALL",
@@ -5320,7 +5327,13 @@
       "today": "Today",
       "pending": "PENDING",
       "settled": "SETTLED",
-      "voided": "VOIDED"
+      "voided": "VOIDED",
+      "addOrder": "Add Order",
+      "none": "None",
+      "dateTime": "Date/Time",
+      "phone": "Phone",
+      "address": "Address",
+      "eta": "ETA"
     },
     "noCharge": {
       "tabAll": "ALL",
@@ -5332,7 +5345,10 @@
       "today": "Today",
       "pending": "PENDING",
       "settled": "SETTLED",
-      "voided": "VOIDED"
+      "voided": "VOIDED",
+      "title": "No Charge Orders",
+      "newOrder": "New No Charge Order",
+      "dateTime": "Date/Time"
     },
     "ingredients": {
       "menuItems": "Menu Items",
@@ -5367,7 +5383,11 @@
     "blockedDevices": {},
     "printer": {},
     "printSettings": {},
-    "accountLookup": {}
+    "accountLookup": {},
+    "order": {
+      "account": "Account"
+    },
+    "panelTitle": "POS"
   },
   "paymentInstructionCard": {
     "title": "How to pay",
