@@ -48,7 +48,16 @@ async function loadOutlets() {
   inflight = (async () => {
     try {
       const { data } = await outletApi.index()
-      outlets.value = data.outlets || data.data || []
+      const list = data.outlets || data.data || []
+      // Cashier/Bar tender panel: show only selling outlets (restaurant/bar),
+      // exclude store/warehouse outlets.
+      outlets.value = list.filter((o) => {
+        const type = (o.type || '').toLowerCase()
+        if (type === 'store') return false
+        if (type === 'restaurant' || type === 'bar') return true
+        // Fallback: if type indicates selling point, include it
+        return !['laundry', 'housekeeping', 'maintenance', 'other'].includes(type)
+      })
       const savedId = sessionStorage.getItem(STORAGE_KEY)
       selectedOutlet.value = outlets.value.find((o) => o.outlet_id === savedId) || null
     } catch {
