@@ -39,6 +39,9 @@
           </span>
         </div>
         <div class="sv-toolbar-right">
+          <button v-if="route.query.from === 'night-audit'" type="button" class="sv-btn sv-btn-ghost" @click="goBackToNightAudit">
+            <i class="fas fa-arrow-left" aria-hidden="true"></i> {{ $t('nightAudit.title') || 'Night Audit' }}
+          </button>
           <div class="sv-search" :class="{ open: searchOpen }" @focusout="onSearchFocusOut">
             <i class="fas fa-search" aria-hidden="true"></i>
             <input v-model="search" type="text" :placeholder="$t('stayview.searchPlaceholder')"

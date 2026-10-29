@@ -761,6 +761,8 @@ function goToStayviewForGuest(guest) {
     if (guest?.room_number) query.room = guest.room_number
     if (guest?.guest_id) query.guest_id = guest.guest_id
     if (guest?.reservation_id) query.res_id = guest.reservation_id
+    query.from = 'night-audit'
+    sessionStorage.setItem('nightAuditReturn', window.location.pathname + window.location.search)
     router.push({ name: 'hotel-dashboard', query })
     dismissIssues()
   } catch {
