@@ -190,7 +190,7 @@
                 <div v-for="(d, di) in days" :key="'mid-' + d.iso" class="sv-day-mid" :class="{ today: d.isToday }"
                   :style="{ gridColumn: `${di * 2 + 2} / span 1` }"></div>
                 <div v-for="bar in barsByRoom[room.room_id] || []" :key="bar.id" class="sv-bar" :class="bar.colorClass"
-                  :style="{ gridColumn: `${bar.start} / span ${bar.span}`, gridRow: bar.lane, animationDelay: `${bar.start * 15}ms` }"
+                  :style="{ gridColumn: `${bar.start} / span ${bar.span}`, gridRow: '1 / -1', animationDelay: `${bar.start * 15}ms` }"
                   role="button" tabindex="0" @click="onBarTap($event, bar)" @keyup.enter="onBarTap($event, bar)"
                   @mouseenter="showBarTip($event, bar)" @mousemove="moveBarTip" @mouseleave="hideBarTip">
                   <i class="fas fa-hotel" aria-hidden="true"></i>
@@ -8284,9 +8284,9 @@ onUnmounted(() => clearInterval(refreshTimer))
   grid-column: 2 / -1;
   display: grid;
   grid-template-columns: repeat(28, 1fr);
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-template-rows: 1fr;
   border-bottom: 1px solid #f6f8fa;
-  min-height: 42px;
+  min-height: 38px;
   height: 100%;
   position: relative;
   align-items: stretch;
@@ -8343,9 +8343,10 @@ onUnmounted(() => clearInterval(refreshTimer))
   z-index: 1;
   animation: sv-bar-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
-  height: calc(100% - 4px);
+  height: calc(100% - 6px);
   align-self: stretch;
   grid-row: 1 / -1;
+  margin: 3px 2px;
 }
 
 .sv-bar:hover {
