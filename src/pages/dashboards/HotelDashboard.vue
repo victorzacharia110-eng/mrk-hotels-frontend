@@ -8284,7 +8284,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   grid-column: 2 / -1;
   display: grid;
   grid-template-columns: repeat(28, 1fr);
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-template-rows: 1fr;
   border-bottom: 1px solid #f6f8fa;
   min-height: 40px;
   height: 100%;
@@ -8345,6 +8345,8 @@ onUnmounted(() => clearInterval(refreshTimer))
   transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
   height: calc(100% - 4px);
   align-self: stretch;
+  margin-top: auto;
+  margin-bottom: auto;
 }
 
 .sv-bar:hover {
