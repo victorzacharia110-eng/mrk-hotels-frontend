@@ -867,12 +867,21 @@ function resolveWarning(w) {
 }
 
 onMounted(async () => {
+  // Restore position when returning from Stayview (night audit round-trip).
+  const savedDate = sessionStorage.getItem('nightAuditSelectedDate')
+  const savedShowIssues = sessionStorage.getItem('nightAuditShowIssues')
+  if (savedDate) selectedDate.value = savedDate
   // Open on the hotel's actual business date, not the browser's calendar day.
   await businessDateStore.ensureLoaded()
-  if (!userPickedDate.value && businessDateStore.current) {
+  if (!userPickedDate.value && !savedDate && businessDateStore.current) {
     selectedDate.value = businessDateStore.current
   }
   load()
+  if (savedShowIssues === '1') {
+    showIssues.value = true
+  }
+  sessionStorage.removeItem('nightAuditSelectedDate')
+  sessionStorage.removeItem('nightAuditShowIssues')
 })
 </script>
 
