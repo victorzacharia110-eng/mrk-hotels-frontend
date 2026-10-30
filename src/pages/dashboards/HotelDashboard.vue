@@ -2400,6 +2400,12 @@
       :body="$t('stayview.releaseConfirmBody', { rooms: amendReleaseNames })"
       :confirm-label="$t('stayview.releaseConfirmAction')" :busy="actionBusy" @cancel="amendReleaseConfirm = false"
       @confirm="confirmAmendRelease" />
+
+    <!-- Return to Night Audit prompt when closing a stay opened from Night Audit. -->
+    <ConfirmModal :show="returnToNightAuditModal" title="Return to Night Audit?"
+      body="Return to the Night Audit page, or stay on Stayview?"
+      confirm-label="Return to Night Audit" cancel-label="Stay on Stayview"
+      @cancel="returnToNightAuditModal = false" @confirm="goBackToNightAudit" />
   </div>
 </template>
 
@@ -3254,7 +3260,9 @@ function hideBarTip() {
 // Bar currently shown in the click modal (null = closed).
 const activeBar = ref(null)
 
-// Folio loaded from reservationApi.folio() for the active bar.
+// Controls the "return to Night Audit?" dialog shown when closing a stay
+// that was opened from the Night Audit page.
+const returnToNightAuditModal = ref(false)
 const folio = ref(null)
 const folioLoading = ref(false)
 
@@ -3323,15 +3331,13 @@ function closeBarModal() {
   roomTasks.value = []
   roomTasksLoaded.value = false
   if (route?.query?.from === 'night-audit') {
-    const goBack = window.confirm(
-      'Return to Night Audit page? Click OK to return, Cancel to stay on Stayview.'
-    )
-    if (goBack) goBackToNightAudit()
+    returnToNightAuditModal.value = true
   }
 }
 
 /** Returns to the Night Audit page using the saved return location. */
 function goBackToNightAudit() {
+  returnToNightAuditModal.value = false
   const target = sessionStorage.getItem('nightAuditReturn')
   if (target) {
     window.location.href = target
