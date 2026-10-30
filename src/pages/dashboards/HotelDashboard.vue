@@ -1766,11 +1766,6 @@
               </label>
               <div class="sv-field-row">
                 <label class="sv-field">
-                  <span>{{ $t('guests.nationality') }}</span>
-                  <input v-model="bookingForm.nationality" type="text" class="input" data-field="nationality"
-                    :placeholder="$t('stayview.optional')" />
-                </label>
-                <label class="sv-field">
                   <span>{{ $t('guests.idTypeOptional') }}</span>
                   <select v-model="bookingForm.id_type" class="input" data-field="id_type">
                     <option value=""></option>
@@ -1779,13 +1774,13 @@
                     <option value="driving_license">{{ $t('guests.typeDriverLicense') }}</option>
                   </select>
                 </label>
-              </div>
-              <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('guests.idNumber') }}</span>
                   <input v-model="bookingForm.id_number" type="text" class="input" data-field="id_number"
                     :placeholder="$t('stayview.optional')" />
                 </label>
+              </div>
+              <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('guests.vipStatus') }}</span>
                   <label class="sv-checkbox">
@@ -1811,7 +1806,7 @@
               </div>
               <div class="sv-field-row">
                 <label class="sv-field" style="grid-column: 1 / -1; width: 100%;">
-                  <span>{{ $t('location.country') }}</span>
+                  <span>{{ $t('guests.country') }} / {{ $t('guests.city') }}</span>
                   <CountryCitySelect v-model:countryCode="bookingForm.country_code"
                     v-model:country="bookingForm.nationality" v-model:city="bookingForm.city" :required="false"
                     city-as-dropdown class="sv-cc-full" style="width:100%;" />
