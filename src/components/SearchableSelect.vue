@@ -256,6 +256,15 @@ function close() {
   open.value = false
 }
 
+function closeAllOthers() {
+  try {
+    document.querySelectorAll('.ss').forEach((el) => {
+      if (el === rootEl.value) return
+      el.dispatchEvent(new CustomEvent('ss:force-close'))
+    })
+  } catch {}
+}
+
 /** Focuses the next or previous option in the list (roving tabindex). */
 function moveOption(dir) {
   const items = Array.from(rootEl.value?.querySelectorAll('[role="option"]') || [])
@@ -322,7 +331,15 @@ function pick(value) {
   emit('update:modelValue', value)
   emit('change', target || { value })
   close()
-  lastPickAt = Date.now()
+  closeAllOthers()
+  lastPickAt = Date.now() + 5000
+  globalLastPickAt = Date.now() + 5000
+  try { lastPickRoot = rootEl.value } catch {}
+  if (typeof window !== 'undefined') {
+    window.__ss_last_pick = Date.now()
+    window.__ss_last_pick_root = rootEl.value
+  }
+  try { document.activeElement?.blur() } catch {}
   nextTick(() => {
     if (open.value) close()
   })
@@ -359,12 +376,14 @@ onMounted(() => {
   document.addEventListener('mousedown', onDocumentClick)
   window.addEventListener('scroll', onViewportChange, true)
   window.addEventListener('resize', onViewportChange)
+  try { rootEl.value?.addEventListener('ss:force-close', close) } catch {}
 })
 /** Removes the document/scroll/resize listeners on teardown. */
 onBeforeUnmount(() => {
   document.removeEventListener('mousedown', onDocumentClick)
   window.removeEventListener('scroll', onViewportChange, true)
   window.removeEventListener('resize', onViewportChange)
+  try { rootEl.value?.removeEventListener('ss:force-close', close) } catch {}
 })
 </script>
 
