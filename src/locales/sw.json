@@ -1040,7 +1040,9 @@
     "typeNationalId": "Kitambulisho cha Taifa",
     "typePassport": "Pasapoti",
     "returningGuest": "Mgeni wa kurudia amepatikana",
-    "selectExisting": "Chagua mgeni aliyepo tayari"
+    "selectExisting": "Chagua mgeni aliyepo tayari",
+    "country": "Nchi",
+    "city": "Mji"
   },
   "reservations": {
     "title": "Uhifadhi",

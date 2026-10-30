@@ -1041,7 +1041,9 @@
     "typePassport": "Passport",
     "typeDriverLicense": "Driving license",
     "returningGuest": "Returning guest found",
-    "selectExisting": "Select existing guest"
+    "selectExisting": "Select existing guest",
+    "country": "Country",
+    "city": "City"
   },
   "reservations": {
     "title": "Reservations",
