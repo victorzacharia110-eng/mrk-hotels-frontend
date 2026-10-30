@@ -305,6 +305,7 @@ function onListKeydown(event) {
 // Timestamp of the last pick. Used to flatten the mobile ghost-click that
 // otherwise reopens the panel right after a selection.
 let lastPickAt = 0
+let globalLastPickAt = 0
 
 /**
  * Selects an option: emits the model update and change events (unless
