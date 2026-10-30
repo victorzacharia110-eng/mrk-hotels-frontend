@@ -591,7 +591,7 @@ const issueTotal = ref(0)
 const issueSuccess = ref(false)
 const ISSUE_SUCCESS_MS = 5000
 let issueSuccessTimer = null
-const openIssueCount = computed(() => dueOuts.value.length + Number(staleArrivals.value.count || 0))
+const openIssueCount = computed(() => dueOuts.value.length + Number(staleArrivals.value.count || 0) + blockerArrivals.value.length)
 const resolvedIssueCount = computed(() =>
   Math.max(0, issueTotal.value - openIssueCount.value),
 )
@@ -600,6 +600,7 @@ const issueProgress = computed(() =>
 )
 const checkingOutId = ref(null)
 const resolvingArrivalId = ref(null)
+const blockerArrivals = ref([])
 const issueError = ref('')
 const error = ref('')
 const success = ref('')
@@ -705,8 +706,8 @@ function openCloseConfirm() {
   closeSuccessTitle.value = ''
   closeSuccessBody.value = ''
   // If there are unfinished businesses/issues, show issues modal with actions
-  if (dueOuts.value.length || staleArrivals.value.count) {
-    issueTotal.value = openIssueCount.value
+  if (dueOuts.value.length || staleArrivals.value.count || blockerArrivals.value.length) {
+    issueTotal.value = (dueOuts.value.length + Number(staleArrivals.value.count || 0) + blockerArrivals.value.length)
     issueSuccess.value = false
     clearIssueSuccessTimer()
     showIssues.value = true
@@ -739,6 +740,20 @@ async function confirmCloseDay() {
   } catch (err) {
     // Keep the dialog open so the blocker stays where the user acted on it.
     closeError.value = err.response?.data?.message || t('common.actionFailed')
+    const msg = err.response?.data?.message || ''
+    if (msg.toLowerCase().includes('no-show')) {
+      blockerArrivals.value = []
+      const m = msg.match(/Room\s*(\d+|—)/g)
+      if (m && m.length) {
+        blockerArrivals.value = m.map((x, i) => ({ reservation_id: 'block-' + i, guest_name: '—', room_number: x.replace(/Room\s*/i, ''), check_in_date: selectedDate.value }))
+      } else {
+        blockerArrivals.value = [{ reservation_id: 'block-0', guest_name: '—', room_number: '—', check_in_date: selectedDate.value }]
+      }
+      issueTotal.value = openIssueCount.value
+      issueSuccess.value = false
+      clearIssueSuccessTimer()
+      showIssues.value = true
+    }
   } finally {
     closing.value = false
   }
