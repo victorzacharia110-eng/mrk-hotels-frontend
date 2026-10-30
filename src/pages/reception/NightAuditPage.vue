@@ -27,23 +27,13 @@
           <!-- max=today: the backend refuses a future business date outright, and
                an unconstrained picker only offers a dead end. Today itself stays
                selectable, because previewing today's figures is allowed. -->
-          <input
-            v-model="selectedDate"
-            type="date"
-            class="input"
-            :max="today"
-            @change="onPickDate"
-          />
+          <input v-model="selectedDate" type="date" class="input" :max="today" @change="onPickDate" />
         </div>
         <!-- Yesterday is closable but today is not, so on a normal evening the
              page opens on a day that cannot be closed. This is the way out of
              that without having to know the date picker is the answer. -->
-        <button
-          type="button"
-          class="btn btn-secondary"
-          :disabled="!yesterday || selectedDate === yesterday"
-          @click="goToDate(yesterday)"
-        >
+        <button type="button" class="btn btn-secondary" :disabled="!yesterday || selectedDate === yesterday"
+          @click="goToDate(yesterday)">
           <i class="fas fa-arrow-left" aria-hidden="true"></i>
           {{ $t('nightAudit.runPreviousDay') }}
         </button>
@@ -67,7 +57,7 @@
             {{ $t('nightAudit.staleArrivalRoom', { room: group[0].room_number }) }}
           </span>
           <span class="duplicate-date">{{ group[0].check_in_date }}</span>
-          <span class="duplicate-names">{{ group.map((i) => i.guest_name).join(', ') }}</span>
+          <span class="duplicate-names">{{group.map((i) => i.guest_name).join(', ')}}</span>
           <span class="duplicate-count">
             {{ $t('nightAudit.duplicateRoomCount', { count: group.length }) }}
           </span>
@@ -125,7 +115,8 @@
     <template v-else-if="report">
       <!-- Revenue breakdown -->
       <div class="card" style="padding: 20px; margin-bottom: 16px;">
-        <h3 style="margin: 0 0 12px;"><i class="fas fa-chart-line" style="color: var(--mrk-blue);"></i> {{ $t('nightAudit.revenue') }}</h3>
+        <h3 style="margin: 0 0 12px;"><i class="fas fa-chart-line" style="color: var(--mrk-blue);"></i> {{
+          $t('nightAudit.revenue') }}</h3>
         <div class="kpi-grid">
           <div class="kpi">
             <span class="kpi-value">{{ fmtMoney(report.revenue.rooms) }}</span>
@@ -152,7 +143,8 @@
 
       <!-- Collections & financials -->
       <div class="card" style="padding: 20px; margin-bottom: 16px;">
-        <h3 style="margin: 0 0 12px;"><i class="fas fa-money-bill-wave" style="color: var(--mrk-blue);"></i> {{ $t('nightAudit.collections') }}</h3>
+        <h3 style="margin: 0 0 12px;"><i class="fas fa-money-bill-wave" style="color: var(--mrk-blue);"></i> {{
+          $t('nightAudit.collections') }}</h3>
         <div class="kpi-grid">
           <div v-for="(amount, method) in report.collections.by_method" :key="method" class="kpi">
             <span class="kpi-value">{{ fmtMoney(amount) }}</span>
@@ -167,14 +159,16 @@
 
       <!-- Financial positions -->
       <div class="card" style="padding: 20px; margin-bottom: 16px;">
-        <h3 style="margin: 0 0 12px;"><i class="fas fa-scale-balanced" style="color: var(--mrk-blue);"></i> {{ $t('nightAudit.financials') }}</h3>
+        <h3 style="margin: 0 0 12px;"><i class="fas fa-scale-balanced" style="color: var(--mrk-blue);"></i> {{
+          $t('nightAudit.financials') }}</h3>
         <div class="kpi-grid">
           <div class="kpi">
             <span class="kpi-value">{{ fmtMoney(report.expenses) }}</span>
             <span class="kpi-label">{{ $t('nightAudit.expenses') }}</span>
           </div>
           <div class="kpi">
-            <span class="kpi-value" :class="{ 'text-red': report.cash_in_hand < 0 }">{{ fmtMoney(report.cash_in_hand) }}</span>
+            <span class="kpi-value" :class="{ 'text-red': report.cash_in_hand < 0 }">{{ fmtMoney(report.cash_in_hand)
+              }}</span>
             <span class="kpi-label">{{ $t('nightAudit.cashInHand') }}</span>
           </div>
           <div class="kpi">
@@ -186,7 +180,8 @@
 
       <!-- Occupancy counts -->
       <div class="card" style="padding: 20px; margin-bottom: 16px;">
-        <h3 style="margin: 0 0 12px;"><i class="fas fa-bed" style="color: var(--mrk-blue);"></i> {{ $t('nightAudit.occupancy') }}</h3>
+        <h3 style="margin: 0 0 12px;"><i class="fas fa-bed" style="color: var(--mrk-blue);"></i> {{
+          $t('nightAudit.occupancy') }}</h3>
         <div class="kpi-grid">
           <div class="kpi">
             <span class="kpi-value">{{ report.counts.arrivals }}</span>
@@ -209,25 +204,31 @@
 
       <!-- Due Out guests -->
       <div class="card" style="padding: 20px; margin-bottom: 16px;">
-        <h3 style="margin: 0 0 4px;"><i class="fas fa-hourglass-half" style="color: #d97706;"></i> {{ $t('nightAudit.dueOuts') }}</h3>
+        <h3 style="margin: 0 0 4px;"><i class="fas fa-hourglass-half" style="color: #d97706;"></i> {{
+          $t('nightAudit.dueOuts') }}</h3>
         <p class="muted" style="margin: 0 0 12px;">{{ $t('nightAudit.dueOutsSubtitle') }}</p>
         <div v-if="!dueOuts.length" class="muted">{{ $t('nightAudit.dueOutsEmpty') }}</div>
         <div v-else class="dueout-list">
-          <div v-for="guest in dueOuts" :key="guest.reservation_id" class="dueout-item" :class="{ overdue: guest.overdue }">
+          <div v-for="guest in dueOuts" :key="guest.reservation_id" class="dueout-item"
+            :class="{ overdue: guest.overdue }">
             <div class="dueout-main">
               <span class="dueout-name">{{ guest.guest_name }}</span>
-              <span class="dueout-room"><i class="fas fa-bed" aria-hidden="true"></i> {{ guest.room_number || '—' }}</span>
+              <span class="dueout-room"><i class="fas fa-bed" aria-hidden="true"></i> {{ guest.room_number || '—'
+                }}</span>
             </div>
             <div class="dueout-meta">
-              <span><i class="fas fa-calendar-day" aria-hidden="true"></i> {{ $t('nightAudit.departure') }} {{ guest.departure }}</span>
+              <span><i class="fas fa-calendar-day" aria-hidden="true"></i> {{ $t('nightAudit.departure') }} {{
+                guest.departure }}</span>
               <span class="dueout-bal">{{ $t('nightAudit.dueAmount') }}: {{ fmtMoney(guest.balance) }}</span>
             </div>
             <div style="display:flex; gap:8px; align-items:center;">
               <span class="dueout-badge" :class="guest.overdue ? 'badge-overdue' : 'badge-due'">
-                <i class="fas" :class="guest.overdue ? 'fa-triangle-exclamation' : 'fa-hourglass-half'" aria-hidden="true"></i>
+                <i class="fas" :class="guest.overdue ? 'fa-triangle-exclamation' : 'fa-hourglass-half'"
+                  aria-hidden="true"></i>
                 {{ guest.overdue ? $t('nightAudit.overdue') : $t('nightAudit.dueToday') }}
               </span>
-              <button type="button" class="btn btn-sm btn-primary" @click="goToStayviewForGuest(guest)">{{ $t('nightAudit.goToStayview') || 'Go to Stayview' }}</button>
+              <button type="button" class="btn btn-sm btn-primary" @click="goToStayviewForGuest(guest)">{{
+                $t('nightAudit.goToStayview') || 'Go to Stayview' }}</button>
             </div>
           </div>
         </div>
@@ -242,41 +243,26 @@
         </p>
         <ul v-if="closeWarnings.length" class="close-warnings">
           <li v-for="w in closeWarnings" :key="w.key" :class="['close-warning', `close-warning--${w.level}`]">
-            <i :class="w.level === 'danger' ? 'fas fa-circle-exclamation' : 'fas fa-triangle-exclamation'" aria-hidden="true"></i>
+            <i :class="w.level === 'danger' ? 'fas fa-circle-exclamation' : 'fas fa-triangle-exclamation'"
+              aria-hidden="true"></i>
             <span>{{ $t(w.key, w.params) }}</span>
           </li>
         </ul>
-        <button
-          class="btn btn-primary btn-lg"
-          :disabled="closing || !canClose"
+        <button class="btn btn-primary btn-lg" :disabled="closing || !canClose"
           :title="!dateHasPassed ? $t('nightAudit.closesAfterMidnight', { date: selectedDate }) : null"
-          @click="openCloseConfirm"
-        >
+          @click="openCloseConfirm">
           <i class="fas fa-lock"></i>
           {{ closing ? $t('common.saving') : $t('nightAudit.closeDay') }}
         </button>
       </div>
     </template>
 
-    <ConfirmModal
-      :show="showClose"
-      :title="t('nightAudit.closeDay')"
-      :body="closeSuccessTitle ? closeSuccessBody : closeConfirmBody"
-      :error="closeError"
-      :success="closeSuccessTitle"
-      :busy="closing"
-      :auto-close-ms="closeError || closeSuccessTitle ? 0 : CLOSE_MODAL_MS"
-      :confirm-label="t('nightAudit.closeDay')"
-      @confirm="confirmCloseDay"
-      @cancel="cancelCloseConfirm"
-    />
+    <ConfirmModal :show="showClose" :title="t('nightAudit.closeDay')"
+      :body="closeSuccessTitle ? closeSuccessBody : closeConfirmBody" :error="closeError" :success="closeSuccessTitle"
+      :busy="closing" :auto-close-ms="closeError || closeSuccessTitle ? 0 : CLOSE_MODAL_MS"
+      :confirm-label="t('nightAudit.closeDay')" @confirm="confirmCloseDay" @cancel="cancelCloseConfirm" />
 
-    <AlertModal
-      :show="showIssues"
-      :title="t('nightAudit.closeDay')"
-      wide
-      @dismiss="dismissIssues"
-    >
+    <AlertModal :show="showIssues" :title="t('nightAudit.closeDay')" wide @dismiss="dismissIssues">
       <div class="na-issues" :class="{ 'na-issues--success': issueSuccess }">
         <div v-if="issueSuccess" class="na-success" role="status" aria-live="polite">
           <span class="na-success-icon" aria-hidden="true"><i class="fas fa-check"></i></span>
@@ -289,60 +275,79 @@
               <span><i class="fas fa-person-running" aria-hidden="true"></i> {{ $t('nightAudit.almostThere') }}</span>
               <strong>{{ resolvedIssueCount }} / {{ issueTotal }}</strong>
             </div>
-            <div class="na-progress-track" role="progressbar" :aria-valuenow="issueProgress"
-              aria-valuemin="0" aria-valuemax="100">
+            <div class="na-progress-track" role="progressbar" :aria-valuenow="issueProgress" aria-valuemin="0"
+              aria-valuemax="100">
               <div class="na-progress-fill" :style="{ width: issueProgress + '%' }"></div>
             </div>
-            <p class="na-progress-label">{{ $t('nightAudit.issuesProgress', { resolved: resolvedIssueCount, total: issueTotal }) }}</p>
+            <p class="na-progress-label">{{ $t('nightAudit.issuesProgress', {
+              resolved: resolvedIssueCount, total:
+              issueTotal }) }}</p>
           </div>
-        <p class="na-intro">{{ $t('nightAudit.closePrompt') }}</p>
-        <p v-if="issueError" class="alert alert-error" style="margin:0 0 12px;">{{ issueError }}</p>
-        <div v-if="dueOuts.length" class="na-issue-block">
-          <h4><i class="fas fa-hourglass-half" style="color:#d97706;"></i> {{ $t('nightAudit.dueOuts') }}</h4>
-          <div v-for="guest in dueOuts" :key="guest.reservation_id" class="na-issue-item">
-            <div class="na-issue-main">
-              <div><strong>{{ guest.guest_name }}</strong> · {{ guest.room_number || '—' }} · {{ $t('nightAudit.departure') }} {{ guest.departure }}</div>
-              <div>{{ $t('nightAudit.dueAmount') }}: {{ fmtMoney(guest.balance) }}</div>
-            </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button type="button" class="btn btn-sm btn-primary" :disabled="checkingOutId === guest.reservation_id" @click="checkOutDueOut(guest)">
-                <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
-                {{ checkingOutId === guest.reservation_id ? $t('common.saving') : ($t('nightAudit.checkOut') || 'Check out') }}
-              </button>
-              <button type="button" class="btn btn-sm btn-secondary" @click="goToStayviewForGuest(guest)">{{ $t('nightAudit.goToStayview') || 'Go to Stayview' }}</button>
-            </div>
-          </div>
-        </div>
-        <div v-if="staleArrivals.count" class="na-issue-block">
-          <h4><i class="fas fa-triangle-exclamation" style="color:#dc2626;"></i> {{ $t('nightAudit.warnStaleRemain') }}</h4>
-          <div v-for="arr in staleArrivals.items || []" :key="arr.reservation_id" class="na-issue-item">
-            <div class="na-issue-main">
-              <div><strong>{{ arr.guest_name }}</strong> · {{ $t('nightAudit.staleArrivalRoom', { room: arr.room_number || '—' }) }}</div>
-              <div>{{ $t('nightAudit.staleArrivalDate', { date: arr.check_in_date }) }}</div>
-            </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button type="button" class="btn btn-sm btn-primary" :disabled="resolvingArrivalId === arr.reservation_id" @click="markArrivalNoShow(arr)">
-                <i class="fas fa-user-xmark" aria-hidden="true"></i> {{ $t('reservations.noShow') || 'No Show' }}
-              </button>
-              <button type="button" class="btn btn-sm btn-danger" :disabled="resolvingArrivalId === arr.reservation_id" @click="cancelArrival(arr)">
-                <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('common.cancel') || 'Cancel' }}
-              </button>
-              <button type="button" class="btn btn-sm btn-secondary" @click="goToStayviewForGuest(arr)">{{ $t('nightAudit.goToStayview') || 'Go to Stayview' }}</button>
+          <p class="na-intro">{{ $t('nightAudit.closePrompt') }}</p>
+          <p v-if="issueError" class="alert alert-error" style="margin:0 0 12px;">{{ issueError }}</p>
+          <div v-if="dueOuts.length" class="na-issue-block">
+            <h4><i class="fas fa-hourglass-half" style="color:#d97706;"></i> {{ $t('nightAudit.dueOuts') }}</h4>
+            <div v-for="guest in dueOuts" :key="guest.reservation_id" class="na-issue-item">
+              <div class="na-issue-main">
+                <div><strong>{{ guest.guest_name }}</strong> · {{ guest.room_number || '—' }} · {{
+                  $t('nightAudit.departure') }} {{ guest.departure }}</div>
+                <div>{{ $t('nightAudit.dueAmount') }}: {{ fmtMoney(guest.balance) }}</div>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-sm btn-primary" :disabled="checkingOutId === guest.reservation_id"
+                  @click="checkOutDueOut(guest)">
+                  <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+                  {{ checkingOutId === guest.reservation_id ? $t('common.saving') : ($t('nightAudit.checkOut') || 'Checkout') }}
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" @click="goToStayviewForGuest(guest)">{{
+                  $t('nightAudit.goToStayview') || 'Go to Stayview' }}</button>
+              </div>
             </div>
           </div>
-        </div>
-        <ul v-if="closeWarnings.length" class="na-warn-list">
-          <li v-for="w in closeWarnings" :key="w.key" :class="['na-warn', `na-warn--${w.level}`]">
-            <i :class="w.level === 'danger' ? 'fas fa-circle-exclamation' : w.level === 'warning' ? 'fas fa-triangle-exclamation' : 'fas fa-circle-info'" aria-hidden="true"></i>
-            <span>{{ $t(w.key, w.params) }}</span>
-          </li>
-        </ul>
+          <div v-if="staleArrivals.count" class="na-issue-block">
+            <h4><i class="fas fa-triangle-exclamation" style="color:#dc2626;"></i> {{ $t('nightAudit.warnStaleRemain')
+              }}</h4>
+            <div v-for="arr in staleArrivals.items || []" :key="arr.reservation_id" class="na-issue-item">
+              <div class="na-issue-main">
+                <div><strong>{{ arr.guest_name }}</strong> · {{ $t('nightAudit.staleArrivalRoom', {
+                  room:
+                    arr.room_number || '—' }) }}</div>
+                <div>{{ $t('nightAudit.staleArrivalDate', { date: arr.check_in_date }) }}</div>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-sm btn-primary"
+                  :disabled="resolvingArrivalId === arr.reservation_id" @click="markArrivalNoShow(arr)">
+                  <i class="fas fa-user-xmark" aria-hidden="true"></i> {{ $t('reservations.noShow') || 'No Show' }}
+                </button>
+                <button type="button" class="btn btn-sm btn-danger"
+                  :disabled="resolvingArrivalId === arr.reservation_id" @click="cancelArrival(arr)">
+                  <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('common.cancel') || 'Cancel' }}
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" @click="goToStayviewForGuest(arr)">{{
+                  $t('nightAudit.goToStayview') || 'Go to Stayview' }}</button>
+              </div>
+            </div>
+          </div>
+          <ul v-if="closeWarnings.length" class="na-warn-list">
+            <li v-for="w in closeWarnings" :key="w.key" :class="['na-warn', `na-warn--${w.level}`]">
+              <i :class="w.level === 'danger' ? 'fas fa-circle-exclamation' : w.level === 'warning' ? 'fas fa-triangle-exclamation' : 'fas fa-circle-info'"
+                aria-hidden="true"></i>
+              <span>{{ $t(w.key, w.params) }}</span>
+             <button v-if="w.key === 'nightAudit.warnOtherDaysOpen' || w.key === 'nightAudit.warnLeavesGap'"
+               type="button" class="btn btn-sm btn-secondary close-warning-action"
+               @click="resolveWarning(w)">
+               <i class="fas fa-arrow-right" aria-hidden="true"></i> Go to day
+             </button>
+            </li>
+          </ul>
         </template>
       </div>
       <template #footer>
         <template v-if="!issueSuccess">
-          <button type="button" class="btn" @click="dismissIssues">{{ $t('common.cancel') || $t('common.close') }}</button>
-          <button type="button" class="btn btn-primary" :disabled="closing || !canClose" @click="proceedToCloseConfirm">{{ $t('nightAudit.confirmClose') || $t('nightAudit.closeDay') }}</button>
+          <button type="button" class="btn" @click="dismissIssues">{{ $t('common.cancel') || $t('common.close')
+            }}</button>
+          <button type="button" class="btn btn-primary" :disabled="closing || !canClose"
+            @click="proceedToCloseConfirm">{{ $t('nightAudit.confirmClose') || $t('nightAudit.closeDay') }}</button>
         </template>
         <span v-else class="na-success-return">{{ $t('nightAudit.returning') }}</span>
       </template>
@@ -350,27 +355,28 @@
 
     <!-- Close history -->
     <div class="card" style="padding: 20px; margin-top: 16px;">
-      <h3 style="margin: 0 0 12px;"><i class="fas fa-clock-rotate-left" style="color: var(--mrk-blue);"></i> {{ $t('nightAudit.history') }}</h3>
+      <h3 style="margin: 0 0 12px;"><i class="fas fa-clock-rotate-left" style="color: var(--mrk-blue);"></i> {{
+        $t('nightAudit.history') }}</h3>
       <div v-if="!history.length" class="muted">{{ $t('nightAudit.noHistory') }}</div>
       <div v-else class="table-scroll">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>{{ $t('nightAudit.date') }}</th>
-            <th>{{ $t('nightAudit.totalRevenue') }}</th>
-            <th>{{ $t('nightAudit.totalCollected') }}</th>
-            <th>{{ $t('nightAudit.closedBy') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="d in history" :key="d.day_close_id">
-            <td>{{ d.close_date }}</td>
-            <td>{{ fmtMoney(d.total_revenue) }}</td>
-            <td>{{ fmtMoney(d.total_collected) }}</td>
-            <td>{{ d.closed_by?.full_name || '—' }}</td>
-          </tr>
-        </tbody>
-      </table>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>{{ $t('nightAudit.date') }}</th>
+              <th>{{ $t('nightAudit.totalRevenue') }}</th>
+              <th>{{ $t('nightAudit.totalCollected') }}</th>
+              <th>{{ $t('nightAudit.closedBy') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="d in history" :key="d.day_close_id">
+              <td>{{ d.close_date }}</td>
+              <td>{{ fmtMoney(d.total_revenue) }}</td>
+              <td>{{ fmtMoney(d.total_collected) }}</td>
+              <td>{{ d.closed_by?.full_name || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -850,6 +856,12 @@ function goToDate(date) {
   onPickDate()
 }
 
+/** Actionable resolver for close warnings that reference specific dates. */
+function resolveWarning(w) {
+  const dates = String(w?.params?.dates || '').split(',').map((d) => d.trim()).filter(Boolean)
+  if (dates.length) goToDate(dates[0])
+}
+
 onMounted(async () => {
   // Open on the hotel's actual business date, not the browser's calendar day.
   await businessDateStore.ensureLoaded()
@@ -861,114 +873,462 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.dashboard-page { padding: 32px 20px; }
-.page-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; }
-.page-head h1 { font-size: 28px; font-weight: 800; }
-.muted { color: #757575; font-size: 12px; margin-top: 2px; }
-.date-row { display: flex; align-items: end; gap: 16px; }
+.dashboard-page {
+  padding: 32px 20px;
+}
+
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.page-head h1 {
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.muted {
+  color: #757575;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.date-row {
+  display: flex;
+  align-items: end;
+  gap: 16px;
+}
+
 /* .form-group carries margin-bottom: 16px and flex `align-items: end` aligns to
    the margin box, not the border box — so the jump button used to sit 16px above
    the input it belongs beside. Dropping the margin here restores true baseline
    alignment; the row's own gap keeps the spacing. */
-.date-field { margin-bottom: 0; }
+.date-field {
+  margin-bottom: 0;
+}
+
 /* The close card is centred, but a list of consequences has to be scannable. */
-.close-warnings { list-style: none; margin: 0 0 14px; padding: 0; text-align: left; display: grid; gap: 8px; }
+.close-warnings {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  text-align: left;
+  display: grid;
+  gap: 8px;
+}
+
 .close-warning {
-  display: flex; align-items: flex-start; gap: 8px; text-align: left;
-  font-size: 13px; line-height: 1.45; padding: 9px 12px; border-radius: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 9px 12px;
+  border-radius: 8px;
 }
-.close-warning i { margin-top: 2px; flex-shrink: 0; }
-.close-warning--danger { background: #fdecea; color: #96281b; }
-.close-warning--warning { background: #fff6e5; color: #8a5a00; }
-.close-warning--info { background: #eaf4ff; color: #1f6ea8; }
-.closed-badge { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: #dcfce7; color: #166534; border-radius: 8px; font-weight: 600; font-size: 13px; }
-.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
-.kpi { display: flex; flex-direction: column; gap: 4px; }
-.kpi-value { font-size: 20px; font-weight: 800; color: #062A52; }
-.kpi-label { font-size: 12px; color: #64748b; }
-.kpi.total { border-top: 2px solid #e2e8f0; padding-top: 8px; }
-.kpi.total .kpi-value { color: #005EB8; font-size: 22px; }
-.dueout-list { display: grid; gap: 10px; }
-.dueout-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 12px 16px; border: 1px solid #fbd38d; background: #fffbeb; border-radius: 10px; }
-.dueout-item.overdue { border-color: #fecaca; background: #fef2f2; }
-.dueout-main { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.dueout-name { font-weight: 700; color: #062A52; }
-.dueout-room { font-size: 12px; color: #64748b; }
-.dueout-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 13px; color: #475569; }
-.duplicate-panel, .gap-panel { margin-bottom: 16px; }
-.duplicate-title, .gap-title { margin: 0 0 8px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-.duplicate-list { margin: 0 0 10px; padding-left: 18px; font-size: 13px; display: grid; gap: 7px; }
-.duplicate-list li { margin-bottom: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.duplicate-room { font-weight: 700; }
-.duplicate-date { background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(150, 40, 27, 0.25); color: #96281b; border-radius: 999px; padding: 2px 10px; font-size: 12px; white-space: nowrap; }
-.duplicate-names { opacity: 0.85; }
-.duplicate-count { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
-.duplicate-note, .gap-note { margin: 0; font-size: 12px; opacity: 0.85; }
+
+.close-warning i {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.close-warning--danger {
+  background: #fdecea;
+  color: #96281b;
+}
+
+.close-warning--warning {
+  background: #fff6e5;
+  color: #8a5a00;
+}
+
+.close-warning--info {
+  background: #eaf4ff;
+  color: #1f6ea8;
+}
+
+.closed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #dcfce7;
+  color: #166534;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kpi-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: #062A52;
+}
+
+.kpi-label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.kpi.total {
+  border-top: 2px solid #e2e8f0;
+  padding-top: 8px;
+}
+
+.kpi.total .kpi-value {
+  color: #005EB8;
+  font-size: 22px;
+}
+
+.dueout-list {
+  display: grid;
+  gap: 10px;
+}
+
+.dueout-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border: 1px solid #fbd38d;
+  background: #fffbeb;
+  border-radius: 10px;
+}
+
+.dueout-item.overdue {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.dueout-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dueout-name {
+  font-weight: 700;
+  color: #062A52;
+}
+
+.dueout-room {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.dueout-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: #475569;
+}
+
+.duplicate-panel,
+.gap-panel {
+  margin-bottom: 16px;
+}
+
+.duplicate-title,
+.gap-title {
+  margin: 0 0 8px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.duplicate-list {
+  margin: 0 0 10px;
+  padding-left: 18px;
+  font-size: 13px;
+  display: grid;
+  gap: 7px;
+}
+
+.duplicate-list li {
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.duplicate-room {
+  font-weight: 700;
+}
+
+.duplicate-date {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(150, 40, 27, 0.25);
+  color: #96281b;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.duplicate-names {
+  opacity: 0.85;
+}
+
+.duplicate-count {
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.duplicate-note,
+.gap-note {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
 .gap-dates {
-  margin: 0 0 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 13px; word-break: break-word;
+  margin: 0 0 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  word-break: break-word;
 }
-.stale-panel { margin-bottom: 16px; }
-.stale-title { margin: 0 0 8px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-.stale-list { margin: 0 0 10px; padding-left: 18px; font-size: 13px; display: grid; gap: 7px; }
-.stale-list li { margin-bottom: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.stale-name { font-weight: 600; min-width: 150px; }
+
+.stale-panel {
+  margin-bottom: 16px;
+}
+
+.stale-title {
+  margin: 0 0 8px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stale-list {
+  margin: 0 0 10px;
+  padding-left: 18px;
+  font-size: 13px;
+  display: grid;
+  gap: 7px;
+}
+
+.stale-list li {
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.stale-name {
+  font-weight: 600;
+  min-width: 150px;
+}
+
 /* Chips rather than dot separators: "Room 116" and a date are different kinds
    of fact, and running them together with a middot made both hard to scan. */
 .stale-chip {
-  background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(31, 110, 168, 0.25);
-  color: #1f6ea8; border-radius: 999px; padding: 2px 10px; font-size: 12px; white-space: nowrap;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(31, 110, 168, 0.25);
+  color: #1f6ea8;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  white-space: nowrap;
 }
-.stale-note { margin: 0; font-size: 12px; opacity: 0.8; }
-.missed-banner { margin-bottom: 16px; }
-.missed-title { margin: 0 0 6px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+
+.stale-note {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.missed-banner {
+  margin-bottom: 16px;
+}
+
+.missed-title {
+  margin: 0 0 6px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* The dates are the actionable part of the warning, so they are listed rather
    than summarised away into "yesterday". */
-.missed-dates { margin: 0 0 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; word-break: break-word; }
-.dueout-bal { font-weight: 600; }
-.dueout-badge { white-space: nowrap; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
-.badge-due { background: #fef3c7; color: #92400e; }
-.badge-overdue { background: #fee2e2; color: #b91c1c; }
-.na-issues { text-align: left; display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
-.na-issues > p { flex: 1 1 100%; margin: 0; }
-.na-issues--success { display: block; }
+.missed-dates {
+  margin: 0 0 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.dueout-bal {
+  font-weight: 600;
+}
+
+.dueout-badge {
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.badge-due {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge-overdue {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.na-issues {
+  text-align: left;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.na-issues>p {
+  flex: 1 1 100%;
+  margin: 0;
+}
+
+.na-issues--success {
+  display: block;
+}
+
 .na-progress {
-  flex: 1 1 100%; padding: 14px 16px; border-radius: 10px;
-  background: #f0f9ff; border: 1px solid #bae6fd; margin-bottom: 12px;
+  flex: 1 1 100%;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  margin-bottom: 12px;
 }
+
 .na-progress-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  margin-bottom: 9px; font-size: 13px; font-weight: 700; color: #075985;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #075985;
 }
-.na-progress-head span { display: inline-flex; align-items: center; gap: 7px; }
+
+.na-progress-head span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
 .na-progress-track {
-  height: 10px; border-radius: 999px; background: #dbeafe; overflow: hidden;
+  height: 10px;
+  border-radius: 999px;
+  background: #dbeafe;
+  overflow: hidden;
 }
+
 .na-progress-fill {
-  height: 100%; border-radius: inherit;
+  height: 100%;
+  border-radius: inherit;
   background: linear-gradient(90deg, #0ea5e9, #22c55e);
   transition: width 0.35s ease;
 }
-.na-progress-label { margin: 7px 0 0; font-size: 12px; color: #0369a1; }
-.na-success {
-  min-height: 280px; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 10px;
-  text-align: center; padding: 20px;
+
+.na-progress-label {
+  margin: 7px 0 0;
+  font-size: 12px;
+  color: #0369a1;
 }
+
+.na-success {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 20px;
+}
+
 .na-success-icon {
-  width: 76px; height: 76px; border-radius: 50%; display: flex;
-  align-items: center; justify-content: center;
-  background: #dcfce7; color: #16a34a; font-size: 32px;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 32px;
   animation: na-success-pop 0.35s ease;
 }
-.na-success h3 { margin: 0; color: #166534; font-size: 22px; }
-.na-success p { margin: 0; max-width: 420px; color: #475569; font-size: 14px; }
-.na-success-return { color: #64748b; font-size: 13px; }
-@keyframes na-success-pop {
-  from { transform: scale(0.7); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+
+.na-success h3 {
+  margin: 0;
+  color: #166534;
+  font-size: 22px;
 }
-.na-intro { margin: 0 0 12px; color: #475569; }
+
+.na-success p {
+  margin: 0;
+  max-width: 420px;
+  color: #475569;
+  font-size: 14px;
+}
+
+.na-success-return {
+  color: #64748b;
+  font-size: 13px;
+}
+
+@keyframes na-success-pop {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.na-intro {
+  margin: 0 0 12px;
+  color: #475569;
+}
+
 .na-issue-block {
   flex: 1 1 360px;
   min-width: 0;
@@ -979,7 +1339,14 @@ onMounted(async () => {
   max-height: 46vh;
   overflow-y: auto;
 }
-.na-issue-block h4 { margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+
+.na-issue-block h4 {
+  margin: 0 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .na-issue-item {
   display: flex;
   align-items: center;
@@ -991,45 +1358,169 @@ onMounted(async () => {
   border-radius: 8px;
   margin-bottom: 8px;
 }
-.na-issue-item:last-child { margin-bottom: 0; }
-.na-issue-main { display: grid; gap: 4px; min-width: 0; flex: 1 1 220px; }
-.na-warn-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; flex: 1 1 100%; }
-.na-warn { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 8px; border: 1px solid #e5e7eb; }
-.na-warn--danger { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
-.na-warn--warning { background: #fffbeb; border-color: #fbd38d; color: #92400e; }
-.na-warn--info { background: #f8fafc; color: #475569; }
+
+.na-issue-item:last-child {
+  margin-bottom: 0;
+}
+
+.na-issue-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 220px;
+}
+
+.na-warn-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  flex: 1 1 100%;
+}
+
+.na-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.na-warn--danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.na-warn--warning {
+  background: #fffbeb;
+  border-color: #fbd38d;
+  color: #92400e;
+}
+
+.na-warn--info {
+  background: #f8fafc;
+  color: #475569;
+}
+
 /* The issues modal reuses the shared AlertModal shell, but these blocks are
    night-audit specific and were painted light-only. In dark mode they must sit
    on the raised slate panel instead of punching a white hole in the modal. */
-html[data-theme='dark'] .na-intro { color: #95a3ab; }
-html[data-theme='dark'] .na-progress { background: #172a36; border-color: #245166; }
-html[data-theme='dark'] .na-progress-head { color: #8fd3ff; }
-html[data-theme='dark'] .na-progress-track { background: #20343f; }
-html[data-theme='dark'] .na-progress-label { color: #9fcbe6; }
-html[data-theme='dark'] .na-success h3 { color: #86efac; }
-html[data-theme='dark'] .na-success p { color: #aebac1; }
-html[data-theme='dark'] .na-success-icon { background: #143a24; color: #4ade80; }
-html[data-theme='dark'] .na-success-return { color: #95a3ab; }
-html[data-theme='dark'] .na-issue-block { background: #202c33; border-color: #2f3b43; color: #e9edef; }
-html[data-theme='dark'] .na-issue-item { border-color: #2f3b43; }
-html[data-theme='dark'] .na-issue-main { color: #e9edef; }
-html[data-theme='dark'] .na-warn { border-color: #2f3b43; }
-html[data-theme='dark'] .na-warn--danger { background: #3a1f22; border-color: #5b2a2f; color: #ffb4b4; }
-html[data-theme='dark'] .na-warn--warning { background: #3a2f18; border-color: #5b4a24; color: #ffd48a; }
-html[data-theme='dark'] .na-warn--info { background: #1b262c; color: #aebac1; }
-.text-red { color: #DC2626 !important; }
-.text-green { color: #16A34A !important; }
-.capitalize { text-transform: capitalize; }
-.table-scroll .table { min-width: 560px; }
+html[data-theme='dark'] .na-intro {
+  color: #95a3ab;
+}
+
+html[data-theme='dark'] .na-progress {
+  background: #172a36;
+  border-color: #245166;
+}
+
+html[data-theme='dark'] .na-progress-head {
+  color: #8fd3ff;
+}
+
+html[data-theme='dark'] .na-progress-track {
+  background: #20343f;
+}
+
+html[data-theme='dark'] .na-progress-label {
+  color: #9fcbe6;
+}
+
+html[data-theme='dark'] .na-success h3 {
+  color: #86efac;
+}
+
+html[data-theme='dark'] .na-success p {
+  color: #aebac1;
+}
+
+html[data-theme='dark'] .na-success-icon {
+  background: #143a24;
+  color: #4ade80;
+}
+
+html[data-theme='dark'] .na-success-return {
+  color: #95a3ab;
+}
+
+html[data-theme='dark'] .na-issue-block {
+  background: #202c33;
+  border-color: #2f3b43;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .na-issue-item {
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .na-issue-main {
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .na-warn {
+  border-color: #2f3b43;
+}
+
+html[data-theme='dark'] .na-warn--danger {
+  background: #3a1f22;
+  border-color: #5b2a2f;
+  color: #ffb4b4;
+}
+
+html[data-theme='dark'] .na-warn--warning {
+  background: #3a2f18;
+  border-color: #5b4a24;
+  color: #ffd48a;
+}
+
+html[data-theme='dark'] .na-warn--info {
+  background: #1b262c;
+  color: #aebac1;
+}
+
+.text-red {
+  color: #DC2626 !important;
+}
+
+.text-green {
+  color: #16A34A !important;
+}
+
+.capitalize {
+  text-transform: capitalize;
+}
+
+.table-scroll .table {
+  min-width: 560px;
+}
+
 /* Tablets: 768px is the classic iPad portrait width, so the phone
    treatment below starts at 767px. Without this band a tablet drops
    straight from the full form to a single column. */
 @media (min-width: 768px) and (max-width: 1024px) {
+
   .date-row,
   .page-head {
     flex-direction: row;
   }
 }
 
-@media (max-width: 767px) { .dashboard-page { padding: 20px 16px; } .page-head { flex-direction: column; align-items: flex-start; } .date-row { flex-direction: column; align-items: stretch; } }
+@media (max-width: 767px) {
+  .dashboard-page {
+    padding: 20px 16px;
+  }
+
+  .page-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .date-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
 </style>

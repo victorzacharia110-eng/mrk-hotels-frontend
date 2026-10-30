@@ -18,7 +18,7 @@
     </div>
 
     <template v-else>
-      
+
       <!-- Toolbar: room/reservation status pills, search and assign-room shortcut -->
       <div class="sv-toolbar">
         <!--
@@ -39,7 +39,8 @@
           </span>
         </div>
         <div class="sv-toolbar-right">
-          <button v-if="route.query.from === 'night-audit'" type="button" class="sv-btn sv-btn-ghost" @click="goBackToNightAudit">
+          <button v-if="route.query.from === 'night-audit'" type="button" class="sv-btn sv-btn-ghost"
+            @click="goBackToNightAudit">
             <i class="fas fa-arrow-left" aria-hidden="true"></i> {{ $t('nightAudit.title') || 'Night Audit' }}
           </button>
           <div class="sv-search" :class="{ open: searchOpen }" @focusout="onSearchFocusOut">
@@ -247,7 +248,7 @@
         <span>
           <template v-if="barTip.rawStatus === 'checked_in'">{{ $t('stayview.balanceDue') }}</template>
           <template v-else>{{ barTip.paymentPending ? $t('stayview.paymentPending') : $t('stayview.paymentPaid')
-            }}</template>
+          }}</template>
           <strong v-if="barTip.paymentPending"> · {{ curCode() }} {{ barTip.balance }}</strong>
         </span>
       </div>
@@ -277,7 +278,7 @@
         <li v-for="task in hkTip.tasks" :key="task.task_id" class="sv-hk-item" :class="task.priority">
           <div class="sv-hk-item-top">
             <span class="sv-hk-task-type"><i class="fas fa-broom" aria-hidden="true"></i> {{ hkLabel(task, 'task_type')
-              }}</span>
+            }}</span>
             <span class="sv-hk-status" :class="task.status">{{ hkLabel(task, 'status') }}</span>
           </div>
           <div class="sv-hk-item-meta">
@@ -331,7 +332,8 @@
             <div class="sv-hk-item-meta">
               <span><i class="fas fa-layer-group" aria-hidden="true"></i> {{ order.items_count ?? 0 }} {{
                 $t('laundry.items') }}</span>
-              <span><i class="fas fa-coins" aria-hidden="true"></i> {{ curCode() }} {{ fmtNum(order.total_charge) }}</span>
+              <span><i class="fas fa-coins" aria-hidden="true"></i> {{ curCode() }} {{ fmtNum(order.total_charge)
+                }}</span>
               <span v-if="order.attendant?.full_name"><i class="fas fa-user-gear" aria-hidden="true"></i> {{
                 order.attendant.full_name }}</span>
             </div>
@@ -405,8 +407,8 @@
                             '' }}</th>
                           <th scope="col" class="sv-folio-col-num">{{ $t('stayview.viewingFolioBalance') }}</th>
                           <th scope="col" class="sv-folio-col-view"><span class="sv-visually-hidden">{{
-                              $t('common.actions')
-                              }}</span></th>
+                            $t('common.actions')
+                          }}</span></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -420,14 +422,14 @@
                           </td>
                           <td>
                             {{ r.guest_name || r.label }}<template v-if="r.room_number"> · {{ r.room_number
-                              }}</template>
+                            }}</template>
                           </td>
                           <td class="sv-folio-col-num">
                             <template v-if="ledgerHeader.guest">{{ folioRowBalanceText(r) }}</template>
                           </td>
                           <td class="sv-folio-col-num">
                             <strong :class="{ 'sv-balance-negative': folioRowBalance(r) < 0 }">{{ folioRowBalanceText(r)
-                              }}</strong>
+                            }}</strong>
                           </td>
                           <td class="sv-folio-col-view">
                             <button type="button" class="sv-folio-print-btn" :disabled="printBusy || folioLoading"
@@ -450,7 +452,7 @@
                   <i class="fas fa-book-bookmark" aria-hidden="true"></i>
                   <span>{{ $t('stayview.viewingFolio') }} <strong>{{ ledgerHeader.code }}</strong> — {{
                     ledgerHeader.guest
-                    }}</span>
+                  }}</span>
                   <button type="button" class="sv-folio-return" :disabled="folioLoading"
                     @click="switchFolio({ reservation_id: activeBar.id })">
                     <i class="fas fa-arrow-left" aria-hidden="true"></i> {{ $t('stayview.backToCurrentFolio') }}
@@ -468,7 +470,7 @@
                   <div class="sv-panel-card" :class="activeBar.paymentPending ? 'pay-pending' : 'pay-ok'">
                     <span>{{ $t('stayview.balance') }}</span>
                     <strong :class="{ 'sv-balance-negative': balanceDisplay.negative }">{{ balanceDisplay.text
-                      }}</strong>
+                    }}</strong>
                   </div>
                 </div>
 
@@ -496,23 +498,24 @@
                           <td class="sv-particular">{{ e.particular }}</td>
                           <td>
                             <template v-if="e.movedFrom"><span class="sv-moved-from">{{ $t('stayview.transferFrom', {
-                                guest: e.movedFrom.guest_name, code: e.movedFrom.folio_code }) }}</span> </template>
+                              guest: e.movedFrom.guest_name, code: e.movedFrom.folio_code
+                            }) }}</span> </template>
                             <template v-if="e.movedTo"><span class="sv-moved-from">{{ $t('stayview.transferTo', {
-                                guest: e.movedTo.guest_name, code: e.movedTo.folio_code }) }}</span> </template>
+                              guest: e.movedTo.guest_name, code: e.movedTo.folio_code
+                            }) }}</span> </template>
                             {{ e.description }}<span v-if="e.detail" class="sv-cap"> · {{ e.detail }}</span>
                             <span v-if="e.payment?.edited_by || e.payment?.edited_at" class="sv-folio-edit-note">
                               {{ $t('stayview.editedBy') }} {{ e.payment.edited_by_name ||
-                                e.payment.edited_by }}<template
-                                v-if="e.payment.edited_at"> {{ $t('stayview.editedAt') }} {{
-                                formatDateDMY(e.payment.edited_at) }}</template>
+                                e.payment.edited_by }}<template v-if="e.payment.edited_at"> {{ $t('stayview.editedAt') }}
+                                {{
+                                  formatDateDMY(e.payment.edited_at) }}</template>
                             </span>
                           </td>
                           <td>{{ e.user }}</td>
                           <td class="num">{{ e.credit ? '−' : '' }}{{ curCode() }} {{ fmtNum(e.amount, 2) }}</td>
                           <td class="sv-cell-actions">
-                            <button type="button" class="sv-icon-link sv-row-menu-btn"
-                              :aria-label="$t('folio.actions')" :aria-expanded="entryMenu?.entry === e"
-                              @click.stop="toggleEntryMenu(e, $event)">
+                            <button type="button" class="sv-icon-link sv-row-menu-btn" :aria-label="$t('folio.actions')"
+                              :aria-expanded="entryMenu?.entry === e" @click.stop="toggleEntryMenu(e, $event)">
                               <i class="fas fa-ellipsis-vertical" aria-hidden="true"></i>
                             </button>
                           </td>
@@ -538,7 +541,7 @@
                           <td colspan="4">{{ $t('folio.balance') }}</td>
                           <td class="num">
                             <strong :class="{ 'sv-balance-negative': ledgerBalance.negative }">{{ ledgerBalance.text
-                              }}</strong>
+                            }}</strong>
                           </td>
                           <td></td>
                         </tr>
@@ -601,7 +604,9 @@
                 <div class="sv-panel-cards">
                   <div class="sv-panel-card">
                     <span>{{ $t('stayview.totalRoomCharges') }}</span>
-                    <strong>{{ curCode() }} {{ fmtNum((folio?.folio?.total_amount ?? 0) + (folio?.folio?.room_charges ?? 0), 2)
+                    <strong>{{ curCode() }} {{ fmtNum((folio?.folio?.total_amount ?? 0) + (folio?.folio?.room_charges ??
+                      0),
+                      2)
                       }}</strong>
                   </div>
                   <div class="sv-panel-card">
@@ -611,7 +616,7 @@
                   <div class="sv-panel-card">
                     <span>{{ $t('folio.balance') }}</span>
                     <strong :class="{ 'sv-balance-negative': balanceDisplay.negative }">{{ balanceDisplay.text
-                      }}</strong>
+                    }}</strong>
                   </div>
                 </div>
                 <div v-if="chargeNights.length" class="sv-table-wrap">
@@ -990,7 +995,7 @@
                 </select>
                 <span v-if="paymentEditErrors.payment_method" class="sv-field-msg" role="alert"><i
                     class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ paymentEditErrors.payment_method
-                  }}</span>
+                    }}</span>
               </label>
               <label v-if="requiresProvider(paymentEditForm.payment_method)" class="sv-field">
                 <span>{{ $t('paymentFields.provider') }}</span>
@@ -1151,13 +1156,16 @@
                   <select v-model="amendRoomSort" class="input" style="max-width:190px;padding:2px 6px;font-size:12px;">
                     <option v-for="opt in roomSortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
                   </select>
-                  <span style="font-size:12px;color:#555;">{{ $t('stayview.roomsSelected', { count: amendSelectedRoomIds.length }) }}</span>
+                  <span style="font-size:12px;color:#555;">{{ $t('stayview.roomsSelected', {
+                    count:
+                    amendSelectedRoomIds.length }) }}</span>
                 </div>
                 <div class="sv-room-picker-grid">
                   <label v-for="room in amendGroupRoomOptions" :key="room.value"
                     style="display:flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:12px;background:#fff;">
                     <input type="checkbox" :value="room.value" v-model="amendSelectedRoomIds" />
-                    <span>{{ room.room_number }}<template v-if="room.room_type"> · {{ roomTypeLabel(room.room_type) }}</template></span>
+                    <span>{{ room.room_number }}<template v-if="room.room_type"> · {{ roomTypeLabel(room.room_type)
+                        }}</template></span>
                     <span v-if="room.is_primary" class="sv-tag-primary">{{ $t('stayview.primaryRoom') }}</span>
                     <span v-if="room.released" class="sv-tag-released">{{ $t('stayview.released') }}</span>
                   </label>
@@ -1418,8 +1426,8 @@
                       </button>
                     </div>
                     {/* The created folio is targetable from any move mode once it
-                        exists — show the open-new-folio shortcut on SPLIT/CUT too so
-                        the receptionist can split a bill onto a brand-new folio. */}
+                    exists — show the open-new-folio shortcut on SPLIT/CUT too so
+                    the receptionist can split a bill onto a brand-new folio. */}
                     <button v-if="folioMoveMode !== 'transfer'" type="button"
                       class="btn btn-secondary btn-sm sv-new-folio-btn" :disabled="newFolioBusy || actionBusy"
                       @click="createNewFolioTarget">
@@ -1440,7 +1448,7 @@
                           :disabled="actionBusy || newFolioBusy || tt.reservation_id === activeBar?.id" />
                         <span class="sv-split-op-text">
                           <span><strong>{{ tt.guest_name || '—' }}</strong> <span class="sv-cap">· {{ tt.folio_code
-                              }}</span></span>
+                          }}</span></span>
                           <span class="sv-cap sv-muted">{{ tt.room_number || '—' }} · {{ (tt.status || '').replace('_',
                             ' ') }}</span>
                         </span>
@@ -1459,7 +1467,7 @@
                   <span v-if="moveTargetObj" class="sv-cap">
                     <i class="fas fa-arrow-right" aria-hidden="true"></i>
                     {{ moveTargetObj.guest_name || '—' }} · {{ moveTargetObj.folio_code }} ({{ moveTargetObj.room_number
-                    || '—' }})
+                      || '—' }})
                   </span>
                 </div>
 
@@ -1619,7 +1627,8 @@
                   <div class="sv-receipt-totals">
                     <div class="sv-receipt-total-row">
                       <span>{{ $t('folio.billAmount') }}</span>
-                      <strong>{{ curCode() }} {{ fmtNum(viewEntryReceipt.billAmount ?? viewEntryReceipt.amount, 2) }}</strong>
+                      <strong>{{ curCode() }} {{ fmtNum(viewEntryReceipt.billAmount ?? viewEntryReceipt.amount, 2)
+                        }}</strong>
                     </div>
                     <div class="sv-receipt-total-row">
                       <span>{{ $t('folio.tax') }}</span>
@@ -1717,8 +1726,7 @@
               <div class="sv-modal-head-text">
                 <h3>{{ $t('stayview.newBooking') }}</h3>
               </div>
-              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')"
-                @click="closeBookingModal">
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')" @click="closeBookingModal">
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </div>
@@ -1739,19 +1747,25 @@
                       class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.last_name }}</span>
                 </label>
               </div>
-              <div v-if="bookingGuestLookup.matches && bookingGuestLookup.matches.length > 0 && !bookingGuestLookup.found" class="sv-field" style="gap:4px; grid-column: 1 / -1;">
+              <div
+                v-if="bookingGuestLookup.matches && bookingGuestLookup.matches.length > 0 && !bookingGuestLookup.found"
+                class="sv-field" style="gap:4px; grid-column: 1 / -1;">
                 <span class="sv-field-hint muted">{{ $t('guests.selectExisting') || 'Select existing guest' }}</span>
-                <input :placeholder="$t('common.search') || 'Search'" type="text" class="input" @input="(e)=>{ bookingGuestLookup._filter = e.target.value || '' }" />
-                <div style="display:flex; flex-direction:column; gap:4px; max-height:200px; overflow:auto; border:1px solid var(--sv-border,#d7dde8); border-radius:6px; padding:4px;">
+                <input :placeholder="$t('common.search') || 'Search'" type="text" class="input"
+                  @input="(e) => { bookingGuestLookup._filter = e.target.value || '' }" />
+                <div
+                  style="display:flex; flex-direction:column; gap:4px; max-height:200px; overflow:auto; border:1px solid var(--sv-border,#d7dde8); border-radius:6px; padding:4px;">
                   <button v-for="gm in (bookingGuestLookup.matches || []).filter(gm => {
                     const f = (bookingGuestLookup._filter || '').toLowerCase()
                     if (!f) return true
-                    const name = (gm.full_name || ((gm.first_name||'') + ' ' + (gm.last_name||'')).trim()).toLowerCase()
+                    const name = (gm.full_name || ((gm.first_name || '') + ' ' + (gm.last_name || '')).trim()).toLowerCase()
                     const phone = String(gm.phone || gm.phone_number || '').toLowerCase()
                     const email = String(gm.email || '').toLowerCase()
                     return name.includes(f) || phone.includes(f) || email.includes(f)
-                  })" :key="gm.guest_id" type="button" class="btn btn-ghost btn-sm" style="justify-content:flex-start; text-align:left;" @click="applyGuestToBooking(gm)">
-                    <span style="font-weight:600;">{{ gm.full_name || ((gm.first_name||'') + ' ' + (gm.last_name||'')).trim() }}</span>
+                  })" :key="gm.guest_id" type="button" class="btn btn-ghost btn-sm"
+                    style="justify-content:flex-start; text-align:left;" @click="applyGuestToBooking(gm)">
+                    <span style="font-weight:600;">{{ gm.full_name || ((gm.first_name || '') + ' ' +
+                      (gm.last_name||'')).trim() }}</span>
                     <span class="muted" style="margin-left:8px;">{{ gm.phone || gm.phone_number || '' }}</span>
                     <span v-if="gm.email" class="muted" style="margin-left:8px;">{{ gm.email }}</span>
                   </button>
@@ -1761,8 +1775,12 @@
                 <span>{{ $t('reservations.guestPhone') }}</span>
                 <PhoneInput v-model="bookingForm.guest_phone" v-model:countryCode="bookingForm.country_code"
                   :error="bookingErrors.guest_phone" required />
-                <span v-if="bookingGuestLookup.loading" class="sv-field-hint muted"><i class="fas fa-spinner fa-spin"></i> {{ $t('common.searching') }}</span>
-                <span v-else-if="bookingGuestLookup.found" class="sv-field-hint" style="color:#16a34a;"><i class="fas fa-circle-check"></i> {{ $t('guests.returningGuest') || 'Returning guest found' }}: {{ bookingGuestLookup.found.full_name }}</span>
+                <span v-if="bookingGuestLookup.loading" class="sv-field-hint muted"><i
+                    class="fas fa-spinner fa-spin"></i>
+                  {{ $t('common.searching') }}</span>
+                <span v-else-if="bookingGuestLookup.found" class="sv-field-hint" style="color:#16a34a;"><i
+                    class="fas fa-circle-check"></i> {{ $t('guests.returningGuest') || 'Returning guest found' }}: {{
+                      bookingGuestLookup.found.full_name }}</span>
               </label>
               <div class="sv-field-row">
                 <label class="sv-field">
@@ -1827,12 +1845,14 @@
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.room') }}</span>
-                  <div v-if="bookingForm.booking_type === 'group' || roomSelectionsArray.length > 0" class="sv-room-picker-shell">
+                  <div v-if="bookingForm.booking_type === 'group' || roomSelectionsArray.length > 0"
+                    class="sv-room-picker-shell">
                     <button type="button" class="btn btn-primary sv-room-picker-trigger"
                       data-testid="group-room-picker-trigger" @click="openRoomPicker">
                       <span class="sv-room-picker-trigger-main">
                         <i class="fas fa-door-open" aria-hidden="true"></i>
-                        <span>{{ roomSelectionsArray.length ? $t('stayview.editRooms') : $t('stayview.selectRooms') }}</span>
+                        <span>{{ roomSelectionsArray.length ? $t('stayview.editRooms') : $t('stayview.selectRooms')
+                          }}</span>
                       </span>
                       <span v-if="roomSelectionsArray.length" class="sv-room-picker-count">
                         {{ $t('stayview.roomsSelected', { count: roomSelectionsArray.length }) }}
@@ -1869,28 +1889,30 @@
                     :class="{ 'sv-input-error': bookingErrors.check_out_date }" required />
                   <span v-if="bookingErrors.check_out_date" class="sv-field-msg" role="alert"><i
                       class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.check_out_date
-                    }}</span>
+                      }}</span>
                 </label>
               </div>
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.total') }}</span>
-                  <input v-model.number="bookingForm.total_amount" type="number" min="0" step="0.01" class="input" required @wheel.prevent @keydown="(e) => ['e','E','+','-'].includes(e.key) && e.preventDefault()" />
+                  <input v-model.number="bookingForm.total_amount" type="number" min="0" step="0.01" class="input"
+                    required @wheel.prevent @keydown="(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()" />
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.advancePaid') }}</span>
                   <input v-model.number="bookingForm.advance_payment" type="number" min="0" step="0.01" class="input"
-                    data-field="advance_payment" :class="{ 'sv-input-error': bookingErrors.advance_payment }" @wheel.prevent @keydown="(e) => ['e','E','+','-'].includes(e.key) && e.preventDefault()" />
+                    data-field="advance_payment" :class="{ 'sv-input-error': bookingErrors.advance_payment }"
+                    @wheel.prevent @keydown="(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()" />
                   <span v-if="bookingErrors.advance_payment" class="sv-field-msg" role="alert"><i
                       class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.advance_payment
-                    }}</span>
+                      }}</span>
                 </label>
               </div>
               <div class="sv-field-row">
                 <label class="sv-field">
                   <span>{{ $t('stayview.advanceAccount') }}</span>
-                  <select v-model="bookingForm.advance_payment_method" class="input"
-                    data-field="advance_payment_method" :class="{ 'sv-input-error': bookingErrors.advance_payment_method }">
+                  <select v-model="bookingForm.advance_payment_method" class="input" data-field="advance_payment_method"
+                    :class="{ 'sv-input-error': bookingErrors.advance_payment_method }">
                     <option value="">—</option>
                     <option value="cash">{{ $t('paymentFields.methods.cash') }}</option>
                     <option value="mobile_money">{{ $t('paymentFields.methods.mobile_money') }}</option>
@@ -1899,7 +1921,7 @@
                   </select>
                   <span v-if="bookingErrors.advance_payment_method" class="sv-field-msg" role="alert"><i
                       class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.advance_payment_method
-                    }}</span>
+                      }}</span>
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.advanceDate') }}</span>
@@ -1914,8 +1936,7 @@
                    so the walk-in button is disabled on any other arrival. -->
               <button type="button" class="btn sv-modal-manage sv-btn-walkin"
                 :disabled="actionBusy || !bookingOnBusinessDate"
-                :title="bookingOnBusinessDate ? '' : $t('stayview.walkInTodayOnly')"
-                @click="submitBooking('walk_in')">
+                :title="bookingOnBusinessDate ? '' : $t('stayview.walkInTodayOnly')" @click="submitBooking('walk_in')">
                 <i class="fas" :class="actionBusy ? 'fa-spinner fa-spin' : 'fa-person-walking-arrow-right'"
                   aria-hidden="true"></i>
                 {{ actionBusy ? $t('common.loading') : $t('stayview.walkIn') }}
@@ -1988,8 +2009,11 @@
                   <div class="sv-group-list">
                     <div v-for="(sel, si) in roomSelectionsArray" :key="sel.room_id" class="sv-group-selected">
                       <div>
-                        <div class="sv-group-selected-name">{{ sel.room_number }} · {{ roomTypeLabel(sel.room_type) }}</div>
-                        <div class="muted sv-group-selected-price">{{ curCode() }} {{ formatPrice(sel.price_per_night) }}</div>
+                        <div class="sv-group-selected-name">{{ sel.room_number }} · {{ roomTypeLabel(sel.room_type) }}
+                        </div>
+                        <div class="muted sv-group-selected-price">{{ curCode() }} {{ formatPrice(sel.price_per_night)
+                          }}
+                        </div>
                       </div>
                       <div class="sv-room-summary-tags">
                         <button v-if="bookingForm.primary_room_id !== sel.room_id" type="button" class="btn btn-xs"
@@ -2159,7 +2183,9 @@
             <div class="sv-modal-body">
               <div class="sv-modal-row">
                 <i class="fas fa-layer-group" aria-hidden="true"></i>
-                <span>{{ roomTypeLabel(roomModal.room_type) }} · {{ curCode() }} {{ formatPrice(roomModal.price_per_night) }}</span>
+                <span>{{ roomTypeLabel(roomModal.room_type) }} · {{ curCode() }} {{
+                  formatPrice(roomModal.price_per_night)
+                  }}</span>
               </div>
               <header class="sv-dot-rules-head">
                 <i class="fas fa-circle-info" aria-hidden="true"></i>
@@ -2178,8 +2204,7 @@
               <div class="sv-status-grid">
                 <div v-for="s in roomBaseStatusOptions" :key="s.key" class="sv-status-btn sv-status-static"
                   :class="{ active: roomBaseStatus(roomModal) === s.key }">
-                  <span class="sv-room-dot" :class="s.key === 'due_out' ? 'dueout' : s.key"
-                    aria-hidden="true"></span>
+                  <span class="sv-room-dot" :class="s.key === 'due_out' ? 'dueout' : s.key" aria-hidden="true"></span>
                   <span class="sv-cap">{{ s.label }}</span>
                 </div>
               </div>
@@ -2213,8 +2238,7 @@
     <!-- Per-row folio actions, opened from the three-dot button. -->
     <Teleport to="body">
       <div v-if="entryMenu" class="sv-row-menu-layer" @click="closeEntryMenu">
-        <ul class="sv-row-menu" role="menu" :style="{ top: entryMenu.y + 'px', left: entryMenu.x + 'px' }"
-          @click.stop>
+        <ul class="sv-row-menu" role="menu" :style="{ top: entryMenu.y + 'px', left: entryMenu.x + 'px' }" @click.stop>
           <li>
             <button type="button" role="menuitem" @click="closeEntryMenu(); viewEntry(entryMenu.entry)">
               <i class="fas fa-eye" aria-hidden="true"></i> {{ $t('folio.view') }}
@@ -2239,12 +2263,12 @@
             </button>
           </li>
           <li v-if="entryMenu.entry.entryUrl">
-            <a :href="entryMenu.entry.entryUrl" target="_blank" rel="noopener" role="menuitem"
-              @click="closeEntryMenu">
+            <a :href="entryMenu.entry.entryUrl" target="_blank" rel="noopener" role="menuitem" @click="closeEntryMenu">
               <i class="fas fa-download" aria-hidden="true"></i> {{ $t('folio.download') }}
             </a>
           </li>
-          <li v-if="entryMenu.entry.entryId && !entryMenu.entry.moveLine && (canManageFolioOps || (entryMenu.entry.type !== 'room_charge' && !folioLocked))">
+          <li
+            v-if="entryMenu.entry.entryId && !entryMenu.entry.moveLine && (canManageFolioOps || (entryMenu.entry.type !== 'room_charge' && !folioLocked))">
             <button type="button" role="menuitem" class="danger" :disabled="actionBusy"
               @click="closeEntryMenu(); entryMenu.entry.entryUrl ? removeFolioAttachment(entryMenu.entry) : voidFolioEntry(entryMenu.entry)">
               <i class="fas fa-trash-can" aria-hidden="true"></i>
@@ -2368,24 +2392,14 @@
       :details="alertDetails" :timestamp="currentAlert.created_at" :type="alertType" @dismiss="dismissCurrentAlert" />
 
     <!-- Cancel dialog: a standalone room or a whole/subset of a group. -->
-    <CancelReservationModal
-      :show="showCancel"
-      :reservation="cancelTarget"
-      :busy="actionBusy"
-      @cancel="showCancel = false"
-      @confirm="confirmCancel"
-    />
+    <CancelReservationModal :show="showCancel" :reservation="cancelTarget" :busy="actionBusy"
+      @cancel="showCancel = false" @confirm="confirmCancel" />
 
     <!-- Amend stay: confirm before any unticked group room is released. -->
-    <ConfirmModal
-      :show="amendReleaseConfirm"
-      :title="$t('stayview.releaseConfirmTitle')"
+    <ConfirmModal :show="amendReleaseConfirm" :title="$t('stayview.releaseConfirmTitle')"
       :body="$t('stayview.releaseConfirmBody', { rooms: amendReleaseNames })"
-      :confirm-label="$t('stayview.releaseConfirmAction')"
-      :busy="actionBusy"
-      @cancel="amendReleaseConfirm = false"
-      @confirm="confirmAmendRelease"
-    />
+      :confirm-label="$t('stayview.releaseConfirmAction')" :busy="actionBusy" @cancel="amendReleaseConfirm = false"
+      @confirm="confirmAmendRelease" />
   </div>
 </template>
 
@@ -2928,23 +2942,23 @@ const barsByRoom = computed(() => {
     const effectiveHalfEnd = endedBeforeWindow && r.status === 'checked_in'
       ? Math.max(halfEnd, halfStart + 1)
       : halfEnd
-    // Bar colors: blue = checked out, green = in-house, red = anything not yet
-    // checked in. A reserved guest that has paid in full must NOT flip green —
-    // only an actual check-in turns the bar green.
-    ; (map[roomId] ||= []).push({
-      ...toPanelBar(r),
-      // Grid column/span on the 28 half-day track (1-based) + the inclusive
-      // 0-based half-cell range used by the vacancy check.
-      halfStart,
-      halfEnd: effectiveHalfEnd,
-      // The bar starts at the vertical MIDPOINT of the arrival day (check-in
-      // is at mid-day, not midnight) and ends at the first half of the
-      // departure day. `halfStart`/`halfEnd` keep their date semantics for the
-      // vacancy check; only the visual grid column/span shift by one half-cell.
-      start: halfStart + 2,
-      span: Math.max(1, effectiveHalfEnd - halfStart),
-      lane: 1,
-    })
+      // Bar colors: blue = checked out, green = in-house, red = anything not yet
+      // checked in. A reserved guest that has paid in full must NOT flip green —
+      // only an actual check-in turns the bar green.
+      ; (map[roomId] ||= []).push({
+        ...toPanelBar(r),
+        // Grid column/span on the 28 half-day track (1-based) + the inclusive
+        // 0-based half-cell range used by the vacancy check.
+        halfStart,
+        halfEnd: effectiveHalfEnd,
+        // The bar starts at the vertical MIDPOINT of the arrival day (check-in
+        // is at mid-day, not midnight) and ends at the first half of the
+        // departure day. `halfStart`/`halfEnd` keep their date semantics for the
+        // vacancy check; only the visual grid column/span shift by one half-cell.
+        start: halfStart + 2,
+        span: Math.max(1, effectiveHalfEnd - halfStart),
+        lane: 1,
+      })
   }
   // Stack successive handovers on alternating lanes so a departing guest's
   // half of the checkout day and the arriving guest's other half render one
@@ -4719,23 +4733,23 @@ async function createNewFolioTarget() {
     // The freshly opened folio has status 'confirmed', so the checked-in-only
     // folio search never lists it — add it to the picker manually so the
     // receptionist can select it as the move destination.
-if (created?.reservation_id) {
-        const shape = {
-          reservation_id: created.reservation_id,
-          folio_code: created.folio_code,
-          guest_name: created.guest_name,
-          room_number: created.room?.room_number || '',
-          status: created.status || 'confirmed',
-          balance_due: Number(created.balance_due ?? 0),
-          check_in_date: created.check_in_date || '',
-          check_out_date: created.check_out_date || '',
-        }
-        // Persist so the created folio re-appears on the split/transfer picker
-        // after the modal closes and is findable via search.
-        rememberCreatedFolio(activeBar.value.id, shape)
-        moveTargets.value = [shape, ...moveTargets.value.filter((tt) => tt.reservation_id !== shape.reservation_id)]
-        moveTarget.value = shape.reservation_id
+    if (created?.reservation_id) {
+      const shape = {
+        reservation_id: created.reservation_id,
+        folio_code: created.folio_code,
+        guest_name: created.guest_name,
+        room_number: created.room?.room_number || '',
+        status: created.status || 'confirmed',
+        balance_due: Number(created.balance_due ?? 0),
+        check_in_date: created.check_in_date || '',
+        check_out_date: created.check_out_date || '',
       }
+      // Persist so the created folio re-appears on the split/transfer picker
+      // after the modal closes and is findable via search.
+      rememberCreatedFolio(activeBar.value.id, shape)
+      moveTargets.value = [shape, ...moveTargets.value.filter((tt) => tt.reservation_id !== shape.reservation_id)]
+      moveTarget.value = shape.reservation_id
+    }
   } catch (err) {
     actionError.value = apiErrorMsg(err, t('stayview.actionError'))
   } finally {
