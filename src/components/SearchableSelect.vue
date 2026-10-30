@@ -306,6 +306,7 @@ function onListKeydown(event) {
 // otherwise reopens the panel right after a selection.
 let lastPickAt = 0
 let globalLastPickAt = 0
+let lastPickRoot = null
 
 /**
  * Selects an option: emits the model update and change events (unless
