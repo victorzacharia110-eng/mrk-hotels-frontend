@@ -2491,7 +2491,7 @@
     "staleArrivalsNote": "These guests never arrived and were never resolved. They no longer block closing a day, but they still need cancelling or marking no-show.",
     "warnOutOfOrder": "You are closing {date}, but {last} has already been closed. Days are not required to close in order, so this is allowed — but the reports will read out of sequence.",
     "warnLeavesGap": "This will still leave {count} unclosed day between them: {dates}. Close those too if the period needs to be complete.",
-    "warnOtherDaysOpen": "{count} later business day is still open: {dates}. Closing {date} now does not close them.",
+    "warnOtherDaysOpen": "{count} later business day(s) still open: {dates}. Close them in order - you cannot close a later day before closing earlier ones.",
     "warnStaleRemain": "{count} older booking will still be unresolved after this close. This only settles the day being closed.",
     "warnOneWay": "Closing a day is permanent. The figures are frozen and the night audit cannot be run for that date again.",
     "duplicateRoomsTitle": "{count} room is double-booked for the same date | {count} rooms are double-booked for the same date",
