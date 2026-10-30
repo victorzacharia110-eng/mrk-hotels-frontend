@@ -168,7 +168,7 @@
           </div>
           <div class="kpi">
             <span class="kpi-value" :class="{ 'text-red': report.cash_in_hand < 0 }">{{ fmtMoney(report.cash_in_hand)
-              }}</span>
+            }}</span>
             <span class="kpi-label">{{ $t('nightAudit.cashInHand') }}</span>
           </div>
           <div class="kpi">
@@ -214,7 +214,7 @@
             <div class="dueout-main">
               <span class="dueout-name">{{ guest.guest_name }}</span>
               <span class="dueout-room"><i class="fas fa-bed" aria-hidden="true"></i> {{ guest.room_number || '—'
-                }}</span>
+              }}</span>
             </div>
             <div class="dueout-meta">
               <span><i class="fas fa-calendar-day" aria-hidden="true"></i> {{ $t('nightAudit.departure') }} {{
@@ -281,7 +281,8 @@
             </div>
             <p class="na-progress-label">{{ $t('nightAudit.issuesProgress', {
               resolved: resolvedIssueCount, total:
-              issueTotal }) }}</p>
+                issueTotal
+            }) }}</p>
           </div>
           <p class="na-intro">{{ $t('nightAudit.closePrompt') }}</p>
           <p v-if="issueError" class="alert alert-error" style="margin:0 0 12px;">{{ issueError }}</p>
@@ -297,7 +298,8 @@
                 <button type="button" class="btn btn-sm btn-primary" :disabled="checkingOutId === guest.reservation_id"
                   @click="checkOutDueOut(guest)">
                   <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
-                  {{ checkingOutId === guest.reservation_id ? $t('common.saving') : ($t('nightAudit.checkOut') || 'Checkout') }}
+                  {{ checkingOutId === guest.reservation_id ? $t('common.saving') : ($t('nightAudit.checkOut') ||
+                    'Checkout') }}
                 </button>
                 <button type="button" class="btn btn-sm btn-secondary" @click="goToStayviewForGuest(guest)">{{
                   $t('nightAudit.goToStayview') || 'Go to Stayview' }}</button>
@@ -306,12 +308,13 @@
           </div>
           <div v-if="staleArrivals.count" class="na-issue-block">
             <h4><i class="fas fa-triangle-exclamation" style="color:#dc2626;"></i> {{ $t('nightAudit.warnStaleRemain')
-              }}</h4>
+            }}</h4>
             <div v-for="arr in staleArrivals.items || []" :key="arr.reservation_id" class="na-issue-item">
               <div class="na-issue-main">
                 <div><strong>{{ arr.guest_name }}</strong> · {{ $t('nightAudit.staleArrivalRoom', {
                   room:
-                    arr.room_number || '—' }) }}</div>
+                    arr.room_number || '—'
+                }) }}</div>
                 <div>{{ $t('nightAudit.staleArrivalDate', { date: arr.check_in_date }) }}</div>
               </div>
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -333,11 +336,10 @@
               <i :class="w.level === 'danger' ? 'fas fa-circle-exclamation' : w.level === 'warning' ? 'fas fa-triangle-exclamation' : 'fas fa-circle-info'"
                 aria-hidden="true"></i>
               <span>{{ $t(w.key, w.params) }}</span>
-             <button v-if="w.key === 'nightAudit.warnOtherDaysOpen' || w.key === 'nightAudit.warnLeavesGap'"
-               type="button" class="btn btn-sm btn-secondary close-warning-action"
-               @click="resolveWarning(w)">
-               <i class="fas fa-arrow-right" aria-hidden="true"></i> Go to day
-             </button>
+              <button v-if="w.key === 'nightAudit.warnOtherDaysOpen' || w.key === 'nightAudit.warnLeavesGap'"
+                type="button" class="btn btn-sm btn-secondary close-warning-action" @click="resolveWarning(w)">
+                <i class="fas fa-arrow-right" aria-hidden="true"></i> Go to day
+              </button>
             </li>
           </ul>
         </template>
@@ -345,7 +347,7 @@
       <template #footer>
         <template v-if="!issueSuccess">
           <button type="button" class="btn" @click="dismissIssues">{{ $t('common.cancel') || $t('common.close')
-            }}</button>
+          }}</button>
           <button type="button" class="btn btn-primary" :disabled="closing || !canClose"
             @click="proceedToCloseConfirm">{{ $t('nightAudit.confirmClose') || $t('nightAudit.closeDay') }}</button>
         </template>

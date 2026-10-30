@@ -3310,7 +3310,8 @@ function onCellTap(event, room, iso) {
   bookVacantDay(room, iso)
 }
 
-/** Closes the reservation summary modal. */
+/** Closes the reservation summary modal. When the stay was opened from the
+ *  Night Audit page, ask whether to stay on Stayview or return to Night Audit. */
 function closeBarModal() {
   activeBar.value = null
   folio.value = null
@@ -3321,6 +3322,22 @@ function closeBarModal() {
   invoiceMenuOpen.value = false
   roomTasks.value = []
   roomTasksLoaded.value = false
+  if (route?.query?.from === 'night-audit') {
+    const goBack = window.confirm(
+      'Return to Night Audit page? Click OK to return, Cancel to stay on Stayview.'
+    )
+    if (goBack) goBackToNightAudit()
+  }
+}
+
+/** Returns to the Night Audit page using the saved return location. */
+function goBackToNightAudit() {
+  const target = sessionStorage.getItem('nightAuditReturn')
+  if (target) {
+    window.location.href = target
+  } else {
+    router.push({ name: 'hotel-night-audit' })
+  }
 }
 
 /**
