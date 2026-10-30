@@ -320,7 +320,15 @@
               <div><strong>{{ arr.guest_name }}</strong> · {{ $t('nightAudit.staleArrivalRoom', { room: arr.room_number || '—' }) }}</div>
               <div>{{ $t('nightAudit.staleArrivalDate', { date: arr.check_in_date }) }}</div>
             </div>
-            <button type="button" class="btn btn-sm btn-secondary" @click="goToStayviewForGuest(arr)">{{ $t('nightAudit.goToStayview') || 'Go to Stayview' }}</button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="btn btn-sm btn-primary" :disabled="resolvingArrivalId === arr.reservation_id" @click="markArrivalNoShow(arr)">
+                <i class="fas fa-user-xmark" aria-hidden="true"></i> {{ $t('reservations.noShow') || 'No Show' }}
+              </button>
+              <button type="button" class="btn btn-sm btn-danger" :disabled="resolvingArrivalId === arr.reservation_id" @click="cancelArrival(arr)">
+                <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('common.cancel') || 'Cancel' }}
+              </button>
+              <button type="button" class="btn btn-sm btn-secondary" @click="goToStayviewForGuest(arr)">{{ $t('nightAudit.goToStayview') || 'Go to Stayview' }}</button>
+            </div>
           </div>
         </div>
         <ul v-if="closeWarnings.length" class="na-warn-list">
@@ -591,6 +599,7 @@ const issueProgress = computed(() =>
   issueTotal.value ? Math.min(100, Math.round((resolvedIssueCount.value / issueTotal.value) * 100)) : 100,
 )
 const checkingOutId = ref(null)
+const resolvingArrivalId = ref(null)
 const issueError = ref('')
 const error = ref('')
 const success = ref('')
@@ -750,6 +759,34 @@ async function checkOutDueOut(guest) {
     issueError.value = err.response?.data?.message || t('common.actionFailed')
   } finally {
     checkingOutId.value = null
+  }
+}
+
+async function markArrivalNoShow(arr) {
+  if (!arr?.reservation_id || resolvingArrivalId.value) return
+  resolvingArrivalId.value = arr.reservation_id
+  issueError.value = ''
+  try {
+    await reservationApi.noShow(arr.reservation_id)
+    await load()
+  } catch (err) {
+    issueError.value = err.response?.data?.message || t('common.actionFailed')
+  } finally {
+    resolvingArrivalId.value = null
+  }
+}
+
+async function cancelArrival(arr) {
+  if (!arr?.reservation_id || resolvingArrivalId.value) return
+  resolvingArrivalId.value = arr.reservation_id
+  issueError.value = ''
+  try {
+    await reservationApi.cancel(arr.reservation_id, { reason: 'No show - night audit' })
+    await load()
+  } catch (err) {
+    issueError.value = err.response?.data?.message || t('common.actionFailed')
+  } finally {
+    resolvingArrivalId.value = null
   }
 }
 
