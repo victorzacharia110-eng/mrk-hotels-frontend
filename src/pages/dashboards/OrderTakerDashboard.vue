@@ -352,8 +352,7 @@
         <div class="open-head">
           <h2><i class="fas fa-gauge-high" aria-hidden="true"></i> {{ $t('staffDashboard.title') }} · {{ $t(`orderTaker.${department}`) }}</h2>
           <div class="dash-tools">
-            <input v-model="dashFrom" type="date" class="dash-date" :aria-label="$t('staffDashboard.from')" />
-            <input v-model="dashTo" type="date" class="dash-date" :aria-label="$t('staffDashboard.to')" />
+            <input v-model="dashDate" type="date" class="dash-date" :aria-label="$t('staffDashboard.date')" />
             <button v-if="canManageTables" type="button" class="oh-manage" @click="openTableManager">
               <i class="fas fa-chair" aria-hidden="true"></i> {{ $t('orderTaker.manageTables') }}
             </button>
@@ -1787,8 +1786,7 @@ async function reprintClosedKot(order) {
 
 // Date-filtered department snapshot: stock, low stock, sales summary, fast
 // moving items and the pending/accepted requisition feeds (default today).
-const dashFrom = ref(workingDateStore.workingDate)
-const dashTo = ref(workingDateStore.workingDate)
+const dashDate = ref(workingDateStore.workingDate)
 const dashboard = ref(null)
 const dashboardLoading = ref(false)
 const dashboardError = ref('')
@@ -1807,14 +1805,12 @@ async function loadDashboard() {
     const res = await reportApi.staffDashboard({
       department: department.value,
       outlet_id: selectedOutlet.value?.outlet_id || undefined,
-      from: dashFrom.value || undefined,
-      to: dashTo.value || undefined,
+      date: dashDate.value || undefined,
     })
     const data = res.data
     dashboard.value = data && typeof data === 'object' ? data : null
     // Mirror the effective (server-defaulted) window back into the pickers.
-    if (data?.range?.from) dashFrom.value = data.range.from
-    if (data?.range?.to) dashTo.value = data.range.to
+    if (data?.range?.date) dashDate.value = data.range.date
   } catch (err) {
     dashboardError.value = err.response?.data?.message || t('staffDashboard.loadError')
     dashboard.value = null
@@ -3044,8 +3040,7 @@ onMounted(async () => {
   restorePrinter()
   await workingDateStore.ensureLoaded()
   summaryDate.value = workingDateStore.workingDate
-  dashFrom.value = workingDateStore.workingDate
-  dashTo.value = workingDateStore.workingDate
+  dashDate.value = workingDateStore.workingDate
   loadMenu()
   loadTables()
   loadOpenOrders()
