@@ -131,7 +131,7 @@
             :show-brand="false"
           />
 
-          <button v-if="!report.closed" type="button" class="rb-btn rb-btn-primary" :disabled="saving" @click="closeDay">
+          <button v-if="!report.closed" type="button" class="rb-btn rb-btn-primary" :disabled="saving" @click="showCloseModal = true">
             <i class="fas fa-lock" aria-hidden="true"></i> {{ $t('nightAudit.closeDay') }}
           </button>
         </div>
@@ -459,6 +459,15 @@
       <div class="rb-help-body">
         <p>{{ activeConfig?.helpIntro || $t('reportBrowser.helpGeneric') }}</p>
 
+    <ConfirmModal
+      :show="showCloseModal"
+      :title="$t('nightAudit.closeDay')"
+      :body="$t('nightAudit.closeConfirm')"
+      :busy="saving"
+      @confirm="confirmCloseDay"
+      @cancel="showCloseModal = false"
+    />
+
         <h4 v-if="activeConfig?.compare?.length"><i class="fas fa-diagram-project"></i> {{ $t('reportBrowser.howCompare') }}</h4>
         <ul v-if="activeConfig?.compare?.length">
           <li v-for="(tip, i) in activeConfig.compare" :key="i">{{ tip }}</li>
@@ -511,6 +520,7 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 import ReportCharts from '@/components/reports/ReportCharts.vue'
 import NightAuditSheet from '@/components/reports/NightAuditSheet.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -1456,8 +1466,11 @@ function statusLabel(status) {
   return key && te(key) ? t(key) : status.replace('_', ' ')
 }
 
-async function closeDay() {
-  if (!window.confirm(t('nightAudit.closeConfirm'))) return
+const showCloseModal = ref(false)
+
+
+async function confirmCloseDay() {
+  showCloseModal.value = false
   saving.value = true
   error.value = ''
   try {

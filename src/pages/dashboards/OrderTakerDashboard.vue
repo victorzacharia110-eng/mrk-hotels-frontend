@@ -1354,11 +1354,9 @@ function switchDepartment(dept) {
   if (fixedDept.value && dept !== fixedDept.value) return
   department.value = dept
   activeCategory.value = ''
-  // The other department has its own service lines and sub-categories, so a
-  // sub-category picked on this side would be meaningless there.
+  // Preserve the selected table and the picked menu items across the switch,
+  // per the review: switching BAR/RESTAURANT must not wipe them.
   activeSubCategory.value = ''
-  orderLines.value = []
-  form.value = { table_number: '', covers: 0, order_type: defaultOrderType(), notes: '' }
   loadMenu()
   loadOpenOrders()
   loadDeptOrders()
