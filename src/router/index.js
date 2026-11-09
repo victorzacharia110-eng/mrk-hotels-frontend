@@ -74,10 +74,10 @@ const hotelChildren = [
   // Ephemeral staff status updates.
   { path: 'statuses', name: 'hotel-statuses', component: () => import('@/pages/statuses/StatusesPage.vue'), meta: { module: 'statuses' } },
   // Menu item management.
-  { path: 'menu', name: 'hotel-menu', component: () => import('@/pages/menu/MenuListPage.vue'), meta: { module: 'menu' } },
+  { path: 'menu', name: 'hotel-menu', component: () => import('@/pages/menu/MenuListPage.vue'), meta: { module: 'menu', role: ['hotel_admin', 'manager'] } },
   // Who changed the menu, and when. Guarded by the same `menu` module as the page
   // above, so the two can never drift apart and a waiter is turned away from both.
-  { path: 'menu/activity', name: 'hotel-menu-activity', component: () => import('@/pages/menu/MenuActivityPage.vue'), meta: { module: 'menu' } },
+  { path: 'menu/activity', name: 'hotel-menu-activity', component: () => import('@/pages/menu/MenuActivityPage.vue'), meta: { module: 'menu', role: ['hotel_admin', 'manager'] } },
   // POS outlets (restaurant/bar) cashiers pick from after login.
   { path: 'outlets', name: 'hotel-outlets', component: () => import('@/pages/outlets/OutletManagePage.vue'), meta: { module: 'outlets' } },
   // Till printer connection (Web Serial ESC/POS thermal printing).
@@ -389,7 +389,7 @@ const routes = [
         path: 'transaction-lock',
         name: 'cashier-transaction-lock',
         component: () => import('@/pages/cashier/CashierTransactionLockPage.vue'),
-        meta: { titleKey: 'cashier.nav.transactionLock' },
+        meta: { titleKey: 'cashier.nav.transactionLock', role: ['cashier', 'bartender', 'hotel_admin', 'manager'] },
       },
       {
         path: 'account-lookup',
@@ -415,6 +415,32 @@ const routes = [
           titleKey: 'cashier.nav.dayClose',
           role: ['cashier', 'bartender', 'waiter', 'hotel_admin', 'manager', 'accountant'],
         },
+      },
+      // Inventory workbench surfaced from the cashier panel: low stock,
+      // transfers, stock counts and stock adjustments.
+      {
+        path: 'inventory/low-stock',
+        name: 'cashier-low-stock',
+        component: () => import('@/pages/cashier/CashierLowStockPage.vue'),
+        meta: { titleKey: 'cashier.nav.lowStock' },
+      },
+      {
+        path: 'inventory/transfers',
+        name: 'cashier-stock-transfers',
+        component: () => import('@/pages/store/StoreTransfersPage.vue'),
+        meta: { titleKey: 'cashier.nav.stockTransfers' },
+      },
+      {
+        path: 'inventory/stock-counts',
+        name: 'cashier-stock-counts',
+        component: () => import('@/pages/store/StoreStockCountsPage.vue'),
+        meta: { titleKey: 'cashier.nav.stockCounts' },
+      },
+      {
+        path: 'inventory/stock-adjust',
+        name: 'cashier-stock-adjust',
+        component: () => import('@/pages/store/StoreStockAdjustPage.vue'),
+        meta: { titleKey: 'cashier.nav.stockAdjust' },
       },
       {
         path: 'reports',

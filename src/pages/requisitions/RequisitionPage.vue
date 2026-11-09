@@ -50,7 +50,6 @@
           {{ $t('requisitionPanel.statusComplete') }}
         </button>
       </div>
-      <div class="rq-search"><i class="fas fa-magnifying-glass"></i><input v-model="q" :placeholder="$t('common.search')" /></div>
       <span v-if="restricted" class="rq-dept-badge"><i class="fas fa-building"></i> {{ deptName }}</span>
     </div>
 
@@ -63,12 +62,9 @@
           <thead>
             <tr>
               <th>{{ $t('requisitionPanel.sn') }}</th>
-              <th>{{ $t('common.date') }}</th>
               <th>{{ $t('requisitionPanel.department') }}</th>
               <th>{{ $t('requisitionPanel.outlet') }}</th>
-              <th>{{ $t('requisitionPanel.items') }}</th>
               <th>{{ $t('requisitionPanel.costValue') }}</th>
-              <th>{{ $t('common.status') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -76,12 +72,9 @@
               <td>
                 <button class="rq-ref" @click.stop="openDetail(indent)">{{ indent.indent_number }}</button>
               </td>
-              <td>{{ fmtDate(indent.created_at) }}</td>
               <td>{{ indent.department_name || indent.department || '—' }}</td>
               <td>{{ indent.outlet_name || '—' }}</td>
-              <td :title="(indent.items || []).map((l) => l.item_name || l.name || `#${l.item_id}`).join(', ')">{{ lineSummary(indent.items) }}</td>
               <td><strong>{{ money(costValue(indent)) }}</strong></td>
-              <td><span class="rq-chip" :class="statusChip(indent.status)">{{ statusLabel(indent.status) }}</span></td>
             </tr>
           </tbody>
         </table>
@@ -104,6 +97,12 @@
           <div class="rq-fld">
             <span>{{ $t('requisitionPanel.items') }}</span>
             <p v-if="restricted && !availableItems.length" class="rq-hint">{{ $t('requisitionPanel.noDeptItems') }}</p>
+            <div class="rq-line rq-line-head">
+              <span>{{ $t('requisitionPanel.items') }}</span>
+              <span>{{ $t('requisitionPanel.requested') }}</span>
+              <span>{{ $t('requisitionPanel.siUnit') }}</span>
+              <span></span>
+            </div>
             <div v-for="(line, idx) in form.lines" :key="idx" class="rq-line">
               <SearchableSelect
                 v-model="line.item_id"
@@ -114,6 +113,7 @@
                 empty-as-hint
               />
               <input v-model.number="line.quantity" type="number" min="0.01" step="any" class="rq-input slim" />
+              <span class="rq-si-unit">{{ unitOf(line.item_id) }}</span>
               <button class="rq-x" @click="form.lines.splice(idx, 1)">×</button>
             </div>
             <button class="rq-btn sm ghost" @click="form.lines.push({ item_id: availableItems[0]?.item_id || null, quantity: 1 })">
@@ -368,7 +368,6 @@ const tab = ref(isStoreManager.value ? 'received' : 'mine')
 const indents = ref([])
 const loading = ref(false)
 const saving = ref(false)
-const q = ref('')
 const notice = ref('')
 const err = ref('')
 
@@ -408,10 +407,6 @@ const statusKeyMap = {
   rejected: 'requisitionPanel.statusRejected',
   voided: 'requisitionPanel.statusVoided',
 }
-const statusChipClass = {
-  pending: 'warn', forwarded: 'info', approved: 'ok', fulfilled: 'ok', rejected: 'bad', voided: 'muted', draft: 'muted',
-}
-
 const departmentOptions = computed(() =>
   departments.value.map((d) => ({ value: d.department_id, label: d.name })),
 )
@@ -447,9 +442,15 @@ const myDepartmentId = computed(() => {
 const itemOptions = computed(() =>
   availableItems.value.map((i) => ({
     value: i.item_id,
-    label: `${i.item_name} — ${t('requisitionPanel.inStock')}: ${Number(i.shelf_quantity_in_stock ?? i.quantity_in_stock ?? 0)}`,
+    label: `${i.item_name} — ${t('requisitionPanel.inStock')}: ${Number(i.shelf_quantity_in_stock ?? i.quantity_in_stock ?? 0)} ${i.unit || ''}`.trim(),
   })),
 )
+
+/** SI unit of the selected registered item, shown in the requisition line. */
+function unitOf(itemId) {
+  if (!itemId) return '—'
+  return items.value.find((i) => String(i.item_id) === String(itemId))?.unit || '—'
+}
 
 const emptyText = computed(() => {
   if (tab.value === 'received') return t('requisitionPanel.emptyReceived')
@@ -465,33 +466,11 @@ const filtered = computed(() => {
   const bucket = statusFilter.value === 'complete' ? completeStatuses : pendingStatuses
   list = list.filter((i) => bucket.includes(i.status))
   if (outletFilter.value) list = list.filter((i) => i.outlet_id === outletFilter.value)
-  const term = q.value.trim().toLowerCase()
-  if (term) {
-    list = list.filter(
-      (i) =>
-        (i.indent_number || '').toLowerCase().includes(term) ||
-        (i.department_name || '').toLowerCase().includes(term) ||
-        (i.requester_name || '').toLowerCase().includes(term) ||
-        (i.items || []).some((l) => (l.item_name || '').toLowerCase().includes(term)),
-    )
-  }
   return list
 })
 
 function statusLabel(s) {
   return s ? t(statusKeyMap[s] || 'common.status') : '—'
-}
-function fmtDate(v) {
-  return v ? new Date(v).toLocaleDateString() : '—'
-}
-function lineSummary(lines) {
-  const list = lines || []
-  if (!list.length) return '—'
-  const first = `${list[0].item_name || '—'} ×${list[0].quantity}`
-  return list.length > 1 ? `${first}…` : first
-}
-function statusChip(s) {
-  return statusChipClass[s] || 'muted'
 }
 function money(value) {
   return formatMoney(value || 0)
@@ -950,6 +929,12 @@ watch(() => selectedOutlet.value?.outlet_id, loadItems)
 .rq-fld { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #334155; }
 .rq-line { display: flex; gap: 8px; align-items: center; }
 .rq-line .ss { flex: 1; min-width: 0; }
+.rq-line-head { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b; }
+.rq-line-head span:first-child { flex: 1; }
+.rq-line-head span:nth-child(2) { width: 90px; }
+.rq-line-head span:nth-child(3) { width: 90px; }
+.rq-line-head span:nth-child(4) { width: 28px; }
+.rq-si-unit { width: 90px; font-size: 12px; color: #334155; font-weight: 600; }
 .rq-modal-foot { display: flex; justify-content: flex-end; gap: 10px; padding-top: 18px; }
 .rq-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: #334155; margin-bottom: 12px; }
 .rq-meta strong { color: #0f172a; }

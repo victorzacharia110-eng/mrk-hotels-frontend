@@ -131,7 +131,8 @@
     "autoClosesIn": "Itafunga yenyewe kwa sekunde {seconds}",
     "share": "Shiriki",
     "voided": "Imebatilishwa",
-    "menuToggle": "Badilisha menyu"
+    "menuToggle": "Badilisha menyu",
+    "language": "Lugha"
   },
   "laundry": {
     "title": "Dobi",
@@ -1406,7 +1407,9 @@
     "descriptionSwPlaceholder": "Acha tupu ili kuonyesha maelezo ya Kiingereza kwenye screen ya Kiswahili.",
     "translationHint": "Si lazima. Acha tupu na jina la Kiingereza litatumika kwenye screen ya Kiswahili.",
     "pickSubCategory": "Chagua kategoria ndogo",
-    "pickCategoryFirst": "Chagua kategoria kwanza"
+    "pickCategoryFirst": "Chagua kategoria kwanza",
+    "reorderLevel": "Kiwango cha Kuagiza Tena",
+    "reorderLevelHint": "Kiwango cha tahadhari ya stoo kwa bidhaa hii, hukiwekwa kwa kila bidhaa ya menyu badala ya stoo kuu."
   },
   "outlets": {
     "title": "Sehemu za Kuuzia (POS)",
@@ -1957,10 +1960,11 @@
     "rejectReason": "Sababu ya kukataa"
   },
   "requisitionPanel": {
-    "title": "Maombi ya Bidhaa",
+    "title": "Requisitions",
+    "siUnit": "Kipimo cha SI",
     "subtitle": "Omba bidhaa zilizosajiliwa kwenye ghala na ujibu maombi ya idara.",
     "myRequisitions": "Maombi yangu",
-    "inbox": "Maombi yaliyorejeshwa",
+    "inbox": "Indent Iliyopokelewa",
     "receivedIndents": "Maombi yaliyopokelewa",
     "new": "Ombi jipya",
     "refresh": "Fungua upya",
@@ -4427,6 +4431,8 @@
     "summaryTitle": "Oda zangu",
     "summarySubtitle": "Tikiti zako na jumla za leo.",
     "summaryRunning": "Zinaendelea",
+    "summaryPending": "Zinasubiri",
+    "summaryTotal": "Jumla",
     "summarySettled": "Zimelipwa",
     "summaryVoided": "Zimefutwa",
     "summaryTotalToday": "Jumla ya leo",
@@ -4443,7 +4449,7 @@
     "summaryStatuses": "Hali ya wafanyakazi",
     "summaryIssueReports": "Ripoti za matatizo",
     "orderTypeDineIn": "DINE IN",
-    "orderTypeTakeAway": "TAKE AWAY",
+    "orderTypeTakeAway": "TAKE OUT",
     "orderTypeRoom": "ODA ZA CHUMBINI",
     "summaryViewAll": "Ona zote",
     "summaryViewItems": "Ona bidhaa",
@@ -4506,6 +4512,7 @@
     "filterReady": "Tayari",
     "filterServed": "Zimetolewa",
     "filterUnpaid": "Ambazo hazijalipwa",
+    "filterSettled": "Zimelipwa",
     "openNoMatch": "Hakuna agizo linalolingana na utafutaji wako.",
     "openFor": "Ilifunguliwa {time}",
     "minShort": "{n}dk",
@@ -4529,6 +4536,7 @@
     "voidAllSummary": "Agizo {count} · {currency} {total} · Haijalipwa",
     "voidAllDone": "Agizo {count} limetenguliwa",
     "voidAllPartial": "{done} kati ya {total} agizo limetenguliwa · {failed} limeshindikana",
+    "void": "Tengua",
     "voidSelected": "Tengua zilizochaguliwa",
     "voidSelectedTitle": "Tengua agizo zilizochaguliwa",
     "voidSelectedSummary": "Agizo {count} · {currency} {total} · Haijalipwa",
@@ -4551,6 +4559,7 @@
     "stockValue": "Thamani",
     "lowStock": "Stoo ya chini",
     "lowStockTitle": "Stoo ya chini",
+    "viewLowStock": "Tazama bidhaa zote zilizo chini ya kiwango",
     "lowStockEmpty": "Vizuri — hakuna kinachoisha.",
     "salesTitle": "Muhtasari wa mauzo",
     "salesOrders": "Oda",
@@ -5170,7 +5179,7 @@
       "dineIn": "Kula Ndani",
       "takeAway": "Chukua Nje",
       "roomService": "Huduma ya Chumba",
-      "delivery": "Meneja wa Usafirishaji",
+      "delivery": "Usafirishaji",
       "noCharge": "Bila Malipo",
       "summaryGroup": "Muhtasari",
       "orderSummary": "Muhtasari wa Oda",
@@ -5185,6 +5194,11 @@
       "printer": "Printa",
       "printSettings": "Mipangilio ya Uchapishaji",
       "waiterAssignment": "Mgawanyo wa Waiters",
+      "inventoryGroup": "BIDHAA",
+      "lowStock": "Bidhaa Chache",
+      "stockTransfers": "Uhamisho wa Bidhaa",
+      "stockCounts": "Hesabu ya Bidhaa",
+      "stockAdjust": "Marekebisho ya Bidhaa",
       "requisitions": "REQUISITIONS",
       "reports": "Ripoti",
       "reportBrowser": "Kivinjari cha Ripoti",
@@ -5199,6 +5213,7 @@
     },
     "shift": {
       "title": "Meneja wa Zamu",
+      "today": "Leo",
       "open": "Funguliwa",
       "closed": "Imefungwa",
       "closedHint": "Rejesta imefungwa. Fungua zamu kabla ya kuhudumia.",
@@ -5228,7 +5243,7 @@
       "muted": "Ukurasa umetulia."
     },
     "txlock": {
-      "title": "Kufuli la Miamala",
+      "title": "NET LOCK",
       "orderNo": "Namba ya Oda",
       "tableNo": "Namba ya Meza",
       "type": "Aina",
@@ -5335,6 +5350,8 @@
       "accountEmpty": "Chagua akaunti",
       "accountHint": "Chagua mojawapo ya akaunti zilizosajiliwa za mikopo.",
       "deliveryPhone": "Nambari ya Simu",
+      "driver": "Dereva",
+      "driverPlaceholder": "Chagua dereva",
       "expectedMinutes": "Inategemewa (dak)",
       "deliveryAddress": "Anwani ya Uwasilishaji",
       "accountRegistryEmpty": "Hakuna akaunti ya mikopo ilyosajiliwa bado, kwa hivyo hakuna cha kuchagua.",
@@ -5345,7 +5362,10 @@
       "stockCount": "Stock {qty} {unit}",
       "table": "Jedwali",
       "room": "Chumba",
-      "guest": "Mgeni"
+      "guest": "Mgeni",
+      "cancel": "Ghairi",
+      "category": "Kundi",
+      "allCategories": "Makundi yote"
     },
     "dineIn": {
       "dateTime": "Tarehe/Saa",
@@ -5353,7 +5373,21 @@
       "moveTicket": "Hamisha Tiketi",
       "newOrderFor": "Agizo Jipya kwa {table}",
       "noRunning": "Hakuna maagizo yanayoendelea",
-      "noTables": "Hakuna meza"
+      "noTables": "Hakuna meza",
+      "noTransferTargets": "Hakuna meza ya kuhamishia",
+      "occupied": "Imechukuliwa",
+      "openTicket": "Fungua Tikiti",
+      "running": "ZINAENDELEA",
+      "runningCount": "Zinaendelea {n}",
+      "takeOrder": "Chukua Oda",
+      "title": "NDANI YA HOTELI",
+      "today": "Leo",
+      "transfer": "Hamisha",
+      "transferHint": "Chagua meza lengwa",
+      "transferPlaceholder": "Chagua meza",
+      "transferTarget": "Hamishia",
+      "transferTitle": "Hamisha Oda",
+      "vacant": "Huru"
     },
     "waiters": {
       "title": "Waiters",
@@ -5403,15 +5437,29 @@
       "pickInventory": "Chagua bidhaa ya hifadhi…",
       "qtyPerUnit": "Kiasi / Unit",
       "unit": "Unit",
+      "siUnit": "Kipimo cha SI",
+      "siUnitHint": "Inajazwa kutoka bidhaa ya hifadhi iliyochaguliwa",
       "unitHint": "mf. vifungo, ml, g",
       "stock": "Hifadhi",
       "lineCost": "Gharama",
       "costPerUnit": "Gharama ya viungo kwa unit",
       "vsPrice": "dhidi ya bei ya mauzo",
-      "noIngredients": "Hakuna viungo vilivyounganishwa bado. Ongeza ili kuanza kufuatilia hifadhi."
+      "noIngredients": "Hakuna viungo vilivyounganishwa bado. Ongeza ili kuanza kufuatilia hifadhi.",
+      "addToRecipe": "Ongeza kwenye Mapishi",
+      "allMenus": "Menyu Zote",
+      "autoFill": "Jaza kiotomatiki",
+      "barMenu": "Menyu ya Baa",
+      "kitchenMenu": "Menyu ya Jikoni",
+      "quantityHint": "Tumia desimali hadi 2",
+      "remove": "Ondoa",
+      "saving": "Inahifadhi...",
+      "searchCategory": "Tafuta kategoria"
     },
     "takeAway": {
       "tabAll": "ZOTE",
+      "tabPending": "ZINASUBIRI",
+      "tabSettled": "ZIMELIPWA",
+      "tabVoided": "ZIMEGHAIRIWA",
       "tabPreparing": "ZINAANDALIWA",
       "tabReady": "TAYARI",
       "tabCompleted": "ZIMEKAMILIKA",
@@ -5419,8 +5467,14 @@
       "today": "Leo",
       "guest": "Mgeni",
       "dateTime": "Tarehe/Saa",
+      "time": "Saa",
       "newOrder": "Agizo Jipya",
-      "none": "Hakuna"
+      "none": "Hakuna",
+      "status": {
+        "pending": "Inasubiri",
+        "completed": "Imekamilika",
+        "cancelled": "Imefutwa"
+      }
     },
     "roomService": {
       "title": "Huduma ya Chumba — Wageni Ndani",
@@ -5436,6 +5490,7 @@
       "completed": "Zimekamilika",
       "today": "Leo",
       "dateTime": "Tarehe / Muda",
+      "time": "Saa",
       "items": "Bidhaa",
       "newOrder": "Agizo Jipya",
       "tabAll": "ZOTE",
@@ -5447,10 +5502,11 @@
       "pending": "INASUBIRI",
       "settled": "IMELIPWA",
       "voided": "IMEBATILISHWA",
-      "ready": "TAYARI"
+      "ready": "TAYARI",
+      "all": "ZOTE"
     },
     "delivery": {
-      "addOrder": "+ Ongeza Oda ya Usafirishaji",
+      "addOrder": "Ongeza Oda ya Usafirishaji",
       "tabAll": "Zote",
       "tabPreparing": "Zinajiandaa",
       "tabDispatched": "Zimetumwa",
@@ -5459,6 +5515,9 @@
       "address": "Anwani",
       "eta": "Muda",
       "minutes": "dak",
+      "time": "Saa",
+      "sender": "Mtumaji",
+      "driver": "Dereva",
       "none": "Hakuna oda za usafirishaji bado.",
       "status": {
         "pending": "Inajiandaa",
@@ -5486,6 +5545,7 @@
       "none": "Hakuna maagizo ya bure kwa tarehe hii.",
       "tag": "BILA MALIPO",
       "dateTime": "Tarehe / Muda",
+      "time": "Saa",
       "previousOrders": "Maagizo ya awali",
       "today": "Leo",
       "workingDate": "Tarehe ya Kazi",
@@ -5505,6 +5565,11 @@
       "workingDate": "Tarehe ya Kazi",
       "order": "Oda",
       "waiter": "Mhudumu",
+      "searchWaiter": "Tafuta kwa mhudumu",
+      "orderType": "Aina ya Oda",
+      "allTypes": "Aina zote",
+      "addItems": "Ongeza bidhaa",
+      "void": "Ghairi",
       "time": "Muda",
       "dateTime": "Tarehe / Muda",
       "table": "Meza / Chumba",
@@ -5643,6 +5708,11 @@
       "kitchenMenu": "Menyu ya Jikoni",
       "barMenu": "Menyu ya Baa",
       "searchCategory": "Tafuta kundi au bidhaa...",
+      "searchItem": "Tafuta bidhaa...",
+      "allCategories": "Kategoria Zote",
+      "allSubCategories": "Kategoria Ndogo Zote",
+      "subCategory": "Kategoria Ndogo",
+      "siUnit": "Kipimo cha SI",
       "items": "bidhaa",
       "name": "Jina",
       "category": "Kundi",
@@ -5680,7 +5750,8 @@
       "timezoneSaved": "Saa rasmi zimesasishwa kikamilifu.",
       "blockingTitle": "Oda zilizo wazi za siku zilizopita",
       "blockingCount": "Oda {n} zinashikilia siku za kazi zilizopita wazi",
-      "blockingHint": "Oda hizi bado zinaendelea au hazijalipwa kwa siku ya kazi iliyopita. Zilipize au zifute zote, kisha funga kila siku, kabla ya kuchukua oda mpya.",
+      "blockingHint": "Malipo hufanywa kwenye ukurasa wa Muhtasari wa Oda. Oda hizi bado zinaendelea au hazijalipwa kwa siku ya kazi iliyopita. Zilipize au zifute zote, kisha funga kila siku, kabla ya kuchukua oda mpya.",
+      "openSummary": "Muhtasari wa Oda",
       "businessDate": "Siku ya kazi",
       "orderNo": "Oda Na.",
       "table": "Meza / Chumba",
@@ -5700,7 +5771,7 @@
       "reasonPlaceholder": "mf. mgeni aliondoka, imeingizwa kwa makosa",
       "reminderTitle": "Funga Siku",
       "reminderText": "Oda unazoingiza zitahifadhiwa chini ya tarehe ya kazi: {today}.",
-      "proceed": "Endelea na Funga Siku",
+      "proceed": "Endelea na Siku ya Kufunga",
       "confirm": "Thibitisha",
       "workingDate": "Tarehe ya Kazi"
     },
@@ -6120,6 +6191,18 @@
       "staff": "Ongeza wafanyakazi, weka majukumu na ruhusa.",
       "trustedDevices": "Vifaa vinavyoruhusiwa kuingia kwa PIN.",
       "import": "Pakia data nyingi kwa pamoja."
+    }
+  },
+  "order": {
+    "summary": {
+      "running": "ZINASUBIRI",
+      "totalToday": "JUMLA"
+    },
+    "types": {
+      "delivery": "Usafirishaji",
+      "dine_in": "NDANI",
+      "room_service": "Huduma ya Chumba",
+      "takeaway": "CHUKUA NJE"
     }
   }
 }

@@ -19,9 +19,14 @@
       <label class="sm-inline-label" for="sum-date">{{ $t('cashier.summary.workingDate') }}</label>
       <OrderDateNav input-id="sum-date" v-model="date" :today="workingDateStore.workingDate"
         :today-label="$t('cashier.takeAway.today')" @change="load" />
+      <label class="sm-inline-label" for="sum-type">{{ $t('cashier.summary.orderType') }}</label>
+      <select id="sum-type" v-model="typeFilter" class="sm-select sm">
+        <option value="">{{ $t('cashier.summary.allTypes') }}</option>
+        <option v-for="type in orderTypeOptions" :key="type" :value="type">{{ typeLabel(type) }}</option>
+      </select>
       <div class="sm-search">
         <i class="fas fa-search" aria-hidden="true"></i>
-        <input v-model="search" type="search" :placeholder="$t('common.search')" />
+        <input v-model="search" type="search" :placeholder="$t('cashier.summary.searchWaiter')" />
       </div>
     </div>
 
@@ -43,10 +48,6 @@
         void-selected works on every ticked order this role may void.
       -->
       <div class="table-actions">
-        <button type="button" class="sm-btn sm" :disabled="!singleSelected"
-          :title="$t('cashier.summary.viewOrder')" @click="actOnSingle(openDrawer)">
-          <i class="fas fa-eye" aria-hidden="true"></i> {{ $t('cashier.summary.view') }}
-        </button>
         <button type="button" class="sm-btn sm ghost" :disabled="!canSettleSelected"
           :title="$t('cashier.summary.settle')" @click="actOnSingle(settle)">
           <i class="fas fa-money-bill" aria-hidden="true"></i> {{ $t('cashier.summary.settle') }}
@@ -54,14 +55,6 @@
         <button type="button" class="sm-btn sm" :disabled="!canFreezeSelected"
           :title="$t('storeManager.common.freeze')" @click="actOnSingle(freeze)">
           <i class="fas fa-snowflake" aria-hidden="true"></i> {{ $t('storeManager.common.freeze') }}
-        </button>
-        <button type="button" class="sm-btn sm success" :disabled="!canUnfreezeSelected"
-          :title="$t('storeManager.common.unfreeze')" @click="actOnSingle(unfreeze)">
-          <i class="fas fa-sun" aria-hidden="true"></i> {{ $t('storeManager.common.unfreeze') }}
-        </button>
-        <button type="button" class="sm-btn sm ghost" :disabled="!canRecallSelected"
-          :title="$t('cashier.summary.recall')" @click="actOnSingle(recall)">
-          <i class="fas fa-clock-rotate-left" aria-hidden="true"></i> {{ $t('cashier.summary.recall') }}
         </button>
         <button type="button" class="sm-btn sm ghost" :disabled="!singleSelected"
           :title="$t('cashier.summary.reprintReceipt')" @click="actOnSingle(reprint)">
@@ -74,12 +67,7 @@
         <span class="spacer"></span>
         <button type="button" class="sm-btn sm danger-ghost" :disabled="!selectedOrders.length"
           :title="$t('cashier.summary.voidSelected')" @click="openSelectedVoid">
-          <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.summary.voidSelected') }}<template v-if="selectedOrders.length"> ({{ selectedOrders.length }})</template>
-        </button>
-        <button v-if="bulkVoidable.length" type="button" class="sm-btn sm danger-ghost"
-          :title="$t('cashier.summary.voidAll')" :aria-label="$t('cashier.summary.voidAll')"
-          @click="openBulkVoid">
-          <i class="fas fa-xmark" aria-hidden="true"></i> {{ $t('cashier.summary.voidAll') }}
+          <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.summary.void') }}<template v-if="selectedOrders.length"> ({{ selectedOrders.length }})</template>
         </button>
       </div>
       <p v-if="!selected.length && !loading" class="table-actions-hint">
@@ -103,7 +91,7 @@
             </th>
             <th>{{ $t('cashier.summary.order') }}</th>
             <th>{{ $t('cashier.summary.waiter') }}</th>
-            <th>{{ $t('cashier.summary.dateTime') }}</th>
+            <th>{{ $t('cashier.summary.time') }}</th>
             <th>{{ $t('cashier.summary.table') }}</th>
             <th>{{ $t('cashier.summary.type') }}</th>
             <th>{{ $t('common.status') }}</th>
@@ -131,7 +119,7 @@
               <span v-if="order.is_no_charge" class="nc-tag">{{ $t('cashier.noCharge.tag') }}</span>
             </td>
             <td>{{ order.waiter_name || '—' }}</td>
-            <td>{{ dateTimeOf(order) }}</td>
+            <td>{{ timeOf(order) }}</td>
             <td>{{ order.table_number || order.room_number || '—' }}</td>
             <td>{{ typeLabel(order.order_type) }}</td>
             <td><span class="chip" :class="chipFor(order)">{{ statusLabel(order) }}</span></td>
@@ -169,10 +157,16 @@
         <div class="drawer-items">
           <div class="drawer-items-head">
             <h3>{{ $t('cashier.summary.itemsTitle') }}</h3>
-            <button v-if="isRunning(drawerOrder)" type="button" class="sm-btn sm ghost" @click="editing = !editing">
-              <i class="fas" :class="editing ? 'fa-check' : 'fa-pen'" aria-hidden="true"></i>
-              {{ editing ? $t('cashier.summary.doneEditing') : $t('cashier.summary.editItems') }}
-            </button>
+            <div v-if="isRunning(drawerOrder)" class="drawer-items-tools">
+              <button type="button" class="sm-btn sm ghost" :title="$t('cashier.summary.editItems')"
+                :aria-label="$t('cashier.summary.editItems')" @click="editing = !editing">
+                <i class="fas" :class="editing ? 'fa-check' : 'fa-pen'" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="sm-btn sm ghost" :title="$t('cashier.summary.addItems')"
+                :aria-label="$t('cashier.summary.addItems')" @click="addItems">
+                <i class="fas fa-plus" aria-hidden="true"></i>
+              </button>
+            </div>
           </div>
 
           <ul v-if="drawerOrder.items?.length" class="drawer-item-list">
@@ -409,45 +403,6 @@
       </div>
     </div>
 
-    <!-- Void every ticket currently listed (honours the active tab + search). -->
-    <div v-if="bulkVoidOpen" class="pay-modal-overlay" @click.self="closeBulkVoid">
-      <div class="pay-modal" role="dialog" aria-modal="true" :aria-label="$t('cashier.summary.voidAllTitle')">
-        <div class="pay-modal-head">
-          <h2><i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.summary.voidAllTitle') }}</h2>
-          <button type="button" class="pay-modal-close" aria-label="Close" @click="closeBulkVoid">
-            <i class="fas fa-xmark"></i>
-          </button>
-        </div>
-
-        <p v-if="bulkVoidError" class="alert alert-error">{{ bulkVoidError }}</p>
-        <p class="pay-order-line">
-          {{ $t('cashier.summary.voidAllSummary', { count: bulkVoidable.length, total: money(bulkVoidTotal) }) }}
-        </p>
-
-        <div class="pay-ref">
-          <label :for="bulkVoidReasonId">{{ $t('storeManager.common.reason') }}</label>
-          <input
-            :id="bulkVoidReasonId"
-            v-model.trim="bulkVoidReason"
-            type="text"
-            maxlength="255"
-            :disabled="savingBulkVoid"
-            :placeholder="$t('storeManager.common.reasonTitle')"
-          />
-        </div>
-
-        <div class="pay-modal-foot">
-          <button type="button" class="btn btn-secondary" :disabled="savingBulkVoid" @click="closeBulkVoid">
-            {{ $t('common.cancel') }}
-          </button>
-          <button type="button" class="btn btn-primary" :disabled="savingBulkVoid || !bulkVoidReason" @click="confirmBulkVoid">
-            <i class="fas fa-ban" aria-hidden="true"></i>
-            {{ savingBulkVoid ? $t('common.saving') : $t('cashier.summary.voidAllConfirm', { count: bulkVoidable.length }) }}
-          </button>
-        </div>
-      </div>
-    </div>
-
     <!-- Void only the tickets ticked with the row checkboxes. -->
     <div v-if="selectedVoidOpen" class="pay-modal-overlay" @click.self="closeSelectedVoid">
       <div class="pay-modal" role="dialog" aria-modal="true" :aria-label="$t('cashier.summary.voidSelectedTitle')">
@@ -498,6 +453,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { cashierApi, orderApi, hotelSettingsApi, tableApi } from '@/api'
 import { selectedOutlet } from '@/composables/useOutletContext'
 import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
@@ -514,7 +470,7 @@ import { restorePrinter, printerState, printerSupported } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { orderPrintLines } from '@/utils/orderPrint'
 import { hasPrintableLines } from '@/utils/receipts'
-import { formatOrderDateTime, localDateOf, todayISO } from '@/utils/dates'
+import { formatOrderDateTime, formatTime, localDateOf, todayISO } from '@/utils/dates'
 import { toast } from '@/utils/toast'
 
 const { t, te } = useI18n()
@@ -540,7 +496,9 @@ const error = ref('')
  *  the Day Close open business date. */
 const workingDateStore = useWorkingDateStore()
 const date = ref(workingDateStore.workingDate)
+const router = useRouter()
 const search = ref('')
+const typeFilter = ref('')
 const activeTab = ref('running')
 const printArea = ref(null)
 const supported = computed(() => printerSupported() && !!printStore.resolveTillPrinter())
@@ -633,16 +591,19 @@ async function loadTables() {
  * selectable (the board does the same for the waiter holding it).
  */
 const transferTableOptions = computed(() => {
-  const current = String(drawerOrder.value?.table_number || '').trim().toLowerCase()
+  // A free table, or one held by this same waiter, is a valid destination.
+  // Comparing against the current TABLE name (as this used to) disabled every
+  // occupied table, including the ones this user owns.
+  const mine = String(drawerOrder.value?.waiter_name || '').trim().toLowerCase()
   return tables.value.map((table) => {
     const name = String(table.table_name)
     const occupant = occupiedTables.value.get(name)
-    const isSelf = !occupant || String(occupant).toLowerCase() === current
+    const isMine = !occupant || String(occupant).trim().toLowerCase() === mine
     const label = table.section ? `${name} · ${table.section}` : name
     return {
       value: name,
-      label: occupant && !isSelf ? `${label} — ${t('orderTaker.occupiedBy', { waiter: occupant })}` : label,
-      disabled: !isSelf,
+      label: occupant && !isMine ? `${label} — ${t('orderTaker.occupiedBy', { waiter: occupant })}` : label,
+      disabled: !isMine,
     }
   })
 })
@@ -675,13 +636,18 @@ const NON_PLACEABLE_TYPES = ['takeaway', 'delivery']
 const canMoveBill = (order) =>
   !!order && !['cancelled', 'merged'].includes(order.status) && !NON_PLACEABLE_TYPES.includes(order.order_type)
 
+const orderTypeOptions = computed(() =>
+  [...new Set(orders.value.map((order) => order.order_type).filter(Boolean))].sort(),
+)
+
 const filteredOrders = computed(() => {
   const term = search.value.trim().toLowerCase()
   return orders.value.filter((order) => {
     if (activeTab.value === 'running' && !isRunning(order)) return false
     if (activeTab.value === 'settled' && !isSettled(order)) return false
     if (activeTab.value === 'voided' && order.status !== 'cancelled') return false
-    if (term && !`${order.order_number} ${order.guest_name || ''} ${order.table_number || ''} ${order.room_number || ''}`.toLowerCase().includes(term)) return false
+    if (typeFilter.value && order.order_type !== typeFilter.value) return false
+    if (term && !(order.waiter_name || '').toLowerCase().includes(term)) return false
     return true
   })
 })
@@ -693,7 +659,7 @@ const pagedOrders = computed(() => {
   const p = Math.min(page.value, lastPage.value)
   return filteredOrders.value.slice((p - 1) * PAGE_SIZE, p * PAGE_SIZE)
 })
-watch([search, activeTab], () => {
+watch([search, typeFilter, activeTab], () => {
   page.value = 1
   selected.value = []
 })
@@ -730,6 +696,19 @@ function dateTimeOf(order) {
   return formatOrderDateTime(order.created_at || order.order_date)
 }
 
+function timeOf(order) {
+  return formatTime(order.created_at || order.order_date)
+}
+
+/** Pencil edits in place; + hands the ticket to the New Order screen so the
+ *  cashier can add fresh menu lines to the existing bill. */
+function addItems() {
+  if (!drawerOrder.value) return
+  const target = drawerOrder.value
+  closeDrawer()
+  router.push({ name: 'cashier-dine-in', query: { addToOrder: target.order_id } })
+}
+
 function money(value) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value ?? 0)
 }
@@ -764,16 +743,6 @@ async function load() {
 async function freeze(order) {
   await cashierApi.freeze(order.order_id)
   await load()
-}
-
-async function unfreeze(order) {
-  await cashierApi.unfreeze(order.order_id)
-  await load()
-}
-
-/** Recall jumps the cashier back to the Dine In floor focused on this ticket. */
-function recall(order) {
-  window.alert(t('cashier.summary.recallHint', { number: order.order_number }))
 }
 
 /** Opens the payment modal for a running ticket. */
@@ -833,7 +802,7 @@ async function changeQty(line, delta) {
   savingItem.value = true
   drawerError.value = ''
   try {
-    const { data } = await orderApi.updateOrderItem(drawerOrder.value.order_id, line.order_item_id, { qty: next })
+    const { data } = await orderApi.updateOrderItem(drawerOrder.value.order_id, line.order_item_id, { quantity: next })
     mergeIntoDrawer(data.order)
     toast(t('cashier.summary.itemUpdated'), 'success')
   } catch (err) {
@@ -896,66 +865,6 @@ async function confirmVoid() {
 }
 
 /**
- * Bulk void: clears every ticket currently listed in one confirmed action. Like
- * the per-row Void it honours the active tab and search, and only offers tickets
- * this role may void (running, plus settled for the counter roles).
- */
-const bulkVoidOpen = ref(false)
-const bulkVoidReason = ref('')
-const bulkVoidReasonId = `bulk-void-reason-${Date.now()}`
-const savingBulkVoid = ref(false)
-const bulkVoidError = ref('')
-
-const bulkVoidable = computed(() => filteredOrders.value.filter((order) => canVoid(order)))
-const bulkVoidTotal = computed(() =>
-  bulkVoidable.value.reduce((sum, order) => sum + Number(order.total_amount || 0), 0),
-)
-
-function openBulkVoid() {
-  if (!bulkVoidable.value.length) return
-  bulkVoidOpen.value = true
-  bulkVoidReason.value = ''
-  bulkVoidError.value = ''
-}
-
-function closeBulkVoid() {
-  if (savingBulkVoid.value) return
-  bulkVoidOpen.value = false
-}
-
-async function confirmBulkVoid() {
-  if (savingBulkVoid.value) return
-  if (!bulkVoidReason.value.trim()) {
-    bulkVoidError.value = t('cashier.summary.voidReasonRequired')
-    return
-  }
-  const targets = bulkVoidable.value
-  if (!targets.length) {
-    bulkVoidOpen.value = false
-    return
-  }
-  savingBulkVoid.value = true
-  bulkVoidError.value = ''
-  const reason = bulkVoidReason.value.trim()
-  const override = canVoidSettled.value ? { override: true } : {}
-  let done = 0
-  let failed = 0
-  for (const order of targets) {
-    try {
-      await orderApi.voidOrder(order.order_id, { reason, ...override })
-      done += 1
-    } catch {
-      failed += 1
-    }
-  }
-  savingBulkVoid.value = false
-  bulkVoidOpen.value = false
-  await load()
-  if (failed) toast(t('cashier.summary.voidAllPartial', { done, total: targets.length, failed }), 'error')
-  else toast(t('cashier.summary.voidAllDone', { count: done }), 'success')
-}
-
-/**
  * Multi-select void: tick the running/unpaid tickets this role may void on the
  * list, then clear just those. Like void-all it honours the active tab + search
  * (the ids are intersected with `filteredOrders`), but it lets the counter pick
@@ -986,9 +895,6 @@ const pickedOrders = computed(() =>
 const singleSelected = computed(() => (pickedOrders.value.length === 1 ? pickedOrders.value[0] : null))
 const canSettleSelected = computed(() => !!singleSelected.value && isRunning(singleSelected.value))
 const canFreezeSelected = computed(() => canSettleSelected.value && !singleSelected.value.is_frozen)
-const canUnfreezeSelected = computed(() => canSettleSelected.value && !!singleSelected.value.is_frozen)
-const canRecallSelected = computed(() => !!singleSelected.value?.is_frozen)
-
 /** Runs a single-ticket action from the action bar on the one ticked order. */
 function actOnSingle(action) {
   if (singleSelected.value) action(singleSelected.value)
@@ -1422,6 +1328,7 @@ onUnmounted(() => {
   margin-bottom: 8px;
 }
 .drawer-items-head h3 { margin: 0; font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; }
+.drawer-items-tools { display: flex; gap: 6px; }
 .drawer-item-list {
   list-style: none;
   margin: 0;

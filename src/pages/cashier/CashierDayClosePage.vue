@@ -96,8 +96,8 @@
               <td class="num">{{ money(o.total_amount) }}</td>
               <td><span class="status-badge warn">{{ blockingLabel(o) }}</span></td>
               <td class="dc-row-actions">
-                <button v-if="o.can_settle" class="sm-btn tiny" :disabled="busy" @click="openSettle(o)">
-                  <i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('cashier.dayClose.settle') }}
+                <button v-if="o.can_settle" class="sm-btn tiny" @click="goToSummary(o)">
+                  <i class="fas fa-arrow-right" aria-hidden="true"></i> {{ $t('cashier.dayClose.openSummary') }}
                 </button>
                 <button v-if="o.can_void" class="sm-btn tiny ghost" :disabled="busy" @click="openVoid(o)">
                   <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('cashier.dayClose.voidOrder') }}
@@ -106,35 +106,6 @@
             </tr>
           </tbody>
         </table>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2><i class="fas fa-clock" aria-hidden="true"></i> {{ $t('cashier.dayClose.standardTime') }}</h2>
-      </div>
-      <div class="panel-body st-grid">
-        <div class="st-live-clock">
-          <span class="fld-label">{{ $t('cashier.dayClose.liveHotelTime') }}</span>
-          <strong class="st-clock">{{ hotelNow }}</strong>
-          <span class="st-zone">{{ timezoneLabel }}</span>
-        </div>
-        <div class="st-form">
-          <label class="fld-label" for="dc-timezone">{{ $t('cashier.dayClose.timezone') }}</label>
-          <select id="dc-timezone" v-model="tzSelect" class="sm-input">
-            <option v-for="tz in timezoneOptions" :key="tz.value" :value="tz.value">{{ tz.label }}</option>
-          </select>
-          <p class="fld-hint"><i class="fas fa-circle-info" aria-hidden="true"></i> {{
-            $t('cashier.dayClose.standardTimeHint') }}</p>
-          <p v-if="tzError" class="form-error">{{ tzError }}</p>
-          <p v-if="tzOk && !tzError" class="sm-ok">{{ tzOk }}</p>
-          <div class="dc-actions">
-            <button class="sm-btn" :disabled="savingTz || tzSelect === timezoneRaw" @click="saveTimezone">
-              <i class="fas fa-floppy-disk" aria-hidden="true"></i> {{ savingTz ? $t('common.saving') :
-                $t('common.save') }}
-            </button>
-          </div>
-        </div>
       </div>
     </section>
 
@@ -172,37 +143,6 @@
         </table>
       </div>
     </section>
-
-    <div v-if="settleTarget" class="sm-modal-backdrop">
-      <div class="sm-modal" role="dialog" aria-modal="true">
-        <div class="sm-modal-head">
-          <h3><i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('cashier.dayClose.settleTitle') }}</h3>
-        </div>
-        <p class="dc-confirm-text">
-          {{ $t('cashier.dayClose.settleText', { order: settleTarget.order_number, amount: money(settleTarget.total_amount) }) }}
-        </p>
-        <label class="fld-label" for="dc-settle-method">{{ $t('cashier.dayClose.method') }}</label>
-        <select id="dc-settle-method" v-model="settleMethod" class="sm-input">
-          <option v-for="m in methodOptions" :key="m.value" :value="m.value">{{ m.label }}</option>
-        </select>
-        <template v-if="providerOptions.length">
-          <label class="fld-label" for="dc-settle-provider">{{ $t('cashier.dayClose.provider') }}</label>
-          <select id="dc-settle-provider" v-model="settleProvider" class="sm-input">
-            <option value="">—</option>
-            <option v-for="p in providerOptions" :key="p.value" :value="p.value">{{ p.label }}</option>
-          </select>
-        </template>
-        <p v-if="actionError" class="sm-error">{{ actionError }}</p>
-        <div class="sm-modal-foot">
-          <button class="sm-btn ghost" :disabled="busy" @click="settleTarget = null">
-            <i class="fas fa-xmark" aria-hidden="true"></i> {{ $t('common.cancel') }}
-          </button>
-          <button class="sm-btn" :disabled="busy" @click="doSettle">
-            <i class="fas fa-check" aria-hidden="true"></i> {{ busy ? $t('common.loading') : $t('cashier.dayClose.settle') }}
-          </button>
-        </div>
-      </div>
-    </div>
 
     <div v-if="voidTarget" class="sm-modal-backdrop">
       <div class="sm-modal" role="dialog" aria-modal="true">
@@ -251,11 +191,13 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { fbDayCloseApi, orderApi } from '@/api'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const { t } = useI18n()
+const router = useRouter()
 const workingDateStore = useWorkingDateStore()
 
 const loading = ref(false)
@@ -267,17 +209,9 @@ const status = ref({ open_date: '', close_date: '', timezone: 'Africa/Dar_es_Sal
 const history = ref([])
 const confirmOpen = ref(false)
 
-const settleTarget = ref(null)
-const settleMethod = ref('cash')
-const settleProvider = ref('')
 const voidTarget = ref(null)
 const voidReason = ref('')
 const actionError = ref('')
-
-const savingTz = ref(false)
-const tzSelect = ref('Africa/Dar_es_Salaam')
-const tzError = ref('')
-const tzOk = ref('')
 
 const nowTick = ref(new Date())
 let clockTimer = null
@@ -287,27 +221,6 @@ const closable = computed(() => status.value.can_close === true)
 
 /** The tickets holding the close date open (running or unpaid). */
 const blockingOrders = computed(() => status.value.blocking_orders || [])
-
-/** Settlement methods offered for the quick settle action. */
-const METHOD_OPTIONS = [
-  { value: 'cash', label: 'Cash' },
-  { value: 'mobile_money', label: 'Mobile money' },
-  { value: 'card', label: 'Card' },
-  { value: 'bank', label: 'Bank' },
-]
-const METHOD_PROVIDERS = {
-  mobile_money: ['airtel_money', 'mixx_by_yas', 'halopesa', 'mpesa'],
-  bank: ['crdb', 'nmb', 'nbc', 'other'],
-}
-
-const methodOptions = computed(() => METHOD_OPTIONS)
-const providerOptions = computed(() =>
-  (METHOD_PROVIDERS[settleMethod.value] || []).map((value) => ({ value, label: prettyProvider(value) })),
-)
-
-function prettyProvider(value) {
-  return String(value || '').split('_').map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')
-}
 
 /** Masked amount for the blocking table and modals. */
 function money(value) {
@@ -332,54 +245,6 @@ function prettyTimezone(tz) {
   return String(tz || '').replaceAll('_', ' ')
 }
 
-/** Common hotel timezones with their runtime GMT offset. */
-const TIMEZONES = [
-  'Africa/Dar_es_Salaam',
-  'Africa/Nairobi',
-  'Africa/Kampala',
-  'Africa/Addis_Ababa',
-  'Africa/Maputo',
-  'Africa/Johannesburg',
-  'Africa/Lusaka',
-  'Africa/Lagos',
-  'Africa/Accra',
-  'Africa/Cairo',
-  'Europe/London',
-  'UTC',
-]
-
-function formatOffset(tz) {
-  try {
-    const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'shortOffset' }).formatToParts(new Date())
-    const name = parts.find((p) => p.type === 'timeZoneName')?.value
-    return name ? ` (${name.replace('GMT', 'GMT')})` : ''
-  } catch {
-    return ''
-  }
-}
-
-const timezoneOptions = computed(() =>
-  TIMEZONES.map((value) => ({ value, label: `${prettyTimezone(value)}${formatOffset(value)}` })),
-)
-
-const hotelNow = computed(() => {
-  try {
-    const fmt = new Intl.DateTimeFormat(undefined, {
-      timeZone: timezoneRaw.value,
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    })
-    return fmt.format(nowTick.value)
-  } catch {
-    return nowTick.value.toLocaleString()
-  }
-})
-
 function formatDate(value) {
   if (!value) return '—'
   const d = new Date(value + 'T00:00:00')
@@ -397,7 +262,6 @@ async function load() {
   try {
     const { data } = await fbDayCloseApi.index()
     status.value = data || status.value
-    if (data?.timezone) tzSelect.value = data.timezone
   } catch (err) {
     error.value = err.response?.data?.message || t('common.loadError')
   } finally {
@@ -409,7 +273,8 @@ async function loadHistory() {
   loadingHistory.value = true
   try {
     const { data } = await fbDayCloseApi.history()
-    history.value = data?.day_closes || data?.data || []
+    // Only the last 30 closed business days are surfaced.
+    history.value = (data?.day_closes || data?.data || []).slice(0, 30)
   } catch (err) {
     error.value = err.response?.data?.message || t('common.loadError')
   } finally {
@@ -440,6 +305,8 @@ async function doClose() {
     await workingDateStore.reload()
     await load()
     await loadHistory()
+    // Closing the day takes the operator back to the dashboard.
+    router.push({ name: 'cashier-dine-in', query: { tab: 'dashboard' } })
   } catch (err) {
     error.value = err.response?.data?.message || t('common.error')
     confirmOpen.value = false
@@ -448,32 +315,11 @@ async function doClose() {
   }
 }
 
-/** Opens the quick-settle modal for a blocking ticket. */
-function openSettle(order) {
-  actionError.value = ''
-  settleMethod.value = 'cash'
-  settleProvider.value = ''
-  settleTarget.value = order
+/** Settlement is handled on the Order Summary page, not from Day Close. */
+function goToSummary(order) {
+  router.push({ name: 'cashier-order-summary', query: { order: order.order_id } })
 }
 
-/** Collects the bill for a blocking ticket, then refreshes the close state. */
-async function doSettle() {
-  if (!settleTarget.value) return
-  busy.value = true
-  actionError.value = ''
-  try {
-    await orderApi.pay(settleTarget.value.order_id, {
-      method: settleMethod.value,
-      provider: settleProvider.value || undefined,
-    })
-    settleTarget.value = null
-    await refetch()
-  } catch (err) {
-    actionError.value = err.response?.data?.message || t('common.error')
-  } finally {
-    busy.value = false
-  }
-}
 
 /** Opens the void modal for a blocking ticket. */
 function openVoid(order) {
@@ -495,22 +341,6 @@ async function doVoid() {
     actionError.value = err.response?.data?.message || t('common.error')
   } finally {
     busy.value = false
-  }
-}
-
-async function saveTimezone() {
-  savingTz.value = true
-  tzError.value = ''
-  tzOk.value = ''
-  try {
-    await fbDayCloseApi.updateTimezone({ timezone: tzSelect.value })
-    tzOk.value = t('cashier.dayClose.timezoneSaved')
-    await refetch()
-    await workingDateStore.reload()
-  } catch (err) {
-    tzError.value = err.response?.data?.message || t('common.error')
-  } finally {
-    savingTz.value = false
   }
 }
 

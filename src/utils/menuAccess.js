@@ -1,25 +1,16 @@
 /**
  * Who may maintain the menu.
  *
- * The menu is owned by admins, managers and kitchen (back-office work, unlike
- * floor operations which exclude those roles). Cashiers and bartenders are in
- * too — they work a till on their own department all day and are the ones who
- * notice a dish missing, a price wrong or a group in the wrong place, so they
- * can fix it rather than report it.
+ * Menu maintenance is a back-office management function: admins and managers
+ * only. Cashiers and bartenders run the floor and must not be able to change
+ * dishes, prices or groups from the till panel.
  *
- * This list is the single source of truth. It has to stay in step with the
- * `CanManageMenu` policy on the API and the `level:30` on the menu write routes,
- * and it previously lived inline in MenuListPage while three comments in three
- * different files each claimed to be the thing that had to be kept in step. A
- * link that decides whether to show the menu at all now reads it from here, so a
- * role added below cannot be editable-but-unreachable.
+ * This list mirrors the route guard and MenuListPage's own gate. Keep all three
+ * in step so a role can never be shown an editable page it is then refused.
  */
 export const MENU_MANAGER_ROLES = Object.freeze([
   'hotel_admin',
   'manager',
-  'kitchen',
-  'cashier',
-  'bartender',
 ])
 
 /**

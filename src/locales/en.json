@@ -1407,7 +1407,9 @@
     "descriptionSwPlaceholder": "Leave blank to show the English text on a Kiswahili screen.",
     "translationHint": "Optional. Leave blank and the English name is used on a Kiswahili screen.",
     "pickSubCategory": "Choose a sub-category",
-    "pickCategoryFirst": "Choose a category first"
+    "pickCategoryFirst": "Choose a category first",
+    "reorderLevel": "Reorder Level",
+    "reorderLevelHint": "Low-stock alert threshold for this item, set per menu item rather than by the store inventory."
   },
   "outlets": {
     "title": "POS Outlets",
@@ -1958,10 +1960,11 @@
     "rejectReason": "Rejection reason"
   },
   "requisitionPanel": {
-    "title": "Store Requisitions",
+    "title": "Requisitions",
+    "siUnit": "SI Unit",
     "subtitle": "Request registered store items and answer department requisitions.",
     "myRequisitions": "My requisitions",
-    "inbox": "Indents forward",
+    "inbox": "Indent Received",
     "receivedIndents": "Requisitions received",
     "new": "New requisition",
     "refresh": "Refresh",
@@ -4429,6 +4432,8 @@
     "summaryTitle": "My orders",
     "summarySubtitle": "Your tickets and totals for today.",
     "summaryRunning": "Running",
+    "summaryPending": "Pending",
+    "summaryTotal": "Total",
     "summarySettled": "Settled",
     "summaryVoided": "Voided",
     "summaryTotalToday": "Total today",
@@ -4445,7 +4450,7 @@
     "summaryStatuses": "Staff status",
     "summaryIssueReports": "Issue reports",
     "orderTypeDineIn": "DINE IN",
-    "orderTypeTakeAway": "TAKE AWAY",
+    "orderTypeTakeAway": "TAKE OUT",
     "orderTypeRoom": "ROOM ORDERS",
     "summaryViewAll": "View all",
     "summaryViewItems": "View items",
@@ -4507,6 +4512,7 @@
     "filterReady": "Ready",
     "filterServed": "Served",
     "filterUnpaid": "Unpaid",
+    "filterSettled": "Settled",
     "openNoMatch": "No orders match your search.",
     "openFor": "Opened {time}",
     "minShort": "{n}m",
@@ -4530,6 +4536,7 @@
     "voidAllSummary": "{count} orders · {currency} {total} · Unpaid",
     "voidAllDone": "{count} orders voided",
     "voidAllPartial": "{done} of {total} orders voided · {failed} failed",
+    "void": "Void",
     "voidSelected": "Void selected",
     "voidSelectedTitle": "Void selected orders",
     "voidSelectedSummary": "{count} orders · {currency} {total} · Unpaid",
@@ -4552,6 +4559,7 @@
     "stockValue": "Value",
     "lowStock": "Low stock",
     "lowStockTitle": "Low stock",
+    "viewLowStock": "View all low stock items",
     "lowStockEmpty": "All good — nothing is running low.",
     "salesTitle": "Sales summary",
     "salesOrders": "Orders",
@@ -5191,7 +5199,7 @@
       "running": "RUNNING",
       "runningCount": "{n} running",
       "takeOrder": "Take Order",
-      "title": "DINE IN",
+      "title": "IN HOUSE",
       "today": "Today",
       "transfer": "Transfer",
       "transferHint": "Select target table",
@@ -5202,6 +5210,9 @@
     },
     "takeAway": {
       "tabAll": "ALL",
+      "tabPending": "PENDING",
+      "tabSettled": "SETTLED",
+      "tabVoided": "VOIDED",
       "tabPreparing": "PREPARING",
       "tabReady": "READY",
       "tabCompleted": "COMPLETED",
@@ -5209,8 +5220,14 @@
       "today": "Today",
       "guest": "Guest",
       "dateTime": "Date/Time",
-      "newOrder": "New Takeaway",
-      "none": "None"
+      "time": "Time",
+      "newOrder": "New Take Out",
+      "none": "None",
+      "status": {
+        "pending": "Pending",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      }
     },
     "nav": {
       "transactionLock": "NET LOCK",
@@ -5240,7 +5257,14 @@
       "communication": "COMMUNICATION",
       "messages": "Messages",
       "statuses": "Statuses",
-      "waiterAssignment": "WAITER ASSIGNMENT"
+      "inventoryGroup": "INVENTORY",
+      "lowStock": "Low Stock",
+      "stockTransfers": "Stock Transfers",
+      "stockCounts": "Stock Count",
+      "stockAdjust": "Stock Adjustment",
+      "waiterAssignment": "WAITER ASSIGNMENT",
+      "reportBrowser": "Report Browser",
+      "summaryGroup": "Summary"
     },
     "txlock": {
       "title": "NET LOCK",
@@ -5258,7 +5282,8 @@
         "takeaway": "TAKE OUT",
         "room_service": "Room Service",
         "delivery": "Delivery",
-        "no_charge": "No Charge"
+        "no_charge": "No Charge",
+        "unknown": "Order"
       }
     },
     "summary": {
@@ -5272,10 +5297,16 @@
       "reprintReceipt": "Reprint Receipt",
       "reprintKot": "Reprint KOT",
       "voidSelected": "Void Selected",
+      "void": "Void",
       "voidAll": "Void All",
       "selectToAct": "Select to act",
       "order": "Order",
       "waiter": "Waiter",
+      "searchWaiter": "Search by waiter",
+      "orderType": "Order Type",
+      "allTypes": "All types",
+      "addItems": "Add menu items",
+      "time": "Time",
       "dateTime": "Date/Time",
       "table": "Table",
       "type": "Type",
@@ -5327,7 +5358,32 @@
       "voidAllConfirm": "Void all listed orders?",
       "voidAllSummary": "{n} orders",
       "voidAllTitle": "Void All",
-      "voidSelectedTitle": "Void Selected"
+      "voidSelectedTitle": "Void Selected",
+      "connectFailed": "Could not connect the printer.",
+      "guest": "Guest",
+      "item": "Item",
+      "itemRemoved": "Line removed.",
+      "itemUpdated": "Line updated.",
+      "lineTotal": "Line total",
+      "price": "Price",
+      "printerConnected": "Printer connected successfully.",
+      "qty": "Qty",
+      "recallHint": "Recall {number}: unfreeze it first, then continue from Dine In.",
+      "roomPosted": "Order posted to the room folio.",
+      "splitConfirm": "Split to a new ticket",
+      "splitDone": "Bill split.",
+      "splitLines": "Split",
+      "splitTitle": "Split bill",
+      "transferHint": "The whole ticket moves. The target table must be free or already held by this waiter.",
+      "transferRoomHint": "The whole ticket moves to the selected room folio.",
+      "transferRoomLabel": "Move ticket to another room",
+      "transferTitle": "Move ticket to another table",
+      "transferred": "Ticket moved.",
+      "voidAllDone": "{count} orders voided.",
+      "voidAllPartial": "{done} of {total} orders voided · {failed} failed",
+      "voidPrompt": "Void {number}? All its items are returned to stock.",
+      "voidReasonRequired": "Enter a reason for the void.",
+      "voided": "Order voided."
     },
     "roomService": {
       "tabAll": "ALL",
@@ -5345,6 +5401,7 @@
       "guest": "Guest",
       "items": "Items",
       "dateTime": "Date/Time",
+      "time": "Time",
       "none": "None",
       "title": "In-House Guests",
       "checkOut": "Check Out",
@@ -5371,10 +5428,25 @@
       "addOrder": "Add Order",
       "none": "None",
       "dateTime": "Date/Time",
+      "time": "Time",
+      "sender": "Sender",
+      "driver": "Driver",
       "phone": "Phone",
       "address": "Address",
       "eta": "ETA",
-      "minutes": "Minutes"
+      "minutes": "Minutes",
+      "previousOrders": "Previous orders",
+      "status": {
+        "cancelled": "Cancelled",
+        "completed": "Completed",
+        "in_progress": "In progress",
+        "merged": "Merged",
+        "pending": "Pending",
+        "preparing": "Preparing",
+        "processing": "Processing",
+        "ready": "Ready",
+        "served": "Served"
+      }
     },
     "noCharge": {
       "tabAll": "ALL",
@@ -5390,8 +5462,10 @@
       "title": "No Charge Orders",
       "newOrder": "New No Charge Order",
       "dateTime": "Date/Time",
+      "time": "Time",
       "none": "None",
-      "tag": "NO CHARGE"
+      "tag": "NO CHARGE",
+      "previousOrders": "Previous orders"
     },
     "ingredients": {
       "menuItems": "Menu Items",
@@ -5405,6 +5479,8 @@
       "inventoryItem": "Inventory Item",
       "qtyPerUnit": "Qty per unit",
       "unit": "SI Unit",
+      "siUnit": "SI Unit",
+      "siUnitHint": "Filled from the selected inventory item",
       "stock": "Stock",
       "lineCost": "Line Cost",
       "noIngredients": "No ingredients yet",
@@ -5437,7 +5513,8 @@
       "amount": "Amount",
       "blockedHint": "Some orders are still running and must be settled first.",
       "blockingCount": "Blocking orders",
-      "blockingHint": "These must be settled/voided before closing.",
+      "blockingHint": "Settlement is done on the Order Summary page. These must be settled/voided before closing.",
+      "openSummary": "Order Summary",
       "blockingTitle": "Orders blocking close",
       "businessDate": "Business Date",
       "canCloseHint": "All running orders are cleared.",
@@ -5472,7 +5549,13 @@
       "voidText": "Void with reason.",
       "voidTitle": "Void blocking order",
       "waiter": "Waiter",
-      "unpaid": "Unpaid"
+      "unpaid": "Unpaid",
+      "closedSuccess": "Business day closed. All systems now run on the new date.",
+      "confirm": "Confirm",
+      "proceed": "Proceed to Day Close",
+      "reminderText": "Orders you enter will be saved under the business date: {today}.",
+      "reminderTitle": "Close Day",
+      "timezoneSaved": "Standard time updated successfully."
     },
     "blockedDevices": {},
     "printer": {
@@ -5502,7 +5585,16 @@
       "testNetwork": "Test Network",
       "transportNetwork": "Network",
       "transportNetworkDetail": "Network printer",
-      "transportTitle": "Transport"
+      "transportTitle": "Transport",
+      "connectFailed": "Could not reach QZ Tray. Make sure it is installed and running on this computer.",
+      "endpointRequired": "Select a printer first.",
+      "saved": "Settings saved.",
+      "statusNetwork": "Printer configured",
+      "statusNetworkDetail": "Sending prints to",
+      "statusNoNetwork": "No printer selected",
+      "statusNoNetworkDetail": "Connect to QZ Tray and choose a printer to print over the network.",
+      "testOk": "Test print sent successfully.",
+      "unsupported": "This browser cannot reach QZ Tray. Use Chrome, Edge, Firefox or Safari on a computer."
     },
     "accountLookup": {},
     "order": {
@@ -5524,6 +5616,8 @@
       "assignRoom": "Assign to Room",
       "assignRoomHint": "Link order to in-house guest room",
       "deliveryPhone": "Delivery Phone",
+      "driver": "Driver",
+      "driverPlaceholder": "Select driver",
       "expectedMinutes": "ETA (minutes)",
       "deliveryAddress": "Delivery Address",
       "selectAccount": "Select Account",
@@ -5539,7 +5633,10 @@
       "placeOrder": "Place Order",
       "created": "Order {number} created",
       "accountRequired": "Account required",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "stockNone": "Not tracked",
+      "category": "Category",
+      "allCategories": "All categories"
     },
     "panelTitle": "POS",
     "topbar": {
@@ -5587,7 +5684,23 @@
       "tabAccounts": "ACCOUNTS",
       "tabCreditors": "CREDITORS",
       "tabNoChargeAccounts": "NO CHARGE ACCOUNTS",
-      "type": "Type"
+      "type": "Type",
+      "category": "Category",
+      "creditorTypes": {
+        "bank": "Bank",
+        "contractor": "Contractor",
+        "landlord": "Landlord",
+        "leasing": "Leasing",
+        "lending": "Lending",
+        "other": "Other",
+        "supplier": "Supplier",
+        "utility": "Utility"
+      },
+      "deleteConfirm": "Delete this creditor account?",
+      "saved": "Creditor saved.",
+      "searchCreditorsHint": "Search by company, contact, phone, email or category...",
+      "searchHint": "Search by name, number, email or city...",
+      "searchNoChargeHint": "Search a registered no-charge account..."
     },
     "lookup": {
       "menus": "Menus",
@@ -5604,6 +5717,11 @@
       "openPrice": "Open Price",
       "price": "Price",
       "searchCategory": "Search category",
+      "searchItem": "Search product...",
+      "allCategories": "All Categories",
+      "allSubCategories": "All Sub Categories",
+      "subCategory": "Sub Category",
+      "siUnit": "SI Unit",
       "sku": "SKU",
       "taxGroup": "Tax Group"
     },
@@ -5637,6 +5755,7 @@
       "history": "History"
     },
     "shift": {
+      "today": "Today",
       "closed": "Closed",
       "closedHint": "Shift closed",
       "counted": "Counted",
@@ -5686,7 +5805,22 @@
       "title": "Waiter Assignment",
       "unassign": "Unassign",
       "waitersServed": "Waiters Served",
-      "waitersServedToday": "Waiters Served Today"
+      "waitersServedToday": "Waiters Served Today",
+      "hintPickWaiter": "Pick a waiter on the right, then tap a table on the right to assign it.",
+      "lastOrderAt": "Last order",
+      "tablesAssigned": "Tables assigned: {n}",
+      "time": "Time",
+      "todayOrdersOnTable": "{n} orders on this table today",
+      "waiter": "Waiter"
+    },
+    "types": {
+      "at_bar": "At Bar",
+      "delivery": "Delivery",
+      "dine_in": "Dine In",
+      "hotel_menu": "Hotel Menu",
+      "no_charge": "No Charge",
+      "room_service": "Room Service",
+      "takeaway": "Take Away"
     }
   },
   "paymentInstructionCard": {

@@ -8,7 +8,10 @@ import i18n from '@/locales/i18n'
 const store = vi.fn()
 const menuIndex = vi.fn()
 vi.mock('@/api', () => ({
-  orderApi: { store: (...args) => store(...args) },
+  orderApi: {
+    store: (...args) => store(...args),
+    formOptions: () => Promise.resolve({ data: { waiters: [], in_house_guests: [] } }),
+  },
   menuItemApi: { index: (...args) => menuIndex(...args) },
 }))
 
@@ -112,7 +115,8 @@ describe('no-charge account picker (item 7)', () => {
     await placeOrder()
 
     expect(store).not.toHaveBeenCalled()
-    expect(domText()).toContain('Choose the account this no-charge order belongs to.')
+    expect(domText()).toContain('Account required')
+    expect(domText()).toContain('Choose a registered creditor/no-charge account.')
   })
 
   it('sends the picked account with the order', async () => {
@@ -141,15 +145,15 @@ describe('no-charge account picker (item 7)', () => {
     mountModal({ mode: 'takeaway', creditAccounts: [{ name: 'Uchumi Hotel' }] })
     await flushPromises()
 
-    expect(domText()).toContain('Left: 12')
-    expect(domText()).toContain('Stock 7 BTL')
+    expect(domText()).toContain('12 left')
+    expect(domText()).toContain('7 BTL in stock')
   })
 
   it('points an empty registry at the page that registers accounts', () => {
     mountModal()
 
     // Nothing to pick and nowhere to go was the dead end item 7 describes.
-    expect(domText()).toContain('No credit account is registered yet')
-    expect(domText()).toContain('Register a credit account')
+    expect(domText()).toContain('No registered accounts.')
+    expect(domText()).toContain('Go to Account Lookup')
   })
 })

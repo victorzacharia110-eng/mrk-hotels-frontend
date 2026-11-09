@@ -38,11 +38,37 @@
             </span>
           </div>
 
+          <div v-if="categories.length" class="cat-rail" role="tablist" :aria-label="$t('cashier.order.category')">
+            <button
+              type="button"
+              role="tab"
+              class="cat-chip"
+              :class="{ active: !activeCat }"
+              :aria-selected="!activeCat"
+              @click="activeCat = ''"
+            >
+              {{ $t('cashier.order.allCategories') }}
+            </button>
+            <button
+              v-for="cat in categories"
+              :key="cat"
+              type="button"
+              role="tab"
+              class="cat-chip"
+              :class="{ active: activeCat === cat }"
+              :aria-selected="activeCat === cat"
+              @click="activeCat = cat"
+            >
+              {{ cat }}
+            </button>
+          </div>
+
           <div class="cat-list">
             <div v-for="(itemsInCat, cat) in filteredMenu" :key="cat" class="cat-group">
               <p class="cat-title">{{ cat }}</p>
               <button v-for="item in itemsInCat" :key="item.menu_item_id" class="cat-item"
-                :disabled="!item.is_available || item.is_in_stock === false" @click="addItem(item)">
+                :class="{ 'out-of-stock': item.is_available === false || item.is_in_stock === false }"
+                @click="addItem(item)">
                 <span class="cat-item-name">{{ dishName(item) }}</span>
                 <!-- Review item 4: take-away, room service and delivery order
                      screens must show the live count of the stock this item
@@ -57,6 +83,9 @@
                   <template v-else>
                     {{ $t('cashier.order.stockCount', { qty: item.quantity_on_hand, unit: item.linked_item_unit || '' }) }}
                   </template>
+                </span>
+                <span v-if="item.is_available === false || item.is_in_stock === false" class="cat-item-oos">
+                  {{ $t('orderTaker.outOfStock') }}
                 </span>
                 <span class="cat-item-price">{{ money(item.price) }}</span>
               </button>
@@ -98,6 +127,16 @@
             />
           </div>
 
+          <div v-if="mode === 'delivery'" class="fld-col">
+            <label class="fld-label" for="no-driver">{{ $t('cashier.order.driver') }}</label>
+            <SearchableSelect
+              id="no-driver"
+              v-model="form.driver_name"
+              :options="waiterOptions"
+              :placeholder="$t('cashier.order.driverPlaceholder')"
+              :empty-label="$t('common.none')"
+            />
+          </div>
           <div v-if="mode === 'delivery'" class="fld-row2">
             <div class="fld-col">
               <label class="fld-label" for="no-phone">{{ $t('cashier.order.deliveryPhone') }} *</label>
@@ -272,6 +311,7 @@ const menu = ref([])
 const waiters = ref([])
 const inHouseRooms = ref([])
 const search = ref('')
+const activeCat = ref('')
 const lines = ref([])
 const busy = ref(false)
 const error = ref('')
@@ -311,6 +351,7 @@ async function loadMenu(page = 1) {
 /** Reloads from the first page whenever the outlet toggle changes. */
 watch(dept, () => {
   search.value = ''
+  activeCat.value = ''
   // The ticket lines were priced against the menu they were taken from; keep
   // them, but the freshly selected outlet drives the next picks.
   loadMenu(1)
@@ -322,6 +363,7 @@ const form = reactive({
   // Default the waiter to the person taking the order (cashier/bartender).
   // They can still reassign it to another waiter via the searchable select.
   waiter_name: selfName.value,
+  driver_name: '',
   covers: null,
   no_charge_account: '',
   delivery_phone: '',
@@ -389,18 +431,34 @@ watch(
 
 const total = computed(() => lines.value.reduce((sum, l) => sum + l.price * l.quantity, 0))
 
+/** Category names available for the active department, in menu order. */
+const categories = computed(() => {
+  const seen = new Set()
+  for (const item of menu.value) {
+    if (item.category) seen.add(item.category)
+  }
+  return [...seen]
+})
+
 const filteredMenu = computed(() => {
   const term = search.value.trim().toLowerCase()
   const groups = {}
   for (const item of menu.value) {
-    if (term && !`${dishName(item)} ${item.item_name} ${item.category || ''}`.toLowerCase().includes(term)) continue
-    const key = item.category || t('cashier.order.uncategorized')
+    if (term && !`${dishName(item)} ${item.item_name} ${item.category || ''} ${item.sub_category || ''}`.toLowerCase().includes(term)) continue
+    // A chosen category narrows the list; a live search deliberately ignores it
+    // so every matching item surfaces under its own sub-category.
+    if (!term && activeCat.value && item.category !== activeCat.value) continue
+    const key = item.sub_category || item.category || t('cashier.order.uncategorized')
     ;(groups[key] ||= []).push(item)
   }
   return groups
 })
 
 function addItem(item) {
+  if (item.is_available === false || item.is_in_stock === false) {
+    toast(t('orderTaker.outOfStockToast', { name: dishName(item) }), 'error')
+    return
+  }
   if (isGrillItem(item)) {
     accompItem.value = item
     return
@@ -511,6 +569,7 @@ async function submit() {
       payload.delivery_phone = form.delivery_phone
       payload.delivery_address = form.delivery_address
       payload.expected_minutes = form.expected_minutes || undefined
+      payload.driver_name = form.driver_name || null
     }
 
     const { data } = await orderApi.store(payload)
@@ -601,9 +660,16 @@ onMounted(async () => {
 
 <style scoped>
 .order-modal { max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
-.order-grid { display: grid; grid-template-columns: 1fr 300px; gap: 16px; overflow-y: auto; padding: 16px 18px 18px; }
+.order-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 34%); gap: 16px; overflow-y: auto; padding: 16px 18px 18px; }
 @media (max-width: 800px) { .order-grid { grid-template-columns: 1fr; } }
 .order-items { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.cat-rail { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.cat-chip {
+  flex: 0 0 auto; border: 1px solid #cbd5e1; border-radius: 999px; background: #fff;
+  color: #475569; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600;
+  padding: 6px 12px; white-space: nowrap;
+}
+.cat-chip.active { background: #005eb8; border-color: #005eb8; color: #fff; }
 .cat-list { max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
 .menu-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .dept-toggle { display: inline-flex; border: 1px solid #cbd5e1; border-radius: 9px; overflow: hidden; background: #fff; }
@@ -622,7 +688,9 @@ onMounted(async () => {
   background: #fff; border: 1px solid #e2e8f0; border-radius: 9px;
   padding: 8px 12px; cursor: pointer; font-size: 13px;
 }
-.cat-item:hover:not(:disabled) { border-color: #005eb8; background: #e8f1fa; }
+.cat-item:hover:not(.out-of-stock) { border-color: #005eb8; background: #e8f1fa; }
+.cat-item.out-of-stock { opacity: 0.6; background: #f4f4f5; cursor: not-allowed; }
+.cat-item-oos { align-self: flex-start; background: #dc2626; color: #fff; font-size: 9px; font-weight: 800; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 999px; text-transform: uppercase; }
 .cat-item:disabled { opacity: 0.45; cursor: not-allowed; }
 .cat-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cat-item-stock {

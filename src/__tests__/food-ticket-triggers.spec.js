@@ -242,14 +242,15 @@ describe('food ticket on the waiter order-taker panel', () => {
     const wrapper = mount(OrderTakerDashboard, { global: { plugins: [i18n] } })
     await flushPromises()
 
-    // A search reveals the menu tiles, which only render for a category/search.
+    // Categories/search stay hidden until a table is chosen.
+    await wrapper.find('.table-chip').trigger('click')
+    await nextTick()
+
     const search = wrapper.find('.cat-search')
     search.element.value = 'ugali'
     await search.trigger('input')
     await nextTick()
 
-    await wrapper.find('.table-chip').trigger('click')
-    await nextTick()
     await wrapper.find('.cat-item').trigger('click')
     await nextTick()
     await wrapper.find('.send-btn').trigger('click')
@@ -346,6 +347,8 @@ describe('waiter order-taker panel: the red row X clears its food card', () => {
     useAuthStore().user = { full_name: 'LYDIA MANASE', user_role: 'waiter' }
     const wrapper = mount(OrderTakerDashboard, { global: { plugins: [i18n] } })
     await flushPromises()
+    await wrapper.find('.table-chip').trigger('click')
+    await nextTick()
     const search = wrapper.find('.cat-search')
     search.element.value = 'ugali'
     await search.trigger('input')

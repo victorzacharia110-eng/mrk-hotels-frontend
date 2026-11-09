@@ -9,117 +9,74 @@
   or settling - those stay with the manager on the orders module.
 -->
 <template>
-  <div
-    class="taker-page"
-    :class="{ 'pos-theme': isPosRole, 'taker-fixed': activeTab === 'new' }"
-  >
+  <div class="taker-page" :class="{ 'pos-theme': isPosRole, 'taker-fixed': activeTab === 'new' }">
     <!-- One-place tabs: dashboard, take a new order or work the open ones (single tap) -->
     <nav class="pos-tabs">
-      <button
-        type="button"
-        class="pos-tab"
-        :class="{ active: activeTab === 'dashboard' }"
-        @click="switchToDashboard"
-      >
+      <button type="button" class="pos-tab" :class="{ active: activeTab === 'dashboard' }" @click="switchToDashboard">
         <i class="fas fa-gauge-high" aria-hidden="true"></i> {{ $t('staffDashboard.title') }}
       </button>
-      <button
-        type="button"
-        class="pos-tab"
-        :class="{ active: activeTab === 'new' }"
-        @click="activeTab = 'new'"
-      >
+      <button type="button" class="pos-tab" :class="{ active: activeTab === 'new' }" @click="activeTab = 'new'">
         <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('orderTaker.tabNewOrder') }}
       </button>
-      <button
-        type="button"
-        class="pos-tab"
-        :class="{ active: activeTab === 'open' }"
-        @click="switchToOpen"
-      >
+      <button type="button" class="pos-tab" :class="{ active: activeTab === 'open' }" @click="switchToOpen">
         <i class="fas fa-list-check" aria-hidden="true"></i> {{ $t('orderTaker.tabOpenOrders') }}
         <span v-if="openOrders.length" class="pos-tab-badge">{{ openOrders.length }}</span>
       </button>
-      <button
-        type="button"
-        class="pos-tab"
-        :class="{ active: activeTab === 'summary' }"
-        @click="switchToSummary"
-      >
+      <button type="button" class="pos-tab" :class="{ active: activeTab === 'summary' }" @click="switchToSummary">
         <i class="fas fa-chart-simple" aria-hidden="true"></i> {{ $t('orderTaker.tabOrderSummary') }}
       </button>
 
       <!-- Department switch: flips menu categories, open orders and defaults -->
       <div class="dept-toggle" role="group" :aria-label="$t('orderTaker.department')">
-        <button
-          v-if="fixedDept !== 'bar'"
-          type="button"
-          :class="{ active: department === 'restaurant', locked: fixedDept === 'bar' }"
-          :disabled="fixedDept === 'bar'"
+        <button v-if="fixedDept !== 'bar'" type="button"
+          :class="{ active: department === 'restaurant', locked: fixedDept === 'bar' }" :disabled="fixedDept === 'bar'"
           :aria-pressed="department === 'restaurant'"
-          :title="fixedDept === 'bar' ? $t('orderTaker.bartenderLocked') : ''"
-          @click="switchDepartment('restaurant')"
-        >
+          :title="fixedDept === 'bar' ? $t('orderTaker.bartenderLocked') : ''" @click="switchDepartment('restaurant')">
           <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('orderTaker.restaurant') }}
         </button>
-        <button
-          v-if="fixedDept !== 'restaurant'"
-          type="button"
+        <button v-if="fixedDept !== 'restaurant'" type="button"
           :class="{ active: department === 'bar', locked: fixedDept === 'restaurant' }"
-          :disabled="fixedDept === 'restaurant'"
-          :aria-pressed="department === 'bar'"
-          :title="fixedDept === 'restaurant' ? $t('orderTaker.cashierLocked') : ''"
-          @click="switchDepartment('bar')"
-        >
+          :disabled="fixedDept === 'restaurant'" :aria-pressed="department === 'bar'"
+          :title="fixedDept === 'restaurant' ? $t('orderTaker.cashierLocked') : ''" @click="switchDepartment('bar')">
           <i class="fas fa-martini-glass" aria-hidden="true"></i> {{ $t('orderTaker.bar') }}
         </button>
       </div>
     </nav>
 
     <template v-if="activeTab === 'new'">
-    <div class="taker-split">
-      <!-- LEFT: categories + search + inline items (Ezee-style picker) -->
-      <div class="ts-left">
-        <!-- Big category buttons, like the department buttons of the reference -->
-        <div class="cat-panel">
-          <div class="cat-panel-head">
-            <i class="fas fa-th-large" aria-hidden="true"></i> {{ $t('orderTaker.categories') }}
-            <span class="cat-dept">{{ $t(`orderTaker.${department}`) }}</span>
-            <input
-              v-model.trim="searchQuery"
-              type="search"
-              class="cat-search"
-              :placeholder="$t('orderTaker.searchPlaceholder')"
-              @focus="openCategory('')"
-              @keydown.esc="closeCategory"
-            />
-          </div>
-          <div v-if="menuLoading" class="cat-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></div>
-          <!--
+      <div class="taker-split">
+        <!-- LEFT: categories + search + inline items (Ezee-style picker) -->
+        <div class="ts-left">
+          <!-- Big category buttons, like the department buttons of the reference -->
+          <div class="cat-panel">
+            <div class="cat-panel-head">
+              <i class="fas fa-th-large" aria-hidden="true"></i> {{ $t('orderTaker.categories') }}
+              <span class="cat-dept">{{ $t(`orderTaker.${department}`) }}</span>
+              <input v-model.trim="searchQuery" type="search" class="cat-search"
+                :placeholder="$t('orderTaker.searchPlaceholder')" :disabled="!form.table_number"
+                @focus="openCategory('')" @keydown.esc="closeCategory" />
+            </div>
+            <div v-if="menuLoading" class="cat-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></div>
+            <!--
             A wrapping rail. As a single sideways-scrolling line the last
             categories sat off the right edge on a small screen, so finding a
             department meant scrolling sideways. They wrap onto as many rows as
             they need instead, which pushes the food list and table map below
             them further down but keeps every category in view.
           -->
-          <div v-else-if="form.table_number && categories.length" class="cat-rail" role="tablist">
-            <button
-              v-for="cat in categories"
-              :key="cat"
-              type="button"
-              role="tab"
-              class="cat-btn"
-              :class="{ active: activeCategory === cat }"
-              :aria-selected="activeCategory === cat"
-              @click="openCategory(cat)"
-            >
-              {{ cat }}
-            </button>
-          </div>
-          <p v-else-if="form.table_number && !categories.length" class="cat-empty">{{ $t('orderTaker.noCategories') }}</p>
-          <p v-else class="cat-empty">{{ $t('orderTaker.selectTableFirst') || 'Select a table to see categories' }}</p>
+            <div v-else-if="form.table_number && categories.length" class="cat-rail" role="tablist">
+              <button v-for="cat in categories" :key="cat" type="button" role="tab" class="cat-btn"
+                :class="{ active: activeCategory === cat }" :aria-selected="activeCategory === cat"
+                @click="openCategory(cat)">
+                {{ cat }}
+              </button>
+            </div>
+            <p v-else-if="form.table_number && !categories.length" class="cat-empty">{{ $t('orderTaker.noCategories') }}
+            </p>
+            <p v-else class="cat-empty">{{ $t('orderTaker.selectTableFirst') || 'Select a table to see categories' }}
+            </p>
 
-          <!--
+            <!--
             The second level. The menu is two levels deep — Drinks is the service
             line a waiter picks, Cocktails and Spirits sit inside it — so once a
             service line is open its sub-categories get their own rail, just above
@@ -128,229 +85,183 @@
             it. It is hidden while searching, because a search deliberately
             ignores the category and speaks for itself.
           -->
-          <div
-            v-if="activeCategory && !searchQuery && subCategories.length > 1"
-            class="sub-rail"
-            role="tablist"
-            :aria-label="$t('orderTaker.subCategories')"
-          >
-            <button
-              type="button"
-              role="tab"
-              class="sub-btn"
-              :class="{ active: !activeSubCategory }"
-              :aria-selected="!activeSubCategory"
-              @click="openSubCategory('')"
-            >
-              {{ $t('orderTaker.allItems') }}
-            </button>
-            <button
-              v-for="sub in subCategories"
-              :key="sub"
-              type="button"
-              role="tab"
-              class="sub-btn"
-              :class="{ active: activeSubCategory === sub }"
-              :aria-selected="activeSubCategory === sub"
-              @click="openSubCategory(sub)"
-            >
-              {{ sub }}
-            </button>
+            <div v-if="activeCategory && !searchQuery && subCategories.length > 1" class="sub-rail" role="tablist"
+              :aria-label="$t('orderTaker.subCategories')">
+              <button type="button" role="tab" class="sub-btn" :class="{ active: !activeSubCategory }"
+                :aria-selected="!activeSubCategory" @click="openSubCategory('')">
+                {{ $t('orderTaker.allItems') }}
+              </button>
+              <button v-for="sub in subCategories" :key="sub" type="button" role="tab" class="sub-btn"
+                :class="{ active: activeSubCategory === sub }" :aria-selected="activeSubCategory === sub"
+                @click="openSubCategory(sub)">
+                {{ sub }}
+              </button>
+            </div>
           </div>
-        </div>
 
-        <!-- Inline items for the active category / search result (non-blocking) -->
-        <div v-if="activeCategory || searchQuery" class="inline-items">
-          <header class="inline-items-head">
-            <strong v-if="searchQuery">{{ $t('orderTaker.searchTitle') }}</strong>
-            <strong v-else-if="activeSubCategory">{{ activeSubCategory }}</strong>
-            <strong v-else>{{ activeCategory }}</strong>
-            <button type="button" class="line-remove" :title="$t('orderTaker.close')" @click="closeCategory">
-              <i class="fas fa-times" aria-hidden="true"></i>
-            </button>
-          </header>
-          <div v-if="popupItems.length" class="cat-pop-grid inline-grid">
-            <button
-              v-for="item in popupItems"
-              :key="item.menu_item_id"
-              type="button"
-              class="cat-item"
-              :class="{ 'on-order': lineFor(item), 'out-of-stock': item.is_in_stock === false }"
-              :disabled="item.is_in_stock === false"
-              @click="addItem(item)"
-            >
-              <span class="cat-item-name">{{ dishName(item) }}</span>
-              <span class="cat-item-price">{{ curCode() }} {{ money(item.price) }}</span>
-              <span v-if="item.is_in_stock === false" class="cat-item-oos">
-                {{ $t('orderTaker.outOfStock') }}
-              </span>
-              <span v-else-if="item.quantity_on_hand != null" class="cat-item-stock">
-                {{ $t('orderTaker.inStockQty', { qty: item.quantity_on_hand, unit: item.linked_item_unit || '' }) }}
-              </span>
-              <span v-if="qtyFor(item)" class="cat-item-qty">×{{ qtyFor(item) }}</span>
-            </button>
+          <!-- Inline items for the active category / search result (non-blocking) -->
+          <div v-if="form.table_number && (activeCategory || searchQuery)" class="inline-items">
+            <header class="inline-items-head">
+              <strong v-if="searchQuery">{{ $t('orderTaker.searchTitle') }}</strong>
+              <strong v-else-if="activeSubCategory">{{ activeSubCategory }}</strong>
+              <strong v-else>{{ activeCategory }}</strong>
+              <button type="button" class="line-remove" :title="$t('orderTaker.close')" @click="closeCategory">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </header>
+            <div v-if="popupItems.length" class="cat-pop-grid inline-grid">
+              <button v-for="item in popupItems" :key="item.menu_item_id" type="button" class="cat-item"
+                :class="{ 'on-order': lineFor(item), 'out-of-stock': item.is_in_stock === false }"
+                @click="addItem(item)">
+                <span class="cat-item-name">{{ dishName(item) }}</span>
+                <span class="cat-item-price">{{ curCode() }} {{ money(item.price) }}</span>
+                <span v-if="item.is_in_stock === false" class="cat-item-oos">
+                  {{ $t('orderTaker.outOfStock') }}
+                </span>
+                <span v-else-if="item.quantity_on_hand != null" class="cat-item-stock">
+                  {{ $t('orderTaker.inStockQty', { qty: item.quantity_on_hand, unit: item.linked_item_unit || '' }) }}
+                </span>
+                <span v-if="qtyFor(item)" class="cat-item-qty">×{{ qtyFor(item) }}</span>
+              </button>
+            </div>
+            <p v-else class="cat-empty">{{ $t('orderTaker.emptyCategory') }}</p>
           </div>
-          <p v-else class="cat-empty">{{ $t('orderTaker.emptyCategory') }}</p>
-        </div>
 
-        <!--
+          <!--
           Dine-in table map: which tables are free vs occupied (and by whom).
 
           It sits at the BOTTOM of the categories column, under the food cards,
           so the picker reads top-to-bottom on the left (categories, then food,
           then tables) while the order being built stays on the right.
         -->
-        <div class="table-map" v-if="servingTables.length">
-          <div class="cat-panel-head">
-            <i class="fas fa-chair" aria-hidden="true"></i> {{ $t('orderTaker.tablesLabel') }}
-            <span class="cat-dept"></span>
-          </div>
-          <div class="table-map-grid">
-            <button
-              v-for="tbl in servingTables"
-              :key="tbl.table_id"
-              type="button"
-              class="table-chip"
-              :class="tableHasLiveOrder(tbl.table_name) ? (tableOccupiedBySelf(tbl.table_name) ? 'mine' : 'occupied') : 'free'"
-              :disabled="tableOccupiedByOther(tbl.table_name)"
-              @click="selectTable(tbl)"
-            >
-              <span class="table-chip-name">
-                {{ tbl.table_name }}
-                <i v-if="form.table_number === tbl.table_name" class="fas fa-circle-check table-chip-tick" aria-hidden="true"></i>
-              </span>
-              <span v-if="tableHasLiveOrder(tbl.table_name)" class="table-chip-occ" :class="{ 'is-mine': tableOccupiedBySelf(tbl.table_name) }">
-                {{ tableOccupiedBySelf(tbl.table_name) ? $t('orderTaker.occupiedByYou') : $t('orderTaker.occupiedBy', { waiter: occupiedTables.get(String(tbl.table_name)) }) }}
-              </span>
-              <span v-else class="table-chip-free">{{ $t('orderTaker.tableFree') }}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- RIGHT: the selected order panel, like the Ezee order book -->
-      <div class="ts-right">
-        <!-- Order header: No, waiter, diners, VIP, transaction type -->
-        <header class="order-header">
-          <div class="oh-field">
-            <label>{{ $t('orderTaker.orderNo') }}</label>
-            <span class="oh-static">-</span>
-          </div>
-          <div class="oh-field">
-            <label>{{ $t('orderTaker.waiter') }}</label>
-            <span class="oh-static">{{ waiterName }}</span>
-          </div>
-          <div class="oh-field">
-            <label>{{ $t('orderTaker.diners') }}</label>
-            <div class="covers-step">
-              <button type="button" :disabled="!form.covers" @click="form.covers = Math.max(0, form.covers - 1)">-</button>
-              <span>{{ form.covers }}</span>
-              <button type="button" @click="form.covers = Math.min(999, form.covers + 1)">+</button>
+          <div class="table-map" v-if="servingTables.length">
+            <div class="cat-panel-head">
+              <i class="fas fa-chair" aria-hidden="true"></i> {{ $t('orderTaker.tablesLabel') }}
+              <span class="cat-dept"></span>
+            </div>
+            <div class="table-map-grid">
+              <button v-for="tbl in servingTables" :key="tbl.table_id" type="button" class="table-chip"
+                :class="tableHasLiveOrder(tbl.table_name) ? (tableOccupiedBySelf(tbl.table_name) ? 'mine' : 'occupied') : 'free'"
+                :disabled="tableOccupiedByOther(tbl.table_name)" @click="selectTable(tbl)">
+                <span class="table-chip-name">
+                  {{ tbl.table_name }}
+                  <i v-if="form.table_number === tbl.table_name" class="fas fa-circle-check table-chip-tick"
+                    aria-hidden="true"></i>
+                </span>
+                <span v-if="tableHasLiveOrder(tbl.table_name)" class="table-chip-occ"
+                  :class="{ 'is-mine': tableOccupiedBySelf(tbl.table_name) }">
+                  {{ tableOccupiedBySelf(tbl.table_name) ? $t('orderTaker.occupiedByYou') : $t('orderTaker.occupiedBy',
+                    { waiter: occupiedTables.get(String(tbl.table_name)) }) }}
+                </span>
+                <span v-else class="table-chip-free">{{ $t('orderTaker.tableFree') }}</span>
+              </button>
             </div>
           </div>
-          <div class="oh-field">
-            <label>{{ $t('orderTaker.table') }}</label>
-            <SearchableSelect
-              v-model="form.table_number"
-              :options="tableOptions"
-              :empty-label="isBartender ? $t('orderTaker.counterOrder') : $t('orderTaker.selectTable')"
-              force-search
-              @change="onTableDropdownChange"
-            />
-          </div>
-          <label class="oh-check">
-            <input type="checkbox" disabled />
-            <span>{{ $t('orderTaker.vip') }}</span>
-          </label>
-          <button
-            v-if="canManageTables"
-            type="button"
-            class="oh-manage"
-            @click="openTableManager"
-          >
-            <i class="fas fa-chair" aria-hidden="true"></i> {{ $t('orderTaker.manageTables') }}
-          </button>
-        </header>
-
-        <!-- Order lines table, with the Send action on its side -->
-        <div class="order-body">
-          <div class="lines-wrap">
-            <table class="lines-table">
-              <thead>
-                <tr>
-                  <th class="col-table">{{ $t('orderTaker.table') }}</th>
-                  <th class="col-qty">{{ $t('orderTaker.qty') }}</th>
-                  <th>{{ $t('orderTaker.item') }}</th>
-                  <th class="col-price">{{ $t('orderTaker.price') }}</th>
-                  <th class="col-amount">{{ $t('orderTaker.amount') }}</th>
-                  <th class="col-x"></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="line in pagedLines" :key="line.key || line.menu_item_id">
-                  <td class="col-table">
-                    <span v-if="form.table_number" class="line-table">
-                      <i class="fas fa-chair line-table-icon" aria-hidden="true"></i>
-                      {{ form.table_number }}
-                    </span>
-                    <span v-else class="line-table is-unset" :title="$t('orderTaker.selectTable')">—</span>
-                  </td>
-                  <td class="col-qty">
-                    <div class="qty-step">
-                      <button type="button" :disabled="line.quantity <= 1" @click="stepQty(line, -1)">-</button>
-                      <span>{{ line.quantity }}</span>
-                      <button type="button" :disabled="lineIsMaxed(line)" @click="stepQty(line, 1)">+</button>
-                    </div>
-                  </td>
-                  <td>{{ line.item_name }}</td>
-                  <td class="col-price">{{ money(line.unit_price) }}</td>
-                  <td class="col-amount">{{ money(line.subtotal) }}</td>
-                  <td class="col-x">
-                    <button type="button" class="line-remove" :title="$t('orderTaker.removeLine')" @click="removeLine(line)">
-                      <i class="fas fa-times" aria-hidden="true"></i>
-                    </button>
-                  </td>
-                </tr>
-                <tr v-if="!orderLines.length">
-                  <td colspan="6" class="empty-cell">{{ $t('orderTaker.empty') }}</td>
-                </tr>
-              </tbody>
-            </table>
-            <input v-model.trim="form.notes" type="text" class="notes-line" :placeholder="$t('orderTaker.notesPlaceholder')" />
-          </div>
         </div>
 
+        <!-- RIGHT: the selected order panel, like the Ezee order book -->
+        <div class="ts-right">
+          <!-- Order header: No, waiter, diners, VIP, transaction type -->
+          <header class="order-header">
+            <div class="oh-field">
+              <label>{{ $t('orderTaker.orderNo') }}</label>
+              <span class="oh-static">-</span>
+            </div>
+            <div class="oh-field">
+              <label>{{ $t('orderTaker.waiter') }}</label>
+              <span class="oh-static">{{ waiterName }}</span>
+            </div>
+            <div class="oh-field">
+              <label>{{ $t('orderTaker.diners') }}</label>
+              <div class="covers-step">
+                <button type="button" :disabled="!form.covers"
+                  @click="form.covers = Math.max(0, form.covers - 1)">-</button>
+                <span>{{ form.covers }}</span>
+                <button type="button" @click="form.covers = Math.min(999, form.covers + 1)">+</button>
+              </div>
+            </div>
+            <div class="oh-field">
+              <label>{{ $t('orderTaker.table') }}</label>
+              <SearchableSelect v-model="form.table_number" :options="tableOptions"
+                :empty-label="isBartender ? $t('orderTaker.counterOrder') : $t('orderTaker.selectTable')" force-search
+                @change="onTableDropdownChange" />
+            </div>
+            <label class="oh-check">
+              <input type="checkbox" disabled />
+              <span>{{ $t('orderTaker.vip') }}</span>
+            </label>
+            <button v-if="canManageTables" type="button" class="oh-manage" @click="openTableManager">
+              <i class="fas fa-chair" aria-hidden="true"></i> {{ $t('orderTaker.manageTables') }}
+            </button>
+          </header>
+
+          <!-- Order lines table, with the Send action on its side -->
+          <div class="order-body">
+            <div class="lines-wrap">
+              <table class="lines-table">
+                <thead>
+                  <tr>
+                    <th class="col-qty">{{ $t('orderTaker.qty') }}</th>
+                    <th>{{ $t('orderTaker.item') }}</th>
+                    <th class="col-price">{{ $t('orderTaker.price') }}</th>
+                    <th class="col-amount">{{ $t('orderTaker.amount') }}</th>
+                    <th class="col-x"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="line in orderLines" :key="line.key || line.menu_item_id">
+                    <td class="col-qty">
+                      <div class="qty-step">
+                        <button type="button" :disabled="line.quantity <= 1" @click="stepQty(line, -1)">-</button>
+                        <span>{{ line.quantity }}</span>
+                        <button type="button" :disabled="lineIsMaxed(line)" @click="stepQty(line, 1)">+</button>
+                      </div>
+                    </td>
+                    <td>{{ line.item_name }}</td>
+                    <td class="col-price">{{ money(line.unit_price) }}</td>
+                    <td class="col-amount">{{ money(line.subtotal) }}</td>
+                    <td class="col-x">
+                      <button type="button" class="line-remove" :title="$t('orderTaker.removeLine')"
+                        @click="removeLine(line)">
+                        <i class="fas fa-times" aria-hidden="true"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr v-if="!orderLines.length">
+                    <td colspan="5" class="empty-cell">{{ $t('orderTaker.empty') }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <input v-model.trim="form.notes" type="text" class="notes-line"
+                :placeholder="$t('orderTaker.notesPlaceholder')" />
+            </div>
+          </div>
+
+        <!-- PDF order pad: the SEND ORDER action and the TOTAL amount swap
+             positions (Send left, Total right). The action keeps its SEND
+             ORDER label; renaming it TOTAL would make the button meaningless. -->
         <div class="order-send-row">
-          <p v-if="sendError" class="send-error">{{ sendError }}</p>
-          <button type="button" class="send-btn" :disabled="!orderLines.length || sending" @click="sendOrder">
-            <i v-if="sending" class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
-            <i v-else class="fas fa-paper-plane" aria-hidden="true"></i>
-            {{ sending ? $t('orderTaker.sending') : $t('orderTaker.send') }}
-          </button>
-        </div>
-
-        <!-- Page start / page end + total -->
-        <div class="pager-row">
-          <button type="button" class="pager-btn" :disabled="page <= 1" @click="setPage(1)">
-            <i class="fas fa-angles-left" aria-hidden="true"></i> {{ $t('orderTaker.pageStart') }}
-          </button>
-          <div class="total-bar">
-            <span>{{ $t('orderTaker.total') }}</span>
-            <strong>{{ curCode() }} {{ money(grandTotal) }}</strong>
+            <p v-if="sendError" class="send-error">{{ sendError }}</p>
+            <button type="button" class="send-btn" :disabled="!orderLines.length || sending" @click="sendOrder">
+              <i v-if="sending" class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+              <i v-else class="fas fa-paper-plane" aria-hidden="true"></i>
+              {{ sending ? $t('orderTaker.sending') : $t('orderTaker.send') }}
+            </button>
+            <div class="total-bar">
+              <span>{{ $t('orderTaker.total') }}</span>
+              <strong>{{ curCode() }} {{ money(grandTotal) }}</strong>
+            </div>
           </div>
-          <button type="button" class="pager-btn" :disabled="page >= pageCount" @click="setPage(pageCount)">
-            {{ $t('orderTaker.pageEnd') }} <i class="fas fa-angles-right" aria-hidden="true"></i>
-          </button>
         </div>
       </div>
-    </div>
     </template>
 
     <!-- Date-filtered department dashboard: stock, sales, requisitions -->
     <template v-else-if="activeTab === 'dashboard'">
       <div class="dash-panel">
         <div class="open-head">
-          <h2><i class="fas fa-gauge-high" aria-hidden="true"></i> {{ $t('staffDashboard.title') }} · {{ $t(`orderTaker.${department}`) }}</h2>
+          <h2><i class="fas fa-gauge-high" aria-hidden="true"></i> {{ $t('staffDashboard.title') }} · {{
+            $t(`orderTaker.${department}`) }}</h2>
           <div class="dash-tools">
             <input v-model="dashDate" type="date" class="dash-date" :aria-label="$t('staffDashboard.date')" />
             <button v-if="canManageTables" type="button" class="oh-manage" @click="openTableManager">
@@ -369,13 +280,15 @@
           <!-- Stock + sales KPIs (department-scoped) -->
           <div class="summary-kpis dash-kpis">
             <div class="summary-kpi kpi-stock-items">
-              <span class="sk-label"><i class="fas fa-boxes-stacked" aria-hidden="true"></i> {{ $t('staffDashboard.stockTitle') }}</span>
+              <span class="sk-label"><i class="fas fa-boxes-stacked" aria-hidden="true"></i> {{
+                $t('staffDashboard.stockTitle') }}</span>
               <strong>{{ dashboard.stock?.items ?? 0 }}</strong>
-              <span class="sk-sub">{{ $t('staffDashboard.stockOnHand') }}: {{ num(dashboard.stock?.on_hand) }} · {{ $t('staffDashboard.stockValue') }}: {{ curCode() }} {{ money(dashboard.stock?.value) }}</span>
+              <span class="sk-sub">{{ $t('staffDashboard.stockOnHand') }}: {{ num(dashboard.stock?.on_hand) }} · {{
+                $t('staffDashboard.stockValue') }}: {{ curCode() }} {{ money(dashboard.stock?.value) }}</span>
             </div>
             <div class="summary-kpi kpi-low">
               <span class="sk-label">{{ $t('staffDashboard.lowStock') }}</span>
-              <strong>{{ dashboard.stock?.low_stock_count ?? 0 }}</strong>
+              <strong>{{ dashboard.menu_stock?.low_stock_count ?? dashboard.stock?.low_stock_count ?? 0 }}</strong>
               <span class="sk-sub">{{ $t('staffDashboard.lowStockTitle') }}</span>
             </div>
             <div class="summary-kpi kpi-sales">
@@ -386,7 +299,8 @@
             <div class="summary-kpi kpi-revenue">
               <span class="sk-label">{{ $t('staffDashboard.salesRevenue') }}</span>
               <strong>{{ curCode() }} {{ money(dashboard.sales?.revenue) }}</strong>
-              <span class="sk-sub">{{ $t('staffDashboard.salesAverage') }}: {{ curCode() }} {{ money(dashboard.sales?.average) }}</span>
+              <span class="sk-sub">{{ $t('staffDashboard.salesAverage') }}: {{ curCode() }} {{
+                money(dashboard.sales?.average) }}</span>
             </div>
           </div>
 
@@ -394,22 +308,30 @@
           <div class="dash-grid">
             <section class="dash-card">
               <header class="dash-card-head">
-                <strong><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> {{ $t('staffDashboard.lowStockTitle') }}</strong>
+                <strong><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> {{
+                  $t('staffDashboard.lowStockTitle') }}</strong>
+                <button v-if="isPosRole" type="button" class="dash-card-link" :title="$t('staffDashboard.viewLowStock')"
+                  :aria-label="$t('staffDashboard.viewLowStock')" @click="router.push({ name: 'cashier-low-stock' })">
+                  <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                </button>
               </header>
-              <p v-if="!(dashboard.stock?.low_stock || []).length" class="cat-empty">{{ $t('staffDashboard.lowStockEmpty') }}</p>
+              <p v-if="!(dashboard.menu_stock?.low_stock || []).length" class="cat-empty">{{
+                $t('staffDashboard.lowStockEmpty') }}</p>
               <div v-else class="table-scroll">
                 <table class="lines-table dash-table">
                   <thead>
                     <tr>
                       <th>{{ $t('staffDashboard.item') }}</th>
+                      <th>{{ $t('requisitionPanel.siUnit') }}</th>
                       <th class="col-qty">{{ $t('staffDashboard.qty') }}</th>
                       <th class="col-qty">{{ $t('staffDashboard.reorderLevel') }}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(row, i) in dashboard.stock.low_stock" :key="i">
+                    <tr v-for="(row, i) in dashboard.menu_stock.low_stock" :key="i">
                       <td>{{ row.item_name }}</td>
-                      <td class="col-qty">{{ num(row.quantity) }} {{ row.unit || '' }}</td>
+                      <td>{{ row.unit || '—' }}</td>
+                      <td class="col-qty">{{ num(row.quantity) }}</td>
                       <td class="col-qty">{{ num(row.reorder_level) }}</td>
                     </tr>
                   </tbody>
@@ -419,9 +341,11 @@
 
             <section class="dash-card">
               <header class="dash-card-head">
-                <strong><i class="fas fa-arrow-trend-up" aria-hidden="true"></i> {{ $t('staffDashboard.fastMovingTitle') }}</strong>
+                <strong><i class="fas fa-arrow-trend-up" aria-hidden="true"></i> {{ $t('staffDashboard.fastMovingTitle')
+                  }}</strong>
               </header>
-              <p v-if="!(dashboard.fast_moving || []).length" class="cat-empty">{{ $t('staffDashboard.fastMovingEmpty') }}</p>
+              <p v-if="!(dashboard.fast_moving || []).length" class="cat-empty">{{ $t('staffDashboard.fastMovingEmpty')
+                }}</p>
               <div v-else class="table-scroll">
                 <table class="lines-table dash-table">
                   <thead>
@@ -446,7 +370,8 @@
           <!-- Pending + accepted requisitions (waiters order through the cashier/bartender) -->
           <section v-if="role !== 'waiter'" class="dash-card">
             <header class="dash-card-head">
-              <strong><i class="fas fa-file-signature" aria-hidden="true"></i> {{ $t('staffDashboard.requisitionsTitle') }}</strong>
+              <strong><i class="fas fa-file-signature" aria-hidden="true"></i> {{ $t('staffDashboard.requisitionsTitle')
+                }}</strong>
               <router-link to="/app/requisitions" class="summary-link req-link">
                 <i class="fas fa-arrow-right" aria-hidden="true"></i> {{ $t('staffDashboard.viewRequisitions') }}
               </router-link>
@@ -477,27 +402,6 @@
             </div>
           </section>
 
-          <!-- One-tap doors into the rest of the panel -->
-          <div class="summary-quick">
-            <button type="button" class="summary-link" @click="activeTab = 'new'">
-              <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('staffDashboard.linkTakeOrder') }}
-            </button>
-            <button type="button" class="summary-link" @click="switchToSummary">
-              <i class="fas fa-chart-simple" aria-hidden="true"></i> {{ $t('staffDashboard.linkOrderSummary') }}
-            </button>
-            <router-link v-if="role !== 'waiter'" to="/app/requisitions" class="summary-link">
-              <i class="fas fa-file-signature" aria-hidden="true"></i> {{ $t('staffDashboard.linkRequisitions') }}
-            </router-link>
-            <router-link to="/app/messages" class="summary-link">
-              <i class="fas fa-comments" aria-hidden="true"></i> {{ $t('staffDashboard.linkCommunication') }}
-            </router-link>
-            <router-link to="/app/issue-reports" class="summary-link">
-              <i class="fas fa-flag" aria-hidden="true"></i> {{ $t('staffDashboard.linkIssueReports') }}
-            </router-link>
-            <router-link to="/app/staff-reports" class="summary-link">
-              <i class="fas fa-chart-line" aria-hidden="true"></i> {{ $t('staffDashboard.linkStaffReports') }}
-            </router-link>
-          </div>
         </template>
       </div>
     </template>
@@ -510,49 +414,26 @@
           <span v-if="!isOpenToday" class="open-day-label">{{ formatDateDMY(openDate) }}</span>
         </h2>
         <div class="sb-date-row">
-          <button v-if="!isOpenToday" type="button" class="oh-manage" @click="openDate = workingDateStore.workingDate; loadOpenOrders()">
+          <button v-if="!isOpenToday" type="button" class="oh-manage"
+            @click="openDate = workingDateStore.workingDate; loadOpenOrders()">
             <i class="fas fa-calendar-day" aria-hidden="true"></i> {{ $t('orderTaker.today') }}
           </button>
-          <CalendarInput
-            v-model="openDate"
-            :placeholder="$t('orderTaker.tabOpenOrders')"
-            :aria-label="$t('orderTaker.tabOpenOrders')"
-            @change="loadOpenOrders"
-          />
+          <CalendarInput v-model="openDate" :clearable="false" :placeholder="$t('orderTaker.tabOpenOrders')"
+            :aria-label="$t('orderTaker.tabOpenOrders')" @change="loadOpenOrders" />
           <button type="button" class="oh-manage" @click="loadOpenOrders">
             <i class="fas fa-rotate" aria-hidden="true"></i> {{ $t('orderTaker.refresh') }}
           </button>
-          <button
-            v-if="bulkVoidable.length"
-            type="button"
-            class="oh-manage oh-danger"
-            :title="$t('orderTaker.voidAll')"
-            :aria-label="$t('orderTaker.voidAll')"
-            @click="openVoidAll"
-          >
-            <i class="fas fa-xmark" aria-hidden="true"></i> {{ $t('orderTaker.voidAll') }}
-          </button>
-          <button
-            v-if="selectedVoidable.length"
-            type="button"
-            class="oh-manage oh-danger"
-            :title="$t('orderTaker.voidSelected')"
-            :aria-label="$t('orderTaker.voidSelected')"
-            @click="openVoidSelected"
-          >
-            <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('orderTaker.voidSelected') }} ({{ selectedVoidable.length }})
+          <button v-if="selectedVoidable.length" type="button" class="oh-manage oh-danger"
+            :title="$t('orderTaker.void')" :aria-label="$t('orderTaker.void')" @click="openVoidSelected">
+            <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('orderTaker.void') }} ({{ selectedVoidable.length }})
           </button>
         </div>
       </div>
       <div class="open-tools">
         <div class="ot-search">
           <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
-          <input
-            v-model="openSearch"
-            type="search"
-            :placeholder="$t('orderTaker.searchOpen')"
-            :aria-label="$t('orderTaker.searchOpen')"
-          />
+          <input v-model="openSearch" type="search" :placeholder="$t('orderTaker.searchOpen')"
+            :aria-label="$t('orderTaker.searchOpen')" />
         </div>
         <div class="ot-chips">
           <button type="button" :class="{ active: openStatus === '' }" @click="openStatus = ''">
@@ -561,14 +442,8 @@
           <button type="button" :class="{ active: openStatus === 'running' }" @click="openStatus = 'running'">
             {{ $t('orderTaker.filterRunning') }} · {{ openRunningCount }}
           </button>
-          <button type="button" :class="{ active: openStatus === 'ready' }" @click="openStatus = 'ready'">
-            {{ $t('orderTaker.filterReady') }} · {{ openReadyCount }}
-          </button>
-          <button type="button" :class="{ active: openStatus === 'served' }" @click="openStatus = 'served'">
-            {{ $t('orderTaker.filterServed') }} · {{ openServedCount }}
-          </button>
-          <button type="button" :class="{ active: openStatus === 'unpaid' }" @click="openStatus = 'unpaid'">
-            {{ $t('orderTaker.filterUnpaid') }} · {{ openUnpaidCount }}
+          <button type="button" :class="{ active: openStatus === 'settled' }" @click="openStatus = 'settled'">
+            {{ $t('orderTaker.filterSettled') }} · {{ openSettledCount }}
           </button>
         </div>
       </div>
@@ -577,105 +452,41 @@
       <p v-else-if="!openOrders.length" class="cat-empty">{{ $t('orderTaker.noOpenOrders') }}</p>
       <p v-else-if="!openFiltered.length" class="cat-empty">{{ $t('orderTaker.openNoMatch') }}</p>
       <div v-else class="open-grid">
-        <article v-for="order in openFiltered" :key="order.order_id" class="open-card">
+        <article v-for="order in openFiltered" :key="order.order_id" class="open-card"
+          @dblclick="toggleSelectOrder(order)">
           <header class="open-card-head">
             <label class="open-check">
-              <input
-                type="checkbox"
-                :value="order.order_id"
-                v-model="selectedVoid"
-                :disabled="!(['pending','preparing','in_progress','processing'].includes(order.status) && order.payment_status === 'unpaid')"
-                :aria-label="$t('orderTaker.voidSelected')"
-              />
+              <input type="checkbox" :value="order.order_id" v-model="selectedVoid"
+                :disabled="!(['pending', 'preparing', 'in_progress', 'processing'].includes(order.status) && order.payment_status === 'unpaid')"
+                :aria-label="$t('orderTaker.voidSelected')" />
             </label>
             <strong>{{ order.order_number }}</strong>
             <span class="open-badge" :class="statusBadge(order.status)">{{ statusLabel(order.status) }}</span>
-            <span
-              class="open-timer"
-              :title="$t('orderTaker.openFor', { time: formatOrderDateTime(order.created_at || order.order_date) })"
-            >
+            <span class="open-timer"
+              :title="$t('orderTaker.openFor', { time: formatOrderDateTime(order.created_at || order.order_date) })">
               <i class="fas fa-stopwatch" aria-hidden="true"></i> {{ elapsedLabel(order) }}
             </span>
           </header>
-          <p class="open-meta">
-            <i class="fas fa-location-dot" aria-hidden="true"></i>
-            {{ order.table_number ? $t('orders.tableN', { number: order.table_number })
-              : order.room_number ? $t('orders.roomN', { number: order.room_number })
-              : order.guest_name || '—' }}
-            · {{ order.waiter_name || '—' }}
-          </p>
-          <p class="open-meta open-time">
-            <i class="fas fa-user" aria-hidden="true"></i>
-            {{ $t('orders.guestName') }}: {{ order.guest_name || '—' }}
-            <template v-if="order.covers">
-              · <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('orderTaker.diners') }}: {{ order.covers }}
-            </template>
-            · <i class="fas fa-clock" aria-hidden="true"></i> {{ formatOrderDateTime(order.created_at || order.order_date) }}
-          </p>
-          <ul class="open-items">
-            <li
-              v-for="item in order.items || []"
-              :key="item.order_item_id"
-              :class="{ 'item-done': item.status === 'served' }"
-            >
-              <span class="item-line-text">
-                {{ item.quantity }}× {{ dishName(item) }}<template v-if="item.accompaniment"> · {{ item.accompaniment }}</template>
-              </span>
-              <span class="item-status-pill" :class="statusBadge(item.status)">{{ statusLabel(item.status) }}</span>
-              <button
-                v-if="!isWaiterRole && nextItemStatus(item)"
-                type="button"
-                class="item-advance"
-                :disabled="advancingItem === item.order_item_id"
-                :aria-label="$t('orderTaker.itemTo', { item: dishName(item), status: statusLabel(nextItemStatus(item)) })"
-                @click="advanceItem(order, item)"
-              >
-                <i class="fas" :class="nextItemStatus(item) === 'served' ? 'fa-utensils' : 'fa-bell-concierge'" aria-hidden="true"></i>
-              </button>
-            </li>
-          </ul>
-          <p class="open-total">{{ $t('orderTaker.orderTotal') }}: <strong>{{ curCode() }} {{ money(order.total_amount) }}</strong>
-            · <span :class="order.payment_status === 'unpaid' ? 'pay-unpaid' : 'pay-ok'">{{ paymentLabel(order.payment_status) }}</span>
-            <span v-if="order.settlement_mode" class="settle-tag" :title="$t('waiterPanel.settlementMode')">
-              <i class="fas fa-wallet" aria-hidden="true"></i> {{ order.settlement_mode }}
-            </span>
-          </p>
           <!-- Single-tap lifecycle: next status, payment, bill to room -->
           <div class="open-actions">
-            <button
-              v-if="!isWaiterRole && order.status === 'pending'"
-              type="button"
-              class="open-btn warn"
-              @click="advanceOrder(order, 'preparing')"
-            >
+            <button v-if="!isWaiterRole && order.status === 'pending'" type="button" class="open-btn warn"
+              @click="advanceOrder(order, 'preparing')">
               <i class="fas fa-fire-burner" aria-hidden="true"></i> {{ $t('orderTaker.markPreparing') }}
             </button>
-            <button
-              v-else-if="!isWaiterRole && ['preparing', 'in_progress', 'processing'].includes(order.status)"
-              type="button"
-              class="open-btn info"
-              @click="advanceOrder(order, 'ready')"
-            >
+            <button v-else-if="!isWaiterRole && ['preparing', 'in_progress', 'processing'].includes(order.status)"
+              type="button" class="open-btn info" @click="advanceOrder(order, 'ready')">
               <i class="fas fa-bell-concierge" aria-hidden="true"></i> {{ $t('orderTaker.markReady') }}
             </button>
-            <button
-              v-else-if="!isWaiterRole && order.status === 'ready'"
-              type="button"
-              class="open-btn ok"
-              @click="advanceOrder(order, 'served')"
-            >
+            <button v-else-if="!isWaiterRole && order.status === 'ready'" type="button" class="open-btn ok"
+              @click="advanceOrder(order, 'served')">
               <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('orderTaker.markServed') }}
             </button>
             <template v-if="order.payment_status === 'unpaid' && canCollect">
               <button type="button" class="open-btn pay" @click="openPay(order)">
                 <i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('orderTaker.collectPayment') }}
               </button>
-              <button
-                v-if="order.room_number && canBillToRoom"
-                type="button"
-                class="open-btn room"
-                @click="billToRoom(order)"
-              >
+              <button v-if="order.room_number && canBillToRoom" type="button" class="open-btn room"
+                @click="billToRoom(order)">
                 <i class="fas fa-bed" aria-hidden="true"></i> {{ $t('orderTaker.billToRoom') }}
               </button>
             </template>
@@ -690,39 +501,66 @@
                 <i class="fas fa-merge" aria-hidden="true"></i> {{ $t('orderTaker.mergeBill') }}
               </button>
             </template>
-            <button
-              v-if="!['completed', 'cancelled'].includes(order.status)"
-              type="button"
-              class="open-btn ghost"
-              @click="printTicket(order, 'kot')"
-            >
+            <button v-if="!['completed', 'cancelled'].includes(order.status)" type="button" class="open-btn ghost"
+              @click="printTicket(order, 'kot')">
               <i class="fas fa-print" aria-hidden="true"></i> {{ $t('orderTaker.printKot') }}
             </button>
-            <button
-              v-if="!['completed', 'cancelled'].includes(order.status)"
-              type="button"
-              class="open-btn ghost"
-              @click="printTicket(order, 'receipt')"
-            >
+            <button v-if="!['completed', 'cancelled'].includes(order.status)" type="button" class="open-btn ghost"
+              @click="printTicket(order, 'receipt')">
               <i class="fas fa-receipt" aria-hidden="true"></i> {{ $t('orderTaker.printReceipt') }}
             </button>
             <button
               v-if="['pending', 'preparing', 'in_progress', 'processing'].includes(order.status) && order.payment_status === 'unpaid'"
-              type="button"
-              class="open-btn ghost danger"
-              @click="openVoid(order)"
-            >
+              type="button" class="open-btn ghost danger" @click="openVoid(order)">
               <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('orderTaker.voidOrder') }}
             </button>
-            <button
-              v-if="!isWaiterRole && !isPosRole && order.status === 'served' && order.payment_status !== 'unpaid'"
-              type="button"
-              class="open-btn done"
-              @click="advanceOrder(order, 'completed')"
-            >
+            <button v-if="!isWaiterRole && !isPosRole && order.status === 'served' && order.payment_status !== 'unpaid'"
+              type="button" class="open-btn done" @click="advanceOrder(order, 'completed')">
               <i class="fas fa-check" aria-hidden="true"></i> {{ $t('orderTaker.markCompleted') }}
             </button>
           </div>
+          <p class="open-meta">
+            <i class="fas fa-location-dot" aria-hidden="true"></i>
+            {{ order.table_number ? $t('orders.tableN', { number: order.table_number })
+              : order.room_number ? $t('orders.roomN', { number: order.room_number })
+                : order.guest_name || '—' }}
+            · {{ order.waiter_name || '—' }}
+          </p>
+          <p class="open-meta open-time">
+            <i class="fas fa-user" aria-hidden="true"></i>
+            {{ $t('orders.guestName') }}: {{ order.guest_name || '—' }}
+            <template v-if="order.covers">
+              · <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('orderTaker.diners') }}: {{ order.covers }}
+            </template>
+            · <i class="fas fa-clock" aria-hidden="true"></i> {{ formatOrderDateTime(order.created_at ||
+              order.order_date)
+            }}
+          </p>
+          <ul class="open-items">
+            <li class="open-items-head">
+              <span>{{ $t('orderTaker.item') }}</span>
+              <span>{{ $t('orderTaker.price') }}</span>
+              <span>{{ $t('orderTaker.amount') }}</span>
+            </li>
+            <li v-for="item in order.items || []" :key="item.order_item_id"
+              :class="{ 'item-done': item.status === 'served' }">
+              <span class="item-line-text">
+                {{ item.quantity }}× {{ dishName(item) }}<template v-if="item.accompaniment"> · {{ item.accompaniment
+                  }}</template>
+              </span>
+              <span class="item-line-price">{{ curCode() }} {{ money(item.unit_price) }}</span>
+              <span class="item-line-amount">{{ curCode() }} {{ money(item.subtotal ?? item.unit_price * item.quantity)
+                }}</span>
+            </li>
+          </ul>
+          <p class="open-total">{{ $t('orderTaker.orderTotal') }}: <strong>{{ curCode() }} {{ money(order.total_amount)
+              }}</strong>
+            · <span :class="order.payment_status === 'unpaid' ? 'pay-unpaid' : 'pay-ok'">{{
+              paymentLabel(order.payment_status) }}</span>
+            <span v-if="order.settlement_mode" class="settle-tag" :title="$t('waiterPanel.settlementMode')">
+              <i class="fas fa-wallet" aria-hidden="true"></i> {{ order.settlement_mode }}
+            </span>
+          </p>
         </article>
       </div>
     </div>
@@ -730,14 +568,12 @@
     <!-- Order Summary: the signed-in waiter's tickets and totals for today -->
     <div v-else class="summary-panel">
       <div class="open-head">
-        <h2><i class="fas fa-chart-simple" aria-hidden="true"></i> {{ $t('orderTaker.summaryTitle') }} · {{ summaryDate }}</h2>
+        <h2><i class="fas fa-chart-simple" aria-hidden="true"></i> {{ $t('orderTaker.summaryTitle') }} · {{ summaryDate
+          }}
+        </h2>
         <div class="sb-date-row">
-          <CalendarInput
-            v-model="summaryDate"
-            :placeholder="$t('orderTaker.summaryTitle')"
-            :aria-label="$t('orderTaker.summaryTitle')"
-            @change="loadOrderSummary"
-          />
+          <CalendarInput v-model="summaryDate" :clearable="false" :placeholder="$t('orderTaker.summaryTitle')"
+            :aria-label="$t('orderTaker.summaryTitle')" @change="loadOrderSummary" />
           <button type="button" class="oh-manage" @click="loadOrderSummary">
             <i class="fas fa-rotate" aria-hidden="true"></i> {{ $t('orderTaker.refresh') }}
           </button>
@@ -748,7 +584,7 @@
         <p v-if="summaryError" class="send-error">{{ summaryError }}</p>
         <div class="summary-kpis">
           <div class="summary-kpi kpi-running">
-            <span class="sk-label">{{ $t('orderTaker.summaryRunning') }}</span>
+            <span class="sk-label">{{ $t('orderTaker.summaryPending') }}</span>
             <strong>{{ summaryRunning }}</strong>
           </div>
           <div class="summary-kpi kpi-settled">
@@ -760,24 +596,24 @@
             <strong>{{ summaryVoided }}</strong>
           </div>
           <div class="summary-kpi kpi-total">
-            <span class="sk-label">{{ isSummaryToday ? $t('orderTaker.summaryTotalToday') : $t('orderTaker.summaryTotalFor', { date: summaryDate }) }}</span>
+            <span class="sk-label">{{ isSummaryToday ? $t('orderTaker.summaryTotal') : $t('orderTaker.summaryTotalFor',
+              { date: summaryDate }) }}</span>
             <strong>{{ curCode() }} {{ money(summaryTotal) }}</strong>
           </div>
         </div>
 
         <div class="summary-quick">
-          <router-link to="/app/messages" class="summary-link"><i class="fas fa-comments" aria-hidden="true"></i> {{ $t('orderTaker.summaryMessages') }}</router-link>
-          <router-link to="/app/statuses" class="summary-link"><i class="fas fa-circle-dot" aria-hidden="true"></i> {{ $t('orderTaker.summaryStatuses') }}</router-link>
-          <router-link to="/app/issue-reports" class="summary-link"><i class="fas fa-flag" aria-hidden="true"></i> {{ $t('orderTaker.summaryIssueReports') }}</router-link>
+          <router-link to="/app/messages" class="summary-link"><i class="fas fa-comments" aria-hidden="true"></i> {{
+            $t('orderTaker.summaryMessages') }}</router-link>
+          <router-link to="/app/statuses" class="summary-link"><i class="fas fa-circle-dot" aria-hidden="true"></i> {{
+            $t('orderTaker.summaryStatuses') }}</router-link>
+          <router-link to="/app/issue-reports" class="summary-link"><i class="fas fa-flag" aria-hidden="true"></i> {{
+            $t('orderTaker.summaryIssueReports') }}</router-link>
         </div>
 
         <div class="summary-tools">
-          <input
-            v-model.trim="summarySearch"
-            type="search"
-            class="st-search"
-            :placeholder="$t('orderTaker.summarySearch')"
-          />
+          <input v-model.trim="summarySearch" type="search" class="st-search"
+            :placeholder="$t('orderTaker.summarySearch')" />
           <select v-model="summaryStatus" class="st-select">
             <option value="">{{ $t('orderTaker.summaryStatusFilter') }}</option>
             <option v-for="s in summaryStatuses" :key="s" :value="s">{{ statusLabel(s) }}</option>
@@ -803,22 +639,27 @@
                 <tr>
                   <th>{{ $t('orderTaker.summaryOrder') }}</th>
                   <th>{{ $t('orderTaker.summaryTime') }}</th>
-                  <th>{{ $t('orderTaker.summaryWaiter') }}</th>
                   <th>{{ $t('orderTaker.summaryType') }}</th>
                   <th>{{ $t('orderTaker.summaryStatus') }}</th>
                   <th>{{ $t('waiterPanel.settlementMode') }}</th>
                   <th class="col-amount">{{ $t('orderTaker.summaryAmount') }}</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 <template v-for="order in summaryPageRows" :key="order.order_id">
                   <tr>
-                    <td><strong>{{ order.order_number }}</strong></td>
-                    <td>{{ formatOrderDateTime(order.created_at || order.order_date) }}</td>
-                    <td>{{ order.waiter_name || '—' }}</td>
+                    <td>
+                      <button type="button" class="summary-order-link" :aria-expanded="summaryOpenId === order.order_id"
+                        @click="toggleSummaryItems(order)">
+                        <strong>{{ order.order_number }}</strong>
+                        <i class="fas" :class="summaryOpenId === order.order_id ? 'fa-chevron-up' : 'fa-chevron-down'"
+                          aria-hidden="true"></i>
+                      </button>
+                    </td>
+                    <td>{{ formatTime(order.created_at || order.order_date) }}</td>
                     <td>{{ orderTypeLabel(order) }}</td>
-                    <td><span class="badge" :class="statusBadge(order.status)">{{ statusLabel(order.status) }}</span></td>
+                    <td><span class="badge" :class="statusBadge(order.status)">{{ statusLabel(order.status) }}</span>
+                    </td>
                     <td>
                       <span v-if="order.settlement_mode" class="settle-tag">
                         <i class="fas fa-wallet" aria-hidden="true"></i> {{ settlementLabel(order) }}
@@ -826,36 +667,24 @@
                       <span v-else>—</span>
                     </td>
                     <td class="col-amount"><strong>{{ curCode() }} {{ money(order.total_amount) }}</strong></td>
-                    <td class="summ-actions">
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-secondary"
-                        :aria-expanded="summaryOpenId === order.order_id"
-                        @click="toggleSummaryItems(order)"
-                      >
-                        <i class="fas" :class="summaryOpenId === order.order_id ? 'fa-chevron-up' : 'fa-chevron-down'" aria-hidden="true"></i>
-                        {{ $t('orderTaker.summaryViewItems') }}
-                      </button>
-                      <button
-                        v-if="['completed', 'cancelled'].includes(order.status) && !isPosRole"
-                        type="button"
-                        class="btn btn-sm btn-secondary"
-                        @click="reprintClosedKot(order)"
-                      >
-                        <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('orderTaker.summaryReprintKot') }}
-                      </button>
-                    </td>
                   </tr>
                   <tr v-if="summaryOpenId === order.order_id" class="summary-items-row">
-                    <td colspan="8">
+                    <td colspan="6">
+                      <p v-if="order.status === 'cancelled'" class="void-reason-line">
+                        <strong>{{ $t('storeManager.common.reason') }}:</strong> {{ order.void_reason || '—' }}
+                      </p>
                       <ul class="summary-items">
                         <li v-for="item in order.items || []" :key="item.order_item_id">
                           <span class="item-line-text">
-                            {{ item.quantity }}× {{ dishName(item) }}<template v-if="item.accompaniment"> · {{ item.accompaniment }}</template>
+                            {{ item.quantity }}× {{ dishName(item) }}<template v-if="item.accompaniment"> · {{
+                              item.accompaniment }}</template>
                           </span>
-                          <span class="summary-item-amount">{{ curCode() }} {{ money(item.subtotal ?? Number(item.unit_price || 0) * Number(item.quantity || 1)) }}</span>
+                          <span class="summary-item-amount">{{ curCode() }} {{ money(item.subtotal ??
+                            Number(item.unit_price || 0) *
+                            Number(item.quantity || 1)) }}</span>
                         </li>
-                        <li v-if="!(order.items || []).length" class="cat-empty">{{ $t('orderTaker.summaryNoItems') }}</li>
+                        <li v-if="!(order.items || []).length" class="cat-empty">{{ $t('orderTaker.summaryNoItems') }}
+                        </li>
                       </ul>
                     </td>
                   </tr>
@@ -871,7 +700,8 @@
     <!-- Collect payment popup (single tap on a method) -->
     <Teleport to="body">
       <Transition name="fade">
-        <div v-if="payOrder" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog" :aria-label="$t('orderTaker.payTitle')">
+        <div v-if="payOrder" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog"
+          :aria-label="$t('orderTaker.payTitle')">
           <div class="cat-pop-backdrop" @click="payOrder = null"></div>
           <div class="cat-pop-panel accomp-panel">
             <header class="cat-pop-head">
@@ -882,17 +712,27 @@
             </header>
             <p class="accomp-hint">{{ curCode() }} {{ money(payOrder.total_amount) }}</p>
             <div class="accomp-grid">
-              <button
-                v-for="method in paymentMethodOptions"
-                :key="method.value"
-                type="button"
-                class="accomp-option"
-                :disabled="paying"
-                @click="pay(method.value)"
-              >
+              <button v-for="method in paymentMethodOptions" :key="method.value" type="button" class="accomp-option"
+                :disabled="paying" @click="pay(method.value)">
                 {{ method.label }}
               </button>
             </div>
+            <template v-if="creditorAccounts.length || noChargeAccounts.length">
+              <p v-if="creditorAccounts.length" class="accomp-hint">{{ $t('cashier.summary.settleModeCreditor') }}</p>
+              <div v-if="creditorAccounts.length" class="accomp-grid">
+                <button v-for="acc in creditorAccounts" :key="acc.credit_account_id" type="button" class="accomp-option"
+                  :disabled="paying" @click="settleAccount(acc)">
+                  {{ acc.name }}
+                </button>
+              </div>
+              <p v-if="noChargeAccounts.length" class="accomp-hint">{{ $t('cashier.summary.settleModeNoCharge') }}</p>
+              <div v-if="noChargeAccounts.length" class="accomp-grid">
+                <button v-for="acc in noChargeAccounts" :key="acc.credit_account_id" type="button" class="accomp-option"
+                  :disabled="paying" @click="settleAccount(acc)">
+                  {{ acc.name }}
+                </button>
+              </div>
+            </template>
           </div>
         </div>
       </Transition>
@@ -901,12 +741,14 @@
     <!-- Void order: confirm + optional reason (the backend stamps a fallback) -->
     <Teleport to="body">
       <Transition name="fade">
-        <div v-if="voidTarget" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog" :aria-label="$t('orderTaker.voidTitle')">
+        <div v-if="voidTarget" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog"
+          :aria-label="$t('orderTaker.voidTitle')">
           <div class="cat-pop-backdrop" @click="voidTarget = null"></div>
           <div class="cat-pop-panel accomp-panel">
             <header class="cat-pop-head">
               <strong>{{ $t('orderTaker.voidTitle') }} · {{ voidTarget.order_number }}</strong>
-              <button type="button" class="cat-pop-close" :aria-label="$t('orderTaker.cancel')" @click="voidTarget = null">
+              <button type="button" class="cat-pop-close" :aria-label="$t('orderTaker.cancel')"
+                @click="voidTarget = null">
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </header>
@@ -914,18 +756,14 @@
             <p class="accomp-hint">{{ $t('orderTaker.voidHint') }}</p>
             <p class="void-summary">
               {{ $t('orderTaker.voidSummary', {
-  currency: curCode(),
+                currency: curCode(),
                 table: voidTarget.table_number || voidTarget.room_number || '—',
                 total: money(voidTarget.total_amount),
               }) }}
             </p>
             <label class="void-reason">
-              <textarea
-                v-model="voidReason"
-                rows="2"
-                :placeholder="$t('orderTaker.voidReason')"
-                :disabled="voiding"
-              ></textarea>
+              <textarea v-model="voidReason" rows="2" :placeholder="$t('orderTaker.voidReason')"
+                :disabled="voiding"></textarea>
             </label>
             <div class="void-actions">
               <button type="button" class="open-btn ghost" :disabled="voiding" @click="voidTarget = null">
@@ -941,41 +779,32 @@
       </Transition>
     </Teleport>
 
-    <!-- Void all listed orders: one X clears the whole visible board -->
+    <!-- Void the ticked orders: one action clears the selected tickets -->
     <Teleport to="body">
       <Transition name="fade">
-        <div v-if="voidAllOpen" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog" :aria-label="$t('orderTaker.voidAllTitle')">
-          <div class="cat-pop-backdrop" @click="closeVoidAll"></div>
+        <div v-if="voidSelectedOpen" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog"
+          :aria-label="$t('orderTaker.voidSelected')">
+          <div class="cat-pop-backdrop" @click="closeVoidSelected"></div>
           <div class="cat-pop-panel accomp-panel">
             <header class="cat-pop-head">
-              <strong>{{ $t('orderTaker.voidAllTitle') }} · {{ bulkVoidable.length }}</strong>
-              <button type="button" class="cat-pop-close" :aria-label="$t('orderTaker.cancel')" @click="closeVoidAll">
+              <strong>{{ $t('orderTaker.voidSelected') }} · {{ selectedVoidable.length }}</strong>
+              <button type="button" class="cat-pop-close" :aria-label="$t('orderTaker.cancel')"
+                @click="closeVoidSelected">
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </header>
             <p class="accomp-hint">{{ $t('orderTaker.voidAllHint') }}</p>
-            <p class="void-summary">
-              {{ $t('orderTaker.voidAllSummary', {
-                count: bulkVoidable.length,
-                currency: curCode(),
-                total: money(bulkVoidTotal),
-              }) }}
-            </p>
             <label class="void-reason">
-              <textarea
-                v-model="voidReason"
-                rows="2"
-                :placeholder="$t('orderTaker.voidReason')"
-                :disabled="voidingAll"
-              ></textarea>
+              <textarea v-model="voidReason" rows="2" :placeholder="$t('orderTaker.voidReason')"
+                :disabled="voidingSelected"></textarea>
             </label>
             <div class="void-actions">
-              <button type="button" class="open-btn ghost" :disabled="voidingAll" @click="closeVoidAll">
+              <button type="button" class="open-btn ghost" :disabled="voidingSelected" @click="closeVoidSelected">
                 {{ $t('orderTaker.cancel') }}
               </button>
-              <button type="button" class="open-btn danger" :disabled="voidingAll" @click="confirmVoidAll">
+              <button type="button" class="open-btn danger" :disabled="voidingSelected" @click="confirmVoidSelected">
                 <i class="fas fa-ban" aria-hidden="true"></i>
-                {{ voidingAll ? $t('orderTaker.sending') : $t('orderTaker.voidAllConfirm', { count: bulkVoidable.length }) }}
+                {{ voidingSelected ? $t('orderTaker.sending') : $t('orderTaker.voidSelected') }}
               </button>
             </div>
           </div>
@@ -986,40 +815,45 @@
     <!-- Bill split / transfer: move lines to a fresh bill or the whole ticket to another table -->
     <Teleport to="body">
       <Transition name="fade">
-        <div v-if="billMode" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog" :aria-label="billMode === 'split' ? $t('orderTaker.splitTitle') : $t('orderTaker.transferTitle')">
+        <div v-if="billMode" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog"
+          :aria-label="billMode === 'split' ? $t('orderTaker.splitTitle') : $t('orderTaker.transferTitle')">
           <div class="cat-pop-backdrop" @click="closeBill"></div>
           <div class="cat-pop-panel accomp-panel bill-pop-panel">
             <header class="cat-pop-head">
-              <strong>{{ billMode === 'split' ? $t('orderTaker.splitTitle') : $t('orderTaker.transferTitle') }} · {{ billModeOrder?.order_number }}</strong>
+              <strong>{{ billMode === 'split' ? $t('orderTaker.splitTitle') : $t('orderTaker.transferTitle') }} · {{
+                billModeOrder?.order_number }}</strong>
               <button type="button" class="cat-pop-close" :aria-label="$t('orderTaker.close')" @click="closeBill">
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </header>
             <p v-if="billError" class="send-error">{{ billError }}</p>
-            <p class="accomp-hint">{{ billMode === 'split' ? $t('orderTaker.splitHint') : $t('orderTaker.transferHint') }}</p>
+            <p class="accomp-hint">{{ billMode === 'split' ? $t('orderTaker.splitHint') : $t('orderTaker.transferHint')
+              }}
+            </p>
 
             <!-- Folio-split style: current bill on the left, destination on
                  the right, and the arrow in the middle moves the ticked lines. -->
             <div class="bill-split">
               <div class="bill-side">
                 <div class="bill-side-head">
-                  <strong>{{ $t('orderTaker.billFrom') }} · {{ billModeOrder?.table_number || billModeOrder?.order_number }}</strong>
+                  <strong>{{ $t('orderTaker.billFrom') }} · {{ billModeOrder?.table_number ||
+                    billModeOrder?.order_number
+                    }}</strong>
                   <label class="bill-all">
-                    <input
-                      type="checkbox"
-                      :checked="billAllSelected"
-                      :disabled="billSaving || !(billModeOrder?.items || []).length"
-                      @change="toggleAllBillLines"
-                    />
+                    <input type="checkbox" :checked="billAllSelected"
+                      :disabled="billSaving || !(billModeOrder?.items || []).length" @change="toggleAllBillLines" />
                     <span>{{ $t('orderTaker.all') }}</span>
                   </label>
                 </div>
                 <ul class="split-pick">
                   <li v-for="line in billModeOrder?.items || []" :key="line.order_item_id">
                     <label class="split-line">
-                      <input type="checkbox" :value="line.order_item_id" v-model="splitSelected" :disabled="billSaving" />
-                      <span class="split-desc">{{ line.quantity }}× {{ line.item_name }}<template v-if="line.accompaniment"> · {{ line.accompaniment }}</template></span>
-                      <span class="split-amt">{{ curCode() }} {{ money(line.subtotal ?? line.unit_price * line.quantity) }}</span>
+                      <input type="checkbox" :value="line.order_item_id" v-model="splitSelected"
+                        :disabled="billSaving" />
+                      <span class="split-desc">{{ line.quantity }}× {{ line.item_name }}<template
+                          v-if="line.accompaniment"> · {{ line.accompaniment }}</template></span>
+                      <span class="split-amt">{{ curCode() }} {{ money(line.subtotal ?? line.unit_price * line.quantity)
+                        }}</span>
                     </label>
                   </li>
                 </ul>
@@ -1027,13 +861,8 @@
 
               <div class="bill-arrow">
                 <div class="bill-arrow-bar"></div>
-                <button
-                  type="button"
-                  class="bill-arrow-btn"
-                  :disabled="!billCanMove"
-                  :title="$t('orderTaker.moveToBill')"
-                  @click="confirmBillMove"
-                >
+                <button type="button" class="bill-arrow-btn" :disabled="!billCanMove"
+                  :title="$t('orderTaker.moveToBill')" @click="confirmBillMove">
                   <i class="fas fa-arrow-right" aria-hidden="true"></i>
                 </button>
                 <div class="bill-arrow-bar"></div>
@@ -1042,33 +871,37 @@
               <div class="bill-side">
                 <div class="bill-side-head">
                   <strong>{{ $t('orderTaker.billTo') }}</strong>
-                  <span class="bill-dest-count">{{ $t('orderTaker.splitSummary', { currency: curCode(), count: splitSelected.length, total: money(splitTotal) }) }}</span>
+                  <span class="bill-dest-count">{{ $t('orderTaker.splitSummary', {
+                    currency: curCode(), count:
+                      splitSelected.length, total: money(splitTotal) }) }}</span>
                 </div>
                 <div class="bill-dests">
-                  <label
-                    v-if="billMode === 'split'"
-                    class="bill-dest"
-                    :class="{ checked: transferTable === (billModeOrder?.table_number || '') }"
-                  >
-                    <input type="radio" :value="billModeOrder?.table_number || ''" v-model="transferTable" :disabled="billSaving" />
-                    <span class="bill-dest-text">{{ $t('orderTaker.newBillSameTable', { table: billModeOrder?.table_number || '—' }) }}</span>
+                  <label v-if="billMode === 'split'" class="bill-dest"
+                    :class="{ checked: transferTable === (billModeOrder?.table_number || '') }">
+                    <input type="radio" :value="billModeOrder?.table_number || ''" v-model="transferTable"
+                      :disabled="billSaving" />
+                    <span class="bill-dest-text">{{ $t('orderTaker.newBillSameTable', {
+                      table:
+                        billModeOrder?.table_number
+                      || '—' }) }}</span>
                   </label>
-                  <label
-                    v-for="option in transferTableOptions"
-                    :key="option.value"
-                    class="bill-dest"
-                    :class="{ checked: transferTable === option.value, 'is-taken': option.disabled }"
-                  >
-                    <input type="radio" :value="option.value" v-model="transferTable" :disabled="billSaving || option.disabled" />
+                  <label v-for="option in transferTableOptions" :key="option.value" class="bill-dest"
+                    :class="{ checked: transferTable === option.value, 'is-taken': option.disabled }">
+                    <input type="radio" :value="option.value" v-model="transferTable"
+                      :disabled="billSaving || option.disabled" />
                     <span class="bill-dest-text">{{ option.label }}</span>
                     <em v-if="option.mine" class="bill-dest-tag mine">{{ $t('orderTaker.yourTable') }}</em>
-                    <em v-else-if="option.disabled" class="bill-dest-tag taken">{{ $t('orderTaker.occupiedBy', { waiter: option.occupant }) }}</em>
+                    <em v-else-if="option.disabled" class="bill-dest-tag taken">{{ $t('orderTaker.occupiedBy', {
+                      waiter:
+                      option.occupant }) }}</em>
                   </label>
-                  <p v-if="billMode === 'transfer' && !transferTableOptions.length" class="cat-empty">{{ $t('orderTaker.noTables') }}</p>
+                  <p v-if="billMode === 'transfer' && !transferTableOptions.length" class="cat-empty">{{
+                    $t('orderTaker.noTables') }}</p>
                 </div>
                 <ul v-if="billSelectedLines.length" class="bill-preview">
                   <li v-for="line in billSelectedLines" :key="line.order_item_id">
-                    {{ line.quantity }}× {{ line.item_name }}<template v-if="line.accompaniment"> · {{ line.accompaniment }}</template>
+                    {{ line.quantity }}× {{ line.item_name }}<template v-if="line.accompaniment"> · {{
+                      line.accompaniment }}</template>
                   </li>
                 </ul>
                 <p v-else class="bill-preview-empty">{{ $t('orderTaker.noLinesSelected') }}</p>
@@ -1078,13 +911,17 @@
             <div class="bill-actions">
               <span class="bill-summary">
                 <template v-if="billMode === 'merge'">{{ $t('orderTaker.mergeHint') }}</template>
-                <template v-else-if="billAllSelected && transferTable === (billModeOrder?.table_number || '')">{{ $t('orderTaker.leaveOneHint') }}</template>
-                <template v-else-if="transferTable && transferTable !== (billModeOrder?.table_number || '')">{{ $t('orderTaker.transferTo', { table: transferTable }) }}</template>
+                <template v-else-if="billAllSelected && transferTable === (billModeOrder?.table_number || '')">{{
+                  $t('orderTaker.leaveOneHint') }}</template>
+                <template v-else-if="transferTable && transferTable !== (billModeOrder?.table_number || '')">{{
+                  $t('orderTaker.transferTo', { table: transferTable }) }}</template>
                 <template v-else>&nbsp;</template>
               </span>
               <button type="button" class="send-btn" :disabled="!billCanMove" @click="confirmBillMove">
-                <i :class="billMode === 'split' ? 'fas fa-scissors' : billMode === 'merge' ? 'fas fa-merge' : 'fas fa-right-left'" aria-hidden="true"></i>
-                {{ billMode === 'split' ? $t('orderTaker.split') : billMode === 'merge' ? $t('orderTaker.mergeBill') : $t('orderTaker.transfer') }}
+                <i :class="billMode === 'split' ? 'fas fa-scissors' : billMode === 'merge' ? 'fas fa-merge' : 'fas fa-right-left'"
+                  aria-hidden="true"></i>
+                {{ billMode === 'split' ? $t('orderTaker.split') : billMode === 'merge' ? $t('orderTaker.mergeBill') :
+                  $t('orderTaker.transfer') }}
               </button>
             </div>
           </div>
@@ -1095,7 +932,8 @@
     <!-- Receipt: the proof of what was paid (printable) -->
     <Teleport to="body">
       <Transition name="fade">
-        <div v-if="receipt" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog" :aria-label="$t('orderTaker.receiptTitle')">
+        <div v-if="receipt" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog"
+          :aria-label="$t('orderTaker.receiptTitle')">
           <div class="cat-pop-backdrop" @click="receipt = null"></div>
           <div class="cat-pop-panel receipt-panel">
             <div id="pos-receipt" class="receipt">
@@ -1132,23 +970,19 @@
     <!-- "Served with" popup: single-tap side dish for grill mains (Beef Mshikaki → Wali/Ugali…) -->
     <Teleport to="body">
       <Transition name="fade">
-        <div v-if="accompItem" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog" :aria-label="$t('orders.servedWithTitle')">
+        <div v-if="accompItem" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog"
+          :aria-label="$t('orders.servedWithTitle')">
           <div class="cat-pop-backdrop" @click="skipAccompaniment"></div>
           <div class="cat-pop-panel accomp-panel">
             <header class="cat-pop-head">
               <strong>{{ $t('orders.servedWithTitle') }}</strong>
               <div class="cat-pop-head-actions">
-                <button
-                  v-if="canManageSides"
-                  type="button"
-                  class="cat-pop-close"
-                  :title="$t('orders.manageSides')"
-                  :aria-label="$t('orders.manageSides')"
-                  @click="manageAccompaniments"
-                >
+                <button v-if="canManageSides" type="button" class="cat-pop-close" :title="$t('orders.manageSides')"
+                  :aria-label="$t('orders.manageSides')" @click="manageAccompaniments">
                   <i class="fas fa-plus" aria-hidden="true"></i>
                 </button>
-                <button type="button" class="cat-pop-close" :aria-label="$t('orderTaker.close')" @click="skipAccompaniment">
+                <button type="button" class="cat-pop-close" :aria-label="$t('orderTaker.close')"
+                  @click="skipAccompaniment">
                   <i class="fas fa-times" aria-hidden="true"></i>
                 </button>
               </div>
@@ -1157,13 +991,8 @@
               {{ $t('orders.servedWithHint', { item: accompItem.item_name }) }}
             </p>
             <div class="accomp-grid">
-              <button
-                v-for="option in accompanimentOptions"
-                :key="option.value"
-                type="button"
-                class="accomp-option"
-                @click="chooseAccompaniment(option.value)"
-              >
+              <button v-for="option in accompanimentOptions" :key="option.value" type="button" class="accomp-option"
+                @click="chooseAccompaniment(option.value)">
                 {{ option.label }}
               </button>
             </div>
@@ -1174,18 +1003,14 @@
 
     <!-- Register "served with" sides straight from the prompt (cashier/bartender
          own side, admins/managers/kitchen either). -->
-    <AccompanimentManager
-      v-if="showAccompanimentManager"
-      :department="department"
-      :lock-department="!!fixedDept"
-      @close="showAccompanimentManager = false"
-      @changed="loadAccompaniments(true)"
-    />
+    <AccompanimentManager v-if="showAccompanimentManager" :department="department" :lock-department="!!fixedDept"
+      @close="showAccompanimentManager = false" @changed="loadAccompaniments(true)" />
 
     <!-- Manager-only table management modal (CRUD for the table list) -->
     <Teleport to="body">
       <Transition name="fade">
-        <div v-if="tableManagerOpen" class="cat-pop" :class="{ 'pos-theme': isPosRole }" @click.self="tableManagerOpen = false">
+        <div v-if="tableManagerOpen" class="cat-pop" :class="{ 'pos-theme': isPosRole }"
+          @click.self="tableManagerOpen = false">
           <div class="cat-pop-backdrop" @click="tableManagerOpen = false"></div>
           <div class="cat-pop-panel tm-pop" role="dialog" :aria-label="$t('orderTaker.manageTables')">
             <header class="cat-pop-head">
@@ -1195,36 +1020,21 @@
               </button>
             </header>
             <form class="tm-form" @submit.prevent="saveTable">
-              <input
-                v-model.trim="tableForm.table_name"
-                type="text"
-                class="tm-input"
-                :placeholder="$t('orderTaker.tableName')"
-                required
-              />
-              <select v-model="tableForm.section" class="tm-input" :disabled="!!fixedDept" :title="fixedDept ? $t('orderTaker.pinnedDept') : ''">
+              <input v-model.trim="tableForm.table_name" type="text" class="tm-input"
+                :placeholder="$t('orderTaker.tableName')" required />
+              <select v-model="tableForm.section" class="tm-input" :disabled="!!fixedDept"
+                :title="fixedDept ? $t('orderTaker.pinnedDept') : ''">
                 <option v-for="sec in sectionOptions" :key="sec" :value="sec">
                   {{ $t('orderTaker.' + sec, sec) }}
                 </option>
               </select>
-              <input
-                v-model.number="tableForm.capacity"
-                type="number"
-                min="1"
-                max="50"
-                class="tm-input tm-cap"
-                :placeholder="$t('orderTaker.capacity')"
-              />
+              <input v-model.number="tableForm.capacity" type="number" min="1" max="50" class="tm-input tm-cap"
+                :placeholder="$t('orderTaker.capacity')" />
               <button type="submit" class="tm-add" :disabled="tableSaving">
                 <i class="fas" :class="tableForm.table_id ? 'fa-save' : 'fa-plus'" aria-hidden="true"></i>
                 {{ tableForm.table_id ? $t('common.update') : $t('common.add') }}
               </button>
-              <button
-                v-if="tableForm.table_id"
-                type="button"
-                class="tm-cancel"
-                @click="resetTableForm"
-              >
+              <button v-if="tableForm.table_id" type="button" class="tm-cancel" @click="resetTableForm">
                 {{ $t('common.cancel') }}
               </button>
             </form>
@@ -1249,12 +1059,8 @@
                 <span class="tm-locs-hint">{{ $t('orderTaker.tableLocationsHint') }}</span>
               </div>
               <form class="tm-locs-form" @submit.prevent="addLocation">
-                <input
-                  v-model.trim="locationInput"
-                  type="text"
-                  class="tm-input"
-                  :placeholder="$t('orderTaker.locationPlaceholder')"
-                />
+                <input v-model.trim="locationInput" type="text" class="tm-input"
+                  :placeholder="$t('orderTaker.locationPlaceholder')" />
                 <button type="submit" class="tm-add" :disabled="locationSaving || !locationInput">
                   <i class="fas fa-plus" aria-hidden="true"></i>
                   {{ $t('common.add') }}
@@ -1264,12 +1070,8 @@
               <ul class="tm-chip-list">
                 <li v-for="loc in tableLocations" :key="loc.location_id" class="tm-chip">
                   <span>{{ $t('orderTaker.' + loc.name, loc.name) }}</span>
-                  <button
-                    type="button"
-                    class="tm-chip-del"
-                    :aria-label="$t('common.delete')"
-                    @click="removeLocation(loc)"
-                  >
+                  <button type="button" class="tm-chip-del" :aria-label="$t('common.delete')"
+                    @click="removeLocation(loc)">
                     <i class="fas fa-times" aria-hidden="true"></i>
                   </button>
                 </li>
@@ -1290,11 +1092,12 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { useOrderRealtime } from '@/composables/useOrderRealtime'
 import { useStockRealtime } from '@/composables/useStockRealtime'
-import { orderApi, menuItemApi, tableApi, tableLocationApi, reportApi } from '@/api'
+import { orderApi, menuItemApi, tableApi, tableLocationApi, reportApi, creditAccountApi } from '@/api'
 import CalendarInput from '@/components/CalendarInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
@@ -1304,7 +1107,7 @@ import { usePrintSettingsStore } from '@/stores/printSettings'
 import { useNotificationSettingsStore } from '@/stores/notificationSettings'
 import { orderPrintLines } from '@/utils/orderPrint'
 import { hasPrintableLines } from '@/utils/receipts'
-import { formatOrderDateTime, formatDateDMY } from '@/utils/dates'
+import { formatOrderDateTime, formatDateDMY, formatTime } from '@/utils/dates'
 import { isGrillMenuItem, canManageAccompaniments } from '@/utils/menuAccompaniment'
 import { useAccompaniments } from '@/composables/useAccompaniments'
 import { selectedOutlet } from '@/composables/useOutletContext'
@@ -1316,6 +1119,8 @@ import { useTenantCurrency } from '@/utils/currency'
 const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 const printStore = usePrintSettingsStore()
 const workingDateStore = useWorkingDateStore()
@@ -1384,28 +1189,21 @@ const openStatus = ref('')
 const openRunningCount = computed(
   () => openOrders.value.filter((o) => ['pending', 'preparing', 'in_progress', 'processing'].includes(o.status)).length,
 )
-const openReadyCount = computed(() => openOrders.value.filter((o) => o.status === 'ready').length)
-const openServedCount = computed(() => openOrders.value.filter((o) => o.status === 'served').length)
-const openUnpaidCount = computed(() => openOrders.value.filter((o) => o.payment_status !== 'paid').length)
+const openSettledCount = computed(
+  () => openOrders.value.filter((o) => o.status === 'completed' || (o.payment_status && o.payment_status !== 'unpaid')).length,
+)
 
 /** The board rows after search + status chips, keeping the load order. */
 const openFiltered = computed(() => {
   let rows = openOrders.value
   if (openStatus.value === 'running') {
     rows = rows.filter((o) => ['pending', 'preparing', 'in_progress', 'processing'].includes(o.status))
-  } else if (openStatus.value === 'ready') {
-    rows = rows.filter((o) => o.status === 'ready')
-  } else if (openStatus.value === 'served') {
-    rows = rows.filter((o) => o.status === 'served')
-  } else if (openStatus.value === 'unpaid') {
-    rows = rows.filter((o) => o.payment_status !== 'paid')
+  } else if (openStatus.value === 'settled') {
+    rows = rows.filter((o) => o.status === 'completed' || (o.payment_status && o.payment_status !== 'unpaid'))
   }
   const term = openSearch.value.trim().toLowerCase()
   if (term) {
-    rows = rows.filter((o) =>
-      [o.order_number, o.guest_name, o.table_number, o.room_number, o.waiter_name]
-        .some((v) => String(v ?? '').toLowerCase().includes(term)),
-    )
+    rows = rows.filter((o) => String(o.waiter_name ?? '').toLowerCase().includes(term))
   }
   return rows
 })
@@ -1429,7 +1227,6 @@ const voidTarget = ref(null)
 const voidReason = ref('')
 const voiding = ref(false)
 const voidError = ref('')
-const advancingItem = ref(null)
 
 function openVoid(order) {
   voidTarget.value = order
@@ -1469,69 +1266,35 @@ async function confirmVoid() {
 // or already closed — are skipped, so the button only offers what it can clear.
 // Waiters may void their running tickets too; only the kitchen flow is theirs to
 // read, not to advance, which stays gated in advanceItem().
-const voidAllOpen = ref(false)
-const voidingAll = ref(false)
 const selectedVoid = ref([])
 const voidSelectedOpen = ref(false)
 const voidingSelected = ref(false)
 
-/** The listed orders the void endpoint will accept right now. */
-const bulkVoidable = computed(() =>
-  openFiltered.value.filter(
-    (o) => ['pending', 'preparing', 'in_progress', 'processing'].includes(o.status) && o.payment_status === 'unpaid',
-  ),
-)
+/** Double-tapping a card is the touch alternative to ticking its checkbox. */
+function toggleSelectOrder(order) {
+  if (!(['pending', 'preparing', 'in_progress', 'processing'].includes(order.status) && order.payment_status === 'unpaid')) return
+  const index = selectedVoid.value.indexOf(order.order_id)
+  if (index >= 0) selectedVoid.value.splice(index, 1)
+  else selectedVoid.value.push(order.order_id)
+}
+
+/** The ticked orders the void endpoint will accept right now. */
 const selectedVoidable = computed(() =>
   openFiltered.value.filter(
     (o) => selectedVoid.value.includes(o.order_id) && ['pending', 'preparing', 'in_progress', 'processing'].includes(o.status) && o.payment_status === 'unpaid',
   ),
 )
-const bulkVoidTotal = computed(() => bulkVoidable.value.reduce((sum, o) => sum + Number(o.total_amount || 0), 0))
-/** Removed unused selectedVoidTotal per lint:eslint */
 function openVoidSelected() {
   if (!selectedVoidable.value.length) return
   voidSelectedOpen.value = true
   voidReason.value = ''
 }
 
-function closeVoidAll() {
-  if (voidingAll.value) return
-  voidAllOpen.value = false
+function closeVoidSelected() {
+  if (voidingSelected.value) return
+  voidSelectedOpen.value = false
 }
 
-async function confirmVoidAll() {
-  if (voidingAll.value) return
-  const targets = bulkVoidable.value
-  if (!targets.length) {
-    voidAllOpen.value = false
-    return
-  }
-  voidingAll.value = true
-  const reason = voidReason.value.trim() || t('orderTaker.voidBy', { waiter: waiterName.value || '-' })
-  let done = 0
-  let failed = 0
-  for (const order of targets) {
-    try {
-      await orderApi.voidOrder(order.order_id, { reason })
-      done += 1
-    } catch {
-      failed += 1
-    }
-  }
-  voidingAll.value = false
-  voidAllOpen.value = false
-  sentToast.value = failed
-    ? t('orderTaker.voidAllPartial', { done, total: targets.length, failed })
-    : t('orderTaker.voidAllDone', { count: done })
-  setTimeout(() => (sentToast.value = ''), 4000)
-  await loadOpenOrders()
-  loadDeptOrders()
-  loadOrderSummary()
-  selectedVoid.value = []
-}
-
-/** confirmVoidSelected not used in template; logic is scaffolded if needed later */
-// eslint-disable-next-line no-unused-vars
 async function confirmVoidSelected() {
   if (voidingSelected.value) return
   const targets = selectedVoidable.value
@@ -1561,36 +1324,6 @@ async function confirmVoidSelected() {
   loadDeptOrders()
   loadOrderSummary()
   selectedVoid.value = []
-}
-
-// Per-line cooking status: single tap advances the dish pending -> ready ->
-// served (the only moves the backend allows), then the board refreshes.
-function nextItemStatus(item) {
-  if (item.status === 'pending') return 'ready'
-  if (item.status === 'ready') return 'served'
-  return ''
-}
-
-async function advanceItem(order, item) {
-  if (isWaiterRole.value) {
-    openError.value = t('orderTaker.waiterCannotAdvance')
-    return
-  }
-  const next = nextItemStatus(item)
-  if (!next) return
-  openError.value = ''
-  advancingItem.value = item.order_item_id
-  try {
-    await orderApi.markItemStatus(order.order_id, item.order_item_id, next)
-    sentToast.value = t('orderTaker.itemAdvanced', { item: dishName(item), status: statusLabel(next) })
-    setTimeout(() => (sentToast.value = ''), 3000)
-    await loadOpenOrders()
-    loadDeptOrders()
-  } catch (err) {
-    openError.value = err.response?.data?.message || t('common.actionFailed')
-  } finally {
-    advancingItem.value = null
-  }
 }
 
 // Reprint from the board: kitchen ticket (KOT) or guest receipt, exactly like
@@ -1701,7 +1434,7 @@ const summaryPage = ref(1)
 const SUMMARY_PAGE_SIZE = 12
 
 const summaryStatuses = computed(() =>
-  [...new Set(myOrders.value.map((o) => o.status).filter(Boolean))].sort(),
+  [...new Set([...myOrders.value.map((o) => o.status), 'completed'].filter(Boolean))].sort(),
 )
 
 const summaryFiltered = computed(() => {
@@ -1774,12 +1507,6 @@ async function toggleSummaryItems(order) {
     }
   }
   summaryOpenId.value = order.order_id
-}
-
-/** Reprints the KOT of an already-closed order — the paper is watermarked
- *  CLOSED ORDER so the kitchen never mistakes it for live work. */
-async function reprintClosedKot(order) {
-  await printTicket(order, 'kot')
 }
 
 /* ---------------- Bar/cashier dashboard (date + department) ---------------- */
@@ -1975,6 +1702,38 @@ async function advanceOrder(order, status) {
 
 // Collect-payment popup state.
 const payOrder = ref(null)
+const creditAccounts = ref([])
+const creditorAccounts = computed(() => creditAccounts.value.filter((a) => a.type === 'creditor' && a.is_active !== false))
+const noChargeAccounts = computed(() => creditAccounts.value.filter((a) => a.type === 'no_charge' && a.is_active !== false))
+
+async function loadCreditAccounts() {
+  try {
+    const { data } = await creditAccountApi.index()
+    creditAccounts.value = data.credit_accounts || data.data || []
+  } catch {
+    creditAccounts.value = []
+  }
+}
+
+/** Settles a ticket against a registered creditor or no-charge account. */
+async function settleAccount(account) {
+  if (!payOrder.value || paying.value) return
+  paying.value = true
+  openError.value = ''
+  try {
+    await orderApi.settleCreditAccount(payOrder.value.order_id, { credit_account_id: account.credit_account_id })
+    sentToast.value = t('orders.paymentCollected')
+    setTimeout(() => (sentToast.value = ''), 3000)
+    payOrder.value = null
+    await loadOpenOrders()
+    loadDeptOrders()
+    loadOrderSummary()
+  } catch (err) {
+    openError.value = err.response?.data?.message || t('common.actionFailed')
+  } finally {
+    paying.value = false
+  }
+}
 
 // Bill split / transfer state: 'split' or 'transfer' when open.
 const billMode = ref(null)
@@ -2097,6 +1856,7 @@ const paying = ref(false)
 /** Opens the payment popup for an unpaid order. */
 function openPay(order) {
   payOrder.value = order
+  if (!creditAccounts.value.length) loadCreditAccounts()
 }
 
 /** Records the payment with the tapped method and closes the popup. */
@@ -2329,6 +2089,15 @@ function ownLiveOrderForTable(name) {
  *  survive the table-selection step (issue 2.2.4). */
 function selectTable(tbl) {
   const name = tbl.table_name
+  // Tapping the already-selected table releases it, so the categories/menu
+  // lock is undone without needing a separate clear button.
+  if (String(form.value.table_number || '') === String(name)) {
+    const wasContinued = Boolean(continueOrderId.value)
+    form.value.table_number = ''
+    continueOrderId.value = null
+    if (wasContinued) orderLines.value = []
+    return
+  }
   // Another staff member's live ticket: do not even start a fresh order here.
   if (tableOccupiedByOther(name)) {
     sendError.value = t('orderTaker.tableOccupied')
@@ -2359,6 +2128,37 @@ function selectTable(tbl) {
   form.value.table_number = name
   form.value.covers = continueTarget?.covers || form.value.covers || 0
   page.value = pageCount.value
+}
+
+/** The Order Summary page's + button hands an existing ticket here so the
+ *  cashier can append new menu lines from the New Order tab. */
+async function applyAddToOrder(orderId) {
+  try {
+    const { data } = await orderApi.show(orderId)
+    const order = data?.data || data
+    if (!order?.order_id) return
+    activeTab.value = 'new'
+    continueOrderId.value = order.order_id
+    form.value.table_number = order.table_number || ''
+    form.value.covers = order.covers || 0
+    form.value.order_type = order.order_type || defaultOrderType()
+    orderLines.value = (order.items || []).map((item) => ({
+      key: `${item.menu_item_id}|${item.accompaniment || ''}`,
+      menu_item_id: item.menu_item_id,
+      item_name: item.item_name,
+      accompaniment: item.accompaniment || '',
+      unit_price: Number(item.unit_price) || 0,
+      quantity: Number(item.quantity) || 1,
+      subtotal: Number(item.subtotal) || 0,
+      existing: true,
+    }))
+    page.value = pageCount.value
+    const query = { ...route.query }
+    delete query.addToOrder
+    router.replace({ name: route.name, query })
+  } catch {
+    /* leave the New Order tab untouched if the ticket cannot be loaded */
+  }
 }
 
 /** Header table dropdown must resolve through the same selectTable() logic as
@@ -2679,12 +2479,6 @@ const page = ref(1)
 /** Number of pages of order lines. */
 const pageCount = computed(() => Math.max(1, Math.ceil(orderLines.value.length / LINES_PER_PAGE)))
 
-/** The order lines visible on the current page. */
-const pagedLines = computed(() => {
-  const start = (page.value - 1) * LINES_PER_PAGE
-  return orderLines.value.slice(start, start + LINES_PER_PAGE)
-})
-
 /** Grand total of the current ticket. */
 const grandTotal = computed(() =>
   orderLines.value.reduce((sum, l) => sum + l.subtotal, 0),
@@ -2732,13 +2526,9 @@ function num(value) {
   })
 }
 
-/** Jumps to the first or last page of order lines. */
-function setPage(p) {
-  page.value = Math.min(Math.max(1, p), pageCount.value)
-}
-
 /** Opens the popup listing the items of a category (and clears any search). */
 function openCategory(cat) {
+  if (!form.value.table_number) return
   activeCategory.value = cat
   // Switching service line starts back at "All": a sub-category that exists
   // under Cocktails says nothing about Beer, and keeping it would silently show
@@ -3041,11 +2831,15 @@ onMounted(async () => {
   await workingDateStore.ensureLoaded()
   summaryDate.value = workingDateStore.workingDate
   dashDate.value = workingDateStore.workingDate
+  openDate.value = workingDateStore.workingDate
   loadMenu()
   loadTables()
   loadOpenOrders()
   loadDeptOrders()
+  const query = route?.query || {}
+  if (query.tab === 'dashboard') activeTab.value = 'dashboard'
   if (activeTab.value === 'dashboard') loadDashboard()
+  if (query.addToOrder) await applyAddToOrder(query.addToOrder)
   // The floor, personal board and department occupancy map refresh instantly
   // on the order.updated push instead of a timer, so taken tables and new
   // tickets always turn up without anyone reloading.
@@ -3111,6 +2905,7 @@ function onKey(e) {
   gap: 14px;
   align-items: start;
 }
+
 .ts-left,
 .ts-right {
   display: flex;
@@ -3118,6 +2913,7 @@ function onKey(e) {
   gap: 12px;
   min-width: 0;
 }
+
 .ts-right {
   position: sticky;
   top: 12px;
@@ -3153,6 +2949,7 @@ function onKey(e) {
   min-height: 0;
   overflow: hidden;
 }
+
 .taker-page.taker-fixed .taker-split {
   /* Fill the height left over under the tab strip, and let the columns shrink
      below their content height — without `min-height: 0` a flex/grid child
@@ -3161,17 +2958,20 @@ function onKey(e) {
   min-height: 0;
   align-items: stretch;
 }
+
 .taker-page.taker-fixed .ts-left,
 .taker-page.taker-fixed .ts-right {
   min-height: 0;
   height: 100%;
 }
+
 /* The order side scrolls as one piece so the sticky table map has something to
    stick inside. */
 .taker-page.taker-fixed .ts-right {
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+
 /*
  * Every section keeps its full height so the rail overflows and scrolls.
  *
@@ -3184,6 +2984,7 @@ function onKey(e) {
 .taker-page.taker-fixed .ts-right > * {
   flex-shrink: 0;
 }
+
 /* Once the category rail wraps, a short window can run out of room for the
    food box and the table map together. The column scrolls then, so the tables
    are always reachable instead of being clipped by `overflow: hidden`. */
@@ -3203,6 +3004,7 @@ function onKey(e) {
      own grid scrolls) instead of squeezing the food cards to nothing. */
   flex: 0 1 auto;
 }
+
 .taker-page.taker-fixed .ts-left .table-map {
   max-height: 30vh;
   display: flex;
@@ -3221,11 +3023,12 @@ function onKey(e) {
   flex-direction: column;
   /* Never collapse the food list to a sliver: the wrapped category rail takes
      rows, and without a floor the grid below was squeezed to a few pixels. */
-  min-height: 132px;
+  min-height: 230px;
   /* Takes whatever height the category and sub-category rails leave behind, and
      is the part that gives way when the column runs short. */
   flex: 1 1 auto;
 }
+
 .inline-items-head {
   display: flex;
   align-items: center;
@@ -3237,8 +3040,20 @@ function onKey(e) {
   font-size: 14px;
   font-weight: 700;
 }
-.inline-items-head strong { text-transform: uppercase; letter-spacing: 0.03em; }
-.inline-items-head .line-remove { color: #fff; background: none; border: none; font-size: 16px; cursor: pointer; }
+
+.inline-items-head strong {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.inline-items-head .line-remove {
+  color: #fff;
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+
 /*
  * The food list is the one region that scrolls vertically.
  *
@@ -3269,6 +3084,7 @@ function onKey(e) {
   border-radius: 10px;
   padding: 12px 14px;
 }
+
 .table-map-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -3277,6 +3093,7 @@ function onKey(e) {
   overflow-y: auto;
   padding-right: 4px;
 }
+
 /* Inside the viewport-height layout the map is capped by 42vh rather than a flat
    520px, so the grid takes the space left inside it and scrolls there. */
 .taker-page.taker-fixed .table-map-grid {
@@ -3284,6 +3101,7 @@ function onKey(e) {
   min-height: 0;
   max-height: none;
 }
+
 .table-chip {
   display: flex;
   flex-direction: column;
@@ -3295,21 +3113,28 @@ function onKey(e) {
   cursor: pointer;
   transition: transform 0.12s, border-color 0.12s;
 }
-.table-chip:disabled { cursor: not-allowed; }
+
+.table-chip:disabled {
+  cursor: not-allowed;
+}
+
 .table-chip.free {
   background: #f0fdf4;
   border-color: #86efac;
 }
+
 .table-chip.free:hover:not(:disabled) {
   transform: translateY(-2px);
   border-color: #16a34a;
 }
+
 .table-chip.taken {
   background: #fef2f2;
   border-color: #fecaca;
 }
 
-.table-chip.occupied, .table-chip.occupied:disabled {
+.table-chip.occupied,
+.table-chip.occupied:disabled {
   background: #fef2f2;
   border-color: #fecaca;
 }
@@ -3318,10 +3143,12 @@ function onKey(e) {
   background: #eff6ff;
   border-color: #bfdbfe;
 }
+
 .table-chip.mine:hover:not(:disabled) {
   transform: translateY(-2px);
   border-color: #005eb8;
 }
+
 .table-chip-name {
   font-weight: 700;
   font-size: 14px;
@@ -3330,23 +3157,28 @@ function onKey(e) {
   align-items: center;
   gap: 6px;
 }
+
 /* The tick marks the table currently selected for the ticket being built. */
 .table-chip-tick {
   color: #16a34a;
   font-size: 15px;
 }
+
 .table-chip.mine .table-chip-tick,
 .table-chip.taken .table-chip-tick {
   color: #005eb8;
 }
+
 .table-chip-occ {
   font-size: 11px;
   color: #b91c1c;
 }
+
 .table-chip-occ.is-mine {
   color: #005eb8;
   font-weight: 600;
 }
+
 .table-chip-free {
   font-size: 11px;
   color: #15803d;
@@ -3354,8 +3186,13 @@ function onKey(e) {
 }
 
 @media (max-width: 820px) {
-  .taker-split { grid-template-columns: 1fr; }
-  .ts-right { position: static; }
+  .taker-split {
+    grid-template-columns: 1fr;
+  }
+
+  .ts-right {
+    position: static;
+  }
 
   /*
    * Hand the scrolling back to the page on a phone.
@@ -3370,6 +3207,7 @@ function onKey(e) {
     height: auto;
     overflow: visible;
   }
+
   .taker-page.taker-fixed .taker-split,
   .taker-page.taker-fixed .ts-left,
   .taker-page.taker-fixed .ts-right {
@@ -3377,11 +3215,13 @@ function onKey(e) {
     min-height: 0;
     overflow: visible;
   }
+
   .taker-page.taker-fixed .inline-grid {
     /* Uncapped again: on a phone the food list is the page. */
     max-height: none;
     overflow-y: visible;
   }
+
   .taker-page.taker-fixed .ts-left .table-map {
     max-height: none;
   }
@@ -3472,10 +3312,17 @@ function onKey(e) {
   white-space: nowrap;
 }
 
-.oh-manage:hover { background: var(--pad-accent-deep); }
+.oh-manage:hover {
+  background: var(--pad-accent-deep);
+}
 
-.oh-manage.oh-danger { background: #dc2626; }
-.oh-manage.oh-danger:hover { background: #b91c1c; }
+.oh-manage.oh-danger {
+  background: #dc2626;
+}
+
+.oh-manage.oh-danger:hover {
+  background: #b91c1c;
+}
 
 /* Manager table modal */
 .tm-pop {
@@ -3502,7 +3349,9 @@ function onKey(e) {
   min-width: 120px;
 }
 
-.tm-cap { max-width: 90px; }
+.tm-cap {
+  max-width: 90px;
+}
 
 .tm-add {
   background: #2e7d32;
@@ -3515,7 +3364,10 @@ function onKey(e) {
   cursor: pointer;
 }
 
-.tm-add:disabled { opacity: 0.5; cursor: wait; }
+.tm-add:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
 
 .tm-cancel {
   background: #f1f5f9;
@@ -3527,7 +3379,11 @@ function onKey(e) {
   cursor: pointer;
 }
 
-.tm-error { color: #dc2626; font-size: 13px; padding: 8px 14px 0; }
+.tm-error {
+  color: #dc2626;
+  font-size: 13px;
+  padding: 8px 14px 0;
+}
 
 .tm-list {
   list-style: none;
@@ -3551,9 +3407,17 @@ function onKey(e) {
   padding: 9px 12px;
 }
 
-.tm-name { font-weight: 600; color: #1f2937; }
+.tm-name {
+  font-weight: 600;
+  color: #1f2937;
+}
 
-.tm-meta { color: #64748b; font-size: 12px; flex: 1; text-transform: capitalize; }
+.tm-meta {
+  color: #64748b;
+  font-size: 12px;
+  flex: 1;
+  text-transform: capitalize;
+}
 
 .tm-btn {
   background: #fff;
@@ -3565,11 +3429,26 @@ function onKey(e) {
   font-size: 12px;
 }
 
-.tm-btn:hover { background: #f1f5f9; color: #1f2937; }
-.tm-btn.danger { color: #dc2626; }
-.tm-btn.danger:hover { background: #fef2f2; color: #b91c1c; }
+.tm-btn:hover {
+  background: #f1f5f9;
+  color: #1f2937;
+}
 
-.tm-empty { color: #94a3b8; font-size: 13px; text-align: center; padding: 14px; }
+.tm-btn.danger {
+  color: #dc2626;
+}
+
+.tm-btn.danger:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.tm-empty {
+  color: #94a3b8;
+  font-size: 13px;
+  text-align: center;
+  padding: 14px;
+}
 
 .tm-locs {
   border-top: 1px solid #eee;
@@ -3577,11 +3456,28 @@ function onKey(e) {
   background: #fafafa;
 }
 
-.tm-locs-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
-.tm-locs-head strong { font-size: 13px; color: #1f2937; }
-.tm-locs-hint { font-size: 11px; color: #94a3b8; }
+.tm-locs-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+}
 
-.tm-locs-form { display: flex; gap: 8px; margin-bottom: 8px; }
+.tm-locs-head strong {
+  font-size: 13px;
+  color: #1f2937;
+}
+
+.tm-locs-hint {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.tm-locs-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
 
 .tm-chip-list {
   list-style: none;
@@ -3618,7 +3514,10 @@ function onKey(e) {
   justify-content: center;
 }
 
-.tm-chip-del:hover { background: #fee2e2; color: #b91c1c; }
+.tm-chip-del:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
 
 .oh-input {
   border: 1px solid #d4d4d8;
@@ -3678,25 +3577,40 @@ function onKey(e) {
   display: block;
   width: 100%;
 }
+
 .order-body .lines-wrap {
   width: 100%;
   min-width: 0;
 }
+
 .order-send {
   display: none;
 }
+
 .order-send-row {
   margin-top: 8px;
   margin-bottom: 8px;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
 }
-.order-send-row .send-btn {
+
+.order-send-row .send-error {
   width: 100%;
-  padding: 12px 16px;
+}
+
+.order-send-row .send-btn {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 170px;
+  padding: 12px 22px;
   font-size: 15px;
   font-weight: 700;
+}
+
+.order-send-row .total-bar {
+  flex: 1;
 }
 
 .lines-table {
@@ -3725,11 +3639,19 @@ function onKey(e) {
   border-bottom: none;
 }
 
-.col-table { width: 140px; }
-.col-qty { width: 150px; }
+.col-qty {
+  width: 150px;
+}
+
 .col-price,
-.col-amount { width: 130px; text-align: right; }
-.col-x { width: 44px; }
+.col-amount {
+  width: 130px;
+  text-align: right;
+}
+
+.col-x {
+  width: 44px;
+}
 
 /* The order's selected table, repeated per row so the destination is readable
    next to each line. A dash means no table is picked yet, which blocks sending. */
@@ -3936,6 +3858,7 @@ function onKey(e) {
   color: #27272a;
   background: #fafafa;
 }
+
 .cat-search:focus {
   outline: none;
   border-color: var(--pad-accent);
@@ -3959,6 +3882,7 @@ function onKey(e) {
   padding: 4px 2px 8px;
   margin: -4px -2px 0;
 }
+
 .cat-rail .cat-btn {
   flex: 0 0 auto;
   /* Categories are words, and the words vary from "Soup" to
@@ -3993,6 +3917,7 @@ function onKey(e) {
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
 }
+
 .sub-rail .sub-btn {
   flex: 0 0 auto;
   border: 1px solid #d4d4d8;
@@ -4009,9 +3934,11 @@ function onKey(e) {
   cursor: pointer;
   scroll-snap-align: start;
 }
+
 .sub-rail .sub-btn:hover {
   border-color: var(--pad-accent);
 }
+
 .sub-rail .sub-btn.active {
   background: var(--pad-accent);
   border-color: var(--pad-accent);
@@ -4336,7 +4263,7 @@ function onKey(e) {
   transition: background 0.12s, color 0.12s;
 }
 
-.dept-toggle button + button {
+.dept-toggle button+button {
   border-left: 1px solid #d4d4d8;
 }
 
@@ -4430,11 +4357,13 @@ function onKey(e) {
   flex-direction: column;
   gap: 12px;
 }
+
 .summary-kpis {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
+
 .summary-kpi {
   background: #fff;
   border: 1px solid #d4d4d8;
@@ -4445,17 +4374,40 @@ function onKey(e) {
   flex-direction: column;
   gap: 4px;
 }
-.summary-kpi strong { font-size: 24px; color: #18181b; }
-.sk-label { font-size: 12px; color: #71717a; font-weight: 600; }
-.kpi-running { border-left-color: #f59e0b; }
-.kpi-settled { border-left-color: #16a34a; }
-.kpi-voided { border-left-color: #ef4444; }
-.kpi-total { border-left-color: #2563eb; }
+
+.summary-kpi strong {
+  font-size: 24px;
+  color: #18181b;
+}
+
+.sk-label {
+  font-size: 12px;
+  color: #71717a;
+  font-weight: 600;
+}
+
+.kpi-running {
+  border-left-color: #f59e0b;
+}
+
+.kpi-settled {
+  border-left-color: #16a34a;
+}
+
+.kpi-voided {
+  border-left-color: #ef4444;
+}
+
+.kpi-total {
+  border-left-color: #2563eb;
+}
+
 .summary-quick {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
+
 .summary-link {
   display: inline-flex;
   align-items: center;
@@ -4469,15 +4421,46 @@ function onKey(e) {
   color: #27272a;
   text-decoration: none;
 }
-.summary-link:hover { background: #e4e4e7; }
-.summary-table th, .summary-table td { padding: 10px 12px; }
+
+.summary-link:hover {
+  background: #e4e4e7;
+}
+
+.summary-table th,
+.summary-table td {
+  padding: 10px 12px;
+}
+
+.summary-order-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.summary-order-link:hover strong {
+  color: var(--pad-accent-deep);
+}
+
 .summary-actions {
   display: flex;
   gap: 6px;
   white-space: nowrap;
 }
-.summary-actions .btn { height: 32px; }
-.summary-items-row td { background: #f7f7f8; }
+
+.summary-actions .btn {
+  height: 32px;
+}
+
+.summary-items-row td {
+  background: #f7f7f8;
+}
+
 .summary-items {
   margin: 0;
   padding: 0;
@@ -4485,6 +4468,7 @@ function onKey(e) {
   display: grid;
   gap: 6px;
 }
+
 .summary-items li {
   display: flex;
   justify-content: space-between;
@@ -4492,8 +4476,17 @@ function onKey(e) {
   font-size: 14px;
   color: #27272a;
 }
-.summary-item-amount { font-weight: 600; white-space: nowrap; }
-.summary-items .cat-empty { color: #71717a; font-style: italic; }
+
+.summary-item-amount {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.summary-items .cat-empty {
+  color: #71717a;
+  font-style: italic;
+}
+
 .summary-tools {
   display: flex;
   gap: 8px;
@@ -4504,6 +4497,7 @@ function onKey(e) {
   border-radius: 10px;
   padding: 10px 14px;
 }
+
 .st-search {
   flex: 1 1 180px;
   border: 1px solid #d4d4d8;
@@ -4513,7 +4507,13 @@ function onKey(e) {
   background: #fafafa;
   color: #27272a;
 }
-.st-search:focus { outline: none; border-color: var(--pad-accent); background: #fff; }
+
+.st-search:focus {
+  outline: none;
+  border-color: var(--pad-accent);
+  background: #fff;
+}
+
 .st-select {
   border: 1px solid #d4d4d8;
   border-radius: 8px;
@@ -4522,13 +4522,21 @@ function onKey(e) {
   background: #fff;
   color: #27272a;
 }
+
 @media (max-width: 768px) {
-  .st-search { flex-basis: 100%; }
-  .st-select { flex: 1 1 auto; }
+  .st-search {
+    flex-basis: 100%;
+  }
+
+  .st-select {
+    flex: 1 1 auto;
+  }
 }
 
 @media (max-width: 768px) {
-  .summary-kpis { grid-template-columns: repeat(2, 1fr); }
+  .summary-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .open-badge {
@@ -4540,11 +4548,30 @@ function onKey(e) {
   letter-spacing: 0.04em;
 }
 
-.badge-yellow { background: #fef9c3; color: #854d0e; }
-.badge-blue { background: #dbeafe; color: #1e40af; }
-.badge-green { background: #dcfce7; color: #166534; }
-.badge-red { background: #fee2e2; color: #991b1b; }
-.badge-gray { background: #f4f4f5; color: #52525b; }
+.badge-yellow {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.badge-blue {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.badge-green {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-red {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-gray {
+  background: #f4f4f5;
+  color: #52525b;
+}
 
 .open-meta {
   margin: 0;
@@ -4580,10 +4607,31 @@ function onKey(e) {
 }
 
 .open-items li {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+}
+
+.open-items .open-items-head {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #71717a;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e4e4e7;
+}
+
+.item-line-price,
+.item-line-amount {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.item-line-amount {
+  font-weight: 700;
+  color: #27272a;
 }
 
 .open-items li.item-done .item-line-text {
@@ -4593,7 +4641,10 @@ function onKey(e) {
   opacity: 0.85;
 }
 
-.item-line-text { flex: 1 1 auto; min-width: 0; }
+.item-line-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 
 .item-status-pill {
   display: inline-block;
@@ -4620,8 +4671,15 @@ function onKey(e) {
   font-size: 12px;
   flex-shrink: 0;
 }
-.item-advance:hover { background: #e4e4e7; }
-.item-advance:disabled { opacity: 0.5; cursor: default; }
+
+.item-advance:hover {
+  background: #e4e4e7;
+}
+
+.item-advance:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 
 .open-timer {
   display: inline-flex;
@@ -4643,8 +4701,15 @@ function onKey(e) {
   color: #52525b;
 }
 
-.pay-unpaid { color: #b91c1c; font-weight: 700; }
-.pay-ok { color: #15803d; font-weight: 700; }
+.pay-unpaid {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.pay-ok {
+  color: #15803d;
+  font-weight: 700;
+}
 
 /* Settlement tag for open orders already paid/billed (OrderResource.settlement_mode) */
 .settle-tag {
@@ -4667,7 +4732,11 @@ function onKey(e) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 4px;
+  margin: 0 0 10px;
+  padding: 10px;
+  border: 1px solid #e4e4e7;
+  border-radius: 10px;
+  background: #fafafa;
 }
 
 .open-btn {
@@ -4683,21 +4752,53 @@ function onKey(e) {
   cursor: pointer;
 }
 
-.open-btn.warn { background: #d97706; }
-.open-btn.info { background: #2563eb; }
-.open-btn.ok { background: #16a34a; }
-.open-btn.pay { background: #0f766e; }
-.open-btn.room { background: #7c3aed; }
-.open-btn.done { background: #3f3f46; }
+.open-btn.warn {
+  background: #d97706;
+}
+
+.open-btn.info {
+  background: #2563eb;
+}
+
+.open-btn.ok {
+  background: #16a34a;
+}
+
+.open-btn.pay {
+  background: #0f766e;
+}
+
+.open-btn.room {
+  background: #7c3aed;
+}
+
+.open-btn.done {
+  background: #3f3f46;
+}
+
 .open-btn.ghost {
   background: transparent;
   color: #3f3f46;
   border: 1px solid #d4d4d8;
 }
-.open-btn.ghost:hover { background: #f4f4f5; }
-.open-btn.danger { background: #dc2626; }
-.open-btn.ghost.danger { background: transparent; color: #dc2626; border-color: #fecaca; }
-.open-btn.ghost.danger:hover { background: #fef2f2; }
+
+.open-btn.ghost:hover {
+  background: #f4f4f5;
+}
+
+.open-btn.danger {
+  background: #dc2626;
+}
+
+.open-btn.ghost.danger {
+  background: transparent;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.open-btn.ghost.danger:hover {
+  background: #fef2f2;
+}
 
 /* Open-orders board filters: instant search + quick status chips */
 .open-tools {
@@ -4710,10 +4811,12 @@ function onKey(e) {
   border-radius: 10px;
   padding: 10px 14px;
 }
+
 .ot-search {
   flex: 1 1 220px;
   position: relative;
 }
+
 .ot-search i {
   position: absolute;
   left: 10px;
@@ -4722,6 +4825,7 @@ function onKey(e) {
   color: #a1a1aa;
   font-size: 13px;
 }
+
 .ot-search input {
   width: 100%;
   border: 1px solid #d4d4d8;
@@ -4731,8 +4835,19 @@ function onKey(e) {
   background: #fafafa;
   color: #27272a;
 }
-.ot-search input:focus { outline: none; border-color: var(--pad-accent); background: #fff; }
-.ot-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.ot-search input:focus {
+  outline: none;
+  border-color: var(--pad-accent);
+  background: #fff;
+}
+
+.ot-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .ot-chips button {
   border: 1px solid #d4d4d8;
   border-radius: 999px;
@@ -4743,8 +4858,16 @@ function onKey(e) {
   padding: 6px 12px;
   cursor: pointer;
 }
-.ot-chips button:hover { background: #f4f4f5; }
-.ot-chips button.active { background: #0f766e; color: #fff; border-color: #0f766e; }
+
+.ot-chips button:hover {
+  background: #f4f4f5;
+}
+
+.ot-chips button.active {
+  background: #0f766e;
+  color: #fff;
+  border-color: #0f766e;
+}
 
 /* Void-confirm dialog extras */
 .void-summary {
@@ -4753,7 +4876,11 @@ function onKey(e) {
   color: #3f3f46;
   font-weight: 600;
 }
-.void-reason { display: block; }
+
+.void-reason {
+  display: block;
+}
+
 .void-reason textarea {
   width: 100%;
   border: 1px solid #d4d4d8;
@@ -4765,8 +4892,18 @@ function onKey(e) {
   color: #27272a;
   resize: vertical;
 }
-.void-reason textarea:focus { outline: none; border-color: var(--pad-accent); background: #fff; }
-.void-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+.void-reason textarea:focus {
+  outline: none;
+  border-color: var(--pad-accent);
+  background: #fff;
+}
+
+.void-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
 
 .split-pick {
   margin: 12px 18px 0;
@@ -4778,6 +4915,7 @@ function onKey(e) {
   padding: 6px;
   scrollbar-width: thin;
 }
+
 .split-line {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -4789,9 +4927,19 @@ function onKey(e) {
   font-size: 13px;
   color: #3f3f46;
 }
-.split-line:hover { background: #fafafa; }
-.split-line:last-child { border-bottom: none; }
-.split-desc { overflow-wrap: anywhere; }
+
+.split-line:hover {
+  background: #fafafa;
+}
+
+.split-line:last-child {
+  border-bottom: none;
+}
+
+.split-desc {
+  overflow-wrap: anywhere;
+}
+
 .split-amt {
   color: #27272a;
   font-weight: 600;
@@ -4809,6 +4957,7 @@ function onKey(e) {
   gap: 12px;
   padding: 4px 18px 0;
 }
+
 .bill-side {
   flex: 1 1 0;
   min-width: 0;
@@ -4816,6 +4965,7 @@ function onKey(e) {
   flex-direction: column;
   gap: 8px;
 }
+
 .bill-side-head {
   display: flex;
   align-items: center;
@@ -4823,6 +4973,7 @@ function onKey(e) {
   gap: 8px;
   font-size: 13px;
 }
+
 .bill-all {
   display: inline-flex;
   align-items: center;
@@ -4832,6 +4983,7 @@ function onKey(e) {
   color: #52525b;
   cursor: pointer;
 }
+
 .bill-dest-count {
   font-size: 12px;
   font-weight: 700;
@@ -4839,6 +4991,7 @@ function onKey(e) {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
 .bill-dests {
   display: flex;
   flex-direction: column;
@@ -4846,6 +4999,7 @@ function onKey(e) {
   max-height: 180px;
   overflow-y: auto;
 }
+
 .bill-dest {
   display: flex;
   align-items: center;
@@ -4857,14 +5011,17 @@ function onKey(e) {
   cursor: pointer;
   transition: border-color 0.12s, background 0.12s;
 }
+
 .bill-dest.checked {
   border-color: #005eb8;
   background: #eff6ff;
 }
+
 .bill-dest.is-taken {
   opacity: 0.55;
   cursor: not-allowed;
 }
+
 .bill-dest-text {
   flex: 1;
   min-width: 0;
@@ -4872,6 +5029,7 @@ function onKey(e) {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .bill-dest-tag {
   font-style: normal;
   font-size: 11px;
@@ -4880,8 +5038,17 @@ function onKey(e) {
   border-radius: 999px;
   white-space: nowrap;
 }
-.bill-dest-tag.mine { background: #dbebfb; color: #005eb8; }
-.bill-dest-tag.taken { background: #ffe4e6; color: #b91c1c; }
+
+.bill-dest-tag.mine {
+  background: #dbebfb;
+  color: #005eb8;
+}
+
+.bill-dest-tag.taken {
+  background: #ffe4e6;
+  color: #b91c1c;
+}
+
 .bill-arrow {
   display: flex;
   flex-direction: column;
@@ -4889,6 +5056,7 @@ function onKey(e) {
   align-self: center;
   gap: 6px;
 }
+
 .bill-arrow-bar {
   width: 2px;
   flex: 1;
@@ -4896,6 +5064,7 @@ function onKey(e) {
   border-radius: 2px;
   background: #e4e4e7;
 }
+
 .bill-arrow-btn {
   width: 44px;
   height: 44px;
@@ -4909,14 +5078,17 @@ function onKey(e) {
   place-items: center;
   transition: background 0.15s, transform 0.12s;
 }
+
 .bill-arrow-btn:hover:not(:disabled) {
   background: var(--pad-accent-deep);
   transform: scale(1.06);
 }
+
 .bill-arrow-btn:disabled {
   background: #d4d4d8;
   cursor: not-allowed;
 }
+
 .bill-preview {
   margin: 0;
   padding: 8px 0 0 18px;
@@ -4927,6 +5099,7 @@ function onKey(e) {
   max-height: 96px;
   overflow-y: auto;
 }
+
 .bill-preview-empty {
   margin: 0;
   padding-top: 8px;
@@ -4934,6 +5107,7 @@ function onKey(e) {
   font-size: 12px;
   color: #a1a1aa;
 }
+
 /* Bill split / transfer dialog: wide panel on desktop (1120px, like the folio
    operation modals), clean single-column flow on phones so a moving waiter can
    read and tap without cramping. */
@@ -4941,25 +5115,65 @@ function onKey(e) {
   width: min(1120px, 96vw);
   max-height: 88vh;
 }
+
 @media (max-width: 640px) {
   .bill-pop-panel {
     width: 96vw;
     max-height: 94dvh;
   }
-  .bill-split { flex-direction: column; }
-  .bill-arrow { flex-direction: row; }
-  .bill-arrow-bar { width: auto; height: 2px; min-height: 0; }
-  .bill-arrow-btn { transform: rotate(90deg); }
-  .bill-arrow-btn:hover:not(:disabled) { transform: rotate(90deg) scale(1.06); }
+
+  .bill-split {
+    flex-direction: column;
+  }
+
+  .bill-arrow {
+    flex-direction: row;
+  }
+
+  .bill-arrow-bar {
+    width: auto;
+    height: 2px;
+    min-height: 0;
+  }
+
+  .bill-arrow-btn {
+    transform: rotate(90deg);
+  }
+
+  .bill-arrow-btn:hover:not(:disabled) {
+    transform: rotate(90deg) scale(1.06);
+  }
+
   /* Bigger touch targets and scrollable panes so the ticket stays usable on a
      phone while moving around the restaurant. */
-  .split-pick { max-height: 30vh; }
-  .split-line { padding: 10px 6px; font-size: 14px; }
-  .bill-dests { max-height: 26vh; }
-  .bill-dest { padding: 10px; font-size: 14px; }
-  .bill-actions { flex-wrap: wrap; }
-  .bill-actions .send-btn { width: 100%; min-width: 0; }
+  .split-pick {
+    max-height: 30vh;
+  }
+
+  .split-line {
+    padding: 10px 6px;
+    font-size: 14px;
+  }
+
+  .bill-dests {
+    max-height: 26vh;
+  }
+
+  .bill-dest {
+    padding: 10px;
+    font-size: 14px;
+  }
+
+  .bill-actions {
+    flex-wrap: wrap;
+  }
+
+  .bill-actions .send-btn {
+    width: 100%;
+    min-width: 0;
+  }
 }
+
 .bill-actions {
   display: flex;
   align-items: center;
@@ -4969,6 +5183,7 @@ function onKey(e) {
   padding: 14px 18px 18px;
   border-top: 1px solid #f4f4f5;
 }
+
 .bill-summary {
   font-size: 13px;
   font-weight: 600;
@@ -4978,6 +5193,7 @@ function onKey(e) {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .bill-actions .send-btn {
   width: auto;
   min-width: 190px;
@@ -5044,6 +5260,7 @@ function onKey(e) {
   .order-body {
     flex-direction: column;
   }
+
   .order-send {
     width: 100%;
   }
@@ -5055,6 +5272,14 @@ function onKey(e) {
 
   .pager-btn {
     padding: 10px 12px;
+  }
+
+  .order-send-row {
+    flex-direction: column;
+  }
+
+  .order-send-row .send-btn {
+    width: 100%;
   }
 
   .send-btn {
@@ -5157,12 +5382,14 @@ function onKey(e) {
   flex-direction: column;
   gap: 14px;
 }
+
 .dash-tools {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
+
 .dash-date {
   padding: 8px 10px;
   border: 1px solid #d4d4d8;
@@ -5171,23 +5398,45 @@ function onKey(e) {
   font-size: 14px;
   color: #27272a;
 }
+
 .sb-date-row {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
-.dash-kpis { grid-template-columns: repeat(4, 1fr); }
-.kpi-stock-items { border-left-color: #6366f1; }
-.kpi-low { border-left-color: #ef4444; }
-.kpi-sales { border-left-color: #f59e0b; }
-.kpi-revenue { border-left-color: #16a34a; }
-.sk-sub { font-size: 12px; color: #a1a1aa; }
+
+.dash-kpis {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.kpi-stock-items {
+  border-left-color: #6366f1;
+}
+
+.kpi-low {
+  border-left-color: #ef4444;
+}
+
+.kpi-sales {
+  border-left-color: #f59e0b;
+}
+
+.kpi-revenue {
+  border-left-color: #16a34a;
+}
+
+.sk-sub {
+  font-size: 12px;
+  color: #a1a1aa;
+}
+
 .dash-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
+
 .dash-card {
   background: #fff;
   border: 1px solid #d4d4d8;
@@ -5198,6 +5447,7 @@ function onKey(e) {
   gap: 10px;
   min-width: 0;
 }
+
 .dash-card-head {
   display: flex;
   align-items: center;
@@ -5205,21 +5455,41 @@ function onKey(e) {
   gap: 8px;
   color: #27272a;
 }
+
 .dash-card-head strong {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   font-size: 13px;
 }
+
 .dash-card-head .req-link {
   padding: 6px 12px;
   font-size: 12px;
 }
-.dash-table { width: 100%; }
+
+.dash-card-link {
+  border: 0;
+  background: none;
+  color: #6366f1;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.dash-card-link:hover {
+  background: #eef2ff;
+}
+
+.dash-table {
+  width: 100%;
+}
+
 .dash-reqs {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
+
 .dash-req {
   background: #fafafa;
   border: 1px solid #e4e4e7;
@@ -5230,7 +5500,12 @@ function onKey(e) {
   gap: 6px;
   min-width: 0;
 }
-.dash-req strong { font-size: 22px; color: #18181b; }
+
+.dash-req strong {
+  font-size: 22px;
+  color: #18181b;
+}
+
 .dash-req ul {
   list-style: none;
   margin: 0;
@@ -5239,6 +5514,7 @@ function onKey(e) {
   flex-direction: column;
   gap: 4px;
 }
+
 .dash-req li {
   display: flex;
   justify-content: space-between;
@@ -5246,7 +5522,11 @@ function onKey(e) {
   font-size: 12px;
   color: #52525b;
 }
-.dash-req-items { color: #71717a; font-weight: 600; }
+
+.dash-req-items {
+  color: #71717a;
+  font-weight: 600;
+}
 
 /* Day Close reminder (login popup on the order-taker pad) */
 .dc-reminder-backdrop {
@@ -5259,6 +5539,7 @@ function onKey(e) {
   justify-content: center;
   padding: 20px;
 }
+
 .dc-reminder-modal {
   background: #fff;
   border-radius: 12px;
@@ -5266,9 +5547,28 @@ function onKey(e) {
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
   overflow: hidden;
 }
-.dc-reminder-head { background: #3f3f46; color: #fff; padding: 14px 18px; }
-.dc-reminder-head h3 { margin: 0; font-size: 16px; display: flex; align-items: center; gap: 8px; }
-.dc-reminder-text { margin: 0; padding: 18px; font-size: 14px; color: #334155; }
+
+.dc-reminder-head {
+  background: #3f3f46;
+  color: #fff;
+  padding: 14px 18px;
+}
+
+.dc-reminder-head h3 {
+  margin: 0;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dc-reminder-text {
+  margin: 0;
+  padding: 18px;
+  font-size: 14px;
+  color: #334155;
+}
+
 .dc-reminder-foot {
   display: flex;
   justify-content: flex-end;
@@ -5277,6 +5577,7 @@ function onKey(e) {
   border-top: 1px solid #e2e8f0;
   background: #f8fafc;
 }
+
 .dc-btn {
   border: 1px solid #d6d3d1;
   background: #fff;
@@ -5288,13 +5589,26 @@ function onKey(e) {
   cursor: pointer;
   font-family: inherit;
 }
-.dc-btn.ok { background: #005eb8; border-color: #005eb8; color: #fff; }
-.dc-btn.ok:hover { background: #00468c; }
+
+.dc-btn.ok {
+  background: #005eb8;
+  border-color: #005eb8;
+  color: #fff;
+}
+
+.dc-btn.ok:hover {
+  background: #00468c;
+}
 
 @media (max-width: 900px) {
-  .dash-kpis { grid-template-columns: repeat(2, 1fr); }
+  .dash-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .dash-grid,
-  .dash-reqs { grid-template-columns: 1fr; }
+  .dash-reqs {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media print {

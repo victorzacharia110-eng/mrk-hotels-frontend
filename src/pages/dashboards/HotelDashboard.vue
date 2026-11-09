@@ -248,7 +248,7 @@
         <span>
           <template v-if="barTip.rawStatus === 'checked_in'">{{ $t('stayview.balanceDue') }}</template>
           <template v-else>{{ barTip.paymentPending ? $t('stayview.paymentPending') : $t('stayview.paymentPaid')
-          }}</template>
+            }}</template>
           <strong v-if="barTip.paymentPending"> · {{ curCode() }} {{ barTip.balance }}</strong>
         </span>
       </div>
@@ -278,7 +278,7 @@
         <li v-for="task in hkTip.tasks" :key="task.task_id" class="sv-hk-item" :class="task.priority">
           <div class="sv-hk-item-top">
             <span class="sv-hk-task-type"><i class="fas fa-broom" aria-hidden="true"></i> {{ hkLabel(task, 'task_type')
-            }}</span>
+              }}</span>
             <span class="sv-hk-status" :class="task.status">{{ hkLabel(task, 'status') }}</span>
           </div>
           <div class="sv-hk-item-meta">
@@ -333,7 +333,7 @@
               <span><i class="fas fa-layer-group" aria-hidden="true"></i> {{ order.items_count ?? 0 }} {{
                 $t('laundry.items') }}</span>
               <span><i class="fas fa-coins" aria-hidden="true"></i> {{ curCode() }} {{ fmtNum(order.total_charge)
-                }}</span>
+              }}</span>
               <span v-if="order.attendant?.full_name"><i class="fas fa-user-gear" aria-hidden="true"></i> {{
                 order.attendant.full_name }}</span>
             </div>
@@ -408,7 +408,7 @@
                           <th scope="col" class="sv-folio-col-num">{{ $t('stayview.viewingFolioBalance') }}</th>
                           <th scope="col" class="sv-folio-col-view"><span class="sv-visually-hidden">{{
                             $t('common.actions')
-                          }}</span></th>
+                              }}</span></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -422,14 +422,14 @@
                           </td>
                           <td>
                             {{ r.guest_name || r.label }}<template v-if="r.room_number"> · {{ r.room_number
-                            }}</template>
+                              }}</template>
                           </td>
                           <td class="sv-folio-col-num">
                             <template v-if="ledgerHeader.guest">{{ folioRowBalanceText(r) }}</template>
                           </td>
                           <td class="sv-folio-col-num">
                             <strong :class="{ 'sv-balance-negative': folioRowBalance(r) < 0 }">{{ folioRowBalanceText(r)
-                            }}</strong>
+                              }}</strong>
                           </td>
                           <td class="sv-folio-col-view">
                             <button type="button" class="sv-folio-print-btn" :disabled="printBusy || folioLoading"
@@ -452,7 +452,7 @@
                   <i class="fas fa-book-bookmark" aria-hidden="true"></i>
                   <span>{{ $t('stayview.viewingFolio') }} <strong>{{ ledgerHeader.code }}</strong> — {{
                     ledgerHeader.guest
-                  }}</span>
+                    }}</span>
                   <button type="button" class="sv-folio-return" :disabled="folioLoading"
                     @click="switchFolio({ reservation_id: activeBar.id })">
                     <i class="fas fa-arrow-left" aria-hidden="true"></i> {{ $t('stayview.backToCurrentFolio') }}
@@ -470,7 +470,7 @@
                   <div class="sv-panel-card" :class="activeBar.paymentPending ? 'pay-pending' : 'pay-ok'">
                     <span>{{ $t('stayview.balance') }}</span>
                     <strong :class="{ 'sv-balance-negative': balanceDisplay.negative }">{{ balanceDisplay.text
-                    }}</strong>
+                      }}</strong>
                   </div>
                 </div>
 
@@ -541,7 +541,7 @@
                           <td colspan="4">{{ $t('folio.balance') }}</td>
                           <td class="num">
                             <strong :class="{ 'sv-balance-negative': ledgerBalance.negative }">{{ ledgerBalance.text
-                            }}</strong>
+                              }}</strong>
                           </td>
                           <td></td>
                         </tr>
@@ -607,7 +607,7 @@
                     <strong>{{ curCode() }} {{ fmtNum((folio?.folio?.total_amount ?? 0) + (folio?.folio?.room_charges ??
                       0),
                       2)
-                      }}</strong>
+                    }}</strong>
                   </div>
                   <div class="sv-panel-card">
                     <span>{{ $t('stayview.totalPaid') }}</span>
@@ -616,7 +616,7 @@
                   <div class="sv-panel-card">
                     <span>{{ $t('folio.balance') }}</span>
                     <strong :class="{ 'sv-balance-negative': balanceDisplay.negative }">{{ balanceDisplay.text
-                    }}</strong>
+                      }}</strong>
                   </div>
                 </div>
                 <div v-if="chargeNights.length" class="sv-table-wrap">
@@ -1158,14 +1158,15 @@
                   </select>
                   <span style="font-size:12px;color:#555;">{{ $t('stayview.roomsSelected', {
                     count:
-                    amendSelectedRoomIds.length }) }}</span>
+                      amendSelectedRoomIds.length
+                  }) }}</span>
                 </div>
                 <div class="sv-room-picker-grid">
                   <label v-for="room in amendGroupRoomOptions" :key="room.value"
                     style="display:flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:12px;background:#fff;">
                     <input type="checkbox" :value="room.value" v-model="amendSelectedRoomIds" />
                     <span>{{ room.room_number }}<template v-if="room.room_type"> · {{ roomTypeLabel(room.room_type)
-                        }}</template></span>
+                    }}</template></span>
                     <span v-if="room.is_primary" class="sv-tag-primary">{{ $t('stayview.primaryRoom') }}</span>
                     <span v-if="room.released" class="sv-tag-released">{{ $t('stayview.released') }}</span>
                   </label>
@@ -1448,7 +1449,7 @@
                           :disabled="actionBusy || newFolioBusy || tt.reservation_id === activeBar?.id" />
                         <span class="sv-split-op-text">
                           <span><strong>{{ tt.guest_name || '—' }}</strong> <span class="sv-cap">· {{ tt.folio_code
-                          }}</span></span>
+                              }}</span></span>
                           <span class="sv-cap sv-muted">{{ tt.room_number || '—' }} · {{ (tt.status || '').replace('_',
                             ' ') }}</span>
                         </span>
@@ -1628,7 +1629,7 @@
                     <div class="sv-receipt-total-row">
                       <span>{{ $t('folio.billAmount') }}</span>
                       <strong>{{ curCode() }} {{ fmtNum(viewEntryReceipt.billAmount ?? viewEntryReceipt.amount, 2)
-                        }}</strong>
+                      }}</strong>
                     </div>
                     <div class="sv-receipt-total-row">
                       <span>{{ $t('folio.tax') }}</span>
@@ -1765,7 +1766,7 @@
                   })" :key="gm.guest_id" type="button" class="btn btn-ghost btn-sm"
                     style="justify-content:flex-start; text-align:left;" @click="applyGuestToBooking(gm)">
                     <span style="font-weight:600;">{{ gm.full_name || ((gm.first_name || '') + ' ' +
-                      (gm.last_name||'')).trim() }}</span>
+                      (gm.last_name || '')).trim() }}</span>
                     <span class="muted" style="margin-left:8px;">{{ gm.phone || gm.phone_number || '' }}</span>
                     <span v-if="gm.email" class="muted" style="margin-left:8px;">{{ gm.email }}</span>
                   </button>
@@ -1852,7 +1853,7 @@
                       <span class="sv-room-picker-trigger-main">
                         <i class="fas fa-door-open" aria-hidden="true"></i>
                         <span>{{ roomSelectionsArray.length ? $t('stayview.editRooms') : $t('stayview.selectRooms')
-                          }}</span>
+                        }}</span>
                       </span>
                       <span v-if="roomSelectionsArray.length" class="sv-room-picker-count">
                         {{ $t('stayview.roomsSelected', { count: roomSelectionsArray.length }) }}
@@ -1896,7 +1897,8 @@
                 <label class="sv-field">
                   <span>{{ $t('stayview.total') }}</span>
                   <input v-model.number="bookingForm.total_amount" type="number" min="0" step="0.01" class="input"
-                    required @wheel.prevent @keydown="(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()" />
+                    required @wheel.prevent
+                    @keydown="(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()" />
                 </label>
                 <label class="sv-field">
                   <span>{{ $t('stayview.advancePaid') }}</span>
@@ -2012,7 +2014,7 @@
                         <div class="sv-group-selected-name">{{ sel.room_number }} · {{ roomTypeLabel(sel.room_type) }}
                         </div>
                         <div class="muted sv-group-selected-price">{{ curCode() }} {{ formatPrice(sel.price_per_night)
-                          }}
+                        }}
                         </div>
                       </div>
                       <div class="sv-room-summary-tags">
@@ -2185,7 +2187,7 @@
                 <i class="fas fa-layer-group" aria-hidden="true"></i>
                 <span>{{ roomTypeLabel(roomModal.room_type) }} · {{ curCode() }} {{
                   formatPrice(roomModal.price_per_night)
-                  }}</span>
+                }}</span>
               </div>
               <header class="sv-dot-rules-head">
                 <i class="fas fa-circle-info" aria-hidden="true"></i>
@@ -2403,9 +2405,8 @@
 
     <!-- Return to Night Audit prompt when closing a stay opened from Night Audit. -->
     <ConfirmModal :show="returnToNightAuditModal" title="Return to Night Audit?"
-      body="Return to the Night Audit page, or stay on Stayview?"
-      confirm-label="Return to Night Audit" cancel-label="Stay on Stayview"
-      @cancel="returnToNightAuditModal = false" @confirm="goBackToNightAudit" />
+      body="Return to the Night Audit page, or stay on Stayview?" confirm-label="Return to Night Audit"
+      cancel-label="Stay on Stayview" @cancel="returnToNightAuditModal = false" @confirm="goBackToNightAudit" />
   </div>
 </template>
 

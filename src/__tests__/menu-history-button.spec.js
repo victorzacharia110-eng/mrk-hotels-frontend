@@ -59,9 +59,9 @@ describe('MenuListPage — edit history', () => {
     expect(historyButton(wrapper)).toBeTruthy()
   })
 
-  it('offers it to a cashier, who maintains the menu from this page', async () => {
+  it('hides it from a cashier, who no longer maintains the menu', async () => {
     const wrapper = await mountAs('cashier')
-    expect(historyButton(wrapper)).toBeTruthy()
+    expect(historyButton(wrapper)).toBeFalsy()
   })
 
   it('hides it from a waiter, who may not edit the menu and so has no trail to read', async () => {

@@ -3,18 +3,12 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 /**
- * Guards the selected table in the waiter pad's order lines.
+ * Guards the waiter pad's order lines after the PDF review.
  *
- * The pad lets a waiter pick the table in the header, but the lines grid below
- * only ever showed Qty / Item / Price / Amount — so the destination of the
- * ticket was invisible next to the items being rung up, and on a phone the
- * header scrolls away while the grid stays put. Sending is also blocked until a
- * table is chosen, which made the missing table easy to miss entirely.
- *
- * Structural assertions, matching the rest of this suite: jsdom resolves no
- * layout, and mounting the pad drags in the whole API surface. What these catch
- * is the column being dropped or a row losing its cell, which is how the gap
- * arrived. The behaviour is asserted for real in `e2e/`.
+ * The selected table is shown once in the header, not repeated on every line.
+ * The lines grid is Qty / Item / Price / Amount / remove. Categories and item
+ * search stay hidden until a table is chosen, and sending still refuses a
+ * table-less ticket.
  */
 
 const read = (p) => readFileSync(resolve(process.cwd(), p), 'utf8')
@@ -23,53 +17,52 @@ const en = JSON.parse(read('src/locales/en.json'))
 const sw = JSON.parse(read('src/locales/sw.json'))
 const styles = pad.slice(pad.indexOf('<style'))
 
-/** The order-lines grid (the plain one; the dash/summary tables reuse the class). */
 const linesTable = pad.slice(pad.indexOf('<table class="lines-table">'), pad.indexOf('</table>'))
 const head = linesTable.slice(linesTable.indexOf('<thead>'), linesTable.indexOf('</thead>'))
 
 const countOf = (re) => (linesTable.match(re) || []).length
 
-describe('waiter pad: the selected table is on every line', () => {
-  it('heads the grid with a table column', () => {
-    expect(head).toMatch(/<th class="col-table">\{\{ \$t\('orderTaker\.table'\) \}\}<\/th>/)
-    // Table first: it scopes the whole ticket, so it is read before the items.
+describe('waiter pad: order lines', () => {
+  it('does not repeat the table on every line', () => {
+    expect(head).not.toMatch(/col-table/)
+    expect(linesTable).not.toMatch(/<td class="col-table">/)
+    expect(linesTable).not.toMatch(/\{\{ form\.table_number \}\}/)
+  })
+
+  it('heads the grid with qty, item, price and amount', () => {
     const order = [...head.matchAll(/\$t\('orderTaker\.(\w+)'\)/g)].map((m) => m[1])
-    expect(order).toEqual(['table', 'qty', 'item', 'price', 'amount'])
+    expect(order).toEqual(['qty', 'item', 'price', 'amount'])
   })
 
-  it('prints the selected table on each row', () => {
-    expect(linesTable).toMatch(/<td class="col-table">/)
-    expect(linesTable).toMatch(/\{\{ form\.table_number \}\}/)
-    // Bound to the order's table, not to the line: there is one table per ticket.
-    expect(linesTable).toMatch(/v-if="form\.table_number"/)
+  it('keeps the selected table in the header', () => {
+    expect(pad).toMatch(/v-model="form\.table_number"/)
+    expect(pad).toMatch(/\$t\('orderTaker\.selectTable'\)/)
   })
 
-  it('marks the not-yet-chosen state, since it blocks sending', () => {
-    expect(linesTable).toMatch(/v-else class="line-table is-unset"/)
-    expect(linesTable).toMatch(/:title="\$t\('orderTaker\.selectTable'\)"/)
-    // ...and sendOrder really does refuse a table-less ticket, so the dash is a
-    // real blocker rather than decoration.
+  it('gates category/search behind a chosen table', () => {
+    expect(pad).toMatch(/<div v-else-if="form\.table_number && categories\.length" class="cat-rail"/)
+    expect(pad).toMatch(/<div v-if="form\.table_number && \(activeCategory \|\| searchQuery\)" class="inline-items">/)
+    expect(pad).toMatch(/function openCategory\(cat\) \{\s*\n\s*if \(!form\.value\.table_number\) return/)
+  })
+
+  it('still refuses to send a table-less ticket', () => {
     expect(pad).toMatch(/if \(!form\.value\.table_number\) \{\s*\n\s*sendError\.value = t\('orderTaker\.selectTableFirst'\)/)
   })
 
   it('keeps the header and body cells aligned', () => {
-    // A stray cell is what breaks a grid: it silently shifts every column.
     const heads = countOf(/<th[\s>]/g)
     const cells = countOf(/<td[\s>]/g)
-    expect(heads).toBe(6) // table, qty, item, price, amount, remove
-    // One populated row plus the empty-state row.
+    expect(heads).toBe(5) // qty, item, price, amount, remove
     expect(cells).toBe(heads + 1)
-    expect(linesTable).toMatch(/colspan="6"/)
+    expect(linesTable).toMatch(/colspan="5"/)
   })
 
-  it('gives the column a width and an unset style', () => {
-    expect(styles).toMatch(/\.col-table \{[^}]*width:/)
-    expect(styles).toMatch(/\.line-table\.is-unset \{/)
-    // Wide enough not to clip "Table 12" next to the qty stepper.
-    expect(styles).not.toMatch(/\.col-table \{[^}]*max-width:\s*\d{2}px/)
+  it('styles the price and amount columns', () => {
+    expect(styles).toMatch(/\.col-price,\s*\.col-amount \{[^}]*width:\s*130px/)
+    expect(styles).not.toMatch(/\.col-table \{/)
   })
 
-  it('has the label in both languages', () => {
+  it('has the labels in both languages', () => {
     expect(en.orderTaker.table).toBe('Table')
     expect(sw.orderTaker.table).toBeTruthy()
     expect(en.orderTaker.selectTable).toBeTruthy()

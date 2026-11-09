@@ -135,6 +135,6 @@ describe('route guarding', () => {
       .find((l) => l.includes("name: 'hotel-menu-activity'"))
 
     expect(line).toBeTruthy()
-    expect(line).toContain("meta: { module: 'menu' }")
+    expect(line).toContain("meta: { module: 'menu', role: ['hotel_admin', 'manager'] }")
   })
 })

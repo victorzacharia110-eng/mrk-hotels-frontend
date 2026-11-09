@@ -1,8 +1,8 @@
 <!--
   CashierTakeAwayPage — the Take Away board.
-  Tabs for All / Preparing / Ready / Completed with live counts, plus an
-  "Add Take Away Order" flow that builds the ticket with menu items and
-  their accompaniments before posting it to the kitchen.
+  Pending / Settled / Voided tabs with live counts, plus an "Add Take Away
+  Order" flow that builds the ticket with menu items and their accompaniments
+  before posting it to the kitchen.
 -->
 
 <template>
@@ -32,18 +32,20 @@
             <th>{{ $t('cashier.summary.order') }}</th>
             <th>{{ $t('cashier.takeAway.guest') }}</th>
             <th>{{ $t('cashier.summary.waiter') }}</th>
-            <th>{{ $t('cashier.takeAway.dateTime') }}</th>
+            <th>{{ $t('cashier.takeAway.time') }}</th>
             <th>{{ $t('common.status') }}</th>
             <th>{{ $t('cashier.summary.amount') }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="order in filteredOrders" :key="order.order_id">
-            <td><strong>{{ order.order_number }}</strong></td>
+            <td>
+              <button class="order-link" @click="peekId = order.order_id">{{ order.order_number }}</button>
+            </td>
             <td>{{ order.guest_name || '—' }}</td>
             <td>{{ order.waiter_name || '—' }}</td>
-            <td>{{ dateTimeOf(order) }}</td>
-            <td><span class="chip" :class="statusChip(order.status)">{{ statusLabel(order.status) }}</span></td>
+            <td>{{ timeOf(order) }}</td>
+            <td><span class="chip" :class="statusChip(order)">{{ statusLabel(order) }}</span></td>
             <td>{{ money(order.total_amount) }}</td>
           </tr>
           <tr v-if="!filteredOrders.length">
@@ -56,66 +58,62 @@
 
     <NewOrderModal v-if="showModal" mode="takeaway" :title="$t('cashier.takeAway.newOrder')"
       @close="showModal = false" @created="onCreated" />
+    <OrderPeekModal :open="!!peekId" :order-id="peekId" @close="peekId = null" />
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { orderApi } from '@/api'
 import { selectedOutlet } from '@/composables/useOutletContext'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
 import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
+import OrderPeekModal from '@/components/cashier/OrderPeekModal.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
-import { formatOrderDateTime, localDateOf, todayISO } from '@/utils/dates'
+import { formatTime, localDateOf, todayISO } from '@/utils/dates'
 
-const { t, te } = useI18n()
+const { t } = useI18n()
 const workingDateStore = useWorkingDateStore()
 
 const orders = ref([])
 const loading = ref(true)
-const activeTab = ref('all')
+const activeTab = ref('pending')
 const showModal = ref(false)
 const date = ref('')
+const peekId = ref(null)
 
-const TAB_STATUS = {
-  preparing: ['pending', 'in_progress', 'processing', 'preparing'],
-  ready: ['ready', 'served'],
-  completed: ['completed'],
-}
+const isSettled = (o) => o.status === 'completed' || (o.payment_status && o.payment_status !== 'unpaid')
+const isVoided = (o) => o.status === 'cancelled'
+const isPending = (o) => !isSettled(o) && !isVoided(o)
 
 const tabs = computed(() => [
-  { key: 'all', label: t('cashier.takeAway.tabAll'), count: orders.value.length },
-  { key: 'preparing', label: t('cashier.takeAway.tabPreparing'), count: countFor('preparing') },
-  { key: 'ready', label: t('cashier.takeAway.tabReady'), count: countFor('ready') },
-  { key: 'completed', label: t('cashier.takeAway.tabCompleted'), count: countFor('completed') },
+  { key: 'pending', label: t('cashier.takeAway.tabPending'), count: orders.value.filter(isPending).length },
+  { key: 'settled', label: t('cashier.takeAway.tabSettled'), count: orders.value.filter(isSettled).length },
+  { key: 'voided', label: t('cashier.takeAway.tabVoided'), count: orders.value.filter(isVoided).length },
 ])
 
 const filteredOrders = computed(() => {
-  const statuses = TAB_STATUS[activeTab.value]
-  if (!statuses) return orders.value
-  return orders.value.filter((o) => statuses.includes(o.status))
+  if (activeTab.value === 'settled') return orders.value.filter(isSettled)
+  if (activeTab.value === 'voided') return orders.value.filter(isVoided)
+  return orders.value.filter(isPending)
 })
 
-function countFor(tab) {
-  return orders.value.filter((o) => TAB_STATUS[tab].includes(o.status)).length
+function statusLabel(order) {
+  if (isVoided(order)) return t('cashier.takeAway.status.cancelled')
+  if (isSettled(order)) return t('cashier.takeAway.status.completed')
+  return t('cashier.takeAway.status.pending')
 }
 
-function statusLabel(status) {
-  const key = `cashier.takeAway.status.${status}`
-  return te(key) ? t(key) : status
-}
-
-function statusChip(status) {
-  if (TAB_STATUS.completed.includes(status)) return 'approved'
-  if (TAB_STATUS.ready.includes(status)) return 'partial'
+function statusChip(order) {
+  if (isVoided(order)) return 'cancelled'
+  if (isSettled(order)) return 'approved'
   return 'pending'
 }
 
-/** Human-readable date + time for the row (the board can show older dates). */
-function dateTimeOf(order) {
-  return formatOrderDateTime(order.created_at || order.order_date)
+function timeOf(order) {
+  return formatTime(order.created_at || order.order_date)
 }
 
 function money(value) {
@@ -127,18 +125,12 @@ async function load() {
   try {
     const params = { order_type: 'takeaway', per_page: 100 }
     if (selectedOutlet.value?.outlet_id) params.outlet_id = selectedOutlet.value.outlet_id
-    // "Previous orders" (a date before today) lists that whole date's tickets.
     if (date.value && date.value < todayISO()) params.date = date.value
     const { data } = await orderApi.index(params)
     const rows = data.data || []
-    // Otherwise show today's tickets by their LOCAL calendar day: the API
-    // returns no business-order-date field, so filtering on `order_date`
-    // matches nothing and today's tickets (waiter-created included) vanish.
     orders.value = params.date
       ? rows
       : rows.filter((o) => {
-          // Prefer created_at (real timestamp); fall back to order_date as a
-          // bare date string so test mocks without created_at still pass.
           const stamp = o.created_at
           if (stamp) return localDateOf(stamp) === date.value
           return String(o.order_date || '').slice(0, 10) === date.value
@@ -153,6 +145,8 @@ function onCreated() {
   load()
 }
 
+watch(() => selectedOutlet.value?.outlet_id, () => load(), { immediate: false })
+
 onMounted(async () => {
   await workingDateStore.ensureLoaded()
   date.value = workingDateStore.workingDate
@@ -160,7 +154,7 @@ onMounted(async () => {
 })
 </script>
 
-
-watch(() => selectedOutlet.value?.outlet_id, () => {
-  if (typeof load === 'function') load()
-}, { immediate: false })
+<style scoped>
+.order-link { background: none; border: none; padding: 0; color: #005eb8; font-weight: 700; cursor: pointer; text-decoration: underline; }
+.chip.cancelled { background: #fee2e2; color: #b91c1c; }
+</style>

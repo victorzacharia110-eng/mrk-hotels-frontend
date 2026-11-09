@@ -18,8 +18,6 @@ const api = vi.hoisted(() => ({
   accIndex: vi.fn(),
 }))
 
-const storeBinding = vi.hoisted(() => ({ current: undefined }))
-
 vi.mock('@/api', () => ({
   orderApi: {
     index: api.orderIndex,
@@ -90,30 +88,21 @@ describe('OrderDateNav', () => {
     })
   }
 
-  it('steps backwards and forwards a day at a time', async () => {
+  it('renders a plain date input with no stepper or Today shortcut', () => {
     const wrapper = mountNav()
-    const buttons = wrapper.findAll('.nav-btn')
-    await buttons[0].trigger('click')
-    expect(wrapper.emitted('update:modelValue')[0][0]).toBe('2026-09-19')
-    expect(wrapper.emitted('change')[0][0]).toBe('2026-09-19')
-
-    await buttons[1].trigger('click')
-    expect(wrapper.emitted('update:modelValue')[1][0]).toBe('2026-09-21')
-  })
-
-  it('shows the Today shortcut only when browsing an older date', async () => {
-    const wrapper = mountNav({ modelValue: '2026-09-19', today: '2026-09-20' })
-    expect(wrapper.find('.today-btn').exists()).toBe(true)
-    await wrapper.find('.today-btn').trigger('click')
-    expect(wrapper.emitted('update:modelValue')[0][0]).toBe('2026-09-20')
-
-    await wrapper.setProps({ modelValue: '2026-09-20' })
+    expect(wrapper.find('input[type="date"].date-nav-input').exists()).toBe(true)
+    expect(wrapper.find('.nav-btn').exists()).toBe(false)
     expect(wrapper.find('.today-btn').exists()).toBe(false)
   })
 
-  it('hides the Today shortcut when no today is provided', () => {
-    const wrapper = mountNav({ modelValue: '2026-09-19', today: '' })
-    expect(wrapper.find('.today-btn').exists()).toBe(false)
+  it('emits the picked date through v-model and change', async () => {
+    const wrapper = mountNav()
+    await wrapper.find('input[type="date"]').setValue('2026-09-21')
+    expect(wrapper.emitted('update:modelValue')[0][0]).toBe('2026-09-21')
+
+    const picked = mountNav({ modelValue: '2026-09-21' })
+    await picked.find('input[type="date"]').trigger('change')
+    expect(picked.emitted('change')[0][0]).toBe('2026-09-21')
   })
 })
 
@@ -132,11 +121,9 @@ describe('NewOrderModal — grills "served with" popup', () => {
     })
     await flushPromises()
 
-    // The modal is teleported to body with its own backdrop layer.
     const backdrop = document.body.querySelector('.order-modal-backdrop')
     expect(backdrop).toBeTruthy()
 
-    // Tapping the grill item opens the "served with" popup (also in body).
     const tile = backdrop.querySelector('.cat-item')
     expect(tile).toBeTruthy()
     expect(tile.textContent).toContain('Beef Mshikaki')
@@ -147,7 +134,6 @@ describe('NewOrderModal — grills "served with" popup', () => {
     expect(popup).toBeTruthy()
     expect(popup.textContent).toContain('Beef Mshikaki')
 
-    // Picking an accompaniment dismisses the popup and queues the line.
     const option = popup.querySelector('.accomp-option')
     expect(option).toBeTruthy()
     option.dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -160,12 +146,11 @@ describe('NewOrderModal — grills "served with" popup', () => {
 })
 
 describe('Cashier order boards — previous orders by date', () => {
-  it('Take Away filters today by business order date and navigates to history', async () => {
+  it('Take Away filters today by business order date and shows time only', async () => {
     const today = todayISO()
     const yesterday = addDays(today, -1)
     const todays = ORDER({ order_id: 1, order_number: 'TA-TODAY', order_date: today, created_at: `${today}T10:00:00` })
     const old = ORDER({ order_id: 2, order_number: 'TA-OLD', order_date: yesterday, created_at: `${yesterday}T09:00:00` })
-    // First load (today) returns both; the board must keep only today's.
     api.orderIndex.mockResolvedValueOnce({ data: { data: [todays, old] } })
 
     const wrapper = mount(CashierTakeAwayPage, { global: { plugins: [i18n] } })
@@ -173,19 +158,20 @@ describe('Cashier order boards — previous orders by date', () => {
 
     expect(wrapper.text()).toContain('TA-TODAY')
     expect(wrapper.text()).not.toContain('TA-OLD')
-    // Human-readable date + time, not just a bare hour.
-    expect(wrapper.text()).toContain('·')
+    expect(wrapper.text()).toContain(formatTime(todays.created_at))
+    expect(wrapper.text()).not.toContain('·')
 
-    // Navigate to yesterday: the board asks the API for that date.
-    api.orderIndex.mockResolvedValueOnce({ data: { data: [old] } })
-    await wrapper.findAll('.nav-btn')[0].trigger('click')
+    api.orderIndex.mockResolvedValue({ data: { data: [old] } })
+    const input = wrapper.find('.date-nav-input')
+    await input.setValue(yesterday)
     await flushPromises()
+    await input.trigger('change')
+    await flushPromises()
+
     expect(api.orderIndex).toHaveBeenLastCalledWith(
       expect.objectContaining({ order_type: 'takeaway', date: yesterday }),
     )
     expect(wrapper.text()).toContain('TA-OLD')
-    // A Today shortcut appears while browsing history and jumps back.
-    expect(wrapper.find('.today-btn').exists()).toBe(true)
 
     wrapper.unmount()
   })
@@ -204,21 +190,19 @@ describe('Cashier order boards — previous orders by date', () => {
     )
     expect(wrapper.text()).toContain('NC-TODAY')
     expect(wrapper.text()).not.toContain('NC-OLD')
-    expect(wrapper.text()).toContain('·')
-    expect(wrapper.find('.date-nav').exists()).toBe(true)
+    expect(wrapper.text()).toContain(formatTime(todays.created_at))
+    expect(wrapper.find('.date-nav-input').exists()).toBe(true)
 
     wrapper.unmount()
   })
 })
 
-
-describe('Cashier Room Service board — resilience', () => {
-  it('renders even when the working-date store binding is unavailable', async () => {
-    // Regression: a chunk-ordering fault in one production build left the store
-    // binding undefined, and the panel white-screened on `.workingDate`.
-    const workingDate = storeBinding
+describe('Cashier Room Service board — business date', () => {
+  it('waits for the working-date store before loading the board', async () => {
+    const ensureLoaded = vi.fn().mockResolvedValue()
+    vi.resetModules()
     vi.doMock('@/stores/workingDate', () => ({
-      useWorkingDateStore: () => workingDate.current,
+      useWorkingDateStore: () => ({ workingDate: '2026-09-20', ensureLoaded }),
     }))
 
     api.orderIndex.mockResolvedValueOnce({ data: { data: [] } })
@@ -227,9 +211,10 @@ describe('Cashier Room Service board — resilience', () => {
     const wrapper = mount(RoomService, { global: { plugins: [i18n] } })
     await flushPromises()
 
-    // The board renders and falls back to the local date instead of throwing.
-    expect(wrapper.find('.date-nav').exists()).toBe(true)
-    expect(wrapper.findComponent(OrderDateNav).props('today')).toBe(todayISO())
+    expect(ensureLoaded).toHaveBeenCalled()
+    expect(wrapper.find('.date-nav-input').exists()).toBe(true)
+    expect(wrapper.find('.date-nav-input').element.value).toBe('2026-09-20')
+    expect(api.orderIndex).toHaveBeenCalledWith(expect.objectContaining({ date: '2026-09-20' }))
 
     wrapper.unmount()
     vi.doUnmock('@/stores/workingDate')

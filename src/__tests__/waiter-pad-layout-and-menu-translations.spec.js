@@ -181,7 +181,7 @@ describe('waiter pad: the table cards close the categories column', () => {
   })
 })
 
-describe('waiter pad: the order table fills the width with Send only above the total', () => {
+describe('waiter pad: the order table fills the width with Send beside the total', () => {
   it('keeps the lines table full width and has no Send button beside it', () => {
     const bodyAt = pad.indexOf('class="order-body"')
     const linesAt = pad.indexOf('class="lines-wrap"')
@@ -196,11 +196,18 @@ describe('waiter pad: the order table fills the width with Send only above the t
     expect(rule(styles, '.order-body')).toMatch(/width:\s*100%/)
   })
 
-  it('sends the ticket from the single button above the total', () => {
-    const totalAt = pad.indexOf('class="pager-row"')
-    const sendRowAt = pad.indexOf('class="order-send-row"')
-    expect(sendRowAt, 'send row not found').toBeGreaterThan(-1)
-    expect(sendRowAt).toBeLessThan(totalAt)
+  it('places Send on the left and the total on the right', () => {
+    const rowAt = pad.indexOf('class="order-send-row"')
+    const sendAt = pad.indexOf('class="send-btn"', rowAt)
+    const totalAt = pad.indexOf('class="total-bar"', rowAt)
+    expect(rowAt, 'send row not found').toBeGreaterThan(-1)
+    expect(sendAt, 'send button not found in the action row').toBeGreaterThan(rowAt)
+    expect(totalAt, 'total bar not found in the action row').toBeGreaterThan(sendAt)
+    // The blocks swap positions; the action is still labelled Send Order and
+    // the amount is still labelled Total (not a literal word-for-word rename).
+    expect(pad.slice(sendAt, totalAt)).toMatch(/\$t\('orderTaker\.send'\)/)
+    expect(pad.slice(totalAt, pad.indexOf('</div>', totalAt))).toMatch(/\$t\('orderTaker\.total'\)/)
+    expect(pad).not.toMatch(/class="pager-row"/)
   })
 
   it('shows the send error instead of failing silently', () => {

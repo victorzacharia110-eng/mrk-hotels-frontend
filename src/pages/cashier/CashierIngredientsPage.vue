@@ -12,11 +12,6 @@
       <section class="panel">
         <div class="panel-head">
           <h2><i class="fas fa-layer-group" aria-hidden="true"></i> {{ $t('cashier.ingredients.menuItems') }}</h2>
-          <select v-model="department" class="sm-select sm" @change="loadMenuItems">
-            <option value="">{{ $t('cashier.lookup.allMenus') }}</option>
-            <option value="restaurant">{{ $t('cashier.lookup.kitchenMenu') }}</option>
-            <option value="bar">{{ $t('cashier.lookup.barMenu') }}</option>
-          </select>
         </div>
         <div class="tree-body">
           <input v-model="menuSearch" type="search" class="sm-input full-width"
@@ -80,7 +75,7 @@
             <tr v-for="ing in ingredients" :key="ing.menu_item_ingredient_id">
               <td><strong>{{ ing.item?.item_name || '—' }}</strong></td>
               <td>
-                <input type="number" class="sm-input sm inline-edit" :value="ing.quantity" min="0.0001" step="0.1"
+                <input type="number" class="sm-input sm inline-edit" :value="Number(ing.quantity).toFixed(2)" min="0.01" step="0.01"
                   @change="e => updateQty(ing, e.target.value)" />
               </td>
               <td>{{ ing.unit || ing.item?.unit || '—' }}</td>
@@ -124,16 +119,14 @@
           </div>
           <div class="din-modal-body add-form">
             <label>{{ $t('cashier.ingredients.inventoryItem') }}</label>
-            <select v-model="newIng.itemId" class="sm-select full-width">
-              <option value="" disabled>{{ $t('cashier.ingredients.pickInventory') }}</option>
-              <option v-for="inv in availableInventory" :key="inv.item_id" :value="inv.item_id">
-                {{ inv.item_name }} ({{ inv.quantity_in_stock }} {{ inv.unit || 'units' }})
-              </option>
-            </select>
+            <SearchableSelect v-model="newIng.itemId" :options="inventoryOptions"
+              :placeholder="$t('cashier.ingredients.pickInventory')" :force-search="true"
+              @change="onInventoryPick" />
             <label>{{ $t('cashier.ingredients.qtyPerUnit') }}</label>
-            <input v-model.number="newIng.quantity" type="number" class="sm-input full-width" min="0.0001" step="0.1" />
-            <label>{{ $t('cashier.ingredients.unit') }} <small>({{ $t('common.optional') }})</small></label>
-            <input v-model="newIng.unit" type="text" class="sm-input full-width" :placeholder="$t('cashier.ingredients.unitHint')" />
+            <input v-model.number="newIng.quantity" type="number" class="sm-input full-width" min="0.01" step="0.01" />
+            <label>{{ $t('cashier.ingredients.siUnit') }}</label>
+            <input v-model="newIng.unit" type="text" class="sm-input full-width" readonly
+              :placeholder="$t('cashier.ingredients.siUnitHint')" />
             <div class="form-actions">
               <button class="sm-btn ghost" @click="addModal = false">{{ $t('common.cancel') }}</button>
               <button class="sm-btn" :disabled="!newIng.itemId || !newIng.quantity || saving" @click="saveAdd">
@@ -153,6 +146,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { menuItemApi, cashierApi, menuItemIngredientApi } from '@/api/index.js'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useTenantCurrency } from '@/utils/currency'
 
 const { curCode } = useTenantCurrency()
@@ -164,17 +158,18 @@ const money = (v) =>
 /* ── Menu items ────────────────────────────────────────── */
 const menuItems = ref([])
 const loadingMenu = ref(true)
-const department = ref('')
 const menuSearch = ref('')
 const openCat = ref('')
 const activeItem = ref(null)
 
+// Menu items are grouped by SUB CATEGORY (the second level), with the category
+// as a fallback for older rows that have no sub-category yet.
 const groupedMenuItems = computed(() => {
   const q = menuSearch.value.trim().toLowerCase()
   const list = q ? menuItems.value.filter(i => i.item_name.toLowerCase().includes(q)) : menuItems.value
   const groups = {}
   for (const item of list) {
-    const cat = item.category || 'Uncategorized'
+    const cat = item.sub_category || item.category || 'Uncategorized'
     ;(groups[cat] ||= []).push(item)
   }
   return groups
@@ -188,9 +183,7 @@ function toggleCat(cat) {
 async function loadMenuItems() {
   loadingMenu.value = true
   try {
-    const params = { per_page: 100 }
-    if (department.value) params.department = department.value
-    const { data } = await menuItemApi.index(params)
+    const { data } = await menuItemApi.index({ per_page: 500 })
     // Backend ships the ingredient line count per item, so the tree renders
     // badges without one extra request per menu item.
     menuItems.value = (data.data || data).map(i => ({ ...i, _ingredientCount: i.ingredient_count ?? 0 }))
@@ -224,10 +217,19 @@ async function loadInventory() {
   inventoryItems.value = data.items || []
 }
 
-const availableInventory = computed(() => {
-  const usedIds = new Set(ingredients.value.map(i => i.item_id))
-  return inventoryItems.value.filter(i => !usedIds.has(i.item_id))
-})
+// The add-ingredient picker lists the whole inventory (searchable), not just
+// the items that have not been linked yet.
+const inventoryOptions = computed(() =>
+  inventoryItems.value.map((inv) => ({
+    value: inv.item_id,
+    label: inv.item_name,
+  })),
+)
+
+function onInventoryPick(option) {
+  const inv = inventoryItems.value.find((i) => String(i.item_id) === String(option?.value ?? newIng.value.itemId))
+  newIng.value.unit = inv?.si_unit || inv?.unit || ''
+}
 
 const autoCost = computed(() =>
   ingredients.value.reduce((sum, i) => sum + (i.item?.unit_cost || 0) * i.quantity, 0)

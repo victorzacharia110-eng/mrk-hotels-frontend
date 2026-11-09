@@ -1,8 +1,8 @@
 <!--
   CashierDeliveryPage — the Delivery Manager board.
-  Tabs for All / Preparing / Dispatched / Completed with live counts, plus
-  an "Add Delivery Order" flow that captures guest contact details, the
-  delivery address and the expected delivery time.
+  Pending / Settled / Voided tabs with live counts, waiter / sender / driver
+  columns, plus an "Add Delivery Order" flow that captures contact details,
+  the delivery address, the driver and the expected delivery time.
 -->
 
 <template>
@@ -19,39 +19,43 @@
       <OrderDateNav input-id="dl-date" v-model="date" :today="workingDateStore.workingDate"
         :today-label="$t('cashier.delivery.today')" @change="load" />
       <button class="sm-btn sm success" @click="showModal = true">
-        <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('cashier.delivery.addOrder') }}
+        {{ $t('cashier.delivery.addOrder') }}
       </button>
     </div>
 
     <section class="panel">
       <div class="table-scroll">
-      <SkeletonLoader v-if="loading" variant="table" :count="6" :cols="8" />
+      <SkeletonLoader v-if="loading" variant="table" :count="6" :cols="9" />
       <table class="sm-table" v-else>
         <thead>
           <tr>
             <th>{{ $t('cashier.summary.order') }}</th>
             <th>{{ $t('cashier.roomService.guest') }}</th>
-            <th>{{ $t('cashier.delivery.dateTime') }}</th>
+            <th>{{ $t('cashier.summary.waiter') }}</th>
+            <th>{{ $t('cashier.delivery.sender') }}</th>
+            <th>{{ $t('cashier.delivery.driver') }}</th>
+            <th>{{ $t('cashier.delivery.time') }}</th>
             <th>{{ $t('cashier.delivery.phone') }}</th>
             <th>{{ $t('cashier.delivery.address') }}</th>
-            <th>{{ $t('cashier.delivery.eta') }}</th>
             <th>{{ $t('common.status') }}</th>
             <th>{{ $t('cashier.summary.amount') }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="order in filteredOrders" :key="order.order_id">
-            <td><strong>{{ order.order_number }}</strong></td>
+            <td><button class="order-link" @click="peekId = order.order_id">{{ order.order_number }}</button></td>
             <td>{{ order.guest_name || '—' }}</td>
-            <td>{{ dateTimeOf(order) }}</td>
+            <td>{{ order.waiter_name || '—' }}</td>
+            <td>{{ senderOf(order) }}</td>
+            <td>{{ order.driver_name || '—' }}</td>
+            <td>{{ timeOf(order) }}</td>
             <td>{{ order.delivery_phone || '—' }}</td>
             <td class="addr-cell">{{ order.delivery_address || '—' }}</td>
-            <td>{{ order.expected_minutes ? `${order.expected_minutes} ${$t('cashier.delivery.minutes')}` : '—' }}</td>
-            <td><span class="chip" :class="statusChip(order.status)">{{ statusLabel(order.status) }}</span></td>
+            <td><span class="chip" :class="statusChip(order)">{{ statusLabel(order) }}</span></td>
             <td>{{ money(order.total_amount) }}</td>
           </tr>
           <tr v-if="!filteredOrders.length">
-            <td colspan="8" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.delivery.none') }}</td>
+            <td colspan="10" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.delivery.none') }}</td>
           </tr>
         </tbody>
       </table>
@@ -60,89 +64,82 @@
 
     <NewOrderModal v-if="showModal" mode="delivery" :title="$t('cashier.delivery.addOrder')"
       @close="showModal = false" @created="onCreated" />
+    <OrderPeekModal :open="!!peekId" :order-id="peekId" @close="peekId = null" />
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { orderApi } from '@/api'
 import { selectedOutlet } from '@/composables/useOutletContext'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
 import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
+import OrderPeekModal from '@/components/cashier/OrderPeekModal.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
-import { formatOrderDateTime, localDateOf, todayISO } from '@/utils/dates'
+import { formatTime, localDateOf, todayISO } from '@/utils/dates'
 
-const { t, te } = useI18n()
+const { t } = useI18n()
 const workingDateStore = useWorkingDateStore()
 
 const orders = ref([])
 const loading = ref(true)
-const activeTab = ref('all')
+const activeTab = ref('pending')
 const showModal = ref(false)
 const date = ref('')
+const peekId = ref(null)
 
-const TAB_STATUS = {
-  preparing: ['pending', 'in_progress', 'processing', 'preparing'],
-  dispatched: ['ready', 'served'],
-  completed: ['completed'],
-}
+const isSettled = (o) => o.status === 'completed' || (o.payment_status && o.payment_status !== 'unpaid')
+const isVoided = (o) => o.status === 'cancelled'
+const isPending = (o) => !isSettled(o) && !isVoided(o)
 
 const tabs = computed(() => [
-  { key: 'all', label: t('cashier.delivery.tabAll'), count: orders.value.length },
-  { key: 'preparing', label: t('cashier.delivery.tabPreparing'), count: countFor('preparing') },
-  { key: 'dispatched', label: t('cashier.delivery.tabDispatched'), count: countFor('dispatched') },
-  { key: 'completed', label: t('cashier.delivery.tabCompleted'), count: countFor('completed') },
+  { key: 'pending', label: t('cashier.takeAway.tabPending'), count: orders.value.filter(isPending).length },
+  { key: 'settled', label: t('cashier.takeAway.tabSettled'), count: orders.value.filter(isSettled).length },
+  { key: 'voided', label: t('cashier.takeAway.tabVoided'), count: orders.value.filter(isVoided).length },
 ])
 
 const filteredOrders = computed(() => {
-  const statuses = TAB_STATUS[activeTab.value]
-  if (!statuses) return orders.value
-  return orders.value.filter((o) => statuses.includes(o.status))
+  if (activeTab.value === 'settled') return orders.value.filter(isSettled)
+  if (activeTab.value === 'voided') return orders.value.filter(isVoided)
+  return orders.value.filter(isPending)
 })
 
-function countFor(tab) {
-  return orders.value.filter((o) => TAB_STATUS[tab].includes(o.status)).length
+function statusLabel(order) {
+  if (isVoided(order)) return t('cashier.takeAway.status.cancelled')
+  if (isSettled(order)) return t('cashier.takeAway.status.completed')
+  return t('cashier.takeAway.status.pending')
 }
 
-function statusLabel(status) {
-  const key = `cashier.delivery.status.${status}`
-  return te(key) ? t(key) : status
-}
-
-function statusChip(status) {
-  if (TAB_STATUS.completed.includes(status)) return 'approved'
-  if (TAB_STATUS.dispatched.includes(status)) return 'partial'
+function statusChip(order) {
+  if (isVoided(order)) return 'cancelled'
+  if (isSettled(order)) return 'approved'
   return 'pending'
+}
+
+function senderOf(order) {
+  return order.created_user?.full_name || order.settled_by_name || '—'
+}
+
+function timeOf(order) {
+  return formatTime(order.created_at || order.order_date)
 }
 
 function money(value) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value ?? 0)
 }
 
-/** Human-readable date + time for the row (the board can show older dates). */
-function dateTimeOf(order) {
-  return formatOrderDateTime(order.created_at || order.order_date)
-}
-
 async function load() {
   loading.value = true
   try {
     const params = { order_type: 'delivery', per_page: 100, outlet_id: selectedOutlet.value?.outlet_id || undefined }
-
-    // "Previous orders" (a date before today) lists that whole date's tickets.
     if (date.value && date.value < todayISO()) params.date = date.value
     const { data } = await orderApi.index(params)
     const rows = data.data || []
-    // Otherwise show today's tickets by their LOCAL calendar day: the API
-    // returns no business-order-date field, so filtering on `order_date`
-    // matches nothing and today's tickets (waiter-created included) vanish.
     orders.value = params.date
       ? rows
       : rows.filter((o) => {
-          // Prefer created_at (real timestamp); fall back to order_date as a
-          // bare date string so test mocks without created_at still pass.
           const stamp = o.created_at
           if (stamp) return localDateOf(stamp) === date.value
           return String(o.order_date || '').slice(0, 10) === date.value
@@ -157,6 +154,8 @@ function onCreated() {
   load()
 }
 
+watch(() => selectedOutlet.value?.outlet_id, () => load(), { immediate: false })
+
 onMounted(async () => {
   await workingDateStore.ensureLoaded()
   date.value = workingDateStore.workingDate
@@ -164,12 +163,8 @@ onMounted(async () => {
 })
 </script>
 
-
 <style scoped>
-.addr-cell { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.addr-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.order-link { background: none; border: none; padding: 0; color: #005eb8; font-weight: 700; cursor: pointer; text-decoration: underline; }
+.chip.cancelled { background: #fee2e2; color: #b91c1c; }
 </style>
-
-
-watch(() => selectedOutlet.value?.outlet_id, () => {
-  if (typeof load === 'function') load()
-}, { immediate: false })

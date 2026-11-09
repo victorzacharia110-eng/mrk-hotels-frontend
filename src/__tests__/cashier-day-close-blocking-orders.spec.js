@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { mount, flushPromises } from '@vue/test-utils'
+import { createRouter, createMemoryHistory } from 'vue-router'
 import i18n from '@/locales/i18n'
 
 /**
  * The F&B Day Close screen lists the actual orders holding a business date
- * open — not just a count — so a blocked operator can settle or void the
- * offending ticket from the same page instead of hunting for order numbers.
+ * open, but settlement now happens on the Order Summary page. Voiding can still
+ * be done in place, and history is capped at the last 30 closed days.
  */
 
 const index = vi.fn()
@@ -57,6 +58,7 @@ const blocking = [
 ]
 
 let pinia
+let router
 
 function statusPayload(overrides = {}) {
   return {
@@ -77,7 +79,17 @@ function statusPayload(overrides = {}) {
 }
 
 async function mountPage() {
-  const wrapper = mount(CashierDayClosePage, { global: { plugins: [pinia, i18n] } })
+  router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/app/cashier/order-summary', name: 'cashier-order-summary', component: { template: '<div />' } },
+      { path: '/:pathMatch(.*)*', component: { template: '<div />' } },
+    ],
+  })
+  await router.push('/cashier/day-close')
+  await router.isReady()
+
+  const wrapper = mount(CashierDayClosePage, { global: { plugins: [pinia, i18n, router] } })
   await flushPromises()
   return wrapper
 }
@@ -106,28 +118,22 @@ describe('cashier day close — blocking orders', () => {
     expect(text).toContain('Juma')
     expect(text).toContain('101')
     expect(text).toContain('20,000')
-    // The business date column shows which previous day each orphan belongs to.
     expect(text).toContain('Oct 11, 2026')
     expect(text).toContain('Oct 12, 2026')
 
     wrapper.unmount()
   })
 
-  it('settles a blocking ticket from the page and refreshes', async () => {
+  it('sends settlement to the Order Summary page instead of settling inline', async () => {
     const wrapper = await mountPage()
+    const push = vi.spyOn(router, 'push')
 
-    await buttonByText(wrapper, 'Settle').trigger('click')
+    await buttonByText(wrapper, 'Order Summary').trigger('click')
     await flushPromises()
 
-    const modal = wrapper.find('.sm-modal')
-    expect(modal.text()).toContain('Collect payment')
-
-    await modal.findAll('button').find((b) => b.text().includes('Settle')).trigger('click')
-    await flushPromises()
-
-    expect(pay).toHaveBeenCalledWith('o1', { method: 'cash', provider: undefined })
-    // A settlement must refetch the close state so the list shrinks.
-    expect(index.mock.calls.length).toBeGreaterThan(1)
+    expect(push).toHaveBeenCalledWith({ name: 'cashier-order-summary', query: { order: 'o1' } })
+    expect(pay).not.toHaveBeenCalled()
+    expect(wrapper.find('.sm-modal').exists()).toBe(false)
 
     wrapper.unmount()
   })
@@ -135,22 +141,41 @@ describe('cashier day close — blocking orders', () => {
   it('voids a blocking ticket only once a reason is given', async () => {
     const wrapper = await mountPage()
 
-    await buttonByText(wrapper, 'Void').trigger('click')
+    await buttonByText(wrapper, 'Void Order').trigger('click')
     await flushPromises()
 
     const modal = wrapper.find('.sm-modal')
-    expect(modal.text()).toContain('Void this order?')
+    expect(modal.text()).toContain('Void blocking order')
 
-    // No reason yet — the action stays disabled.
-    let confirm = modal.findAll('button').find((b) => b.text().includes('Void'))
+    let confirm = modal.findAll('button').find((b) => b.text().includes('Void Order'))
     expect(confirm.attributes('disabled')).toBeDefined()
 
     await wrapper.find('#dc-void-reason').setValue('guest left')
-    confirm = wrapper.find('.sm-modal').findAll('button').find((b) => b.text().includes('Void'))
+    confirm = wrapper.find('.sm-modal').findAll('button').find((b) => b.text().includes('Void Order'))
     await confirm.trigger('click')
     await flushPromises()
 
     expect(voidOrder).toHaveBeenCalledWith('o1', { reason: 'guest left' })
+    expect(index.mock.calls.length).toBeGreaterThan(1)
+
+    wrapper.unmount()
+  })
+
+  it('caps history at the last 30 closed days', async () => {
+    const dayCloses = Array.from({ length: 35 }, (_, i) => ({
+      fb_day_close_id: `dc-${i}`,
+      close_date: `2026-08-${String(i + 1).padStart(2, '0')}`,
+      closed_by: { name: 'Manager' },
+      closed_at: `2026-08-${String(i + 1).padStart(2, '0')}T23:00:00`,
+      running_orders_count: 0,
+    }))
+    history.mockResolvedValue({ data: { day_closes: dayCloses } })
+
+    const wrapper = await mountPage()
+
+    expect(wrapper.text()).toContain('30 records')
+    expect(wrapper.text()).not.toContain('Aug 31, 2026')
+    expect(wrapper.text()).not.toContain('Aug 35, 2026')
 
     wrapper.unmount()
   })

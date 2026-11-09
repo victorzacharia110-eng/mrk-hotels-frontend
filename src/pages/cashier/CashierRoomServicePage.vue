@@ -33,20 +33,20 @@
               <th>{{ $t('cashier.summary.order') }}</th>
               <th>{{ $t('cashier.roomService.room') }}</th>
               <th>{{ $t('cashier.roomService.guest') }}</th>
-              <th>{{ $t('cashier.roomService.items') }}</th>
-              <th>{{ $t('cashier.roomService.dateTime') }}</th>
+              <th>{{ $t('cashier.summary.waiter') }}</th>
+              <th>{{ $t('cashier.roomService.time') }}</th>
               <th>{{ $t('common.status') }}</th>
               <th>{{ $t('cashier.summary.amount') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="order in filteredOrders" :key="order.order_id">
-              <td><strong>{{ order.order_number }}</strong></td>
+              <td><button class="order-link" @click="peekId = order.order_id">{{ order.order_number }}</button></td>
               <td><strong>{{ order.room_number || '—' }}</strong></td>
               <td>{{ order.guest_name || '—' }}</td>
-              <td class="items-cell">{{ itemsSummary(order) }}</td>
-              <td>{{ dateTimeOf(order) }}</td>
-              <td><span class="chip" :class="statusChip(order.status)">{{ statusLabel(order.status) }}</span></td>
+              <td>{{ order.waiter_name || '—' }}</td>
+              <td>{{ timeOf(order) }}</td>
+              <td><span class="chip" :class="statusChip(order)">{{ statusLabel(order) }}</span></td>
               <td>{{ money(order.total_amount) }}</td>
             </tr>
             <tr v-if="!filteredOrders.length">
@@ -92,7 +92,7 @@
                     <td>{{ guest.check_out || '—' }}</td>
                     <td>
                       <button type="button" class="sm-btn sm success" @click.stop="openOrder(guest)">
-                        <i class="fas fa-cart-plus" aria-hidden="true"></i> {{ $t('cashier.roomService.order') }}
+                        {{ $t('cashier.roomService.order') }}
                       </button>
                     </td>
                   </tr>
@@ -108,6 +108,7 @@
       </Transition>
     </Teleport>
 
+    <OrderPeekModal :open="!!peekId" :order-id="peekId" @close="peekId = null" />
     <NewOrderModal v-if="activeGuest" mode="room_service"
       :title="$t('cashier.roomService.newOrderFor', { room: activeGuest.room_number, guest: activeGuest.guest_name })"
       :room-number="activeGuest.room_number" :guest-name-prefill="activeGuest.guest_name" @close="activeGuest = null"
@@ -122,8 +123,10 @@ import { orderApi } from '@/api'
 import { selectedOutlet } from '@/composables/useOutletContext'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
+import OrderPeekModal from '@/components/cashier/OrderPeekModal.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
+import { formatTime } from '@/utils/dates'
 
 const { t } = useI18n()
 
@@ -138,9 +141,10 @@ const localToday = () => {
 }
 const workingToday = computed(() => workingDateStore?.workingDate || localToday())
 const date = ref(workingToday.value)
-const activeTab = ref('all')
+const activeTab = ref('pending')
 const orders = ref([])
 const loading = ref(true)
+const peekId = ref(null)
 
 // ---- In-house guest picker state -----------------------------------------
 const showPicker = ref(false)
@@ -149,29 +153,23 @@ const search = ref('')
 const guests = ref([])
 const activeGuest = ref(null)
 
-// ---- Status metadata (adjust keys to match your backend) -----------------
-const STATUS_KEYS = ['preparing', 'served', 'completed']
+// ---- Status buckets ------------------------------------------------------
+const isSettled = (o) => o.status === 'completed' || (o.payment_status && o.payment_status !== 'unpaid')
+const isVoided = (o) => o.status === 'cancelled'
+const isPending = (o) => !isSettled(o) && !isVoided(o)
 
 // ---- Tabs (computed so counts stay live) ---------------------------------
-const tabs = computed(() => {
-  const counts = { all: orders.value.length }
-  for (const key of STATUS_KEYS) {
-    counts[key] = orders.value.filter((o) => o.status === key).length
-  }
-  return [
-    { key: 'all', label: t('common.all'), count: counts.all },
-    ...STATUS_KEYS.map((key) => ({
-      key,
-      label: t(`cashier.roomService.${key}`),
-      count: counts[key],
-    })),
-  ]
-})
+const tabs = computed(() => [
+  { key: 'pending', label: t('cashier.takeAway.tabPending'), count: orders.value.filter(isPending).length },
+  { key: 'settled', label: t('cashier.takeAway.tabSettled'), count: orders.value.filter(isSettled).length },
+  { key: 'voided', label: t('cashier.takeAway.tabVoided'), count: orders.value.filter(isVoided).length },
+])
 
 // ---- Filtered lists ------------------------------------------------------
 const filteredOrders = computed(() => {
-  if (activeTab.value === 'all') return orders.value
-  return orders.value.filter((o) => o.status === activeTab.value)
+  if (activeTab.value === 'settled') return orders.value.filter(isSettled)
+  if (activeTab.value === 'voided') return orders.value.filter(isVoided)
+  return orders.value.filter(isPending)
 })
 
 const filteredGuests = computed(() => {
@@ -186,7 +184,12 @@ const filteredGuests = computed(() => {
 async function load() {
   loading.value = true
   try {
-    const { data } = await orderApi.index({ date: date.value })
+    const { data } = await orderApi.index({
+      date: date.value,
+      order_type: 'room_service',
+      per_page: 100,
+      outlet_id: selectedOutlet.value?.outlet_id || undefined,
+    })
     // Handles Laravel paginator ({ data: [...] }) or a plain array.
     orders.value = data?.data || data?.orders || data?.results || data || []
   } catch (err) {
@@ -227,38 +230,26 @@ function openOrder(guest) {
   activeGuest.value = guest
 }
 
-function onCreated(order) {
-  window.alert(t('cashier.order.created', { number: order.order_number }))
-  // Optionally refresh the board and close both modals:
-  // activeGuest.value = null
-  // showPicker.value = false
-  // load()
+function onCreated() {
+  activeGuest.value = null
+  load()
 }
 
 // ---- Display helpers -----------------------------------------------------
-function itemsSummary(order) {
-  const items = order.items || order.order_items || []
-  if (!items.length) return '—'
-  return items
-    .map((it) => `${it.quantity ?? 1}× ${it.name ?? it.item_name ?? ''}`.trim())
-    .join(', ')
+function timeOf(order) {
+  return formatTime(order.created_at || order.date_time || order.ordered_at)
 }
 
-function dateTimeOf(order) {
-  const raw = order.created_at || order.date_time || order.ordered_at
-  if (!raw) return '—'
-  const d = new Date(raw)
-  if (Number.isNaN(d.getTime())) return raw
-  return d.toLocaleString()
+function statusChip(order) {
+  if (isVoided(order)) return 'cancelled'
+  if (isSettled(order)) return 'approved'
+  return 'pending'
 }
 
-function statusChip(status) {
-  return `chip-${status || 'unknown'}`
-}
-
-function statusLabel(status) {
-  if (!status) return '—'
-  return t(`cashier.roomService.${status}`)
+function statusLabel(order) {
+  if (isVoided(order)) return t('cashier.takeAway.status.cancelled')
+  if (isSettled(order)) return t('cashier.takeAway.status.completed')
+  return t('cashier.takeAway.status.pending')
 }
 
 function money(value) {
@@ -271,7 +262,9 @@ function money(value) {
 }
 
 // ---- Lifecycle -----------------------------------------------------------
-onMounted(() => {
+onMounted(async () => {
+  await workingDateStore.ensureLoaded()
+  date.value = workingDateStore.workingDate
   load()
   loadGuests()
 })
@@ -283,6 +276,9 @@ onMounted(() => {
 .rs-picker-backdrop {
   z-index: 1100;
 }
+
+.order-link { background: none; border: none; padding: 0; color: #005eb8; font-weight: 700; cursor: pointer; text-decoration: underline; }
+.chip.cancelled { background: #fee2e2; color: #b91c1c; }
 
 .rs-picker-body {
   padding: 16px 18px 18px;

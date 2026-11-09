@@ -48,7 +48,11 @@
     <section class="panel">
       <div class="panel-head">
         <h2><i class="fas fa-clock-rotate-left" aria-hidden="true"></i> {{ $t('cashier.shift.history') }}</h2>
-        <span class="hotel-name">{{ $t('cashier.shift.records', { n: meta.total }) }}</span>
+        <div class="shift-history-tools">
+          <OrderDateNav input-id="shift-date" v-model="date" :today="workingDate"
+            :today-label="$t('cashier.shift.today')" @change="load" />
+          <span class="hotel-name">{{ $t('cashier.shift.records', { n: meta.total }) }}</span>
+        </div>
       </div>
       <div class="table-scroll">
         <SkeletonLoader v-if="loading" variant="table" :count="5" :cols="7" />
@@ -126,6 +130,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useWorkingDateStore } from '@/stores/workingDate'
 import { posApi } from '@/api'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import '@/pages/store/store-shared.css'
@@ -136,6 +141,7 @@ const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()
+const workingDateStore = useWorkingDateStore()
 
 const current = ref(null)
 const shifts = ref([])
@@ -145,8 +151,10 @@ const busy = ref(false)
 const error = ref('')
 const floatModal = ref(null)
 const floatAmount = ref(null)
+const date = ref('')
 
 const hotelName = computed(() => authStore.tenant?.hotel_name || '')
+const workingDate = computed(() => workingDateStore.workingDate)
 const isOpen = computed(() => current.value?.status === 'open')
 
 async function load() {
@@ -154,7 +162,7 @@ async function load() {
   try {
     const [{ data: cur }, { data: list }] = await Promise.all([
       posApi.shiftCurrent(),
-      posApi.shifts({ per_page: 10, page: meta.value.current_page }),
+      posApi.shifts({ per_page: 10, page: meta.value.current_page, date: date.value || undefined }),
     ])
     current.value = cur.data
     shifts.value = list.data || []
@@ -220,11 +228,16 @@ function varianceClass(variance) {
   return Number(variance) > 0 ? 'up' : Number(variance) < 0 ? 'down' : ''
 }
 
-onMounted(load)
+onMounted(async () => {
+  await workingDateStore.ensureLoaded()
+  date.value = workingDateStore.workingDate
+  load()
+})
 </script>
 
 <style scoped>
 .hotel-name { font-size: 12px; color: #64748b; font-weight: 600; }
+.shift-history-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .shift-skeleton { display: flex; flex-direction: column; gap: 10px; }
 .shift-card { border-radius: 12px; padding: 18px 20px; border: 1px solid #e2e8f0; }
 .shift-card.open { background: linear-gradient(135deg, #e8f1fa, #f8fbff); border-color: var(--mrk-blue-tint, #b0cde9); }

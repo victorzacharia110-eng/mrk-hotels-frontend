@@ -87,16 +87,6 @@
             <i class="fas fa-flask" aria-hidden="true"></i>
             <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.ingredients') }}</span>
           </router-link>
-          <!-- Cashiers were given menu management so they could fix a wrong dish
-               or price themselves, but nothing in this panel pointed at it: the
-               menu page lives in StoreLayout, so from the till it was only
-               reachable by typing the URL. Sits next to Ingredients because that
-               is the third level of the same tree. -->
-          <router-link v-if="['hotel_admin','manager'].includes(authStore.user?.user_role)" :to="{ name: 'hotel-menu' }" class="pos-nav-link"
-            :class="{ active: isActive('/app/menu') }" @click="mobileOpen = false">
-            <i class="fas fa-book-open" aria-hidden="true"></i>
-            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.menu') }}</span>
-          </router-link>
           <router-link :to="{ name: 'cashier-shift-manager' }" class="pos-nav-link"
             :class="{ active: isActive('/cashier/shift-manager') }" @click="mobileOpen = false">
             <i class="fas fa-cash-register" aria-hidden="true"></i>
@@ -107,11 +97,6 @@
             <i class="fas fa-calendar-check" aria-hidden="true"></i>
             <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.dayClose') }}</span>
           </router-link>
-          <router-link :to="{ name: 'cashier-blocked-devices' }" class="pos-nav-link"
-            :class="{ active: isActive('/cashier/blocked-devices') }" @click="mobileOpen = false">
-            <i class="fas fa-shield-halved" aria-hidden="true"></i>
-            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.blockedDevices') }}</span>
-          </router-link>
           <router-link :to="{ name: 'cashier-transaction-lock' }" class="pos-nav-link"
             :class="{ active: isActive('/cashier/transaction-lock') }" @click="mobileOpen = false">
             <i class="fas fa-lock" aria-hidden="true"></i>
@@ -121,6 +106,37 @@
             :class="{ active: isActive('/cashier/account-lookup') }" @click="mobileOpen = false">
             <i class="fas fa-users" aria-hidden="true"></i>
             <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.accountLookup') }}</span>
+          </router-link>
+          </div>
+        </div>
+
+        <button type="button" class="pos-nav-heading pos-group" :class="{ open: isOpen('inventory') }"
+          @click="toggleGroup('inventory')" v-show="!sidebarCollapsed"
+          :aria-expanded="isOpen('inventory')">
+          {{ $t('cashier.nav.inventoryGroup') }}
+          <i class="fas fa-chevron-down pos-chevron" aria-hidden="true"></i>
+        </button>
+        <div class="pos-group-items" :class="{ open: isOpen('inventory') }">
+          <div class="pos-group-inner">
+          <router-link :to="{ name: 'cashier-low-stock' }" class="pos-nav-link"
+            :class="{ active: isActive('/cashier/inventory/low-stock') }" @click="mobileOpen = false">
+            <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.lowStock') }}</span>
+          </router-link>
+          <router-link :to="{ name: 'cashier-stock-transfers' }" class="pos-nav-link"
+            :class="{ active: isActive('/cashier/inventory/transfers') }" @click="mobileOpen = false">
+            <i class="fas fa-right-left" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.stockTransfers') }}</span>
+          </router-link>
+          <router-link :to="{ name: 'cashier-stock-counts' }" class="pos-nav-link"
+            :class="{ active: isActive('/cashier/inventory/stock-counts') }" @click="mobileOpen = false">
+            <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.stockCounts') }}</span>
+          </router-link>
+          <router-link :to="{ name: 'cashier-stock-adjust' }" class="pos-nav-link"
+            :class="{ active: isActive('/cashier/inventory/stock-adjust') }" @click="mobileOpen = false">
+            <i class="fas fa-sliders" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.stockAdjust') }}</span>
           </router-link>
           </div>
         </div>
@@ -189,13 +205,11 @@
             <i class="fas fa-bars" aria-hidden="true"></i>
           </button>
           <h1 class="pos-page-title">{{ pageTitle }}</h1>
-          <ThemeToggle />
           <div class="sm-user" style="position: relative;">
             <button type="button" class="sm-user-trigger" @click="toggleProfile" aria-haspopup="true" :aria-expanded="profileOpen">
               <span class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
               <span class="sm-user-meta">
                 <strong>{{ authStore.user?.name }}</strong>
-                <RoleBadge />
               </span>
               <i class="fas fa-chevron-down" aria-hidden="true"></i>
             </button>
@@ -238,9 +252,6 @@
             <i class="fas fa-store" aria-hidden="true"></i> {{ selectedOutlet.name }}
             <i class="fas fa-chevron-down" aria-hidden="true"></i>
           </button>
-          <router-link :to="{ name: 'cashier-waiter-assignment' }" class="pos-waiter-btn">
-            <i class="fas fa-user-group" aria-hidden="true"></i> {{ $t('cashier.nav.waiterAssignment') }}
-          </router-link>
         </div>
       </header>
 
@@ -288,12 +299,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useWorkingDateStore } from '@/stores/workingDate'
-import { canManageMenu as canManageMenuFor } from '@/utils/menuAccess'
 import { selectedOutlet } from '@/pages/cashier/outlet-context'
 import { useOutletContext } from '@/composables/useOutletContext'
 import { restorePrinter } from '@/utils/printer'
-import RoleBadge from '@/components/RoleBadge.vue'
-import ThemeToggle from '@/components/ThemeToggle.vue'
 import { useThemeStore } from '@/stores/theme'
 import DayCloseReminderModal from '@/components/cashier/DayCloseReminderModal.vue'
 
@@ -302,9 +310,6 @@ const router = useRouter()
 const { t, d, locale } = useI18n()
 const authStore = useAuthStore()
 
-// Same gate the menu page itself uses, so the link can never be offered to a role
-// that page would turn away.
-const canManageMenu = computed(() => canManageMenuFor(authStore.user))
 const workingDateStore = useWorkingDateStore()
 const themeStore = useThemeStore()
 
@@ -340,7 +345,7 @@ function goToProfile() {
 
 function toggleDarkMode() {
   closeProfile()
-  themeStore.toggle()
+  themeStore.toggleTheme()
 }
 
 function switchLanguage(lang) {
@@ -373,6 +378,8 @@ watch(() => route.path, () => {
     || route.path.startsWith('/cashier/transaction-lock') || route.path.startsWith('/cashier/account-lookup')
     || route.path.startsWith('/cashier/day-close')) {
     openGroup.value = 'manager'
+  } else if (route.path.startsWith('/cashier/inventory')) {
+    openGroup.value = 'inventory'
   } else if (route.path.startsWith('/cashier/printer') || route.path.startsWith('/cashier/print-settings')) {
     openGroup.value = 'printer'
   } else if (route.path.startsWith('/cashier/reports') || route.path.startsWith('/cashier/report-browser')) {

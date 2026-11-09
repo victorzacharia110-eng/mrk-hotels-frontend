@@ -334,6 +334,11 @@
               </p>
             </div>
             <div class="form-group">
+              <label>{{ $t('menu.reorderLevel') }}</label>
+              <input v-model.number="form.reorder_level" type="number" min="0" step="0.01" class="input" />
+              <p class="muted">{{ $t('menu.reorderLevelHint') }}</p>
+            </div>
+            <div class="form-group">
               <label>{{ $t('menu.available') }}</label>
               <SearchableSelect v-model="form.is_available" :options="formAvailabilityOptions" />
             </div>
@@ -613,7 +618,6 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { menuItemApi, menuCategoryApi, menuSubCategoryApi, inventoryApi } from '@/api'
-import { canManageMenu } from '@/utils/menuAccess'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
@@ -686,6 +690,7 @@ const form = reactive({
   inventory_item_id: null,
   price: null,
   cost: null,
+  reorder_level: null,
   description: '',
   description_sw: '',
   is_available: true,
@@ -983,6 +988,7 @@ function openEdit(item) {
   form.inventory_item_id = item.inventory_item_id || null
   form.price = item.price
   form.cost = item.cost
+  form.reorder_level = item.reorder_level ?? null
   form.description = item.description || ''
   form.description_sw = item.description_sw || ''
   form.is_available = !!item.is_available
