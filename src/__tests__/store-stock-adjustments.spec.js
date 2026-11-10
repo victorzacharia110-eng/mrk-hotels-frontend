@@ -129,6 +129,31 @@ describe('StoreStockAdjustPage', () => {
     expect(wrapper.vm.sheetOpen).toBe(false)
   })
 
+  it('converts an SI unit quantity to base units and costs the line', async () => {
+    const crateItem = { ...ITEM, si_units: [{ unit: 'CRATE', factor: 12 }] }
+    api.inventoryOpsApi.stockAdjustments.mockResolvedValue({ data: { adjustments: [] } })
+    const wrapper = mountPage()
+    await flushPromises()
+
+    wrapper.vm.allItems = [crateItem]
+    wrapper.vm.openCreate()
+    wrapper.vm.draft.item_id = crateItem.item_id
+    wrapper.vm.draft.unit = 'CRATE'
+    wrapper.vm.draft.quantity = 1
+    wrapper.vm.addLine()
+
+    expect(wrapper.vm.form.lines[0]).toMatchObject({
+      input_unit: 'CRATE',
+      input_quantity: 1,
+      input_unit_cost: 36000,
+      quantity: 12,
+      unit_cost: 36000,
+      total_cost: 36000,
+    })
+    expect(wrapper.vm.lineDisplayQty(wrapper.vm.form.lines[0])).toBe(1)
+    expect(wrapper.vm.lineDisplayUnit(wrapper.vm.form.lines[0])).toBe('CRATE')
+  })
+
   it('blocks duplicate items on one sheet', async () => {
     const wrapper = mountPage()
     await flushPromises()

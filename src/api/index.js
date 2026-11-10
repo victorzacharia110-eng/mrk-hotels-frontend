@@ -1374,8 +1374,11 @@ export const inventoryOpsApi = {
 
   stockTakes: (params) => api.get(`${v1}/inventory-stock-takes`, { params }),
   openStockTake: (data) => api.post(`${v1}/inventory-stock-takes`, data),
-  updateStockTakeCounts: (id, counts) =>
-    api.put(`${v1}/inventory-stock-takes/${id}/counts`, { counts }),
+  updateStockTakeCounts: (id, counts, notes = undefined) =>
+    api.put(`${v1}/inventory-stock-takes/${id}/counts`, {
+      counts,
+      ...(notes !== undefined ? { notes } : {}),
+    }),
   postStockTake: (id) => api.post(`${v1}/inventory-stock-takes/${id}/post`),
   voidStockTake: (id, reason) => api.post(`${v1}/inventory-stock-takes/${id}/void`, { reason }),
 
@@ -1434,7 +1437,7 @@ export const storeApi = {
   expenses: (params) => api.get(`${v1}/store/expenses`, { params }),
   storeExpense: (data) => api.post(`${v1}/store/expenses`, data),
   destroyExpense: (id, data) => api.delete(`${v1}/store/expenses/${id}`, { data }),
-  cashRegister: () => api.get(`${v1}/store/cash-register`),
+  cashRegister: (params) => api.get(`${v1}/store/cash-register`, { params }),
   openRegister: (data) => api.post(`${v1}/store/cash-register/open`, data),
   addFloat: (data) => api.post(`${v1}/store/cash-register/floats`, data),
   closeRegister: (data) => api.post(`${v1}/store/cash-register/close`, data),

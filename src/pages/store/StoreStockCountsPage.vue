@@ -29,6 +29,18 @@
         <div class="sm-search"><i class="fas fa-magnifying-glass"></i><input v-model="itemQ" type="text" :placeholder="$t('inventory.searchItems')" /></div>
         <span class="muted-cell">{{ pagedActiveRows.length }} / {{ activeRows.length }}</span>
       </div>
+      <label v-if="sheetTab === 'description'" class="fld sheet-description">
+        <span>{{ $t('storeManager.counts.sheetDescription') }}</span>
+        <textarea
+          v-model="activeTake.notes"
+          class="sm-textarea"
+          rows="2"
+          maxlength="255"
+          :placeholder="$t('storeManager.counts.descriptionPlaceholder')"
+          @input="markDirty"
+          @change="markDirty"
+        ></textarea>
+      </label>
       <div class="table-scroll">
         <table class="sm-table">
         <thead><tr>
@@ -42,12 +54,12 @@
             <td>{{ row.item?.category || row.category || '—' }}</td>
             <td class="muted-cell">{{ row.item?.description || '—' }}</td>
             <td>{{ row.expected_qty }}</td>
-            <td><input v-model.number="row.counted_qty" type="number" min="0" class="sm-input slim" :data-row="row.take_item_id" @input="markDirty" @keydown.enter.prevent="focusNextCount($event)" /></td>
+            <td><input v-model.number="row.counted_qty" type="number" min="0" class="sm-input slim" :data-row="row.take_item_id" @input="markDirty" @change="markDirty" @keydown.enter.prevent="focusNextCount($event)" /></td>
             <td :class="{ neg: Number(row.counted_qty) - Number(row.expected_qty) < 0 }">
               {{ round(Number(row.counted_qty) - Number(row.expected_qty)) }}
             </td>
             <td v-if="sheetTab === 'description'">
-              <input v-model="row.variance_reason" type="text" class="sm-input reason-input" :placeholder="$t('storeManager.counts.reasonPlaceholder')" @input="markDirty" />
+              <input v-model="row.variance_reason" type="text" class="sm-input reason-input" :placeholder="$t('storeManager.counts.reasonPlaceholder')" @input="markDirty" @change="markDirty" />
             </td>
           </tr>
         </tbody>
@@ -55,6 +67,7 @@
       <PaginationBar :page="sheetPage" :last-page="sheetLastPage" @change="sheetPage = $event" />
       </div>
       <p v-if="formError" class="sm-error">{{ formError }}</p>
+      <p v-if="saveNotice" class="save-ok"><i class="fas fa-circle-check"></i> {{ saveNotice }}</p>
       <div class="sm-modal-foot">
         <button class="sm-btn ghost" @click="activeTake = null">{{ $t('common.cancel') }}</button>
         <button class="sm-btn" :disabled="saving || !dirty" :title="!dirty ? $t('storeManager.counts.nothingToSave') : ''" @click="saveCounts">
@@ -80,16 +93,19 @@
         <div class="table-scroll">
         <table class="sm-table" v-if="historyRows.length">
           <thead><tr>
-            <th>{{ $t('common.date') }}</th><th>#</th><th>{{ $t('storeManager.sales.items') }}</th>
-            <th>{{ $t('common.status') }}</th><th></th>
+            <th>{{ $t('common.reference') }}</th>
+            <th>{{ $t('common.time') }}</th>
+            <th>{{ $t('storeManager.sales.items') }}</th>
+            <th>{{ $t('storeManager.adjustments.costValue') }}</th>
+            <th></th>
           </tr></thead>
           <tbody>
             <tr v-for="take in historyRows" :key="take.take_id">
-              <td>{{ fmtDate(take.business_date || take.created_at) }}</td>
-              <td>{{ take.take_number }}</td>
+              <td><button class="ref-link" @click="openTakeDetail(take)">{{ take.take_number }}</button></td>
+              <td>{{ fmtTime(take.created_at) }}</td>
               <td>{{ (take.items || []).length }}</td>
-              <td><span class="chip" :class="{ danger: take.status === 'voided' }">{{ take.status }}</span></td>
-              <td>
+              <td><strong>{{ money(takeCost(take)) }}</strong></td>
+              <td class="actions-cell">
                 <button v-if="take.status === 'open' && isCurrentDay" class="sm-btn ghost slim-btn" @click="resumeTake(take)">
                   {{ $t('storeManager.counts.resume') }}
                 </button>
@@ -105,6 +121,57 @@
       </div>
       </template>
     </section>
+
+    <div v-if="detailTake" class="sm-modal-backdrop" @click.self="detailTake = null">
+      <div class="sm-modal wide">
+        <div class="sm-modal-head">
+          <h3>{{ detailTake.take_number }}</h3>
+          <button class="sm-modal-close" @click="detailTake = null"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="sm-modal-body">
+          <div class="take-meta">
+            <p><strong>{{ $t('common.date') }}:</strong> {{ fmtDate(detailTake.business_date || detailTake.created_at) }}</p>
+            <p><strong>{{ $t('common.time') }}:</strong> {{ fmtTime(detailTake.created_at) }}</p>
+            <p><strong>{{ $t('common.status') }}:</strong> <span class="chip" :class="{ danger: detailTake.status === 'voided' }">{{ detailTake.status }}</span></p>
+            <p><strong>{{ $t('storeManager.adjustments.costValue') }}:</strong> {{ money(takeCost(detailTake)) }}</p>
+          </div>
+          <p v-if="detailTake.notes"><strong>{{ $t('common.description') }}:</strong> {{ detailTake.notes }}</p>
+          <div class="table-scroll">
+            <table class="sm-table">
+              <thead><tr>
+                <th>{{ $t('inventory.itemName') }}</th>
+                <th>{{ $t('storeManager.counts.system') }}</th>
+                <th>{{ $t('storeManager.counts.counted') }}</th>
+                <th>{{ $t('storeManager.counts.variance') }}</th>
+                <th>{{ $t('storeManager.adjustments.costValue') }}</th>
+                <th>{{ $t('storeManager.counts.varianceReason') }}</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="row in detailTake.items || []" :key="row.take_item_id">
+                  <td>{{ row.item?.item_name || '—' }}</td>
+                  <td>{{ row.expected_qty }}</td>
+                  <td>{{ row.counted_qty }}</td>
+                  <td :class="{ neg: Number(row.counted_qty) - Number(row.expected_qty) < 0 }">
+                    {{ round(Number(row.counted_qty) - Number(row.expected_qty)) }}
+                  </td>
+                  <td>{{ money(takeLineCost(row)) }}</td>
+                  <td>{{ row.variance_reason || '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="sm-modal-foot">
+            <button v-if="detailTake.status === 'open' && isCurrentDay" class="sm-btn ghost" @click="resumeFromDetail">
+              {{ $t('storeManager.counts.resume') }}
+            </button>
+            <button v-if="detailTake.status === 'posted'" class="sm-btn danger" @click="voidFromDetail">
+              {{ $t('storeManager.common.void') }}
+            </button>
+            <button class="sm-btn" @click="detailTake = null">{{ $t('common.close') }}</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div v-if="voidTarget" class="sm-modal-backdrop" @click.self="voidTarget = null">
       <div class="sm-modal">
@@ -132,9 +199,11 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useCategoriesStore } from '@/stores/categories'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { useClientTable } from '@/composables/useClientTable.js'
+import { useTenantCurrency } from '@/utils/currency'
 import '@/pages/store/store-shared.css'
 
 const { t } = useI18n()
+const { moneyAs } = useTenantCurrency()
 const takes = ref([])
 const { q, page, lastPage } = useClientTable(takes, { pageSize: 15, searchFields: ['take_number', 'status'] })
 const categoriesStore = useCategoriesStore()
@@ -155,6 +224,8 @@ const itemQ = ref('')
 const sheetPage = ref(1)
 const sheetPageSize = 20
 const formError = ref('')
+const saveNotice = ref('')
+const detailTake = ref(null)
 const voidTarget = ref(null)
 const voidReason = ref('')
 
@@ -192,6 +263,10 @@ const historyRows = computed(() => {
   } else {
     list = takes.value.filter((tk) => tk.status === 'open')
   }
+  const needle = q.value.trim().toLowerCase()
+  if (needle) {
+    list = list.filter((tk) => `${tk.take_number || ''} ${tk.status || ''}`.toLowerCase().includes(needle))
+  }
   const p = Math.min(page.value, lastPage.value)
   return list.slice((p - 1) * 15, p * 15)
 })
@@ -201,8 +276,39 @@ function focusNextCount(event) {
   inputs[idx + 1]?.focus()
 }
 function fmtDate(v) { return v ? new Date(v).toLocaleString() : '-' }
+function fmtTime(v) {
+  if (!v) return '—'
+  const date = new Date(v)
+  return Number.isNaN(date.getTime())
+    ? '—'
+    : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
 function round(v) { return Math.round(v * 100) / 100 }
-function markDirty() { dirty.value = true; autosavedAt.value = '' }
+function money(value) { return moneyAs(value) }
+function takeLineCost(row) {
+  return Number(row.counted_qty || 0) * Number(row.item?.unit_cost || 0)
+}
+function takeCost(take) {
+  return (take.items || []).reduce((sum, row) => sum + takeLineCost(row), 0)
+}
+function openTakeDetail(take) {
+  detailTake.value = take
+}
+function resumeFromDetail() {
+  const take = detailTake.value
+  detailTake.value = null
+  if (take) resumeTake(take)
+}
+function voidFromDetail() {
+  const take = detailTake.value
+  detailTake.value = null
+  if (take) askVoid(take)
+}
+function markDirty() {
+  dirty.value = true
+  autosavedAt.value = ''
+  saveNotice.value = ''
+}
 
 async function load() {
   loading.value = true
@@ -244,16 +350,30 @@ async function saveCounts(showError = true) {
   if (!activeTake.value || !dirty.value) return
   if (showError) saving.value = true; formError.value = ''
   try {
-    await inventoryOpsApi.updateStockTakeCounts(activeTake.value.take_id, countPayload())
+    await inventoryOpsApi.updateStockTakeCounts(
+      activeTake.value.take_id,
+      countPayload(),
+      activeTake.value.notes ?? null,
+    )
     dirty.value = false
     formError.value = ''
+    if (showError) {
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      autosavedAt.value = time
+      saveNotice.value = t('storeManager.counts.saved')
+      setTimeout(() => { saveNotice.value = '' }, 3000)
+    }
   } catch (e) { if (showError) formError.value = e.response?.data?.message || t('common.error'); throw e } finally { if (showError) saving.value = false }
 }
 async function postTake() {
   saving.value = true; formError.value = ''
   try {
     if (dirty.value) {
-      await inventoryOpsApi.updateStockTakeCounts(activeTake.value.take_id, countPayload())
+      await inventoryOpsApi.updateStockTakeCounts(
+        activeTake.value.take_id,
+        countPayload(),
+        activeTake.value.notes ?? null,
+      )
       dirty.value = false
     }
     await inventoryOpsApi.postStockTake(activeTake.value.take_id)
@@ -321,4 +441,11 @@ onUnmounted(() => clearInterval(autosaveTimer))
 .history-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .history-head .panel-title { margin: 0; }
 .muted-cell { color: #64748b; font-size: 12px; max-width: 220px; }
+.ref-link { border: 0; background: none; padding: 0; color: var(--mrk-blue); font-weight: 700; cursor: pointer; font-family: inherit; font-size: 13px; }
+.ref-link:hover { text-decoration: underline; }
+.actions-cell { text-align: right; white-space: nowrap; }
+.take-meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 16px; margin-bottom: 12px; }
+.take-meta p { margin: 0; font-size: 13px; }
+.sheet-description { margin: 0 0 10px; }
+.save-ok { color: #15803d; font-size: 13px; margin: 6px 0 0; display: flex; align-items: center; gap: 6px; }
 </style>

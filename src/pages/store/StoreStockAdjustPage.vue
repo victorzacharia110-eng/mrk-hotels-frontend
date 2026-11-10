@@ -18,14 +18,16 @@
         <i class="fas fa-magnifying-glass"></i>
         <input v-model="search" type="text" :placeholder="$t('common.search')" @input="debouncedLoad" />
       </div>
-      <div class="segmented">
-        <button :class="{ active: voidFilter === 'all' }" @click="setVoidFilter('all')">
-          {{ $t('storeManager.adjustments.filterAll') }}
-        </button>
-        <button :class="{ active: voidFilter === 'voided' }" @click="setVoidFilter('voided')">
-          {{ $t('storeManager.adjustments.filterVoided') }}
-        </button>
-      </div>
+      <button
+        type="button"
+        class="icon-filter"
+        :class="{ active: voidFilter === 'voided' }"
+        :title="voidFilter === 'voided' ? $t('storeManager.adjustments.filterAll') : $t('storeManager.adjustments.filterVoided')"
+        :aria-label="voidFilter === 'voided' ? $t('storeManager.adjustments.filterAll') : $t('storeManager.adjustments.filterVoided')"
+        @click="toggleVoidFilter"
+      >
+        <i class="fas fa-ban"></i>
+      </button>
       <span class="spacer"></span>
       <button class="sm-btn" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('storeManager.adjustments.add') }}</button>
     </div>
@@ -140,11 +142,17 @@
                 :options="itemOptions"
                 :placeholder="$t('inventory.selectItem')"
                 force-search
+                @change="onPickAdjustItem"
               />
             </label>
             <label class="fld qty-fld">
               <span>{{ isReset ? $t('storeManager.adjustments.newLevel') : $t('storeManager.adjustments.quantityRemoved') }}</span>
-              <input v-model.number="draft.quantity" type="number" min="0" step="0.01" class="sm-input" />
+              <div class="qty-unit">
+                <input v-model.number="draft.quantity" type="number" min="0" step="0.01" class="sm-input" />
+                <select v-model="draft.unit" class="sm-input unit-select">
+                  <option v-for="u in draftUnitOptions" :key="u" :value="u">{{ u }}</option>
+                </select>
+              </div>
             </label>
             <div class="fld selected-stock" v-if="selectedItem">
               <span>{{ $t('storeManager.adjustments.currentLevel') }}</span>
@@ -162,7 +170,7 @@
                   <th>#</th>
                   <th>{{ $t('inventory.itemName') }}</th>
                   <th>{{ $t('inventory.unit') }}</th>
-                  <th>{{ isNew ? (isReset ? $t('storeManager.adjustments.newLevel') : $t('common.quantity')) : $t('storeManager.adjustments.before') }}</th>
+                  <th>{{ isNew ? (isReset ? $t('storeManager.adjustments.newLevel') : $t('storeManager.adjustments.quantityRemoved')) : $t('storeManager.adjustments.before') }}</th>
                   <th v-if="!isNew">{{ $t('storeManager.adjustments.after') }}</th>
                   <th>{{ $t('inventory.unitCost') }}</th>
                   <th>{{ $t('storeManager.adjustments.costValue') }}</th>
@@ -176,10 +184,10 @@
                     <strong>{{ line.item_name || itemName(line.item_id) }}</strong>
                     <small v-if="line.note" class="line-note">{{ line.note }}</small>
                   </td>
-                  <td>{{ line.unit || itemUnit(line.item_id) }}</td>
-                  <td>{{ isNew ? (isReset ? line.quantity : itemStock(line.item_id)) : line.quantity_before }}</td>
+                  <td>{{ lineDisplayUnit(line) }}</td>
+                  <td>{{ isNew ? lineDisplayQty(line) : line.quantity_before }}</td>
                   <td v-if="!isNew">{{ line.quantity_after }}</td>
-                  <td>{{ money(line.unit_cost ?? itemCost(line.item_id), 0) }}</td>
+                  <td>{{ money(line.input_unit_cost ?? line.unit_cost ?? itemCost(line.item_id), 0) }}</td>
                   <td><strong>{{ money(line.total_cost ?? lineCost(line)) }}</strong></td>
                   <td v-if="isNew">
                     <button class="icon-btn" :title="$t('common.delete')" @click="removeLine(idx)">
@@ -319,7 +327,7 @@ const sheetOpen = ref(false)
 const sheetTab = ref('items')
 const activeSheet = ref(null)
 const form = reactive({ type: 'wastage', description: '', lines: [] })
-const draft = reactive({ item_id: null, quantity: 1 })
+const draft = reactive({ item_id: null, quantity: 1, unit: '' })
 const formError = ref('')
 
 const voidTarget = ref(null)
@@ -333,7 +341,7 @@ const currentUserName = computed(() => auth.user?.full_name || auth.user?.name |
 const itemOptions = computed(() =>
   allItems.value.map((item) => ({
     value: item.item_id,
-    label: `${item.item_name} (${item.quantity_in_stock ?? 0} ${item.unit || ''})`,
+    label: `${item.item_name}${item.unit ? ` (${item.unit})` : ''}`,
   })),
 )
 const selectedItem = computed(() => allItems.value.find((item) => item.item_id === draft.item_id) || null)
@@ -341,9 +349,32 @@ const shownLines = computed(() => (isNew.value ? form.lines : (activeSheet.value
 const newTotal = computed(() =>
   form.lines.reduce((sum, line) => sum + Math.abs(Number(line.total_cost || lineCost(line))), 0),
 )
+const draftUnitOptions = computed(() => {
+  const item = selectedItem.value
+  if (!item) return []
+  const names = []
+  if (item.unit) names.push(item.unit)
+  for (const entry of item.si_units || []) {
+    const name = typeof entry === 'string' ? entry : entry?.unit
+    if (name && !names.includes(name)) names.push(name)
+  }
+  return names.length ? names : ['PCS']
+})
+const draftUnitFactor = computed(() => {
+  const item = selectedItem.value
+  if (!item || !draft.unit || draft.unit === item.unit) return 1
+  for (const entry of item.si_units || []) {
+    const name = typeof entry === 'string' ? entry : entry?.unit
+    if (name === draft.unit) return Number(typeof entry === 'string' ? 1 : entry?.factor ?? 1) || 1
+  }
+  return 1
+})
+const draftBaseQuantity = computed(
+  () => Math.round(Number(draft.quantity || 0) * draftUnitFactor.value * 100) / 100,
+)
 const canAddLine = computed(() => {
   if (!draft.item_id || form.lines.some((line) => line.item_id === draft.item_id)) return false
-  return isReset.value ? Number(draft.quantity) >= 0 : Number(draft.quantity) > 0
+  return isReset.value ? draftBaseQuantity.value >= 0 : draftBaseQuantity.value > 0
 })
 const typeHint = computed(() => {
   if (isReset.value) return t('storeManager.adjustments.hintAdjustment')
@@ -375,11 +406,14 @@ function itemName(id) {
 function itemUnit(id) {
   return allItems.value.find((item) => item.item_id === id)?.unit || '—'
 }
-function itemStock(id) {
-  return allItems.value.find((item) => item.item_id === id)?.quantity_in_stock ?? '—'
-}
 function itemCost(id) {
   return allItems.value.find((item) => item.item_id === id)?.unit_cost ?? 0
+}
+function lineDisplayUnit(line) {
+  return line.input_unit || line.unit || itemUnit(line.item_id)
+}
+function lineDisplayQty(line) {
+  return line.input_quantity ?? line.quantity
 }
 function lineCost(line) {
   const item = allItems.value.find((row) => row.item_id === line.item_id)
@@ -395,9 +429,16 @@ function debouncedLoad() {
   clearTimeout(debounce)
   debounce = setTimeout(load, 300)
 }
-function setVoidFilter(value) {
-  voidFilter.value = value
+function toggleVoidFilter() {
+  voidFilter.value = voidFilter.value === 'voided' ? 'all' : 'voided'
   load()
+}
+
+function onPickAdjustItem(hit) {
+  const id = hit?.value ?? hit
+  draft.item_id = id ?? null
+  const found = allItems.value.find((item) => String(item.item_id) === String(id))
+  draft.unit = found?.unit || ''
 }
 
 async function load() {
@@ -430,7 +471,7 @@ async function loadItems() {
 function openCreate() {
   activeSheet.value = null
   Object.assign(form, { type: 'wastage', description: '', lines: [] })
-  Object.assign(draft, { item_id: null, quantity: 1 })
+  Object.assign(draft, { item_id: null, quantity: 1, unit: '' })
   sheetTab.value = 'items'
   formError.value = ''
   sheetOpen.value = true
@@ -453,20 +494,30 @@ function closeSheet() {
 function addLine() {
   if (!canAddLine.value) return
   const item = selectedItem.value
-  const quantity = Number(draft.quantity)
+  const inputQuantity = Number(draft.quantity)
+  const inputUnit = draft.unit || item.unit || ''
+  const factor = draftUnitFactor.value
+  const quantity = draftBaseQuantity.value
   const before = Number(item.quantity_in_stock || 0)
-  const totalCost = (isReset.value ? Math.abs(quantity - before) : quantity) * Number(item.unit_cost || 0)
+  const baseCost = Number(item.unit_cost || 0)
+  const inputUnitCost = Math.round(baseCost * factor * 100) / 100
+  const totalCost = Math.round(
+    (isReset.value ? Math.abs(quantity - before) : quantity) * baseCost * 100,
+  ) / 100
   form.lines.push({
     item_id: item.item_id,
     item_name: item.item_name,
-    unit: item.unit,
+    unit: inputUnit,
+    input_unit: inputUnit,
+    input_quantity: inputQuantity,
+    input_unit_cost: inputUnitCost,
     quantity,
     quantity_before: before,
-    unit_cost: Number(item.unit_cost || 0),
+    unit_cost: inputUnitCost,
     total_cost: totalCost,
     note: '',
   })
-  Object.assign(draft, { item_id: null, quantity: 1 })
+  Object.assign(draft, { item_id: null, quantity: 1, unit: '' })
 }
 function removeLine(index) {
   form.lines.splice(index, 1)
@@ -596,7 +647,7 @@ function printSheet(row) {
     <table><thead><tr><th>#</th><th>Item</th><th>Description</th><th>Before</th><th>After</th><th>Unit</th><th>Unit cost</th><th>Total</th></tr></thead><tbody>${lines}</tbody></table>
     <p><strong>Description:</strong> ${escapeHtml(row.description || '—')}</p>
     <div class="sign"><div>Created by</div><div>Supervisor</div><div>Authorized by</div></div>
-    <script>window.print()<\/script>
+    <script>window.print()${'</'}script>
   </body></html>`)
   w.document.close()
 }
@@ -612,9 +663,12 @@ onMounted(async () => {
 .alert { border-radius: 10px; padding: 10px 14px; font-size: 13px; }
 .alert-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
 .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-.segmented { display: inline-flex; gap: 4px; background: #f1f5f9; border-radius: 8px; padding: 3px; }
-.segmented button { border: 0; background: transparent; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; color: #475569; font-family: inherit; }
-.segmented button.active { background: #fff; color: #0f172a; box-shadow: 0 1px 3px rgba(15,23,42,.12); font-weight: 700; }
+.icon-filter { width: 34px; height: 34px; border: 1px solid #d7dee8; border-radius: 6px; background: #fff; color: #64748b; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.icon-filter:hover { background: #f8fafc; color: #334155; }
+.icon-filter.active { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.qty-unit { display: flex; gap: 6px; align-items: center; }
+.qty-unit input { width: 92px; }
+.unit-select { width: 96px; }
 .ref-link { border: 0; background: none; padding: 0; color: var(--mrk-blue); font-weight: 700; cursor: pointer; font-family: inherit; font-size: 13px; }
 .ref-link:hover { text-decoration: underline; }
 .chip.red { background: #fee2e2; color: #b91c1c; }
@@ -636,7 +690,7 @@ onMounted(async () => {
 .sheet-tabs button.active { background: #fff; color: #0f172a; box-shadow: 0 1px 3px rgba(15,23,42,.12); font-weight: 700; }
 .line-picker { display: flex; gap: 10px; align-items: flex-end; padding: 12px; border: 1px dashed #cbd5e1; border-radius: 10px; margin-bottom: 12px; background: #f8fafc; }
 .line-picker .grow { flex: 1; min-width: 220px; }
-.qty-fld { width: 170px; }
+.qty-fld { width: 220px; }
 .selected-stock { width: 130px; }
 .add-line { margin-bottom: 0; }
 .sheet-table { min-width: 880px; }

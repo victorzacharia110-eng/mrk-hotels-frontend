@@ -5,9 +5,13 @@
       <i class="fas fa-circle-info"></i> {{ $t('storeManager.transfers.multiOutletOnly') }}
     </div>
     <div v-else class="sm-toolbar">
-      <CalendarInput v-model="businessDate" :clearable="false" />
+      <CalendarInput v-model="businessDate" :clearable="false" @change="loadTransfers" />
       <div class="sm-search"><i class="fas fa-magnifying-glass"></i><input v-model="q" type="text" :placeholder="$t('common.search')" /></div>
-      <select v-if="statuses.length" v-model="status" class="sm-select"><option value="">{{ $t('common.status') }}</option><option v-for="s in statuses" :key="s" :value="s">{{ statusLabel(s) }}</option></select>
+      <select v-model="statusFilter" class="sm-select">
+        <option value="">{{ $t('common.allStatuses') }}</option>
+        <option value="draft">{{ $t('storeManager.transfers.draft') }}</option>
+        <option value="sent">{{ $t('storeManager.transfers.sent') }}</option>
+      </select>
       <span class="spacer"></span>
       <button class="sm-btn" @click="openCreate"><i class="fas fa-plus"></i> {{ $t('storeManager.transfers.add') }}</button>
     </div>
@@ -15,80 +19,146 @@
       <div v-if="loading" class="sm-loading"><i class="fas fa-circle-notch"></i> {{ $t('common.loading') }}</div>
       <template v-else>
         <div class="table-scroll">
-        <table class="sm-table" v-if="transfers.length">
-          <thead><tr>
-            <th>S/N</th><th>{{ $t('common.reference') }}</th><th>{{ $t('common.date') }}</th><th>{{ $t('inventory.itemName') }}</th>
-            <th>{{ $t('storeManager.transfers.from') }}</th><th>{{ $t('storeManager.transfers.to') }}</th>
-            <th>{{ $t('storeManager.sales.qty') }}</th><th>{{ $t('storeManager.transfers.costValue') }}</th>
-            <th>{{ $t('common.status') }}</th><th>{{ $t('common.actions') }}</th>
-          </tr></thead>
-          <tbody>
-            <tr v-for="(tr, idx) in paged" :key="tr.transfer_id">
-              <td>{{ (page - 1) * 15 + idx + 1 }}</td>
-              <td><strong>{{ tr.transfer_number }}</strong></td>
-              <td>{{ fmtDate(tr.business_date || tr.created_at) }}</td>
-              <td>{{ lineSummary(tr) }}</td>
-              <td>{{ fromName(tr) }}</td>
-              <td>{{ toName(tr) }}</td>
-              <td>{{ totalQty(tr) }}</td>
-              <td>{{ money(tr.total_cost) }}</td>
-              <td><span class="chip" :class="{ danger: tr.status === 'voided' }">{{ statusLabel(tr.status) }}</span></td>
-              <td>
-                <div class="row-actions">
-                  <button class="sm-btn sm ghost" :title="$t('common.print')" @click="printTransfer(tr)"><i class="fas fa-print"></i></button>
-                  <button class="sm-btn sm ghost" :title="$t('common.share')" @click="shareTransfer(tr)"><i class="fas fa-share-nodes"></i></button>
-                  <button v-if="tr.status === 'draft'" class="sm-btn sm primary" :title="$t('storeManager.transfers.send')" @click="sendTransfer(tr)"><i class="fas fa-paper-plane"></i></button>
-                  <button v-if="tr.status === 'draft' || tr.status === 'sent' || tr.status === 'completed'" class="sm-btn sm danger" :title="$t('storeManager.common.void')" @click="askVoid(tr)"><i class="fas fa-ban"></i></button>
-                  <span v-if="tr.status === 'voided'" class="void-reason">{{ tr.void_reason }}</span>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <p v-else class="empty">{{ $t('storeManager.transfers.empty') }}</p>
-      <PaginationBar :page="page" :last-page="lastPage" @change="page = $event" />
-      </div>
+          <table class="sm-table" v-if="filteredTransfers.length">
+            <thead><tr>
+              <th>S/N</th>
+              <th>{{ $t('common.status') }}</th>
+              <th>{{ $t('storeManager.transfers.costValue') }}</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="tr in pagedTransfers" :key="tr.transfer_id">
+                <td><button class="ref-link" @click="openDetail(tr)">{{ tr.transfer_number }}</button></td>
+                <td><span class="chip" :class="{ danger: tr.status === 'voided' }">{{ statusLabel(tr.status) }}</span></td>
+                <td><strong>{{ money(tr.total_cost) }}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-else class="empty">{{ $t('storeManager.transfers.empty') }}</p>
+          <PaginationBar :page="Math.min(page, lastPage)" :last-page="lastPage" @change="page = $event" />
+        </div>
       </template>
     </section>
+
+    <!-- New transfer: same item-line layout as purchase orders. -->
     <div v-if="showForm" class="sm-modal-backdrop" @click.self="showForm = false">
       <div class="sm-modal wide">
         <div class="sm-modal-head"><h3>{{ $t('storeManager.transfers.add') }}</h3><button class="x" @click="showForm = false">×</button></div>
-        <div class="transfer-grid">
-          <label class="fld"><span>{{ $t('storeManager.transfers.from') }}</span>
-            <SearchableSelect v-model="form.from_outlet_id" :options="outletOptions" :force-search="true" />
-          </label>
-          <label class="fld"><span>{{ $t('storeManager.transfers.to') }}</span>
-            <SearchableSelect v-model="form.to_outlet_id" :options="outletOptions" :force-search="true" />
-          </label>
+        <form class="sm-modal-body" @submit.prevent="save(true)">
+          <div class="transfer-grid">
+            <label class="fld"><span>{{ $t('storeManager.transfers.from') }}</span>
+              <SearchableSelect v-model="form.from_outlet_id" :options="outletOptions" :force-search="true" />
+            </label>
+            <label class="fld"><span>{{ $t('storeManager.transfers.to') }}</span>
+              <SearchableSelect v-model="form.to_outlet_id" :options="outletOptions" :force-search="true" />
+            </label>
+          </div>
+
+          <div class="items-block">
+            <div class="items-head">
+              <strong>{{ $t('common.items') }}</strong>
+              <button type="button" class="sm-btn sm ghost" @click="form.items.push(emptyLine())">
+                <i class="fas fa-plus"></i> {{ $t('requisitions.addItem') }}
+              </button>
+            </div>
+            <div v-for="(line, idx) in form.items" :key="idx" class="item-grid">
+              <SearchableSelect
+                v-model="line.item_id"
+                :options="itemOptions"
+                :placeholder="$t('inventory.searchItems')"
+                :search-placeholder="$t('inventory.searchItems')"
+                :empty-label="$t('inventory.selectItem')"
+                required
+                @change="onPickItem(line, $event)"
+              >
+                <template #option="{ option }">
+                  <span>{{ option.label }} <small class="muted">{{ option.category }} · {{ option.stock }} {{ option.unit }} · {{ curCode() }} {{ Number(option.unit_cost || 0).toLocaleString() }}</small></span>
+                </template>
+              </SearchableSelect>
+              <input v-model.number="line.quantity" type="number" min="0.01" step="0.01" class="sm-input" :placeholder="$t('storeManager.sales.qty')" required />
+              <select v-model="line.unit" class="sm-input">
+                <option v-for="u in unitOptionsFor(line)" :key="u" :value="u">{{ u }}</option>
+              </select>
+              <input :value="money(unitCostFor(line))" class="sm-input" readonly :title="$t('inventory.unitCost', { currency: curCode() })" />
+              <button type="button" class="sm-btn sm danger" :disabled="form.items.length === 1" @click="form.items.splice(idx, 1)">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="transfer-preview">
+            <span>{{ $t('storeManager.transfers.totalCost') }}</span>
+            <strong>{{ money(transferTotal) }}</strong>
+          </div>
+          <label class="fld"><span>{{ $t('storeManager.common.notes') }}</span><input v-model="form.notes" class="sm-input" /></label>
+          <p v-if="formError" class="sm-error">{{ formError }}</p>
+          <div class="sm-modal-foot">
+            <button type="button" class="sm-btn ghost" @click="showForm = false">{{ $t('common.cancel') }}</button>
+            <button type="button" class="sm-btn ghost" :disabled="saving" @click="save(false)">
+              {{ saving ? $t('common.saving') : $t('storeManager.transfers.saveDraft') }}
+            </button>
+            <button type="submit" class="sm-btn" :disabled="saving">
+              <i class="fas fa-paper-plane"></i> {{ saving ? $t('common.saving') : $t('storeManager.transfers.saveSend') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Transfer detail: all commands live here, not in the list row. -->
+    <div v-if="detailTransfer" class="sm-modal-backdrop" @click.self="detailTransfer = null">
+      <div class="sm-modal wide">
+        <div class="sm-modal-head">
+          <h3>{{ detailTransfer.transfer_number }}</h3>
+          <button class="sm-modal-close" @click="detailTransfer = null"><i class="fas fa-xmark"></i></button>
         </div>
-        <label class="fld"><span>{{ $t('inventory.itemName') }}</span>
-          <SearchableSelect v-model="form.item_id" :options="itemOptions" :force-search="true" @change="onPickItem">
-            <template #option="{ option }">
-              <span>{{ option.label }} <small class="muted">{{ option.category }} · {{ option.stock }} {{ option.unit }} · {{ curCode() }} {{ Number(option.unit_cost || 0).toLocaleString() }}</small></span>
-            </template>
-          </SearchableSelect>
-        </label>
-        <div class="transfer-grid">
-          <label class="fld"><span>{{ $t('inventory.unit') }}</span>
-            <select v-model="form.unit" class="sm-input">
-              <option v-for="u in unitOptions" :key="u" :value="u">{{ u }}</option>
-            </select>
-          </label>
-          <label class="fld"><span>{{ $t('storeManager.sales.qty') }}</span><input v-model.number="form.quantity" type="number" min="1" step="0.01" class="sm-input" /></label>
-        </div>
-        <div v-if="selectedItem" class="transfer-preview">
-          <span>{{ $t('storeManager.transfers.onShelf', { qty: baseQuantity, unit: selectedItem.unit || '—' }) }}</span>
-          <strong>{{ curCode() }} {{ lineCost.toLocaleString() }}</strong>
-        </div>
-        <label class="fld"><span>{{ $t('storeManager.common.notes') }}</span><input v-model="form.notes" class="sm-input" /></label>
-        <p v-if="formError" class="sm-error">{{ formError }}</p>
-        <div class="sm-modal-foot">
-          <button class="sm-btn ghost" @click="showForm = false">{{ $t('common.cancel') }}</button>
-          <button class="sm-btn ghost" :disabled="saving" @click="save(false)">{{ saving ? $t('common.saving') : $t('storeManager.transfers.saveDraft') }}</button>
-          <button class="sm-btn" :disabled="saving" @click="save(true)"><i class="fas fa-paper-plane"></i> {{ saving ? $t('common.saving') : $t('storeManager.transfers.saveSend') }}</button>
+        <div class="sm-modal-body">
+          <div class="detail-actions">
+            <button class="sm-btn sm ghost" @click="printTransfer(detailTransfer)"><i class="fas fa-print"></i> {{ $t('common.print') }}</button>
+            <button class="sm-btn sm ghost" @click="shareTransfer(detailTransfer)"><i class="fas fa-share-nodes"></i> {{ $t('common.share') }}</button>
+            <button v-if="detailTransfer.status === 'draft'" class="sm-btn sm primary" @click="sendTransfer(detailTransfer)">
+              <i class="fas fa-paper-plane"></i> {{ $t('storeManager.transfers.send') }}
+            </button>
+            <button v-if="['draft', 'sent', 'completed'].includes(detailTransfer.status)" class="sm-btn sm danger" @click="askVoid(detailTransfer)">
+              <i class="fas fa-ban"></i> {{ $t('storeManager.common.void') }}
+            </button>
+          </div>
+          <p v-if="detailTransfer.void_reason" class="void-note"><i class="fas fa-circle-info"></i> {{ detailTransfer.void_reason }}</p>
+          <div class="transfer-meta">
+            <p><strong>{{ $t('storeManager.transfers.from') }}:</strong> {{ fromName(detailTransfer) }}</p>
+            <p><strong>{{ $t('storeManager.transfers.to') }}:</strong> {{ toName(detailTransfer) }}</p>
+            <p><strong>{{ $t('common.date') }}:</strong> {{ fmtDate(detailTransfer.business_date || detailTransfer.created_at) }}</p>
+            <p><strong>{{ $t('common.status') }}:</strong> <span class="chip" :class="{ danger: detailTransfer.status === 'voided' }">{{ statusLabel(detailTransfer.status) }}</span></p>
+          </div>
+          <p v-if="detailTransfer.notes"><strong>{{ $t('common.notes') }}:</strong> {{ detailTransfer.notes }}</p>
+          <p v-if="formError" class="sm-error">{{ formError }}</p>
+          <div class="table-scroll">
+            <table class="sm-table">
+              <thead><tr>
+                <th>{{ $t('inventory.itemName') }}</th>
+                <th>{{ $t('storeManager.sales.qty') }}</th>
+                <th>{{ $t('common.unit') }}</th>
+                <th>{{ $t('inventory.unitCost', { currency: curCode() }) }}</th>
+                <th>{{ $t('storeManager.transfers.costValue') }}</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="line in detailTransfer.items || []" :key="line.transfer_item_id">
+                  <td>{{ line.item?.item_name || line.item_name || '—' }}</td>
+                  <td>{{ line.quantity }}</td>
+                  <td>{{ line.item?.unit || '—' }}</td>
+                  <td>{{ money(line.item?.unit_cost) }}</td>
+                  <td><strong>{{ money(Number(line.quantity || 0) * Number(line.item?.unit_cost || 0)) }}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="transfer-total"><strong>{{ $t('storeManager.transfers.totalCost') }}: {{ money(detailTransfer.total_cost) }}</strong></p>
+          <div class="sm-modal-foot">
+            <button class="sm-btn" @click="detailTransfer = null">{{ $t('common.close') }}</button>
+          </div>
         </div>
       </div>
     </div>
+
     <div v-if="voidTarget" class="sm-modal-backdrop" @click.self="voidTarget = null">
       <div class="sm-modal">
         <div class="sm-modal-head"><h3>{{ $t('storeManager.common.voidTitle') }}</h3><button class="x" @click="voidTarget = null">×</button></div>
@@ -112,7 +182,6 @@ import { useOutletContext } from '@/composables/useOutletContext'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
-import { useClientTable } from '@/composables/useClientTable.js'
 import { fetchAllInventoryItems } from '@/utils/inventoryItems.js'
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -120,20 +189,30 @@ const { t } = useI18n()
 const { curCode } = useTenantCurrency()
 const workingDateStore = useWorkingDateStore()
 const { outlets, selectedOutlet, loadOutlets } = useOutletContext()
-const canTransfer = computed(() => outlets.value.length > 1)
+const transferableOutlets = computed(() => outlets.value.filter((outlet) => outlet.stock_department))
+const canTransfer = computed(() => transferableOutlets.value.length > 1)
 const businessDate = ref('')
 const loadedDate = ref('')
 const transfers = ref([])
-const { q, status, statuses, page, lastPage, paged } = useClientTable(transfers, {
-  pageSize: 15,
-  searchFields: [
-    'transfer_number', 'transfer_id', 'status',
-    (r) => fromName(r),
-    (r) => toName(r),
-    (r) => lineSummary(r),
-  ],
-})
+const q = ref('')
+const statusFilter = ref('')
+const page = ref(1)
+const pageSize = 15
 const items = ref([])
+const loading = ref(false)
+const saving = ref(false)
+const showForm = ref(false)
+const formError = ref('')
+const voidTarget = ref(null)
+const voidReason = ref('')
+const detailTransfer = ref(null)
+const form = reactive({
+  from_outlet_id: null,
+  to_outlet_id: null,
+  notes: '',
+  items: [],
+})
+
 const itemOptions = computed(() => items.value.map((i) => ({
   value: i.item_id,
   label: `${i.item_name}${i.unit ? ` (${i.unit})` : ''}`,
@@ -142,48 +221,47 @@ const itemOptions = computed(() => items.value.map((i) => ({
   stock: i.quantity_in_stock ?? 0,
   unit_cost: i.unit_cost,
 })))
-const outletOptions = computed(() => outlets.value.map((o) => ({
-  value: o.outlet_id,
-  label: o.stock_department ? o.name : `${o.name} (${t('storeManager.transfers.noShelf')})`,
-})))
-const loading = ref(false)
-const saving = ref(false)
-const showForm = ref(false)
-const formError = ref('')
-const voidTarget = ref(null)
-const voidReason = ref('')
-const form = reactive({
-  item_id: null,
-  from_outlet_id: null,
-  to_outlet_id: null,
-  unit: '',
-  quantity: 1,
-  notes: '',
-})
 
-const selectedItem = computed(() => items.value.find((i) => String(i.item_id) === String(form.item_id)) || null)
-const unitOptions = computed(() => {
-  const item = selectedItem.value
-  if (!item) return []
-  const names = []
-  if (item.unit) names.push(item.unit)
-  for (const entry of item.si_units || []) {
-    const name = typeof entry === 'string' ? entry : entry?.unit
-    if (name && !names.includes(name)) names.push(name)
+const outletOptions = computed(() => transferableOutlets.value.map((o) => ({
+  value: o.outlet_id,
+  label: `${o.name} · ${o.stock_department?.name || ''}`.replace(/ · $/, ''),
+})))
+
+const filteredTransfers = computed(() => {
+  let rows = transfers.value
+  if (statusFilter.value === 'draft') rows = rows.filter((tr) => tr.status === 'draft')
+  if (statusFilter.value === 'sent') rows = rows.filter((tr) => ['sent', 'completed'].includes(tr.status))
+  const needle = q.value.trim().toLowerCase()
+  if (needle) {
+    rows = rows.filter((tr) => [
+      tr.transfer_number,
+      tr.status,
+      fromName(tr),
+      toName(tr),
+      lineSummary(tr),
+    ].some((value) => String(value ?? '').toLowerCase().includes(needle)))
   }
-  return names.length ? names : ['PCS']
+  return rows
 })
-const unitFactor = computed(() => {
-  const item = selectedItem.value
-  if (!item || !form.unit || form.unit === item.unit) return 1
-  for (const entry of item.si_units || []) {
-    const name = typeof entry === 'string' ? entry : entry?.unit
-    if (name === form.unit) return Number(typeof entry === 'string' ? 1 : entry?.factor ?? 1) || 1
+const lastPage = computed(() => Math.max(1, Math.ceil(filteredTransfers.value.length / pageSize)))
+const pagedTransfers = computed(() => {
+  const current = Math.min(page.value, lastPage.value)
+  return filteredTransfers.value.slice((current - 1) * pageSize, current * pageSize)
+})
+watch([q, statusFilter], () => { page.value = 1 })
+
+function emptyLine() {
+  return {
+    item_id: '',
+    item_name: '',
+    quantity: 1,
+    unit: '',
+    si_units: [],
+    si_factors: {},
+    base_unit: '',
+    base_cost: 0,
   }
-  return 1
-})
-const baseQuantity = computed(() => Math.round(Number(form.quantity || 0) * unitFactor.value * 100) / 100)
-const lineCost = computed(() => Math.round(baseQuantity.value * Number(selectedItem.value?.unit_cost || 0) * 100) / 100)
+}
 
 function fmtDate(v) { return v ? new Date(v).toLocaleDateString() : '-' }
 function money(v) { return `${curCode()} ${Number(v || 0).toLocaleString()}` }
@@ -201,14 +279,67 @@ function lineSummary(tr) {
   if (!lines.length) return '—'
   return lines.map((l) => l.item?.item_name || l.item_name).filter(Boolean).join(', ') || '—'
 }
-function totalQty(tr) {
-  return (tr.items || []).reduce((sum, l) => sum + Number(l.quantity || 0), 0) || '—'
+
+function normalizeSiUnits(found) {
+  const names = []
+  const factors = {}
+  for (const raw of found?.si_units || []) {
+    const name = typeof raw === 'string' ? raw : raw?.unit
+    if (!name) continue
+    names.push(name)
+    factors[name] = Number(typeof raw === 'string' ? 1 : raw?.factor ?? 1) || 1
+  }
+  return { names, factors }
 }
-function onPickItem(hit) {
+
+function unitOptionsFor(line) {
+  const names = []
+  if (line.base_unit) names.push(line.base_unit)
+  for (const name of line.si_units || []) {
+    if (name && !names.includes(name)) names.push(name)
+  }
+  return names.length ? names : ['PCS']
+}
+
+function unitFactorFor(line) {
+  if (!line.unit || line.unit === line.base_unit) return 1
+  return Number(line.si_factors?.[line.unit] ?? 1) || 1
+}
+
+function baseQuantity(line) {
+  return Math.round(Number(line.quantity || 0) * unitFactorFor(line) * 100) / 100
+}
+
+function unitCostFor(line) {
+  return Math.round(Number(line.base_cost || 0) * unitFactorFor(line) * 100) / 100
+}
+
+function lineCost(line) {
+  return Math.round(baseQuantity(line) * Number(line.base_cost || 0) * 100) / 100
+}
+
+const transferTotal = computed(() =>
+  form.items.reduce((sum, line) => sum + lineCost(line), 0),
+)
+
+function onPickItem(line, hit) {
   const id = hit?.value ?? hit
-  form.item_id = id ?? null
   const found = items.value.find((i) => String(i.item_id) === String(id))
-  form.unit = found?.unit || ''
+  if (found && form.items.some((other) => other !== line && String(other.item_id) === String(found.item_id))) {
+    formError.value = t('storeManager.transfers.itemRequired')
+    line.item_id = ''
+    line.item_name = ''
+    return
+  }
+  formError.value = ''
+  line.item_id = id ?? ''
+  line.item_name = found?.item_name || ''
+  line.base_unit = found?.unit || ''
+  line.base_cost = Number(found?.unit_cost || 0)
+  const { names, factors } = normalizeSiUnits(found)
+  line.si_units = names
+  line.si_factors = factors
+  line.unit = found?.unit || ''
 }
 
 async function loadTransfers() {
@@ -227,31 +358,40 @@ async function loadItems() {
 async function load() {
   await Promise.all([loadTransfers(), loadItems()])
 }
+
 function openCreate() {
-  const first = selectedOutlet.value?.outlet_id || outlets.value[0]?.outlet_id || null
-  const second = outlets.value.find((o) => o.outlet_id !== first)?.outlet_id || null
+  const first = selectedOutlet.value?.outlet_id && transferableOutlets.value.some((o) => o.outlet_id === selectedOutlet.value.outlet_id)
+    ? selectedOutlet.value.outlet_id
+    : transferableOutlets.value[0]?.outlet_id || null
+  const second = transferableOutlets.value.find((o) => o.outlet_id !== first)?.outlet_id || null
   Object.assign(form, {
-    item_id: items.value[0]?.item_id || null,
     from_outlet_id: first,
     to_outlet_id: second,
-    unit: items.value[0]?.unit || '',
-    quantity: 1,
     notes: '',
+    items: [emptyLine()],
   })
   formError.value = ''
   showForm.value = true
+  if (!items.value.length) loadItems()
 }
+
+function openDetail(tr) {
+  formError.value = ''
+  detailTransfer.value = tr
+}
+
 async function save(send = true) {
   formError.value = ''
   if (!form.from_outlet_id || !form.to_outlet_id || form.from_outlet_id === form.to_outlet_id) {
     formError.value = t('storeManager.transfers.sameOutlet')
     return
   }
-  if (!form.item_id) {
+  const lines = form.items.filter((line) => line.item_id)
+  if (!lines.length) {
     formError.value = t('storeManager.transfers.itemRequired')
     return
   }
-  if (!(baseQuantity.value > 0)) {
+  if (lines.some((line) => !(baseQuantity(line) > 0))) {
     formError.value = t('storeManager.transfers.quantityRequired')
     return
   }
@@ -263,18 +403,21 @@ async function save(send = true) {
       business_date: businessDate.value,
       notes: form.notes,
       send,
-      items: [{ item_id: form.item_id, quantity: baseQuantity.value }],
+      items: lines.map((line) => ({ item_id: line.item_id, quantity: baseQuantity(line) })),
     })
     showForm.value = false
     await load()
   } catch (e) { formError.value = e.response?.data?.message || t('common.error') } finally { saving.value = false }
 }
+
 async function sendTransfer(tr) {
   try {
     await inventoryOpsApi.sendTransfer(tr.transfer_id)
+    detailTransfer.value = null
     await load()
-  } catch (e) { window.alert(e.response?.data?.message || t('common.error')) }
+  } catch (e) { formError.value = e.response?.data?.message || t('common.error') }
 }
+
 function printTransfer(tr) {
   const rows = (tr.items || []).map((l) => {
     const qty = Number(l.quantity || 0)
@@ -322,6 +465,7 @@ async function confirmVoid() {
   try {
     await inventoryOpsApi.voidTransfer(voidTarget.value.transfer_id, voidReason.value.trim())
     voidTarget.value = null
+    detailTransfer.value = null
     await load()
   } catch (e) { formError.value = e.response?.data?.message || t('common.error') } finally { saving.value = false }
 }
@@ -344,6 +488,20 @@ onMounted(async () => {
 .alert-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 14px; display: flex; gap: 8px; align-items: center; }
 .row-actions { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 .transfer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.transfer-preview { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 4px 0 12px; padding: 9px 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; color: #1e40af; font-size: 13px; }
+.transfer-preview { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 10px 0 12px; padding: 9px 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; color: #1e40af; font-size: 13px; }
 .transfer-preview strong { font-size: 14px; }
+.items-block { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.items-head { display: flex; align-items: center; justify-content: space-between; }
+.item-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 8px; }
+.detail-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.void-note { background: #fff4ed; border: 1px solid #fed7aa; color: #9a3412; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+.transfer-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; margin-bottom: 10px; }
+.transfer-meta p { margin: 0; font-size: 13px; }
+.transfer-total { text-align: right; margin: 10px 0 0; }
+.ref-link { border: 0; background: none; padding: 0; color: var(--mrk-blue); font-weight: 700; cursor: pointer; font-family: inherit; font-size: 13px; }
+.ref-link:hover { text-decoration: underline; }
+@media (max-width: 700px) {
+  .item-grid, .transfer-grid { grid-template-columns: 1fr 1fr; }
+  .transfer-meta { grid-template-columns: 1fr; }
+}
 </style>

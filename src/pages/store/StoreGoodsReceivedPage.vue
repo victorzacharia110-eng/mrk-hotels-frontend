@@ -70,7 +70,6 @@
           <thead>
             <tr>
               <th>{{ $t('goodsReceived.number') }}</th>
-              <th>{{ $t('goodsReceived.purchaseOrder') }}</th>
               <th>{{ $t('goodsReceived.supplier') }}</th>
               <th>{{ $t('goodsReceived.receivedDate') }}</th>
               <th>{{ $t('goodsReceived.deliveryNote') }}</th>
@@ -81,7 +80,6 @@
           <tbody>
             <tr v-for="grn in paged" :key="grn.grn_id">
               <td><strong>{{ grn.grn_number }}</strong></td>
-              <td>{{ grn.purchase_order?.po_number || '-' }}</td>
               <td>{{ grn.supplier?.supplier_name || '-' }}</td>
               <td>{{ formatDate(grn.received_date) }}</td>
               <td>{{ grn.delivery_note_number || '-' }}</td>
