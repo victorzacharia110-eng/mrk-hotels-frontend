@@ -193,8 +193,12 @@
           <button v-for="o in outlets" :key="o.outlet_id" type="button" class="sm-outlet-option"
             @click="chooseOutlet(o)">
             <i class="fas fa-store" aria-hidden="true"></i>
-            <span>{{ o.name }}</span>
+            <span>
+              <strong>{{ o.name }}</strong>
+              <small v-if="o.type">{{ o.type }}</small>
+            </span>
           </button>
+          <p v-if="outlets.length === 0" class="sm-gate-hint">{{ $t('outlet.gateEmpty') }}</p>
         </div>
       </div>
     </div>
@@ -235,18 +239,12 @@ const {
 const showOutletPicker = computed(() => hasChoice.value && roleCanSelectOutlet(authStore.user?.user_role))
 const outletGateOpen = ref(false)
 
-/** Opens the picker on sign-in when the role may choose and nothing is picked. */
+/** Opens the picker on sign-in, even for a single outlet. */
 async function openOutletGateIfNeeded() {
   await loadOutletList()
   if (!roleCanSelectOutlet(authStore.user?.user_role)) return
-  if (outlets.value.length === 0 || selectedOutlet.value) return
-  // A single outlet is not a choice: use it silently and keep the picker and
-  // the post-login gate out of the way, as requested in the panel review.
-  if (!hasChoice.value) {
-    selectOutlet(outlets.value[0])
-    outletGateOpen.value = false
-    return
-  }
+  // The inventory panel follows the same rule as the till: the manager confirms
+  // the store/outlet they are working in before any stock figure is shown.
   outletGateOpen.value = true
 }
 
@@ -563,6 +561,9 @@ const DAY_CLOSE_ROLES = ['store_manager', 'cashier', 'bartender', 'waiter', 'hot
 }
 .sm-outlet-option:hover { border-color: var(--sm-blue); background: var(--sm-blue-light); }
 .sm-outlet-option i { color: var(--sm-blue); font-size: 16px; }
+.sm-outlet-option span { display: flex; flex-direction: column; gap: 2px; }
+.sm-outlet-option strong { font-size: 14px; }
+.sm-outlet-option small { color: var(--sm-muted); font-size: 11.5px; font-weight: 500; text-transform: capitalize; }
 .sm-icon-btn {
   width: 38px; height: 38px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;

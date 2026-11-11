@@ -404,6 +404,7 @@ import { exportCSV } from '@/utils/export'
 import { useAuthStore } from '@/stores/auth'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { printHtmlSilently } from '@/utils/reportPrint'
+import { selectedOutlet } from '@/composables/useOutletContext'
 import { formatNumber, isIdentifierKey } from '@/utils/numbers'
 import { fmtLedgerMoney, fmtQty, unitSuffix, fmtLedgerDateTime, ledgerTypeLabel, buildLedgerGroups, INVENTORY_CATEGORIES } from '@/utils/ezeeLedger'
 
@@ -710,6 +711,22 @@ const INVENTORY_REPORTS = new Set([
 
 const usesDepartments = computed(() => INVENTORY_REPORTS.has(activeReport.value))
 
+/** The selected counter's own stock shelf, used by inventory reports. */
+const selectedShelfId = computed(
+  () => selectedOutlet.value?.stock_department?.department_id || '',
+)
+
+/** Scope the report browser to the outlet picked in the till: F&B reports use
+ * the POS outlet id, inventory reports use that outlet's stock department. */
+const scopedVenueId = computed(() => (
+  usesDepartments.value ? selectedShelfId.value : (selectedOutlet.value?.outlet_id || '')
+))
+
+function applySelectedVenue() {
+  filterValues.outlet_id = scopedVenueId.value
+  filterValues.terminal_id = ''
+}
+
 /** The single Outlet / Terminal picker: departments for inventory reports, outlets otherwise. */
 const venueOptions = computed(() => {
   const items = usesDepartments.value ? departments.value : outlets.value
@@ -925,6 +942,7 @@ function toggleColumn(key) {
 }
 
 function selectReport(key) {
+  const wasDepartments = usesDepartments.value
   activeReport.value = key
   engine.value = null
   error.value = ''
@@ -932,14 +950,16 @@ function selectReport(key) {
     customSource.value = 'menu-item-sales'
     customCols.value = []
   }
+  // Switching between F&B and inventory reports changes the meaning of the
+  // venue id, so re-apply the selected outlet in its new form before running.
+  if (wasDepartments !== usesDepartments.value) applySelectedVenue()
   run()
 }
 
 function resetFilters() {
   filterValues.from = todayIso()
   filterValues.to = todayIso()
-  filterValues.outlet_id = ''
-  filterValues.terminal_id = ''
+  applySelectedVenue()
   filterValues.user_id = ''
   filterValues.business_source = ''
   filterValues.category_id = ''
@@ -1407,16 +1427,19 @@ watch(activeReport, () => {
 })
 
 watch(usesDepartments, (now, before) => {
-  if (before !== undefined && now !== before) {
-    filterValues.outlet_id = ''
-    filterValues.terminal_id = ''
-  }
+  if (before !== undefined && now !== before) applySelectedVenue()
+})
+
+watch(() => selectedOutlet.value?.outlet_id, () => {
+  applySelectedVenue()
+  run()
 })
 
 onMounted(() => {
   loadReportLogo()
   loadOutlets()
   loadDepartments()
+  applySelectedVenue()
   run()
 })
 

@@ -182,7 +182,7 @@ import { useOutletContext } from '@/composables/useOutletContext'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
-import { fetchAllInventoryItems } from '@/utils/inventoryItems.js'
+import { fetchAllInventoryItems, stockOnShelf } from '@/utils/inventoryItems.js'
 import { useTenantCurrency } from '@/utils/currency'
 
 const { t } = useI18n()
@@ -213,12 +213,20 @@ const form = reactive({
   items: [],
 })
 
+/** Items are read from the transfer's source shelf, not hotel-wide stock. */
+const formShelfId = computed(() => {
+  const from = transferableOutlets.value.find((outlet) => outlet.outlet_id === form.from_outlet_id)
+  return from?.stock_department?.department_id
+    || selectedOutlet.value?.stock_department?.department_id
+    || undefined
+})
+
 const itemOptions = computed(() => items.value.map((i) => ({
   value: i.item_id,
   label: `${i.item_name}${i.unit ? ` (${i.unit})` : ''}`,
   category: i.category,
   unit: i.unit,
-  stock: i.quantity_in_stock ?? 0,
+  stock: stockOnShelf(i, formShelfId.value),
   unit_cost: i.unit_cost,
 })))
 
@@ -345,7 +353,11 @@ function onPickItem(line, hit) {
 async function loadTransfers() {
   loading.value = true
   try {
-    const res = await inventoryOpsApi.transfers({ per_page: 50, date: businessDate.value })
+    const res = await inventoryOpsApi.transfers({
+      per_page: 50,
+      date: businessDate.value,
+      outlet_id: selectedOutlet.value?.outlet_id || undefined,
+    })
     transfers.value = res.data.transfers || []
     loadedDate.value = businessDate.value
   } catch {
@@ -353,7 +365,9 @@ async function loadTransfers() {
   } finally { loading.value = false }
 }
 async function loadItems() {
-  try { items.value = await fetchAllInventoryItems() } catch { items.value = [] }
+  try {
+    items.value = await fetchAllInventoryItems({ department_id: formShelfId.value })
+  } catch { items.value = [] }
 }
 async function load() {
   await Promise.all([loadTransfers(), loadItems()])
@@ -372,7 +386,7 @@ function openCreate() {
   })
   formError.value = ''
   showForm.value = true
-  if (!items.value.length) loadItems()
+  loadItems()
 }
 
 function openDetail(tr) {
@@ -471,6 +485,16 @@ async function confirmVoid() {
 }
 watch(businessDate, async (date) => {
   if (!date || date === loadedDate.value) return
+  await loadTransfers()
+})
+watch(() => form.from_outlet_id, (id, previous) => {
+  if (!showForm.value || !id || !previous || id === previous) return
+  form.items = [emptyLine()]
+  loadItems()
+})
+watch(() => selectedOutlet.value?.outlet_id, async () => {
+  showForm.value = false
+  detailTransfer.value = null
   await loadTransfers()
 })
 onMounted(async () => {

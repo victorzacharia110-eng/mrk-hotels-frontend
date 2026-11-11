@@ -53,6 +53,7 @@ async function loadOutlets(opts = {}) {
       let list = data.outlets || data.data || []
       if (sellingOnly) {
         list = list.filter((o) => {
+          if (o.is_active === false) return false
           const type = (o.type || '').toLowerCase()
           if (type === 'store') return false
           if (type === 'restaurant' || type === 'bar') return true

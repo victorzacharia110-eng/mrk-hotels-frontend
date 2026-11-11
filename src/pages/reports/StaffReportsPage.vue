@@ -197,11 +197,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { reportApi } from '@/api'
 import CalendarInput from '@/components/CalendarInput.vue'
+import { selectedOutlet } from '@/composables/useOutletContext'
 
 import { useTenantCurrency } from '@/utils/currency'
 import { formatNumber } from '@/utils/numbers'
@@ -220,8 +221,16 @@ function nowDate() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-/** The department defaults from the staff role (bartenders start on the bar). */
-const department = ref(authStore.user?.user_role === 'bartender' ? 'bar' : 'restaurant')
+function outletDepartment(outlet) {
+  const type = String(outlet?.type || '').toLowerCase()
+  return type === 'bar' || type === 'restaurant' ? type : null
+}
+
+/** The department defaults from the selected counter, then the staff role. */
+const department = ref(
+  outletDepartment(selectedOutlet.value)
+  || (authStore.user?.user_role === 'bartender' ? 'bar' : 'restaurant'),
+)
 const from = ref(nowDate())
 const to = ref(nowDate())
 const dashboard = ref(null)
@@ -257,6 +266,7 @@ async function loadReport() {
   try {
     const res = await reportApi.staffDashboard({
       department: department.value,
+      outlet_id: selectedOutlet.value?.outlet_id || undefined,
       from: from.value || undefined,
       to: to.value || undefined,
     })
@@ -291,6 +301,12 @@ function money(value) {
     maximumFractionDigits: 2,
   })
 }
+
+watch(() => selectedOutlet.value?.outlet_id, () => {
+  const dept = outletDepartment(selectedOutlet.value)
+  if (dept) department.value = dept
+  loadReport()
+})
 
 onMounted(loadReport)
 </script>

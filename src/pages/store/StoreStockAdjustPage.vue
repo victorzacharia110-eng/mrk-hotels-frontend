@@ -156,7 +156,7 @@
             </label>
             <div class="fld selected-stock" v-if="selectedItem">
               <span>{{ $t('storeManager.adjustments.currentLevel') }}</span>
-              <strong>{{ selectedItem.quantity_in_stock }} {{ selectedItem.unit }}</strong>
+              <strong>{{ selectedStock }} {{ selectedItem.unit }}</strong>
             </div>
             <button type="button" class="sm-btn add-line" :disabled="!canAddLine" @click="addLine">
               <i class="fas fa-plus"></i> {{ $t('storeManager.adjustments.addLine') }}
@@ -296,7 +296,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { inventoryOpsApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
@@ -304,13 +304,15 @@ import CalendarInput from '@/components/CalendarInput.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { useAuthStore } from '@/stores/auth'
 import { selectedOutlet } from '@/composables/useOutletContext'
-import { fetchAllInventoryItems } from '@/utils/inventoryItems'
+import { fetchAllInventoryItems, stockOnShelf } from '@/utils/inventoryItems'
 import { formatMoney } from '@/utils/currency'
 import '@/pages/store/store-shared.css'
 
 const { t } = useI18n()
 const workingDateStore = useWorkingDateStore()
 const auth = useAuthStore()
+/** The selected counter's shelf; adjustments read and write this shelf. */
+const shelfId = computed(() => selectedOutlet.value?.stock_department?.department_id || undefined)
 
 const adjustments = ref([])
 const allItems = ref([])
@@ -345,6 +347,9 @@ const itemOptions = computed(() =>
   })),
 )
 const selectedItem = computed(() => allItems.value.find((item) => item.item_id === draft.item_id) || null)
+const selectedStock = computed(
+  () => (selectedItem.value ? stockOnShelf(selectedItem.value, shelfId.value) : 0),
+)
 const shownLines = computed(() => (isNew.value ? form.lines : (activeSheet.value?.items || [])))
 const newTotal = computed(() =>
   form.lines.reduce((sum, line) => sum + Math.abs(Number(line.total_cost || lineCost(line))), 0),
@@ -418,7 +423,7 @@ function lineDisplayQty(line) {
 function lineCost(line) {
   const item = allItems.value.find((row) => row.item_id === line.item_id)
   if (!item) return 0
-  const before = Number(item.quantity_in_stock || 0)
+  const before = stockOnShelf(item, shelfId.value)
   const quantity = Number(line.quantity || 0)
   const delta = isReset.value ? Math.abs(quantity - before) : quantity
   return delta * Number(item.unit_cost || 0)
@@ -445,7 +450,7 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const params = { per_page: 250 }
+    const params = { per_page: 250, department_id: shelfId.value }
     if (businessDate.value) params.date = businessDate.value
     if (typeFilter.value) params.type = typeFilter.value
     if (voidFilter.value === 'voided') params.voided = 1
@@ -462,7 +467,7 @@ async function load() {
 
 async function loadItems() {
   try {
-    allItems.value = await fetchAllInventoryItems()
+    allItems.value = await fetchAllInventoryItems({ department_id: shelfId.value })
   } catch {
     allItems.value = []
   }
@@ -498,7 +503,7 @@ function addLine() {
   const inputUnit = draft.unit || item.unit || ''
   const factor = draftUnitFactor.value
   const quantity = draftBaseQuantity.value
-  const before = Number(item.quantity_in_stock || 0)
+  const before = stockOnShelf(item, shelfId.value)
   const baseCost = Number(item.unit_cost || 0)
   const inputUnitCost = Math.round(baseCost * factor * 100) / 100
   const totalCost = Math.round(
@@ -651,6 +656,11 @@ function printSheet(row) {
   </body></html>`)
   w.document.close()
 }
+
+watch(() => selectedOutlet.value?.outlet_id, async () => {
+  closeSheet()
+  await Promise.all([load(), loadItems()])
+})
 
 onMounted(async () => {
   await workingDateStore.ensureLoaded()

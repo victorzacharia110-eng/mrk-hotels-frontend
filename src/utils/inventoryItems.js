@@ -24,3 +24,25 @@ export async function fetchAllInventoryItems(params = {}) {
 
   return items
 }
+
+/**
+ * The stock an item holds on one department's shelf.
+ *
+ * Mirrors InventoryItem::stockFor() on the API: items with no shelf rows keep
+ * their plain global level, while shelf-managed items must not fall back to
+ * the hotel-wide total when the selected shelf is not one of their rows.
+ *
+ * @param {object} item - Inventory item resource.
+ * @param {string|undefined} departmentId - Shelf to read.
+ * @returns {number} Quantity on that shelf.
+ */
+export function stockOnShelf(item, departmentId) {
+  const shelves = item?.departments
+  if (!Array.isArray(shelves) || shelves.length === 0) {
+    return Number(item?.quantity_in_stock || 0)
+  }
+  const shelf = shelves.find(
+    (department) => String(department.department_id) === String(departmentId),
+  )
+  return shelf ? Number(shelf.quantity || 0) : 0
+}

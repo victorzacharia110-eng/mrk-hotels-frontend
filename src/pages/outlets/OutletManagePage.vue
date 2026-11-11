@@ -34,6 +34,7 @@
             <th scope="col">{{ $t('outlets.name') }}</th>
             <th scope="col">{{ $t('outlets.type') }}</th>
             <th scope="col">{{ $t('outlets.stockShelf') }}</th>
+            <th scope="col">{{ $t('outlets.accessCode') }}</th>
             <th scope="col">{{ $t('common.status') }}</th>
             <th v-if="canEdit" scope="col">{{ $t('common.actions') }}</th>
           </tr>
@@ -55,6 +56,11 @@
               <span v-else class="muted">{{ $t('outlets.noStockShelf') }}</span>
             </td>
             <td>
+              <span class="badge" :class="outlet.has_access_code ? 'badge-green' : 'badge-red'">
+                {{ outlet.has_access_code ? $t('outlets.accessCodeSet') : $t('outlets.accessCodeNotSet') }}
+              </span>
+            </td>
+            <td>
               <span class="badge" :class="outlet.is_active ? 'badge-green' : 'badge-red'">
                 {{ outlet.is_active ? $t('outlets.statusActive') : $t('outlets.statusInactive') }}
               </span>
@@ -63,6 +69,13 @@
               <div class="actions">
                 <button class="btn btn-sm btn-secondary" @click="toggleActive(outlet)">
                   {{ outlet.is_active ? $t('outlets.deactivate') : $t('outlets.activate') }}
+                </button>
+                <button
+                  class="btn btn-sm btn-secondary"
+                  :title="$t('outlets.resetAccessCode')"
+                  @click="resetAccess(outlet)"
+                >
+                  <i class="fas fa-key"></i>
                 </button>
                 <button class="btn btn-sm btn-secondary" @click="openEdit(outlet)">
                   <i class="fas fa-pen"></i>
@@ -74,7 +87,7 @@
             </td>
           </tr>
           <tr v-if="!outlets.length && !loading">
-            <td :colspan="canEdit ? 5 : 4" class="muted">{{ $t('outlets.empty') }}</td>
+            <td :colspan="canEdit ? 6 : 5" class="muted">{{ $t('outlets.empty') }}</td>
           </tr>
         </tbody>
       </table>
@@ -289,6 +302,20 @@ async function save() {
     modalError.value = flattenError(err)
   } finally {
     saving.value = false
+  }
+}
+
+async function resetAccess(outlet) {
+  error.value = ''
+  try {
+    const res = await outletApi.resetAccess(outlet.outlet_id)
+    success.value = t('outlets.accessCodeReset', {
+      name: outlet.name,
+      code: res.data.access_code,
+    })
+    await load()
+  } catch (err) {
+    error.value = flattenError(err)
   }
 }
 

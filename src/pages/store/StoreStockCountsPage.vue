@@ -198,6 +198,7 @@ import CalendarInput from '@/components/CalendarInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useCategoriesStore } from '@/stores/categories'
 import { useWorkingDateStore } from '@/stores/workingDate'
+import { selectedOutlet } from '@/composables/useOutletContext'
 import { useClientTable } from '@/composables/useClientTable.js'
 import { useTenantCurrency } from '@/utils/currency'
 import '@/pages/store/store-shared.css'
@@ -210,6 +211,8 @@ const categoriesStore = useCategoriesStore()
 const workingDateStore = useWorkingDateStore()
 const businessDate = ref('')
 const loadedDate = ref('')
+/** The selected counter's shelf; every count sheet belongs to one shelf. */
+const shelfId = computed(() => selectedOutlet.value?.stock_department?.department_id || undefined)
 const isCurrentDay = computed(() => !businessDate.value || businessDate.value === workingDateStore.workingDate)
 const catFilter = ref('')
 const categoryOptions = computed(() => categoriesStore.inventoryCategoryOptions)
@@ -314,7 +317,7 @@ async function load() {
   loading.value = true
   try {
     const date = businessDate.value
-    const res = await inventoryOpsApi.stockTakes({ per_page: 50, date })
+    const res = await inventoryOpsApi.stockTakes({ per_page: 50, date, department_id: shelfId.value })
     takes.value = res.data.takes || []
     loadedDate.value = date
     // Resume an open sheet only on the current business day. An earlier date
@@ -328,7 +331,10 @@ async function load() {
 async function startCount() {
   formError.value = ''
   try {
-    const res = await inventoryOpsApi.openStockTake({ business_date: businessDate.value })
+    const res = await inventoryOpsApi.openStockTake({
+      business_date: businessDate.value,
+      department_id: shelfId.value,
+    })
     activeTake.value = res.data.take
     dirty.value = false
     await load()
@@ -407,6 +413,15 @@ watch(businessDate, async (date) => {
   if (!date || date === loadedDate.value) return
   if (activeTake.value && dirty.value) {
     try { await saveCounts(false) } catch { /* leave the selected date to load */ }
+  }
+  activeTake.value = null
+  itemQ.value = ''
+  sheetTab.value = 'all'
+  await load()
+})
+watch(() => selectedOutlet.value?.outlet_id, async () => {
+  if (activeTake.value && dirty.value) {
+    try { await saveCounts(false) } catch { /* switch to the new counter anyway */ }
   }
   activeTake.value = null
   itemQ.value = ''

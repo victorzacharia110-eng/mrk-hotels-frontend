@@ -52,6 +52,24 @@ describe('outlet context', () => {
     expect(useOutletContext().roleCanSelectOutlet(undefined)).toBe(false)
   })
 
+  it('keeps store outlets out of the till but visible to inventory', async () => {
+    const ctx = useOutletContext()
+    outletIndex.mockResolvedValue({
+      data: {
+        outlets: [
+          ...OUTLETS.outlets,
+          { outlet_id: 'out-store', name: 'Store A', type: 'store' },
+        ],
+      },
+    })
+
+    await ctx.loadOutlets({ sellingOnly: true })
+    expect(ctx.outlets.value.map((o) => o.outlet_id)).toEqual(['out-brand', 'out-bar'])
+
+    await ctx.loadOutlets()
+    expect(ctx.outlets.value.map((o) => o.outlet_id)).toContain('out-store')
+  })
+
   it('treats a single-outlet property as no choice to offer', async () => {
     const ctx = useOutletContext()
     outletIndex.mockResolvedValue({ data: { outlets: [OUTLETS.outlets[0]] } })

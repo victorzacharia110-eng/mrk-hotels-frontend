@@ -1980,6 +1980,39 @@ export const outletApi = {
     return api.post(`${v1}/outlets`, data);
   },
   /**
+   * Creates the selling point the cashier is standing at during login.
+   * @param {object} data - Selling point payload (name, type).
+   * @returns {Promise} Axios response with the outlet and one-time access code.
+   */
+  storeSellingPoint(data) {
+    return api.post(`${v1}/outlets/selling-points`, data);
+  },
+  /**
+   * Verifies the access code before the cashier can work in an outlet.
+   * @param {string|number} id - Outlet identifier.
+   * @param {object} data - { access_code }.
+   * @returns {Promise} Axios response with the unlocked outlet.
+   */
+  verifyAccess(id, data) {
+    return api.post(`${v1}/outlets/${id}/verify-access`, data);
+  },
+  /**
+   * Gives a legacy counter its first default access code.
+   * @param {string|number} id - Outlet identifier.
+   * @returns {Promise} Axios response with the one-time access code.
+   */
+  claimAccess(id) {
+    return api.post(`${v1}/outlets/${id}/claim-access`);
+  },
+  /**
+   * Issues a new access code for a counter. Managers only.
+   * @param {string|number} id - Outlet identifier.
+   * @returns {Promise} Axios response with the one-time access code.
+   */
+  resetAccess(id) {
+    return api.post(`${v1}/outlets/${id}/reset-access`);
+  },
+  /**
    * Updates an outlet.
    * @param {string|number} id - Outlet identifier.
    * @param {object} data - Fields to update.

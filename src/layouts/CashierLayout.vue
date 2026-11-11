@@ -1,8 +1,8 @@
 <!--
   CashierLayout — dedicated point-of-sale panel for the cashier role.
   Dark sidebar with the POS sections (Ordering / Order Summary / Manager),
-  top bar carrying the working date, the outlet selector and the Waiter
-  Assignment shortcut. On first entry the outlet gate forces a choice
+  top bar carrying the outlet selector and the profile menu at the far end.
+  On first entry the outlet gate forces a choice
   between the property's outlets (e.g. "Brand Hotel" vs "BAR OUT").
 -->
 
@@ -205,13 +205,16 @@
             <i class="fas fa-bars" aria-hidden="true"></i>
           </button>
           <h1 class="pos-page-title">{{ pageTitle }}</h1>
+        </div>
+        <div class="pos-topbar-sub">
+          <button v-if="selectedOutlet" class="pos-outlet-select" @click="switchOutlet"
+            :title="$t('cashier.topbar.switchOutlet')">
+            <i class="fas fa-store" aria-hidden="true"></i> {{ selectedOutlet.name }}
+            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+          </button>
           <div class="sm-user" style="position: relative;">
             <button type="button" class="sm-user-trigger" @click="toggleProfile" aria-haspopup="true" :aria-expanded="profileOpen">
               <span class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
-              <span class="sm-user-meta">
-                <strong>{{ authStore.user?.name }}</strong>
-              </span>
-              <i class="fas fa-chevron-down" aria-hidden="true"></i>
             </button>
             <div v-if="profileOpen" class="sm-profile-backdrop" @click="closeProfile"></div>
             <div v-if="profileOpen" class="sm-profile-panel">
@@ -245,14 +248,6 @@
             </div>
           </div>
         </div>
-        <div class="pos-topbar-sub">
-          <span class="pos-working-date"><i class="fas fa-calendar-day" aria-hidden="true"></i> {{ workingDate }}</span>
-          <button v-if="selectedOutlet" class="pos-outlet-select" @click="switchOutlet"
-            :title="$t('cashier.topbar.switchOutlet')">
-            <i class="fas fa-store" aria-hidden="true"></i> {{ selectedOutlet.name }}
-            <i class="fas fa-chevron-down" aria-hidden="true"></i>
-          </button>
-        </div>
       </header>
 
       <main class="pos-content" id="main-content">
@@ -260,22 +255,154 @@
       </main>
     </div>
 
-    <!-- Outlet gate: blocks the panel until an outlet is picked. -->
+    <!-- Outlet gate: pick the selling-point type first, then the exact counter
+         when a property runs more than one bar or restaurant. Each counter owns
+         its own stock shelf, so the second step is what scopes the whole panel.
+         The gate always opens after login, even for a single outlet, and asks
+         for that counter's access code before the cashier can start working. -->
     <div v-if="gateOpen" class="sm-modal-backdrop">
       <div class="sm-modal" role="dialog" aria-modal="true">
         <div class="sm-modal-head">
-          <h3><i class="fas fa-store" aria-hidden="true"></i> {{ $t('cashier.outletGate.title') }}</h3>
+          <button v-if="canGoBack" type="button" class="gate-back" @click="goBack">
+            <i class="fas fa-arrow-left" aria-hidden="true"></i>
+            <span>{{ $t('cashier.outletGate.back') }}</span>
+          </button>
+          <h3>
+            <i :class="gateTitleIcon" aria-hidden="true"></i>
+            {{ gateTitle }}
+          </h3>
         </div>
-        <p class="gate-hint">{{ $t('cashier.outletGate.hint', { hotel: hotelName }) }}</p>
-        <div class="outlet-gate-list">
-          <button v-for="outlet in outlets" :key="outlet.outlet_id" class="outlet-option"
-            @click="chooseOutlet(outlet)">
-            <span class="ico"><i :class="outlet.type === 'bar' ? 'fas fa-martini-glass-citrus' : 'fas fa-utensils'"
-              aria-hidden="true"></i></span>
-            <span>
-              <strong>{{ outlet.name }}</strong>
-              <small>{{ outlet.type === 'bar' ? $t('cashier.outletGate.barType') : $t('cashier.outletGate.restaurantType') }}</small>
+
+        <p v-if="gateStep === 'type' || gateStep === 'point'" class="gate-hint">
+          {{ $t('cashier.outletGate.hint', { hotel: hotelName }) }}
+        </p>
+
+        <div v-if="gateStep === 'type'" class="outlet-gate-list">
+          <button v-for="group in outletTypeGroups" :key="group.type" class="outlet-option"
+            @click="chooseType(group)">
+            <span class="ico"><i :class="group.icon" aria-hidden="true"></i></span>
+            <span class="gate-option-copy">
+              <strong>{{ group.label }}</strong>
+              <small>{{ $t('cashier.outletGate.pointCount', { count: group.outlets.length }) }}</small>
             </span>
+            <i class="fas fa-chevron-right gate-option-arrow" aria-hidden="true"></i>
+          </button>
+
+          <div v-if="outletTypeGroups.length === 0" class="gate-empty">
+            <i class="fas fa-store-slash" aria-hidden="true"></i>
+            <p>{{ $t('cashier.outletGate.noCounters') }}</p>
+          </div>
+
+          <button type="button" class="gate-create-link" @click="startCreate">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+            {{ $t('cashier.outletGate.createSellingPoint') }}
+          </button>
+        </div>
+
+        <div v-else-if="gateStep === 'point'" class="outlet-gate-list">
+          <button v-for="outlet in gateOutlets" :key="outlet.outlet_id" class="outlet-option"
+            @click="beginUnlock(outlet)">
+            <span class="ico"><i :class="gateTypeIcon" aria-hidden="true"></i></span>
+            <span class="gate-option-copy">
+              <strong>{{ outlet.name }}</strong>
+              <small>
+                {{ outlet.stock_department?.name || $t('cashier.outletGate.noShelf') }}
+              </small>
+              <small v-if="outlet.created_by_name" class="gate-meta">
+                {{ $t('cashier.outletGate.createdByOn', {
+                  name: outlet.created_by_name,
+                  when: formatStamp(outlet.created_at),
+                }) }}
+              </small>
+            </span>
+            <i class="fas fa-chevron-right gate-option-arrow" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div v-else-if="gateStep === 'create'" class="gate-form">
+          <p class="gate-hint">{{ $t('cashier.outletGate.createHint') }}</p>
+          <label for="gate-counter-name">{{ $t('cashier.outletGate.nameLabel') }}</label>
+          <input id="gate-counter-name" v-model="createForm.name" type="text" maxlength="100"
+            :placeholder="$t('cashier.outletGate.namePlaceholder')" @keyup.enter="createSellingPoint" />
+          <label for="gate-counter-type">{{ $t('cashier.outletGate.typeLabel') }}</label>
+          <select id="gate-counter-type" v-model="createForm.type">
+            <option value="bar">{{ $t('cashier.outletGate.barType') }}</option>
+            <option value="restaurant">{{ $t('cashier.outletGate.restaurantType') }}</option>
+          </select>
+          <p v-if="gateError" class="gate-error">{{ gateError }}</p>
+          <button type="button" class="sm-btn" :disabled="gateBusy || !createForm.name.trim()"
+            @click="createSellingPoint">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+            {{ gateBusy ? $t('cashier.outletGate.creating') : $t('cashier.outletGate.createButton') }}
+          </button>
+        </div>
+
+        <div v-else-if="gateStep === 'unlock'" class="gate-form">
+          <div class="gate-counter">
+            <strong><i :class="gateTypeIcon" aria-hidden="true"></i> {{ pendingOutlet?.name }}</strong>
+            <small v-if="pendingOutlet?.created_by_name">
+              {{ $t('cashier.outletGate.createdByOn', {
+                name: pendingOutlet.created_by_name,
+                when: formatStamp(pendingOutlet.created_at),
+              }) }}
+            </small>
+          </div>
+
+          <template v-if="pendingOutlet?.has_access_code">
+            <p class="gate-hint">{{ $t('cashier.outletGate.accessHint') }}</p>
+            <label for="gate-access-code">{{ $t('cashier.outletGate.accessLabel') }}</label>
+            <input id="gate-access-code" v-model="accessCodeInput" type="password" maxlength="100"
+              autocomplete="off" :placeholder="$t('cashier.outletGate.accessPlaceholder')"
+              @keyup.enter="unlockCounter" />
+            <p v-if="gateError" class="gate-error">{{ gateError }}</p>
+            <button type="button" class="sm-btn" :disabled="gateBusy || !accessCodeInput.trim()"
+              @click="unlockCounter">
+              <i class="fas fa-lock-open" aria-hidden="true"></i>
+              {{ gateBusy ? $t('cashier.outletGate.unlocking') : $t('cashier.outletGate.unlockButton') }}
+            </button>
+          </template>
+
+          <template v-else>
+            <p class="gate-hint">{{ $t('cashier.outletGate.noCodeHint') }}</p>
+            <p v-if="gateError" class="gate-error">{{ gateError }}</p>
+            <button type="button" class="sm-btn" :disabled="gateBusy" @click="claimCounter">
+              <i class="fas fa-key" aria-hidden="true"></i>
+              {{ gateBusy ? $t('cashier.outletGate.creatingCode') : $t('cashier.outletGate.createDefaultCode') }}
+            </button>
+          </template>
+        </div>
+
+        <div v-else-if="gateStep === 'code'" class="gate-form">
+          <p class="gate-hint">{{ $t('cashier.outletGate.codeOnceHint') }}</p>
+          <div class="gate-code" role="status">{{ createdCode }}</div>
+          <p class="gate-hint">{{ $t('cashier.outletGate.codeSaveHint') }}</p>
+          <button type="button" class="sm-btn" @click="continueAfterCode">
+            <i class="fas fa-check" aria-hidden="true"></i>
+            {{ $t('cashier.outletGate.codeContinue') }}
+          </button>
+        </div>
+
+        <div v-else-if="gateStep === 'duplicate'" class="gate-form">
+          <p class="gate-hint">
+            {{ $t('cashier.outletGate.duplicateHint', {
+              name: duplicateOutlet?.created_by_name || '—',
+              when: formatStamp(duplicateOutlet?.created_at),
+            }) }}
+          </p>
+          <div class="gate-counter">
+            <strong><i class="fas fa-store" aria-hidden="true"></i> {{ duplicateOutlet?.name }}</strong>
+            <small v-if="duplicateOutlet?.stock_department?.name">
+              {{ duplicateOutlet.stock_department.name }}
+            </small>
+          </div>
+          <p v-if="gateError" class="gate-error">{{ gateError }}</p>
+          <button type="button" class="sm-btn" @click="beginUnlock(duplicateOutlet)">
+            <i class="fas fa-lock-open" aria-hidden="true"></i>
+            {{ $t('cashier.outletGate.openExisting') }}
+          </button>
+          <button type="button" class="sm-btn ghost" @click="startCreate">
+            <i class="fas fa-pen" aria-hidden="true"></i>
+            {{ $t('cashier.outletGate.tryAnotherName') }}
           </button>
         </div>
       </div>
@@ -294,9 +421,10 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { outletApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { selectedOutlet } from '@/pages/cashier/outlet-context'
@@ -307,7 +435,7 @@ import DayCloseReminderModal from '@/components/cashier/DayCloseReminderModal.vu
 
 const route = useRoute()
 const router = useRouter()
-const { t, d, locale } = useI18n()
+const { t, locale } = useI18n()
 const authStore = useAuthStore()
 
 const workingDateStore = useWorkingDateStore()
@@ -317,6 +445,15 @@ const themeStore = useThemeStore()
 // the same list rather than keeping a private copy that could disagree with it.
 const { outlets, loadOutlets: loadOutletList, selectOutlet } = useOutletContext()
 const gateOpen = ref(false)
+const gateStep = ref('type')
+const gateType = ref('')
+const pendingOutlet = ref(null)
+const duplicateOutlet = ref(null)
+const accessCodeInput = ref('')
+const createdCode = ref('')
+const gateError = ref('')
+const gateBusy = ref(false)
+const createForm = reactive({ name: '', type: 'bar' })
 const sidebarCollapsed = ref(true)
 const mobileOpen = ref(false)
 // Accordion groups in the sidebar are exclusive: opening one smoothly closes
@@ -411,28 +548,223 @@ const userInitials = computed(() => {
   return (authStore.user?.user_role || 'CS').slice(0, 2).toUpperCase()
 })
 const hotelName = computed(() => authStore.tenant?.hotel_name || '')
-/** The panel's working date is the hotel's open business day (Day Close). */
-const workingDate = computed(() => d(new Date(workingDateStore.workingDate + 'T12:00:00'), 'long'))
+
+const OUTLET_TYPE_META = {
+  bar: { icon: 'fas fa-martini-glass-citrus', labelKey: 'cashier.outletGate.barType' },
+  restaurant: { icon: 'fas fa-utensils', labelKey: 'cashier.outletGate.restaurantType' },
+  laundry: { icon: 'fas fa-shirt', labelKey: 'outlets.typeLaundry' },
+  swimming: { icon: 'fas fa-person-swimming', labelKey: 'outlets.typeSwimming' },
+  spa: { icon: 'fas fa-spa', labelKey: 'outlets.typeSpa' },
+  kitchen: { icon: 'fas fa-kitchen-set', labelKey: 'outlets.typeKitchen' },
+  store: { icon: 'fas fa-warehouse', labelKey: 'outlets.typeStore' },
+  other: { icon: 'fas fa-store', labelKey: 'outlets.typeOther' },
+}
+
+function outletTypeMeta(type) {
+  return OUTLET_TYPE_META[String(type || 'other').toLowerCase()] || OUTLET_TYPE_META.other
+}
+
+const outletTypeGroups = computed(() => {
+  const groups = new Map()
+  for (const outlet of outlets.value) {
+    const type = String(outlet.type || 'other').toLowerCase()
+    if (!groups.has(type)) groups.set(type, [])
+    groups.get(type).push(outlet)
+  }
+  return [...groups.entries()]
+    .map(([type, list]) => ({
+      type,
+      outlets: list,
+      icon: outletTypeMeta(type).icon,
+      label: t(outletTypeMeta(type).labelKey),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+})
+
+const gateOutlets = computed(
+  () => outletTypeGroups.value.find((group) => group.type === gateType.value)?.outlets || [],
+)
+const gateTypeLabel = computed(
+  () => outletTypeGroups.value.find((group) => group.type === gateType.value)?.label || '',
+)
+const gateTypeIcon = computed(() => outletTypeMeta(gateType.value).icon)
+const gateTitle = computed(() => {
+  if (gateStep.value === 'type') return t('cashier.outletGate.chooseType')
+  if (gateStep.value === 'point') return t('cashier.outletGate.choosePoint', { type: gateTypeLabel.value })
+  if (gateStep.value === 'create') return t('cashier.outletGate.createTitle')
+  if (gateStep.value === 'unlock') return t('cashier.outletGate.accessTitle')
+  if (gateStep.value === 'code') return t('cashier.outletGate.codeOnceTitle')
+  return t('cashier.outletGate.duplicateTitle')
+})
+const gateTitleIcon = computed(() => {
+  if (gateStep.value === 'type') return 'fas fa-store'
+  if (gateStep.value === 'create') return 'fas fa-plus'
+  if (gateStep.value === 'unlock') return 'fas fa-lock'
+  if (gateStep.value === 'code') return 'fas fa-key'
+  if (gateStep.value === 'duplicate') return 'fas fa-triangle-exclamation'
+  return gateTypeIcon.value
+})
+const canGoBack = computed(
+  () => gateStep.value !== 'type' && gateStep.value !== 'code',
+)
+
+/** Formats the creator timestamp the same way in the gate and duplicate view. */
+function formatStamp(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Intl.DateTimeFormat(locale.value, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date)
+}
 
 function isActive(to) {
   return route.path.startsWith(to)
 }
 
-/** Loads outlets and opens the gate when the cashier has not picked one. */
+/** Loads outlets and always opens the gate after login, even with one outlet. */
 async function loadOutlets() {
   await loadOutletList({ sellingOnly: true })
-  // Nothing to confirm when the property has no active outlet; otherwise the
-  // cashier always confirms the outlet on login, even a single-outlet one.
-  if (outlets.value.length === 0) return
-  if (!selectedOutlet.value) gateOpen.value = true
+  resetGate()
+  gateOpen.value = true
 }
 
-function chooseOutlet(outlet) {
+function resetGate() {
+  gateStep.value = 'type'
+  gateType.value = ''
+  pendingOutlet.value = null
+  duplicateOutlet.value = null
+  accessCodeInput.value = ''
+  createdCode.value = ''
+  gateError.value = ''
+  createForm.name = ''
+  createForm.type = 'bar'
+}
+
+function rememberOutlet(outlet) {
+  if (!outlet?.outlet_id) return
+  const exists = outlets.value.some((row) => row.outlet_id === outlet.outlet_id)
+  const next = exists
+    ? outlets.value.map((row) => (row.outlet_id === outlet.outlet_id ? { ...row, ...outlet } : row))
+    : [...outlets.value, outlet]
+  outlets.value = next.sort((a, b) => a.name.localeCompare(b.name))
+}
+
+function applyOutlet(outlet) {
+  rememberOutlet(outlet)
   selectOutlet(outlet)
   gateOpen.value = false
+  resetGate()
+}
+
+function chooseType(group) {
+  gateType.value = group.type
+  // A type with one selling point needs no second screen; a type with two or
+  // more (Bar A / Bar B) opens the exact-counter list.
+  if (group.outlets.length === 1) {
+    beginUnlock(group.outlets[0])
+    return
+  }
+  gateStep.value = 'point'
+}
+
+function beginUnlock(outlet) {
+  if (!outlet) return
+  pendingOutlet.value = outlet
+  duplicateOutlet.value = null
+  accessCodeInput.value = ''
+  gateError.value = ''
+  gateStep.value = 'unlock'
+}
+
+async function unlockCounter() {
+  if (!pendingOutlet.value || !accessCodeInput.value.trim()) return
+  gateBusy.value = true
+  gateError.value = ''
+  try {
+    const { data } = await outletApi.verifyAccess(pendingOutlet.value.outlet_id, {
+      access_code: accessCodeInput.value.trim(),
+    })
+    applyOutlet(data.outlet || pendingOutlet.value)
+  } catch (error) {
+    gateError.value = error.response?.data?.message || t('cashier.outletGate.invalidCode')
+  } finally {
+    gateBusy.value = false
+  }
+}
+
+async function claimCounter() {
+  if (!pendingOutlet.value) return
+  gateBusy.value = true
+  gateError.value = ''
+  try {
+    const { data } = await outletApi.claimAccess(pendingOutlet.value.outlet_id)
+    pendingOutlet.value = data.outlet || pendingOutlet.value
+    createdCode.value = data.access_code
+    gateStep.value = 'code'
+  } catch (error) {
+    gateError.value = error.response?.data?.message || t('cashier.outletGate.claimFailed')
+  } finally {
+    gateBusy.value = false
+  }
+}
+
+function startCreate() {
+  duplicateOutlet.value = null
+  gateError.value = ''
+  createForm.name = ''
+  createForm.type = gateType.value === 'restaurant' ? 'restaurant' : 'bar'
+  gateStep.value = 'create'
+}
+
+async function createSellingPoint() {
+  const name = createForm.name.trim()
+  if (!name) return
+  gateBusy.value = true
+  gateError.value = ''
+  try {
+    const { data } = await outletApi.storeSellingPoint({ name, type: createForm.type })
+    pendingOutlet.value = data.outlet
+    createdCode.value = data.access_code
+    gateStep.value = 'code'
+  } catch (error) {
+    const existing = error.response?.data?.existing
+    if (existing) {
+      duplicateOutlet.value = existing
+      gateError.value = ''
+      gateStep.value = 'duplicate'
+    } else {
+      gateError.value = error.response?.data?.message || t('cashier.outletGate.createFailed')
+    }
+  } finally {
+    gateBusy.value = false
+  }
+}
+
+function continueAfterCode() {
+  if (pendingOutlet.value) applyOutlet(pendingOutlet.value)
+}
+
+function goBack() {
+  if (gateStep.value === 'point' || gateStep.value === 'create') {
+    gateStep.value = 'type'
+    gateType.value = ''
+    gateError.value = ''
+    return
+  }
+  if (gateStep.value === 'unlock') {
+    gateStep.value = gateType.value ? 'point' : 'type'
+    gateError.value = ''
+    return
+  }
+  if (gateStep.value === 'duplicate') {
+    startCreate()
+  }
 }
 
 function switchOutlet() {
+  resetGate()
   gateOpen.value = true
 }
 
@@ -603,11 +935,12 @@ onMounted(() => {
 .pos-topbar-sub {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 12px;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 .pos-page-title { font-size: 18px; font-weight: 700; margin: 0; flex: 1; color: var(--mrk-charcoal); }
-.pos-working-date { font-size: 13px; color: #64748b; display: inline-flex; align-items: center; gap: 7px; }
 .pos-outlet-select {
   display: inline-flex; align-items: center; gap: 9px;
   background: var(--mrk-blue-pale); color: var(--mrk-blue-deep);
@@ -630,22 +963,14 @@ onMounted(() => {
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 14px;
 }
-.sm-user-meta { display: flex; flex-direction: column; line-height: 1.2; }
-.sm-user-meta strong { font-size: 14px; color: var(--mrk-charcoal); }
-.sm-user-meta small { color: #64748b; font-size: 12px; }
-
 .sm-user-trigger {
   display: flex;
   align-items: center;
-  gap: 10px;
   background: none;
   border: none;
+  padding: 0;
   cursor: pointer;
   font-family: inherit;
-}
-.sm-user-trigger i {
-  color: #64748b;
-  font-size: 12px;
 }
 .sm-profile-backdrop {
   position: fixed;
@@ -763,6 +1088,55 @@ html[data-theme='dark'] .sm-lang-btn.active {
 }
 .pos-content { flex: 1; min-height: 0; overflow-y: auto; padding: 24px; }
 .gate-hint { color: #64748b; font-size: 13px; margin: 4px 0 16px; }
+.gate-back {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 0; background: transparent; color: #64748b;
+  font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+  padding: 0; margin-bottom: 8px;
+}
+.gate-back:hover { color: var(--mrk-blue-deep); }
+.gate-option-copy { flex: 1; min-width: 0; }
+.gate-option-copy small { display: block; margin-top: 2px; }
+.gate-option-copy .gate-meta { color: #94a3b8; font-size: 11.5px; }
+.gate-option-arrow { color: #94a3b8; font-size: 12px; }
+.gate-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 22px 16px; border: 1px dashed #cbd5e1; border-radius: 14px;
+  color: #64748b; text-align: center; font-size: 13px;
+}
+.gate-empty i { font-size: 22px; color: var(--mrk-blue); }
+.gate-empty p { margin: 0; }
+.gate-create-link {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px dashed var(--mrk-blue); background: transparent; color: var(--mrk-blue);
+  border-radius: 12px; padding: 12px 16px; font: inherit; font-size: 13px;
+  font-weight: 700; cursor: pointer; margin-top: 2px;
+}
+.gate-create-link:hover { background: var(--mrk-blue-pale); }
+.gate-form { display: flex; flex-direction: column; gap: 9px; }
+.gate-form label { font-size: 12px; font-weight: 700; color: var(--mrk-charcoal); }
+.gate-form input,
+.gate-form select {
+  width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 10px;
+  padding: 10px 12px; font: inherit; font-size: 14px; color: var(--mrk-charcoal);
+  background: #fff;
+}
+.gate-form input:focus,
+.gate-form select:focus { outline: 2px solid var(--mrk-blue-tint); border-color: var(--mrk-blue); }
+.gate-form .sm-btn { justify-content: center; margin-top: 4px; }
+.gate-error { margin: 0; color: #b91c1c; font-size: 12.5px; font-weight: 600; }
+.gate-counter {
+  display: flex; flex-direction: column; gap: 3px;
+  background: var(--mrk-blue-pale); border-radius: 12px; padding: 12px 14px;
+}
+.gate-counter strong { display: flex; align-items: center; gap: 8px; color: var(--mrk-blue-deep); }
+.gate-counter small { color: #64748b; font-size: 12px; }
+.gate-code {
+  border: 1px dashed var(--mrk-blue); background: #fff; border-radius: 12px;
+  padding: 16px; text-align: center; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 20px; font-weight: 700; letter-spacing: 0.08em; color: var(--mrk-blue-deep);
+  word-break: break-all;
+}
 .pos-backdrop { display: none; }
 @media (max-width: 900px) {
   .pos-sidebar {
@@ -784,11 +1158,10 @@ html[data-theme='dark'] .sm-lang-btn.active {
     z-index: 55;
     background: rgba(33, 33, 33, 0.5);
   }
-  .sm-user-meta { display: none; }
   .pos-page-title { font-size: 16px; }
 
-  /* Header collapses into two tidy rows: title/identity above, then the
-     working controls (date · outlet · waiter assignment) below. */
+  /* Header collapses into two tidy rows: title above, then the outlet and
+     profile controls below. */
   .pos-topbar {
     flex-wrap: wrap;
     gap: 8px 12px;
@@ -807,9 +1180,11 @@ html[data-theme='dark'] .sm-lang-btn.active {
   .pos-topbar-sub {
     flex: 1 1 100%;
     gap: 10px;
+    justify-content: space-between;
   }
-  .pos-working-date { font-size: 12px; }
   .pos-outlet-select {
+    flex: 1 1 auto;
+    min-width: 0;
     padding: 6px 12px;
     font-size: 12px;
     max-width: 100%;
@@ -825,10 +1200,5 @@ html[data-theme='dark'] .sm-lang-btn.active {
 @media (max-width: 480px) {
   .pos-topbar { padding: 10px 12px; }
   .pos-collapse { width: 32px; height: 32px; }
-  .pos-working-date {
-    flex: 1 1 100%;
-    font-size: 12px;
-  }
-  .pos-topbar-sub > * { flex: 1 1 auto; justify-content: center; }
 }
 </style>
