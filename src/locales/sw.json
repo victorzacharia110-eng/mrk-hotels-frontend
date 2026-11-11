@@ -6142,7 +6142,12 @@
     "choosePlaceholder": "Chagua kituo",
     "gateTitle": "Chagua kituo chako",
     "gateHint": "Chagua kituo unachotaka kufanyia kazi. Oda, hisa, marekebisho na ripoti zitafuata kituo hiki.",
-    "gateEmpty": "Hakuna vituo vilivyopo bado. Muulize meneja kuunda duka au kaunta kwanza."
+    "gateEmpty": "Hakuna vituo vilivyopo bado. Muulize meneja kuunda duka au kaunta kwanza.",
+    "gateChooseType": "Chagua aina ya kituo",
+    "gateChoosePoint": "Chagua {type} ipi?",
+    "gatePointCount": "Vituo {count}",
+    "gateBack": "Rudi",
+    "gateNoShelf": "Hakuna rafi ya stock iliyowekwa"
   },
   "menuAudit": {
     "title": "Shughuli za Menyu",

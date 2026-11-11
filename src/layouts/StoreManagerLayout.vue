@@ -66,7 +66,9 @@
               @change="onOutletChange($event.target.value)"
             >
               <option value="">{{ $t('outlet.choosePlaceholder') }}</option>
-              <option v-for="o in outlets" :key="o.outlet_id" :value="o.outlet_id">{{ o.name }}</option>
+              <optgroup v-for="group in outletTypeGroups" :key="group.type" :label="group.label">
+                <option v-for="o in group.outlets" :key="o.outlet_id" :value="o.outlet_id">{{ o.name }}</option>
+              </optgroup>
             </select>
           </div>
           <button class="sm-icon-btn sm-notif-bell" :title="$t('notifications.title')"
@@ -186,19 +188,34 @@
     <div v-if="outletGateOpen" class="sm-modal-backdrop">
       <div class="sm-modal" role="dialog" aria-modal="true">
         <div class="sm-modal-head">
-          <h3><i class="fas fa-store" aria-hidden="true"></i> {{ $t('outlet.gateTitle') }}</h3>
+          <h3><i :class="gateTitleIcon" aria-hidden="true"></i> {{ gateTitle }}</h3>
+          <button v-if="gateStep === 'point'" type="button" class="sm-gate-back" @click="gateStep = 'type'">
+            <i class="fas fa-arrow-left" aria-hidden="true"></i>
+            {{ $t('outlet.gateBack') }}
+          </button>
         </div>
         <p class="sm-gate-hint">{{ $t('outlet.gateHint') }}</p>
-        <div class="sm-outlet-gate-list">
-          <button v-for="o in outlets" :key="o.outlet_id" type="button" class="sm-outlet-option"
-            @click="chooseOutlet(o)">
-            <i class="fas fa-store" aria-hidden="true"></i>
+        <div v-if="gateStep === 'type'" class="sm-outlet-gate-list">
+          <button v-for="group in outletTypeGroups" :key="group.type" type="button" class="sm-outlet-option"
+            @click="chooseType(group)">
+            <i :class="group.icon" aria-hidden="true"></i>
             <span>
-              <strong>{{ o.name }}</strong>
-              <small v-if="o.type">{{ o.type }}</small>
+              <strong>{{ group.label }}</strong>
+              <small>{{ $t('outlet.gatePointCount', { count: group.outlets.length }) }}</small>
             </span>
+            <i class="fas fa-chevron-right sm-gate-arrow" aria-hidden="true"></i>
           </button>
           <p v-if="outlets.length === 0" class="sm-gate-hint">{{ $t('outlet.gateEmpty') }}</p>
+        </div>
+        <div v-else class="sm-outlet-gate-list">
+          <button v-for="o in gateOutlets" :key="o.outlet_id" type="button" class="sm-outlet-option"
+            @click="chooseOutlet(o)">
+            <i :class="gateTypeIcon" aria-hidden="true"></i>
+            <span>
+              <strong>{{ o.name }}</strong>
+              <small>{{ o.stock_department?.name || $t('outlet.gateNoShelf') }}</small>
+            </span>
+          </button>
         </div>
       </div>
     </div>
@@ -238,6 +255,55 @@ const {
 
 const showOutletPicker = computed(() => hasChoice.value && roleCanSelectOutlet(authStore.user?.user_role))
 const outletGateOpen = ref(false)
+const gateStep = ref('type')
+const gateType = ref('')
+
+const OUTLET_TYPE_META = {
+  bar: { icon: 'fas fa-martini-glass-citrus', labelKey: 'outlets.typeBar' },
+  restaurant: { icon: 'fas fa-utensils', labelKey: 'outlets.typeRestaurant' },
+  laundry: { icon: 'fas fa-shirt', labelKey: 'outlets.typeLaundry' },
+  swimming: { icon: 'fas fa-person-swimming', labelKey: 'outlets.typeSwimming' },
+  spa: { icon: 'fas fa-spa', labelKey: 'outlets.typeSpa' },
+  kitchen: { icon: 'fas fa-kitchen-set', labelKey: 'outlets.typeKitchen' },
+  store: { icon: 'fas fa-warehouse', labelKey: 'outlets.typeStore' },
+  other: { icon: 'fas fa-store', labelKey: 'outlets.typeOther' },
+}
+
+function outletTypeMeta(type) {
+  return OUTLET_TYPE_META[String(type || 'other').toLowerCase()] || OUTLET_TYPE_META.other
+}
+
+const outletTypeGroups = computed(() => {
+  const groups = new Map()
+  for (const outlet of outlets.value) {
+    const type = String(outlet.type || 'other').toLowerCase()
+    if (!groups.has(type)) groups.set(type, [])
+    groups.get(type).push(outlet)
+  }
+  return [...groups.entries()]
+    .map(([type, list]) => ({
+      type,
+      outlets: list,
+      icon: outletTypeMeta(type).icon,
+      label: t(outletTypeMeta(type).labelKey),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+})
+
+const gateOutlets = computed(
+  () => outletTypeGroups.value.find((group) => group.type === gateType.value)?.outlets || [],
+)
+const gateTypeLabel = computed(
+  () => outletTypeGroups.value.find((group) => group.type === gateType.value)?.label || '',
+)
+const gateTypeIcon = computed(() => outletTypeMeta(gateType.value).icon)
+const gateTitle = computed(() => {
+  if (gateStep.value === 'type') return t('outlet.gateChooseType')
+  return t('outlet.gateChoosePoint', { type: gateTypeLabel.value })
+})
+const gateTitleIcon = computed(() => (
+  gateStep.value === 'type' ? 'fas fa-store' : gateTypeIcon.value
+))
 
 /** Opens the picker on sign-in, even for a single outlet. */
 async function openOutletGateIfNeeded() {
@@ -245,7 +311,14 @@ async function openOutletGateIfNeeded() {
   if (!roleCanSelectOutlet(authStore.user?.user_role)) return
   // The inventory panel follows the same rule as the till: the manager confirms
   // the store/outlet they are working in before any stock figure is shown.
+  gateStep.value = 'type'
+  gateType.value = ''
   outletGateOpen.value = true
+}
+
+function chooseType(group) {
+  gateType.value = group.type
+  gateStep.value = 'point'
 }
 
 /** Confirms the outlet the user will work in and closes the gate. */
@@ -563,7 +636,12 @@ const DAY_CLOSE_ROLES = ['store_manager', 'cashier', 'bartender', 'waiter', 'hot
 .sm-outlet-option i { color: var(--sm-blue); font-size: 16px; }
 .sm-outlet-option span { display: flex; flex-direction: column; gap: 2px; }
 .sm-outlet-option strong { font-size: 14px; }
-.sm-outlet-option small { color: var(--sm-muted); font-size: 11.5px; font-weight: 500; text-transform: capitalize; }
+.sm-outlet-option small { color: var(--sm-muted); font-size: 11.5px; font-weight: 500; }
+.sm-gate-arrow { margin-left: auto; color: var(--sm-muted); font-size: 12px; }
+.sm-gate-back {
+  display: inline-flex; align-items: center; gap: 6px; border: 0; background: none;
+  color: var(--sm-blue); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
+}
 .sm-icon-btn {
   width: 38px; height: 38px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;

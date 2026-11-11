@@ -64,6 +64,10 @@ describe('store manager outlet gate', () => {
     const wrapper = await mountLayout()
 
     expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Store')
+
+    await wrapper.find('.sm-outlet-option').trigger('click')
+    await flushPromises()
     expect(wrapper.text()).toContain('Store A')
 
     await wrapper.find('.sm-outlet-option').trigger('click')
@@ -73,7 +77,7 @@ describe('store manager outlet gate', () => {
     expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(false)
   })
 
-  it('shows store outlets to the inventory user', async () => {
+  it('shows the exact store after choosing the Store outlet type', async () => {
     outletApi.index.mockResolvedValue({
       data: {
         outlets: [
@@ -86,7 +90,17 @@ describe('store manager outlet gate', () => {
 
     const wrapper = await mountLayout()
 
-    expect(wrapper.text()).toContain('Store A')
-    expect(wrapper.text()).toContain('Store B')
+    const gateList = wrapper.find('.sm-outlet-gate-list')
+    expect(gateList.text()).toContain('Bar')
+    expect(gateList.text()).toContain('Store')
+    expect(gateList.text()).not.toContain('Store A')
+
+    const storeType = gateList.findAll('.sm-outlet-option').find((button) => button.text().includes('Store'))
+    await storeType.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Which Store?')
+    expect(wrapper.find('.sm-outlet-gate-list').text()).toContain('Store A')
+    expect(wrapper.find('.sm-outlet-gate-list').text()).toContain('Store B')
   })
 })

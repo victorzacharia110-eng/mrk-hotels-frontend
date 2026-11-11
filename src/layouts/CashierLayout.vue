@@ -660,12 +660,8 @@ function applyOutlet(outlet) {
 
 function chooseType(group) {
   gateType.value = group.type
-  // A type with one selling point needs no second screen; a type with two or
-  // more (Bar A / Bar B) opens the exact-counter list.
-  if (group.outlets.length === 1) {
-    beginUnlock(group.outlets[0])
-    return
-  }
+  // Always show the exact counter, even when the type currently has one, so
+  // the cashier sees which bar/restaurant they are unlocking.
   gateStep.value = 'point'
 }
 

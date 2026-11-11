@@ -81,6 +81,9 @@ describe('cashier outlet gate', () => {
     expect(wrapper.text()).toContain('Choose a selling point')
 
     await wrapper.find('.outlet-option').trigger('click')
+    expect(wrapper.text()).toContain('Which Bar?')
+
+    await wrapper.find('.outlet-option').trigger('click')
     expect(wrapper.find('#gate-access-code').exists()).toBe(true)
 
     await wrapper.find('#gate-access-code').setValue('THB-BAR-1-ABC123')

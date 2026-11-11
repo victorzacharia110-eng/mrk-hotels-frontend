@@ -6140,7 +6140,12 @@
     "choosePlaceholder": "Choose an outlet",
     "gateTitle": "Select your outlet",
     "gateHint": "Choose the outlet you want to work in. Orders, stocks, adjustments and reports will follow this selection.",
-    "gateEmpty": "No outlets are available yet. Ask a manager to create the store or counter first."
+    "gateEmpty": "No outlets are available yet. Ask a manager to create the store or counter first.",
+    "gateChooseType": "Choose an outlet type",
+    "gateChoosePoint": "Which {type}?",
+    "gatePointCount": "{count} outlets",
+    "gateBack": "Back",
+    "gateNoShelf": "No stock shelf assigned"
   },
   "menuAudit": {
     "title": "Menu activity",
