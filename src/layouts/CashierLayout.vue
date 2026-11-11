@@ -383,7 +383,16 @@
 
         <div v-else-if="gateStep === 'code'" class="gate-form">
           <p class="gate-hint">{{ $t('cashier.outletGate.codeOnceHint') }}</p>
-          <div class="gate-code" role="status">{{ createdCode }}</div>
+          <div class="gate-code-wrap">
+            <div class="gate-code" role="status">{{ createdCode }}</div>
+            <button type="button" class="gate-code-copy"
+              :aria-label="$t('cashier.outletGate.copyCode')"
+              :title="$t('cashier.outletGate.copyCode')"
+              @click="copyCreatedCode">
+              <i :class="codeCopied ? 'fas fa-check' : 'fas fa-copy'" aria-hidden="true"></i>
+            </button>
+          </div>
+          <p v-if="codeCopied" class="gate-copied">{{ $t('cashier.outletGate.codeCopied') }}</p>
           <p class="gate-hint">{{ $t('cashier.outletGate.codeSaveHint') }}</p>
           <button type="button" class="sm-btn" @click="continueAfterCode">
             <i class="fas fa-check" aria-hidden="true"></i>
@@ -461,6 +470,7 @@ const duplicateOutlet = ref(null)
 const accessCodeInput = ref('')
 const showAccessCode = ref(false)
 const createdCode = ref('')
+const codeCopied = ref(false)
 const gateError = ref('')
 const gateBusy = ref(false)
 const createForm = reactive({ name: '', type: 'bar' })
@@ -648,6 +658,7 @@ function resetGate() {
   accessCodeInput.value = ''
   showAccessCode.value = false
   createdCode.value = ''
+  codeCopied.value = false
   gateError.value = ''
   createForm.name = ''
   createForm.type = 'bar'
@@ -710,6 +721,7 @@ async function claimCounter() {
     const { data } = await outletApi.claimAccess(pendingOutlet.value.outlet_id)
     pendingOutlet.value = data.outlet || pendingOutlet.value
     createdCode.value = data.access_code
+    codeCopied.value = false
     gateStep.value = 'code'
   } catch (error) {
     gateError.value = error.response?.data?.message || t('cashier.outletGate.claimFailed')
@@ -735,6 +747,7 @@ async function createSellingPoint() {
     const { data } = await outletApi.storeSellingPoint({ name, type: createForm.type })
     pendingOutlet.value = data.outlet
     createdCode.value = data.access_code
+    codeCopied.value = false
     gateStep.value = 'code'
   } catch (error) {
     const existing = error.response?.data?.existing
@@ -748,6 +761,29 @@ async function createSellingPoint() {
   } finally {
     gateBusy.value = false
   }
+}
+
+async function copyCreatedCode() {
+  if (!createdCode.value) return
+  try {
+    await navigator.clipboard.writeText(createdCode.value)
+  } catch {
+    const textarea = document.createElement('textarea')
+    textarea.value = createdCode.value
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.select()
+    try {
+      document.execCommand('copy')
+    } finally {
+      document.body.removeChild(textarea)
+    }
+  }
+  codeCopied.value = true
+  setTimeout(() => {
+    codeCopied.value = false
+  }, 1500)
 }
 
 function continueAfterCode() {
@@ -1148,12 +1184,21 @@ html[data-theme='dark'] .sm-lang-btn.active {
 }
 .gate-counter strong { display: flex; align-items: center; gap: 8px; color: var(--mrk-blue-deep); }
 .gate-counter small { color: #64748b; font-size: 12px; }
+.gate-code-wrap { position: relative; }
 .gate-code {
   border: 1px dashed var(--mrk-blue); background: #fff; border-radius: 12px;
-  padding: 16px; text-align: center; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 16px 48px; text-align: center; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 20px; font-weight: 700; letter-spacing: 0.08em; color: var(--mrk-blue-deep);
   word-break: break-all;
 }
+.gate-code-copy {
+  position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border: 0; border-radius: 8px;
+  background: transparent; color: #64748b; cursor: pointer;
+}
+.gate-code-copy:hover { background: var(--mrk-blue-pale); color: var(--mrk-blue); }
+.gate-copied { margin: 0; color: #15803d; font-size: 12.5px; font-weight: 600; }
 .pos-backdrop { display: none; }
 @media (max-width: 900px) {
   .pos-sidebar {

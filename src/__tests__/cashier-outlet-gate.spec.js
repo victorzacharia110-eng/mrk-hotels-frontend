@@ -124,6 +124,13 @@ describe('cashier outlet gate', () => {
     expect(outletApi.storeSellingPoint).toHaveBeenCalledWith({ name: 'Bar 1', type: 'bar' })
     expect(wrapper.find('.gate-code').text()).toBe('THB-BAR-1-NEW123')
 
+    const writeText = vi.fn().mockResolvedValue()
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    await wrapper.find('.gate-code-copy').trigger('click')
+    await flushPromises()
+    expect(writeText).toHaveBeenCalledWith('THB-BAR-1-NEW123')
+    expect(wrapper.text()).toContain('Access code copied')
+
     await buttonByText(wrapper, 'I saved it, continue').trigger('click')
     await flushPromises()
 

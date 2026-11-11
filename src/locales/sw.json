@@ -5358,6 +5358,8 @@
       "accessHint": "Weka msimbo ulioundwa kwa kaunta hii. Muulize meneja ikiwa umepotea.",
       "showCode": "Onyesha msimbo wa kuingia",
       "hideCode": "Ficha msimbo wa kuingia",
+      "copyCode": "Nakili msimbo wa kuingia",
+      "codeCopied": "Msimbo wa kuingia umenakiliwa",
       "unlockButton": "Fungua kaunta",
       "unlocking": "Inakagua...",
       "invalidCode": "Msimbo huo haulingani na kaunta hii.",

@@ -5763,6 +5763,8 @@
       "accessHint": "Enter the code created for this counter. Ask a manager if it was lost.",
       "showCode": "Show access code",
       "hideCode": "Hide access code",
+      "copyCode": "Copy access code",
+      "codeCopied": "Access code copied",
       "unlockButton": "Unlock counter",
       "unlocking": "Checking...",
       "invalidCode": "That access code does not match this counter.",
