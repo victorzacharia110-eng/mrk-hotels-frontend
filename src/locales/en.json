@@ -5761,6 +5761,8 @@
       "accessLabel": "Access code",
       "accessPlaceholder": "Enter the counter access code",
       "accessHint": "Enter the code created for this counter. Ask a manager if it was lost.",
+      "showCode": "Show access code",
+      "hideCode": "Hide access code",
       "unlockButton": "Unlock counter",
       "unlocking": "Checking...",
       "invalidCode": "That access code does not match this counter.",

@@ -85,6 +85,12 @@ describe('cashier outlet gate', () => {
 
     await wrapper.find('.outlet-option').trigger('click')
     expect(wrapper.find('#gate-access-code').exists()).toBe(true)
+    expect(wrapper.find('#gate-access-code').attributes('type')).toBe('password')
+
+    await wrapper.find('.gate-code-toggle').trigger('click')
+    expect(wrapper.find('#gate-access-code').attributes('type')).toBe('text')
+    await wrapper.find('.gate-code-toggle').trigger('click')
+    expect(wrapper.find('#gate-access-code').attributes('type')).toBe('password')
 
     await wrapper.find('#gate-access-code').setValue('THB-BAR-1-ABC123')
     await buttonByText(wrapper, 'Unlock counter').trigger('click')

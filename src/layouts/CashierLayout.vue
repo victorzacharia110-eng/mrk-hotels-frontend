@@ -351,9 +351,18 @@
           <template v-if="pendingOutlet?.has_access_code">
             <p class="gate-hint">{{ $t('cashier.outletGate.accessHint') }}</p>
             <label for="gate-access-code">{{ $t('cashier.outletGate.accessLabel') }}</label>
-            <input id="gate-access-code" v-model="accessCodeInput" type="password" maxlength="100"
-              autocomplete="off" :placeholder="$t('cashier.outletGate.accessPlaceholder')"
-              @keyup.enter="unlockCounter" />
+            <div class="gate-code-field">
+              <input id="gate-access-code" v-model="accessCodeInput" :type="showAccessCode ? 'text' : 'password'"
+                maxlength="100" autocomplete="off"
+                :placeholder="$t('cashier.outletGate.accessPlaceholder')"
+                @keyup.enter="unlockCounter" />
+              <button type="button" class="gate-code-toggle"
+                :aria-label="$t(showAccessCode ? 'cashier.outletGate.hideCode' : 'cashier.outletGate.showCode')"
+                :title="$t(showAccessCode ? 'cashier.outletGate.hideCode' : 'cashier.outletGate.showCode')"
+                @click="showAccessCode = !showAccessCode">
+                <i :class="showAccessCode ? 'fas fa-eye-slash' : 'fas fa-eye'" aria-hidden="true"></i>
+              </button>
+            </div>
             <p v-if="gateError" class="gate-error">{{ gateError }}</p>
             <button type="button" class="sm-btn" :disabled="gateBusy || !accessCodeInput.trim()"
               @click="unlockCounter">
@@ -450,6 +459,7 @@ const gateType = ref('')
 const pendingOutlet = ref(null)
 const duplicateOutlet = ref(null)
 const accessCodeInput = ref('')
+const showAccessCode = ref(false)
 const createdCode = ref('')
 const gateError = ref('')
 const gateBusy = ref(false)
@@ -636,6 +646,7 @@ function resetGate() {
   pendingOutlet.value = null
   duplicateOutlet.value = null
   accessCodeInput.value = ''
+  showAccessCode.value = false
   createdCode.value = ''
   gateError.value = ''
   createForm.name = ''
@@ -670,6 +681,7 @@ function beginUnlock(outlet) {
   pendingOutlet.value = outlet
   duplicateOutlet.value = null
   accessCodeInput.value = ''
+  showAccessCode.value = false
   gateError.value = ''
   gateStep.value = 'unlock'
 }
@@ -1119,6 +1131,15 @@ html[data-theme='dark'] .sm-lang-btn.active {
 }
 .gate-form input:focus,
 .gate-form select:focus { outline: 2px solid var(--mrk-blue-tint); border-color: var(--mrk-blue); }
+.gate-code-field { position: relative; }
+.gate-code-field input { padding-right: 42px; }
+.gate-code-toggle {
+  position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border: 0; border-radius: 8px;
+  background: transparent; color: #64748b; cursor: pointer;
+}
+.gate-code-toggle:hover { background: var(--mrk-blue-pale); color: var(--mrk-blue); }
 .gate-form .sm-btn { justify-content: center; margin-top: 4px; }
 .gate-error { margin: 0; color: #b91c1c; font-size: 12.5px; font-weight: 600; }
 .gate-counter {
