@@ -277,6 +277,12 @@
             {{ $t('outlet.gateBack') }}
           </button>
         </div>
+        <div class="sm-gate-foot">
+          <button type="button" class="sm-gate-logout" :disabled="gateBusy" @click="handleLogout">
+            <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+            {{ $t('common.logout') }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -603,6 +609,7 @@ function setLocale(lang) {
 }
 
 async function handleLogout() {
+  outletGateOpen.value = false
   await authStore.logout()
   router.push({ name: 'login' })
 }
@@ -810,6 +817,16 @@ const DAY_CLOSE_ROLES = ['store_manager', 'cashier', 'bartender', 'waiter', 'hot
   display: inline-flex; align-items: center; gap: 6px; border: 0; background: none;
   color: var(--sm-blue); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
 }
+.sm-gate-foot {
+  display: flex; justify-content: flex-end; margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid #e2e8f0;
+}
+.sm-gate-logout {
+  display: inline-flex; align-items: center; gap: 7px; border: 0; background: none;
+  color: var(--sm-muted); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.sm-gate-logout:hover { color: #b91c1c; }
+.sm-gate-logout:disabled { opacity: .6; cursor: not-allowed; }
 .sm-icon-btn {
   width: 38px; height: 38px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;

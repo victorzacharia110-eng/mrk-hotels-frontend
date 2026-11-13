@@ -423,6 +423,12 @@
             {{ $t('cashier.outletGate.tryAnotherName') }}
           </button>
         </div>
+        <div class="gate-foot">
+          <button type="button" class="gate-logout" :disabled="gateBusy" @click="handleLogout">
+            <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+            {{ $t('common.logout') }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -813,6 +819,7 @@ function switchOutlet() {
 }
 
 async function handleLogout() {
+  gateOpen.value = false
   await authStore.logout()
   router.push({ name: 'login' })
 }
@@ -1139,6 +1146,16 @@ html[data-theme='dark'] .sm-lang-btn.active {
   padding: 0; margin-bottom: 8px;
 }
 .gate-back:hover { color: var(--mrk-blue-deep); }
+.gate-foot {
+  display: flex; justify-content: flex-end; margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid #e2e8f0;
+}
+.gate-logout {
+  display: inline-flex; align-items: center; gap: 7px; border: 0; background: none;
+  color: #64748b; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.gate-logout:hover { color: #b91c1c; }
+.gate-logout:disabled { opacity: .6; cursor: not-allowed; }
 .gate-option-copy { flex: 1; min-width: 0; }
 .gate-option-copy small { display: block; margin-top: 2px; }
 .gate-option-copy .gate-meta { color: #94a3b8; font-size: 11.5px; }

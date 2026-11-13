@@ -640,6 +640,11 @@
             {{ gateBusy ? $t('outlet.gateCreatingStore') : $t('outlet.gateCreateStoreButton') }}
           </button>
         </div>
+        <div class="outlet-gate-foot">
+          <button type="button" class="outlet-gate-logout" :disabled="gateBusy" @click="handleLogout">
+            <i class="fas fa-right-from-bracket" aria-hidden="true"></i> {{ $t('common.logout') }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -1591,6 +1596,7 @@ watch(
  */
 async function handleLogout() {
   navOpen.value = false
+  outletGateOpen.value = false
   await authStore.logout()
   router.push('/')
 }
@@ -3504,6 +3510,27 @@ function formatNotifTime(iso) {
   font-weight: 700;
   cursor: pointer;
 }
+.outlet-gate-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #e2e8f0;
+}
+.outlet-gate-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  background: none;
+  color: #64748b;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.outlet-gate-logout:hover { color: #b91c1c; }
+.outlet-gate-logout:disabled { opacity: .6; cursor: not-allowed; }
 .outlet-gate-copy { display: flex; flex: 1; flex-direction: column; gap: 2px; }
 .outlet-gate-copy small { color: #64748b; font-size: 11.5px; font-weight: 500; }
 .outlet-gate-arrow { color: #94a3b8; font-size: 12px; }

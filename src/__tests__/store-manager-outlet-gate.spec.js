@@ -9,6 +9,7 @@ import StoreManagerLayout from '@/layouts/StoreManagerLayout.vue'
 
 vi.mock('@/api', () => ({
   outletApi: { index: vi.fn() },
+  authApi: { logout: vi.fn().mockResolvedValue({ data: {} }) },
   fbDayCloseApi: { index: vi.fn().mockResolvedValue({ data: {} }) },
   notificationApi: {
     unreadCount: vi.fn().mockResolvedValue({ data: {} }),
@@ -30,7 +31,10 @@ async function mountLayout() {
 
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/:pathMatch(.*)*', component: { template: '<div />' } }],
+    routes: [
+      { path: '/login', name: 'login', component: { template: '<div />' } },
+      { path: '/:pathMatch(.*)*', component: { template: '<div />' } },
+    ],
   })
   await router.push('/store-manager')
   await router.isReady()
@@ -126,6 +130,28 @@ describe('store manager outlet gate', () => {
     await flushPromises()
 
     expect(selectedStore.value.outlet_id).toBe('outlet-store-a')
+    expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(false)
+  })
+
+  it('lets the user log out while the outlet gate is open', async () => {
+    outletApi.index.mockResolvedValue({
+      data: {
+        outlets: [
+          store,
+          { outlet_id: 'outlet-bar', name: 'Bar 1', type: 'bar', is_active: true },
+        ],
+      },
+    })
+
+    const wrapper = await mountLayout()
+
+    expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(true)
+    const logout = wrapper.find('.sm-gate-logout')
+    expect(logout.exists()).toBe(true)
+
+    await logout.trigger('click')
+    await flushPromises()
+
     expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(false)
   })
 })
