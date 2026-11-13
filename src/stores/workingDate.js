@@ -58,6 +58,10 @@ export const useWorkingDateStore = defineStore('workingDate', () => {
   const unsettledOrdersCount = ref(0)
   const loading = ref(false)
   const loaded = ref(false)
+  // Layouts and pages often request the business date at the same time. Every
+  // caller must await this one request; returning early here would let a page
+  // initialize its calendar from the browser's wall-clock date instead.
+  let inflight = null
 
   /** The business date every cashier/bar/inventory panel should default to. */
   const workingDate = computed(() => openDate.value || today.value)
@@ -96,21 +100,28 @@ export const useWorkingDateStore = defineStore('workingDate', () => {
   }
 
   /** Fetches the open business date once; failures keep the local fallback. */
-  async function ensureLoaded() {
-    if (loaded.value || loading.value) return
+  function ensureLoaded() {
+    if (loaded.value) return Promise.resolve()
+    if (inflight) return inflight
+
     loading.value = true
-    try {
-      const { data } = await fbDayCloseApi.index()
-      openDate.value = data?.open_date || ''
-      timezone.value = data?.timezone || ''
-      runningOrdersCount.value = Number(data?.running_orders_count ?? 0)
-      unsettledOrdersCount.value = Number(data?.unsettled_orders_count ?? 0)
-      loaded.value = true
-    } catch {
-      // Keep the local-today fallback so panels always render.
-    } finally {
-      loading.value = false
-    }
+    inflight = (async () => {
+      try {
+        const { data } = await fbDayCloseApi.index()
+        openDate.value = data?.open_date || ''
+        timezone.value = data?.timezone || ''
+        runningOrdersCount.value = Number(data?.running_orders_count ?? 0)
+        unsettledOrdersCount.value = Number(data?.unsettled_orders_count ?? 0)
+        loaded.value = true
+      } catch {
+        // Keep the local-today fallback so panels always render.
+      } finally {
+        loading.value = false
+        inflight = null
+      }
+    })()
+
+    return inflight
   }
 
   /** Force-refetches the business date (used after a Day Close succeeds). */

@@ -263,7 +263,8 @@
           <h2><i class="fas fa-gauge-high" aria-hidden="true"></i> {{ $t('staffDashboard.title') }} · {{
             $t(`orderTaker.${department}`) }}</h2>
           <div class="dash-tools">
-            <input v-model="dashDate" type="date" class="dash-date" :aria-label="$t('staffDashboard.date')" />
+            <input v-model="dashDate" type="date" class="dash-date" :aria-label="$t('staffDashboard.date')"
+              @change="loadDashboard" />
             <button v-if="canManageTables" type="button" class="oh-manage" @click="openTableManager">
               <i class="fas fa-chair" aria-hidden="true"></i> {{ $t('orderTaker.manageTables') }}
             </button>
