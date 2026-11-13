@@ -82,13 +82,16 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { inventoryApi, inventoryOpsApi } from '../../api'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
+import { useOutletContext } from '@/composables/useOutletContext'
 
 const { t } = useI18n()
+const { selectedOutlet } = useOutletContext()
+const outletId = computed(() => selectedOutlet.value?.outlet_id || undefined)
 const returns = ref([])
 const { q, status, statuses, page, lastPage, paged } = useClientTable(returns, { pageSize: 15, searchFields: ['goods_return_id', 'status', (r) => lineSummary(r)] })
 const items = ref([])
@@ -112,7 +115,7 @@ async function load() {
   loading.value = true
   try {
     const [rt, it] = await Promise.allSettled([
-      inventoryOpsApi.goodsReturns({ per_page: 50 }),
+      inventoryOpsApi.goodsReturns({ per_page: 50, ...(outletId.value ? { outlet_id: outletId.value } : {}) }),
       inventoryApi.index({ per_page: 100 }),
     ])
     returns.value = rt.status === 'fulfilled' ? (rt.value.data.returns || []) : []
@@ -129,6 +132,7 @@ async function save() {
   try {
     await inventoryOpsApi.storeGoodsReturn({
       reason: form.reason,
+      outlet_id: outletId.value,
       items: form.lines.filter((l) => l.item_id && l.quantity > 0),
     })
     showForm.value = false
@@ -149,6 +153,8 @@ async function confirmVoid() {
     await load()
   } catch (e) { formError.value = e.response?.data?.message || t('common.error') } finally { saving.value = false }
 }
+watch(outletId, load)
+
 onMounted(load)
 </script>
 

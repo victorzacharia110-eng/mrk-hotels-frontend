@@ -1980,6 +1980,14 @@ export const outletApi = {
     return api.post(`${v1}/outlets`, data);
   },
   /**
+   * Creates a warehouse/store from the manager panel.
+   * @param {object} data - Store payload (name).
+   * @returns {Promise} Axios response with the created store outlet.
+   */
+  storeStore(data) {
+    return api.post(`${v1}/outlets/stores`, data);
+  },
+  /**
    * Creates the selling point the cashier is standing at during login.
    * @param {object} data - Selling point payload (name, type).
    * @returns {Promise} Axios response with the outlet and one-time access code.

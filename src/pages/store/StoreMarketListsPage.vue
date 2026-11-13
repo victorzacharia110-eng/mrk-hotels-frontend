@@ -98,13 +98,16 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { inventoryApi, inventoryOpsApi } from '../../api'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
+import { useOutletContext } from '@/composables/useOutletContext'
 
 const { t } = useI18n()
+const { selectedOutlet } = useOutletContext()
+const outletId = computed(() => selectedOutlet.value?.outlet_id || undefined)
 const lists = ref([])
 const { q, status, statuses, page, lastPage, paged } = useClientTable(lists, { pageSize: 15, searchFields: ['market_list_id', 'status', (r) => r.department?.name, (r) => lineSummary(r)] })
 const indents = ref([])
@@ -127,7 +130,7 @@ async function load() {
   loading.value = true
   try {
     const [ml, ind, it] = await Promise.allSettled([
-      inventoryOpsApi.marketLists({ per_page: 50 }),
+      inventoryOpsApi.marketLists({ per_page: 50, ...(outletId.value ? { outlet_id: outletId.value } : {}) }),
       inventoryOpsApi.indents({ per_page: 100 }),
       inventoryApi.index({ per_page: 100 }),
     ])
@@ -153,6 +156,7 @@ async function save() {
   try {
     await inventoryOpsApi.storeMarketList({
       indent_id: form.indent_id,
+      outlet_id: outletId.value,
       items: form.lines.filter((l) => l.item_id && l.quantity > 0),
     })
     showForm.value = false
@@ -178,6 +182,8 @@ async function confirmVoid() {
     await load()
   } catch (e) { formError.value = e.response?.data?.message || t('common.error') } finally { saving.value = false }
 }
+watch(outletId, load)
+
 onMounted(load)
 </script>
 

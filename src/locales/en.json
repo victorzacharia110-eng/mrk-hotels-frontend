@@ -6149,7 +6149,13 @@
     "gateChoosePoint": "Which {type}?",
     "gatePointCount": "{count} outlets",
     "gateBack": "Back",
-    "gateNoShelf": "No stock shelf assigned"
+    "gateNoShelf": "No stock shelf assigned",
+    "gateCreateStore": "Add another store",
+    "gateCreateStoreButton": "Create store",
+    "gateCreatingStore": "Creating store…",
+    "gateCreateFailed": "Could not create the store.",
+    "gateStoreNameLabel": "Store name",
+    "gateStoreNamePlaceholder": "e.g. Main Store"
   },
   "menuAudit": {
     "title": "Menu activity",

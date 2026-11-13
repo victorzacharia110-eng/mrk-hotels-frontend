@@ -108,8 +108,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { inventoryApi, purchaseRequisitionApi, goodsReceivedNoteApi } from '@/api'
+import { shelfId, shelfName, outletId } from '@/composables/useOutletContext'
 import { useStockRealtime } from '@/composables/useStockRealtime'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import '@/pages/store/store-shared.css'
@@ -140,11 +141,17 @@ function formatDate(d) {
 }
 
 async function loadDashboard() {
+  const department = shelfId.value || undefined
   const [inv, low, req, grn] = await Promise.allSettled([
-    inventoryApi.index({ per_page: 100 }),
-    inventoryApi.index({ low_stock: 1, per_page: 1 }),
-    purchaseRequisitionApi.index({ status: 'pending', per_page: 8 }),
-    goodsReceivedNoteApi.index({ per_page: 3 }),
+    inventoryApi.index({ per_page: 100, department_id: department }),
+    inventoryApi.index({ low_stock: 1, per_page: 1, department_id: department }),
+    purchaseRequisitionApi.index({
+      status: 'pending',
+      per_page: 8,
+      department: shelfName.value || undefined,
+      outlet_id: outletId.value || undefined,
+    }),
+    goodsReceivedNoteApi.index({ per_page: 3, outlet_id: outletId.value || undefined }),
   ])
   if (inv.status === 'fulfilled') {
     items.value = inv.value.data.data || inv.value.data || []
@@ -165,6 +172,10 @@ async function loadDashboard() {
 }
 
 let stockRealtime = null
+
+watch([shelfId, outletId], () => {
+  loadDashboard()
+})
 
 onMounted(async () => {
   loading.value = true

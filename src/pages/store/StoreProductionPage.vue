@@ -145,13 +145,16 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { inventoryApi, inventoryOpsApi } from '../../api'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
+import { useOutletContext } from '@/composables/useOutletContext'
 
 const { t } = useI18n()
+const { selectedOutlet } = useOutletContext()
+const outletId = computed(() => selectedOutlet.value?.outlet_id || undefined)
 const recipes = ref([])
 const runs = ref([])
 const runTable = useClientTable(runs, { pageSize: 10, searchFields: ['run_number', 'status', (r) => r.recipe?.name] })
@@ -179,7 +182,7 @@ async function load() {
   try {
     const [rc, rn, it] = await Promise.allSettled([
       inventoryOpsApi.recipes(),
-      inventoryOpsApi.productionRuns({ per_page: 50 }),
+      inventoryOpsApi.productionRuns({ per_page: 50, ...(outletId.value ? { outlet_id: outletId.value } : {}) }),
       inventoryApi.index({ per_page: 100 }),
     ])
     recipes.value = rc.status === 'fulfilled' ? (rc.value.data.recipes || []) : []
@@ -215,7 +218,7 @@ function openRecipeForm() {
 async function saveRun() {
   saving.value = true; formError.value = ''
   try {
-    await inventoryOpsApi.storeProductionRun({ ...runForm })
+    await inventoryOpsApi.storeProductionRun({ ...runForm, outlet_id: outletId.value })
     showRunForm.value = false
     await load()
   } catch (e) { formError.value = e.response?.data?.message || t('common.error') } finally { saving.value = false }
@@ -249,6 +252,8 @@ async function confirmVoid() {
     await load()
   } catch (e) { formError.value = e.response?.data?.message || t('common.error') } finally { saving.value = false }
 }
+watch(outletId, load)
+
 onMounted(load)
 </script>
 

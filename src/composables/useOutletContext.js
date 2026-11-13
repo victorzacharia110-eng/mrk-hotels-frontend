@@ -34,6 +34,20 @@ const hasOutlet = computed(() => selectedOutlet.value !== null)
 /** Outlet id for API calls, or undefined so a query string is left clean. */
 const outletId = computed(() => selectedOutlet.value?.outlet_id)
 
+/** The stock shelf linked to the selected outlet, when it has one. */
+const activeShelf = computed(() => selectedOutlet.value?.stock_department || null)
+
+/** Shelf/department id for stock and document calls. */
+const shelfId = computed(() => activeShelf.value?.department_id || null)
+
+/** Human-readable shelf name for scope labels. */
+const shelfName = computed(() => activeShelf.value?.name || '')
+
+/** Outlets that are explicitly warehouse/store outlets. */
+const storeOutlets = computed(() =>
+  outlets.value.filter((outlet) => String(outlet.type || '').toLowerCase() === 'store'),
+)
+
 /**
  * Loads the property's outlets and re-applies the persisted selection.
  *
@@ -44,7 +58,7 @@ const outletId = computed(() => selectedOutlet.value?.outlet_id)
  * @returns {Promise<Array>} The outlets.
  */
 async function loadOutlets(opts = {}) {
-  const { sellingOnly = false } = opts
+  const { sellingOnly = false, autoSelectSingle = false } = opts
 
   if (inflight) return inflight
   inflight = (async () => {
@@ -62,7 +76,15 @@ async function loadOutlets(opts = {}) {
       }
       outlets.value = list
       const savedId = sessionStorage.getItem(STORAGE_KEY)
-      selectedOutlet.value = outlets.value.find((o) => o.outlet_id === savedId) || null
+      const saved = outlets.value.find((o) => o.outlet_id === savedId) || null
+      // A property with exactly one outlet should start there without making
+      // the user confirm a choice that has only one possible answer. Cashier
+      // gates pass autoSelectSingle:false because they still unlock the counter
+      // with its access code.
+      selectedOutlet.value = saved || (autoSelectSingle && outlets.value.length === 1 ? outlets.value[0] : null)
+      if (!saved && selectedOutlet.value?.outlet_id) {
+        sessionStorage.setItem(STORAGE_KEY, selectedOutlet.value.outlet_id)
+      }
     } catch {
       // A property with no reachable outlet list keeps the panel usable rather
       // than blocking it; the POS gate still guards the cashier flow.
@@ -119,6 +141,10 @@ export function useOutletContext() {
     hasChoice,
     loaded,
     outletId,
+    activeShelf,
+    shelfId,
+    shelfName,
+    storeOutlets,
     loadOutlets,
     selectOutlet,
     clearOutlet,
@@ -132,4 +158,4 @@ export function useOutletContext() {
  * moment -- it is a single read at submit time. They are the same refs the
  * function above hands out, so there is still only one selection per session.
  */
-export { outlets, selectedOutlet, hasOutlet, hasChoice, loaded, outletId }
+export { outlets, selectedOutlet, hasOutlet, hasChoice, loaded, outletId, activeShelf, shelfId, shelfName, storeOutlets }

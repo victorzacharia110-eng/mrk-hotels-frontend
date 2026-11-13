@@ -539,30 +539,59 @@
       </div>
     </Transition>
 
-    <!-- Outlet gate: the review asks every operating role (manager, admin,
-         accountant, cashier, waiter, bar tender) to choose the outlet they work
-         in as soon as they sign in, exactly like the cashier login. Until a
-         choice is made the panel is held behind this bar; the header select
-         stays available to switch later. -->
+    <!-- Outlet gate: every operating role chooses the outlet they work in as
+         soon as they sign in. A property with one outlet starts there
+         automatically; multiple outlets are grouped by type first so the
+         manager can pick the exact store or counter. -->
     <div v-if="outletGateOpen" class="outlet-gate-backdrop">
       <div class="outlet-gate" role="dialog" aria-modal="true" :aria-label="$t('outlet.gateTitle')">
         <div class="outlet-gate-head">
-          <i class="fas fa-store" aria-hidden="true"></i>
+          <i :class="gateTitleIcon" aria-hidden="true"></i>
           <div>
-            <h3>{{ $t('outlet.gateTitle') }}</h3>
+            <h3>{{ gateTitle }}</h3>
             <p>{{ $t('outlet.gateHint') }}</p>
           </div>
+          <button v-if="gateStep !== 'type'" type="button" class="outlet-gate-back" @click="goBackToTypes">
+            <i class="fas fa-arrow-left" aria-hidden="true"></i> {{ $t('outlet.gateBack') }}
+          </button>
         </div>
-        <div class="outlet-gate-list">
-          <button
-            v-for="o in outlets"
-            :key="o.outlet_id"
-            type="button"
-            class="outlet-gate-option"
-            @click="chooseOutlet(o)"
-          >
-            <i class="fas fa-utensils" aria-hidden="true"></i>
-            <span>{{ o.name }}</span>
+
+        <div v-if="gateStep === 'type'" class="outlet-gate-list">
+          <button v-for="group in outletTypeGroups" :key="group.type" type="button" class="outlet-gate-option"
+            @click="chooseType(group)">
+            <i :class="group.icon" aria-hidden="true"></i>
+            <span class="outlet-gate-copy">
+              <strong>{{ group.label }}</strong>
+              <small>{{ $t('outlet.gatePointCount', { count: group.outlets.length }) }}</small>
+            </span>
+            <i class="fas fa-chevron-right outlet-gate-arrow" aria-hidden="true"></i>
+          </button>
+          <p v-if="!outlets.length" class="outlet-gate-empty">{{ $t('outlet.gateEmpty') }}</p>
+          <button type="button" class="outlet-gate-create" :disabled="gateBusy" @click="startCreateStore">
+            <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('outlet.gateCreateStore') }}
+          </button>
+        </div>
+
+        <div v-else-if="gateStep === 'point'" class="outlet-gate-list">
+          <button v-for="o in gateOutlets" :key="o.outlet_id" type="button" class="outlet-gate-option"
+            @click="chooseOutlet(o)">
+            <i :class="gateTypeIcon" aria-hidden="true"></i>
+            <span class="outlet-gate-copy">
+              <strong>{{ o.name }}</strong>
+              <small>{{ o.stock_department?.name || $t('outlet.gateNoShelf') }}</small>
+            </span>
+          </button>
+        </div>
+
+        <div v-else class="outlet-gate-form">
+          <label for="manager-gate-store-name">{{ $t('outlet.gateStoreNameLabel') }}</label>
+          <input id="manager-gate-store-name" v-model="newStoreName" type="text" maxlength="100"
+            :placeholder="$t('outlet.gateStoreNamePlaceholder')" @keyup.enter="createStore" />
+          <p v-if="gateError" class="outlet-gate-error">{{ gateError }}</p>
+          <button type="button" class="outlet-gate-submit" :disabled="gateBusy || !newStoreName.trim()"
+            @click="createStore">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+            {{ gateBusy ? $t('outlet.gateCreatingStore') : $t('outlet.gateCreateStoreButton') }}
           </button>
         </div>
       </div>
@@ -585,7 +614,7 @@ import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vu
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import RoleBadge from '@/components/RoleBadge.vue'
-import { publicApi } from '@/api'
+import { outletApi, publicApi } from '@/api'
 import { MODULES } from '@/config/modules'
 import { clearOwnerHotel, ownerHotelId, ownerHotelName } from '@/utils/ownerView'
 import { useHoliday } from '@/composables/useHoliday'
@@ -715,24 +744,126 @@ const showOutletPicker = computed(
   () => isAppMode.value && authStore.isAuthenticated && hasChoice.value && roleCanSelectOutlet(authStore.user?.user_role),
 )
 
-// The post-login outlet gate. It opens once the outlet list has loaded and the
-// signed-in role still has no outlet for the session.
+// The post-login outlet gate. A single outlet is selected automatically by the
+// shared context; multiple outlets are grouped by type before the exact one is
+// confirmed.
 const outletGateOpen = ref(false)
+const gateStep = ref('type')
+const gateType = ref('')
+const newStoreName = ref('')
+const gateError = ref('')
+const gateBusy = ref(false)
 
-/** Opens the picker on sign-in when the role may choose and nothing is picked. */
+const OUTLET_TYPE_META = {
+  bar: { icon: 'fas fa-martini-glass-citrus', labelKey: 'outlets.typeBar' },
+  restaurant: { icon: 'fas fa-utensils', labelKey: 'outlets.typeRestaurant' },
+  laundry: { icon: 'fas fa-shirt', labelKey: 'outlets.typeLaundry' },
+  swimming: { icon: 'fas fa-person-swimming', labelKey: 'outlets.typeSwimming' },
+  spa: { icon: 'fas fa-spa', labelKey: 'outlets.typeSpa' },
+  kitchen: { icon: 'fas fa-kitchen-set', labelKey: 'outlets.typeKitchen' },
+  store: { icon: 'fas fa-warehouse', labelKey: 'outlets.typeStore' },
+  other: { icon: 'fas fa-store', labelKey: 'outlets.typeOther' },
+}
+
+function outletTypeMeta(type) {
+  return OUTLET_TYPE_META[String(type || 'other').toLowerCase()] || OUTLET_TYPE_META.other
+}
+
+const outletTypeGroups = computed(() => {
+  const groups = new Map()
+  for (const outlet of outlets.value) {
+    const type = String(outlet.type || 'other').toLowerCase()
+    if (!groups.has(type)) groups.set(type, [])
+    groups.get(type).push(outlet)
+  }
+  return [...groups.entries()]
+    .map(([type, list]) => ({
+      type,
+      outlets: list,
+      icon: outletTypeMeta(type).icon,
+      label: t(outletTypeMeta(type).labelKey),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+})
+
+const gateOutlets = computed(
+  () => outletTypeGroups.value.find((group) => group.type === gateType.value)?.outlets || [],
+)
+const gateTypeIcon = computed(() => outletTypeMeta(gateType.value).icon)
+const gateTitle = computed(() => (
+  gateStep.value === 'create'
+    ? t('outlet.gateCreateStore')
+    : gateStep.value === 'point'
+      ? t('outlet.gateChoosePoint', { type: outletTypeMeta(gateType.value).label || '' })
+      : t('outlet.gateChooseType')
+))
+const gateTitleIcon = computed(() => (
+  gateStep.value === 'create' ? 'fas fa-plus' : gateStep.value === 'point' ? gateTypeIcon.value : 'fas fa-store'
+))
+
+/** Opens the picker when the role may choose and there is a real choice. */
 async function openOutletGateIfNeeded() {
-  await loadOutletList()
+  await loadOutletList({ autoSelectSingle: true })
   if (!authStore.isAuthenticated || !roleCanSelectOutlet(authStore.user?.user_role)) return
-  if (outlets.value.length === 0 || selectedOutlet.value) return
-  // The review asks for the prompt on every login, so even a single-outlet
-  // property confirms its outlet here instead of being silently auto-selected.
+  if (outlets.value.length === 1 && selectedOutlet.value) {
+    outletGateOpen.value = false
+    return
+  }
+  gateStep.value = 'type'
+  gateType.value = ''
+  gateError.value = ''
   outletGateOpen.value = true
+}
+
+function chooseType(group) {
+  gateType.value = group.type
+  gateStep.value = 'point'
+}
+
+function goBackToTypes() {
+  gateStep.value = 'type'
+  gateType.value = ''
+  gateError.value = ''
+}
+
+function rememberOutlet(outlet) {
+  if (!outlet?.outlet_id) return
+  const exists = outlets.value.some((row) => row.outlet_id === outlet.outlet_id)
+  const next = exists
+    ? outlets.value.map((row) => (row.outlet_id === outlet.outlet_id ? { ...row, ...outlet } : row))
+    : [...outlets.value, outlet]
+  outlets.value = next.sort((a, b) => a.name.localeCompare(b.name))
 }
 
 /** Confirms the outlet the user will work in and closes the gate. */
 function chooseOutlet(outlet) {
   selectOutlet(outlet)
   outletGateOpen.value = false
+}
+
+function startCreateStore() {
+  gateError.value = ''
+  newStoreName.value = ''
+  gateStep.value = 'create'
+}
+
+/** Creates another store and switches straight into it. */
+async function createStore() {
+  const name = newStoreName.value.trim()
+  if (!name) return
+  gateBusy.value = true
+  gateError.value = ''
+  try {
+    const { data } = await outletApi.storeStore({ name })
+    rememberOutlet(data.outlet)
+    selectOutlet(data.outlet)
+    outletGateOpen.value = false
+    newStoreName.value = ''
+  } catch (error) {
+    gateError.value = error.response?.data?.message || t('outlet.gateCreateFailed')
+  } finally {
+    gateBusy.value = false
+  }
 }
 
 /** Activates the chosen outlet for the rest of the session. */
@@ -3254,6 +3385,43 @@ function formatNotifTime(iso) {
   gap: 12px;
   margin-bottom: 16px;
 }
+.outlet-gate-back {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  color: #005eb8;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.outlet-gate-copy { display: flex; flex: 1; flex-direction: column; gap: 2px; }
+.outlet-gate-copy small { color: #64748b; font-size: 11.5px; font-weight: 500; }
+.outlet-gate-arrow { color: #94a3b8; font-size: 12px; }
+.outlet-gate-empty { margin: 0; color: #64748b; font-size: 13px; }
+.outlet-gate-create {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 11px 14px; border: 1px dashed #93c5fd; border-radius: 10px;
+  background: #eff6ff; color: #005eb8; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.outlet-gate-create:hover { background: #dbeafe; }
+.outlet-gate-form { display: flex; flex-direction: column; gap: 10px; }
+.outlet-gate-form label { font-size: 13px; font-weight: 700; color: #334155; }
+.outlet-gate-form input {
+  width: 100%; padding: 11px 12px; border: 1px solid #cbd5e1; border-radius: 10px;
+  font: inherit; font-size: 14px; color: #1e293b; background: #fff;
+}
+.outlet-gate-form input:focus { outline: 2px solid #005eb8; outline-offset: 1px; border-color: #005eb8; }
+.outlet-gate-error { margin: 0; color: #b91c1c; font-size: 12.5px; }
+.outlet-gate-submit {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 12px 14px; border: 0; border-radius: 10px;
+  background: #005eb8; color: #fff; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.outlet-gate-submit:disabled { opacity: .6; cursor: not-allowed; }
 
 .outlet-gate-head > i {
   color: #005eb8;

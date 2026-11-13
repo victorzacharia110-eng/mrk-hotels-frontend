@@ -145,7 +145,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeApi } from '../../api'
 import CalendarInput from '@/components/CalendarInput.vue'
@@ -155,10 +155,13 @@ import { useWorkingDateStore } from '@/stores/workingDate'
 import '@/pages/store/store-shared.css'
 
 import { useTenantCurrency } from '@/utils/currency'
+import { useOutletContext } from '@/composables/useOutletContext'
 
 const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
+const { selectedOutlet } = useOutletContext()
+const outletId = computed(() => selectedOutlet.value?.outlet_id || undefined)
 const register = ref(null)
 const businessDate = ref('')
 const workingDateStore = useWorkingDateStore()
@@ -235,9 +238,9 @@ async function load() {
   loading.value = true
   try {
     const [reg, sh, ex] = await Promise.allSettled([
-      storeApi.cashRegister(businessDate.value ? { date: businessDate.value } : undefined),
-      storeApi.shifts({ per_page: 100, days: 30 }),
-      storeApi.expenses({ per_page: 100, ...(businessDate.value ? { date: businessDate.value } : {}) }),
+      storeApi.cashRegister({ ...(businessDate.value ? { date: businessDate.value } : {}), ...(outletId.value ? { outlet_id: outletId.value } : {}) }),
+      storeApi.shifts({ per_page: 100, days: 30, ...(outletId.value ? { outlet_id: outletId.value } : {}) }),
+      storeApi.expenses({ per_page: 100, ...(businessDate.value ? { date: businessDate.value } : {}), ...(outletId.value ? { outlet_id: outletId.value } : {}) }),
     ])
     register.value = reg.status === 'fulfilled' ? (reg.value.data.data || reg.value.data) : null
     shifts.value = sh.status === 'fulfilled' ? (sh.value.data.data || sh.value.data || []) : []
@@ -247,7 +250,7 @@ async function load() {
 async function addFloat() {
   saving.value = true; formError.value = ''
   try {
-    await storeApi.addFloat({ amount: floatAmount.value, reference: floatReference.value || null })
+    await storeApi.addFloat({ amount: floatAmount.value, reference: floatReference.value || null, outlet_id: outletId.value })
     showFloat.value = false
     floatAmount.value = 0
     floatReference.value = ''
@@ -256,14 +259,16 @@ async function addFloat() {
 }
 async function openRegister() {
   saving.value = true; formError.value = ''
-  try { await storeApi.openRegister({ opening_float: openFloat.value }); showOpen.value = false; await load() }
+  try { await storeApi.openRegister({ opening_float: openFloat.value, outlet_id: outletId.value }); showOpen.value = false; await load() }
   catch (e) { formError.value = e.response?.data?.message || t('common.error') } finally { saving.value = false }
 }
 async function closeRegister() {
   saving.value = true; formError.value = ''
-  try { await storeApi.closeRegister({ counted_cash: countedCash.value }); showClose.value = false; await load() }
+  try { await storeApi.closeRegister({ counted_cash: countedCash.value, outlet_id: outletId.value }); showClose.value = false; await load() }
   catch (e) { formError.value = e.response?.data?.message || t('common.error') } finally { saving.value = false }
 }
+watch(outletId, () => load())
+
 onMounted(async () => {
   await workingDateStore.ensureLoaded()
   businessDate.value = workingDateStore.workingDate

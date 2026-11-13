@@ -159,7 +159,7 @@
 
 <script setup>
 
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { inventoryOpsApi, purchaseRequisitionApi } from '@/api'
@@ -167,11 +167,15 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import { useClientTable } from '@/composables/useClientTable.js'
 import { useTenantCurrency } from '@/utils/currency'
+import { useOutletContext } from '@/composables/useOutletContext'
 
 const { curCode } = useTenantCurrency()
 
 const route = useRoute()
 const { t } = useI18n()
+const { selectedOutlet } = useOutletContext()
+const outletId = computed(() => selectedOutlet.value?.outlet_id || undefined)
+const shelfName = computed(() => selectedOutlet.value?.stock_department?.name || '')
 
 const requisitions = ref([])
 const { q, status, statuses, page, lastPage, paged } = useClientTable(requisitions, { pageSize: 15, searchFields: ['requisition_id', 'status', 'department', (r) => lineSummary(r)] })
@@ -196,6 +200,7 @@ async function loadDepartments() {
   try {
     const res = await inventoryOpsApi.departments()
     departmentOptions.value = (res.data.departments || [])
+      .filter((d) => !outletId.value || !d.outlet_id || d.outlet_id === outletId.value)
       .map((d) => ({ value: d.name, label: d.name }))
       .sort((a, b) => a.label.localeCompare(b.label))
   } catch {
@@ -226,6 +231,7 @@ async function load(page = meta.value.current_page) {
   try {
     const params = { page, per_page: 20 }
     if (statusFilter.value) params.status = statusFilter.value
+    if (outletId.value) params.outlet_id = outletId.value
     const res = await purchaseRequisitionApi.index(params)
     requisitions.value = res.data.data || res.data || []
     meta.value = res.data.meta || { current_page: 1, last_page: 1 }
@@ -237,7 +243,7 @@ async function load(page = meta.value.current_page) {
 function go(page) { load(page) }
 
 function openCreate() {
-  Object.assign(form, { department: '', priority: 'normal', justification: '', items: [emptyItem()] })
+  Object.assign(form, { department: shelfName.value, priority: 'normal', justification: '', items: [emptyItem()] })
   formError.value = ''
   showForm.value = true
 }
@@ -248,6 +254,7 @@ async function save() {
   try {
     await purchaseRequisitionApi.store({
       department: form.department,
+      outlet_id: outletId.value,
       priority: form.priority,
       justification: form.justification,
       items: form.items.filter((i) => i.item_name),
@@ -287,6 +294,11 @@ async function openDetail(req) {
   const res = await purchaseRequisitionApi.show(req.requisition_id)
   detail.value = res.data.data || res.data
 }
+
+watch(outletId, async () => {
+  await loadDepartments()
+  await load(1)
+})
 
 onMounted(async () => {
   await Promise.all([loadDepartments(), load(1)])

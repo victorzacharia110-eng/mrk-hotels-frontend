@@ -56,9 +56,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeApi } from '../../api'
+import { shelfId } from '@/composables/useOutletContext'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useCategoriesStore } from '@/stores/categories'
 
@@ -96,11 +97,16 @@ function reorder() {
 async function load() {
   loading.value = true
   try {
-    const res = await storeApi.lowStock({})
+    const res = await storeApi.lowStock({ department_id: shelfId.value || undefined })
     const items = res.data.data || res.data || []
     alerts.value = items.filter((i) => Number(i.quantity_in_stock) <= Number(i.reorder_level || 0) || i.status === 'out_of_stock')
   } finally { loading.value = false }
 }
+watch(shelfId, () => {
+  selected.value = []
+  load()
+})
+
 onMounted(async () => {
   await categoriesStore.ensureLoaded()
   load()

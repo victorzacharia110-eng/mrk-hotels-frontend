@@ -319,6 +319,7 @@ import { usePrintSettingsStore } from '@/stores/printSettings'
 import { printElementSilently } from '@/utils/reportPrint'
 
 import { useTenantCurrency } from '@/utils/currency'
+import { useOutletContext } from '@/composables/useOutletContext'
 
 const { curCode } = useTenantCurrency()
 
@@ -328,6 +329,9 @@ const { t } = useI18n()
 const workingDateStore = useWorkingDateStore()
 const auth = useAuthStore()
 const printStore = usePrintSettingsStore()
+const { selectedOutlet } = useOutletContext()
+const outletId = computed(() => selectedOutlet.value?.outlet_id || undefined)
+const shelfId = computed(() => selectedOutlet.value?.stock_department?.department_id || undefined)
 
 const grns = ref([])
 const { q, status, statuses, paged } = useClientTable(grns, {
@@ -363,6 +367,7 @@ async function loadMovements(date, page = 1) {
   try {
     const params = { page, per_page: 100 }
     if (date) params.date = date
+    if (shelfId.value) params.department_id = shelfId.value
     const res = await storeApi.movements(params)
     movementRows.value = res.data.data || res.data || []
     movementMeta.value = res.data.meta || { current_page: 1, last_page: 1 }
@@ -457,6 +462,7 @@ async function load(page = meta.value.current_page) {
   try {
     const params = { page, per_page: 100 }
     if (dateFilter.value) params.date = dateFilter.value
+    if (outletId.value) params.outlet_id = outletId.value
     if (q.value.trim()) params.search = q.value.trim()
     const res = await goodsReceivedNoteApi.index(params)
     grns.value = res.data.data || res.data || []
@@ -489,7 +495,7 @@ async function openCreate() {
   formError.value = ''
   showForm.value = true
   try {
-    const res = await purchaseOrderApi.index({ per_page: 100 })
+    const res = await purchaseOrderApi.index({ per_page: 100, outlet_id: outletId.value })
     const all = res.data.data || res.data || []
     poOptions.value = all.filter((po) => ['pending', 'manager_approved', 'approved', 'partially_received'].includes(po.status))
   } catch {
@@ -599,6 +605,7 @@ async function save() {
     } else {
       const fd = new FormData()
       fd.append('po_id', form.po_id)
+      if (outletId.value) fd.append('outlet_id', outletId.value)
       fd.append('inspection_status', form.inspection_status)
       if (form.received_date) fd.append('received_date', form.received_date)
       if (form.delivery_note_number) fd.append('delivery_note_number', form.delivery_note_number)
@@ -678,6 +685,8 @@ async function voidGrn() {
     window.alert(e.response?.data?.message || t('common.error'))
   }
 }
+
+watch(outletId, () => load(1))
 
 onMounted(async () => {
   await workingDateStore.ensureLoaded()

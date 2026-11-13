@@ -6,11 +6,11 @@
 <template>
   <div class="sm-page">
     <div class="sm-toolbar">
-      <button class="sm-btn ghost dept-btn" @click="showDeptPicker = true">
+      <div class="sm-btn ghost dept-btn">
         <i class="fas fa-warehouse"></i>
         {{ $t('storeManager.inventory.department') }}:
         <strong>{{ activeDepartmentName }}</strong>
-      </button>
+      </div>
       <div class="sm-search">
         <i class="fas fa-magnifying-glass"></i>
         <input v-model="search" type="text" :placeholder="$t('common.search')" @input="debouncedLoad" />
@@ -216,25 +216,6 @@
         </form>
       </div>
     </div>
-    <!-- Department scope picker (the reference system's shelf selector) -->
-    <div v-if="showDeptPicker" class="sm-modal-backdrop" @click.self="showDeptPicker = false">
-      <div class="sm-modal">
-        <div class="sm-modal-head">
-          <h3>{{ $t('storeManager.inventory.pickDepartment') }}</h3>
-          <button class="sm-modal-close" @click="showDeptPicker = false"><i class="fas fa-xmark"></i></button>
-        </div>
-        <div class="sm-modal-body dept-list">
-          <button class="dept-option" :class="{ active: departmentId === null }" @click="pickDepartment(null)">
-            {{ $t('storeManager.inventory.allDepartments') }}
-          </button>
-          <button v-for="d in departments" :key="d.department_id" class="dept-option"
-            :class="{ active: departmentId === d.department_id }" @click="pickDepartment(d.department_id)">
-            <i class="fas fa-dolly"></i> {{ d.name }}
-          </button>
-        </div>
-      </div>
-    </div>
-
     <!-- Confirmation modal for bulk deletion (type DELETE to confirm) -->
     <DeleteConfirmModal
       v-model="showBulkDelete"
@@ -275,7 +256,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, computed } from 'vue'
+import { onMounted, reactive, ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { inventoryApi, inventoryOpsApi, supplierApi, unitsApi } from '@/api'
@@ -285,7 +266,7 @@ import { useBulkSelection } from '@/composables/useBulkSelection'
 import { formatCategory } from '@/utils/format'
 import { useCategoriesStore } from '@/stores/categories'
 import { useAuthStore } from '@/stores/auth'
-import { selectedOutlet } from '@/composables/useOutletContext'
+import { selectedOutlet, shelfId, shelfName } from '@/composables/useOutletContext'
 
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -319,23 +300,16 @@ const bulk = useBulkSelection(() => items.value, { idKey: 'item_id' })
 const showBulkDelete = ref(false)
 const deleting = ref(false)
 
-// Department scope: the store keeper works one shelf at a time; the choice
-// persists for the session like the reference system's department bar.
+// Department scope follows the outlet picked for the session. The store
+// manager no longer picks a shelf here: switching outlet in the header changes
+// the stock, documents and reports for the whole panel.
 const departments = ref([])
-const departmentId = ref(localStorage.getItem('store_dept_scope') || null)
-const showDeptPicker = ref(false)
+const departmentId = computed(() => shelfId.value)
 
 const activeDepartmentName = computed(() =>
-  departments.value.find((d) => d.department_id === departmentId.value)?.name
+  shelfName.value
+  || selectedOutlet.value?.name
   || t('storeManager.inventory.allDepartments'))
-
-function pickDepartment(id) {
-  departmentId.value = id
-  if (id) localStorage.setItem('store_dept_scope', id)
-  else localStorage.removeItem('store_dept_scope')
-  showDeptPicker.value = false
-  load(1)
-}
 
 const categoriesStore = useCategoriesStore()
 const categoryOptions = categoriesStore.inventoryCategoryOptions
@@ -446,7 +420,7 @@ function go(page) { load(page) }
 
 function openCreate() {
   editing.value = null
-  Object.assign(form, { item_name: '', category: 'other', unit: '', si_units: [], currency_type: '', quantity_in_stock: 0, reorder_level: 0, unit_cost: 0, supplier: '', notes: '', department_id: '', department_ids: [] })
+  Object.assign(form, { item_name: '', category: 'other', unit: '', si_units: [], currency_type: '', quantity_in_stock: 0, reorder_level: 0, unit_cost: 0, supplier: '', notes: '', department_id: '', department_ids: shelfId.value ? [shelfId.value] : [] })
   formError.value = ''
   showForm.value = true
 }
@@ -577,6 +551,10 @@ async function openUnitsModal() {
   await refreshUnits()
   showUnitsModal.value = true
 }
+
+watch(shelfId, () => {
+  load(1)
+})
 
 onMounted(async () => {
   inventoryOpsApi.departments().then((res) => { departments.value = res.data.departments || [] }).catch(() => {})

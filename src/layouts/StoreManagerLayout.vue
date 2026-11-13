@@ -206,8 +206,12 @@
             <i class="fas fa-chevron-right sm-gate-arrow" aria-hidden="true"></i>
           </button>
           <p v-if="outlets.length === 0" class="sm-gate-hint">{{ $t('outlet.gateEmpty') }}</p>
+          <button type="button" class="sm-btn ghost" :disabled="gateBusy" @click="startCreateStore">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+            {{ $t('outlet.gateCreateStore') }}
+          </button>
         </div>
-        <div v-else class="sm-outlet-gate-list">
+        <div v-else-if="gateStep === 'point'" class="sm-outlet-gate-list">
           <button v-for="o in gateOutlets" :key="o.outlet_id" type="button" class="sm-outlet-option"
             @click="chooseOutlet(o)">
             <i :class="gateTypeIcon" aria-hidden="true"></i>
@@ -215,6 +219,19 @@
               <strong>{{ o.name }}</strong>
               <small>{{ o.stock_department?.name || $t('outlet.gateNoShelf') }}</small>
             </span>
+          </button>
+        </div>
+        <div v-else class="sm-gate-form">
+          <label for="gate-store-name">{{ $t('outlet.gateStoreNameLabel') }}</label>
+          <input id="gate-store-name" v-model="newStoreName" type="text" maxlength="100" class="sm-input"
+            :placeholder="$t('outlet.gateStoreNamePlaceholder')" @keyup.enter="createStore" />
+          <p v-if="gateError" class="form-error">{{ gateError }}</p>
+          <button type="button" class="sm-btn" :disabled="gateBusy || !newStoreName.trim()" @click="createStore">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+            {{ gateBusy ? $t('outlet.gateCreatingStore') : $t('outlet.gateCreateStoreButton') }}
+          </button>
+          <button type="button" class="sm-btn ghost" :disabled="gateBusy" @click="gateStep = 'type'">
+            {{ $t('outlet.gateBack') }}
           </button>
         </div>
       </div>
@@ -232,6 +249,7 @@ import { useWorkingDateStore } from '@/stores/workingDate'
 import { useThemeStore } from '@/stores/theme'
 import DayCloseReminderModal from '@/components/cashier/DayCloseReminderModal.vue'
 import { useOutletContext } from '@/composables/useOutletContext'
+import { outletApi } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -257,6 +275,9 @@ const showOutletPicker = computed(() => hasChoice.value && roleCanSelectOutlet(a
 const outletGateOpen = ref(false)
 const gateStep = ref('type')
 const gateType = ref('')
+const newStoreName = ref('')
+const gateError = ref('')
+const gateBusy = ref(false)
 
 const OUTLET_TYPE_META = {
   bar: { icon: 'fas fa-martini-glass-citrus', labelKey: 'outlets.typeBar' },
@@ -298,21 +319,30 @@ const gateTypeLabel = computed(
 )
 const gateTypeIcon = computed(() => outletTypeMeta(gateType.value).icon)
 const gateTitle = computed(() => {
+  if (gateStep.value === 'create') return t('outlet.gateCreateStore')
   if (gateStep.value === 'type') return t('outlet.gateChooseType')
   return t('outlet.gateChoosePoint', { type: gateTypeLabel.value })
 })
-const gateTitleIcon = computed(() => (
-  gateStep.value === 'type' ? 'fas fa-store' : gateTypeIcon.value
-))
+const gateTitleIcon = computed(() => {
+  if (gateStep.value === 'create') return 'fas fa-plus'
+  if (gateStep.value === 'type') return 'fas fa-store'
+  return gateTypeIcon.value
+})
 
-/** Opens the picker on sign-in, even for a single outlet. */
+/** Opens the picker after sign-in, but lets a single outlet start automatically. */
 async function openOutletGateIfNeeded() {
-  await loadOutletList()
+  await loadOutletList({ autoSelectSingle: true })
   if (!roleCanSelectOutlet(authStore.user?.user_role)) return
-  // The inventory panel follows the same rule as the till: the manager confirms
-  // the store/outlet they are working in before any stock figure is shown.
+  // A one-outlet property has nothing to choose, so the shared context selects
+  // it and the panel opens straight into that store. Multiple outlets still
+  // confirm the store before stock figures are shown.
+  if (outlets.value.length === 1 && selectedOutlet.value) {
+    outletGateOpen.value = false
+    return
+  }
   gateStep.value = 'type'
   gateType.value = ''
+  gateError.value = ''
   outletGateOpen.value = true
 }
 
@@ -321,10 +351,44 @@ function chooseType(group) {
   gateStep.value = 'point'
 }
 
+function rememberOutlet(outlet) {
+  if (!outlet?.outlet_id) return
+  const exists = outlets.value.some((row) => row.outlet_id === outlet.outlet_id)
+  const next = exists
+    ? outlets.value.map((row) => (row.outlet_id === outlet.outlet_id ? { ...row, ...outlet } : row))
+    : [...outlets.value, outlet]
+  outlets.value = next.sort((a, b) => a.name.localeCompare(b.name))
+}
+
 /** Confirms the outlet the user will work in and closes the gate. */
 function chooseOutlet(outlet) {
   selectOutlet(outlet)
   outletGateOpen.value = false
+}
+
+function startCreateStore() {
+  gateError.value = ''
+  newStoreName.value = ''
+  gateStep.value = 'create'
+}
+
+/** Creates another store from the gate and switches straight into it. */
+async function createStore() {
+  const name = newStoreName.value.trim()
+  if (!name) return
+  gateBusy.value = true
+  gateError.value = ''
+  try {
+    const { data } = await outletApi.storeStore({ name })
+    rememberOutlet(data.outlet)
+    selectOutlet(data.outlet)
+    outletGateOpen.value = false
+    newStoreName.value = ''
+  } catch (error) {
+    gateError.value = error.response?.data?.message || t('outlet.gateCreateFailed')
+  } finally {
+    gateBusy.value = false
+  }
 }
 
 /** Activates a different outlet from the header picker. */
@@ -625,6 +689,9 @@ const DAY_CLOSE_ROLES = ['store_manager', 'cashier', 'bartender', 'waiter', 'hot
 }
 .sm-outlet-select:focus-visible { outline: 2px solid var(--sm-blue); outline-offset: 2px; }
 .sm-gate-hint { margin: 4px 0 14px; color: var(--sm-muted); font-size: 13px; line-height: 1.5; }
+.sm-gate-form { display: flex; flex-direction: column; gap: 10px; }
+.sm-gate-form label { color: var(--sm-text); font-size: 13px; font-weight: 600; }
+.sm-gate-form .sm-btn { width: 100%; justify-content: center; }
 .sm-outlet-gate-list { display: flex; flex-direction: column; gap: 10px; }
 .sm-outlet-option {
   display: flex; align-items: center; gap: 12px; width: 100%;

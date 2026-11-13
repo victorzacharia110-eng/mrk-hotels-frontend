@@ -81,7 +81,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeApi, inventoryOpsApi } from '../../api'
 import CalendarInput from '@/components/CalendarInput.vue'
@@ -93,10 +93,13 @@ import { useWorkingDateStore } from '@/stores/workingDate'
 import '@/pages/store/store-shared.css'
 
 import { useTenantCurrency } from '@/utils/currency'
+import { useOutletContext } from '@/composables/useOutletContext'
 
 const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
+const { selectedOutlet } = useOutletContext()
+const outletId = computed(() => selectedOutlet.value?.outlet_id || undefined)
 const expenses = ref([])
 const loading = ref(false)
 const saving = ref(false)
@@ -131,6 +134,7 @@ async function load(page = 1) {
     if (catFilter.value) params.category = catFilter.value
     if (businessDate.value) params.date = businessDate.value
     if (q.value) params.q = q.value
+    if (outletId.value) params.outlet_id = outletId.value
     const res = await storeApi.expenses(params)
     const d = res.data
     expenses.value = d.data || d || []
@@ -140,7 +144,7 @@ async function load(page = 1) {
 function openCreate() { Object.assign(form, { description: '', particular: '', category: 'supplies', amount: 0 }); formError.value = ''; showForm.value = true }
 async function save() {
   saving.value = true; formError.value = ''
-  try { await storeApi.storeExpense({ ...form, spent_at: businessDate.value || undefined }); showForm.value = false; await load() }
+  try { await storeApi.storeExpense({ ...form, outlet_id: outletId.value, spent_at: businessDate.value || undefined }); showForm.value = false; await load() }
   catch (e) { formError.value = e.response?.data?.message || t('common.error') } finally { saving.value = false }
 }
 function remove(e) {
@@ -191,6 +195,8 @@ async function createCategory() {
     formError.value = err.response?.data?.message || t('common.error')
   }
 }
+watch(outletId, () => load(1))
+
 onMounted(async () => {
   await categoriesStore.ensureLoaded()
   await workingDateStore.ensureLoaded()

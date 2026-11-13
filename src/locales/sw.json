@@ -6151,7 +6151,13 @@
     "gateChoosePoint": "Chagua {type} ipi?",
     "gatePointCount": "Vituo {count}",
     "gateBack": "Rudi",
-    "gateNoShelf": "Hakuna rafi ya stock iliyowekwa"
+    "gateNoShelf": "Hakuna rafi ya stock iliyowekwa",
+    "gateCreateStore": "Ongeza duka lingine",
+    "gateCreateStoreButton": "Unda duka",
+    "gateCreatingStore": "Inaunda duka…",
+    "gateCreateFailed": "Imeshindikana kuunda duka.",
+    "gateStoreNameLabel": "Jina la duka",
+    "gateStoreNamePlaceholder": "mf. Duka Kuu"
   },
   "menuAudit": {
     "title": "Shughuli za Menyu",

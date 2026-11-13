@@ -440,7 +440,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { inventoryApi, inventoryOpsApi, unitsApi } from '@/api'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -448,7 +448,7 @@ import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { useCategoriesStore } from '@/stores/categories'
-import { selectedOutlet } from '@/composables/useOutletContext'
+import { selectedOutlet, shelfId } from '@/composables/useOutletContext'
 
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -641,6 +641,7 @@ async function load() {
       status: filters.status,
       search: filters.search,
       low_stock: filters.low_stock || undefined,
+      department_id: shelfId.value || undefined,
       page: page.value,
       per_page: 15,
     })
@@ -661,6 +662,7 @@ const loadAllItems = () =>
       status: filters.status,
       search: filters.search,
       low_stock: filters.low_stock || undefined,
+      department_id: shelfId.value || undefined,
       page,
       per_page: perPage,
     }),
@@ -834,6 +836,11 @@ function flattenError(err) {
     ? Object.values(messages).flat().join(' ')
     : err.response?.data?.message || t('common.actionFailed')
 }
+
+watch(shelfId, () => {
+  page.value = 1
+  load()
+})
 
 onMounted(() => {
   load()

@@ -198,7 +198,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { purchaseOrderApi, purchaseRequisitionApi, supplierApi } from '@/api'
@@ -211,6 +211,7 @@ import { usePrintSettingsStore } from '@/stores/printSettings'
 import { printElementSilently } from '@/utils/reportPrint'
 
 import { useTenantCurrency } from '@/utils/currency'
+import { useOutletContext } from '@/composables/useOutletContext'
 
 const { curCode } = useTenantCurrency()
 
@@ -219,6 +220,8 @@ const workingDateStore = useWorkingDateStore()
 const route = useRoute()
 const router = useRouter()
 const printStore = usePrintSettingsStore()
+const { selectedOutlet } = useOutletContext()
+const outletId = computed(() => selectedOutlet.value?.outlet_id || undefined)
 
 const auth = useAuthStore()
 const orders = ref([])
@@ -373,6 +376,7 @@ async function load(page = meta.value.current_page) {
     if (statusFilter.value) params.status_group = statusFilter.value
     if (q.value.trim()) params.search = q.value.trim()
     if (dateFilter.value) params.date = dateFilter.value
+    if (outletId.value) params.outlet_id = outletId.value
     const res = await purchaseOrderApi.index(params)
     orders.value = res.data.data || res.data || []
     meta.value = res.data.meta || { current_page: 1, last_page: 1 }
@@ -392,7 +396,7 @@ function closeForm() {
 async function primeForm() {
   const [sup, req, inv] = await Promise.allSettled([
     supplierApi.index({ per_page: 100 }),
-    purchaseRequisitionApi.index({ status: 'approved', per_page: 100 }),
+    purchaseRequisitionApi.index({ status: 'approved', per_page: 100, outlet_id: outletId.value }),
     fetchAllInventoryItems(),
   ])
   if (sup.status === 'fulfilled') suppliers.value = sup.value.data.data || sup.value.data || []
@@ -472,6 +476,7 @@ async function save() {
   formError.value = ''
   const payload = {
     supplier_id: form.supplier_id,
+    outlet_id: outletId.value,
     pr_id: form.pr_id || undefined,
     delivery_date: form.delivery_date || undefined,
     payment_terms: form.payment_terms || undefined,
@@ -590,6 +595,8 @@ async function handleRouteIntent() {
   }
   router.replace({ query: {} })
 }
+
+watch(outletId, () => load(1))
 
 onMounted(async () => {
   await workingDateStore.ensureLoaded()
