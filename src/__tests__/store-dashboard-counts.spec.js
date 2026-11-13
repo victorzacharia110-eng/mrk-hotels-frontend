@@ -61,6 +61,38 @@ describe('StoreDashboardPage KPI counts', () => {
     expect(cards[2].text()).toContain('3')
   })
 
+  it('separates the SI unit from qty and reorder in the low-stock table', async () => {
+    api.inventoryApi.index.mockImplementation((params = {}) => {
+      if (params.low_stock) return Promise.resolve({ data: { data: [], meta: { total: 1 } } })
+      return Promise.resolve({
+        data: {
+          data: [
+            {
+              item_id: 1,
+              item_name: 'Rice',
+              category: 'Food',
+              unit: 'KG',
+              quantity_in_stock: 2,
+              reorder_level: 5,
+            },
+          ],
+          meta: { total: 1 },
+        },
+      })
+    })
+    api.purchaseRequisitionApi.index.mockResolvedValue({ data: { data: [], meta: {} } })
+    api.goodsReceivedNoteApi.index.mockResolvedValue({ data: { data: [], meta: {} } })
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const lowStockTable = wrapper.findAll('.sm-table')[0]
+    expect(lowStockTable.findAll('thead th').map((th) => th.text()))
+      .toEqual(['Item name *', 'SI Unit', 'Category', 'In stock', 'Reorder Level'])
+    expect(lowStockTable.findAll('tbody td').map((td) => td.text()))
+      .toEqual(['Rice', 'KG', 'Food', '2', '5'])
+  })
+
   it('falls back to the derived count when the API omits a total', async () => {
     api.inventoryApi.index.mockImplementation((params = {}) => {
       if (params.low_stock) return Promise.resolve({ data: { data: [], meta: {} } })

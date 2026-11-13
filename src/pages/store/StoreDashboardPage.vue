@@ -44,13 +44,14 @@
         <div class="table-scroll">
         <SkeletonLoader v-if="loading" variant="table" :count="4" :cols="4" />
         <table class="sm-table" v-else-if="lowStock.length">
-          <thead><tr><th>{{ $t('inventory.itemName') }}</th><th>{{ $t('inventory.category') }}</th><th>{{ $t('inventory.inStock') }}</th><th>{{ $t('inventory.reorderLevel') }}</th></tr></thead>
+          <thead><tr><th>{{ $t('inventory.itemName') }}</th><th>{{ $t('requisitionPanel.siUnit') }}</th><th>{{ $t('inventory.category') }}</th><th>{{ $t('inventory.inStock') }}</th><th>{{ $t('inventory.reorderLevel') }}</th></tr></thead>
           <tbody>
             <tr v-for="item in lowStock" :key="item.item_id">
               <td><strong>{{ item.item_name }}</strong></td>
+              <td>{{ item.unit || '—' }}</td>
               <td><span class="chip">{{ item.category }}</span></td>
-              <td><span class="stock-low">{{ item.quantity_in_stock }} {{ item.unit }}</span></td>
-              <td>{{ item.reorder_level }} {{ item.unit }}</td>
+              <td><span class="stock-low">{{ Number(item.quantity_in_stock || 0) }}</span></td>
+              <td>{{ Number(item.reorder_level || 0) }}</td>
             </tr>
           </tbody>
         </table>

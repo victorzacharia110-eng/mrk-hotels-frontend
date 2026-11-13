@@ -22,7 +22,7 @@
         <table class="sm-table" v-if="alerts.length">
           <thead><tr>
             <th class="pick-col"><input type="checkbox" :checked="allSelected" :indeterminate.prop="someSelected && !allSelected" :aria-label="$t('common.selectAll')" @change="toggleAll" /></th>
-            <th>{{ $t('inventory.itemName') }}</th><th>{{ $t('inventory.category') }}</th>
+            <th>{{ $t('inventory.itemName') }}</th><th>{{ $t('requisitionPanel.siUnit') }}</th><th>{{ $t('inventory.category') }}</th>
             <th>{{ $t('inventory.inStock') }}</th><th>{{ $t('inventory.reorderLevel') }}</th>
             <th>{{ $t('storeManager.lowStock.onShelves') }}</th>
             <th>{{ $t('storeManager.lowStock.severity') }}</th>
@@ -31,9 +31,10 @@
             <tr v-for="a in filteredAlerts" :key="a.item_id">
               <td class="pick-col"><input type="checkbox" :checked="selected.includes(a.item_id)" @change="toggle(a.item_id)" /></td>
               <td><strong>{{ a.item_name }}</strong></td>
+              <td>{{ a.unit || '—' }}</td>
               <td><span class="chip">{{ a.category }}</span></td>
-              <td><span class="stock-low">{{ a.quantity_in_stock }}</span></td>
-              <td>{{ a.reorder_level }}</td>
+              <td><span class="stock-low">{{ Number(a.quantity_in_stock || 0) }}</span></td>
+              <td>{{ Number(a.reorder_level || 0) }}</td>
               <!-- The QTY above is the hotel-wide truth; this traces it back to
                    the shelf each balance actually sits on. -->
               <td>

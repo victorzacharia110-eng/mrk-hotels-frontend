@@ -150,6 +150,76 @@ describe('cashier/bartender dashboard business date', () => {
     wrapper.unmount()
   })
 
+  it('shows the SI unit in its own column and the menu reorder level as a number', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    api.staffDashboard.mockResolvedValue({
+      data: {
+        range: { from: '2026-09-25', to: '2026-09-25' },
+        sales: {},
+        stock: {},
+        requisitions: {},
+        menu_stock: {
+          low_stock_count: 1,
+          low_stock: [{
+            item_id: 'menu-1',
+            item_name: 'Bar Gin',
+            si_unit: 'BTL',
+            unit: 'BTL',
+            quantity: 2,
+            reorder_level: 5,
+          }],
+        },
+      },
+    })
+
+    const wrapper = mountDashboard('bartender', pinia)
+    await flushPromises()
+
+    const lowStockCard = wrapper.findAll('.dash-card')[0]
+    expect(lowStockCard.findAll('thead th').map((th) => th.text()))
+      .toEqual(['Item', 'SI Unit', 'Qty', 'Reorder level'])
+    expect(lowStockCard.findAll('tbody td').map((td) => td.text()))
+      .toEqual(['Bar Gin', 'BTL', '2', '5'])
+
+    wrapper.unmount()
+  })
+
+  it('renders the full low-stock page with SI unit and numeric reorder columns', async () => {
+    route.query = { department: 'bar' }
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore().user = { full_name: 'Test User', user_role: 'cashier' }
+    api.staffDashboard.mockResolvedValue({
+      data: {
+        menu_stock: {
+          low_stock_count: 1,
+          rows: [{
+            item_id: 'menu-1',
+            item_name: 'Bar Gin',
+            si_unit: 'BTL',
+            quantity: 2,
+            reorder_level: 5,
+            value: 10000,
+            low: true,
+          }],
+        },
+      },
+    })
+
+    const wrapper = mount(CashierLowStockPage, {
+      global: { plugins: [pinia, i18n] },
+    })
+    await flushPromises()
+
+    expect(wrapper.findAll('thead th').slice(0, 4).map((th) => th.text()))
+      .toEqual(['Item', 'SI Unit', 'Qty', 'Reorder level'])
+    expect(wrapper.findAll('tbody td').slice(0, 4).map((td) => td.text()))
+      .toEqual(['Bar Gin', 'BTL', '2.00', '5.00'])
+
+    wrapper.unmount()
+  })
+
   it.each([
     ['cashier', 'restaurant'],
     ['bartender', 'bar'],

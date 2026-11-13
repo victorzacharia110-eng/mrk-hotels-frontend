@@ -337,9 +337,9 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(row, i) in dashboard.menu_stock.low_stock" :key="i">
+                    <tr v-for="(row, i) in dashboard.menu_stock.low_stock" :key="row.item_id || i">
                       <td>{{ row.item_name }}</td>
-                      <td>{{ row.unit || '—' }}</td>
+                      <td>{{ row.si_unit || row.unit || '—' }}</td>
                       <td class="col-qty">{{ num(row.quantity) }}</td>
                       <td class="col-qty">{{ num(row.reorder_level) }}</td>
                     </tr>
