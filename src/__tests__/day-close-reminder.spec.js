@@ -57,7 +57,9 @@ describe('workingDate store — the hotel clock, not the browser clock', () => {
     // remind the 25th to be closed.
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-09-25T22:30:00Z'))
-    index.mockResolvedValue({ data: { open_date: '2026-09-25', timezone: TZ } })
+    index.mockResolvedValue({
+      data: { close_date: '2026-09-25', open_date: '2026-09-26', timezone: TZ },
+    })
 
     const store = useWorkingDateStore()
     await store.ensureLoaded()

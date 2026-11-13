@@ -59,7 +59,11 @@ beforeEach(() => {
   sessionStorage.clear()
   vi.clearAllMocks()
   api.dayClose.mockResolvedValue({
-    data: { open_date: '2026-09-25', timezone: 'Africa/Dar_es_Salaam' },
+    data: {
+      close_date: '2026-09-25',
+      open_date: '2026-11-13',
+      timezone: 'Africa/Dar_es_Salaam',
+    },
   })
   api.orderIndex.mockResolvedValue({ data: { data: [] } })
   api.menuIndex.mockResolvedValue({ data: { data: [] } })
@@ -91,14 +95,18 @@ describe('cashier/bartender dashboard business date', () => {
     expect(api.staffDashboard).not.toHaveBeenCalled()
 
     releaseDayClose({
-      data: { open_date: '2026-09-25', timezone: 'Africa/Dar_es_Salaam' },
+      data: {
+        close_date: '2026-11-09',
+        open_date: '2026-11-13',
+        timezone: 'Africa/Dar_es_Salaam',
+      },
     })
     await layoutLoad
     await flushPromises()
 
-    expect(wrapper.find('.dash-date').element.value).toBe('2026-09-25')
+    expect(wrapper.find('.dash-date').element.value).toBe('2026-11-09')
     expect(api.staffDashboard).toHaveBeenCalledWith(
-      expect.objectContaining({ department: 'bar', date: '2026-09-25' }),
+      expect.objectContaining({ department: 'bar', date: '2026-11-09' }),
     )
     wrapper.unmount()
     vi.useRealTimers()

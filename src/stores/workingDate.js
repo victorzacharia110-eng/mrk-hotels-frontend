@@ -7,9 +7,10 @@ import { fbDayCloseApi } from '@/api'
  *
  * When a cashier closes a business day the panels must start operating on the
  * NEXT working date instead of the wall-clock "today". This store fetches
- * GET /fnb/day-close once (which returns the tenant's `open_date` in the
- * hotel's own timezone), caches it, and falls back to the local date so every
- * panel still renders before the fetch completes or if it fails.
+ * GET /fnb/day-close once, prefers its oldest unclosed `close_date` (falling
+ * back to `open_date` for older responses), caches the result in the hotel's
+ * own timezone, and falls back to the local date so every panel still renders
+ * before the fetch completes or if it fails.
  */
 const localToday = () => {
   const now = new Date()
@@ -108,7 +109,9 @@ export const useWorkingDateStore = defineStore('workingDate', () => {
     inflight = (async () => {
       try {
         const { data } = await fbDayCloseApi.index()
-        openDate.value = data?.open_date || ''
+        // The date awaiting close is the effective business date. open_date can
+        // already be several calendar days ahead while older days remain open.
+        openDate.value = data?.close_date || data?.open_date || ''
         timezone.value = data?.timezone || ''
         runningOrdersCount.value = Number(data?.running_orders_count ?? 0)
         unsettledOrdersCount.value = Number(data?.unsettled_orders_count ?? 0)

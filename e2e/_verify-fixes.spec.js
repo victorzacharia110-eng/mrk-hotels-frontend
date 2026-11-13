@@ -62,10 +62,10 @@ test.describe('PDF feedback fixes', () => {
     const errors = trackPageErrors(page)
     await page.goto('/cashier/take-away')
     await expect(page).toHaveURL(/\/cashier\/take-away$/, { timeout: 20_000 })
-    await expect(page.locator('#ta-date')).toHaveValue(dayClose.open_date)
+    await expect(page.locator('#ta-date')).toHaveValue(dayClose.close_date || dayClose.open_date)
     await page.goto('/cashier/delivery')
     await expect(page).toHaveURL(/\/cashier\/delivery$/, { timeout: 20_000 })
-    await expect(page.locator('#dl-date')).toHaveValue(dayClose.open_date)
+    await expect(page.locator('#dl-date')).toHaveValue(dayClose.close_date || dayClose.open_date)
     expect(errors).toEqual([])
   })
 

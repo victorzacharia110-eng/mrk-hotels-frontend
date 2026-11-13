@@ -4,9 +4,9 @@
 
   A date can only be closed once its day has fully ended in the hotel's own
   timezone (midnight rollover) AND every order on it is settled and finished.
-  The page therefore offers the previous ended day ("date to close") plus the
-  current open business date the panels operate on. Closing a date freezes its
-  snapshot and the panels keep running on the open date.
+  The page therefore offers the oldest unclosed day ("date to close") plus the
+  current open calendar date. Panels remain on the date awaiting close until it
+  is closed; closing it advances their business date to the next unclosed day.
 -->
 
 <template>
