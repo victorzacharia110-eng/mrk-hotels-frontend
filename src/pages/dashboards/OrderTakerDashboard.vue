@@ -381,7 +381,7 @@
             <header class="dash-card-head">
               <strong><i class="fas fa-file-signature" aria-hidden="true"></i> {{ $t('staffDashboard.requisitionsTitle')
                 }}</strong>
-              <router-link to="/app/requisitions" class="summary-link req-link">
+              <router-link to="/cashier/requisitions" class="summary-link req-link">
                 <i class="fas fa-arrow-right" aria-hidden="true"></i> {{ $t('staffDashboard.viewRequisitions') }}
               </router-link>
             </header>

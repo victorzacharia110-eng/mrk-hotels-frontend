@@ -53,7 +53,7 @@ function mountDashboard(role, pinia) {
   return mount(OrderTakerDashboard, {
     global: {
       plugins: [pinia, i18n],
-      stubs: { 'router-link': { template: '<a><slot /></a>' } },
+      stubs: { 'router-link': { props: ['to'], template: '<a :href="to"><slot /></a>' } },
     },
   })
 }
@@ -217,6 +217,16 @@ describe('cashier/bartender dashboard business date', () => {
     expect(wrapper.findAll('tbody td').slice(0, 4).map((td) => td.text()))
       .toEqual(['Bar Gin', 'BTL', '2.00', '5.00'])
 
+    wrapper.unmount()
+  })
+
+  it('links the dashboard requisitions card to the cashier requisition page', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const wrapper = mountDashboard('bartender', pinia)
+    await flushPromises()
+
+    expect(wrapper.find('.req-link').attributes('href')).toBe('/cashier/requisitions')
     wrapper.unmount()
   })
 
