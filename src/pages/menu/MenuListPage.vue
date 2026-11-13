@@ -935,6 +935,7 @@ function resetForm() {
   form.inventory_item_id = null
   form.price = null
   form.cost = null
+  form.reorder_level = null
   form.description = ''
   form.description_sw = ''
   form.is_available = true

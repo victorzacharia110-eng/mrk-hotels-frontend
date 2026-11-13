@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import i18n from '@/locales/i18n'
 import OrderTakerDashboard from '@/pages/dashboards/OrderTakerDashboard.vue'
+import CashierLowStockPage from '@/pages/cashier/CashierLowStockPage.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useWorkingDateStore } from '@/stores/workingDate'
 
@@ -26,9 +27,12 @@ vi.mock('@/api', () => ({
   creditAccountApi: { index: vi.fn().mockResolvedValue({ data: { data: [] } }) },
 }))
 
+const router = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn() }))
+const route = vi.hoisted(() => ({ name: 'take-order', query: { tab: 'dashboard' } }))
+
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ name: 'take-order', query: { tab: 'dashboard' } }),
-  useRouter: () => ({ replace: vi.fn() }),
+  useRoute: () => route,
+  useRouter: () => router,
 }))
 
 vi.mock('@/utils/printer', async (importOriginal) => ({
@@ -57,6 +61,7 @@ function mountDashboard(role, pinia) {
 beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
+  route.query = { tab: 'dashboard' }
   vi.clearAllMocks()
   api.dayClose.mockResolvedValue({
     data: {
@@ -70,7 +75,7 @@ beforeEach(() => {
   api.tables.mockResolvedValue({ data: { data: [] } })
   api.accompaniments.mockResolvedValue({ data: { data: [] } })
   api.staffDashboard.mockImplementation(async (params) => ({
-    data: { range: { date: params.date }, sales: {}, stock: {}, requisitions: {} },
+    data: { range: { from: params.from, to: params.to }, sales: {}, stock: {}, requisitions: {} },
   }))
 })
 
@@ -106,10 +111,43 @@ describe('cashier/bartender dashboard business date', () => {
 
     expect(wrapper.find('.dash-date').element.value).toBe('2026-11-09')
     expect(api.staffDashboard).toHaveBeenCalledWith(
-      expect.objectContaining({ department: 'bar', date: '2026-11-09' }),
+      expect.objectContaining({ department: 'bar', from: '2026-11-09', to: '2026-11-09' }),
     )
     wrapper.unmount()
     vi.useRealTimers()
+  })
+
+  it('opens the low-stock page scoped to the department on screen', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const wrapper = mountDashboard('cashier', pinia)
+    await flushPromises()
+
+    await wrapper.find('.kpi-arrow').trigger('click')
+
+    expect(router.push).toHaveBeenCalledWith({
+      name: 'cashier-low-stock',
+      query: { department: 'restaurant' },
+    })
+    wrapper.unmount()
+  })
+
+  it('opens the low-stock page on the department that was on screen', async () => {
+    route.query = { department: 'bar' }
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore().user = { full_name: 'Test User', user_role: 'cashier' }
+    api.staffDashboard.mockResolvedValue({ data: { menu_stock: { rows: [], low_stock_count: 0 } } })
+
+    const wrapper = mount(CashierLowStockPage, {
+      global: { plugins: [pinia, i18n] },
+    })
+    await flushPromises()
+
+    expect(api.staffDashboard).toHaveBeenCalledWith(
+      expect.objectContaining({ department: 'bar' }),
+    )
+    wrapper.unmount()
   })
 
   it.each([
@@ -124,7 +162,7 @@ describe('cashier/bartender dashboard business date', () => {
     const dateInput = wrapper.find('.dash-date')
     expect(dateInput.element.value).toBe('2026-09-25')
     expect(api.staffDashboard).toHaveBeenCalledWith(
-      expect.objectContaining({ department, date: '2026-09-25' }),
+      expect.objectContaining({ department, from: '2026-09-25', to: '2026-09-25' }),
     )
 
     await dateInput.setValue('2026-08-17')
@@ -133,7 +171,7 @@ describe('cashier/bartender dashboard business date', () => {
 
     expect(dateInput.element.value).toBe('2026-08-17')
     expect(api.staffDashboard).toHaveBeenLastCalledWith(
-      expect.objectContaining({ department, date: '2026-08-17' }),
+      expect.objectContaining({ department, from: '2026-08-17', to: '2026-08-17' }),
     )
     wrapper.unmount()
   })

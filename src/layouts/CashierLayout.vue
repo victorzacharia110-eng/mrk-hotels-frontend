@@ -480,6 +480,8 @@ const codeCopied = ref(false)
 const gateError = ref('')
 const gateBusy = ref(false)
 const createForm = reactive({ name: '', type: 'bar' })
+const UNLOCKED_OUTLETS_KEY = 'cashier_unlocked_outlets'
+const unlockedOutletIds = ref(new Set(readUnlockedOutlets()))
 const sidebarCollapsed = ref(true)
 const mobileOpen = ref(false)
 // Accordion groups in the sidebar are exclusive: opening one smoothly closes
@@ -649,10 +651,44 @@ function isActive(to) {
   return route.path.startsWith(to)
 }
 
-/** Loads outlets and always opens the gate after login, even with one outlet. */
+/** Reads the counters already unlocked in this browser tab. */
+function readUnlockedOutlets() {
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(UNLOCKED_OUTLETS_KEY) || '[]')
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string' && id) : []
+  } catch {
+    return []
+  }
+}
+
+/** True when this tab has already passed this counter's access gate. */
+function isOutletUnlocked(outlet) {
+  return Boolean(outlet?.outlet_id) && unlockedOutletIds.value.has(outlet.outlet_id)
+}
+
+/** Remembers a counter as unlocked until the user signs out or closes the tab. */
+function markOutletUnlocked(outlet) {
+  if (!outlet?.outlet_id) return
+  const next = new Set(unlockedOutletIds.value)
+  next.add(outlet.outlet_id)
+  unlockedOutletIds.value = next
+  sessionStorage.setItem(UNLOCKED_OUTLETS_KEY, JSON.stringify([...next]))
+}
+
+/** Drops every remembered unlock, so the next sign-in asks for the code again. */
+function clearUnlockedOutlets() {
+  unlockedOutletIds.value = new Set()
+  sessionStorage.removeItem(UNLOCKED_OUTLETS_KEY)
+}
+
+/** Loads outlets and opens the gate only when the restored counter is still locked. */
 async function loadOutlets() {
   await loadOutletList({ sellingOnly: true })
   resetGate()
+  if (selectedOutlet.value && isOutletUnlocked(selectedOutlet.value)) {
+    gateOpen.value = false
+    return
+  }
   gateOpen.value = true
 }
 
@@ -682,6 +718,7 @@ function rememberOutlet(outlet) {
 function applyOutlet(outlet) {
   rememberOutlet(outlet)
   selectOutlet(outlet)
+  markOutletUnlocked(outlet)
   gateOpen.value = false
   resetGate()
 }
@@ -695,6 +732,10 @@ function chooseType(group) {
 
 function beginUnlock(outlet) {
   if (!outlet) return
+  if (isOutletUnlocked(outlet)) {
+    applyOutlet(outlet)
+    return
+  }
   pendingOutlet.value = outlet
   duplicateOutlet.value = null
   accessCodeInput.value = ''
@@ -820,6 +861,7 @@ function switchOutlet() {
 
 async function handleLogout() {
   gateOpen.value = false
+  clearUnlockedOutlets()
   await authStore.logout()
   router.push({ name: 'login' })
 }

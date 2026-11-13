@@ -288,8 +288,15 @@
                 $t('staffDashboard.stockValue') }}: {{ curCode() }} {{ money(dashboard.stock?.value) }}</span>
             </div>
             <div class="summary-kpi kpi-low">
-              <span class="sk-label">{{ $t('staffDashboard.lowStock') }}</span>
-              <strong>{{ dashboard.menu_stock?.low_stock_count ?? dashboard.stock?.low_stock_count ?? 0 }}</strong>
+              <span class="sk-label">
+                {{ $t('staffDashboard.lowStock') }}
+                <button v-if="canViewLowStock" type="button" class="kpi-arrow"
+                  :title="$t('staffDashboard.viewLowStock')"
+                  :aria-label="$t('staffDashboard.viewLowStock')" @click="openLowStock">
+                  <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                </button>
+              </span>
+              <strong>{{ dashboard.menu_stock?.low_stock_count ?? 0 }}</strong>
               <span class="sk-sub">{{ $t('staffDashboard.lowStockTitle') }}</span>
             </div>
             <div class="summary-kpi kpi-sales">
@@ -311,8 +318,9 @@
               <header class="dash-card-head">
                 <strong><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> {{
                   $t('staffDashboard.lowStockTitle') }}</strong>
-                <button v-if="isPosRole" type="button" class="dash-card-link" :title="$t('staffDashboard.viewLowStock')"
-                  :aria-label="$t('staffDashboard.viewLowStock')" @click="router.push({ name: 'cashier-low-stock' })">
+                <button v-if="canViewLowStock" type="button" class="dash-card-link"
+                  :title="$t('staffDashboard.viewLowStock')"
+                  :aria-label="$t('staffDashboard.viewLowStock')" @click="openLowStock">
                   <i class="fas fa-arrow-right" aria-hidden="true"></i>
                 </button>
               </header>
@@ -1165,6 +1173,16 @@ const fixedDept = computed(() => '')
 // Cashier/bartender dine-in uses the hotel's logo palette: swapping the pad's
 // amber accent for the brand blue. Waiters keep the classic gold theme.
 const isPosRole = computed(() => ['cashier', 'bartender'].includes(role.value))
+// Everyone who can open the cashier panel's low-stock page. Waiters reach this
+// dashboard through /take-order, so they must not be sent into a guarded route.
+const canViewLowStock = computed(() =>
+  ['cashier', 'bartender', 'hotel_admin', 'manager', 'accountant'].includes(role.value),
+)
+
+/** Opens the low-stock page already filtered to the department on screen. */
+function openLowStock() {
+  router.push({ name: 'cashier-low-stock', query: { department: department.value } })
+}
 
 /** The order type the API accepts for the current department (dine_in / at_bar). */
 function defaultOrderType() {
@@ -1558,12 +1576,13 @@ async function loadDashboard() {
     const res = await reportApi.staffDashboard({
       department: department.value,
       outlet_id: selectedOutlet.value?.outlet_id || undefined,
-      date: dashDate.value || undefined,
+      from: dashDate.value || undefined,
+      to: dashDate.value || undefined,
     })
     const data = res.data
     dashboard.value = data && typeof data === 'object' ? data : null
-    // Mirror the effective (server-defaulted) window back into the pickers.
-    if (data?.range?.date) dashDate.value = data.range.date
+    // Mirror the effective (server-defaulted) window back into the picker.
+    if (data?.range?.from) dashDate.value = data.range.from
   } catch (err) {
     dashboardError.value = err.response?.data?.message || t('staffDashboard.loadError')
     dashboard.value = null
@@ -5519,6 +5538,27 @@ function onKey(e) {
 
 .kpi-low {
   border-left-color: #ef4444;
+}
+
+.kpi-low .sk-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.kpi-arrow {
+  border: 0;
+  background: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 6px;
+  line-height: 1;
+}
+
+.kpi-arrow:hover {
+  background: #fef2f2;
 }
 
 .kpi-sales {

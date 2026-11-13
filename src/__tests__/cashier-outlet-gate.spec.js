@@ -71,7 +71,7 @@ describe('cashier outlet gate', () => {
     loaded.value = false
   })
 
-  it('always opens the gate and asks for the counter access code', async () => {
+  it('opens the gate for a fresh session and asks for the counter access code', async () => {
     outletApi.index.mockResolvedValue({ data: { outlets: [bar] } })
     outletApi.verifyAccess.mockResolvedValue({ data: { outlet: bar } })
 
@@ -101,6 +101,27 @@ describe('cashier outlet gate', () => {
     })
     expect(selectedOutlet.value.outlet_id).toBe('outlet-bar-1')
     expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(false)
+  })
+
+  it('keeps the unlocked counter across a refresh while the user stays signed in', async () => {
+    outletApi.index.mockResolvedValue({ data: { outlets: [bar] } })
+    outletApi.verifyAccess.mockResolvedValue({ data: { outlet: bar } })
+
+    const first = await mountLayout()
+    await first.find('.outlet-option').trigger('click')
+    await first.find('.outlet-option').trigger('click')
+    await first.find('#gate-access-code').setValue('THB-BAR-1-ABC123')
+    await buttonByText(first, 'Unlock counter').trigger('click')
+    await flushPromises()
+
+    expect(first.find('.sm-modal-backdrop').exists()).toBe(false)
+    expect(selectedOutlet.value.outlet_id).toBe('outlet-bar-1')
+    first.unmount()
+
+    const second = await mountLayout()
+
+    expect(second.find('.sm-modal-backdrop').exists()).toBe(false)
+    expect(selectedOutlet.value.outlet_id).toBe('outlet-bar-1')
   })
 
   it('lets a cashier create the first counter and shows the default code once', async () => {

@@ -243,6 +243,8 @@ export const useAuthStore = defineStore('auth', () => {
       // confirm which outlet to work in (the review wants the prompt on login).
       sessionStorage.removeItem('active_outlet')
       sessionStorage.removeItem('active_store_outlet')
+      // Unlocked counters are a per-session convenience, not device trust.
+      sessionStorage.removeItem('cashier_unlocked_outlets')
       // The trusted-device key is deliberately kept: sign-out ends the session,
       // not the device's trust (only expiry or the Trusted Devices screen
       // revokes that), and wiping it here is what made PIN sign-in fail with
@@ -274,6 +276,7 @@ export const useAuthStore = defineStore('auth', () => {
         permissions.value = []
         mustChangePassword.value = false
         sessionStorage.removeItem('auth_token')
+        sessionStorage.removeItem('cashier_unlocked_outlets')
         // Device trust survives a dead session — see logout() above.
       }
       throw error
