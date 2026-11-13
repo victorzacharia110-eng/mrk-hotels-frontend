@@ -117,7 +117,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { orderApi } from '@/api'
 import { selectedOutlet } from '@/composables/useOutletContext'
@@ -260,6 +260,8 @@ function money(value) {
     maximumFractionDigits: 2,
   })
 }
+
+watch(() => selectedOutlet.value?.outlet_id, () => load(), { immediate: false })
 
 // ---- Lifecycle -----------------------------------------------------------
 onMounted(async () => {

@@ -1028,6 +1028,13 @@
                   {{ $t('orderTaker.' + sec, sec) }}
                 </option>
               </select>
+              <select v-model="tableForm.outlet_id" class="tm-input" :disabled="!!fixedDept"
+                :title="fixedDept ? $t('orderTaker.pinnedOutlet') : $t('orderTaker.unassignedTableHint')">
+                <option :value="null">{{ $t('orderTaker.unassignedOutlet') }}</option>
+                <option v-for="outlet in tableOutletOptions" :key="outlet.outlet_id" :value="outlet.outlet_id">
+                  {{ outlet.name }}
+                </option>
+              </select>
               <input v-model.number="tableForm.capacity" type="number" min="1" max="50" class="tm-input tm-cap"
                 :placeholder="$t('orderTaker.capacity')" />
               <button type="submit" class="tm-add" :disabled="tableSaving">
@@ -1039,10 +1046,23 @@
               </button>
             </form>
             <p v-if="tableError" class="tm-error">{{ tableError }}</p>
+            <div class="tm-filter">
+              <label class="tm-filter-label" for="tm-outlet-filter">{{ $t('orderTaker.tableOutletFilter') }}</label>
+              <select id="tm-outlet-filter" v-model="tableOutletFilter" class="tm-input tm-filter-select">
+                <option value="all">{{ $t('orderTaker.tableOutletFilterAll') }}</option>
+                <option value="scoped" :disabled="!selectedOutlet?.outlet_id">
+                  {{ selectedOutlet?.name || $t('orderTaker.tableOutletFilterScoped') }}
+                </option>
+                <option value="unassigned">{{ $t('orderTaker.unassignedOutlet') }}</option>
+              </select>
+            </div>
             <ul class="tm-list">
               <li v-for="tbl in managerTables" :key="tbl.table_id" class="tm-row">
                 <span class="tm-name">{{ tbl.table_name }}</span>
-                <span class="tm-meta">{{ $t('orderTaker.' + tbl.section, tbl.section) }} · {{ tbl.capacity }}</span>
+                <span class="tm-meta">
+                  {{ $t('orderTaker.' + tbl.section, tbl.section) }} ·
+                  {{ tbl.outlet_name || $t('orderTaker.unassignedOutlet') }} · {{ tbl.capacity }}
+                </span>
                 <button type="button" class="tm-btn" :disabled="!canTouchTable(tbl)" @click="editTable(tbl)">
                   <i class="fas fa-pen" aria-hidden="true"></i>
                 </button>
@@ -1110,7 +1130,7 @@ import { hasPrintableLines } from '@/utils/receipts'
 import { formatOrderDateTime, formatDateDMY, formatTime } from '@/utils/dates'
 import { isGrillMenuItem, canManageAccompaniments } from '@/utils/menuAccompaniment'
 import { useAccompaniments } from '@/composables/useAccompaniments'
-import { selectedOutlet } from '@/composables/useOutletContext'
+import { outlets, selectedOutlet } from '@/composables/useOutletContext'
 import AccompanimentManager from '@/components/AccompanimentManager.vue'
 import { toast } from '@/utils/toast'
 
@@ -1475,11 +1495,16 @@ watch([summarySearch, summaryStatus, summarySort], () => {
   summaryPage.value = 1
 })
 
-// Changing outlet changes which shelf the drinks figures come from, so the
-// menu has to be re-read. Leaving the old figures up would show the waiter a
-// stock level from the counter they just walked away from.
+// Changing outlet changes which shelf the drinks figures come from and which
+// counter's tickets/tables belong on the boards, so every outlet-scoped read
+// is refreshed rather than leaving the previous counter's figures on screen.
 watch(() => selectedOutlet.value?.outlet_id, () => {
-  if (activeTab.value === 'new') loadMenu()
+  loadMenu()
+  loadTables({ includeUnassigned: tableManagerOpen.value })
+  loadOpenOrders()
+  loadDeptOrders()
+  if (activeTab.value === 'dashboard') loadDashboard()
+  if (activeTab.value === 'summary') loadOrderSummary()
 })
 
 /** Switches to the order-summary tab and refreshes the waiter's tickets. */
@@ -1560,6 +1585,7 @@ async function loadOrderSummary() {
       // scope). The backend closes the same-waiter rule itself for floor staff.
       const res = await orderApi.summary({
         department: dept,
+        outlet_id: selectedOutlet.value?.outlet_id || undefined,
         date: summaryDate.value || undefined,
         ...waiterScopeParams(),
       })
@@ -1625,6 +1651,7 @@ async function loadOpenOrders() {
   try {
     const res = await orderApi.index({
       department: department.value,
+      outlet_id: selectedOutlet.value?.outlet_id || undefined,
       date: openDate.value || undefined,
       per_page: 50,
       ...waiterScopeParams(),
@@ -1995,10 +2022,16 @@ const barSeeded = ref(false)
 // must be able to move a bar drinks bill onto a restaurant table and vice
 // versa). Restaurant and bar tables therefore never mix for the fixed roles,
 // while waiters always see the full floor.
+const assignedTables = computed(() =>
+  tables.value.filter(
+    (t) => t.outlet_id || String(t.table_id || '').startsWith('bar-fallback-'),
+  ),
+)
+
 const servingTables = computed(() => {
-  if (!fixedDept.value) return tables.value
+  if (!fixedDept.value) return assignedTables.value
   const dept = fixedDept.value
-  const matched = tables.value.filter((t) => String(t.section || '').trim().toLowerCase() === dept)
+  const matched = assignedTables.value.filter((t) => String(t.section || '').trim().toLowerCase() === dept)
   if (dept !== 'bar' || barSeeded.value) return matched
   const taken = new Set(matched.map((t) => String(t.table_name).trim().toLowerCase()))
   const placeholders = BAR_FALLBACK_TABLES
@@ -2028,7 +2061,12 @@ async function loadDeptOrders() {
   const merged = []
   for (const dept of depts) {
     try {
-      const res = await orderApi.index({ department: dept, per_page: 100, occupancy: 1 })
+      const res = await orderApi.index({
+        department: dept,
+        outlet_id: selectedOutlet.value?.outlet_id || undefined,
+        per_page: 100,
+        occupancy: 1,
+      })
       const rows = Array.isArray(res.data) ? res.data : res.data?.data || []
       merged.push(...rows)
     } catch {
@@ -2197,10 +2235,18 @@ const tableOptions = computed(() =>
 const canManageTables = computed(() => ['hotel_admin', 'manager', 'bartender'].includes(role.value))
 const canManageLocations = computed(() => ['hotel_admin', 'manager'].includes(role.value))
 
-/** Tables shown in the manager popup: bartenders only ever see their bar rows. */
+/** Tables shown in the manager popup: bartenders only ever see their bar rows,
+ *  and the outlet filter narrows the list to one selling point (or to the
+ *  tables still waiting for an outlet) so a manager can spot gaps quickly. */
 const managerTables = computed(() => {
-  if (!fixedDept.value) return tables.value
-  return tables.value.filter((t) => String(t.section || '').trim().toLowerCase() === fixedDept.value)
+  const outletId = selectedOutlet.value?.outlet_id || null
+
+  return tables.value.filter((t) => {
+    if (fixedDept.value && String(t.section || '').trim().toLowerCase() !== fixedDept.value) return false
+    if (tableOutletFilter.value === 'unassigned') return !t.outlet_id
+    if (tableOutletFilter.value === 'scoped') return Boolean(outletId) && String(t.outlet_id) === String(outletId)
+    return true
+  })
 })
 
 /** True when the signed-in role is allowed to edit/delete the given table:
@@ -2226,9 +2272,15 @@ const transferTableOptions = computed(() =>
 )
 
 /** Loads the active tables for the table picker (all staff can read them). */
-async function loadTables() {
+async function loadTables({ includeUnassigned = false } = {}) {
   try {
-    const res = await tableApi.index({ is_active: 1 })
+    const params = {
+      is_active: 1,
+      outlet_id: selectedOutlet.value?.outlet_id || undefined,
+    }
+    if (includeUnassigned) params.include_unassigned = 1
+
+    const res = await tableApi.index(params)
     const d = res.data
     tables.value = Array.isArray(d) ? d : d?.data || []
   } catch {
@@ -2250,10 +2302,15 @@ async function ensureBarTables() {
   tableError.value = ''
   try {
     for (const table_name of missing) {
-      await tableApi.store({ table_name, section: 'bar', capacity: 4 })
+      await tableApi.store({
+        table_name,
+        section: 'bar',
+        outlet_id: selectedOutlet.value?.outlet_id || null,
+        capacity: 4,
+      })
     }
     barSeeded.value = true
-    await loadTables()
+    await loadTables({ includeUnassigned: true })
   } catch (err) {
     tableError.value = err.response?.data?.message || t('orderTaker.tableSaveError')
   }
@@ -2264,13 +2321,22 @@ async function ensureBarTables() {
 const tableManagerOpen = ref(false)
 const tableSaving = ref(false)
 const tableError = ref('')
-const tableForm = ref({ table_id: null, table_name: '', section: 'restaurant', capacity: 4 })
+const tableForm = ref({
+  table_id: null,
+  table_name: '',
+  section: 'restaurant',
+  outlet_id: null,
+  capacity: 4,
+})
+// Which rows the manager list shows: everything loaded, only the picked
+// outlet's tables, or only the tables nobody has assigned an outlet yet.
+const tableOutletFilter = ref('all')
 
 /** Opens the table manager and refreshes the list. */
 function openTableManager() {
   resetTableForm()
   tableManagerOpen.value = true
-  loadTables()
+  loadTables({ includeUnassigned: true })
   loadTableLocations()
   if (fixedDept.value === 'bar') ensureBarTables()
 }
@@ -2296,10 +2362,25 @@ const sectionOptions = computed(() => {
   return [...tableLocations.value.map((l) => l.name), ...extras]
 })
 
+/** Selling outlets a table can belong to (warehouses/stores cannot own tables). */
+const tableOutletOptions = computed(() =>
+  outlets.value.filter((outlet) => {
+    if (outlet.is_active === false) return false
+    const type = String(outlet.type || '').toLowerCase()
+    return type !== 'store' && !['laundry', 'housekeeping', 'maintenance', 'other'].includes(type)
+  }),
+)
+
 /** Clears the table form back to "add" mode. Floor roles default (and stay)
  *  on their own department so a bartender's new tables are always bar tables. */
 function resetTableForm() {
-  tableForm.value = { table_id: null, table_name: '', section: fixedDept.value || 'restaurant', capacity: 4 }
+  tableForm.value = {
+    table_id: null,
+    table_name: '',
+    section: fixedDept.value || 'restaurant',
+    outlet_id: selectedOutlet.value?.outlet_id || null,
+    capacity: 4,
+  }
   tableError.value = ''
 }
 
@@ -2314,6 +2395,7 @@ function editTable(tbl) {
     table_id: tbl.table_id,
     table_name: tbl.table_name,
     section: tbl.section,
+    outlet_id: tbl.outlet_id || null,
     capacity: tbl.capacity,
   }
 }
@@ -2330,6 +2412,7 @@ async function saveTable() {
     const payload = {
       table_name: tableForm.value.table_name,
       section: fixedDept.value || tableForm.value.section,
+      outlet_id: tableForm.value.outlet_id || null,
       capacity: tableForm.value.capacity,
     }
     if (tableForm.value.table_id) {
@@ -2338,7 +2421,7 @@ async function saveTable() {
       await tableApi.store(payload)
     }
     resetTableForm()
-    await loadTables()
+    await loadTables({ includeUnassigned: tableManagerOpen.value })
   } catch (err) {
     tableError.value = err.response?.data?.message || t('orderTaker.tableSaveError')
   } finally {
@@ -2355,7 +2438,7 @@ async function deleteTable(tbl) {
   tableError.value = ''
   try {
     await tableApi.destroy(tbl.table_id)
-    await loadTables()
+    await loadTables({ includeUnassigned: tableManagerOpen.value })
   } catch (err) {
     tableError.value = err.response?.data?.message || t('orderTaker.tableSaveError')
   }
@@ -3383,6 +3466,25 @@ function onKey(e) {
   color: #dc2626;
   font-size: 13px;
   padding: 8px 14px 0;
+}
+
+.tm-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 0;
+}
+
+.tm-filter-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.tm-filter-select {
+  flex: 0 1 220px;
+  min-width: 140px;
 }
 
 .tm-list {

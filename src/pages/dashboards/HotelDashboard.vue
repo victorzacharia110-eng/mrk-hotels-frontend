@@ -2413,10 +2413,11 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useNotificationStore } from '@/stores/notifications'
 
 const route = useRoute()
+const router = useRouter()
 import { roomApi, reservationApi, guestApi, housekeepingApi, laundryApi, inventoryApi, paymentApi, companyApi, hotelSettingsApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import AlertModal from '@/components/AlertModal.vue'

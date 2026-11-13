@@ -11,7 +11,9 @@ import { inventoryApi } from '@/api'
 export async function fetchAllInventoryItems(params = {}) {
   const items = []
   let page = 1
-  let lastPage = 1
+  // Only the loop condition reads this, and the do/while body always assigns it
+  // from the first response's meta before that condition is ever evaluated.
+  let lastPage
 
   do {
     const res = await inventoryApi.index({ ...params, per_page: 100, page })

@@ -262,7 +262,10 @@ function closeAllOthers() {
       if (el === rootEl.value) return
       el.dispatchEvent(new CustomEvent('ss:force-close'))
     })
-  } catch {}
+  } catch {
+    // Best-effort broadcast — one select failing to dispatch must not stop this
+    // one from closing.
+  }
 }
 
 /** Focuses the next or previous option in the list (roving tabindex). */
@@ -314,8 +317,6 @@ function onListKeydown(event) {
 // Timestamp of the last pick. Used to flatten the mobile ghost-click that
 // otherwise reopens the panel right after a selection.
 let lastPickAt = 0
-let globalLastPickAt = 0
-let lastPickRoot = null
 
 /**
  * Selects an option: emits the model update and change events (unless
@@ -333,13 +334,12 @@ function pick(value) {
   close()
   closeAllOthers()
   lastPickAt = Date.now() + 5000
-  globalLastPickAt = Date.now() + 5000
-  try { lastPickRoot = rootEl.value } catch {}
   if (typeof window !== 'undefined') {
     window.__ss_last_pick = Date.now()
     window.__ss_last_pick_root = rootEl.value
   }
-  try { document.activeElement?.blur() } catch {}
+  // Dropping focus is cosmetic, and blur() can throw on a detached node.
+  try { document.activeElement?.blur() } catch { /* ignored */ }
   nextTick(() => {
     if (open.value) close()
   })
@@ -376,14 +376,15 @@ onMounted(() => {
   document.addEventListener('mousedown', onDocumentClick)
   window.addEventListener('scroll', onViewportChange, true)
   window.addEventListener('resize', onViewportChange)
-  try { rootEl.value?.addEventListener('ss:force-close', close) } catch {}
+  // The root ref can be absent when the component is rendered headlessly.
+  try { rootEl.value?.addEventListener('ss:force-close', close) } catch { /* ignored */ }
 })
 /** Removes the document/scroll/resize listeners on teardown. */
 onBeforeUnmount(() => {
   document.removeEventListener('mousedown', onDocumentClick)
   window.removeEventListener('scroll', onViewportChange, true)
   window.removeEventListener('resize', onViewportChange)
-  try { rootEl.value?.removeEventListener('ss:force-close', close) } catch {}
+  try { rootEl.value?.removeEventListener('ss:force-close', close) } catch { /* ignored */ }
 })
 </script>
 

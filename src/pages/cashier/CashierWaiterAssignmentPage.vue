@@ -340,10 +340,11 @@
 
 <script setup>
 
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { cashierApi, tableApi, orderApi } from '@/api'
+import { selectedOutlet } from '@/composables/useOutletContext'
 import { initEcho, getEcho } from '@/plugins/echo'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
 import { useTenantCurrency } from '@/utils/currency'
@@ -571,9 +572,10 @@ async function load() {
   busy.value = true
   try {
     const dept = fixedDept.value
+    const outletId = selectedOutlet.value?.outlet_id || undefined
     const [tablesRes, board] = await Promise.all([
-      tableApi.index({ per_page: 100, section: dept }),
-      cashierApi.waiters(),
+      tableApi.index({ per_page: 100, section: dept, outlet_id: outletId }),
+      cashierApi.waiters({ outlet_id: outletId }),
     ])
     const list = tablesRes.data.data || tablesRes.data
     const wList = board.data.waiters || []
@@ -584,7 +586,11 @@ async function load() {
     // and by whom — independent of the explicit waiter assignment above.
     // Best-effort: if the orders feed fails the board still shows every table.
     try {
-      const ordersRes = await orderApi.index({ department: dept, per_page: 100 })
+      const ordersRes = await orderApi.index({
+        department: dept,
+        outlet_id: outletId,
+        per_page: 100,
+      })
       const rows = Array.isArray(ordersRes.data) ? ordersRes.data : ordersRes.data?.data || []
       deptOrders.value = rows.filter(
         (o) => !['completed', 'cancelled'].includes(o.status) && o.payment_status !== 'paid',
@@ -602,7 +608,7 @@ async function load() {
         _lastAt: null,
       }))
 
-    const batchRes = await cashierApi.todayOrdersBatch()
+    const batchRes = await cashierApi.todayOrdersBatch({ outlet_id: outletId })
     const batchMap = batchRes.data.tables || {}
 
     for (const tbl of enriched) {
@@ -659,6 +665,8 @@ function unsubscribe() {
     echoChannel = null
   }
 }
+
+watch(() => selectedOutlet.value?.outlet_id, () => load(), { immediate: false })
 
 onMounted(() => {
   load(); subscribe()

@@ -14,13 +14,42 @@ const read = (p) => readFileSync(resolve(process.cwd(), p), 'utf8')
 
 const component = read('src/components/ThemeToggle.vue')
 
-const PANELS = {
-  'cashier / bartender': 'src/layouts/CashierLayout.vue',
-  'store manager / inventory': 'src/layouts/StoreManagerLayout.vue',
-  superadmin: 'src/layouts/SuperadminLayout.vue',
-  owner: 'src/layouts/OwnerLayout.vue',
-  'customer portal': 'src/layouts/CustomerLayout.vue',
-}
+// Each shell reaches the switch its own way: the cashier and store manager
+// panels put it inside their profile menu, wired straight to the theme store,
+// while the remaining shells render the shared ThemeToggle component. The marks
+// are what has to show up in the file for that wiring to actually be reachable.
+const PANELS = [
+  {
+    label: 'cashier / bartender',
+    path: 'src/layouts/CashierLayout.vue',
+    wiring: /import \{ useThemeStore \} from '@\/stores\/theme'/,
+    marks: [/themeStore\.toggleTheme\(\)/, /cashier\.profile\.darkMode/],
+  },
+  {
+    label: 'store manager / inventory',
+    path: 'src/layouts/StoreManagerLayout.vue',
+    wiring: /import \{ useThemeStore \} from '@\/stores\/theme'/,
+    marks: [/themeStore\.toggleTheme\(\)/],
+  },
+  {
+    label: 'superadmin',
+    path: 'src/layouts/SuperadminLayout.vue',
+    wiring: /import ThemeToggle from '@\/components\/ThemeToggle\.vue'/,
+    marks: [/<ThemeToggle \/>/],
+  },
+  {
+    label: 'owner',
+    path: 'src/layouts/OwnerLayout.vue',
+    wiring: /import ThemeToggle from '@\/components\/ThemeToggle\.vue'/,
+    marks: [/<ThemeToggle \/>/],
+  },
+  {
+    label: 'customer portal',
+    path: 'src/layouts/CustomerLayout.vue',
+    wiring: /import ThemeToggle from '@\/components\/ThemeToggle\.vue'/,
+    marks: [/<ThemeToggle \/>/],
+  },
+]
 
 describe('shared ThemeToggle component', () => {
   it('drives the one theme store', () => {
@@ -36,23 +65,18 @@ describe('shared ThemeToggle component', () => {
   })
 })
 
-describe.each(Object.entries(PANELS))('%s panel has the theme switch', (_label, path) => {
+describe.each(PANELS)('$label panel has the theme switch', ({ path, wiring, marks }) => {
   const layout = read(path)
-  const inProfileMenu = path.includes('StoreManagerLayout') || path.includes('CashierLayout')
 
   it('imports or wires the theme switch', () => {
-    if (inProfileMenu) expect(layout).toMatch(/import \{ useThemeStore \} from '@\/stores\/theme'/)
-    else expect(layout).toMatch(/import ThemeToggle from '@\/components\/ThemeToggle\.vue'/)
+    expect(layout).toMatch(wiring)
   })
 
   it('renders it in the shell', () => {
-    if (path.includes('CashierLayout')) {
-      expect(layout).toMatch(/themeStore\.toggleTheme\(\)/)
-      expect(layout).toMatch(/cashier\.profile\.darkMode/)
-    } else if (inProfileMenu) {
-      expect(layout).toContain('themeStore.toggleTheme()')
-    } else {
-      expect(layout).toContain('<ThemeToggle />')
+    // Every panel declares the marks that prove the switch is reachable, so the
+    // assertions run unconditionally instead of branching on the file name.
+    for (const mark of marks) {
+      expect(layout).toMatch(mark)
     }
   })
 })

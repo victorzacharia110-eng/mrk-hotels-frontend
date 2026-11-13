@@ -130,7 +130,9 @@ beforeEach(() => {
   api.store.mockResolvedValue({ data: { order: ORDER() } })
   api.show.mockResolvedValue({ data: { order: ORDER() } })
   api.index.mockResolvedValue({ data: { data: [] } })
-  api.tables.mockResolvedValue({ data: { data: [{ table_id: 1, table_name: '4', section: 'restaurant', is_active: 1 }] } })
+  api.tables.mockResolvedValue({
+    data: { data: [{ table_id: 1, table_name: '4', section: 'restaurant', outlet_id: 1, is_active: 1 }] },
+  })
   api.reports.mockResolvedValue({ data: { data: [] } })
   // Printed documents resolve the hotel's saved letterhead; this hotel has one.
   api.hotelShow.mockResolvedValue({

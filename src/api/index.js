@@ -1725,8 +1725,8 @@ export const menuAccompanimentApi = {
 /** Restaurant/bar tables (manager maintains the list; waiters pick one when ordering). */
 export const tableApi = {
   /**
-   * Lists tables with optional section/status filters.
-   * @param {object} params - Query params (section, status, is_active).
+   * Lists tables with optional section/outlet/status filters.
+   * @param {object} params - Query params (section, outlet_id, include_unassigned, status, is_active).
    * @returns {Promise} Axios response with the table list.
    */
   index(params) {
@@ -1810,7 +1810,7 @@ export const orderApi = {
   index(params) {
     return api.get(`${v1}/orders`, { params });
   },
-  /** Daily order summary (settlement buckets + waiter scoped). @param {object} params - date, department, waiter_id. */
+  /** Daily order summary (settlement buckets + waiter scoped). @param {object} params - date, department, outlet_id, waiter_id. */
   summary(params) {
     return api.get(`${v1}/orders/summary`, { params });
   },
@@ -2043,10 +2043,11 @@ export const outletApi = {
 export const cashierApi = {
   /**
    * Waiter assignment board: service staff with their assigned-table counts.
+   * @param {object} [params] - Optional outlet_id scope for the counts.
    * @returns {Promise} Axios response with waiters + unassigned table count.
    */
-  waiters() {
-    return api.get(`${v1}/cashier/waiters`);
+  waiters(params) {
+    return api.get(`${v1}/cashier/waiters`, { params });
   },
   /**
    * Assigns (or clears, when userId is null) the waiter responsible for a table.
@@ -2075,10 +2076,11 @@ export const cashierApi = {
   },
   /**
    * Batch today's order summary for ALL tables in one request.
+   * @param {object} [params] - Optional outlet_id scope.
    * @returns {Promise} Axios response with { tables: { tableName: { waiters_count, last_at } } }
    */
-  todayOrdersBatch() {
-    return api.get(`${v1}/cashier/tables/today-orders-batch`);
+  todayOrdersBatch(params) {
+    return api.get(`${v1}/cashier/tables/today-orders-batch`, { params });
   },
   /**
    * Freezes a running order so it cannot be edited until unfrozen.

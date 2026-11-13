@@ -1199,6 +1199,10 @@ const { stop: stopOrderUpdates } = useOrderRealtime(() => {
   if (!loading.value && !drawerOpen.value && !payOpen.value) load()
 })
 
+watch(() => selectedOutlet.value?.outlet_id, () => {
+  load()
+}, { immediate: false })
+
 onMounted(async () => {
   await workingDateStore.ensureLoaded()
   date.value = workingDateStore.workingDate
@@ -1609,8 +1613,3 @@ onUnmounted(() => {
   gap: 6px;
 }
 </style>
-
-
-watch(() => selectedOutlet.value?.outlet_id, () => {
-  if (typeof load === 'function') load()
-}, { immediate: false })
