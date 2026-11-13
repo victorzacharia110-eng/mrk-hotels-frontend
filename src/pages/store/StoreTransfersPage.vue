@@ -22,12 +22,20 @@
           <table class="sm-table" v-if="filteredTransfers.length">
             <thead><tr>
               <th>S/N</th>
+              <th>{{ $t('storeManager.transfers.from') }}</th>
+              <th>{{ $t('storeManager.transfers.to') }}</th>
+              <th>{{ $t('storeManager.transfers.manager') }}</th>
+              <th>{{ $t('storeManager.transfers.recordedAt') }}</th>
               <th>{{ $t('common.status') }}</th>
               <th>{{ $t('storeManager.transfers.costValue') }}</th>
             </tr></thead>
             <tbody>
               <tr v-for="tr in pagedTransfers" :key="tr.transfer_id">
                 <td><button class="ref-link" @click="openDetail(tr)">{{ tr.transfer_number }}</button></td>
+                <td>{{ fromName(tr) }}</td>
+                <td>{{ toName(tr) }}</td>
+                <td>{{ managerName(tr) }}</td>
+                <td>{{ fmtDateTime(tr.created_at) }}</td>
                 <td><span class="chip" :class="{ danger: tr.status === 'voided' }">{{ statusLabel(tr.status) }}</span></td>
                 <td><strong>{{ money(tr.total_cost) }}</strong></td>
               </tr>
@@ -127,6 +135,8 @@
             <p><strong>{{ $t('storeManager.transfers.from') }}:</strong> {{ fromName(detailTransfer) }}</p>
             <p><strong>{{ $t('storeManager.transfers.to') }}:</strong> {{ toName(detailTransfer) }}</p>
             <p><strong>{{ $t('common.date') }}:</strong> {{ fmtDate(detailTransfer.business_date || detailTransfer.created_at) }}</p>
+            <p><strong>{{ $t('storeManager.transfers.movedBy') }}:</strong> {{ managerName(detailTransfer) }}</p>
+            <p><strong>{{ $t('storeManager.transfers.recordedAt') }}:</strong> {{ fmtDateTime(detailTransfer.created_at) }}</p>
             <p><strong>{{ $t('common.status') }}:</strong> <span class="chip" :class="{ danger: detailTransfer.status === 'voided' }">{{ statusLabel(detailTransfer.status) }}</span></p>
           </div>
           <p v-if="detailTransfer.notes"><strong>{{ $t('common.notes') }}:</strong> {{ detailTransfer.notes }}</p>
@@ -159,6 +169,83 @@
       </div>
     </div>
 
+    <div v-if="confirmSend" class="sm-modal-backdrop" @click.self="closeConfirm">
+      <div class="sm-modal">
+        <div class="sm-modal-head">
+          <h3>{{ confirmSend.mode === 'draft' ? $t('storeManager.transfers.confirmDraftTitle') : $t('storeManager.transfers.confirmTitle') }}</h3>
+          <button class="x" @click="closeConfirm">×</button>
+        </div>
+        <div class="sm-modal-body">
+          <p class="confirm-intro">
+            {{ confirmSend.mode === 'draft'
+              ? $t('storeManager.transfers.confirmDraftIntro', { number: confirmSend.number })
+              : $t('storeManager.transfers.confirmIntro') }}
+          </p>
+          <div class="transfer-meta">
+            <p><strong>{{ $t('storeManager.transfers.from') }}:</strong> {{ confirmSend.from }}</p>
+            <p><strong>{{ $t('storeManager.transfers.to') }}:</strong> {{ confirmSend.to }}</p>
+            <p><strong>{{ $t('storeManager.transfers.movedBy') }}:</strong> {{ confirmSend.manager }}</p>
+            <p><strong>{{ $t('storeManager.transfers.recordedAt') }}:</strong> {{ fmtDateTime(confirmSend.at) }}</p>
+          </div>
+          <div class="table-scroll">
+            <table class="sm-table">
+              <thead><tr>
+                <th>{{ $t('inventory.itemName') }}</th>
+                <th>{{ $t('storeManager.sales.qty') }}</th>
+                <th>{{ $t('common.unit') }}</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="(line, idx) in confirmSend.lines" :key="idx">
+                  <td>{{ line.name }}</td>
+                  <td>{{ line.quantity }}</td>
+                  <td>{{ line.unit || '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="transfer-total"><strong>{{ $t('storeManager.transfers.totalCost') }}: {{ money(confirmSend.total) }}</strong></p>
+          <p v-if="formError" class="sm-error">{{ formError }}</p>
+          <div class="sm-modal-foot">
+            <button class="sm-btn ghost" :disabled="saving" @click="closeConfirm">{{ $t('storeManager.transfers.confirmBack') }}</button>
+            <button class="sm-btn" :disabled="saving" @click="confirmMovement">
+              <i class="fas fa-check"></i>
+              {{ saving ? $t('storeManager.transfers.confirmSending') : $t('storeManager.transfers.confirmSend') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="successInfo" class="sm-modal-backdrop" @click.self="successInfo = null">
+      <div class="sm-modal">
+        <div class="sm-modal-head">
+          <h3><i class="fas fa-circle-check"></i> {{ $t('storeManager.transfers.successTitle') }}</h3>
+          <button class="x" @click="successInfo = null">×</button>
+        </div>
+        <div class="sm-modal-body">
+          <p>{{ $t('storeManager.transfers.successMessage') }}</p>
+          <div class="transfer-meta">
+            <p><strong>{{ $t('storeManager.transfers.from') }}:</strong> {{ successInfo.from }}</p>
+            <p><strong>{{ $t('storeManager.transfers.to') }}:</strong> {{ successInfo.to }}</p>
+            <p><strong>{{ $t('storeManager.transfers.movedBy') }}:</strong> {{ successInfo.manager }}</p>
+            <p><strong>{{ $t('storeManager.transfers.recordedAt') }}:</strong> {{ fmtDateTime(successInfo.at) }}</p>
+          </div>
+          <p v-if="successInfo.number" class="transfer-total">
+            <strong>{{ $t('storeManager.transfers.successRef') }}: {{ successInfo.number }}</strong>
+          </p>
+          <p class="transfer-total">
+            <strong>{{ $t('storeManager.transfers.totalCost') }}: {{ money(successInfo.total) }}</strong>
+          </p>
+          <div class="sm-modal-foot">
+            <button class="sm-btn ghost" @click="successInfo = null">{{ $t('storeManager.transfers.done') }}</button>
+            <button v-if="successInfo.transferId" class="sm-btn" @click="viewSuccessTransfer">
+              {{ $t('storeManager.transfers.viewTransfer') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div v-if="voidTarget" class="sm-modal-backdrop" @click.self="voidTarget = null">
       <div class="sm-modal">
         <div class="sm-modal-head"><h3>{{ $t('storeManager.common.voidTitle') }}</h3><button class="x" @click="voidTarget = null">×</button></div>
@@ -184,12 +271,16 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
 import { fetchAllInventoryItems, stockOnShelf } from '@/utils/inventoryItems.js'
 import { useTenantCurrency } from '@/utils/currency'
+import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n()
 const { curCode } = useTenantCurrency()
 const workingDateStore = useWorkingDateStore()
-const { outlets, selectedOutlet, loadOutlets } = useOutletContext()
+const authStore = useAuthStore()
+const { outlets, selectedOutlet, selectedStore, mainStore, loadOutlets } = useOutletContext()
 const transferableOutlets = computed(() => outlets.value.filter((outlet) => outlet.stock_department))
+/** Stock transfers follow the selected store, falling back to the outlet. */
+const stockOutletId = computed(() => selectedStore.value?.outlet_id || selectedOutlet.value?.outlet_id || undefined)
 const canTransfer = computed(() => transferableOutlets.value.length > 1)
 const businessDate = ref('')
 const loadedDate = ref('')
@@ -206,6 +297,8 @@ const formError = ref('')
 const voidTarget = ref(null)
 const voidReason = ref('')
 const detailTransfer = ref(null)
+const confirmSend = ref(null)
+const successInfo = ref(null)
 const form = reactive({
   from_outlet_id: null,
   to_outlet_id: null,
@@ -217,6 +310,7 @@ const form = reactive({
 const formShelfId = computed(() => {
   const from = transferableOutlets.value.find((outlet) => outlet.outlet_id === form.from_outlet_id)
   return from?.stock_department?.department_id
+    || selectedStore.value?.stock_department?.department_id
     || selectedOutlet.value?.stock_department?.department_id
     || undefined
 })
@@ -230,10 +324,13 @@ const itemOptions = computed(() => items.value.map((i) => ({
   unit_cost: i.unit_cost,
 })))
 
-const outletOptions = computed(() => transferableOutlets.value.map((o) => ({
-  value: o.outlet_id,
-  label: `${o.name} · ${o.stock_department?.name || ''}`.replace(/ · $/, ''),
-})))
+const outletOptions = computed(() => transferableOutlets.value.map((o) => {
+  const main = mainStore.value?.outlet_id === o.outlet_id ? ` · ${t('outlet.mainStore')}` : ''
+  return {
+    value: o.outlet_id,
+    label: `${o.name} · ${o.stock_department?.name || ''}${main}`.replace(/ · $/, ''),
+  }
+}))
 
 const filteredTransfers = computed(() => {
   let rows = transfers.value
@@ -246,6 +343,7 @@ const filteredTransfers = computed(() => {
       tr.status,
       fromName(tr),
       toName(tr),
+      managerName(tr),
       lineSummary(tr),
     ].some((value) => String(value ?? '').toLowerCase().includes(needle)))
   }
@@ -272,6 +370,11 @@ function emptyLine() {
 }
 
 function fmtDate(v) { return v ? new Date(v).toLocaleDateString() : '-' }
+function fmtDateTime(v) {
+  return v
+    ? new Date(v).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+    : '—'
+}
 function money(v) { return `${curCode()} ${Number(v || 0).toLocaleString()}` }
 function esc(v) {
   return String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
@@ -282,6 +385,9 @@ function statusLabel(v) {
 function outletName(id) { return outlets.value.find((o) => o.outlet_id === id)?.name || '—' }
 function fromName(tr) { return tr.from_outlet?.name || outletName(tr.from_outlet_id) || tr.from_department?.name || '—' }
 function toName(tr) { return tr.to_outlet?.name || outletName(tr.to_outlet_id) || tr.to_department?.name || '—' }
+function managerName(tr) {
+  return tr?.creator?.full_name || tr?.creator?.name || tr?.created_by_name || '—'
+}
 function lineSummary(tr) {
   const lines = tr.items || []
   if (!lines.length) return '—'
@@ -356,7 +462,7 @@ async function loadTransfers() {
     const res = await inventoryOpsApi.transfers({
       per_page: 50,
       date: businessDate.value,
-      outlet_id: selectedOutlet.value?.outlet_id || undefined,
+      outlet_id: stockOutletId.value,
     })
     transfers.value = res.data.transfers || []
     loadedDate.value = businessDate.value
@@ -374,10 +480,14 @@ async function load() {
 }
 
 function openCreate() {
-  const first = selectedOutlet.value?.outlet_id && transferableOutlets.value.some((o) => o.outlet_id === selectedOutlet.value.outlet_id)
-    ? selectedOutlet.value.outlet_id
+  const first = stockOutletId.value && transferableOutlets.value.some((o) => o.outlet_id === stockOutletId.value)
+    ? stockOutletId.value
     : transferableOutlets.value[0]?.outlet_id || null
-  const second = transferableOutlets.value.find((o) => o.outlet_id !== first)?.outlet_id || null
+  // Default the destination to the main store so moving stock back to the
+  // store that holds the hotel's data is one click, not a hunt through a list.
+  const second = mainStore.value?.outlet_id && mainStore.value.outlet_id !== first
+    ? mainStore.value.outlet_id
+    : transferableOutlets.value.find((o) => o.outlet_id !== first)?.outlet_id || null
   Object.assign(form, {
     from_outlet_id: first,
     to_outlet_id: second,
@@ -409,27 +519,107 @@ async function save(send = true) {
     formError.value = t('storeManager.transfers.quantityRequired')
     return
   }
-  saving.value = true
-  try {
-    await inventoryOpsApi.storeTransfer({
-      from_outlet_id: form.from_outlet_id,
-      to_outlet_id: form.to_outlet_id,
-      business_date: businessDate.value,
-      notes: form.notes,
-      send,
-      items: lines.map((line) => ({ item_id: line.item_id, quantity: baseQuantity(line) })),
-    })
-    showForm.value = false
-    await load()
-  } catch (e) { formError.value = e.response?.data?.message || t('common.error') } finally { saving.value = false }
+  const payload = {
+    from_outlet_id: form.from_outlet_id,
+    to_outlet_id: form.to_outlet_id,
+    business_date: businessDate.value,
+    notes: form.notes,
+    send,
+    items: lines.map((line) => ({ item_id: line.item_id, quantity: baseQuantity(line) })),
+  }
+
+  if (!send) {
+    saving.value = true
+    try {
+      await inventoryOpsApi.storeTransfer(payload)
+      showForm.value = false
+      await load()
+    } catch (e) { formError.value = e.response?.data?.message || t('common.error') } finally { saving.value = false }
+    return
+  }
+
+  // Sending changes stock on both shelves, so show a receipt-style check first.
+  confirmSend.value = {
+    mode: 'create',
+    payload,
+    number: null,
+    from: outletName(form.from_outlet_id),
+    to: outletName(form.to_outlet_id),
+    lines: lines.map((line) => ({
+      name: line.item_name || '—',
+      quantity: baseQuantity(line),
+      unit: line.unit,
+    })),
+    total: transferTotal.value,
+    manager: authStore.user?.full_name || authStore.user?.name || '—',
+    at: new Date().toISOString(),
+  }
 }
 
-async function sendTransfer(tr) {
+function sendTransfer(tr) {
+  formError.value = ''
+  const lines = tr.items || []
+  confirmSend.value = {
+    mode: 'draft',
+    transfer: tr,
+    number: tr.transfer_number,
+    from: fromName(tr),
+    to: toName(tr),
+    lines: lines.map((line) => ({
+      name: line.item?.item_name || line.item_name || '—',
+      quantity: Number(line.quantity || 0),
+      unit: line.item?.unit || '',
+    })),
+    total: Number(tr.total_cost || lines.reduce(
+      (sum, line) => sum + Number(line.quantity || 0) * Number(line.item?.unit_cost || 0),
+      0,
+    )),
+    manager: authStore.user?.full_name || authStore.user?.name || '—',
+    at: new Date().toISOString(),
+  }
+}
+
+function closeConfirm() {
+  confirmSend.value = null
+  formError.value = ''
+}
+
+async function confirmMovement() {
+  const summary = confirmSend.value
+  if (!summary) return
+  saving.value = true
+  formError.value = ''
   try {
-    await inventoryOpsApi.sendTransfer(tr.transfer_id)
+    let transfer
+    if (summary.mode === 'draft') {
+      const res = await inventoryOpsApi.sendTransfer(summary.transfer.transfer_id)
+      transfer = res.data?.transfer || summary.transfer
+    } else {
+      const res = await inventoryOpsApi.storeTransfer(summary.payload)
+      transfer = res.data?.transfer || {}
+    }
+    confirmSend.value = null
+    showForm.value = false
     detailTransfer.value = null
+    successInfo.value = {
+      transferId: transfer?.transfer_id || summary.transfer?.transfer_id || null,
+      number: transfer?.transfer_number || summary.number || '',
+      from: summary.from,
+      to: summary.to,
+      manager: summary.manager,
+      at: summary.at,
+      total: transfer?.total_cost ?? summary.total,
+    }
     await load()
-  } catch (e) { formError.value = e.response?.data?.message || t('common.error') }
+  } catch (e) {
+    formError.value = e.response?.data?.message || t('common.error')
+  } finally { saving.value = false }
+}
+
+function viewSuccessTransfer() {
+  const transfer = transfers.value.find((row) => row.transfer_id === successInfo.value?.transferId)
+  successInfo.value = null
+  if (transfer) openDetail(transfer)
 }
 
 function printTransfer(tr) {
@@ -455,7 +645,8 @@ function printTransfer(tr) {
     .sign div{flex:1;border-top:1px solid #111;padding-top:6px}
   </style></head><body>
     <h2>${esc(tr.transfer_number)}</h2>
-    <p>${esc(fromName(tr))} → ${esc(toName(tr))} · ${esc(statusLabel(tr.status))}<br><span class="muted">${fmtDate(tr.business_date || tr.created_at)}</span></p>
+    <p>${esc(fromName(tr))} → ${esc(toName(tr))} · ${esc(statusLabel(tr.status))}<br>
+    <span class="muted">${fmtDate(tr.business_date || tr.created_at)} · ${esc(t('storeManager.transfers.movedBy'))}: ${esc(managerName(tr))} · ${esc(t('storeManager.transfers.recordedAt'))}: ${esc(fmtDateTime(tr.created_at))}</span></p>
     ${voided}
     <table><thead><tr><th>Item</th><th>Quantity</th><th>Unit cost</th><th>Cost</th></tr></thead>
     <tbody>${rows}</tbody><tfoot><tr><td colspan="3">Total</td><td>${money(total)}</td></tr></tfoot></table>
@@ -464,7 +655,7 @@ function printTransfer(tr) {
   w.document.close()
 }
 async function shareTransfer(tr) {
-  const text = `${tr.transfer_number}: ${lineSummary(tr)} (${fromName(tr)} → ${toName(tr)}) · ${money(tr.total_cost)}`
+  const text = `${tr.transfer_number}: ${lineSummary(tr)} (${fromName(tr)} → ${toName(tr)}) · ${money(tr.total_cost)} · ${managerName(tr)} · ${fmtDateTime(tr.created_at)}`
   if (navigator.share) { try { await navigator.share({ title: tr.transfer_number, text }) } catch { /* cancelled */ } }
   else window.location.href = `mailto:?subject=${encodeURIComponent(tr.transfer_number)}&body=${encodeURIComponent(text)}`
 }
@@ -492,7 +683,7 @@ watch(() => form.from_outlet_id, (id, previous) => {
   form.items = [emptyLine()]
   loadItems()
 })
-watch(() => selectedOutlet.value?.outlet_id, async () => {
+watch(stockOutletId, async () => {
   showForm.value = false
   detailTransfer.value = null
   await loadTransfers()
@@ -521,6 +712,7 @@ onMounted(async () => {
 .void-note { background: #fff4ed; border: 1px solid #fed7aa; color: #9a3412; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
 .transfer-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; margin-bottom: 10px; }
 .transfer-meta p { margin: 0; font-size: 13px; }
+.confirm-intro { margin: 0 0 12px; color: #475569; font-size: 13px; line-height: 1.5; }
 .transfer-total { text-align: right; margin: 10px 0 0; }
 .ref-link { border: 0; background: none; padding: 0; color: var(--mrk-blue); font-weight: 700; cursor: pointer; font-family: inherit; font-size: 13px; }
 .ref-link:hover { text-decoration: underline; }

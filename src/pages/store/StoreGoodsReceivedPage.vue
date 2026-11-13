@@ -329,9 +329,8 @@ const { t } = useI18n()
 const workingDateStore = useWorkingDateStore()
 const auth = useAuthStore()
 const printStore = usePrintSettingsStore()
-const { selectedOutlet } = useOutletContext()
+const { selectedOutlet, shelfId } = useOutletContext()
 const outletId = computed(() => selectedOutlet.value?.outlet_id || undefined)
-const shelfId = computed(() => selectedOutlet.value?.stock_department?.department_id || undefined)
 
 const grns = ref([])
 const { q, status, statuses, paged } = useClientTable(grns, {
@@ -687,6 +686,10 @@ async function voidGrn() {
 }
 
 watch(outletId, () => load(1))
+
+watch(shelfId, () => {
+  if (isLedgerView.value) loadMovements(dateFilter.value)
+})
 
 onMounted(async () => {
   await workingDateStore.ensureLoaded()

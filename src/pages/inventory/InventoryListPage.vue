@@ -448,7 +448,7 @@ import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { useCategoriesStore } from '@/stores/categories'
-import { selectedOutlet, shelfId } from '@/composables/useOutletContext'
+import { selectedOutlet, selectedStore, shelfId } from '@/composables/useOutletContext'
 
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -805,7 +805,7 @@ async function saveAdjust() {
       notes: adjustForm.notes,
       // "Each outlet has its own ... adjustment": the correction has to land on
       // the shelf that was miscounted, not on the hotel-wide total.
-      outlet_id: selectedOutlet.value?.outlet_id || undefined,
+      outlet_id: selectedStore.value?.outlet_id || selectedOutlet.value?.outlet_id || undefined,
     })
     showAdjust.value = false
     success.value = t('inventory.adjusted')

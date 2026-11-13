@@ -266,7 +266,7 @@ import { useBulkSelection } from '@/composables/useBulkSelection'
 import { formatCategory } from '@/utils/format'
 import { useCategoriesStore } from '@/stores/categories'
 import { useAuthStore } from '@/stores/auth'
-import { selectedOutlet, shelfId, shelfName } from '@/composables/useOutletContext'
+import { selectedOutlet, selectedStore, shelfId, shelfName } from '@/composables/useOutletContext'
 
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -513,7 +513,7 @@ async function saveAdjustment() {
       type: adjustForm.type,
       quantity: Math.abs(adjustForm.quantity),
       notes: adjustForm.reason,
-      outlet_id: selectedOutlet.value?.outlet_id || undefined,
+      outlet_id: selectedStore.value?.outlet_id || selectedOutlet.value?.outlet_id || undefined,
     })
     adjusting.value = null
     await load()

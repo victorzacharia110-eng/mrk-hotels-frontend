@@ -71,6 +71,22 @@
               </optgroup>
             </select>
           </div>
+          <!-- Warehouse/store picker: the outlet is the business unit, the
+               store is the stock location the panel is working against. -->
+          <div v-if="showStorePicker" class="sm-outlet-picker sm-store-picker">
+            <i class="fas fa-warehouse" aria-hidden="true"></i>
+            <select
+              class="sm-outlet-select"
+              :aria-label="$t('outlet.storePickerLabel')"
+              :value="selectedStore?.outlet_id || ''"
+              @change="onStoreChange($event.target.value)"
+            >
+              <option value="">{{ $t('outlet.chooseStorePlaceholder') }}</option>
+              <option v-for="store in storeOutlets" :key="store.outlet_id" :value="store.outlet_id">
+                {{ store.name }}{{ isMainStore(store) ? ` · ${$t('outlet.mainStore')}` : '' }}
+              </option>
+            </select>
+          </div>
           <button class="sm-icon-btn sm-notif-bell" :title="$t('notifications.title')"
             :aria-label="$t('notifications.unreadCount', { count: notifStore.unreadCount })"
             @click="toggleNotifDropdown">
@@ -189,7 +205,7 @@
       <div class="sm-modal" role="dialog" aria-modal="true">
         <div class="sm-modal-head">
           <h3><i :class="gateTitleIcon" aria-hidden="true"></i> {{ gateTitle }}</h3>
-          <button v-if="gateStep === 'point'" type="button" class="sm-gate-back" @click="gateStep = 'type'">
+          <button v-if="gateStep === 'point' || gateStep === 'store'" type="button" class="sm-gate-back" @click="goBackFromGate">
             <i class="fas fa-arrow-left" aria-hidden="true"></i>
             {{ $t('outlet.gateBack') }}
           </button>
@@ -219,6 +235,33 @@
               <strong>{{ o.name }}</strong>
               <small>{{ o.stock_department?.name || $t('outlet.gateNoShelf') }}</small>
             </span>
+          </button>
+        </div>
+        <div v-else-if="gateStep === 'store'" class="sm-outlet-gate-list">
+          <button v-if="selectedStore" type="button" class="sm-outlet-option"
+            @click="chooseStore(selectedStore)">
+            <i class="fas fa-warehouse" aria-hidden="true"></i>
+            <span>
+              <strong>{{ selectedStore.name }}</strong>
+              <small>
+                {{ selectedStore.stock_department?.name || $t('outlet.gateNoShelf') }}
+                <template v-if="isMainStore(selectedStore)"> · {{ $t('outlet.mainStore') }}</template>
+              </small>
+            </span>
+            <i class="fas fa-chevron-right sm-gate-arrow" aria-hidden="true"></i>
+          </button>
+          <p v-if="selectedStore && gateStoreList.length" class="sm-gate-hint">{{ $t('outlet.orChooseStore') }}</p>
+          <button v-for="store in gateStoreList" :key="store.outlet_id" type="button" class="sm-outlet-option"
+            @click="chooseStore(store)">
+            <i class="fas fa-warehouse" aria-hidden="true"></i>
+            <span>
+              <strong>{{ store.name }}</strong>
+              <small>
+                {{ store.stock_department?.name || $t('outlet.gateNoShelf') }}
+                <template v-if="isMainStore(store)"> · {{ $t('outlet.mainStore') }}</template>
+              </small>
+            </span>
+            <i class="fas fa-chevron-right sm-gate-arrow" aria-hidden="true"></i>
           </button>
         </div>
         <div v-else class="sm-gate-form">
@@ -265,13 +308,22 @@ const themeStore = useThemeStore()
 const {
   outlets,
   selectedOutlet,
+  selectedStore,
   hasChoice,
+  storeOutlets,
+  mainStore,
   loadOutlets: loadOutletList,
   selectOutlet,
+  selectStore,
   roleCanSelectOutlet,
 } = useOutletContext()
 
 const showOutletPicker = computed(() => hasChoice.value && roleCanSelectOutlet(authStore.user?.user_role))
+const showStorePicker = computed(
+  () => showOutletPicker.value
+    && storeOutlets.value.length > 0
+    && String(selectedOutlet.value?.type || '').toLowerCase() !== 'store',
+)
 const outletGateOpen = ref(false)
 const gateStep = ref('type')
 const gateType = ref('')
@@ -314,20 +366,33 @@ const outletTypeGroups = computed(() => {
 const gateOutlets = computed(
   () => outletTypeGroups.value.find((group) => group.type === gateType.value)?.outlets || [],
 )
+const gateStoreList = computed(
+  () => storeOutlets.value.filter((store) => store.outlet_id !== selectedStore.value?.outlet_id),
+)
+function isMainStore(store) {
+  return !!store?.outlet_id && store.outlet_id === mainStore.value?.outlet_id
+}
 const gateTypeLabel = computed(
   () => outletTypeGroups.value.find((group) => group.type === gateType.value)?.label || '',
 )
 const gateTypeIcon = computed(() => outletTypeMeta(gateType.value).icon)
 const gateTitle = computed(() => {
   if (gateStep.value === 'create') return t('outlet.gateCreateStore')
+  if (gateStep.value === 'store') return t('outlet.gateChooseStore')
   if (gateStep.value === 'type') return t('outlet.gateChooseType')
   return t('outlet.gateChoosePoint', { type: gateTypeLabel.value })
 })
 const gateTitleIcon = computed(() => {
   if (gateStep.value === 'create') return 'fas fa-plus'
+  if (gateStep.value === 'store') return 'fas fa-warehouse'
   if (gateStep.value === 'type') return 'fas fa-store'
   return gateTypeIcon.value
 })
+
+/** True when a selling outlet must be paired with a warehouse/store. */
+function needsStoreStep(outlet) {
+  return String(outlet?.type || '').toLowerCase() !== 'store' && storeOutlets.value.length > 0
+}
 
 /** Opens the picker after sign-in, but lets a single outlet start automatically. */
 async function openOutletGateIfNeeded() {
@@ -337,6 +402,11 @@ async function openOutletGateIfNeeded() {
   // it and the panel opens straight into that store. Multiple outlets still
   // confirm the store before stock figures are shown.
   if (outlets.value.length === 1 && selectedOutlet.value) {
+    if (needsStoreStep(selectedOutlet.value)) {
+      gateStep.value = 'store'
+      outletGateOpen.value = true
+      return
+    }
     outletGateOpen.value = false
     return
   }
@@ -351,6 +421,16 @@ function chooseType(group) {
   gateStep.value = 'point'
 }
 
+function goBackFromGate() {
+  gateError.value = ''
+  if (gateStep.value === 'store') {
+    gateStep.value = gateType.value ? 'point' : 'type'
+    return
+  }
+  gateStep.value = 'type'
+  gateType.value = ''
+}
+
 function rememberOutlet(outlet) {
   if (!outlet?.outlet_id) return
   const exists = outlets.value.some((row) => row.outlet_id === outlet.outlet_id)
@@ -360,9 +440,19 @@ function rememberOutlet(outlet) {
   outlets.value = next.sort((a, b) => a.name.localeCompare(b.name))
 }
 
-/** Confirms the outlet the user will work in and closes the gate. */
+/** Confirms the outlet, then asks which store supplies its stock. */
 function chooseOutlet(outlet) {
   selectOutlet(outlet)
+  if (needsStoreStep(outlet)) {
+    gateStep.value = 'store'
+    return
+  }
+  outletGateOpen.value = false
+}
+
+/** Confirms the warehouse/store whose shelf the panel should use. */
+function chooseStore(store) {
+  selectStore(store)
   outletGateOpen.value = false
 }
 
@@ -393,7 +483,18 @@ async function createStore() {
 
 /** Activates a different outlet from the header picker. */
 function onOutletChange(outletId) {
-  selectOutlet(outlets.value.find((o) => o.outlet_id === outletId) || null)
+  const outlet = outlets.value.find((o) => o.outlet_id === outletId) || null
+  selectOutlet(outlet)
+  if (needsStoreStep(outlet)) {
+    gateType.value = ''
+    gateStep.value = 'store'
+    outletGateOpen.value = true
+  }
+}
+
+/** Switches the warehouse/store without changing the operating outlet. */
+function onStoreChange(storeId) {
+  selectStore(storeOutlets.value.find((s) => s.outlet_id === storeId) || null)
 }
 
 const sidebarCollapsed = ref(true)

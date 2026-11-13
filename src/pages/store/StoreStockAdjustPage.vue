@@ -303,7 +303,7 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import CalendarInput from '@/components/CalendarInput.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { useAuthStore } from '@/stores/auth'
-import { selectedOutlet } from '@/composables/useOutletContext'
+import { selectedOutlet, selectedStore, shelfId } from '@/composables/useOutletContext'
 import { fetchAllInventoryItems, stockOnShelf } from '@/utils/inventoryItems'
 import { formatMoney } from '@/utils/currency'
 import '@/pages/store/store-shared.css'
@@ -311,8 +311,6 @@ import '@/pages/store/store-shared.css'
 const { t } = useI18n()
 const workingDateStore = useWorkingDateStore()
 const auth = useAuthStore()
-/** The selected counter's shelf; adjustments read and write this shelf. */
-const shelfId = computed(() => selectedOutlet.value?.stock_department?.department_id || undefined)
 
 const adjustments = ref([])
 const allItems = ref([])
@@ -541,7 +539,7 @@ async function saveSheet() {
       type: form.type,
       business_date: businessDate.value,
       description: form.description || null,
-      outlet_id: selectedOutlet.value?.outlet_id || undefined,
+      outlet_id: selectedStore.value?.outlet_id || selectedOutlet.value?.outlet_id || undefined,
       items: form.lines.map((line) => ({
         item_id: line.item_id,
         quantity: Number(line.quantity),
@@ -657,7 +655,7 @@ function printSheet(row) {
   w.document.close()
 }
 
-watch(() => selectedOutlet.value?.outlet_id, async () => {
+watch(shelfId, async () => {
   closeSheet()
   await Promise.all([load(), loadItems()])
 })

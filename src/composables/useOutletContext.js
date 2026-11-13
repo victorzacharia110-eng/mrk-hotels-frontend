@@ -21,12 +21,15 @@ import { outletApi } from '@/api'
 const outlets = ref([])
 /** Currently selected outlet object ({ outlet_id, name, type }) or null. */
 const selectedOutlet = ref(null)
+/** The warehouse/store outlet whose shelf holds the stock being worked on. */
+const selectedStore = ref(null)
 /** True once the list has been fetched at least once. */
 const loaded = ref(false)
 /** Set while a fetch is in flight, so two layouts don't both request it. */
 let inflight = null
 
 const STORAGE_KEY = 'active_outlet'
+const STORE_STORAGE_KEY = 'active_store_outlet'
 
 /** True once an outlet has been picked for this session. */
 const hasOutlet = computed(() => selectedOutlet.value !== null)
@@ -34,8 +37,38 @@ const hasOutlet = computed(() => selectedOutlet.value !== null)
 /** Outlet id for API calls, or undefined so a query string is left clean. */
 const outletId = computed(() => selectedOutlet.value?.outlet_id)
 
-/** The stock shelf linked to the selected outlet, when it has one. */
-const activeShelf = computed(() => selectedOutlet.value?.stock_department || null)
+/** Outlets that are explicitly warehouse/store outlets. */
+const storeOutlets = computed(() =>
+  outlets.value
+    .filter((outlet) => String(outlet.type || '').toLowerCase() === 'store')
+    .slice()
+    .sort((a, b) => {
+      // The store carrying the most stock is the natural main store: it is the
+      // shelf that already holds the hotel's current inventory data.
+      const countDiff = Number(b.stock_items_count || 0) - Number(a.stock_items_count || 0)
+      if (countDiff) return countDiff
+      const createdDiff = new Date(a.created_at || 0) - new Date(b.created_at || 0)
+      if (createdDiff) return createdDiff
+      return String(a.name || '').localeCompare(String(b.name || ''))
+    }),
+)
+
+/** True when the property has at least one warehouse/store outlet. */
+const hasStoreChoice = computed(() => storeOutlets.value.length > 0)
+
+/** The store that should be selected by default: the one holding the data. */
+const mainStore = computed(() => storeOutlets.value[0] || null)
+
+/**
+ * The shelf the stock work is scoped to.
+ *
+ * When the user picks a warehouse/store, its shelf wins because that is the
+ * stock location they are dealing with. Without a store selection the outlet's
+ * own shelf remains the fallback, so older properties keep working unchanged.
+ */
+const activeShelf = computed(
+  () => selectedStore.value?.stock_department || selectedOutlet.value?.stock_department || null,
+)
 
 /** Shelf/department id for stock and document calls. */
 const shelfId = computed(() => activeShelf.value?.department_id || null)
@@ -43,10 +76,8 @@ const shelfId = computed(() => activeShelf.value?.department_id || null)
 /** Human-readable shelf name for scope labels. */
 const shelfName = computed(() => activeShelf.value?.name || '')
 
-/** Outlets that are explicitly warehouse/store outlets. */
-const storeOutlets = computed(() =>
-  outlets.value.filter((outlet) => String(outlet.type || '').toLowerCase() === 'store'),
-)
+/** Store outlet id, when a store has been chosen. */
+const storeOutletId = computed(() => selectedStore.value?.outlet_id)
 
 /**
  * Loads the property's outlets and re-applies the persisted selection.
@@ -85,11 +116,26 @@ async function loadOutlets(opts = {}) {
       if (!saved && selectedOutlet.value?.outlet_id) {
         sessionStorage.setItem(STORAGE_KEY, selectedOutlet.value.outlet_id)
       }
+
+      // A store selection only survives while that store still exists. When
+      // the chosen outlet is itself a store, it becomes the stock location.
+      const savedStoreId = sessionStorage.getItem(STORE_STORAGE_KEY)
+      const savedStore = outlets.value.find(
+        (o) => o.outlet_id === savedStoreId && String(o.type || '').toLowerCase() === 'store',
+      ) || null
+      if (savedStoreId && !savedStore) sessionStorage.removeItem(STORE_STORAGE_KEY)
+      const outletIsStore = String(selectedOutlet.value?.type || '').toLowerCase() === 'store'
+      // Default to the main store (the shelf with the most stock) when the user
+      // has not picked one yet, so stock work opens on the current data.
+      selectedStore.value = outletIsStore
+        ? selectedOutlet.value
+        : savedStore || (selectedOutlet.value ? mainStore.value : null)
     } catch {
       // A property with no reachable outlet list keeps the panel usable rather
       // than blocking it; the POS gate still guards the cashier flow.
       outlets.value = []
       selectedOutlet.value = null
+      selectedStore.value = null
     } finally {
       loaded.value = true
       inflight = null
@@ -108,12 +154,47 @@ function selectOutlet(outlet) {
   selectedOutlet.value = outlet || null
   if (outlet?.outlet_id) sessionStorage.setItem(STORAGE_KEY, outlet.outlet_id)
   else sessionStorage.removeItem(STORAGE_KEY)
+
+  // Picking a warehouse/store outlet is itself the stock location. Picking a
+  // selling outlet leaves any chosen store in place so the user keeps working
+  // against the same shelf until they change it.
+  if (String(outlet?.type || '').toLowerCase() === 'store') {
+    selectStore(outlet)
+  } else if (!outlet) {
+    clearStore()
+  } else if (!selectedStore.value && mainStore.value) {
+    // Keep the main store as the in-memory default without persisting it, so a
+    // later data shift can move the default to the store that holds the stock.
+    selectedStore.value = mainStore.value
+  }
+}
+
+/**
+ * Chooses the warehouse/store whose shelf the panel should work against.
+ *
+ * @param {object|null} store  A type=store outlet, or null to fall back to the
+ *                             selected outlet's own shelf.
+ */
+function selectStore(store) {
+  selectedStore.value = String(store?.type || '').toLowerCase() === 'store' ? store : null
+  if (selectedStore.value?.outlet_id) {
+    sessionStorage.setItem(STORE_STORAGE_KEY, selectedStore.value.outlet_id)
+  } else {
+    sessionStorage.removeItem(STORE_STORAGE_KEY)
+  }
+}
+
+/** Clears the store selection and falls back to the outlet's shelf. */
+function clearStore() {
+  selectedStore.value = null
+  sessionStorage.removeItem(STORE_STORAGE_KEY)
 }
 
 /** Clears the selection, returning the user to the un-picked state. */
 function clearOutlet() {
   selectedOutlet.value = null
   sessionStorage.removeItem(STORAGE_KEY)
+  clearStore()
 }
 
 /** True when more than one outlet exists, i.e. picking one is a real choice. */
@@ -141,12 +222,18 @@ export function useOutletContext() {
     hasChoice,
     loaded,
     outletId,
+    selectedStore,
+    storeOutletId,
+    hasStoreChoice,
     activeShelf,
     shelfId,
     shelfName,
     storeOutlets,
+    mainStore,
     loadOutlets,
     selectOutlet,
+    selectStore,
+    clearStore,
     clearOutlet,
     roleCanSelectOutlet,
   }
@@ -158,4 +245,4 @@ export function useOutletContext() {
  * moment -- it is a single read at submit time. They are the same refs the
  * function above hands out, so there is still only one selection per session.
  */
-export { outlets, selectedOutlet, hasOutlet, hasChoice, loaded, outletId, activeShelf, shelfId, shelfName, storeOutlets }
+export { outlets, selectedOutlet, selectedStore, hasOutlet, hasChoice, loaded, outletId, storeOutletId, hasStoreChoice, activeShelf, shelfId, shelfName, storeOutlets, mainStore }

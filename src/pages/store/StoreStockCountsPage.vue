@@ -198,7 +198,7 @@ import CalendarInput from '@/components/CalendarInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useCategoriesStore } from '@/stores/categories'
 import { useWorkingDateStore } from '@/stores/workingDate'
-import { selectedOutlet } from '@/composables/useOutletContext'
+import { shelfId } from '@/composables/useOutletContext'
 import { useClientTable } from '@/composables/useClientTable.js'
 import { useTenantCurrency } from '@/utils/currency'
 import '@/pages/store/store-shared.css'
@@ -211,8 +211,6 @@ const categoriesStore = useCategoriesStore()
 const workingDateStore = useWorkingDateStore()
 const businessDate = ref('')
 const loadedDate = ref('')
-/** The selected counter's shelf; every count sheet belongs to one shelf. */
-const shelfId = computed(() => selectedOutlet.value?.stock_department?.department_id || undefined)
 const isCurrentDay = computed(() => !businessDate.value || businessDate.value === workingDateStore.workingDate)
 const catFilter = ref('')
 const categoryOptions = computed(() => categoriesStore.inventoryCategoryOptions)
@@ -419,7 +417,7 @@ watch(businessDate, async (date) => {
   sheetTab.value = 'all'
   await load()
 })
-watch(() => selectedOutlet.value?.outlet_id, async () => {
+watch(shelfId, async () => {
   if (activeTake.value && dirty.value) {
     try { await saveCounts(false) } catch { /* switch to the new counter anyway */ }
   }

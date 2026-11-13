@@ -116,7 +116,7 @@ import { useCategoriesStore } from '@/stores/categories'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { restorePrinter, buildReportLines } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
-import { selectedOutlet } from '@/composables/useOutletContext'
+import { shelfId } from '@/composables/useOutletContext'
 import '@/pages/store/store-shared.css'
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -488,16 +488,9 @@ async function printToMachine() {
   if (!sent) printReport()
 }
 
-// The department that backs the outlet the user chose at login. The manager
-// review asks for "reports / stocks / adjustment ... directed to that
-// individual OUTLET"; each outlet keeps its own stock shelf (an ordinary
-// department), so scoping the report to that shelf is what routes it to the
-// outlet. Returns null when no outlet is selected or it has no shelf yet.
-function outletDepartmentId() {
-  const outletId = selectedOutlet.value?.outlet_id
-  if (!outletId) return null
-  return departments.value.find((d) => d.outlet_id === outletId)?.department_id || null
-}
+// The active stock shelf: the selected warehouse/store when one is chosen,
+// otherwise the operating outlet's own shelf. Reports follow stock, so they
+// use the same shelf as inventory and stock counts.
 
 // Load the inventory departments available for filtering and the hotel logo.
 async function loadReportData() {
@@ -509,8 +502,8 @@ async function loadReportData() {
   } catch {
     departments.value = []
   }
-  // Default the report's department scope to the chosen outlet's shelf.
-  const scoped = outletDepartmentId()
+  // Default the report's department scope to the active stock shelf.
+  const scoped = shelfId.value
   if (scoped && scoped !== departmentId.value) {
     departmentId.value = scoped
     // A ?view= report generates during setup, before the shelves load, so
@@ -548,9 +541,8 @@ watch(() => route.query.view, (view) => {
   }
 }, { immediate: true })
 
-// Switching outlet re-scopes the report to that outlet's stock shelf.
-watch(() => selectedOutlet.value?.outlet_id, () => {
-  const scoped = outletDepartmentId()
+// Switching outlet or store re-scopes the report to that stock shelf.
+watch(shelfId, (scoped) => {
   if (scoped && scoped !== departmentId.value) {
     departmentId.value = scoped
     if (data.value) generate()

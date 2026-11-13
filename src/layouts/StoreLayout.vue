@@ -92,6 +92,24 @@
               </select>
             </div>
 
+            <!-- Warehouse/store picker: the outlet is the business unit, the
+                 store is the stock location the panel is working against. -->
+            <div v-if="showStorePicker" class="outlet-picker outlet-store-picker">
+              <label class="visually-hidden" for="active-store">{{ $t('outlet.storePickerLabel') }}</label>
+              <i class="fas fa-warehouse outlet-picker-icon" aria-hidden="true"></i>
+              <select
+                id="active-store"
+                class="outlet-picker-select"
+                :value="selectedStore?.outlet_id || ''"
+                @change="onStoreChange($event.target.value)"
+              >
+                <option value="">{{ $t('outlet.chooseStorePlaceholder') }}</option>
+                <option v-for="store in storeOutlets" :key="store.outlet_id" :value="store.outlet_id">
+                  {{ store.name }}{{ isMainStore(store) ? ` · ${$t('outlet.mainStore')}` : '' }}
+                </option>
+              </select>
+            </div>
+
             <template v-if="isAppMode">
               <!--
                 Staff panel header: the notification bell and the profile circle
@@ -551,7 +569,7 @@
             <h3>{{ gateTitle }}</h3>
             <p>{{ $t('outlet.gateHint') }}</p>
           </div>
-          <button v-if="gateStep !== 'type'" type="button" class="outlet-gate-back" @click="goBackToTypes">
+          <button v-if="gateStep !== 'type'" type="button" class="outlet-gate-back" @click="goBackFromGate">
             <i class="fas fa-arrow-left" aria-hidden="true"></i> {{ $t('outlet.gateBack') }}
           </button>
         </div>
@@ -580,6 +598,34 @@
               <strong>{{ o.name }}</strong>
               <small>{{ o.stock_department?.name || $t('outlet.gateNoShelf') }}</small>
             </span>
+          </button>
+        </div>
+
+        <div v-else-if="gateStep === 'store'" class="outlet-gate-list">
+          <button v-if="selectedStore" type="button" class="outlet-gate-option"
+            @click="chooseStore(selectedStore)">
+            <i class="fas fa-warehouse" aria-hidden="true"></i>
+            <span class="outlet-gate-copy">
+              <strong>{{ selectedStore.name }}</strong>
+              <small>
+                {{ selectedStore.stock_department?.name || $t('outlet.gateNoShelf') }}
+                <template v-if="isMainStore(selectedStore)"> · {{ $t('outlet.mainStore') }}</template>
+              </small>
+            </span>
+            <i class="fas fa-chevron-right outlet-gate-arrow" aria-hidden="true"></i>
+          </button>
+          <p v-if="selectedStore && gateStoreList.length" class="outlet-gate-hint">{{ $t('outlet.orChooseStore') }}</p>
+          <button v-for="store in gateStoreList" :key="store.outlet_id" type="button" class="outlet-gate-option"
+            @click="chooseStore(store)">
+            <i class="fas fa-warehouse" aria-hidden="true"></i>
+            <span class="outlet-gate-copy">
+              <strong>{{ store.name }}</strong>
+              <small>
+                {{ store.stock_department?.name || $t('outlet.gateNoShelf') }}
+                <template v-if="isMainStore(store)"> · {{ $t('outlet.mainStore') }}</template>
+              </small>
+            </span>
+            <i class="fas fa-chevron-right outlet-gate-arrow" aria-hidden="true"></i>
           </button>
         </div>
 
@@ -734,14 +780,23 @@ const isAppMode = computed(() => route.path.startsWith('/app'))
 const {
   outlets,
   selectedOutlet,
+  selectedStore,
   hasChoice,
+  storeOutlets,
+  mainStore,
   loadOutlets: loadOutletList,
   selectOutlet,
+  selectStore,
   roleCanSelectOutlet,
 } = useOutletContext()
 
 const showOutletPicker = computed(
   () => isAppMode.value && authStore.isAuthenticated && hasChoice.value && roleCanSelectOutlet(authStore.user?.user_role),
+)
+const showStorePicker = computed(
+  () => showOutletPicker.value
+    && storeOutlets.value.length > 0
+    && String(selectedOutlet.value?.type || '').toLowerCase() !== 'store',
 )
 
 // The post-login outlet gate. A single outlet is selected automatically by the
@@ -789,23 +844,44 @@ const outletTypeGroups = computed(() => {
 const gateOutlets = computed(
   () => outletTypeGroups.value.find((group) => group.type === gateType.value)?.outlets || [],
 )
+const gateStoreList = computed(
+  () => storeOutlets.value.filter((store) => store.outlet_id !== selectedStore.value?.outlet_id),
+)
+function isMainStore(store) {
+  return !!store?.outlet_id && store.outlet_id === mainStore.value?.outlet_id
+}
 const gateTypeIcon = computed(() => outletTypeMeta(gateType.value).icon)
 const gateTitle = computed(() => (
   gateStep.value === 'create'
     ? t('outlet.gateCreateStore')
-    : gateStep.value === 'point'
-      ? t('outlet.gateChoosePoint', { type: outletTypeMeta(gateType.value).label || '' })
-      : t('outlet.gateChooseType')
+    : gateStep.value === 'store'
+      ? t('outlet.gateChooseStore')
+      : gateStep.value === 'point'
+        ? t('outlet.gateChoosePoint', { type: outletTypeMeta(gateType.value).label || '' })
+        : t('outlet.gateChooseType')
 ))
-const gateTitleIcon = computed(() => (
-  gateStep.value === 'create' ? 'fas fa-plus' : gateStep.value === 'point' ? gateTypeIcon.value : 'fas fa-store'
-))
+const gateTitleIcon = computed(() => {
+  if (gateStep.value === 'create') return 'fas fa-plus'
+  if (gateStep.value === 'store') return 'fas fa-warehouse'
+  if (gateStep.value === 'point') return gateTypeIcon.value
+  return 'fas fa-store'
+})
+
+/** True when a selling outlet must be paired with a warehouse/store. */
+function needsStoreStep(outlet) {
+  return String(outlet?.type || '').toLowerCase() !== 'store' && storeOutlets.value.length > 0
+}
 
 /** Opens the picker when the role may choose and there is a real choice. */
 async function openOutletGateIfNeeded() {
   await loadOutletList({ autoSelectSingle: true })
   if (!authStore.isAuthenticated || !roleCanSelectOutlet(authStore.user?.user_role)) return
   if (outlets.value.length === 1 && selectedOutlet.value) {
+    if (needsStoreStep(selectedOutlet.value)) {
+      gateStep.value = 'store'
+      outletGateOpen.value = true
+      return
+    }
     outletGateOpen.value = false
     return
   }
@@ -826,6 +902,15 @@ function goBackToTypes() {
   gateError.value = ''
 }
 
+function goBackFromGate() {
+  gateError.value = ''
+  if (gateStep.value === 'store') {
+    gateStep.value = gateType.value ? 'point' : 'type'
+    return
+  }
+  goBackToTypes()
+}
+
 function rememberOutlet(outlet) {
   if (!outlet?.outlet_id) return
   const exists = outlets.value.some((row) => row.outlet_id === outlet.outlet_id)
@@ -835,9 +920,19 @@ function rememberOutlet(outlet) {
   outlets.value = next.sort((a, b) => a.name.localeCompare(b.name))
 }
 
-/** Confirms the outlet the user will work in and closes the gate. */
+/** Confirms the outlet, then asks which store supplies its stock. */
 function chooseOutlet(outlet) {
   selectOutlet(outlet)
+  if (needsStoreStep(outlet)) {
+    gateStep.value = 'store'
+    return
+  }
+  outletGateOpen.value = false
+}
+
+/** Confirms the warehouse/store whose shelf the panel should use. */
+function chooseStore(store) {
+  selectStore(store)
   outletGateOpen.value = false
 }
 
@@ -868,7 +963,18 @@ async function createStore() {
 
 /** Activates the chosen outlet for the rest of the session. */
 function onOutletChange(outletId) {
-  selectOutlet(outlets.value.find((o) => o.outlet_id === outletId) || null)
+  const outlet = outlets.value.find((o) => o.outlet_id === outletId) || null
+  selectOutlet(outlet)
+  if (needsStoreStep(outlet)) {
+    gateType.value = ''
+    gateStep.value = 'store'
+    outletGateOpen.value = true
+  }
+}
+
+/** Switches the warehouse/store without changing the operating outlet. */
+function onStoreChange(storeId) {
+  selectStore(storeOutlets.value.find((s) => s.outlet_id === storeId) || null)
 }
 const isDirectory = computed(() => route.name === 'public-home')
 
@@ -3445,6 +3551,13 @@ function formatNotifTime(iso) {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.outlet-gate-hint {
+  margin: 0;
+  color: #64748b;
+  font-size: 12.5px;
+  font-weight: 600;
 }
 
 .outlet-gate-option {

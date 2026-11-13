@@ -81,6 +81,45 @@ describe('outlet context', () => {
     expect(ctx.hasChoice.value).toBe(false)
   })
 
+  it('defaults to the store holding the most stock as the main store', async () => {
+    const ctx = useOutletContext()
+    outletIndex.mockResolvedValue({
+      data: {
+        outlets: [
+          {
+            outlet_id: 'out-bar',
+            name: 'Bar',
+            type: 'bar',
+            stock_department: { department_id: 'd-bar', name: 'BAR' },
+          },
+          {
+            outlet_id: 'out-store-small',
+            name: 'Small Store',
+            type: 'store',
+            stock_items_count: 2,
+            created_at: '2026-01-01T00:00:00Z',
+            stock_department: { department_id: 'd-small', name: 'Small' },
+          },
+          {
+            outlet_id: 'out-store-main',
+            name: 'Main Store',
+            type: 'store',
+            stock_items_count: 137,
+            created_at: '2026-02-01T00:00:00Z',
+            stock_department: { department_id: 'd-main', name: 'Main' },
+          },
+        ],
+      },
+    })
+
+    await ctx.loadOutlets()
+    ctx.selectOutlet(ctx.outlets.value.find((outlet) => outlet.outlet_id === 'out-bar'))
+
+    expect(ctx.mainStore.value.outlet_id).toBe('out-store-main')
+    expect(ctx.selectedStore.value.outlet_id).toBe('out-store-main')
+    expect(ctx.shelfId.value).toBe('d-main')
+  })
+
   it('remembers the chosen outlet for the session', async () => {
     const ctx = useOutletContext()
     await ctx.loadOutlets()

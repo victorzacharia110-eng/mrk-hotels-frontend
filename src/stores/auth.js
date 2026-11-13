@@ -242,6 +242,7 @@ export const useAuthStore = defineStore('auth', () => {
       // Forget the outlet chosen last session so the next sign-in is asked to
       // confirm which outlet to work in (the review wants the prompt on login).
       sessionStorage.removeItem('active_outlet')
+      sessionStorage.removeItem('active_store_outlet')
       // The trusted-device key is deliberately kept: sign-out ends the session,
       // not the device's trust (only expiry or the Trusted Devices screen
       // revokes that), and wiping it here is what made PIN sign-in fail with

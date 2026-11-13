@@ -4,7 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import i18n from '@/locales/i18n'
 import { outletApi } from '@/api'
-import { outlets, selectedOutlet, loaded } from '@/composables/useOutletContext'
+import { outlets, selectedOutlet, selectedStore, loaded } from '@/composables/useOutletContext'
 import StoreManagerLayout from '@/layouts/StoreManagerLayout.vue'
 
 vi.mock('@/api', () => ({
@@ -55,26 +55,18 @@ describe('store manager outlet gate', () => {
     sessionStorage.clear()
     outlets.value = []
     selectedOutlet.value = null
+    selectedStore.value = null
     loaded.value = false
   })
 
-  it('always opens the gate, even when the property has one store', async () => {
+  it('auto-selects the only store without showing the gate', async () => {
     outletApi.index.mockResolvedValue({ data: { outlets: [store] } })
 
     const wrapper = await mountLayout()
 
-    expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(true)
-    expect(wrapper.text()).toContain('Store')
-
-    await wrapper.find('.sm-outlet-option').trigger('click')
-    await flushPromises()
-    expect(wrapper.text()).toContain('Store A')
-
-    await wrapper.find('.sm-outlet-option').trigger('click')
-    await flushPromises()
-
-    expect(selectedOutlet.value.outlet_id).toBe('outlet-store-a')
     expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(false)
+    expect(selectedOutlet.value.outlet_id).toBe('outlet-store-a')
+    expect(selectedStore.value.outlet_id).toBe('outlet-store-a')
   })
 
   it('shows the exact store after choosing the Store outlet type', async () => {
@@ -102,5 +94,38 @@ describe('store manager outlet gate', () => {
     expect(wrapper.text()).toContain('Which Store?')
     expect(wrapper.find('.sm-outlet-gate-list').text()).toContain('Store A')
     expect(wrapper.find('.sm-outlet-gate-list').text()).toContain('Store B')
+  })
+
+  it('asks which store supplies a selling outlet after it is chosen', async () => {
+    outletApi.index.mockResolvedValue({
+      data: {
+        outlets: [
+          store,
+          { outlet_id: 'outlet-store-b', name: 'Store B', type: 'store', is_active: true },
+          { outlet_id: 'outlet-bar', name: 'Bar 1', type: 'bar', is_active: true },
+        ],
+      },
+    })
+
+    const wrapper = await mountLayout()
+
+    const barType = wrapper.findAll('.sm-outlet-option').find((button) => button.text().includes('Bar'))
+    await barType.trigger('click')
+    await flushPromises()
+
+    const bar = wrapper.findAll('.sm-outlet-option').find((button) => button.text().includes('Bar 1'))
+    await bar.trigger('click')
+    await flushPromises()
+
+    expect(selectedOutlet.value.outlet_id).toBe('outlet-bar')
+    expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Which store are you working with?')
+
+    const chosenStore = wrapper.findAll('.sm-outlet-option').find((button) => button.text().includes('Store A'))
+    await chosenStore.trigger('click')
+    await flushPromises()
+
+    expect(selectedStore.value.outlet_id).toBe('outlet-store-a')
+    expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(false)
   })
 })

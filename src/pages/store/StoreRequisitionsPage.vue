@@ -173,9 +173,9 @@ const { curCode } = useTenantCurrency()
 
 const route = useRoute()
 const { t } = useI18n()
-const { selectedOutlet } = useOutletContext()
+const { selectedOutlet, selectedStore, shelfName } = useOutletContext()
 const outletId = computed(() => selectedOutlet.value?.outlet_id || undefined)
-const shelfName = computed(() => selectedOutlet.value?.stock_department?.name || '')
+const departmentOutletId = computed(() => selectedStore.value?.outlet_id || selectedOutlet.value?.outlet_id || undefined)
 
 const requisitions = ref([])
 const { q, status, statuses, page, lastPage, paged } = useClientTable(requisitions, { pageSize: 15, searchFields: ['requisition_id', 'status', 'department', (r) => lineSummary(r)] })
@@ -200,7 +200,7 @@ async function loadDepartments() {
   try {
     const res = await inventoryOpsApi.departments()
     departmentOptions.value = (res.data.departments || [])
-      .filter((d) => !outletId.value || !d.outlet_id || d.outlet_id === outletId.value)
+      .filter((d) => !departmentOutletId.value || !d.outlet_id || d.outlet_id === departmentOutletId.value)
       .map((d) => ({ value: d.name, label: d.name }))
       .sort((a, b) => a.label.localeCompare(b.label))
   } catch {
@@ -295,8 +295,9 @@ async function openDetail(req) {
   detail.value = res.data.data || res.data
 }
 
+watch(departmentOutletId, loadDepartments)
+
 watch(outletId, async () => {
-  await loadDepartments()
   await load(1)
 })
 
