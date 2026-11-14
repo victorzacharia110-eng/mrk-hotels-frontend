@@ -2278,6 +2278,10 @@ html[data-theme='dark'] .cat-pop-panel {
   background: #202c33;
 }
 
+html[data-theme='dark'] .add-form label {
+  color: #aebac1;
+}
+
 html[data-theme='dark'] .wl-row,
 html[data-theme='dark'] .guide-foot,
 html[data-theme='dark'] .row-frozen td,

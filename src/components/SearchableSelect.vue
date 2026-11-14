@@ -15,34 +15,40 @@
       <span class="ss-trigger-label">{{ selectedLabel || placeholder }}</span>
     </button>
 
-    <!-- Dropdown panel: search box, loading/empty states and the option list. -->
-    <div v-if="open" class="ss-panel" :style="panelStyle">
-      <input v-if="showSearch" v-model="query" type="search" class="input ss-search"
-        :placeholder="resolvedSearchPlaceholder" autocomplete="off" :aria-label="resolvedSearchPlaceholder"
-        @keydown.esc="close" @input="onSearchInput" />
-      <ul class="ss-list" role="listbox" :aria-label="resolvedListboxLabel" @keydown="onListKeydown">
-        <li v-if="emptyAsHint ? (!searching && !options.length) : (emptyLabel !== null && emptyLabel !== undefined)"
-          role="option" tabindex="-1" data-value="" class="ss-option"
-          :class="{ 'is-active': !modelValue, 'ss-muted': emptyAsHint }" :aria-selected="!modelValue ? 'true' : 'false'"
-          @click="emptyAsHint ? null : pick('')">
-          {{ emptyLabel }}
-        </li>
-        <li v-if="searching" class="ss-option ss-muted">
-          <i class="fas fa-spinner fa-spin" aria-hidden="true" /> {{ resolvedLoadingLabel }}
-        </li>
-        <li v-for="o in filteredOptions" v-else :key="o.value" :data-value="o.value" role="option" tabindex="-1"
-          class="ss-option" :class="{ 'is-active': String(modelValue) === String(o.value), 'is-disabled': o.disabled }"
-          :aria-selected="String(modelValue) === String(o.value) ? 'true' : 'false'"
-          :aria-disabled="o.disabled ? 'true' : 'false'" @click="pick(o.value)">
-          <slot name="option" :option="o" :active="String(modelValue) === String(o.value)">
-            {{ o.label }}
-          </slot>
-        </li>
-        <li v-if="!searching && !filteredOptions.length" class="ss-option ss-muted">
-          {{ resolvedNoResultsLabel }}
-        </li>
-      </ul>
-    </div>
+    <!--
+      Dropdown panel: search box, loading/empty states and the option list.
+      Teleported to <body> so a transformed modal ancestor cannot become the
+      containing block for `position: fixed` and clip or offset the panel.
+    -->
+    <Teleport to="body">
+      <div v-if="open" ref="panelEl" class="ss-panel" :style="panelStyle">
+        <input v-if="showSearch" v-model="query" type="search" class="input ss-search"
+          :placeholder="resolvedSearchPlaceholder" autocomplete="off" :aria-label="resolvedSearchPlaceholder"
+          @keydown.esc="close" @input="onSearchInput" />
+        <ul class="ss-list" role="listbox" :aria-label="resolvedListboxLabel" @keydown="onListKeydown">
+          <li v-if="emptyAsHint ? (!searching && !options.length) : (emptyLabel !== null && emptyLabel !== undefined)"
+            role="option" tabindex="-1" data-value="" class="ss-option"
+            :class="{ 'is-active': !modelValue, 'ss-muted': emptyAsHint }" :aria-selected="!modelValue ? 'true' : 'false'"
+            @click="emptyAsHint ? null : pick('')">
+            {{ emptyLabel }}
+          </li>
+          <li v-if="searching" class="ss-option ss-muted">
+            <i class="fas fa-spinner fa-spin" aria-hidden="true" /> {{ resolvedLoadingLabel }}
+          </li>
+          <li v-for="o in filteredOptions" v-else :key="o.value" :data-value="o.value" role="option" tabindex="-1"
+            class="ss-option" :class="{ 'is-active': String(modelValue) === String(o.value), 'is-disabled': o.disabled }"
+            :aria-selected="String(modelValue) === String(o.value) ? 'true' : 'false'"
+            :aria-disabled="o.disabled ? 'true' : 'false'" @click="pick(o.value)">
+            <slot name="option" :option="o" :active="String(modelValue) === String(o.value)">
+              {{ o.label }}
+            </slot>
+          </li>
+          <li v-if="!searching && !filteredOptions.length" class="ss-option ss-muted">
+            {{ resolvedNoResultsLabel }}
+          </li>
+        </ul>
+      </div>
+    </Teleport>
 
     <!--
       Invisible twin select so HTML5 constraint validation (e.g. `required`)
@@ -86,6 +92,7 @@ const { t } = useI18n()
 // Dropdown UI state: root element ref, open flag, search query and the
 // fixed-position panel geometry (anchored to the trigger).
 const rootEl = ref(null)
+const panelEl = ref(null)
 const open = ref(false)
 const query = ref('')
 const panelStyle = ref({ top: '0px', left: '0px', width: '200px' })
@@ -171,7 +178,7 @@ const SEARCH_CHROME = 46 // search input height + its margin
 function positionPanel() {
   const trigger = rootEl.value?.querySelector('.ss-trigger')
   if (!trigger) return
-  const panel = rootEl.value?.querySelector('.ss-panel')
+  const panel = panelEl.value
   const rect = trigger.getBoundingClientRect()
 
   // Natural (unclamped) height; scrollHeight ignores any max-height we applied.
@@ -243,10 +250,10 @@ function openPanel(focusFirst = false, focusLast = false) {
   nextTick(positionPanel)
   requestAnimationFrame(() => {
     if (focusFirst || focusLast) {
-      const items = rootEl.value?.querySelectorAll('[role="option"]')
+      const items = panelEl.value?.querySelectorAll('[role="option"]')
       if (items?.length) items[focusLast ? items.length - 1 : 0].focus()
     } else {
-      rootEl.value?.querySelector('.ss-search')?.focus()
+      panelEl.value?.querySelector('.ss-search')?.focus()
     }
   })
 }
@@ -270,7 +277,7 @@ function closeAllOthers() {
 
 /** Focuses the next or previous option in the list (roving tabindex). */
 function moveOption(dir) {
-  const items = Array.from(rootEl.value?.querySelectorAll('[role="option"]') || [])
+  const items = Array.from(panelEl.value?.querySelectorAll('[role="option"]') || [])
   if (!items.length) return
   const current = items.findIndex((el) => el === document.activeElement)
   const next =
@@ -299,11 +306,11 @@ function onListKeydown(event) {
     moveOption(-1)
   } else if (event.key === 'Home') {
     event.preventDefault()
-    const items = rootEl.value?.querySelectorAll('[role="option"]')
+    const items = panelEl.value?.querySelectorAll('[role="option"]')
     items?.[0]?.focus()
   } else if (event.key === 'End') {
     event.preventDefault()
-    const items = rootEl.value?.querySelectorAll('[role="option"]')
+    const items = panelEl.value?.querySelectorAll('[role="option"]')
     items?.[items.length - 1]?.focus()
   } else if (event.key === 'Enter' || event.key === ' ') {
     const value = document.activeElement?.dataset?.value
@@ -333,7 +340,7 @@ function pick(value) {
   emit('change', target || { value })
   close()
   closeAllOthers()
-  lastPickAt = Date.now() + 5000
+  lastPickAt = Date.now()
   if (typeof window !== 'undefined') {
     window.__ss_last_pick = Date.now()
     window.__ss_last_pick_root = rootEl.value
@@ -351,7 +358,10 @@ function pick(value) {
  * @param {MouseEvent} event - The captured mousedown event.
  */
 function onDocumentClick(event) {
-  if (open.value && rootEl.value && !rootEl.value.contains(event.target)) close()
+  if (!open.value) return
+  if (rootEl.value?.contains(event.target)) return
+  if (panelEl.value?.contains(event.target)) return
+  close()
 }
 
 // A model change from the parent collapses the dropdown.
@@ -443,7 +453,8 @@ onBeforeUnmount(() => {
 
 .ss-panel {
   position: fixed;
-  z-index: 1200;
+  /* Above app modals (up to 10000) because the panel is teleported to <body>. */
+  z-index: 10001;
   padding: 8px;
   background: #fff;
   border: 1px solid #ddd;

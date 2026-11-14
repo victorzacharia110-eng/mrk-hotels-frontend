@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { DOMWrapper, mount } from '@vue/test-utils'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import i18n from '@/locales/i18n'
 
@@ -17,6 +17,10 @@ function buildOptions(count) {
   }))
 }
 
+function panelOptions() {
+  return [...document.querySelectorAll('.ss-option')].map((o) => o.textContent.trim())
+}
+
 describe('SearchableSelect option rendering', () => {
   it('renders options past the first hundred so a late item is reachable', async () => {
     const options = [...buildOptions(150), { value: 'zanzi', label: 'Zanzi 250ml' }]
@@ -28,8 +32,7 @@ describe('SearchableSelect option rendering', () => {
 
     await wrapper.get('.ss-trigger').trigger('click')
 
-    const rendered = wrapper.findAll('.ss-option').map((o) => o.text())
-    expect(rendered).toContain('Zanzi 250ml')
+    expect(panelOptions()).toContain('Zanzi 250ml')
 
     wrapper.unmount()
   })
@@ -43,10 +46,38 @@ describe('SearchableSelect option rendering', () => {
     })
 
     await wrapper.get('.ss-trigger').trigger('click')
-    await wrapper.get('.ss-search').setValue('zanzi')
+    await new DOMWrapper(document.querySelector('.ss-search')).setValue('zanzi')
 
-    const rendered = wrapper.findAll('.ss-option').map((o) => o.text())
-    expect(rendered).toEqual(['Zanzi 250ml'])
+    expect(panelOptions()).toEqual(['Zanzi 250ml'])
+
+    wrapper.unmount()
+  })
+
+  it('keeps the teleported panel open when its option is clicked inside a clipped modal', async () => {
+    const options = [{ value: 'flour', label: 'Flour' }]
+    const wrapper = mount(
+      {
+        components: { SearchableSelect },
+        template: `
+          <div style="position: fixed; transform: translate(-50%, -50%); overflow: hidden">
+            <SearchableSelect v-model="picked" :options="options" />
+          </div>
+        `,
+        data: () => ({ picked: '', options }),
+      },
+      { global: { plugins: [i18n] }, attachTo: document.body },
+    )
+
+    await wrapper.get('.ss-trigger').trigger('click')
+    const panel = document.querySelector('.ss-panel')
+    expect(panel?.parentElement).toBe(document.body)
+
+    const option = new DOMWrapper(document.querySelector('.ss-option'))
+    await option.trigger('mousedown')
+    await option.trigger('click')
+
+    expect(wrapper.vm.picked).toBe('flour')
+    expect(document.querySelector('.ss-panel')).toBeNull()
 
     wrapper.unmount()
   })
