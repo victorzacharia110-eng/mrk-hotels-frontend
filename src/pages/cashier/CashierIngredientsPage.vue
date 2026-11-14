@@ -132,13 +132,14 @@
           <div class="din-modal-body add-form">
             <label>{{ $t('cashier.ingredients.inventoryItem') }}</label>
             <SearchableSelect v-model="newIng.itemId" :options="inventoryOptions"
-              :placeholder="$t('cashier.ingredients.pickInventory')" :force-search="true"
+              :placeholder="$t('cashier.ingredients.pickInventory')"
+              :search-placeholder="$t('cashier.ingredients.searchInventory')" :force-search="true"
               @change="onInventoryPick" />
             <label>{{ $t('cashier.ingredients.qtyPerUnit') }}</label>
             <input v-model.number="newIng.quantity" type="number" class="sm-input full-width" min="0.01" step="0.01" />
             <label>{{ $t('cashier.ingredients.siUnit') }}</label>
-            <input v-model="newIng.unit" type="text" class="sm-input full-width" readonly
-              :placeholder="$t('cashier.ingredients.siUnitHint')" />
+            <SearchableSelect v-model="newIng.unit" :options="siUnitOptions" :searchable="false"
+              :placeholder="$t('cashier.ingredients.siUnitPlaceholder')" />
             <div class="form-actions">
               <button class="sm-btn ghost" @click="addModal = false">{{ $t('common.cancel') }}</button>
               <button class="sm-btn" :disabled="!newIng.itemId || !newIng.quantity || saving" @click="saveAdd">
@@ -314,9 +315,42 @@ const inventoryOptions = computed(() =>
   })),
 )
 
+const selectedInventoryItem = computed(() =>
+  inventoryItems.value.find((i) => String(i.item_id) === String(newIng.value.itemId)),
+)
+
+// Common SI units offered when the picked item registers no units.
+const STANDARD_UNITS = [
+  'BTL', 'PCS', 'KG', 'L', 'GLN', 'BOX', 'CARTON', 'PKT', 'ROLL', 'DOZ', 'PAIR', 'SET', 'M', 'GM', 'ML', 'TIN', 'SACHET',
+]
+
+/**
+ * Units shown for the ingredient: the selected item's registered SI units
+ * (or its primary unit when it has none), else the common SI-unit list.
+ *
+ * @param {object} item - The selected inventory item.
+ * @returns {Array<{value: string, label: string}>} Unit dropdown options.
+ */
+function unitOptionsFor(item) {
+  const units = new Set()
+  const registered = (item?.si_units || [])
+    .map((u) => (typeof u === 'string' ? u : u?.unit))
+    .filter(Boolean)
+  if (registered.length) {
+    registered.forEach((u) => units.add(u))
+  } else if (item?.unit) {
+    units.add(item.unit)
+  } else {
+    STANDARD_UNITS.forEach((u) => units.add(u))
+  }
+  return Array.from(units).map((u) => ({ value: u, label: u }))
+}
+
+const siUnitOptions = computed(() => unitOptionsFor(selectedInventoryItem.value))
+
 function onInventoryPick(option) {
   const inv = inventoryItems.value.find((i) => String(i.item_id) === String(option?.value ?? newIng.value.itemId))
-  newIng.value.unit = inv?.si_unit || inv?.unit || ''
+  newIng.value.unit = inv?.unit || ''
 }
 
 const autoCost = computed(() =>

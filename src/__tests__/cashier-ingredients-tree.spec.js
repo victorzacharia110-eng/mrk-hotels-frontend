@@ -21,6 +21,24 @@ vi.mock('@/api', () => ({
   },
 }))
 
+const INVENTORY = {
+  item_id: 'inv-flour',
+  item_name: 'Flour',
+  unit: 'kg',
+  si_units: [{ unit: 'kg', factor: 1 }, { unit: 'bag', factor: 25 }],
+  quantity_in_stock: 10,
+  unit_cost: 1,
+}
+
+const INVENTORY_NO_UNITS = {
+  item_id: 'inv-misc',
+  item_name: 'Misc',
+  unit: '',
+  si_units: [],
+  quantity_in_stock: 0,
+  unit_cost: 0,
+}
+
 const INGREDIENT = {
   menu_item_ingredient_id: 'mi-1',
   quantity: 2,
@@ -79,7 +97,7 @@ beforeEach(() => {
     }
     return { data: { data: [MENU[0], MENU[1]], meta: { last_page: 2 } } }
   })
-  api.inventoryItems.mockResolvedValue({ data: { items: [] } })
+  api.inventoryItems.mockResolvedValue({ data: { items: [INVENTORY, INVENTORY_NO_UNITS] } })
   api.ingredientIndex.mockResolvedValue({ data: { ingredients: [] } })
 })
 
@@ -97,6 +115,65 @@ describe('CashierIngredientsPage menu tree', () => {
       .toEqual(['Spirits 1', 'Beer 1', 'Main dishes 1'])
     expect(wrapper.findAll('.cat-leaf').map((button) => button.text()))
       .toEqual(['Gin', 'Beer', 'Rice'])
+
+    wrapper.unmount()
+  })
+
+  it('auto-fills the SI unit picker from the selected inventory item', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.findAll('.cat-leaf')[0].trigger('click')
+    await flushPromises()
+    await wrapper.find('.panel-head .sm-btn').trigger('click')
+    await flushPromises()
+
+    const modal = document.querySelector('.din-modal')
+    expect(modal).not.toBeNull()
+    const triggers = modal.querySelectorAll('.ss-trigger')
+    expect(triggers).toHaveLength(2)
+
+    await new DOMWrapper(triggers[0]).trigger('click')
+    await flushPromises()
+    await new DOMWrapper(document.querySelector('.ss-search')).setValue('flour')
+    const option = [...document.querySelectorAll('.ss-option')].find((o) => o.textContent.includes('Flour'))
+    await new DOMWrapper(option).trigger('mousedown')
+    await new DOMWrapper(option).trigger('click')
+    await flushPromises()
+
+    const unitTrigger = modal.querySelectorAll('.ss-trigger')[1]
+    expect(unitTrigger.textContent).toContain('kg')
+
+    await new DOMWrapper(unitTrigger).trigger('click')
+    await flushPromises()
+    const units = [...document.querySelectorAll('.ss-option')].map((o) => o.textContent.trim())
+    expect(units).toEqual(expect.arrayContaining(['kg', 'bag']))
+
+    wrapper.unmount()
+  })
+
+  it('falls back to the standard SI-unit list when the item registers none', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.findAll('.cat-leaf')[0].trigger('click')
+    await flushPromises()
+    await wrapper.find('.panel-head .sm-btn').trigger('click')
+    await flushPromises()
+
+    const modal = document.querySelector('.din-modal')
+    const triggers = modal.querySelectorAll('.ss-trigger')
+    await new DOMWrapper(triggers[0]).trigger('click')
+    await flushPromises()
+    const option = [...document.querySelectorAll('.ss-option')].find((o) => o.textContent.includes('Misc'))
+    await new DOMWrapper(option).trigger('mousedown')
+    await new DOMWrapper(option).trigger('click')
+    await flushPromises()
+
+    await new DOMWrapper(modal.querySelectorAll('.ss-trigger')[1]).trigger('click')
+    await flushPromises()
+    const units = [...document.querySelectorAll('.ss-option')].map((o) => o.textContent.trim())
+    expect(units).toEqual(expect.arrayContaining(['BTL', 'PCS', 'KG', 'SACHET']))
 
     wrapper.unmount()
   })
