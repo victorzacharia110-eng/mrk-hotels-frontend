@@ -182,6 +182,15 @@
 }
 .cat-kids button.cat-leaf:hover { background: var(--mrk-blue-pale); color: var(--mrk-blue-deep); }
 .cat-kids button.cat-leaf.active { background: var(--mrk-blue); color: #fff; font-weight: 600; }
+.sub-group > button.sub-toggle {
+  display: flex; align-items: center; gap: 7px; width: 100%;
+  background: none; border: none; text-align: left; cursor: pointer;
+  font-family: inherit; font-size: 12.5px; font-weight: 600; color: #475569;
+  padding: 5px 10px; border-radius: 8px;
+}
+.sub-group > button.sub-toggle:hover { background: var(--mrk-blue-pale); color: var(--mrk-blue-deep); }
+.sub-group > button.sub-toggle i { font-size: 10px; color: var(--mrk-blue); width: 11px; }
+.sub-kids-inner { padding-left: 20px; margin-bottom: 2px; }
 
 .lookup-layout { display: grid; grid-template-columns: 250px 1fr; gap: 18px; align-items: start; }
 @media (max-width: 1000px) { .lookup-layout { grid-template-columns: 1fr; } }

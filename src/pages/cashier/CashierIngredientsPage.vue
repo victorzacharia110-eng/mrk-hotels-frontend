@@ -18,19 +18,31 @@
             :placeholder="$t('cashier.lookup.searchCategory')" />
           <SkeletonLoader v-if="loadingMenu" variant="tree" :count="9" />
           <div v-else class="cat-tree">
-            <div v-for="(itemsInCat, cat) in groupedMenuItems" :key="cat" class="cat-group">
+            <div v-for="cat in groupedMenuItems" :key="cat.name" class="cat-group">
               <button class="cat-toggle" @click="toggleCat(cat)">
-                <i :class="openCat === cat ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" aria-hidden="true"></i>
-                {{ cat }}
-                <span class="cat-count">{{ itemsInCat.length }}</span>
+                <i :class="isCatOpen(cat) ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" aria-hidden="true"></i>
+                {{ cat.name }}
+                <span class="cat-count">{{ cat.count }}</span>
               </button>
-              <div class="cat-kids" :class="{ open: openCat === cat }">
+              <div class="cat-kids" :class="{ open: isCatOpen(cat) }">
                 <div class="cat-kids-inner">
-                  <button v-for="item in itemsInCat" :key="item.menu_item_id" class="cat-leaf"
-                    :class="{ active: activeItemId === item.menu_item_id }" @click="selectItem(item)">
-                    {{ item.item_name }}
-                    <span v-if="item._ingredientCount > 0" class="ing-badge">{{ item._ingredientCount }}</span>
-                  </button>
+                  <div v-for="sub in cat.subcategories" :key="subKey(cat, sub)" class="sub-group">
+                    <button class="sub-toggle" @click="toggleSub(cat, sub)">
+                      <i :class="isSubOpen(cat, sub) ? 'fas fa-chevron-down' : 'fas fa-chevron-right'"
+                        aria-hidden="true"></i>
+                      {{ sub.name }}
+                      <span class="cat-count">{{ sub.items.length }}</span>
+                    </button>
+                    <div class="cat-kids sub-kids" :class="{ open: isSubOpen(cat, sub) }">
+                      <div class="cat-kids-inner sub-kids-inner">
+                        <button v-for="item in sub.items" :key="item.menu_item_id" class="cat-leaf"
+                          :class="{ active: activeItemId === item.menu_item_id }" @click="selectItem(item)">
+                          {{ item.item_name }}
+                          <span v-if="item._ingredientCount > 0" class="ing-badge">{{ item._ingredientCount }}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -160,37 +172,105 @@ const menuItems = ref([])
 const loadingMenu = ref(true)
 const menuSearch = ref('')
 const openCat = ref('')
+const openSub = ref('')
 const activeItem = ref(null)
 
-// Menu items are grouped by SUB CATEGORY (the second level), with the category
-// as a fallback for older rows that have no sub-category yet.
+// Menu items are grouped CATEGORY -> SUB CATEGORY -> items. The sub-category is
+// the registered second level, so the tree never jumps straight from a service
+// line to a long list of dishes. Older rows without a sub-category fall back to
+// an "Uncategorized" group instead of being hidden.
 const groupedMenuItems = computed(() => {
   const q = menuSearch.value.trim().toLowerCase()
   const list = q ? menuItems.value.filter(i => i.item_name.toLowerCase().includes(q)) : menuItems.value
-  const groups = {}
+  const categories = new Map()
   for (const item of list) {
-    const cat = item.sub_category || item.category || 'Uncategorized'
-    ;(groups[cat] ||= []).push(item)
+    const catName = item.category || 'Uncategorized'
+    const subName = item.sub_category || 'Uncategorized'
+    // Group by the registered IDs, not just names: the same category name can
+    // exist on the restaurant and bar menus, and those must stay separate.
+    const catId = item.category_id || catName
+    const subId = item.sub_category_id || subName
+    if (!categories.has(catId)) {
+      categories.set(catId, {
+        id: catId,
+        name: catName,
+        order: Number(item.category_order || 0),
+        subcategories: new Map(),
+      })
+    }
+    const cat = categories.get(catId)
+    if (!cat.subcategories.has(subId)) {
+      cat.subcategories.set(subId, {
+        id: subId,
+        name: subName,
+        order: Number(item.sub_category_order || 0),
+        items: [],
+      })
+    }
+    cat.subcategories.get(subId).items.push(item)
   }
-  return groups
+  return [...categories.values()]
+    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
+    .map((cat) => {
+      const subcategories = [...cat.subcategories.values()]
+        .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
+        .map((sub) => ({
+          ...sub,
+          items: sub.items.sort((a, b) => a.item_name.localeCompare(b.item_name)),
+        }))
+      return {
+        ...cat,
+        subcategories,
+        count: subcategories.reduce((total, sub) => total + sub.items.length, 0),
+      }
+    })
 })
 
-// Categories are exclusive: opening one smoothly closes the others.
+const subKey = (cat, sub) => `${cat.id}::${sub.id}`
+
+const isCatOpen = (cat) => Boolean(menuSearch.value.trim()) || openCat.value === cat.id
+const isSubOpen = (cat, sub) => Boolean(menuSearch.value.trim()) || openSub.value === subKey(cat, sub)
+
+// Categories are exclusive: opening one smoothly closes the others and opens
+// its first sub-category, so the tree reads top-to-bottom without an extra tap.
 function toggleCat(cat) {
-  openCat.value = openCat.value === cat ? '' : cat
+  const opening = openCat.value !== cat.id
+  openCat.value = opening ? cat.id : ''
+  openSub.value = opening && cat.subcategories.length ? subKey(cat, cat.subcategories[0]) : ''
+}
+
+// Sub-categories are exclusive too; the open one is the group whose items show.
+function toggleSub(cat, sub) {
+  const key = subKey(cat, sub)
+  openSub.value = openSub.value === key ? '' : key
 }
 
 async function loadMenuItems() {
   loadingMenu.value = true
   try {
-    const { data } = await menuItemApi.index({ per_page: 500 })
+    // The API caps a page at 100 rows, so walk every page instead of asking for
+    // a size it rejects. The tree must contain the whole menu, not just page 1.
+    const { data } = await menuItemApi.index({ per_page: 100 })
+    const rows = [...(data.data || data)]
+    const lastPage = Number(data.meta?.last_page || 1)
+    if (lastPage > 1) {
+      const pages = await Promise.all(
+        Array.from({ length: lastPage - 1 }, (_, index) =>
+          menuItemApi.index({ per_page: 100, page: index + 2 }).then((response) => response.data.data || response.data),
+        ),
+      )
+      pages.forEach((pageRows) => rows.push(...pageRows))
+    }
     // Backend ships the ingredient line count per item, so the tree renders
     // badges without one extra request per menu item.
-    menuItems.value = (data.data || data).map(i => ({ ...i, _ingredientCount: i.ingredient_count ?? 0 }))
-    // Default to the first category open so the item tree reads on load.
+    menuItems.value = rows.map(i => ({ ...i, _ingredientCount: i.ingredient_count ?? 0 }))
+    // Default to the first category and its first sub-category open.
     if (!openCat.value) {
-      const first = Object.keys(groupedMenuItems.value).sort((a, b) => a.localeCompare(b))[0]
-      if (first) openCat.value = first
+      const first = groupedMenuItems.value[0]
+      if (first) {
+        openCat.value = first.id
+        openSub.value = first.subcategories.length ? subKey(first, first.subcategories[0]) : ''
+      }
     }
   } finally {
     loadingMenu.value = false
