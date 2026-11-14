@@ -5526,6 +5526,8 @@
       "kitchenMenu": "Menyu ya Jikoni",
       "quantityHint": "Tumia desimali hadi 2",
       "remove": "Ondoa",
+      "removeConfirmTitle": "Ondoa kiungo?",
+      "removeConfirmMessage": "Ondoa {name} kutoka {item}? Hatua hii haiwezi kutenduliwa.",
       "saving": "Inahifadhi...",
       "searchCategory": "Tafuta kategoria"
     },

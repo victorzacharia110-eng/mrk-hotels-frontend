@@ -5525,6 +5525,8 @@
       "pickInventory": "Pick inventory item",
       "unitHint": "e.g. ml, g",
       "remove": "Remove",
+      "removeConfirmTitle": "Remove ingredient?",
+      "removeConfirmMessage": "Remove {name} from {item}? This cannot be undone.",
       "saving": "Saving...",
       "addToRecipe": "Add to Recipe",
       "autoFill": "Auto-fill",

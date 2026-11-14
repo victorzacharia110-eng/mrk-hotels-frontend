@@ -97,7 +97,7 @@
               <td>{{ money((ing.item?.unit_cost || 0) * ing.quantity) }}</td>
               <td>
                 <button class="sm-btn ghost xs danger" :title="$t('common.delete')"
-                  @click="remove(ing)"><i class="fas fa-trash"></i></button>
+                  @click="askRemove(ing)"><i class="fas fa-trash"></i></button>
               </td>
             </tr>
           </tbody>
@@ -149,6 +149,13 @@
         </div>
       </transition>
     </teleport>
+
+    <ConfirmModal :show="showRemoveConfirm" :title="$t('cashier.ingredients.removeConfirmTitle')"
+      :body="$t('cashier.ingredients.removeConfirmMessage', {
+        name: removeTarget?.item?.item_name || '—',
+        item: activeItem?.item_name || '—',
+      })" :error="removeError" danger :busy="removing" :confirm-label="$t('common.delete')"
+      @confirm="confirmRemove" @cancel="showRemoveConfirm = false" />
   </div>
 </template>
 
@@ -158,6 +165,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { menuItemApi, cashierApi, menuItemIngredientApi } from '@/api/index.js'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -327,6 +335,11 @@ const addModal = ref(false)
 const newIng = ref({ itemId: '', quantity: 1, unit: '' })
 const saving = ref(false)
 
+const showRemoveConfirm = ref(false)
+const removeTarget = ref(null)
+const removing = ref(false)
+const removeError = ref('')
+
 function openAdd() {
   newIng.value = { itemId: '', quantity: 1, unit: '' }
   addModal.value = true
@@ -354,11 +367,28 @@ async function updateQty(ing, val) {
   await selectItem(activeItem.value)
 }
 
-async function remove(ing) {
-  if (!confirm(t('common.confirmDelete'))) return
-  await menuItemIngredientApi.destroy(activeItem.value.menu_item_id, ing.menu_item_ingredient_id)
-  await selectItem(activeItem.value)
-  activeItem.value._ingredientCount = ingredients.value.length
+function askRemove(ing) {
+  removeError.value = ''
+  removeTarget.value = ing
+  showRemoveConfirm.value = true
+}
+
+async function confirmRemove() {
+  const ing = removeTarget.value
+  if (!ing || !activeItem.value) return
+  removing.value = true
+  removeError.value = ''
+  try {
+    await menuItemIngredientApi.destroy(activeItem.value.menu_item_id, ing.menu_item_ingredient_id)
+    showRemoveConfirm.value = false
+    removeTarget.value = null
+    await selectItem(activeItem.value)
+    activeItem.value._ingredientCount = ingredients.value.length
+  } catch (err) {
+    removeError.value = err.response?.data?.message || t('common.actionFailed')
+  } finally {
+    removing.value = false
+  }
 }
 
 onMounted(() => {

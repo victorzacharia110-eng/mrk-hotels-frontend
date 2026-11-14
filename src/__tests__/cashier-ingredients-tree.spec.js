@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { DOMWrapper, mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import i18n from '@/locales/i18n'
 import CashierIngredientsPage from '@/pages/cashier/CashierIngredientsPage.vue'
@@ -8,6 +8,7 @@ const api = vi.hoisted(() => ({
   menuIndex: vi.fn(),
   inventoryItems: vi.fn(),
   ingredientIndex: vi.fn(),
+  destroy: vi.fn(),
 }))
 
 vi.mock('@/api', () => ({
@@ -16,9 +17,22 @@ vi.mock('@/api', () => ({
   menuItemIngredientApi: {
     index: api.ingredientIndex,
     store: vi.fn(),
-    destroy: vi.fn(),
+    destroy: api.destroy,
   },
 }))
+
+const INGREDIENT = {
+  menu_item_ingredient_id: 'mi-1',
+  quantity: 2,
+  unit: 'g',
+  item: {
+    item_name: 'Flour',
+    unit: 'g',
+    quantity_in_stock: 10,
+    reorder_level: 2,
+    unit_cost: 1,
+  },
+}
 
 const MENU = [
   {
@@ -83,6 +97,31 @@ describe('CashierIngredientsPage menu tree', () => {
       .toEqual(['Spirits 1', 'Beer 1', 'Main dishes 1'])
     expect(wrapper.findAll('.cat-leaf').map((button) => button.text()))
       .toEqual(['Gin', 'Beer', 'Rice'])
+
+    wrapper.unmount()
+  })
+
+  it('opens a styled confirmation modal and deletes only after confirming', async () => {
+    api.ingredientIndex.mockResolvedValue({ data: { ingredients: [INGREDIENT] } })
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.findAll('.cat-leaf')[0].trigger('click')
+    await flushPromises()
+    await wrapper.find('.sm-btn.ghost.xs.danger').trigger('click')
+    await flushPromises()
+
+    const modal = document.querySelector('.confirm-modal')
+    expect(modal).not.toBeNull()
+    expect(modal.textContent).toContain('Remove ingredient?')
+    expect(modal.textContent).toContain('Remove Flour from Gin?')
+    expect(api.destroy).not.toHaveBeenCalled()
+
+    await new DOMWrapper(document.querySelector('.confirm-modal-foot .btn-danger')).trigger('click')
+    await flushPromises()
+
+    expect(api.destroy).toHaveBeenCalledWith('menu-gin', 'mi-1')
+    expect(document.querySelector('.confirm-modal')).toBeNull()
 
     wrapper.unmount()
   })
