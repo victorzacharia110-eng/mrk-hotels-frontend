@@ -338,6 +338,40 @@ describe('food ticket on the waiter order-taker panel', () => {
   })
 })
 
+describe('waiter selected item order tab', () => {
+  it('keeps every selected line in one continuous list without pagination', async () => {
+    useAuthStore().user = { full_name: 'LYDIA MANASE', user_role: 'waiter' }
+    api.items.mockResolvedValue({
+      data: {
+        data: Array.from({ length: 10 }, (_, index) => ({
+          menu_item_id: index + 1,
+          item_name: `Dish ${index + 1}`,
+          category: 'Mains',
+          price: 3000,
+          is_available: true,
+          is_in_stock: true,
+        })),
+      },
+    })
+
+    const wrapper = mount(OrderTakerDashboard, { global: { plugins: [i18n] } })
+    await flushPromises()
+    await wrapper.find('.table-chip').trigger('click')
+    await flushPromises()
+    await wrapper.find('.cat-btn').trigger('click')
+    await nextTick()
+
+    const tiles = wrapper.findAll('.cat-item')
+    expect(tiles).toHaveLength(10)
+    for (const tile of tiles) await tile.trigger('click')
+
+    expect(wrapper.findAll('.lines-table tbody tr')).toHaveLength(10)
+    expect(wrapper.find('.pager-row').exists()).toBe(false)
+    expect(wrapper.find('.send-btn').attributes('disabled')).toBeUndefined()
+    wrapper.unmount()
+  })
+})
+
 describe('waiter live tickets and table release', () => {
   const pizzaLine = (quantity = 2) => ({
     menu_item_id: 9,
@@ -398,12 +432,14 @@ describe('waiter live tickets and table release', () => {
     await wrapper.find('.table-chip').trigger('click')
     await flushPromises()
     await wrapper.findAll('.lines-table .qty-step button')[1].trigger('click')
+    await wrapper.find('.notes-line').setValue('E SPICY')
     await wrapper.find('.send-btn').trigger('click')
     await flushPromises()
 
     expect(printToPrinter).toHaveBeenCalledTimes(1)
     const text = printedText()
     expect(text).toContain('1 x Pizza')
+    expect(text).toContain('NOTE: E SPICY')
     expect(text).not.toContain('2 x Pizza')
     expect(text).not.toContain('3 x Pizza')
     wrapper.unmount()

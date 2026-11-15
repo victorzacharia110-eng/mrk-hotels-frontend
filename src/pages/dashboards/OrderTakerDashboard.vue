@@ -198,7 +198,7 @@
             </button>
           </header>
 
-          <!-- Order lines table, with the Send action on its side -->
+          <!-- One continuous order list; the order panel scrolls without pages. -->
           <div class="order-body">
             <div class="lines-wrap">
               <table class="lines-table">
@@ -2210,7 +2210,6 @@ function releaseTable() {
   searchQuery.value = ''
   sendError.value = ''
   if (wasContinued) orderLines.value = []
-  page.value = 1
 }
 
 /** Selects a table for the ticket. Re-opening the waiter's own occupied table
@@ -2276,7 +2275,6 @@ async function selectTable(tbl, { allowRelease = true } = {}) {
 
   form.value.table_number = name
   form.value.covers = continueTarget?.covers || form.value.covers || 0
-  page.value = pageCount.value
 }
 
 /** The Order Summary page's + button hands an existing ticket here so the
@@ -2292,7 +2290,6 @@ async function applyAddToOrder(orderId) {
     form.value.covers = order.covers || 0
     form.value.order_type = order.order_type || defaultOrderType()
     orderLines.value = orderLinesFromOrder(order)
-    page.value = pageCount.value
     const query = { ...route.query }
     delete query.addToOrder
     router.replace({ name: route.name, query })
@@ -2660,13 +2657,6 @@ const popupItems = computed(() => {
   return searchQuery.value.trim() ? searchResults.value : categoryItems.value
 })
 
-// Lines table window: the reference shows 8 rows with PÁG. INICIO/FINAL.
-const LINES_PER_PAGE = 8
-const page = ref(1)
-
-/** Number of pages of order lines. */
-const pageCount = computed(() => Math.max(1, Math.ceil(orderLines.value.length / LINES_PER_PAGE)))
-
 /** Grand total of the current ticket. */
 const grandTotal = computed(() =>
   orderLines.value.reduce((sum, l) => sum + l.subtotal, 0),
@@ -2867,8 +2857,6 @@ function commitItem(item, accompaniment) {
       sent_quantity: 0,
     })
   }
-  // Keep the newest line visible in the 8-row window.
-  page.value = pageCount.value
 }
 
 /** Records the chosen accompaniment (or none) and puts the item on the ticket. */
@@ -2923,10 +2911,12 @@ async function printNewOrderTicket(order) {
  * Off by default: most kitchens reprint the whole ticket instead, and a
  * per-item ticket on a busy service is noise rather than help.
  */
-async function printAddedItemsTicket(order, addedLines) {
+async function printAddedItemsTicket(order, addedLines, notes = '') {
   if (!order || !printStore.printFoodTicketOnItemAdded) return
   if (!addedLines.length) return
-  const added = { ...order, items: addedLines }
+  // Only this round's comment belongs on its additional-items ticket. The API
+  // append contract accepts item lines, so pass the note straight to printing.
+  const added = { ...order, items: addedLines, notes: String(notes || '').trim() }
   await printStore.printFoodTicketsByStation(
     (station) => orderPrintLines(added, 'kot', { station }),
     order.department || department.value,
@@ -2984,7 +2974,7 @@ async function sendOrder() {
         quantity,
         subtotal: line.unit_price * quantity,
       }))
-      await printAddedItemsTicket(res.data?.order, addedLines)
+      await printAddedItemsTicket(res.data?.order, addedLines, form.value.notes)
       // Keep the full order on the summary and remember what has been sent; the
       // waiter can add another round without leaving the table.
       orderLines.value = orderLines.value.map((line) => {
@@ -3912,27 +3902,6 @@ function onKey(e) {
   width: 44px;
 }
 
-/* The order's selected table, repeated per row so the destination is readable
-   next to each line. A dash means no table is picked yet, which blocks sending. */
-.line-table {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.line-table-icon {
-  color: #71717a;
-  font-size: 12px;
-}
-
-.line-table.is-unset {
-  color: #a1a1aa;
-  font-weight: 400;
-  cursor: help;
-}
-
 .qty-step {
   display: inline-flex;
   align-items: center;
@@ -3993,32 +3962,7 @@ function onKey(e) {
   background: var(--pad-accent-soft);
 }
 
-/* ---- Pager + total ---- */
-.pager-row {
-  display: flex;
-  align-items: stretch;
-  gap: 10px;
-}
-
-.pager-btn {
-  border: 1px solid #d4d4d8;
-  background: #fff;
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #3f3f46;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pager-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
+/* ---- Total + submit ---- */
 .total-bar {
   flex: 1;
   display: flex;
@@ -5544,15 +5488,6 @@ function onKey(e) {
 
   .order-send {
     width: 100%;
-  }
-
-  .pager-row {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .pager-btn {
-    padding: 10px 12px;
   }
 
   .order-send-row {

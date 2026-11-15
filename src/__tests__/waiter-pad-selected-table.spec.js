@@ -51,6 +51,15 @@ describe('waiter pad: order lines', () => {
     expect(pad).toMatch(/activeCategory\.value = ''\s*\n\s*activeSubCategory\.value = ''\s*\n\s*searchQuery\.value = ''/)
   })
 
+  it('renders every line continuously without pagination code or controls', () => {
+    expect(pad).toMatch(/v-for="line in orderLines"/)
+    expect(pad).not.toMatch(/LINES_PER_PAGE|pageCount|page\.value|class="pager/)
+    expect(en.orderTaker.pageStart).toBeUndefined()
+    expect(en.orderTaker.pageEnd).toBeUndefined()
+    expect(sw.orderTaker.pageStart).toBeUndefined()
+    expect(sw.orderTaker.pageEnd).toBeUndefined()
+  })
+
   it('still refuses to send a table-less ticket', () => {
     expect(pad).toMatch(/if \(!form\.value\.table_number\) \{\s*\n\s*sendError\.value = t\('orderTaker\.selectTableFirst'\)/)
   })

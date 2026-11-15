@@ -4380,8 +4380,6 @@
     "amount": "Amount",
     "notes": "Notes",
     "empty": "Order is empty - tap a category, then tap an item to add it.",
-    "pageStart": "Page start",
-    "pageEnd": "Page end",
     "categories": "Categories",
     "subCategories": "Sub-categories",
     "noCategories": "No categories found for this department",

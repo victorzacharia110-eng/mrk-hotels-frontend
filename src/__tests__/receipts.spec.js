@@ -121,6 +121,16 @@ describe('receipt line widths', () => {
     expect(text).toContain('each')
   })
 
+  it('prints the full order comment on a KOT within the paper width', () => {
+    const comment = 'E SPICY; serve the sauce separately and bring every dish together at the pass'
+    const lines = kitchenTicketLines({ ...order, notes: comment })
+    const text = lines.map((l) => l[0]).join('\n')
+
+    expect(text).toContain('NOTE: E SPICY')
+    expect(text.replace(/\s+/g, ' ')).toContain(comment)
+    for (const [row] of lines) expect(String(row).length).toBeLessThanOrEqual(48)
+  })
+
   it('reprinted KOT is watermarked REPRINTED under the header', () => {
     const lines = kitchenTicketLines(order, { reprinted: true })
     const text = lines.map((l) => l[0]).join('\n')

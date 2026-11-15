@@ -299,6 +299,14 @@ export function kitchenTicketLines(order, opts = {}) {
     if (item.accompaniment) lines.push([`   + ${item.accompaniment}`])
   }
 
+  // Order-level instructions belong on the kitchen/bar ticket, not the guest
+  // receipt. Reuse the width-aware wrapper so long comments print in full.
+  const notes = String(order.notes || '').trim()
+  if (notes) {
+    lines.push([''])
+    for (const row of centeredRows(`NOTE: ${notes}`)) lines.push([row, true])
+  }
+
   lines.push([''])
   lines.push([padLine(new Date().toLocaleTimeString(), 'center')])
   return lines
