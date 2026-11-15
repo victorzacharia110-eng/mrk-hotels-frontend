@@ -914,13 +914,14 @@ watch(() => selectedOutlet.value?.outlet_id, loadItems)
 .rq-channel input { margin: 0; }
 .rq-overlay {
   position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: flex;
-  align-items: flex-start; justify-content: center; z-index: 1000; padding: 40px 20px; overflow-y: auto;
+  align-items: center; justify-content: center; z-index: 1000; padding: 20px; overflow-y: auto;
 }
 .rq-modal {
   background: #fff; border-radius: 14px; width: 100%; max-width: 560px;
+  max-height: 90vh; overflow-y: auto;
   padding: 22px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
 }
-.rq-modal.wide { max-width: 760px; }
+.rq-modal.wide { max-width: 1120px; }
 .rq-modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .rq-modal-head h3 { margin: 0; font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 8px; color: #1f2937; }
 .rq-modal-head h3 i { color: #005eb8; }
