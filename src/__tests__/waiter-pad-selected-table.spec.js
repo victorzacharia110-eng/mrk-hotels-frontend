@@ -35,7 +35,7 @@ describe('waiter pad: order lines', () => {
   })
 
   it('keeps the selected table in the header', () => {
-    expect(pad).toMatch(/v-model="form\.table_number"/)
+    expect(pad).toMatch(/:model-value="form\.table_number"/)
     expect(pad).toMatch(/\$t\('orderTaker\.selectTable'\)/)
   })
 
@@ -43,6 +43,12 @@ describe('waiter pad: order lines', () => {
     expect(pad).toMatch(/<div v-else-if="form\.table_number && categories\.length" class="cat-rail"/)
     expect(pad).toMatch(/<div v-if="form\.table_number && \(activeCategory \|\| searchQuery\)" class="inline-items">/)
     expect(pad).toMatch(/function openCategory\(cat\) \{\s*\n\s*if \(!form\.value\.table_number\) return/)
+    // The results themselves must also be empty without a table, even if a
+    // query survived a table change or arrived some other way.
+    expect(pad).toMatch(/const searchResults = computed\(\(\) => \{[\s\S]*?if \(!form\.value\.table_number\) return \[\]/)
+    expect(pad).toMatch(/const popupItems = computed\(\(\) => \{[\s\S]*?if \(!form\.value\.table_number\) return \[\]/)
+    // Releasing the table clears the query so it cannot resurface later.
+    expect(pad).toMatch(/activeCategory\.value = ''\s*\n\s*activeSubCategory\.value = ''\s*\n\s*searchQuery\.value = ''/)
   })
 
   it('still refuses to send a table-less ticket', () => {
@@ -67,5 +73,9 @@ describe('waiter pad: order lines', () => {
     expect(sw.orderTaker.table).toBeTruthy()
     expect(en.orderTaker.selectTable).toBeTruthy()
     expect(sw.orderTaker.selectTable).toBeTruthy()
+    expect(en.orderTaker.unselectTable).toBeTruthy()
+    expect(sw.orderTaker.unselectTable).toBeTruthy()
+    expect(en.orderTaker.loadOrderError).toBeTruthy()
+    expect(sw.orderTaker.loadOrderError).toBeTruthy()
   })
 })

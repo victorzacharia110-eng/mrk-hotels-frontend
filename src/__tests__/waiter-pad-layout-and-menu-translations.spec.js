@@ -120,6 +120,15 @@ describe('waiter pad: categories wrap so every one is visible, food scrolls down
     expect(rule(styles, '.inline-items')).toMatch(/display:\s*flex/)
   })
 
+  it('reserves enough height for two complete stock-bearing item rows', () => {
+    // Two 96px cards, the row gap and grid padding need more than the old 230px
+    // wrapper once the header is included. The larger floor keeps row two whole.
+    expect(rule(styles, '.inline-items')).toMatch(/min-height:\s*320px/)
+    expect(rule(styles, '.cat-item')).toMatch(/min-height:\s*96px/)
+    expect(rule(styles, '.cat-pop-grid')).toMatch(/gap:\s*10px/)
+    expect(rule(styles, '.cat-pop-grid')).toMatch(/padding:\s*16px/)
+  })
+
   it('shows the selected-card state from the order, not a stuck touch hover', () => {
     // `.cat-item:hover` used to apply unconditionally. On a tablet the browser
     // leaves :hover stuck on the last-tapped card, so deleting that item's line

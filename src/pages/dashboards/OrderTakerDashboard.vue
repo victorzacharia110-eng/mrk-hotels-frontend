@@ -138,6 +138,9 @@
             <div class="cat-panel-head">
               <i class="fas fa-chair" aria-hidden="true"></i> {{ $t('orderTaker.tablesLabel') }}
               <span class="cat-dept"></span>
+              <button v-if="form.table_number" type="button" class="table-unselect" @click="releaseTable">
+                <i class="fas fa-times" aria-hidden="true"></i> {{ $t('orderTaker.unselectTable') }}
+              </button>
             </div>
             <div class="table-map-grid">
               <button v-for="tbl in servingTables" :key="tbl.table_id" type="button" class="table-chip"
@@ -182,7 +185,7 @@
             </div>
             <div class="oh-field">
               <label>{{ $t('orderTaker.table') }}</label>
-              <SearchableSelect v-model="form.table_number" :options="tableOptions"
+              <SearchableSelect :model-value="form.table_number" :options="tableOptions"
                 :empty-label="isBartender ? $t('orderTaker.counterOrder') : $t('orderTaker.selectTable')" force-search
                 @change="onTableDropdownChange" />
             </div>
@@ -212,7 +215,7 @@
                   <tr v-for="line in orderLines" :key="line.key || line.menu_item_id">
                     <td class="col-qty">
                       <div class="qty-step">
-                        <button type="button" :disabled="line.quantity <= 1" @click="stepQty(line, -1)">-</button>
+                        <button type="button" :disabled="line.quantity <= lineFloor(line)" @click="stepQty(line, -1)">-</button>
                         <span>{{ line.quantity }}</span>
                         <button type="button" :disabled="lineIsMaxed(line)" @click="stepQty(line, 1)">+</button>
                       </div>
@@ -221,8 +224,8 @@
                     <td class="col-price">{{ money(line.unit_price) }}</td>
                     <td class="col-amount">{{ money(line.subtotal) }}</td>
                     <td class="col-x">
-                      <button type="button" class="line-remove" :title="$t('orderTaker.removeLine')"
-                        @click="removeLine(line)">
+                      <button v-if="canRemoveLine(line)" type="button" class="line-remove"
+                        :title="$t('orderTaker.removeLine')" @click="removeLine(line)">
                         <i class="fas fa-times" aria-hidden="true"></i>
                       </button>
                     </td>
@@ -242,7 +245,8 @@
              ORDER label; renaming it TOTAL would make the button meaningless. -->
         <div class="order-send-row">
             <p v-if="sendError" class="send-error">{{ sendError }}</p>
-            <button type="button" class="send-btn" :disabled="!orderLines.length || sending" @click="sendOrder">
+            <button type="button" class="send-btn" :disabled="!pendingLineCount || sending || selectingTable"
+              @click="sendOrder">
               <i v-if="sending" class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
               <i v-else class="fas fa-paper-plane" aria-hidden="true"></i>
               {{ sending ? $t('orderTaker.sending') : $t('orderTaker.send') }}
@@ -2016,6 +2020,10 @@ const sentToast = ref('')
 // When a waiter re-opens one of their own tables, this holds the running order
 // id so sendOrder() appends the new lines instead of creating a duplicate order.
 const continueOrderId = ref(null)
+// Guards the async table reload: tapping another table while a resumed ticket is
+// still loading must not let the older response overwrite the newer choice.
+const selectingTable = ref(false)
+const tableSelectionToken = ref(0)
 
 // Physical tables managed by the manager; the waiter only picks one.
 const tables = ref([])
@@ -2141,19 +2149,84 @@ function ownLiveOrderForTable(name) {
   )
 }
 
+/** Maps a fetched order's items onto the pad's editable line shape. The full
+ *  quantity is kept on screen (the waiter needs the whole order summary), while
+ *  `sent_quantity` records what is already with the kitchen so only the extra
+ *  units are ever sent and printed again. */
+function orderLinesFromOrder(order) {
+  return (order?.items || []).map((item) => {
+    const quantity = Number(item.quantity) || 1
+    const unitPrice = Number(item.unit_price) || 0
+    return {
+      key: `${item.menu_item_id}|${item.accompaniment || ''}`,
+      menu_item_id: item.menu_item_id,
+      item_name: item.item_name,
+      accompaniment: item.accompaniment || '',
+      unit_price: unitPrice,
+      quantity,
+      subtotal: Number(item.subtotal) || unitPrice * quantity,
+      existing: true,
+      sent_quantity: quantity,
+    }
+  })
+}
+
+/** Resolves the waiter's own live ticket on a table.
+ *
+ *  The personal board only holds today's tickets, while occupancy is read
+ *  without a date filter. A table can therefore be "occupied by you" and still
+ *  be missing from `openOrders` after midnight; in that case the occupancy
+ *  snapshot gives us the order id and the order endpoint gives us its lines. */
+async function loadOwnLiveOrderForTable(name) {
+  const direct = ownLiveOrderForTable(name)
+  if (direct) return direct
+
+  const snapshot = deptOrders.value.find(
+    (o) =>
+      String(o.table_number) === String(name) &&
+      String(o.waiter_name || '').toLowerCase() === String(waiterName.value).toLowerCase() &&
+      !['completed', 'cancelled'].includes(o.status),
+  )
+  if (!snapshot?.order_id) return null
+
+  const { data } = await orderApi.show(snapshot.order_id)
+  const order = data?.order || data?.data || data
+  return order?.order_id ? order : null
+}
+
+/** Releases the selected table without touching a draft ticket that was picked
+ *  menu-first. A resumed ticket is closed so its old lines do not leak onto the
+ *  next table. */
+function releaseTable() {
+  // Invalidate an occupied-table request that is still in flight. Its response
+  // must not reselect the table after the waiter has explicitly released it.
+  tableSelectionToken.value += 1
+  selectingTable.value = false
+  const wasContinued = Boolean(continueOrderId.value)
+  form.value.table_number = ''
+  continueOrderId.value = null
+  activeCategory.value = ''
+  activeSubCategory.value = ''
+  searchQuery.value = ''
+  sendError.value = ''
+  if (wasContinued) orderLines.value = []
+  page.value = 1
+}
+
 /** Selects a table for the ticket. Re-opening the waiter's own occupied table
  *  loads its existing lines so they can continue that ticket (issue 7); any
  *  other table keeps the working item tab as-is, so items picked menu-first
- *  survive the table-selection step (issue 2.2.4). */
-function selectTable(tbl) {
+ *  survive the table-selection step (issue 2.2.4).
+ *
+ *  The header dropdown resolves through this same function and only commits its
+ *  model after any existing order has loaded. `allowRelease` is false there so
+ *  choosing the already-selected option does not immediately clear it. */
+async function selectTable(tbl, { allowRelease = true } = {}) {
   const name = tbl.table_name
   // Tapping the already-selected table releases it, so the categories/menu
   // lock is undone without needing a separate clear button.
-  if (String(form.value.table_number || '') === String(name)) {
-    const wasContinued = Boolean(continueOrderId.value)
-    form.value.table_number = ''
-    continueOrderId.value = null
-    if (wasContinued) orderLines.value = []
+  if (allowRelease && String(form.value.table_number || '') === String(name)) {
+    releaseTable()
     return
   }
   // Another staff member's live ticket: do not even start a fresh order here.
@@ -2161,26 +2234,44 @@ function selectTable(tbl) {
     sendError.value = t('orderTaker.tableOccupied')
     return
   }
-  const continueTarget = ownLiveOrderForTable(name)
+
+  const token = ++tableSelectionToken.value
+  // A synchronous free-table choice also cancels any older occupied-table
+  // request, so clear its loading flag before resolving this selection.
+  selectingTable.value = false
+  sendError.value = ''
+  const wasContinued = Boolean(continueOrderId.value)
+  activeCategory.value = ''
+  activeSubCategory.value = ''
+  searchQuery.value = ''
+
+  let continueTarget = null
+  if (tableOccupiedBySelf(name)) {
+    selectingTable.value = true
+    try {
+      continueTarget = await loadOwnLiveOrderForTable(name)
+    } catch {
+      continueTarget = null
+    } finally {
+      if (token === tableSelectionToken.value) selectingTable.value = false
+    }
+    if (token !== tableSelectionToken.value) return
+    if (!continueTarget) {
+      sendError.value = t('orderTaker.loadOrderError')
+      return
+    }
+  }
+
+  if (token !== tableSelectionToken.value) return
 
   if (continueTarget) {
     continueOrderId.value = continueTarget.order_id
-    orderLines.value = (continueTarget.items || []).map((item) => ({
-      key: `${item.menu_item_id}|${item.accompaniment || ''}`,
-      menu_item_id: item.menu_item_id,
-      item_name: item.item_name,
-      accompaniment: item.accompaniment || '',
-      unit_price: Number(item.unit_price) || 0,
-      quantity: Number(item.quantity) || 1,
-      subtotal: Number(item.subtotal) || 0,
-      existing: true,
-    }))
+    orderLines.value = orderLinesFromOrder(continueTarget)
   } else {
-    const steppingAwayFromContinuedOrder = Boolean(continueOrderId.value)
     continueOrderId.value = null
     // A menu-first flow expects draft items picked before the table to stay on
     // the tab; only stepping away from a resumed ticket starts a clean slate.
-    if (steppingAwayFromContinuedOrder) orderLines.value = []
+    if (wasContinued) orderLines.value = []
   }
 
   form.value.table_number = name
@@ -2193,23 +2284,14 @@ function selectTable(tbl) {
 async function applyAddToOrder(orderId) {
   try {
     const { data } = await orderApi.show(orderId)
-    const order = data?.data || data
+    const order = data?.order || data?.data || data
     if (!order?.order_id) return
     activeTab.value = 'new'
     continueOrderId.value = order.order_id
     form.value.table_number = order.table_number || ''
     form.value.covers = order.covers || 0
     form.value.order_type = order.order_type || defaultOrderType()
-    orderLines.value = (order.items || []).map((item) => ({
-      key: `${item.menu_item_id}|${item.accompaniment || ''}`,
-      menu_item_id: item.menu_item_id,
-      item_name: item.item_name,
-      accompaniment: item.accompaniment || '',
-      unit_price: Number(item.unit_price) || 0,
-      quantity: Number(item.quantity) || 1,
-      subtotal: Number(item.subtotal) || 0,
-      existing: true,
-    }))
+    orderLines.value = orderLinesFromOrder(order)
     page.value = pageCount.value
     const query = { ...route.query }
     delete query.addToOrder
@@ -2226,10 +2308,9 @@ function onTableDropdownChange(option) {
   const name = option?.value
   const tbl = servingTables.value.find((t) => String(t.table_name) === String(name))
   if (tbl) {
-    selectTable(tbl)
+    selectTable(tbl, { allowRelease: false })
   } else if (!name) {
-    continueOrderId.value = null
-    form.value.table_number = ''
+    releaseTable()
   }
 }
 
@@ -2561,6 +2642,9 @@ const subCategories = computed(() => {
 const searchQuery = ref('')
 /** Items that match the universal search across every category. */
 const searchResults = computed(() => {
+  // Categories, items and search are all locked until a table is chosen, so a
+  // stray query can never surface food on a table-less ticket.
+  if (!form.value.table_number) return []
   const q = searchQuery.value.trim().toLowerCase()
   if (!q) return []
   return availableMenu.value.filter(
@@ -2571,9 +2655,10 @@ const searchResults = computed(() => {
   )
 })
 /** When a search is active we show results from every category at once. */
-const popupItems = computed(() =>
-  searchQuery.value.trim() ? searchResults.value : categoryItems.value,
-)
+const popupItems = computed(() => {
+  if (!form.value.table_number) return []
+  return searchQuery.value.trim() ? searchResults.value : categoryItems.value
+})
 
 // Lines table window: the reference shows 8 rows with PÁG. INICIO/FINAL.
 const LINES_PER_PAGE = 8
@@ -2586,6 +2671,27 @@ const pageCount = computed(() => Math.max(1, Math.ceil(orderLines.value.length /
 const grandTotal = computed(() =>
   orderLines.value.reduce((sum, l) => sum + l.subtotal, 0),
 )
+
+/** How many units on this line have not been sent yet. Existing lines start at
+ *  zero, so reopening a table and tapping + sends (and prints) only the extra
+ *  unit instead of the whole ticket again. */
+function linePendingQty(line) {
+  return Math.max(0, Number(line.quantity || 0) - Number(line.sent_quantity || 0))
+}
+
+/** The lowest quantity an existing line may be stepped down to: what is already
+ *  with the kitchen cannot be removed from this pad. */
+function lineFloor(line) {
+  return Math.max(1, Number(line.sent_quantity || 0))
+}
+
+/** Only a line that has never been sent can be removed here. */
+function canRemoveLine(line) {
+  return !Number(line.sent_quantity || 0)
+}
+
+/** Number of lines carrying a new quantity; the Send button follows this. */
+const pendingLineCount = computed(() => orderLines.value.filter((line) => linePendingQty(line) > 0).length)
 
 /** Human-readable label for an order's payment status. */
 function paymentLabel(status) {
@@ -2758,6 +2864,7 @@ function commitItem(item, accompaniment) {
       unit_price: Number(item.price),
       quantity: 1,
       subtotal: Number(item.price),
+      sent_quantity: 0,
     })
   }
   // Keep the newest line visible in the 8-row window.
@@ -2776,14 +2883,17 @@ function skipAccompaniment() {
   accompItem.value = null
 }
 
-/** Steps a line's quantity (never below 1). */
+/** Steps a line's quantity, never below what has already been sent (or 1 for a
+ *  brand-new line). */
 function stepQty(line, delta) {
-  line.quantity = Math.max(1, line.quantity + delta)
+  line.quantity = Math.max(lineFloor(line), line.quantity + delta)
   line.subtotal = line.unit_price * line.quantity
 }
 
-/** Removes a line from the ticket before it is sent. */
+/** Removes a line from the ticket before it is sent. Lines already with the
+ *  kitchen stay on the summary; only their extra units can be stepped back. */
 function removeLine(line) {
+  if (!canRemoveLine(line)) return
   orderLines.value = orderLines.value.filter((l) => (l.key || l.menu_item_id) !== (line.key || line.menu_item_id))
 }
 
@@ -2828,7 +2938,7 @@ async function printAddedItemsTicket(order, addedLines) {
  *  a table the waiter already opened (continueOrderId) it appends the new
  *  lines to that same order so nothing is ever duplicated. */
 async function sendOrder() {
-  if (!orderLines.value.length || sending.value) return
+  if (!orderLines.value.length || sending.value || selectingTable.value) return
   // A waiter-panel ticket is always anchored to a table (the API refuses
   // table-less dine-in tickets from floor staff) — tap a table chip first.
   if (!form.value.table_number) {
@@ -2841,26 +2951,50 @@ async function sendOrder() {
     sendError.value = t('orderTaker.tableOccupied')
     return
   }
+
+  // Existing lines carry the quantity already with the kitchen. Only the units
+  // above that (and brand-new lines) form this send, so reopening a table and
+  // adding one drink cannot re-order everything already on the bill.
+  const pending = orderLines.value
+    .map((line) => ({ line, quantity: linePendingQty(line) }))
+    .filter(({ quantity }) => quantity > 0)
+  if (!pending.length) return
+
+  const itemsPayload = pending.map(({ line, quantity }) => ({
+    menu_item_id: line.menu_item_id,
+    quantity,
+    accompaniment: line.accompaniment || null,
+  }))
+  // Capture the quantities in this request before awaiting the API. If the
+  // waiter adds another unit while it is being sent, that newer unit remains
+  // pending instead of being incorrectly marked as already sent on success.
+  const sentQuantities = new Map(pending.map(({ line }) => [line, Number(line.quantity) || 0]))
+
   sending.value = true
   sendError.value = ''
   try {
-    const newLines = orderLines.value.filter((l) => !l.existing)
-    const itemsPayload = newLines.map((l) => ({
-      menu_item_id: l.menu_item_id,
-      quantity: l.quantity,
-      accompaniment: l.accompaniment || null,
-    }))
-
     if (continueOrderId.value) {
-      if (itemsPayload.length) {
-        const res = await orderApi.addItems(continueOrderId.value, { items: itemsPayload })
-        const number = res.data?.order?.order_number || ''
-        sentToast.value = t('orderTaker.sent', { number })
-        // Only the lines just added go on this ticket. Reprinting the whole
-        // order would tell the kitchen to cook everything twice.
-        await printAddedItemsTicket(res.data?.order, newLines)
-      }
-      orderLines.value = []
+      const res = await orderApi.addItems(continueOrderId.value, { items: itemsPayload })
+      const number = res.data?.order?.order_number || ''
+      sentToast.value = t('orderTaker.sent', { number })
+      // Only the quantities just added go on this ticket. Reprinting the whole
+      // order would tell the kitchen to cook everything twice.
+      const addedLines = pending.map(({ line, quantity }) => ({
+        ...line,
+        quantity,
+        subtotal: line.unit_price * quantity,
+      }))
+      await printAddedItemsTicket(res.data?.order, addedLines)
+      // Keep the full order on the summary and remember what has been sent; the
+      // waiter can add another round without leaving the table.
+      orderLines.value = orderLines.value.map((line) => {
+        if (!sentQuantities.has(line)) return line
+        return {
+          ...line,
+          existing: true,
+          sent_quantity: sentQuantities.get(line),
+        }
+      })
       form.value.notes = ''
     } else {
       const res = await orderApi.store({
@@ -2951,9 +3085,11 @@ onMounted(async () => {
     if (activeTab.value === 'open') loadOpenOrders()
     if (activeTab.value === 'dashboard') loadDashboard()
   })
-  // Stock is recomputed from receipts + accepted indents on the server; a
-  // movement push reloads the dashboard's LOW STOCK list and stock snapshot.
+  // Stock is recomputed from receipts + accepted indents on the server. Refresh
+  // both the dashboard figures and the menu cards currently being ordered from,
+  // so an accepted indent immediately increases the selected outlet's stock.
   stockRealtime = useStockRealtime(() => {
+    if (activeTab.value === 'new') loadMenu()
     if (activeTab.value === 'dashboard') loadDashboard()
   })
   document.addEventListener('keydown', onKey)
@@ -3124,9 +3260,10 @@ function onKey(e) {
      inside it, instead of the whole page growing. */
   display: flex;
   flex-direction: column;
-  /* Never collapse the food list to a sliver: the wrapped category rail takes
-     rows, and without a floor the grid below was squeezed to a few pixels. */
-  min-height: 230px;
+  /* Reserve enough height for the header plus two complete card rows, including
+     their price and outlet-stock lines. On shorter windows the categories column
+     scrolls rather than squeezing the second row into a clipped strip. */
+  min-height: 320px;
   /* Takes whatever height the category and sub-category rails leave behind, and
      is the part that gives way when the column runs short. */
   flex: 1 1 auto;
@@ -3967,6 +4104,27 @@ function onKey(e) {
   border-radius: 999px;
 }
 
+.table-unselect {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: 1px solid #d4d4d8;
+  border-radius: 6px;
+  background: #fff;
+  color: #52525b;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.table-unselect:hover {
+  border-color: var(--pad-accent);
+  color: var(--pad-accent-deep);
+}
+
 .cat-search {
   flex: 1 1 100%;
   width: 100%;
@@ -4203,6 +4361,7 @@ function onKey(e) {
   flex: 0 1 auto;
   width: max-content;
   max-width: 100%;
+  min-height: 96px;
 }
 
 /*

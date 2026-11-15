@@ -7,6 +7,7 @@ import { usePrintSettingsStore } from '@/stores/printSettings'
 import NewOrderModal from '@/components/cashier/NewOrderModal.vue'
 import OrderTakerDashboard from '@/pages/dashboards/OrderTakerDashboard.vue'
 import { useAuthStore } from '@/stores/auth'
+import { selectedOutlet } from '@/composables/useOutletContext'
 
 /**
  * The review's "print a food ticket" flags were dead settings: the store
@@ -104,6 +105,7 @@ function printedRow(index, text) {
 beforeEach(() => {
   setActivePinia(createPinia())
   localStorage.clear()
+  selectedOutlet.value = null
   vi.clearAllMocks()
   printerSupported.mockReturnValue(true)
   printToPrinter.mockResolvedValue(true)
@@ -335,6 +337,183 @@ describe('food ticket on the waiter order-taker panel', () => {
     expect(printToPrinter).not.toHaveBeenCalled()
   })
 })
+
+describe('waiter live tickets and table release', () => {
+  const pizzaLine = (quantity = 2) => ({
+    menu_item_id: 9,
+    item_name: 'Pizza',
+    quantity,
+    unit_price: 8000,
+    subtotal: 8000 * quantity,
+  })
+
+  async function mountPanel() {
+    useAuthStore().user = { full_name: 'LYDIA MANASE', user_role: 'waiter' }
+    const wrapper = mount(OrderTakerDashboard, { global: { plugins: [i18n] } })
+    await flushPromises()
+    return wrapper
+  }
+
+  it('appends only the extra quantity and protects the sent quantity', async () => {
+    const liveOrder = ORDER({ order_id: 'o-live', items: [pizzaLine(2)] })
+    api.index.mockResolvedValue({ data: { data: [liveOrder] } })
+    api.addItems.mockResolvedValue({ data: { order: ORDER() } })
+
+    const wrapper = await mountPanel()
+    await wrapper.find('.table-chip').trigger('click')
+    await flushPromises()
+
+    // Nothing is pending merely because an existing ticket was opened.
+    expect(wrapper.find('.send-btn').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('.lines-table .line-remove').exists()).toBe(false)
+    const quantityButtons = wrapper.findAll('.lines-table .qty-step button')
+    expect(quantityButtons[0].attributes('disabled')).toBeDefined()
+
+    await quantityButtons[1].trigger('click')
+    expect(wrapper.find('.lines-table .qty-step span').text()).toBe('3')
+    await wrapper.find('.send-btn').trigger('click')
+    await flushPromises()
+
+    expect(api.addItems).toHaveBeenCalledWith('o-live', {
+      items: [{ menu_item_id: 9, quantity: 1, accompaniment: null }],
+    })
+    // The full summary stays visible, with no unsent units left.
+    expect(wrapper.find('.lines-table .qty-step span').text()).toBe('3')
+    expect(wrapper.find('.send-btn').attributes('disabled')).toBeDefined()
+    expect(wrapper.findAll('.lines-table .qty-step button')[0].attributes('disabled')).toBeDefined()
+    wrapper.unmount()
+  })
+
+  it('prints only the extra units when an existing line is increased', async () => {
+    const store = usePrintSettingsStore()
+    const kitchen = store.addTicketPrinter({ name: 'Kitchen', transport: 'network', endpoint: 'http://10.0.0.7:9720' })
+    store.saveSettings({ printFoodTicketOnItemAdded: true, departmentRouting: { restaurant: kitchen } })
+    const liveOrder = ORDER({ order_id: 'o-live', items: [pizzaLine(2)] })
+    api.index.mockResolvedValue({ data: { data: [liveOrder] } })
+    api.addItems.mockResolvedValue({
+      data: { order: ORDER({ order_id: 'o-live', items: [pizzaLine(3)] }) },
+    })
+
+    const wrapper = await mountPanel()
+    await wrapper.find('.table-chip').trigger('click')
+    await flushPromises()
+    await wrapper.findAll('.lines-table .qty-step button')[1].trigger('click')
+    await wrapper.find('.send-btn').trigger('click')
+    await flushPromises()
+
+    expect(printToPrinter).toHaveBeenCalledTimes(1)
+    const text = printedText()
+    expect(text).toContain('1 x Pizza')
+    expect(text).not.toContain('2 x Pizza')
+    expect(text).not.toContain('3 x Pizza')
+    wrapper.unmount()
+  })
+
+  it('reloads the visible stock quantity when the outlet changes', async () => {
+    selectedOutlet.value = { outlet_id: 1, name: 'Main Bar', type: 'bar' }
+    api.items.mockImplementation(({ outlet_id }) => Promise.resolve({
+      data: {
+        data: [{
+          menu_item_id: 1,
+          item_name: 'Ugali',
+          category: 'Mains',
+          price: 3000,
+          is_available: true,
+          is_in_stock: true,
+          quantity_on_hand: outlet_id === 1 ? 4 : 9,
+          linked_item_unit: 'PC',
+        }],
+      },
+    }))
+
+    const wrapper = await mountPanel()
+    await wrapper.find('.table-chip').trigger('click')
+    await flushPromises()
+    await wrapper.find('.cat-btn').trigger('click')
+    await nextTick()
+    expect(wrapper.find('.cat-item-stock').text()).toContain('4')
+
+    selectedOutlet.value = { outlet_id: 2, name: 'Pool Bar', type: 'bar' }
+    await flushPromises()
+
+    expect(api.items).toHaveBeenLastCalledWith(expect.objectContaining({ outlet_id: 2, page: 1 }))
+    expect(wrapper.find('.cat-item-stock').text()).toContain('9')
+    wrapper.unmount()
+  })
+
+  it('releases the table and clears category and search state', async () => {
+    const wrapper = await mountPanel()
+    await wrapper.find('.table-chip').trigger('click')
+    await flushPromises()
+
+    const search = wrapper.find('.cat-search')
+    await search.setValue('ugali')
+    expect(wrapper.find('.inline-items').exists()).toBe(true)
+
+    await wrapper.find('.table-unselect').trigger('click')
+
+    expect(wrapper.find('.table-unselect').exists()).toBe(false)
+    expect(wrapper.find('.cat-rail').exists()).toBe(false)
+    expect(wrapper.find('.inline-items').exists()).toBe(false)
+    expect(wrapper.find('.cat-search').element.value).toBe('')
+    wrapper.unmount()
+  })
+
+  it('loads an own live order from the API when only occupancy is cached', async () => {
+    const liveOrder = ORDER({ order_id: 'o-live', items: [pizzaLine()] })
+    api.index.mockImplementation((params = {}) => Promise.resolve({
+      data: { data: params.occupancy ? [liveOrder] : [] },
+    }))
+    api.show.mockResolvedValue({ data: { order: liveOrder } })
+
+    const wrapper = await mountPanel()
+    await wrapper.find('.table-chip').trigger('click')
+    await flushPromises()
+
+    expect(api.show).toHaveBeenCalledWith('o-live')
+    expect(wrapper.text()).toContain('Pizza')
+    expect(wrapper.find('.lines-table .qty-step span').text()).toBe('2')
+    expect(wrapper.find('.send-btn').attributes('disabled')).toBeDefined()
+    wrapper.unmount()
+  })
+
+  it('ignores an occupied-table response that arrives after release', async () => {
+    const liveOrder = ORDER({ order_id: 'o-live', table_number: '4', items: [pizzaLine()] })
+    api.index.mockImplementation((params = {}) => Promise.resolve({
+      data: { data: params.occupancy ? [liveOrder] : [] },
+    }))
+    api.tables.mockResolvedValue({
+      data: {
+        data: [
+          { table_id: 1, table_name: '4', section: 'restaurant', outlet_id: 1, is_active: 1 },
+          { table_id: 2, table_name: '5', section: 'restaurant', outlet_id: 1, is_active: 1 },
+        ],
+      },
+    })
+    let resolveShow
+    api.show.mockImplementation(() => new Promise((resolve) => { resolveShow = resolve }))
+
+    const wrapper = await mountPanel()
+    const chips = wrapper.findAll('.table-chip')
+    await chips[1].trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.table-unselect').exists()).toBe(true)
+
+    // Table 4 needs an asynchronous fetch; table 5 remains selected meanwhile.
+    await chips[0].trigger('click')
+    expect(api.show).toHaveBeenCalledWith('o-live')
+    await wrapper.find('.table-unselect').trigger('click')
+    resolveShow({ data: { data: liveOrder } })
+    await flushPromises()
+
+    expect(wrapper.find('.table-unselect').exists()).toBe(false)
+    expect(wrapper.find('.table-chip-tick').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Pizza')
+    expect(wrapper.find('.send-btn').attributes('disabled')).toBeDefined()
+    wrapper.unmount()
+  })
+})
+
 
 describe('waiter order-taker panel: the red row X clears its food card', () => {
   /**

@@ -46,6 +46,12 @@ describe('dine-in board is scoped to the selected outlet', () => {
     expect(bodyOf(pad, 'async function loadOrderSummary')).toMatch(/outlet_id: selectedOutlet\.value\?\.outlet_id/)
   })
 
+  it('loads and displays stock for the selected outlet', () => {
+    expect(bodyOf(pad, 'async function loadMenu')).toMatch(/outlet_id: selectedOutlet\.value\?\.outlet_id/)
+    expect(pad).toMatch(/item\.quantity_on_hand != null/)
+    expect(pad).toMatch(/orderTaker\.inStockQty/)
+  })
+
   it('refreshes every outlet-scoped board when the outlet changes', () => {
     const at = pad.indexOf('watch(() => selectedOutlet.value?.outlet_id')
     expect(at).toBeGreaterThan(-1)
@@ -54,6 +60,15 @@ describe('dine-in board is scoped to the selected outlet', () => {
     expect(watcher).toMatch(/loadOpenOrders\(\)/)
     expect(watcher).toMatch(/loadDeptOrders\(\)/)
     expect(watcher).toMatch(/loadOrderSummary\(\)/)
+  })
+
+
+  it('refreshes visible menu stock after receipts and accepted indents', () => {
+    const at = pad.indexOf('stockRealtime = useStockRealtime')
+    expect(at).toBeGreaterThan(-1)
+    const listener = pad.slice(at, pad.indexOf('\n  })', at))
+    expect(listener).toMatch(/activeTab\.value === 'new'\) loadMenu\(\)/)
+    expect(listener).toMatch(/activeTab\.value === 'dashboard'\) loadDashboard\(\)/)
   })
 })
 
