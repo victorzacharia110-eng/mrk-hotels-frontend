@@ -57,7 +57,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in filteredItems" :key="item.menu_item_id">
+            <tr v-for="item in pagedItems" :key="item.menu_item_id">
               <td><strong>{{ item.item_name }}</strong></td>
               <td>{{ item.category || '—' }}</td>
               <td>{{ item.sub_category || '—' }}</td>
@@ -66,12 +66,13 @@
               <td>{{ money(item.cost) }}</td>
               <td><strong>{{ money(item.price) }}</strong></td>
             </tr>
-            <tr v-if="!filteredItems.length">
+            <tr v-if="!pagedItems.length">
               <td colspan="7" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.lookup.noItems') }}</td>
             </tr>
           </tbody>
         </table>
       </div>
+      <PaginationBar :page="currentPage" :last-page="lastPage" @change="page = $event" />
     </section>
   </div>
 </template>
@@ -80,13 +81,16 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { menuItemApi } from '@/api'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import PaginationBar from '@/components/store/PaginationBar.vue'
 import '@/pages/store/store-shared.css'
 
+const PAGE_SIZE = 15
 const items = ref([])
 const loading = ref(true)
 const search = ref('')
 const activeCategory = ref('')
 const activeSubCategory = ref('')
+const page = ref(1)
 
 const matchesSearch = (item) => {
   const term = search.value.trim().toLowerCase()
@@ -128,6 +132,17 @@ const filteredItems = computed(() =>
   }),
 )
 
+const lastPage = computed(() => Math.max(1, Math.ceil(filteredItems.value.length / PAGE_SIZE)))
+const currentPage = computed(() => Math.min(page.value, lastPage.value))
+const pagedItems = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return filteredItems.value.slice(start, start + PAGE_SIZE)
+})
+
+watch([search, activeCategory, activeSubCategory], () => {
+  page.value = 1
+})
+
 watch(search, () => {
   activeCategory.value = ''
   activeSubCategory.value = ''
@@ -152,10 +167,10 @@ async function load() {
   try {
     const { data } = await menuItemApi.index({ per_page: 100 })
     const rows = [...(data.data || data)]
-    const lastPage = Number(data.meta?.last_page || 1)
-    if (lastPage > 1) {
+    const totalPages = Number(data.meta?.last_page || 1)
+    if (totalPages > 1) {
       const pages = await Promise.all(
-        Array.from({ length: lastPage - 1 }, (_, index) =>
+        Array.from({ length: totalPages - 1 }, (_, index) =>
           menuItemApi.index({ per_page: 100, page: index + 2 }).then((response) => response.data.data || response.data),
         ),
       )
