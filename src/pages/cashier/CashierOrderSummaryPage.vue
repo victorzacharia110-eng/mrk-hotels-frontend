@@ -453,7 +453,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { cashierApi, orderApi, hotelSettingsApi, tableApi } from '@/api'
 import { selectedOutlet } from '@/composables/useOutletContext'
 import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
@@ -496,6 +496,7 @@ const error = ref('')
  *  the Day Close open business date. */
 const workingDateStore = useWorkingDateStore()
 const date = ref(workingDateStore.workingDate)
+const route = useRoute()
 const router = useRouter()
 const search = ref('')
 const typeFilter = ref('')
@@ -1205,7 +1206,8 @@ watch(() => selectedOutlet.value?.outlet_id, () => {
 
 onMounted(async () => {
   await workingDateStore.ensureLoaded()
-  date.value = workingDateStore.workingDate
+  const queryDate = Array.isArray(route.query.date) ? route.query.date[0] : route.query.date
+  date.value = queryDate || workingDateStore.workingDate
   load()
   loadTables()
   loadLogo()

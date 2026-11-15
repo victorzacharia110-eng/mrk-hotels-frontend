@@ -78,16 +78,19 @@ function statusPayload(overrides = {}) {
   }
 }
 
-async function mountPage() {
-  router = createRouter({
-    history: createMemoryHistory(),
-    routes: [
-      { path: '/app/cashier/order-summary', name: 'cashier-order-summary', component: { template: '<div />' } },
-      { path: '/:pathMatch(.*)*', component: { template: '<div />' } },
-    ],
-  })
+async function mountPage({ routeName, onRouter } = {}) {
+  const routes = [
+    { path: '/app/cashier/order-summary', name: 'cashier-order-summary', component: { template: '<div />' } },
+    ...(routeName
+      ? [{ path: '/cashier/day-close', name: routeName, component: { template: '<div />' } }]
+      : []),
+    { path: '/:pathMatch(.*)*', component: { template: '<div />' } },
+  ]
+  router = createRouter({ history: createMemoryHistory(), routes })
   await router.push('/cashier/day-close')
   await router.isReady()
+
+  if (onRouter) onRouter(router)
 
   const wrapper = mount(CashierDayClosePage, { global: { plugins: [pinia, i18n, router] } })
   await flushPromises()
@@ -131,9 +134,40 @@ describe('cashier day close — blocking orders', () => {
     await buttonByText(wrapper, 'Order Summary').trigger('click')
     await flushPromises()
 
-    expect(push).toHaveBeenCalledWith({ name: 'cashier-order-summary', query: { order: 'o1' } })
+    expect(push).toHaveBeenCalledWith({
+      name: 'cashier-order-summary',
+      query: { order: 'o1', date: '2026-10-11' },
+    })
     expect(pay).not.toHaveBeenCalled()
     expect(wrapper.find('.sm-modal').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  it('auto-redirects cashier day close to Order Summary when tickets are blocking', async () => {
+    const replace = vi.fn()
+    const wrapper = await mountPage({
+      routeName: 'cashier-day-close',
+      onRouter: (r) => { r.replace = replace },
+    })
+
+    expect(replace).toHaveBeenCalledWith({
+      name: 'cashier-order-summary',
+      query: { date: '2026-10-11' },
+    })
+
+    wrapper.unmount()
+  })
+
+  it('does not auto-redirect the shared store-manager day close', async () => {
+    const replace = vi.fn()
+    const wrapper = await mountPage({
+      routeName: 'store-day-close',
+      onRouter: (r) => { r.replace = replace },
+    })
+
+    expect(replace).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('ORD-1')
 
     wrapper.unmount()
   })

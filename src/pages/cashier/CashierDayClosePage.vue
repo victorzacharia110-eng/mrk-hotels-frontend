@@ -191,12 +191,13 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { fbDayCloseApi, orderApi } from '@/api'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const { t } = useI18n()
+const route = useRoute()
 const router = useRouter()
 const workingDateStore = useWorkingDateStore()
 
@@ -256,12 +257,23 @@ function formatTime(value) {
   return new Date(value).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-async function load() {
+async function load({ redirectToSummary = false } = {}) {
   loading.value = true
   error.value = ''
   try {
     const { data } = await fbDayCloseApi.index()
     status.value = data || status.value
+
+    // The cashier should settle running tickets on the Order Summary table,
+    // not from the Day Close screen. Opening Day Close with blockers sends
+    // them straight to the order list for the affected business date.
+    if (redirectToSummary && route.name === 'cashier-day-close' && blockingOrders.value.length) {
+      const targetDate = blockingOrders.value[0]?.business_date || status.value.close_date
+      await router.replace({
+        name: 'cashier-order-summary',
+        query: targetDate ? { date: targetDate } : {},
+      })
+    }
   } catch (err) {
     error.value = err.response?.data?.message || t('common.loadError')
   } finally {
@@ -317,7 +329,9 @@ async function doClose() {
 
 /** Settlement is handled on the Order Summary page, not from Day Close. */
 function goToSummary(order) {
-  router.push({ name: 'cashier-order-summary', query: { order: order.order_id } })
+  const query = { order: order.order_id }
+  if (order.business_date) query.date = order.business_date
+  router.push({ name: 'cashier-order-summary', query })
 }
 
 
@@ -345,7 +359,7 @@ async function doVoid() {
 }
 
 onMounted(() => {
-  load()
+  load({ redirectToSummary: true })
   loadHistory()
   clockTimer = setInterval(() => {
     nowTick.value = new Date()
