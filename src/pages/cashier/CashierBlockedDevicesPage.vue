@@ -7,8 +7,30 @@
 
 <template>
   <div class="sm-page">
-    <div class="alert" style="background:#f8fafc;color:#475569;border:1px solid #cbd5e1;margin-bottom:12px;"><i class="fas fa-volume-xmark" aria-hidden="true"></i> {{ $t("cashier.devices.muted") || "Page muted as requested." }}</div>
-    <section class="panel">
+    <div class="toggle-bar">
+      <div class="toggle-copy">
+        <strong>{{ $t('cashier.devices.toggleLabel') }}</strong>
+        <small>{{ enabled ? $t('cashier.devices.onHint') : $t('cashier.devices.offHint') }}</small>
+        <small v-if="!canToggle">{{ $t('cashier.devices.managedByManager') }}</small>
+      </div>
+      <button
+        v-if="canToggle"
+        type="button"
+        class="sm-btn toggle-btn"
+        :class="{ ghost: !enabled }"
+        :aria-pressed="enabled"
+        :disabled="saving || settingsLoading"
+        @click="toggleEnabled"
+      >
+        <i :class="enabled ? 'fas fa-toggle-on' : 'fas fa-toggle-off'" aria-hidden="true"></i>
+        {{ saving ? $t('common.saving') : (enabled ? $t('cashier.devices.on') : $t('cashier.devices.off')) }}
+      </button>
+      <span v-else class="toggle-state" :class="{ on: enabled }">
+        {{ enabled ? $t('cashier.devices.on') : $t('cashier.devices.off') }}
+      </span>
+    </div>
+
+    <section v-if="enabled" class="panel">
       <div class="panel-head">
         <h2><i class="fas fa-shield-halved" aria-hidden="true"></i> {{ $t('cashier.devices.title') }}</h2>
         <span class="muted">{{ $t('cashier.devices.records', { n: meta.total }) }}</span>
@@ -57,18 +79,52 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { posApi } from '@/api'
+import { hotelSettingsApi, posApi } from '@/api'
+import { useAuthStore } from '@/stores/auth'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import '@/pages/store/store-shared.css'
 
 const { t } = useI18n()
+const authStore = useAuthStore()
 
+const canToggle = computed(() => ['hotel_admin', 'manager'].includes(authStore.user?.user_role))
+const enabled = ref(false)
+const settingsLoading = ref(true)
+const saving = ref(false)
 const devices = ref([])
 const meta = ref({ current_page: 1, last_page: 1, total: 0, per_page: 25 })
 const loading = ref(false)
 const busy = ref(null)
+
+async function loadSettings() {
+  settingsLoading.value = true
+  try {
+    const { data } = await hotelSettingsApi.show()
+    enabled.value = !!data.hotel?.blocked_devices_enabled
+    if (enabled.value) load()
+  } catch {
+    enabled.value = false
+  } finally {
+    settingsLoading.value = false
+  }
+}
+
+async function toggleEnabled() {
+  if (!canToggle.value || saving.value) return
+  saving.value = true
+  const next = !enabled.value
+  try {
+    await hotelSettingsApi.update({ blocked_devices_enabled: next })
+    enabled.value = next
+    if (next) load()
+  } catch (e) {
+    window.alert(e.response?.data?.message || t('common.actionFailed'))
+  } finally {
+    saving.value = false
+  }
+}
 
 async function load() {
   loading.value = true
@@ -108,7 +164,7 @@ function fmtTime(value) {
   return value ? new Date(value).toLocaleString() : '—'
 }
 
-onMounted(load)
+onMounted(loadSettings)
 </script>
 
 <style scoped>
@@ -116,4 +172,18 @@ onMounted(load)
 .right { text-align: right; }
 .table-scroll { overflow-x: auto; }
 .pagination { padding: 12px 16px; border-top: 1px solid #e2e8f0; }
+.toggle-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 12px 16px; margin-bottom: 12px; background: #fff;
+  border: 1px solid #e2e8f0; border-radius: 10px;
+}
+.toggle-copy strong { display: block; font-size: 14px; color: #1e293b; }
+.toggle-copy small { display: block; font-size: 12px; color: #64748b; margin-top: 2px; }
+.toggle-btn { min-width: 96px; justify-content: center; }
+.toggle-state {
+  flex: none; min-width: 72px; padding: 7px 12px; border-radius: 8px;
+  background: #f1f5f9; color: #475569; font-size: 12px; font-weight: 800;
+  text-align: center; letter-spacing: 0.04em;
+}
+.toggle-state.on { background: #e8f1fa; color: var(--mrk-blue-deep, #00468c); }
 </style>

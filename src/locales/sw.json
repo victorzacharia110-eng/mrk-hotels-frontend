@@ -5269,13 +5269,18 @@
     },
     "devices": {
       "title": "Vifaa Vilivyozuiwa",
+      "toggleLabel": "Vifaa Vilivyozuiwa",
+      "on": "IMEWASHWA",
+      "off": "IMEZIMWA",
+      "onHint": "Vifaa vilivyozuiwa vimewashwa.",
+      "offHint": "Vifaa vilivyozuiwa vimezimwa. Washa ili kukagua vifaa.",
+      "managedByManager": "Ni meneja au msimamizi pekee anayeweza kubadilisha hili.",
       "deviceName": "Jina la Kifaa",
       "blockedAt": "Kilizuiwa",
       "blockedBy": "Aliezuia",
       "unblock": "Fungua",
       "noData": "Hakuna vifaa vilivyozuiwa.",
-      "records": "Rekodi {n}",
-      "muted": "Ukurasa umetulia."
+      "records": "Rekodi {n}"
     },
     "txlock": {
       "title": "NET LOCK",
