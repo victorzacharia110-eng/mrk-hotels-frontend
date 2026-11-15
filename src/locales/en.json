@@ -5748,12 +5748,10 @@
       "barMenu": "Bar Menu",
       "category": "Category",
       "cost": "Cost",
-      "discount": "Discount Allowed",
       "items": "Items",
       "kitchenMenu": "Kitchen Menu",
       "name": "Name",
       "noItems": "No items",
-      "openPrice": "Open Price",
       "price": "Price",
       "searchCategory": "Search category",
       "searchItem": "Search product...",
@@ -5761,7 +5759,6 @@
       "allSubCategories": "All Sub Categories",
       "subCategory": "Sub Category",
       "siUnit": "SI Unit",
-      "sku": "SKU",
       "taxGroup": "Tax Group"
     },
     "outletGate": {

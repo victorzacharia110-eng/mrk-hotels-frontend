@@ -36,7 +36,7 @@
                     <div class="cat-kids sub-kids" :class="{ open: isSubOpen(cat, sub) }">
                       <div class="cat-kids-inner sub-kids-inner">
                         <button v-for="item in sub.items" :key="item.menu_item_id" class="cat-leaf"
-                          :class="{ active: activeItemId === item.menu_item_id }" @click="selectItem(item)">
+                          :class="{ active: activeItem?.menu_item_id === item.menu_item_id }" @click="selectItem(item)">
                           {{ item.item_name }}
                           <span v-if="item._ingredientCount > 0" class="ing-badge">{{ item._ingredientCount }}</span>
                         </button>
