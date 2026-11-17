@@ -411,22 +411,10 @@ const departmentOptions = computed(() =>
   departments.value.map((d) => ({ value: d.department_id, label: d.name })),
 )
 
-const availableItems = computed(() => {
-  if (!restricted.value) return items.value
-  // Seeded cashiers/bartenders carry only the `department` NAME (e.g. "bar"),
-  // so match on the id when present and fall back to the name. An item
-  // registered on no department is store stock every outlet may request.
-  const deptId = myDepartmentId.value
-  const name = String(auth.user?.department || '').trim().toLowerCase()
-  return items.value.filter((i) => {
-    const links = i.departments || []
-    if (!i.department_id && !links.length) return true
-    return (
-      (deptId && (i.department_id === deptId || links.some((d) => d.department_id === deptId))) ||
-      (name && links.some((d) => String(d.name || '').trim().toLowerCase() === name))
-    )
-  })
-})
+// Every outlet may request any registered item. The shelf balance on each
+// option still tells the requester what their own outlet holds, so an item
+// stocked elsewhere is visible but reads 0 on their shelf.
+const availableItems = computed(() => items.value)
 
 /** The signed-in user's own shelf, resolved by id or by department name. */
 const myDepartmentId = computed(() => {
