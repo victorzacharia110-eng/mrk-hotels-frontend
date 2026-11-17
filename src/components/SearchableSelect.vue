@@ -332,8 +332,10 @@ let lastPickAt = 0
  * @param {string|number|boolean} value - Value of the chosen option.
  */
 function pick(value) {
+  if (props.disabled) return
   // In hint mode the empty label is informational, never a selectable choice.
-  if (props.disabled || props.emptyAsHint) return
+  // Real options must still be pickable, otherwise the whole list is dead.
+  if (props.emptyAsHint && (value === '' || value === null || value === undefined)) return
   const target = props.options.find((option) => String(option.value) === String(value))
   if (target?.disabled) return
   emit('update:modelValue', value)

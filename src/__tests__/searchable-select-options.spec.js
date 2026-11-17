@@ -81,4 +81,61 @@ describe('SearchableSelect option rendering', () => {
 
     wrapper.unmount()
   })
+
+  it('selects a low-stock row rendered through the custom option slot', async () => {
+    const options = [
+      { value: 'tp', name: 'Toilet Paper', quantity: 4, unit: 'PCS', status: 'low_stock', label: 'Toilet Paper — 4 PCS' },
+    ]
+    const wrapper = mount(
+      {
+        components: { SearchableSelect },
+        template: `
+          <SearchableSelect v-model="picked" :options="options">
+            <template #option="{ option }">
+              <span class="item-option">
+                <span>{{ option.name }} — {{ option.quantity }} {{ option.unit }}</span>
+                <span v-if="option.status === 'low_stock'" class="badge badge-yellow">Low stock</span>
+              </span>
+            </template>
+          </SearchableSelect>
+        `,
+        data: () => ({ picked: '', options }),
+      },
+      { global: { plugins: [i18n] }, attachTo: document.body },
+    )
+
+    await wrapper.get('.ss-trigger').trigger('click')
+    const option = new DOMWrapper(document.querySelector('.ss-option[data-value="tp"]'))
+    await option.trigger('mousedown')
+    await option.trigger('click')
+
+    expect(wrapper.vm.picked).toBe('tp')
+    expect(document.querySelector('.ss-panel')).toBeNull()
+
+    wrapper.unmount()
+  })
+
+  it('still selects real options when the empty label is rendered as a hint', async () => {
+    const options = [{ value: 'flour', label: 'Flour' }]
+    const wrapper = mount(SearchableSelect, {
+      props: {
+        modelValue: '',
+        options,
+        emptyLabel: 'No items',
+        emptyAsHint: true,
+      },
+      global: { plugins: [i18n] },
+      attachTo: document.body,
+    })
+
+    await wrapper.get('.ss-trigger').trigger('click')
+    const option = new DOMWrapper(document.querySelector('.ss-option[data-value="flour"]'))
+    await option.trigger('mousedown')
+    await option.trigger('click')
+
+    expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['flour'])
+    expect(document.querySelector('.ss-panel')).toBeNull()
+
+    wrapper.unmount()
+  })
 })
