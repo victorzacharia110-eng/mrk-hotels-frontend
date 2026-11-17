@@ -5,9 +5,9 @@ import RequisitionPage from '@/pages/requisitions/RequisitionPage.vue'
 import i18n from '@/locales/i18n'
 
 /**
- * The requisition picker offers the whole catalogue to every outlet. An item
- * registered to another department is still requestable; the shelf figure on
- * the option is what tells the requester their own outlet holds none.
+ * The requisition picker stays department-scoped: it offers the requester's
+ * own shelf plus shared store stock, and hides items registered only to other
+ * departments. The shelf figure on each option is the requester's balance.
  */
 
 const api = vi.hoisted(() => {
@@ -63,7 +63,7 @@ function mountPage() {
 describe('RequisitionPage catalogue', () => {
   afterEach(() => vi.clearAllMocks())
 
-  it('offers other departments items while showing the requesters shelf stock', async () => {
+  it('hides other departments items while showing the requesters shelf stock', async () => {
     api.inventoryOpsApi.requisitionItems.mockResolvedValue({
       data: {
         data: [
@@ -74,7 +74,7 @@ describe('RequisitionPage catalogue', () => {
             quantity_in_stock: 10,
             shelf_quantity_in_stock: 10,
             department_id: 'bar-1',
-            departments: [],
+            departments: [{ department_id: 'bar-1', name: 'Bar' }],
           },
           {
             item_id: 'rest-1',
@@ -83,6 +83,15 @@ describe('RequisitionPage catalogue', () => {
             quantity_in_stock: 5,
             shelf_quantity_in_stock: 0,
             department_id: 'rest-1',
+            departments: [{ department_id: 'rest-1', name: 'Restaurant' }],
+          },
+          {
+            item_id: 'shared-1',
+            item_name: 'Mineral Water',
+            unit: 'BTL',
+            quantity_in_stock: 40,
+            shelf_quantity_in_stock: 40,
+            department_id: null,
             departments: [],
           },
         ],
@@ -103,8 +112,8 @@ describe('RequisitionPage catalogue', () => {
     await flushPromises()
 
     expect(wrapper.vm.restricted).toBe(true)
-    expect(wrapper.vm.itemOptions.map((option) => option.value)).toEqual(['bar-1', 'rest-1'])
-    expect(wrapper.vm.itemOptions[1].label).toContain('Bleach')
-    expect(wrapper.vm.itemOptions[1].label).toContain('0 LTR')
+    expect(wrapper.vm.itemOptions.map((option) => option.value)).toEqual(['bar-1', 'shared-1'])
+    expect(wrapper.vm.itemOptions.find((option) => option.value === 'bar-1').label).toContain('10 BTL')
+    expect(wrapper.vm.itemOptions.find((option) => option.value === 'shared-1').label).toContain('40 BTL')
   })
 })

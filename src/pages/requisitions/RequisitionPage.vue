@@ -330,11 +330,12 @@ const role = computed(() => auth.user?.user_role)
 const isKeeper = computed(() => role.value !== 'waiter')
 const isStoreManager = computed(() => role.value === 'store_manager')
 const isManagement = computed(() => KEEPER_ROLES.includes(role.value))
-// Every mapped staff member raises the requisition against their own shelf,
-// so the department is locked and the shelf balance is shown. The picker
-// itself offers the full catalogue: an outlet may ask the store for an item
-// stocked elsewhere. The store keeper and superadmin work the whole store, so
-// they are never scoped.
+// Per the panel review, an item registered to another department is neither
+// visible nor selectable: every mapped staff member is scoped to their own
+// shelf, back office panels included. The store keeper works the whole store,
+// so they (and the superadmin) are never scoped. Staff with no department on
+// file have no shelf to scope to and keep the full catalogue. The backend
+// enforces the same rule when it stamps department_id on the requisition.
 const UNSCOPED_ROLES = ['store_manager', 'superadmin']
 const restricted = computed(() => !UNSCOPED_ROLES.includes(role.value) && !!myDepartmentId.value)
 const deptName = computed(() => auth.user?.department || '')
@@ -410,10 +411,22 @@ const departmentOptions = computed(() =>
   departments.value.map((d) => ({ value: d.department_id, label: d.name })),
 )
 
-// Every outlet may request any registered item. The shelf balance on each
-// option still tells the requester what their own outlet holds, so an item
-// stocked elsewhere is visible but reads 0 on their shelf.
-const availableItems = computed(() => items.value)
+const availableItems = computed(() => {
+  if (!restricted.value) return items.value
+  // Seeded cashiers/bartenders carry only the `department` NAME (e.g. "bar"),
+  // so match on the id when present and fall back to the name. An item
+  // registered on no department is store stock every outlet may request.
+  const deptId = myDepartmentId.value
+  const name = String(auth.user?.department || '').trim().toLowerCase()
+  return items.value.filter((i) => {
+    const links = i.departments || []
+    if (!i.department_id && !links.length) return true
+    return (
+      (deptId && (i.department_id === deptId || links.some((d) => d.department_id === deptId))) ||
+      (name && links.some((d) => String(d.name || '').trim().toLowerCase() === name))
+    )
+  })
+})
 
 /** The signed-in user's own shelf, resolved by id or by department name. */
 const myDepartmentId = computed(() => {
