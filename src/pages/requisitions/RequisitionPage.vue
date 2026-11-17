@@ -111,7 +111,15 @@
                 :placeholder="$t('common.select')"
                 :empty-label="$t('requisitionPanel.noDeptItems')"
                 empty-as-hint
-              />
+              >
+                <template #option="{ option }">
+                  <span class="rq-item-option">
+                    <span>{{ option.name }} — {{ $t('requisitionPanel.inStock') }}: {{ option.quantity }} {{ option.unit }}</span>
+                    <span v-if="option.status === 'out_of_stock'" class="badge badge-red">{{ $t('inventory.statusOutOfStock') }}</span>
+                    <span v-else-if="option.status === 'low_stock'" class="badge badge-yellow">{{ $t('inventory.statusLowStock') }}</span>
+                  </span>
+                </template>
+              </SearchableSelect>
               <input v-model.number="line.quantity" type="number" min="0.01" step="any" class="rq-input slim" />
               <span class="rq-si-unit">{{ unitOf(line.item_id) }}</span>
               <button class="rq-x" @click="form.lines.splice(idx, 1)">×</button>
@@ -438,12 +446,27 @@ const myDepartmentId = computed(() => {
 
 /** Registered stock items, searchable, showing the current stock level. A bar or
  *  restaurant requester sees THEIR shelf balance (shelf_quantity_in_stock), not
- *  the whole-store figure. */
+ *  the whole-store figure, and the status badge follows that same shelf. */
 const itemOptions = computed(() =>
-  availableItems.value.map((i) => ({
-    value: i.item_id,
-    label: `${i.item_name} — ${t('requisitionPanel.inStock')}: ${Number(i.shelf_quantity_in_stock ?? i.quantity_in_stock ?? 0)} ${i.unit || ''}`.trim(),
-  })),
+  availableItems.value.map((i) => {
+    const quantity = Number(i.shelf_quantity_in_stock ?? i.quantity_in_stock ?? 0)
+    const status = i.shelf_status
+      || (quantity <= 0 ? 'out_of_stock' : quantity <= Number(i.reorder_level || 0) ? 'low_stock' : 'in_stock')
+    const statusLabel = status === 'out_of_stock'
+      ? t('inventory.statusOutOfStock')
+      : status === 'low_stock'
+        ? t('inventory.statusLowStock')
+        : ''
+    return {
+      value: i.item_id,
+      name: i.item_name,
+      quantity,
+      unit: i.unit || '',
+      status,
+      statusLabel,
+      label: `${i.item_name} — ${t('requisitionPanel.inStock')}: ${quantity} ${i.unit || ''}${statusLabel ? ` — ${statusLabel}` : ''}`.trim(),
+    }
+  }),
 )
 
 /** SI unit of the selected registered item, shown in the requisition line. */
@@ -948,6 +971,7 @@ watch(() => selectedOutlet.value?.outlet_id, loadItems)
 .rq-ref:hover { text-decoration: underline; }
 .rq-detail-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; }
 .rq-low { color: #b91c1c; }
+.rq-item-option { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 @media print {
   @page { size: A4 portrait; margin: 12mm; }
   body * { visibility: hidden; }

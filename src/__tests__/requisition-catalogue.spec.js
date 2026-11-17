@@ -77,6 +77,17 @@ describe('RequisitionPage catalogue', () => {
             departments: [{ department_id: 'bar-1', name: 'Bar' }],
           },
           {
+            item_id: 'out-1',
+            item_name: 'Lime Juice',
+            unit: 'BTL',
+            quantity_in_stock: 0,
+            shelf_quantity_in_stock: 0,
+            reorder_level: 2,
+            shelf_status: 'out_of_stock',
+            department_id: 'bar-1',
+            departments: [{ department_id: 'bar-1', name: 'Bar' }],
+          },
+          {
             item_id: 'rest-1',
             item_name: 'Bleach',
             unit: 'LTR',
@@ -112,8 +123,12 @@ describe('RequisitionPage catalogue', () => {
     await flushPromises()
 
     expect(wrapper.vm.restricted).toBe(true)
-    expect(wrapper.vm.itemOptions.map((option) => option.value)).toEqual(['bar-1', 'shared-1'])
+    expect(wrapper.vm.itemOptions.map((option) => option.value)).toEqual(['bar-1', 'out-1', 'shared-1'])
     expect(wrapper.vm.itemOptions.find((option) => option.value === 'bar-1').label).toContain('10 BTL')
     expect(wrapper.vm.itemOptions.find((option) => option.value === 'shared-1').label).toContain('40 BTL')
+
+    const empty = wrapper.vm.itemOptions.find((option) => option.value === 'out-1')
+    expect(empty.status).toBe('out_of_stock')
+    expect(empty.label).toContain('Out of Stock')
   })
 })
