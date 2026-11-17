@@ -214,7 +214,19 @@
             <div class="item-grid">
               <div class="form-group">
                 <label>{{ $t('requisitions.itemName') }}</label>
-                <input v-model="item.item_name" type="text" class="input" required />
+                <SearchableSelect
+                  v-model="item.item_id"
+                  :options="itemOptions"
+                  :placeholder="$t('inventory.searchItems')"
+                  :search-placeholder="$t('inventory.searchItems')"
+                  :empty-label="$t('inventory.selectItem')"
+                  required
+                  @change="onPickItem(idx, $event)"
+                >
+                  <template #option="{ option }">
+                    <span>{{ option.label }} <small class="muted">{{ option.category }}</small></span>
+                  </template>
+                </SearchableSelect>
               </div>
               <div class="form-group">
                 <label>{{ $t('common.description') }}</label>
@@ -233,10 +245,10 @@
               </div>
               <div class="form-group">
                 <label>{{ $t('common.unit') }}</label>
-                <input
+                <SearchableSelect
                   v-model="item.unit"
-                  type="text"
-                  class="input"
+                  :options="unitOptionsFor(item)"
+                  :searchable="false"
                   :placeholder="$t('requisitions.unitPlaceholder')"
                 />
               </div>
@@ -257,6 +269,15 @@
                 </button>
               </div>
             </div>
+            <div class="item-total">
+              <span class="muted">{{ $t('requisitions.tableSubtotal') }}</span>
+              <span class="price">{{ curCode() }} {{ lineSubtotal(item).toLocaleString() }}</span>
+            </div>
+          </div>
+
+          <div class="requisition-total">
+            <span>{{ $t('requisitions.total') }}</span>
+            <strong>{{ curCode() }} {{ prTotal.toLocaleString() }}</strong>
           </div>
 
           <div class="modal-foot">
@@ -355,6 +376,7 @@ import { useI18n } from 'vue-i18n'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { collectAllRows } from '@/utils/export'
+import { fetchAllInventoryItems } from '@/utils/inventoryItems'
 
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -425,10 +447,106 @@ async function loadDepartments() {
   }
 }
 
+// Registered inventory items become the only selectable line items, so a
+// requisition always maps to real stock (and can feed a purchase order).
+const inventoryItems = ref([])
+
+const itemOptions = computed(() =>
+  inventoryItems.value.map((item) => ({
+    value: item.item_id,
+    label: `${item.item_name}${item.unit ? ` (${item.unit})` : ''}`,
+    category: item.category,
+    unit_cost: item.unit_cost,
+  })),
+)
+
+// Common SI units offered when the picked item registers no units.
+const STANDARD_UNITS = [
+  'BTL', 'PCS', 'KG', 'L', 'GLN', 'BOX', 'CARTON', 'PKT', 'ROLL', 'DOZ', 'PAIR', 'SET', 'M', 'GM', 'ML', 'TIN', 'SACHET',
+]
+
+/**
+ * Units shown for a line: the selected item's registered SI units (or its
+ * primary unit when it has none), else the common SI-unit list.
+ *
+ * @param {object} item - The requisition line item.
+ * @returns {Array<{value: string, label: string}>} Unit dropdown options.
+ */
+function unitOptionsFor(item) {
+  const units = new Set()
+  const registered = (item.si_units || []).filter(Boolean)
+  if (registered.length) {
+    registered.forEach((u) => units.add(u))
+  } else if (item.unit) {
+    units.add(item.unit)
+  } else {
+    STANDARD_UNITS.forEach((u) => units.add(u))
+  }
+  return Array.from(units).map((u) => ({ value: u, label: u }))
+}
+
+/**
+ * Applies a picked registered inventory item to a requisition line: captures
+ * its id, name, registered SI units, default unit and unit cost so the line
+ * mirrors the purchase-order form.
+ *
+ * @param {number} idx - Index of the line item in the form.
+ * @param {object|string} hit - The chosen inventory option object (or id).
+ */
+function onPickItem(idx, hit) {
+  const line = form.items[idx]
+  const id = hit?.value ?? hit
+  const found = inventoryItems.value.find((i) => String(i.item_id) === String(id))
+
+  modalError.value = ''
+
+  if (id && form.items.some((l, i) => i !== idx && String(l.item_id) === String(id))) {
+    modalError.value = t('requisitions.duplicateItem')
+    line.item_id = ''
+    line.item_name = ''
+    return
+  }
+
+  line.item_id = id ?? ''
+  line.item_name = found?.item_name || ''
+  line.si_units = (found?.si_units || [])
+    .map((u) => (typeof u === 'string' ? u : u?.unit))
+    .filter(Boolean)
+  if (found?.unit) line.unit = found.unit
+  if (found?.unit_cost) line.estimated_price = Number(found.unit_cost)
+}
+
+/** Loads the registered inventory catalogue for the item picker. */
+async function loadInventory() {
+  try {
+    inventoryItems.value = await fetchAllInventoryItems()
+  } catch {
+    inventoryItems.value = []
+  }
+}
+
 /** Returns a fresh blank requisition line item. */
 function emptyItem() {
-  return { item_name: '', description: '', quantity: null, unit: '', estimated_price: null }
+  return {
+    item_id: '',
+    item_name: '',
+    description: '',
+    quantity: null,
+    unit: '',
+    si_units: [],
+    estimated_price: null,
+  }
 }
+
+/** Computes one line's estimated subtotal. */
+function lineSubtotal(item) {
+  return Number(item.quantity || 0) * Number(item.estimated_price || 0)
+}
+
+/** Computes the whole requisition's estimated total. */
+const prTotal = computed(() =>
+  form.items.reduce((sum, item) => sum + lineSubtotal(item), 0),
+)
 
 /** Maps a requisition status to its badge CSS class for the table. */
 function statusBadge(status) {
@@ -524,11 +642,27 @@ async function save() {
   modalError.value = ''
   saving.value = true
   try {
+    const items = form.items
+      .filter((item) => item.item_id || item.item_name)
+      .map((item) => ({
+        item_id: item.item_id || null,
+        item_name: item.item_name,
+        description: item.description,
+        quantity: item.quantity,
+        unit: item.unit,
+        estimated_price: item.estimated_price,
+      }))
+
+    if (!items.length) {
+      modalError.value = t('requisitions.addItemError')
+      return
+    }
+
     const res = await purchaseRequisitionApi.store({
       department: form.department,
       priority: form.priority,
       justification: form.justification,
-      items: form.items.filter((item) => item.item_name),
+      items,
     })
     success.value = res.data.message || t('requisitions.createSuccess')
     showModal.value = false
@@ -607,6 +741,7 @@ function flattenError(err) {
 
 onMounted(() => {
   loadDepartments()
+  loadInventory()
   load()
 })
 </script>
@@ -721,6 +856,30 @@ onMounted(() => {
 
 .item-remove {
   padding-bottom: 1px;
+}
+
+.item-total {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.requisition-total {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 12px;
+  margin: 16px 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.requisition-total strong {
+  font-size: 20px;
+  color: #005eb8;
 }
 
 .modal-overlay {

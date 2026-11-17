@@ -1940,6 +1940,8 @@
     "reject": "Kataa",
     "rejectHeading": "Kataa {reference}",
     "addItem": "Ongeza bidhaa",
+    "addItemError": "Ongeza angalau bidhaa moja iliyosajiliwa kwenye ombi.",
+    "duplicateItem": "Bidhaa hii tayari ipo kwenye ombi hili.",
     "itemName": "Jina la bidhaa *",
     "quantity": "Idadi *",
     "estPrice": "Bei ya makadirio ({currency}) *",

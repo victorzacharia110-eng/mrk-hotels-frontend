@@ -1940,6 +1940,8 @@
     "reject": "Reject",
     "rejectHeading": "Reject {reference}",
     "addItem": "Add item",
+    "addItemError": "Add at least one registered item to the requisition.",
+    "duplicateItem": "That item is already on this requisition.",
     "itemName": "Item name *",
     "quantity": "Quantity *",
     "estPrice": "Est. price ({currency}) *",
