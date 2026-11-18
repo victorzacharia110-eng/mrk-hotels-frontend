@@ -11,6 +11,7 @@ import CashierNoChargePage from '@/pages/cashier/CashierNoChargePage.vue'
 
 const api = vi.hoisted(() => ({
   orderIndex: vi.fn(),
+  orderShow: vi.fn(),
   formOptions: vi.fn(),
   categories: vi.fn(),
   items: vi.fn(),
@@ -22,7 +23,7 @@ vi.mock('@/api', () => ({
   orderApi: {
     index: api.orderIndex,
     formOptions: api.formOptions,
-    show: vi.fn(),
+    show: api.orderShow,
   },
   menuItemApi: { index: api.items, categories: api.categories, items: api.items },
   waiterApi: { index: api.waiterIndex },
@@ -52,6 +53,7 @@ beforeEach(() => {
   setActivePinia(createPinia())
   vi.clearAllMocks()
   api.orderIndex.mockResolvedValue({ data: { data: [] } })
+  api.orderShow.mockResolvedValue({ data: { order: null } })
   api.formOptions.mockResolvedValue({ data: { tables: [], in_house_guests: [] } })
   api.categories.mockResolvedValue({ data: { data: [] } })
   api.items.mockResolvedValue({ data: { data: [] } })
@@ -179,14 +181,13 @@ describe('Cashier order boards — previous orders by date', () => {
   it('No Charge lists only the picked date instead of dumping every ticket', async () => {
     const today = todayISO()
     const todays = ORDER({ order_id: 3, order_number: 'NC-TODAY', order_type: 'no_charge', order_date: today, created_at: `${today}T09:00:00` })
-    const old = ORDER({ order_id: 4, order_number: 'NC-OLD', order_type: 'no_charge', order_date: addDays(today, -3), created_at: `${addDays(today, -3)}T09:00:00` })
-    api.orderIndex.mockResolvedValueOnce({ data: { data: [todays, old] } })
+    api.orderIndex.mockResolvedValueOnce({ data: { data: [todays] } })
 
     const wrapper = mount(CashierNoChargePage, { global: { plugins: [i18n] } })
     await flushPromises()
 
     expect(api.orderIndex).toHaveBeenCalledWith(
-      expect.objectContaining({ order_type: 'no_charge' }),
+      expect.objectContaining({ order_type: 'no_charge', from_date: today }),
     )
     expect(wrapper.text()).toContain('NC-TODAY')
     expect(wrapper.text()).not.toContain('NC-OLD')
@@ -196,25 +197,82 @@ describe('Cashier order boards — previous orders by date', () => {
     wrapper.unmount()
   })
 
+  it('No Charge order number opens the order peek', async () => {
+    const today = todayISO()
+    const order = ORDER({ order_id: 'peek-1', order_number: 'ORD-2026-0124', order_type: 'no_charge', created_at: `${today}T09:00:00` })
+    api.orderIndex.mockResolvedValueOnce({ data: { data: [order] } })
+    api.orderShow.mockResolvedValueOnce({ data: { order } })
+
+    const wrapper = mount(CashierNoChargePage, { global: { plugins: [i18n] } })
+    await flushPromises()
+
+    expect(document.body.querySelector('.peek-modal')).toBeNull()
+    await wrapper.find('.order-link').trigger('click')
+    await flushPromises()
+
+    expect(api.orderShow).toHaveBeenCalledWith('peek-1')
+    const modal = document.body.querySelector('.peek-modal')
+    expect(modal).not.toBeNull()
+    expect(modal?.textContent).toContain('ORD-2026-0124')
+
+    wrapper.unmount()
+  })
+
+  it('No Charge sends search and status filters and renders pagination controls', async () => {
+    const today = todayISO()
+    api.orderIndex.mockResolvedValue({
+      data: {
+        data: [ORDER({ order_id: 10, order_number: 'NC-A', order_type: 'no_charge', status: 'completed', created_at: `${today}T09:00:00` })],
+        meta: { current_page: 2, last_page: 3, total: 31, per_page: 15 },
+      },
+    })
+
+    const wrapper = mount(CashierNoChargePage, { global: { plugins: [i18n] } })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Page 2 of 3')
+
+    const searchInput = wrapper.find('input[type="search"]')
+    await searchInput.setValue('NC-A')
+    await searchInput.trigger('keyup.enter')
+    await flushPromises()
+
+    await wrapper.find('#nc-status').setValue('completed')
+    await flushPromises()
+
+    expect(api.orderIndex).toHaveBeenLastCalledWith(expect.objectContaining({
+      order_type: 'no_charge',
+      search: 'NC-A',
+      status: 'completed',
+      page: 1,
+      per_page: 15,
+    }))
+
+    await wrapper.findAll('.pagination button')[1].trigger('click')
+    await flushPromises()
+    expect(api.orderIndex).toHaveBeenLastCalledWith(expect.objectContaining({ page: 3 }))
+
+    wrapper.unmount()
+  })
+
   it('No Charge keeps orders created after midnight on the open business date', async () => {
     const today = todayISO()
     const openDate = addDays(today, -1)
-    const older = addDays(openDate, -2)
     const lateOrder = ORDER({ order_id: 5, order_number: 'NC-LATE', order_type: 'no_charge', order_date: openDate, created_at: `${today}T00:30:00` })
-    const oldOrder = ORDER({ order_id: 6, order_number: 'NC-OLD', order_type: 'no_charge', order_date: older, created_at: `${older}T09:00:00` })
     const ensureLoaded = vi.fn().mockResolvedValue()
 
     vi.resetModules()
     vi.doMock('@/stores/workingDate', () => ({
       useWorkingDateStore: () => ({ workingDate: openDate, timezone: '', ensureLoaded }),
     }))
-    api.orderIndex.mockResolvedValueOnce({ data: { data: [lateOrder, oldOrder] } })
+    api.orderIndex.mockResolvedValueOnce({ data: { data: [lateOrder] } })
 
     const Page = (await import('@/pages/cashier/CashierNoChargePage.vue')).default
     const wrapper = mount(Page, { global: { plugins: [i18n] } })
     await flushPromises()
 
     expect(ensureLoaded).toHaveBeenCalled()
+    expect(api.orderIndex.mock.calls[0][0]).toMatchObject({ from_date: openDate })
     expect(api.orderIndex.mock.calls[0][0]).not.toHaveProperty('date')
     expect(wrapper.text()).toContain('NC-LATE')
     expect(wrapper.text()).not.toContain('NC-OLD')

@@ -5727,6 +5727,19 @@
       "tabReady": "TAYARI",
       "tabCompleted": "ZIMEKAMILIKA",
       "tabDispatched": "IMETOKA",
+      "search": "Tafuta oda bila malipo",
+      "allStatuses": "Hali zote",
+      "status": {
+        "pending": "Inajiandaa",
+        "in_progress": "Inaendelea",
+        "processing": "Inachakatwa",
+        "preparing": "Inaandaliwa",
+        "ready": "Iko tayari",
+        "served": "Imetolewa",
+        "completed": "Imemaliza",
+        "cancelled": "Imeghairiwa",
+        "merged": "Imeunganishwa"
+      },
       "pending": "INASUBIRI",
       "settled": "IMELIPWA",
       "voided": "IMEBATILISHWA"

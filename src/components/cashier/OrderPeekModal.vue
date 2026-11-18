@@ -52,12 +52,7 @@
           </template>
         </div>
         <div class="din-modal-foot">
-          <button
-            v-if="canAdd"
-            type="button"
-            class="sm-btn success"
-            @click="$emit('add-items', order)"
-          >
+          <button v-if="canAdd" type="button" class="sm-btn success" @click="$emit('add-items', order)">
             <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('cashier.order.addItems') }}
           </button>
           <button class="sm-btn ghost" @click="$emit('close')">{{ $t('common.close') }}</button>
@@ -112,9 +107,98 @@ function money(value) {
 </script>
 
 <style scoped>
-.peek-modal { max-width: 640px; width: calc(100vw - 32px); }
-.peek-loading { padding: 32px; text-align: center; color: #64748b; }
-.peek-meta { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: #334155; margin-bottom: 12px; }
-.peek-reason { margin: 0 0 12px; padding: 8px 10px; border-radius: 8px; background: #fef2f2; color: #b91c1c; font-size: 13px; }
-.peek-total { display: flex; justify-content: flex-end; gap: 16px; padding: 12px 4px 0; font-size: 15px; }
+.din-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.din-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
+  max-height: 80vh;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 14px 44px rgba(6, 42, 82, 0.28);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.din-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.din-modal-head h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.din-modal-body {
+  padding: 14px 18px 18px;
+  overflow-y: auto;
+}
+
+.din-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 18px 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.din-pop-enter-active,
+.din-pop-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.din-pop-enter-from,
+.din-pop-leave-to {
+  opacity: 0;
+}
+
+.peek-modal {
+  max-width: 640px;
+  width: calc(100vw - 32px);
+}
+
+.peek-loading {
+  padding: 32px;
+  text-align: center;
+  color: #64748b;
+}
+
+.peek-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 13px;
+  color: #334155;
+  margin-bottom: 12px;
+}
+
+.peek-reason {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+.peek-total {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 12px 4px 0;
+  font-size: 15px;
+}
 </style>

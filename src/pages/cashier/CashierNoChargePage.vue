@@ -15,8 +15,19 @@
           </button>
         </div>
         <div class="nc-head-actions">
+          <div class="sm-search nc-search">
+            <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+            <input v-model="search" type="search" :placeholder="$t('cashier.noCharge.search')"
+              @keyup.enter="submitSearch" @input="debouncedSearch" />
+          </div>
+          <select id="nc-status" v-model="statusFilter" class="sm-select sm nc-status">
+            <option value="">{{ $t('cashier.noCharge.allStatuses') }}</option>
+            <option v-for="status in statusOptions" :key="status" :value="status">
+              {{ statusText(status) }}
+            </option>
+          </select>
           <OrderDateNav input-id="nc-date" v-model="date" :today="workingDateStore.workingDate"
-            :today-label="$t('cashier.noCharge.today')" @change="load" />
+            :today-label="$t('cashier.noCharge.today')" @change="onFilterChange" />
           <button class="sm-btn sm success" @click="showModal = true">
             <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('cashier.noCharge.newOrder') }}
           </button>
@@ -50,6 +61,13 @@
         </tbody>
       </table>
       </div>
+      <div v-if="meta.last_page > 1" class="pagination">
+        <button class="sm-btn sm ghost" :disabled="meta.current_page <= 1"
+          @click="goPage(meta.current_page - 1)">{{ $t('common.previous') }}</button>
+        <span>{{ $t('common.pageXOfY', { current: meta.current_page, total: meta.last_page }) }}</span>
+        <button class="sm-btn sm ghost" :disabled="meta.current_page >= meta.last_page"
+          @click="goPage(meta.current_page + 1)">{{ $t('common.next') }}</button>
+      </div>
     </section>
 
     <NewOrderModal v-if="showModal" mode="no_charge" :title="$t('cashier.noCharge.newOrder')"
@@ -60,7 +78,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { creditAccountApi, orderApi } from '@/api'
 import { selectedOutlet } from '@/composables/useOutletContext'
@@ -69,7 +87,7 @@ import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
 import OrderPeekModal from '@/components/cashier/OrderPeekModal.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
-import { dateInTimezoneOf, formatTime } from '@/utils/dates'
+import { formatTime } from '@/utils/dates'
 import { normalizeCreditAccounts } from '@/utils/payments'
 
 const { t } = useI18n()
@@ -82,6 +100,11 @@ const date = ref('')
 const activeTab = ref('pending')
 const peekId = ref(null)
 const creditAccounts = ref([])
+const search = ref('')
+const statusFilter = ref('')
+const meta = ref({ current_page: 1, last_page: 1, total: 0, per_page: 15 })
+const statusOptions = ['pending', 'in_progress', 'processing', 'preparing', 'ready', 'served', 'completed', 'cancelled', 'merged']
+let debounceTimer = null
 
 const knownAccounts = computed(() =>
   [...new Set(orders.value.map((o) => o.no_charge_account).filter(Boolean))],
@@ -92,12 +115,14 @@ const isVoided = (o) => o.status === 'cancelled'
 const isPending = (o) => !isSettled(o) && !isVoided(o)
 
 const tabs = computed(() => [
+  { key: 'all', label: t('cashier.noCharge.tabAll'), count: orders.value.length },
   { key: 'pending', label: t('cashier.takeAway.tabPending'), count: orders.value.filter(isPending).length },
   { key: 'settled', label: t('cashier.takeAway.tabSettled'), count: orders.value.filter(isSettled).length },
   { key: 'voided', label: t('cashier.takeAway.tabVoided'), count: orders.value.filter(isVoided).length },
 ])
 
 const filteredOrders = computed(() => {
+  if (activeTab.value === 'all') return orders.value
   if (activeTab.value === 'settled') return orders.value.filter(isSettled)
   if (activeTab.value === 'voided') return orders.value.filter(isVoided)
   return orders.value.filter(isPending)
@@ -132,34 +157,77 @@ function timeOf(order) {
   return formatTime(order.created_at || order.order_date)
 }
 
+function statusText(status) {
+  const key = `cashier.noCharge.status.${status}`
+  const text = t(key)
+  return text === key ? status : text
+}
+
 async function load() {
   loading.value = true
   try {
-    const params = { order_type: 'no_charge', per_page: 100, outlet_id: selectedOutlet.value?.outlet_id || undefined }
-    if (date.value && date.value < workingDateStore.workingDate) params.date = date.value
+    const params = {
+      order_type: 'no_charge',
+      page: meta.value.current_page,
+      per_page: meta.value.per_page,
+      outlet_id: selectedOutlet.value?.outlet_id || undefined,
+      search: search.value.trim() || undefined,
+      status: statusFilter.value || undefined,
+    }
+    if (date.value) {
+      if (date.value < workingDateStore.workingDate) params.date = date.value
+      else params.from_date = date.value
+    }
     const { data } = await orderApi.index(params)
     const rows = data.data || []
-    orders.value = params.date || !date.value
-      ? rows
-      : rows.filter((o) => {
-          const stamp = o.created_at || o.order_date
-          if (!stamp) return false
-          return dateInTimezoneOf(stamp, workingDateStore.timezone) >= date.value
-        })
+    orders.value = rows
+    const info = data.meta || data.pagination || {}
+    meta.value = {
+      current_page: Number(info.current_page) || 1,
+      last_page: Number(info.last_page) || 1,
+      total: Number(info.total) || rows.length,
+      per_page: Number(info.per_page) || meta.value.per_page,
+    }
   } finally {
     loading.value = false
   }
 }
 
-function onCreated(order) {
-  showModal.value = false
-  if (order?.order_id && !orders.value.some((o) => o.order_id === order.order_id)) {
-    orders.value = [order, ...orders.value]
-  }
+function onFilterChange() {
+  meta.value.current_page = 1
   load()
 }
 
-watch(() => selectedOutlet.value?.outlet_id, () => load(), { immediate: false })
+function submitSearch() {
+  clearTimeout(debounceTimer)
+  onFilterChange()
+}
+
+function debouncedSearch() {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(submitSearch, 400)
+}
+
+function goPage(page) {
+  if (page < 1 || page > meta.value.last_page) return
+  meta.value.current_page = page
+  load()
+}
+
+function onCreated() {
+  showModal.value = false
+  meta.value.current_page = 1
+  load()
+}
+
+watch(statusFilter, () => {
+  activeTab.value = 'all'
+  onFilterChange()
+})
+
+watch(() => selectedOutlet.value?.outlet_id, () => onFilterChange(), { immediate: false })
+
+onBeforeUnmount(() => clearTimeout(debounceTimer))
 
 onMounted(async () => {
   await workingDateStore.ensureLoaded()
@@ -170,6 +238,9 @@ onMounted(async () => {
 
 <style scoped>
 .nc-head-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-left: auto; }
+.nc-search { min-width: 190px; }
+.nc-status { min-width: 150px; }
+.pagination { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 12px 16px; border-top: 1px solid #e2e8f0; }
 .order-link { background: none; border: none; padding: 0; color: #005eb8; font-weight: 700; cursor: pointer; text-decoration: underline; }
 .chip.cancelled { background: #fee2e2; color: #b91c1c; }
 </style>
