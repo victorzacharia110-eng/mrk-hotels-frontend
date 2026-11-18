@@ -195,6 +195,33 @@ describe('Cashier order boards — previous orders by date', () => {
 
     wrapper.unmount()
   })
+
+  it('No Charge keeps orders created after midnight on the open business date', async () => {
+    const today = todayISO()
+    const openDate = addDays(today, -1)
+    const older = addDays(openDate, -2)
+    const lateOrder = ORDER({ order_id: 5, order_number: 'NC-LATE', order_type: 'no_charge', order_date: openDate, created_at: `${today}T00:30:00` })
+    const oldOrder = ORDER({ order_id: 6, order_number: 'NC-OLD', order_type: 'no_charge', order_date: older, created_at: `${older}T09:00:00` })
+    const ensureLoaded = vi.fn().mockResolvedValue()
+
+    vi.resetModules()
+    vi.doMock('@/stores/workingDate', () => ({
+      useWorkingDateStore: () => ({ workingDate: openDate, timezone: '', ensureLoaded }),
+    }))
+    api.orderIndex.mockResolvedValueOnce({ data: { data: [lateOrder, oldOrder] } })
+
+    const Page = (await import('@/pages/cashier/CashierNoChargePage.vue')).default
+    const wrapper = mount(Page, { global: { plugins: [i18n] } })
+    await flushPromises()
+
+    expect(ensureLoaded).toHaveBeenCalled()
+    expect(api.orderIndex.mock.calls[0][0]).not.toHaveProperty('date')
+    expect(wrapper.text()).toContain('NC-LATE')
+    expect(wrapper.text()).not.toContain('NC-OLD')
+
+    wrapper.unmount()
+    vi.doUnmock('@/stores/workingDate')
+  })
 })
 
 describe('Cashier Room Service board — business date', () => {

@@ -117,3 +117,22 @@ export function localDateOf(value) {
   const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
   return local.toISOString().slice(0, 10)
 }
+
+export function dateInTimezoneOf(value, timezone = '') {
+  if (!value) return ''
+  const d = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  if (!timezone) return localDateOf(d)
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(d)
+    const pick = (type) => parts.find((part) => part.type === type)?.value
+    return `${pick('year')}-${pick('month')}-${pick('day')}`
+  } catch {
+    return localDateOf(d)
+  }
+}

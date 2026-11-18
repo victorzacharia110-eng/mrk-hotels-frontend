@@ -69,7 +69,7 @@ import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
 import OrderPeekModal from '@/components/cashier/OrderPeekModal.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
-import { formatTime, localDateOf, todayISO } from '@/utils/dates'
+import { dateInTimezoneOf, formatTime } from '@/utils/dates'
 import { normalizeCreditAccounts } from '@/utils/payments'
 
 const { t } = useI18n()
@@ -136,23 +136,26 @@ async function load() {
   loading.value = true
   try {
     const params = { order_type: 'no_charge', per_page: 100, outlet_id: selectedOutlet.value?.outlet_id || undefined }
-    if (date.value && date.value < todayISO()) params.date = date.value
+    if (date.value && date.value < workingDateStore.workingDate) params.date = date.value
     const { data } = await orderApi.index(params)
     const rows = data.data || []
-    orders.value = params.date
+    orders.value = params.date || !date.value
       ? rows
       : rows.filter((o) => {
-          const stamp = o.created_at
-          if (stamp) return localDateOf(stamp) === date.value
-          return String(o.order_date || '').slice(0, 10) === date.value
+          const stamp = o.created_at || o.order_date
+          if (!stamp) return false
+          return dateInTimezoneOf(stamp, workingDateStore.timezone) >= date.value
         })
   } finally {
     loading.value = false
   }
 }
 
-function onCreated() {
+function onCreated(order) {
   showModal.value = false
+  if (order?.order_id && !orders.value.some((o) => o.order_id === order.order_id)) {
+    orders.value = [order, ...orders.value]
+  }
   load()
 }
 
