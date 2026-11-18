@@ -1163,7 +1163,6 @@
                     <span>{{ room.room_number }}<template v-if="room.room_type"> · {{ roomTypeLabel(room.room_type)
                     }}</template></span>
                     <span v-if="room.is_primary" class="sv-tag-primary">{{ $t('stayview.primaryRoom') }}</span>
-                    <span v-if="room.released" class="sv-tag-released">{{ $t('stayview.released') }}</span>
                   </label>
                 </div>
                 <div style="margin-top:4px;font-size:11px;color:#888;">
@@ -4126,7 +4125,7 @@ function buildLedgerEntries(src) {
       description: refunded
         ? `${paymentDescription(p)} · ${t('paymentFields.statuses.refunded')}`
         : paymentDescription(p),
-      detail: '',
+      detail: p.transaction_reference || p.clickpesa_reference || '',
       user: p.user || '—',
       amount: Number(p.amount ?? 0),
       credit: true,
@@ -5196,18 +5195,19 @@ const amendReleaseNames = computed(() =>
 
 /** Room checkboxes for the party, ordered by the desk's choice. */
 const amendGroupRoomOptions = computed(() => {
-  const options = amendGroupRooms.value.map((room) => {
-    const full = rooms.value.find((r) => r.room_id === room.room_id)
-    return {
-      value: room.reservation_id,
-      room_number: room.room_number ?? full?.room_number ?? '—',
-      room_type: full?.room_type ?? room.room_type ?? '',
-      price: Number(full?.price_per_night) || 0,
-      is_primary: !!room.is_primary,
-      released: !!room.released_at || room.status === 'cancelled',
-      guest_name: room.guest_name || '',
-    }
-  })
+  const options = amendGroupRooms.value
+    .filter((room) => !room.released_at && room.status !== 'cancelled')
+    .map((room) => {
+      const full = rooms.value.find((r) => r.room_id === room.room_id)
+      return {
+        value: room.reservation_id,
+        room_number: room.room_number ?? full?.room_number ?? '—',
+        room_type: full?.room_type ?? room.room_type ?? '',
+        price: Number(full?.price_per_night) || 0,
+        is_primary: !!room.is_primary,
+        guest_name: room.guest_name || '',
+      }
+    })
   return sortRoomOptions(options, amendRoomSort.value)
 })
 
@@ -5228,16 +5228,14 @@ async function loadAmendGroupRooms(reservationId) {
   }
 }
 
-/** Seeds the group room list and ticks the stay being amended. */
+/** Seeds the active group rooms and ticks the stay being amended. */
 function setAmendGroupRooms(rooms, activeId = null) {
-  amendGroupRooms.value = rooms
+  const activeRooms = rooms.filter((r) => !r.released_at && r.status !== 'cancelled')
+  amendGroupRooms.value = activeRooms
   // Amending one guest's stay must not silently rewrite the whole party, so
-  // only the viewed stay starts ticked. The desk can tick more rooms when the
-  // change really applies to everyone; released rooms stay listed.
-  const current = rooms.find((r) => String(r.reservation_id) === String(activeId))
-  amendSelectedRoomIds.value = current && !current.released_at && current.status !== 'cancelled'
-    ? [current.reservation_id]
-    : []
+  // only the viewed stay starts ticked. Cancelled/released rooms are hidden.
+  const current = activeRooms.find((r) => String(r.reservation_id) === String(activeId))
+  amendSelectedRoomIds.value = current ? [current.reservation_id] : []
 }
 
 function openAmendModal(roomMove = false) {

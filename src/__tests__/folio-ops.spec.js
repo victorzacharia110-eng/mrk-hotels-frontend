@@ -262,6 +262,18 @@ describe('folio operations on the stay view', () => {
     expect(note.textContent).toMatch(/\d{2}\/\d{2}\/\d{4}/)
   })
 
+  it('shows the transaction reference in the folio description column', async () => {
+    await mountDashboard()
+    const payment = wrapper.vm.folioEntries.find((e) => e.kind === 'payment')
+    expect(payment.detail).toBe('T-101')
+
+    const row = [...document.querySelectorAll('.sv-folio-table tbody tr')].find((tr) =>
+      tr.textContent.includes('T-101'),
+    )
+    expect(row).toBeTruthy()
+    expect(row.textContent).toContain('T-101')
+  })
+
   it('shows a refunded payment as history without counting it twice', async () => {
     await mountDashboard()
     const payload = folioPayload()
@@ -291,6 +303,25 @@ describe('folio operations on the stay view', () => {
       payment_provider: null,
       notes: 'Corrected after re-count',
     })
+  })
+
+  it('recalculates the folio balance after a payment edit', async () => {
+    await mountDashboard()
+    const updated = folioPayload()
+    updated.folio.advance_payment = 120000
+    updated.reservation.advance_payment = 120000
+    updated.payments[0].amount = 120000
+    api.reservationApi.folio.mockResolvedValue({ data: updated })
+
+    wrapper.vm.openPaymentEdit({ payment: updated.payments[0] })
+    wrapper.vm.paymentEditForm.amount = 120000
+    wrapper.vm.paymentEditForm.payment_status = 'completed'
+    await wrapper.vm.submitPaymentEdit()
+    await flushPromises()
+
+    expect(api.reservationApi.folio).toHaveBeenCalledWith(501)
+    expect(wrapper.vm.folioTotals.paid).toBe(120000)
+    expect(wrapper.vm.balanceDisplay.text).toContain('250,000')
   })
 
   it('itemises the rental one row per night with the room and date in the folio ledger', async () => {
