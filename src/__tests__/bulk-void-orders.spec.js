@@ -183,6 +183,11 @@ describe('cashier summary: review follow-ups', () => {
     expect(pad).toMatch(/async function applyAddToOrder/)
     expect(pad).toMatch(/continueOrderId\.value = order\.order_id/)
   })
+
+  it('keeps after-midnight tickets on the open business date', () => {
+    expect(cashier).toMatch(/date\.value < workingDateStore\.workingDate\)\s+params\.date = date\.value\s+else\s+params\.from_date = date\.value/)
+    expect(pad).toMatch(/if \(isOpenToday\.value\) params\.from_date = openDate\.value\s+else params\.date = openDate\.value/)
+  })
 })
 
 describe('orders list: void selected (multi-select)', () => {

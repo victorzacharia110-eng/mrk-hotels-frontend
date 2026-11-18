@@ -1668,13 +1668,17 @@ async function loadOpenOrders() {
   openLoading.value = true
   openError.value = ''
   try {
-    const res = await orderApi.index({
+    const params = {
       department: department.value,
       outlet_id: selectedOutlet.value?.outlet_id || undefined,
-      date: openDate.value || undefined,
       per_page: 50,
       ...waiterScopeParams(),
-    })
+    }
+    if (openDate.value) {
+      if (isOpenToday.value) params.from_date = openDate.value
+      else params.date = openDate.value
+    }
+    const res = await orderApi.index(params)
     const rows = Array.isArray(res.data) ? res.data : res.data?.data || []
     const filtered = floorStaffOrders(rows)
       .filter((order) => !['completed', 'cancelled', 'merged'].includes(order.status))

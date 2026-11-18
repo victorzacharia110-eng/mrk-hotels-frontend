@@ -482,7 +482,7 @@ import { restorePrinter, printerState, printerSupported } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { orderPrintLines } from '@/utils/orderPrint'
 import { hasPrintableLines } from '@/utils/receipts'
-import { formatOrderDateTime, formatTime, localDateOf, todayISO } from '@/utils/dates'
+import { formatOrderDateTime, formatTime } from '@/utils/dates'
 import { toast } from '@/utils/toast'
 
 const { t, te } = useI18n()
@@ -746,16 +746,14 @@ async function load() {
   try {
     const params = { per_page: 100, outlet_id: selectedOutlet.value?.outlet_id || undefined }
 
-    // "Previous orders" (a date before today) lists that whole date's tickets.
-    if (date.value && date.value < todayISO()) params.date = date.value
+    // Older dates are exact; the open business date is a lower bound so
+    // tickets created after midnight still join the day that has not closed.
+    if (date.value) {
+      if (date.value < workingDateStore.workingDate) params.date = date.value
+      else params.from_date = date.value
+    }
     const { data } = await orderApi.index(params)
-    const rows = data.data || []
-    // Otherwise show today's tickets by their LOCAL calendar day: the API
-    // returns no business-order-date field, so filtering on `order_date`
-    // matches nothing and today's tickets (waiter-created included) vanish.
-    orders.value = params.date
-      ? rows
-      : rows.filter((o) => localDateOf(o.created_at || o.order_date) === date.value)
+    orders.value = data.data || []
     // Drop any ticked ids that are no longer on the board (the checkboxes now
     // drive every action, not just void, so any listed status stays tickable).
     selected.value = selected.value.filter((id) =>
