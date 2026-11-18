@@ -488,7 +488,8 @@ const codeCopied = ref(false)
 const gateError = ref('')
 const gateBusy = ref(false)
 const createForm = reactive({ name: '', type: 'bar' })
-const UNLOCKED_OUTLETS_KEY = 'cashier_unlocked_outlets'
+const UNLOCKED_OUTLETS_KEY = 'cashier_outlet_unlocks'
+const UNLOCK_TTL_MS = 12 * 60 * 60 * 1000
 const unlockedOutletIds = ref(new Set(readUnlockedOutlets()))
 const sidebarCollapsed = ref(true)
 const mobileOpen = ref(false)
@@ -561,6 +562,16 @@ watch(() => route.path, () => {
     openGroup.value = 'ordering'
   }
 })
+
+watch(
+  () => currentUserKey(),
+  (userKey) => {
+    unlockedOutletIds.value = new Set(readUnlockedOutlets())
+    if (userKey && selectedOutlet.value && isOutletUnlocked(selectedOutlet.value)) {
+      gateOpen.value = false
+    }
+  },
+)
 
 const orderingNav = [
   { to: '/cashier/dine-in', icon: 'fas fa-chair', labelKey: 'cashier.nav.dineIn' },
@@ -659,34 +670,63 @@ function isActive(to) {
   return route.path.startsWith(to)
 }
 
-/** Reads the counters already unlocked in this browser tab. */
+/** Stable per-user key so one cashier's unlocks never open another's gate. */
+function currentUserKey() {
+  const id = authStore.user?.user_id ?? authStore.user?.email
+  return id == null ? '' : String(id)
+}
+
+function unlockStorageKey() {
+  const userKey = currentUserKey()
+  return userKey ? `${UNLOCKED_OUTLETS_KEY}:${userKey}` : ''
+}
+
+/** Reads the counters this user unlocked on this browser, dropping expired ones. */
 function readUnlockedOutlets() {
+  const key = unlockStorageKey()
+  if (!key) return []
   try {
-    const parsed = JSON.parse(sessionStorage.getItem(UNLOCKED_OUTLETS_KEY) || '[]')
-    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string' && id) : []
+    const parsed = JSON.parse(localStorage.getItem(key) || '[]')
+    if (!Array.isArray(parsed)) return []
+    const now = Date.now()
+    const valid = parsed.filter(
+      (entry) => entry && typeof entry.outlet_id === 'string' && entry.expires_at > now,
+    )
+    if (valid.length !== parsed.length) {
+      localStorage.setItem(key, JSON.stringify(valid))
+    }
+    return valid.map((entry) => entry.outlet_id)
   } catch {
     return []
   }
 }
 
-/** True when this tab has already passed this counter's access gate. */
+/** True when this user has already passed this counter's access gate. */
 function isOutletUnlocked(outlet) {
   return Boolean(outlet?.outlet_id) && unlockedOutletIds.value.has(outlet.outlet_id)
 }
 
-/** Remembers a counter as unlocked until the user signs out or closes the tab. */
+/** Remembers a counter for this user for the rest of the shift. */
 function markOutletUnlocked(outlet) {
   if (!outlet?.outlet_id) return
+  const key = unlockStorageKey()
+  if (!key) return
   const next = new Set(unlockedOutletIds.value)
   next.add(outlet.outlet_id)
   unlockedOutletIds.value = next
-  sessionStorage.setItem(UNLOCKED_OUTLETS_KEY, JSON.stringify([...next]))
-}
-
-/** Drops every remembered unlock, so the next sign-in asks for the code again. */
-function clearUnlockedOutlets() {
-  unlockedOutletIds.value = new Set()
-  sessionStorage.removeItem(UNLOCKED_OUTLETS_KEY)
+  const now = Date.now()
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || '[]')
+    const kept = Array.isArray(parsed)
+      ? parsed.filter(
+        (entry) => entry && entry.expires_at > now && entry.outlet_id !== outlet.outlet_id,
+      )
+      : []
+    kept.push({ outlet_id: outlet.outlet_id, expires_at: now + UNLOCK_TTL_MS })
+    localStorage.setItem(key, JSON.stringify(kept))
+  } catch {
+    // Storage may be unavailable; the in-memory unlock still works for this tab.
+  }
 }
 
 /** Loads outlets and opens the gate only when the restored counter is still locked. */
@@ -887,7 +927,6 @@ function switchOutlet() {
 
 async function handleLogout() {
   gateOpen.value = false
-  clearUnlockedOutlets()
   await authStore.logout()
   router.push({ name: 'login' })
 }

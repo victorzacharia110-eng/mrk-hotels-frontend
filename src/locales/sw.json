@@ -1448,7 +1448,11 @@
     "accessCodeSet": "Imewekwa",
     "accessCodeNotSet": "Haijawekwa",
     "resetAccessCode": "Weka upya PIN",
-    "accessCodeReset": "PIN mpya kwa {name}: {code} — inakili sasa, haitaonyeshwa tena."
+    "accessCodeCreatedTitle": "Kaunta imeundwa. PIN ya {name}:",
+    "accessCodeResetTitle": "PIN mpya kwa {name}:",
+    "accessCodeOnceHint": "Inakili sasa. Haitaonyeshwa tena.",
+    "copyPin": "Nakili PIN",
+    "pinCopied": "PIN imenakiliwa"
   },
   "printer": {
     "title": "Uunganisho wa Printa",

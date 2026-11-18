@@ -32,8 +32,15 @@ const bar = {
   stock_department: { name: 'Bar 1' },
 }
 
-async function mountLayout() {
-  setActivePinia(createPinia())
+async function mountLayout(
+  user = { user_id: 'user-cathy', user_role: 'cashier', name: 'Cathy Cashier' },
+) {
+  const pinia = createPinia()
+  setActivePinia(pinia)
+
+  const { useAuthStore } = await import('@/stores/auth')
+  useAuthStore().user = user
+  useAuthStore().tenant = { hotel_name: 'Brand Hotel' }
 
   const router = createRouter({
     history: createMemoryHistory(),
@@ -44,15 +51,10 @@ async function mountLayout() {
 
   const wrapper = mount(CashierLayout, {
     global: {
-      plugins: [i18n, router, createPinia()],
+      plugins: [i18n, router, pinia],
       stubs: { RouterLink: RouterLinkStub },
     },
   })
-  await flushPromises()
-
-  const { useAuthStore } = await import('@/stores/auth')
-  useAuthStore().user = { user_role: 'cashier', name: 'Cathy Cashier' }
-  useAuthStore().tenant = { hotel_name: 'Brand Hotel' }
   await flushPromises()
 
   return wrapper
@@ -72,6 +74,7 @@ async function enterPin(wrapper, pin) {
 describe('cashier outlet gate', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
     sessionStorage.clear()
     outlets.value = []
     selectedOutlet.value = null
@@ -126,6 +129,29 @@ describe('cashier outlet gate', () => {
 
     expect(second.find('.sm-modal-backdrop').exists()).toBe(false)
     expect(selectedOutlet.value.outlet_id).toBe('outlet-bar-1')
+  })
+
+  it('keeps the unlock for the same user but not for a different user', async () => {
+    outletApi.index.mockResolvedValue({ data: { outlets: [bar] } })
+    outletApi.verifyAccess.mockResolvedValue({ data: { outlet: bar } })
+
+    const first = await mountLayout()
+    await first.find('.outlet-option').trigger('click')
+    await first.find('.outlet-option').trigger('click')
+    await enterPin(first, '4821')
+    await flushPromises()
+    first.unmount()
+
+    const sameUser = await mountLayout()
+    expect(sameUser.find('.sm-modal-backdrop').exists()).toBe(false)
+    sameUser.unmount()
+
+    const otherUser = await mountLayout({
+      user_id: 'user-dan',
+      user_role: 'cashier',
+      name: 'Dan Cashier',
+    })
+    expect(otherUser.find('.sm-modal-backdrop').exists()).toBe(true)
   })
 
   it('lets a cashier create the first counter and shows the default PIN once', async () => {

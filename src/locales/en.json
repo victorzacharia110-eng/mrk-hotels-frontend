@@ -1448,7 +1448,11 @@
     "accessCodeSet": "Set",
     "accessCodeNotSet": "Not set",
     "resetAccessCode": "Reset PIN",
-    "accessCodeReset": "New PIN for {name}: {code} — copy it now, it will not be shown again."
+    "accessCodeCreatedTitle": "Counter created. PIN for {name}:",
+    "accessCodeResetTitle": "New PIN for {name}:",
+    "accessCodeOnceHint": "Copy it now. It will not be shown again.",
+    "copyPin": "Copy PIN",
+    "pinCopied": "PIN copied"
   },
   "printer": {
     "title": "Printer Connection",

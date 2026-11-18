@@ -22,7 +22,26 @@
       </div>
     </div>
 
-    <div v-if="success" class="alert alert-success">{{ success }}</div>
+    <div v-if="newPin" class="alert alert-success pin-alert">
+      <div>
+        <strong>
+          {{
+            newPin.action === 'reset'
+              ? $t('outlets.accessCodeResetTitle', { name: newPin.name })
+              : $t('outlets.accessCodeCreatedTitle', { name: newPin.name })
+          }}
+        </strong>
+        <div class="pin-row">
+          <code class="pin-code">{{ newPin.code }}</code>
+          <button type="button" class="btn btn-sm btn-secondary" @click="copyNewPin">
+            <i :class="pinCopied ? 'fas fa-check' : 'fas fa-copy'" aria-hidden="true"></i>
+            {{ pinCopied ? $t('outlets.pinCopied') : $t('outlets.copyPin') }}
+          </button>
+        </div>
+        <small class="pin-hint">{{ $t('outlets.accessCodeOnceHint') }}</small>
+      </div>
+    </div>
+    <div v-else-if="success" class="alert alert-success">{{ success }}</div>
     <div v-if="error" class="alert alert-error">{{ error }}</div>
 
     <div v-if="loading" class="alert alert-info">{{ $t('common.loading') }}</div>
@@ -205,6 +224,8 @@ const outlets = ref([])
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
+const newPin = ref(null)
+const pinCopied = ref(false)
 
 const showModal = ref(false)
 const editing = ref(false)
@@ -288,13 +309,20 @@ async function save() {
         ...form,
         stock_department_id: form.stock_department_id || null,
       })
+      newPin.value = null
       success.value = t('outlets.updateSuccess')
     } else {
-      await outletApi.store({
+      const res = await outletApi.store({
         ...form,
         stock_department_id: form.stock_department_id || null,
       })
-      success.value = t('outlets.createSuccess')
+      if (res.data?.access_code) {
+        newPin.value = { code: res.data.access_code, name, action: 'create' }
+        pinCopied.value = false
+        success.value = ''
+      } else {
+        success.value = t('outlets.createSuccess')
+      }
     }
     showModal.value = false
     await load()
@@ -309,20 +337,40 @@ async function resetAccess(outlet) {
   error.value = ''
   try {
     const res = await outletApi.resetAccess(outlet.outlet_id)
-    success.value = t('outlets.accessCodeReset', {
-      name: outlet.name,
-      code: res.data.access_code,
-    })
+    newPin.value = { code: res.data.access_code, name: outlet.name, action: 'reset' }
+    pinCopied.value = false
+    success.value = ''
     await load()
   } catch (err) {
     error.value = flattenError(err)
   }
 }
 
+async function copyNewPin() {
+  if (!newPin.value?.code) return
+  try {
+    await navigator.clipboard.writeText(newPin.value.code)
+  } catch {
+    const textarea = document.createElement('textarea')
+    textarea.value = newPin.value.code
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textarea)
+  }
+  pinCopied.value = true
+  setTimeout(() => {
+    pinCopied.value = false
+  }, 2000)
+}
+
 async function toggleActive(outlet) {
   error.value = ''
   try {
     await outletApi.update(outlet.outlet_id, { is_active: !outlet.is_active })
+    newPin.value = null
     success.value = t('outlets.toggled', {
       name: outlet.name,
       status: outlet.is_active ? t('outlets.statusInactive') : t('outlets.statusActive'),
@@ -344,6 +392,7 @@ async function confirmDelete() {
   deleting.value = true
   try {
     await outletApi.destroy(pendingDelete.value.outlet_id)
+    newPin.value = null
     success.value = t('outlets.deleteSuccess', { name: pendingDelete.value.name })
     showDelete.value = false
     pendingDelete.value = null
@@ -371,6 +420,24 @@ onMounted(() => {
 <style scoped>
 .shelf-clear {
   margin-top: 6px;
+}
+
+.pin-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 4px;
+}
+
+.pin-code {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  color: #005eb8;
+}
+
+.pin-hint {
+  color: #475569;
 }
 
 .hint {
