@@ -66,25 +66,9 @@
               @change="onOutletChange($event.target.value)"
             >
               <option value="">{{ $t('outlet.choosePlaceholder') }}</option>
-              <optgroup v-for="group in outletTypeGroups" :key="group.type" :label="group.label">
-                <option v-for="o in group.outlets" :key="o.outlet_id" :value="o.outlet_id">{{ o.name }}</option>
+              <optgroup :label="$t('outlets.typeStore')">
+                <option v-for="o in inventoryOutlets" :key="o.outlet_id" :value="o.outlet_id">{{ o.name }}</option>
               </optgroup>
-            </select>
-          </div>
-          <!-- Warehouse/store picker: the outlet is the business unit, the
-               store is the stock location the panel is working against. -->
-          <div v-if="showStorePicker" class="sm-outlet-picker sm-store-picker">
-            <i class="fas fa-warehouse" aria-hidden="true"></i>
-            <select
-              class="sm-outlet-select"
-              :aria-label="$t('outlet.storePickerLabel')"
-              :value="selectedStore?.outlet_id || ''"
-              @change="onStoreChange($event.target.value)"
-            >
-              <option value="">{{ $t('outlet.chooseStorePlaceholder') }}</option>
-              <option v-for="store in storeOutlets" :key="store.outlet_id" :value="store.outlet_id">
-                {{ store.name }}{{ isMainStore(store) ? ` · ${$t('outlet.mainStore')}` : '' }}
-              </option>
             </select>
           </div>
           <button class="sm-icon-btn sm-notif-bell" :title="$t('notifications.title')"
@@ -204,81 +188,26 @@
     <div v-if="outletGateOpen" class="sm-modal-backdrop">
       <div class="sm-modal" role="dialog" aria-modal="true">
         <div class="sm-modal-head">
-          <h3><i :class="gateTitleIcon" aria-hidden="true"></i> {{ gateTitle }}</h3>
-          <button v-if="gateStep === 'point' || gateStep === 'store'" type="button" class="sm-gate-back" @click="goBackFromGate">
-            <i class="fas fa-arrow-left" aria-hidden="true"></i>
-            {{ $t('outlet.gateBack') }}
-          </button>
+          <h3><i class="fas fa-warehouse" aria-hidden="true"></i> {{ $t('outlet.gateChooseStore') }}</h3>
         </div>
         <p class="sm-gate-hint">{{ $t('outlet.gateHint') }}</p>
-        <div v-if="gateStep === 'type'" class="sm-outlet-gate-list">
-          <button v-for="group in outletTypeGroups" :key="group.type" type="button" class="sm-outlet-option"
-            @click="chooseType(group)">
-            <i :class="group.icon" aria-hidden="true"></i>
-            <span>
-              <strong>{{ group.label }}</strong>
-              <small>{{ $t('outlet.gatePointCount', { count: group.outlets.length }) }}</small>
-            </span>
-            <i class="fas fa-chevron-right sm-gate-arrow" aria-hidden="true"></i>
-          </button>
-          <p v-if="outlets.length === 0" class="sm-gate-hint">{{ $t('outlet.gateEmpty') }}</p>
-          <button type="button" class="sm-btn ghost" :disabled="gateBusy" @click="startCreateStore">
-            <i class="fas fa-plus" aria-hidden="true"></i>
-            {{ $t('outlet.gateCreateStore') }}
-          </button>
-        </div>
-        <div v-else-if="gateStep === 'point'" class="sm-outlet-gate-list">
-          <button v-for="o in gateOutlets" :key="o.outlet_id" type="button" class="sm-outlet-option"
+        <div class="sm-outlet-gate-list">
+          <button v-for="o in inventoryOutlets" :key="o.outlet_id" type="button" class="sm-outlet-option"
             @click="chooseOutlet(o)">
-            <i :class="gateTypeIcon" aria-hidden="true"></i>
+            <i class="fas fa-warehouse" aria-hidden="true"></i>
             <span>
               <strong>{{ o.name }}</strong>
-              <small>{{ o.stock_department?.name || $t('outlet.gateNoShelf') }}</small>
-            </span>
-          </button>
-        </div>
-        <div v-else-if="gateStep === 'store'" class="sm-outlet-gate-list">
-          <button v-if="selectedStore" type="button" class="sm-outlet-option"
-            @click="chooseStore(selectedStore)">
-            <i class="fas fa-warehouse" aria-hidden="true"></i>
-            <span>
-              <strong>{{ selectedStore.name }}</strong>
               <small>
-                {{ selectedStore.stock_department?.name || $t('outlet.gateNoShelf') }}
-                <template v-if="isMainStore(selectedStore)"> · {{ $t('outlet.mainStore') }}</template>
+                {{ o.stock_department?.name || $t('outlet.gateNoShelf') }}
+                <template v-if="isMainStore(o)"> · {{ $t('outlet.mainStore') }}</template>
               </small>
             </span>
             <i class="fas fa-chevron-right sm-gate-arrow" aria-hidden="true"></i>
           </button>
-          <p v-if="selectedStore && gateStoreList.length" class="sm-gate-hint">{{ $t('outlet.orChooseStore') }}</p>
-          <button v-for="store in gateStoreList" :key="store.outlet_id" type="button" class="sm-outlet-option"
-            @click="chooseStore(store)">
-            <i class="fas fa-warehouse" aria-hidden="true"></i>
-            <span>
-              <strong>{{ store.name }}</strong>
-              <small>
-                {{ store.stock_department?.name || $t('outlet.gateNoShelf') }}
-                <template v-if="isMainStore(store)"> · {{ $t('outlet.mainStore') }}</template>
-              </small>
-            </span>
-            <i class="fas fa-chevron-right sm-gate-arrow" aria-hidden="true"></i>
-          </button>
-        </div>
-        <div v-else class="sm-gate-form">
-          <label for="gate-store-name">{{ $t('outlet.gateStoreNameLabel') }}</label>
-          <input id="gate-store-name" v-model="newStoreName" type="text" maxlength="100" class="sm-input"
-            :placeholder="$t('outlet.gateStoreNamePlaceholder')" @keyup.enter="createStore" />
-          <p v-if="gateError" class="form-error">{{ gateError }}</p>
-          <button type="button" class="sm-btn" :disabled="gateBusy || !newStoreName.trim()" @click="createStore">
-            <i class="fas fa-plus" aria-hidden="true"></i>
-            {{ gateBusy ? $t('outlet.gateCreatingStore') : $t('outlet.gateCreateStoreButton') }}
-          </button>
-          <button type="button" class="sm-btn ghost" :disabled="gateBusy" @click="gateStep = 'type'">
-            {{ $t('outlet.gateBack') }}
-          </button>
+          <p v-if="inventoryOutlets.length === 0" class="sm-gate-hint">{{ $t('outlet.gateEmpty') }}</p>
         </div>
         <div class="sm-gate-foot">
-          <button type="button" class="sm-gate-logout" :disabled="gateBusy" @click="handleLogout">
+          <button type="button" class="sm-gate-logout" @click="handleLogout">
             <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
             {{ $t('common.logout') }}
           </button>
@@ -298,7 +227,6 @@ import { useWorkingDateStore } from '@/stores/workingDate'
 import { useThemeStore } from '@/stores/theme'
 import DayCloseReminderModal from '@/components/cashier/DayCloseReminderModal.vue'
 import { useOutletContext } from '@/composables/useOutletContext'
-import { outletApi } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -309,198 +237,55 @@ const workingDateStore = useWorkingDateStore()
 const themeStore = useThemeStore()
 
 // Outlet selection, shared with the staff panel and the till so one pick covers
-// the whole app. The store manager picks the outlet whose stock and reports
-// they are working on.
+// the whole app. The store manager only works through STORE outlets.
 const {
-  outlets,
   selectedOutlet,
-  selectedStore,
   hasChoice,
   storeOutlets,
   mainStore,
   loadOutlets: loadOutletList,
   selectOutlet,
-  selectStore,
   roleCanSelectOutlet,
 } = useOutletContext()
 
-const showOutletPicker = computed(() => hasChoice.value && roleCanSelectOutlet(authStore.user?.user_role))
-const showStorePicker = computed(
-  () => showOutletPicker.value
-    && storeOutlets.value.length > 0
-    && String(selectedOutlet.value?.type || '').toLowerCase() !== 'store',
+const inventoryOutlets = computed(() => storeOutlets.value.filter((outlet) => outlet.is_active !== false))
+const showOutletPicker = computed(
+  () => inventoryOutlets.value.length > 1 && roleCanSelectOutlet(authStore.user?.user_role),
 )
 const outletGateOpen = ref(false)
-const gateStep = ref('type')
-const gateType = ref('')
-const newStoreName = ref('')
-const gateError = ref('')
-const gateBusy = ref(false)
 
-const OUTLET_TYPE_META = {
-  bar: { icon: 'fas fa-martini-glass-citrus', labelKey: 'outlets.typeBar' },
-  restaurant: { icon: 'fas fa-utensils', labelKey: 'outlets.typeRestaurant' },
-  laundry: { icon: 'fas fa-shirt', labelKey: 'outlets.typeLaundry' },
-  swimming: { icon: 'fas fa-person-swimming', labelKey: 'outlets.typeSwimming' },
-  spa: { icon: 'fas fa-spa', labelKey: 'outlets.typeSpa' },
-  kitchen: { icon: 'fas fa-kitchen-set', labelKey: 'outlets.typeKitchen' },
-  store: { icon: 'fas fa-warehouse', labelKey: 'outlets.typeStore' },
-  other: { icon: 'fas fa-store', labelKey: 'outlets.typeOther' },
-}
-
-function outletTypeMeta(type) {
-  return OUTLET_TYPE_META[String(type || 'other').toLowerCase()] || OUTLET_TYPE_META.other
-}
-
-const outletTypeGroups = computed(() => {
-  const groups = new Map()
-  for (const outlet of outlets.value) {
-    const type = String(outlet.type || 'other').toLowerCase()
-    if (!groups.has(type)) groups.set(type, [])
-    groups.get(type).push(outlet)
-  }
-  return [...groups.entries()]
-    .map(([type, list]) => ({
-      type,
-      outlets: list,
-      icon: outletTypeMeta(type).icon,
-      label: t(outletTypeMeta(type).labelKey),
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label))
-})
-
-const gateOutlets = computed(
-  () => outletTypeGroups.value.find((group) => group.type === gateType.value)?.outlets || [],
-)
-const gateStoreList = computed(
-  () => storeOutlets.value.filter((store) => store.outlet_id !== selectedStore.value?.outlet_id),
-)
 function isMainStore(store) {
   return !!store?.outlet_id && store.outlet_id === mainStore.value?.outlet_id
 }
-const gateTypeLabel = computed(
-  () => outletTypeGroups.value.find((group) => group.type === gateType.value)?.label || '',
-)
-const gateTypeIcon = computed(() => outletTypeMeta(gateType.value).icon)
-const gateTitle = computed(() => {
-  if (gateStep.value === 'create') return t('outlet.gateCreateStore')
-  if (gateStep.value === 'store') return t('outlet.gateChooseStore')
-  if (gateStep.value === 'type') return t('outlet.gateChooseType')
-  return t('outlet.gateChoosePoint', { type: gateTypeLabel.value })
-})
-const gateTitleIcon = computed(() => {
-  if (gateStep.value === 'create') return 'fas fa-plus'
-  if (gateStep.value === 'store') return 'fas fa-warehouse'
-  if (gateStep.value === 'type') return 'fas fa-store'
-  return gateTypeIcon.value
-})
 
-/** True when a selling outlet must be paired with a warehouse/store. */
-function needsStoreStep(outlet) {
-  return String(outlet?.type || '').toLowerCase() !== 'store' && storeOutlets.value.length > 0
-}
-
-/** Opens the picker after sign-in, but lets a single outlet start automatically. */
+/** Opens the store picker after sign-in, unless there is no real choice. */
 async function openOutletGateIfNeeded() {
-  await loadOutletList({ autoSelectSingle: true })
+  await loadOutletList()
   if (!roleCanSelectOutlet(authStore.user?.user_role)) return
-  // A one-outlet property has nothing to choose, so the shared context selects
-  // it and the panel opens straight into that store. Multiple outlets still
-  // confirm the store before stock figures are shown.
-  if (outlets.value.length === 1 && selectedOutlet.value) {
-    if (needsStoreStep(selectedOutlet.value)) {
-      gateStep.value = 'store'
-      outletGateOpen.value = true
-      return
-    }
+
+  if (inventoryOutlets.value.length <= 1) {
+    if (inventoryOutlets.value[0]) selectOutlet(inventoryOutlets.value[0])
     outletGateOpen.value = false
     return
   }
-  gateStep.value = 'type'
-  gateType.value = ''
-  gateError.value = ''
+
+  const currentIsStore = inventoryOutlets.value.some(
+    (store) => store.outlet_id === selectedOutlet.value?.outlet_id,
+  )
+  if (!currentIsStore) selectOutlet(inventoryOutlets.value[0])
   outletGateOpen.value = true
 }
 
-function chooseType(group) {
-  gateType.value = group.type
-  gateStep.value = 'point'
-}
-
-function goBackFromGate() {
-  gateError.value = ''
-  if (gateStep.value === 'store') {
-    gateStep.value = gateType.value ? 'point' : 'type'
-    return
-  }
-  gateStep.value = 'type'
-  gateType.value = ''
-}
-
-function rememberOutlet(outlet) {
-  if (!outlet?.outlet_id) return
-  const exists = outlets.value.some((row) => row.outlet_id === outlet.outlet_id)
-  const next = exists
-    ? outlets.value.map((row) => (row.outlet_id === outlet.outlet_id ? { ...row, ...outlet } : row))
-    : [...outlets.value, outlet]
-  outlets.value = next.sort((a, b) => a.name.localeCompare(b.name))
-}
-
-/** Confirms the outlet, then asks which store supplies its stock. */
+/** Confirms the store whose shelf the panel will work against. */
 function chooseOutlet(outlet) {
   selectOutlet(outlet)
-  if (needsStoreStep(outlet)) {
-    gateStep.value = 'store'
-    return
-  }
   outletGateOpen.value = false
 }
 
-/** Confirms the warehouse/store whose shelf the panel should use. */
-function chooseStore(store) {
-  selectStore(store)
-  outletGateOpen.value = false
-}
-
-function startCreateStore() {
-  gateError.value = ''
-  newStoreName.value = ''
-  gateStep.value = 'create'
-}
-
-/** Creates another store from the gate and switches straight into it. */
-async function createStore() {
-  const name = newStoreName.value.trim()
-  if (!name) return
-  gateBusy.value = true
-  gateError.value = ''
-  try {
-    const { data } = await outletApi.storeStore({ name })
-    rememberOutlet(data.outlet)
-    selectOutlet(data.outlet)
-    outletGateOpen.value = false
-    newStoreName.value = ''
-  } catch (error) {
-    gateError.value = error.response?.data?.message || t('outlet.gateCreateFailed')
-  } finally {
-    gateBusy.value = false
-  }
-}
-
-/** Activates a different outlet from the header picker. */
+/** Activates a different store from the header picker. */
 function onOutletChange(outletId) {
-  const outlet = outlets.value.find((o) => o.outlet_id === outletId) || null
+  const outlet = inventoryOutlets.value.find((o) => o.outlet_id === outletId) || null
   selectOutlet(outlet)
-  if (needsStoreStep(outlet)) {
-    gateType.value = ''
-    gateStep.value = 'store'
-    outletGateOpen.value = true
-  }
-}
-
-/** Switches the warehouse/store without changing the operating outlet. */
-function onStoreChange(storeId) {
-  selectStore(storeOutlets.value.find((s) => s.outlet_id === storeId) || null)
 }
 
 const sidebarCollapsed = ref(true)
@@ -541,11 +326,6 @@ const navItems = [
       { to: '/store-manager/stock-adjust', icon: 'fas fa-sliders', labelKey: 'storeManager.nav.stockAdjust' },
     ],
   },
-  { to: '/store-manager/items', icon: 'fas fa-boxes-stacked', labelKey: 'storeManager.nav.items' },
-  { to: '/store-manager/suppliers', icon: 'fas fa-truck-ramp-box', labelKey: 'storeManager.nav.suppliers' },
-  { to: '/store-manager/categories', icon: 'fas fa-tags', labelKey: 'storeManager.nav.categories' },
-  { to: '/store-manager/expense-categories', icon: 'fas fa-money-bill-wave', labelKey: 'storeManager.nav.expenseCategories' },
-  { to: '/store-manager/units', icon: 'fas fa-ruler-combined', labelKey: 'storeManager.nav.siUnits' },
   { to: '/store-manager/back-office', icon: 'fas fa-address-book', labelKey: 'storeManager.nav.backOffice' },
 ]
 

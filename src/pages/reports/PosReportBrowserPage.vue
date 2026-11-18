@@ -12,10 +12,10 @@
 -->
 <template>
   <ReportBrowserLayout
-    :categories="categories"
+    :categories="browserCategories"
     :active="activeReport"
-    :title="$t('posReports.title')"
-    :subtitle="windowLabel"
+    :title="isInventoryScope ? $t('storeManager.nav.reports') : $t('posReports.title')"
+    :subtitle="isInventoryScope ? $t('storeManager.reports.subtitle') : windowLabel"
     :exporting="exporting"
     :pos-print="['sales', 'sales-detail', 'cashier-sales-summary'].includes(activeReport)"
     @select="selectReport"
@@ -41,7 +41,14 @@
             </label>
             <label class="posr-field">
               <span>{{ $t('posReports.outlet') }}</span>
-              <select v-model="filterValues.outlet_id" class="rb-input rb-select" :disabled="venuesLoading">
+              <SearchableSelect
+                v-if="isInventoryScope"
+                v-model="filterValues.outlet_id"
+                :options="searchableVenueOptions"
+                :empty-label="$t('posReports.all')"
+                force-search
+              />
+              <select v-else v-model="filterValues.outlet_id" class="rb-input rb-select" :disabled="venuesLoading">
                 <option value="">{{ $t('posReports.all') }}</option>
                 <option v-for="v in venueOptions" :key="v.id" :value="v.id">{{ v.label }}</option>
               </select>
@@ -54,35 +61,39 @@
             <i class="fas fa-sliders" aria-hidden="true"></i> {{ $t('posReports.filterOptions') }}
           </div>
           <div class="posr-grid">
-            <label class="posr-field">
-              <span>{{ $t('posReports.user') }}</span>
-              <div class="rb-filter-block" :class="{ 'rb-off': !userFilterReady }" @click="alertFilterUnavailable('user')">
-                <select v-model="filterValues.user_id" class="rb-input rb-select" :disabled="!userFilterReady">
+            <template v-if="!isInventoryScope || !usesDepartments">
+              <label class="posr-field">
+                <span>{{ $t('posReports.user') }}</span>
+                <div class="rb-filter-block" :class="{ 'rb-off': !userFilterReady }" @click="alertFilterUnavailable('user')">
+                  <select v-model="filterValues.user_id" class="rb-input rb-select" :disabled="!userFilterReady">
+                    <option value="">{{ $t('posReports.all') }}</option>
+                    <option v-for="u in userOptions" :key="u.user_id" :value="u.user_id">{{ u.full_name }}</option>
+                  </select>
+                  <i v-if="!userFilterReady" class="fas fa-circle-info" aria-hidden="true"></i>
+                </div>
+              </label>
+              <label class="posr-field">
+                <span>{{ $t('posReports.terminal') }}</span>
+                <select v-model="filterValues.terminal_id" class="rb-input rb-select" :disabled="venuesLoading">
                   <option value="">{{ $t('posReports.all') }}</option>
-                  <option v-for="u in userOptions" :key="u.user_id" :value="u.user_id">{{ u.full_name }}</option>
+                  <option v-for="v in venueOptions" :key="'t' + v.id" :value="v.id">{{ v.label }}</option>
                 </select>
-                <i v-if="!userFilterReady" class="fas fa-circle-info" aria-hidden="true"></i>
-              </div>
-            </label>
-            <label class="posr-field">
-              <span>{{ $t('posReports.terminal') }}</span>
-              <select v-model="filterValues.terminal_id" class="rb-input rb-select" :disabled="venuesLoading">
-                <option value="">{{ $t('posReports.all') }}</option>
-                <option v-for="v in venueOptions" :key="'t' + v.id" :value="v.id">{{ v.label }}</option>
-              </select>
-            </label>
-            <label class="posr-field">
-              <span>{{ $t('posReports.orderType') }}</span>
-              <select v-model="filterValues.business_source" class="rb-input rb-select">
-                <option value="">{{ $t('posReports.all') }}</option>
-                <option v-for="(label, value) in businessSources" :key="value" :value="value">{{ label }}</option>
-              </select>
-            </label>
-            <template v-if="activeReport === 'cashier-sales-summary'">
+              </label>
+              <label class="posr-field">
+                <span>{{ $t('posReports.orderType') }}</span>
+                <select v-model="filterValues.business_source" class="rb-input rb-select">
+                  <option value="">{{ $t('posReports.all') }}</option>
+                  <option v-for="(label, value) in businessSources" :key="value" :value="value">{{ label }}</option>
+                </select>
+              </label>
+            </template>
+            <template v-if="activeReport === 'cashier-sales-summary' || usesProductFilter">
               <label class="posr-field">
                 <span>{{ $t('posReports.menuItem') }}</span>
                 <input v-model="filterValues.menu_item" type="text" class="rb-input" placeholder="e.g. Chicken Tikka" />
               </label>
+            </template>
+            <template v-if="activeReport === 'cashier-sales-summary'">
               <label class="posr-field">
                 <span>{{ $t('posReports.tax') }}</span>
                 <input v-model="filterValues.tax" type="text" class="rb-input" placeholder="e.g. VAT" />
@@ -116,7 +127,66 @@
                 </select>
               </label>
             </template>
-            <label class="posr-field">
+            <label v-if="usesSupplier" class="posr-field">
+              <span>{{ $t('posReports.supplier') }}</span>
+              <SearchableSelect
+                v-model="filterValues.supplier_id"
+                :options="supplierOptions"
+                :empty-label="$t('posReports.all')"
+                :disabled="inventoryOptionsLoading"
+                force-search
+                required
+              />
+            </label>
+            <label v-if="usesVoidUser" class="posr-field">
+              <span>{{ $t('posReports.voidUser') }}</span>
+              <SearchableSelect
+                v-model="filterValues.void_user"
+                :options="voidUserOptions"
+                :empty-label="$t('posReports.all')"
+                force-search
+              />
+            </label>
+            <label v-if="usesOutletTo" class="posr-field">
+              <span>{{ $t('posReports.outletTo') }}</span>
+              <SearchableSelect
+                v-model="filterValues.outlet_to"
+                :options="searchableVenueOptions"
+                :empty-label="$t('posReports.all')"
+                force-search
+              />
+            </label>
+            <label v-if="usesAdjustmentType" class="posr-field">
+              <span>{{ $t('posReports.adjustmentType') }}</span>
+              <select v-model="filterValues.adjustment_type" class="rb-input rb-select">
+                <option value="">{{ $t('posReports.all') }}</option>
+                <option v-for="type in adjustmentTypeOptions" :key="type.value" :value="type.value">{{ type.label }}</option>
+              </select>
+            </label>
+            <label v-if="usesInventoryItem" class="posr-field">
+              <span>{{ $t('posReports.inventoryItem') }}</span>
+              <SearchableSelect
+                v-model="filterValues.item_id"
+                :options="inventoryItemOptions"
+                :empty-label="$t('posReports.all')"
+                :disabled="inventoryOptionsLoading"
+                force-search
+              />
+            </label>
+            <label v-if="usesIgnoreZero" class="posr-field posr-check">
+              <span>{{ $t('posReports.ignoreZero') }}</span>
+              <input v-model="filterValues.ignore_zero" type="checkbox" class="rb-check" />
+            </label>
+            <label v-if="isInventoryScope && usesDepartments" class="posr-field">
+              <span>{{ $t('posReports.category') }}</span>
+              <SearchableSelect
+                v-model="filterValues.category_id"
+                :options="searchableCategoryOptions"
+                :empty-label="$t('posReports.all')"
+                force-search
+              />
+            </label>
+            <label v-else class="posr-field">
               <span>{{ $t('posReports.category') }}</span>
               <div class="rb-filter-block" :class="{ 'rb-off': !categoryFilterReady }" @click="alertFilterUnavailable('category')">
                 <select v-model="filterValues.category_id" class="rb-input rb-select" :disabled="!categoryFilterReady">
@@ -133,20 +203,22 @@
                 <option v-for="d in departmentOptions" :key="d" :value="d">{{ departmentLabel(d) }}</option>
               </select>
             </label>
-            <label class="posr-field">
-              <span>{{ $t('posReports.subCategory') }}</span>
-              <div class="rb-filter-block" :class="{ 'rb-off': !subCategoryFilterReady }" @click="alertFilterUnavailable('sub_category')">
-                <select v-model="filterValues.sub_category" class="rb-input rb-select" :disabled="!subCategoryFilterReady">
-                  <option value="">{{ $t('posReports.all') }}</option>
-                  <option v-for="c in subCategoryOptions" :key="c" :value="c">{{ c }}</option>
-                </select>
-                <i v-if="!subCategoryFilterReady" class="fas fa-circle-info" aria-hidden="true"></i>
-              </div>
-            </label>
-            <label class="posr-field posr-check">
-              <span>{{ $t('posReports.includeNoCharge') }}</span>
-              <input v-model="filterValues.include_no_charge" type="checkbox" class="rb-check" />
-            </label>
+            <template v-if="!isInventoryScope || !usesDepartments">
+              <label class="posr-field">
+                <span>{{ $t('posReports.subCategory') }}</span>
+                <div class="rb-filter-block" :class="{ 'rb-off': !subCategoryFilterReady }" @click="alertFilterUnavailable('sub_category')">
+                  <select v-model="filterValues.sub_category" class="rb-input rb-select" :disabled="!subCategoryFilterReady">
+                    <option value="">{{ $t('posReports.all') }}</option>
+                    <option v-for="c in subCategoryOptions" :key="c" :value="c">{{ c }}</option>
+                  </select>
+                  <i v-if="!subCategoryFilterReady" class="fas fa-circle-info" aria-hidden="true"></i>
+                </div>
+              </label>
+              <label class="posr-field posr-check">
+                <span>{{ $t('posReports.includeNoCharge') }}</span>
+                <input v-model="filterValues.include_no_charge" type="checkbox" class="rb-check" />
+              </label>
+            </template>
           </div>
         </div>
 
@@ -399,7 +471,7 @@ import { useI18n } from 'vue-i18n'
 import Swal from 'sweetalert2'
 import ReportBrowserLayout from '@/components/reports/ReportBrowserLayout.vue'
 import ReportCharts from '@/components/reports/ReportCharts.vue'
-import { reportApi, outletApi, departmentApi, hotelSettingsApi } from '@/api'
+import { reportApi, outletApi, departmentApi, hotelSettingsApi, supplierApi, inventoryApi } from '@/api'
 import { exportCSV } from '@/utils/export'
 import { useAuthStore } from '@/stores/auth'
 import { usePrintSettingsStore } from '@/stores/printSettings'
@@ -407,7 +479,13 @@ import { printHtmlSilently } from '@/utils/reportPrint'
 import { selectedOutlet } from '@/composables/useOutletContext'
 import { formatNumber, isIdentifierKey } from '@/utils/numbers'
 import { fmtLedgerMoney, fmtQty, unitSuffix, fmtLedgerDateTime, ledgerTypeLabel, buildLedgerGroups, INVENTORY_CATEGORIES } from '@/utils/ezeeLedger'
+import SearchableSelect from '@/components/SearchableSelect.vue'
 
+const props = defineProps({
+  scope: { type: String, default: 'pos' },
+})
+
+const isInventoryScope = computed(() => props.scope === 'inventory')
 const { t, te } = useI18n()
 
 /* ── Branding for the printable A4 document ── */
@@ -460,6 +538,8 @@ const REPORTS = [
   { key: 'tax-analysis', label: 'posReports.taxAnalysis' },
   { key: 'creditors-summary', label: 'posReports.creditorsSummary' },
   { key: 'creditors-details', label: 'posReports.creditorsDetails' },
+  { key: 'supplier-detail', label: 'posReports.pdfSupplierDetail' },
+  { key: 'supplier-summary', label: 'posReports.pdfSupplierSummary' },
   { key: 'driver-efficiency', label: 'posReports.driverEfficiency' },
   { key: 'driver-deliveries', label: 'posReports.driverDeliveries' },
   { key: 'expense-income-detail', label: 'posReports.expenseIncomeDetail' },
@@ -475,6 +555,10 @@ const REPORTS = [
   { key: 'goods-received-detail', label: 'posReports.goodsReceivedDetail' },
   { key: 'goods-received-register', label: 'posReports.goodsReceivedRegister' },
   { key: 'goods-return-detail', label: 'posReports.goodsReturnDetail' },
+  { key: 'requisition-detail', label: 'posReports.pdfRequisitionDetail' },
+  { key: 'requisition-summary', label: 'posReports.pdfRequisitionSummary' },
+  { key: 'indent-forward-detail', label: 'posReports.pdfIndentForwardDetail' },
+  { key: 'indent-forward-summary', label: 'posReports.pdfIndentForwardSummary' },
   { key: 'inventory', label: 'posReports.inventoryMovements' },
   { key: 'stock-ledger', label: 'posReports.stockLedger' },
   { key: 'stock-ledger-summary', label: 'posReports.stockLedgerSummary' },
@@ -487,6 +571,13 @@ const REPORTS = [
   { key: 'audit-void-goods-received', label: 'posReports.auditVoidGoodsReceived' },
   { key: 'audit-void-physical-stock', label: 'posReports.auditVoidPhysicalStock' },
   { key: 'audit-void-requisitions', label: 'posReports.auditVoidRequisitions' },
+  { key: 'audit-void-purchase-order-summary', label: 'posReports.pdfVoidPurchaseOrderSummary' },
+  { key: 'audit-void-goods-received-summary', label: 'posReports.pdfVoidGoodsReceivedSummary' },
+  { key: 'audit-void-physical-stock-summary', label: 'posReports.pdfVoidStockCountSummary' },
+  { key: 'audit-void-stock-adjustment-summary', label: 'posReports.pdfVoidAdjustmentSummary' },
+  { key: 'audit-void-stock-transfer-summary', label: 'posReports.pdfVoidStockTransferSummary' },
+  { key: 'audit-void-indent-forward-detail', label: 'posReports.pdfVoidIndentForwardDetail' },
+  { key: 'audit-void-indent-forward-summary', label: 'posReports.pdfVoidIndentForwardSummary' },
   { key: 'audit-void-stock-adjustment-detail', label: 'posReports.auditVoidStockAdjustmentDetail' },
   { key: 'audit-void-stock-transfer-detail', label: 'posReports.auditVoidStockTransferDetail' },
   { key: 'audit-void-items', label: 'posReports.auditVoidItems' },
@@ -623,7 +714,81 @@ const categories = [
   },
 ]
 
-const customSources = REPORTS.filter((r) => r.key !== 'custom')
+const PDF_INVENTORY_CATEGORIES = [
+  {
+    key: 'menu-item-sales',
+    label: 'posReports.catProductSales',
+    icon: 'fas fa-burger',
+    reports: [
+      { key: 'menu-item-cost-detail', label: 'posReports.pdfProductSalesCostDetail', icon: 'fas fa-list-ul' },
+      { key: 'menu-item-cost-summary', label: 'posReports.pdfProductSalesSummary', icon: 'fas fa-chart-simple' },
+    ],
+  },
+  {
+    key: 'back-office',
+    label: 'posReports.catBackOffice',
+    icon: 'fas fa-briefcase',
+    reports: [
+      { key: 'supplier-detail', label: 'posReports.pdfSupplierDetail', icon: 'fas fa-file-invoice' },
+      { key: 'supplier-summary', label: 'posReports.pdfSupplierSummary', icon: 'fas fa-chart-simple' },
+    ],
+  },
+  {
+    key: 'inventory',
+    label: 'posReports.catInventory',
+    icon: 'fas fa-boxes-stacked',
+    reports: [
+      { key: 'purchase-order-register', label: 'posReports.pdfPurchaseOrderSummary', icon: 'fas fa-file-signature' },
+      { key: 'purchase-order-detail', label: 'posReports.pdfPurchaseOrderDetail', icon: 'fas fa-file-invoice' },
+      { key: 'goods-received-detail', label: 'posReports.pdfGoodsReceivedDetail', icon: 'fas fa-box-open' },
+      { key: 'goods-received-register', label: 'posReports.pdfGoodsReceivedSummary', icon: 'fas fa-box' },
+      { key: 'physical-stock-detail', label: 'posReports.pdfStockCountDetail', icon: 'fas fa-clipboard-list' },
+      { key: 'stock-adjustment-detail', label: 'posReports.pdfStockAdjustmentDetail', icon: 'fas fa-pen-to-square' },
+      { key: 'stock-transfer-detail', label: 'posReports.pdfStockTransferDetail', icon: 'fas fa-right-left' },
+      { key: 'stock-transfer-summary', label: 'posReports.pdfStockTransferSummary', icon: 'fas fa-chart-simple' },
+      { key: 'requisition-detail', label: 'posReports.pdfRequisitionDetail', icon: 'fas fa-file-lines' },
+      { key: 'requisition-summary', label: 'posReports.pdfRequisitionSummary', icon: 'fas fa-chart-simple' },
+      { key: 'indent-forward-detail', label: 'posReports.pdfIndentForwardDetail', icon: 'fas fa-arrow-right-arrow-left' },
+      { key: 'indent-forward-summary', label: 'posReports.pdfIndentForwardSummary', icon: 'fas fa-chart-simple' },
+    ],
+  },
+  {
+    key: 'stock',
+    label: 'posReports.catStock',
+    icon: 'fas fa-warehouse',
+    reports: [
+      { key: 'stock-ledger', label: 'posReports.pdfStockLedgerDetail', icon: 'fas fa-book' },
+      { key: 'stock-ledger-summary', label: 'posReports.pdfStockLedgerSummary', icon: 'fas fa-book-bookmark' },
+      { key: 'closing-stock', label: 'posReports.pdfClosingStock', icon: 'fas fa-boxes-stacked' },
+      { key: 'low-stock', label: 'posReports.pdfLowStock', icon: 'fas fa-triangle-exclamation' },
+    ],
+  },
+  {
+    key: 'audit',
+    label: 'posReports.catAudit',
+    icon: 'fas fa-file-pen',
+    reports: [
+      { key: 'audit-void-purchase-order-summary', label: 'posReports.pdfVoidPurchaseOrderSummary', icon: 'fas fa-file-invoice' },
+      { key: 'audit-void-purchase-order', label: 'posReports.pdfVoidPurchaseOrderDetail', icon: 'fas fa-file-circle-xmark' },
+      { key: 'audit-void-goods-received-summary', label: 'posReports.pdfVoidGoodsReceivedSummary', icon: 'fas fa-box-open' },
+      { key: 'audit-void-goods-received', label: 'posReports.pdfVoidGoodsReceivedDetail', icon: 'fas fa-box' },
+      { key: 'audit-void-physical-stock-summary', label: 'posReports.pdfVoidStockCountSummary', icon: 'fas fa-clipboard-list' },
+      { key: 'audit-void-physical-stock', label: 'posReports.pdfVoidStockCountDetail', icon: 'fas fa-clipboard-check' },
+      { key: 'audit-void-stock-adjustment-summary', label: 'posReports.pdfVoidAdjustmentSummary', icon: 'fas fa-pen-to-square' },
+      { key: 'audit-void-stock-adjustment-detail', label: 'posReports.pdfVoidAdjustmentDetail', icon: 'fas fa-pen' },
+      { key: 'audit-void-stock-transfer-summary', label: 'posReports.pdfVoidStockTransferSummary', icon: 'fas fa-right-left' },
+      { key: 'audit-void-stock-transfer-detail', label: 'posReports.pdfVoidStockTransferDetail', icon: 'fas fa-arrow-right-arrow-left' },
+      { key: 'audit-void-indent-forward-summary', label: 'posReports.pdfVoidIndentForwardSummary', icon: 'fas fa-file-lines' },
+      { key: 'audit-void-indent-forward-detail', label: 'posReports.pdfVoidIndentForwardDetail', icon: 'fas fa-file-circle-xmark' },
+    ],
+  },
+]
+const browserCategories = computed(() => isInventoryScope.value
+  ? PDF_INVENTORY_CATEGORIES
+  : categories)
+const customSources = computed(() => (isInventoryScope.value
+  ? REPORTS.filter((r) => browserCategories.value.some((c) => c.reports.some((cr) => cr.key === r.key)))
+  : REPORTS).filter((r) => r.key !== 'custom'))
 
 // The whole NO CHARGE group lists no-charge tickets by definition, so the
 // include flag is forced on for these codes (mirrored in the backend builders).
@@ -634,7 +799,7 @@ const NO_CHARGE_REPORTS = new Set([
   'no-charge-sales-detail',
 ])
 
-const activeReport = ref('menu-item-sales')
+const activeReport = ref(isInventoryScope.value ? 'menu-item-cost-detail' : 'menu-item-sales')
 const customSource = ref('menu-item-sales')
 const customCols = ref([])
 
@@ -665,6 +830,9 @@ const outlets = ref([])
 const outletsLoading = ref(false)
 const departments = ref([])
 const departmentsLoading = ref(false)
+const suppliers = ref([])
+const inventoryItems = ref([])
+const inventoryOptionsLoading = ref(false)
 const venuesLoading = computed(() => outletsLoading.value || departmentsLoading.value)
 
 const filterValues = reactive({
@@ -684,9 +852,19 @@ const filterValues = reactive({
   tax: '',
   discount: '',
   waiter_wise_sales: '',
+  item_id: '',
+  ignore_zero: false,
+  void_user: '',
+  supplier_id: '',
+  outlet_to: '',
+  adjustment_type: '',
 })
 
 const activeLabel = computed(() => {
+  for (const category of browserCategories.value) {
+    const match = category.reports.find((r) => r.key === activeReport.value)
+    if (match) return t(match.label)
+  }
   const cfg = REPORTS.find((r) => r.key === activeReport.value)
   return cfg ? t(cfg.label) : ''
 })
@@ -699,36 +877,119 @@ const windowLabel = computed(() => {
 
 /** Staff members offered by the wired engine's filter options. */
 const userOptions = computed(() => engine.value?.filters?.users || [])
+const voidUserOptions = computed(() => userOptions.value.map((u) => ({
+  value: u.user_id,
+  label: u.full_name,
+})))
+const supplierOptions = computed(() => suppliers.value.map((s) => ({
+  value: s.supplier_id,
+  label: s.supplier_name || '—',
+})))
+const inventoryItemOptions = computed(() => inventoryItems.value.map((item) => ({
+  value: item.item_id,
+  label: item.item_name || '—',
+})))
+const adjustmentTypeOptions = computed(() => [
+  { value: 'adjustment', label: t('posReports.adjustment') },
+  { value: 'wastage', label: t('posReports.wastage') },
+])
 
 /** Inventory & store reports scope by physical department — the role EZEE's
  * outlet plays for these reports. F&B reports keep scoping by POS outlet. */
 const INVENTORY_REPORTS = new Set([
-  'purchase-order-detail', 'purchase-order-register', 'stock-adjustment-detail', 'physical-stock-detail',
-  'stock-transfer-detail', 'stock-transfer-summary', 'goods-received-detail', 'goods-received-register',
-  'goods-return-detail', 'inventory', 'stock-ledger', 'stock-ledger-summary', 'closing-stock',
-  'stock-movement-detail', 'low-stock', 'physical-stock-taking', 'stock',
+  'supplier-detail', 'supplier-summary', 'purchase-order-detail', 'purchase-order-register',
+  'stock-adjustment-detail', 'physical-stock-detail', 'stock-transfer-detail', 'stock-transfer-summary',
+  'goods-received-detail', 'goods-received-register', 'requisition-detail', 'requisition-summary',
+  'indent-forward-detail', 'indent-forward-summary', 'stock-ledger', 'stock-ledger-summary',
+  'closing-stock', 'low-stock', 'audit-void-purchase-order', 'audit-void-purchase-order-summary',
+  'audit-void-goods-received', 'audit-void-goods-received-summary', 'audit-void-physical-stock',
+  'audit-void-physical-stock-summary', 'audit-void-stock-adjustment-detail',
+  'audit-void-stock-adjustment-summary', 'audit-void-stock-transfer-detail',
+  'audit-void-stock-transfer-summary', 'audit-void-indent-forward-detail',
+  'audit-void-indent-forward-summary',
 ])
 
 const usesDepartments = computed(() => INVENTORY_REPORTS.has(activeReport.value))
+const usesStoreOutletPicker = computed(() => isInventoryScope.value && usesDepartments.value)
+const usesSellingOutletPicker = computed(() => isInventoryScope.value && !usesDepartments.value)
+const PRODUCT_SALES_REPORTS = new Set(['menu-item-cost-detail', 'menu-item-cost-summary'])
+const usesProductFilter = computed(() => isInventoryScope.value && PRODUCT_SALES_REPORTS.has(activeReport.value))
+const usesIgnoreZero = computed(() => isInventoryScope.value && [
+  'supplier-detail', 'supplier-summary', 'purchase-order-register', 'purchase-order-detail',
+  'goods-received-detail', 'goods-received-register', 'stock-ledger', 'stock-ledger-summary',
+  'closing-stock', 'low-stock',
+].includes(activeReport.value))
+const usesInventoryItem = computed(() => isInventoryScope.value && [
+  'purchase-order-detail', 'goods-received-detail', 'physical-stock-detail',
+  'stock-adjustment-detail', 'stock-transfer-detail', 'stock-transfer-summary',
+  'requisition-detail', 'indent-forward-detail', 'stock-ledger', 'stock-ledger-summary',
+  'closing-stock', 'audit-void-purchase-order', 'audit-void-goods-received',
+  'audit-void-physical-stock', 'audit-void-stock-adjustment-detail',
+  'audit-void-stock-transfer-detail', 'audit-void-indent-forward-detail',
+].includes(activeReport.value))
+const usesSupplier = computed(() => isInventoryScope.value && [
+  'supplier-detail', 'supplier-summary', 'purchase-order-register', 'goods-received-detail',
+  'goods-received-register', 'audit-void-purchase-order', 'audit-void-purchase-order-summary',
+  'audit-void-goods-received', 'audit-void-goods-received-summary',
+].includes(activeReport.value))
+const usesVoidUser = computed(() => isInventoryScope.value && activeReport.value.startsWith('audit-void-'))
+const usesOutletTo = computed(() => isInventoryScope.value && [
+  'stock-transfer-detail', 'stock-transfer-summary', 'indent-forward-detail',
+  'indent-forward-summary', 'audit-void-stock-transfer-detail',
+  'audit-void-stock-transfer-summary', 'audit-void-indent-forward-detail',
+  'audit-void-indent-forward-summary',
+].includes(activeReport.value))
+const usesAdjustmentType = computed(() => isInventoryScope.value && [
+  'stock-adjustment-detail', 'audit-void-stock-adjustment-detail',
+  'audit-void-stock-adjustment-summary',
+].includes(activeReport.value))
 
-/** The selected counter's own stock shelf, used by inventory reports. */
 const selectedShelfId = computed(
   () => selectedOutlet.value?.stock_department?.department_id || '',
 )
 
-/** Scope the report browser to the outlet picked in the till: F&B reports use
- * the POS outlet id, inventory reports use that outlet's stock department. */
-const scopedVenueId = computed(() => (
-  usesDepartments.value ? selectedShelfId.value : (selectedOutlet.value?.outlet_id || '')
-))
+const storeVenueOptions = computed(() => outlets.value
+  .filter((outlet) => String(outlet.type || '').toLowerCase() === 'store')
+  .map((outlet) => ({
+    id: String(outlet.stock_department?.department_id || outlet.outlet_id),
+    label: outlet.name || '—',
+  })))
+
+const sellingVenueOptions = computed(() => outlets.value
+  .filter((outlet) => String(outlet.type || '').toLowerCase() !== 'store')
+  .map((outlet) => ({
+    id: String(outlet.outlet_id),
+    label: outlet.name || outlet.outlet_name || '—',
+  })))
+
+const scopedVenueId = computed(() => {
+  if (!isInventoryScope.value) {
+    return usesDepartments.value ? selectedShelfId.value : (selectedOutlet.value?.outlet_id || '')
+  }
+  if (usesStoreOutletPicker.value) {
+    const preferred = selectedShelfId.value
+    return storeVenueOptions.value.some((o) => o.id === preferred)
+      ? preferred
+      : (storeVenueOptions.value[0]?.id || '')
+  }
+  if (usesSellingOutletPicker.value) {
+    const preferred = String(selectedOutlet.value?.outlet_id || '')
+    return sellingVenueOptions.value.some((o) => o.id === preferred)
+      ? preferred
+      : (sellingVenueOptions.value[0]?.id || '')
+  }
+  return ''
+})
 
 function applySelectedVenue() {
   filterValues.outlet_id = scopedVenueId.value
   filterValues.terminal_id = ''
 }
 
-/** The single Outlet / Terminal picker: departments for inventory reports, outlets otherwise. */
 const venueOptions = computed(() => {
+  if (isInventoryScope.value) {
+    return usesStoreOutletPicker.value ? storeVenueOptions.value : sellingVenueOptions.value
+  }
   const items = usesDepartments.value ? departments.value : outlets.value
   return (Array.isArray(items) ? items : []).map((item) => ({
     id: String(item.department_id || item.outlet_id),
@@ -748,6 +1009,11 @@ const categoryOptions = computed(() => {
   }
   return engine.value?.filters?.menu_categories || []
 })
+const searchableVenueOptions = computed(() => venueOptions.value.map((o) => ({ value: o.id, label: o.label })))
+const searchableCategoryOptions = computed(() => categoryOptions.value.map((c) => ({
+  value: c.category_id,
+  label: c.category_name,
+})))
 
 /** Settlement methods offered by the Cashier Report PAYMENT filter. */
 const paymentOptions = computed(() => engine.value?.filters?.payment_options || [])
@@ -972,10 +1238,20 @@ function resetFilters() {
   filterValues.discount = ''
   filterValues.waiter_wise_sales = ''
   filterValues.include_no_charge = false
+  filterValues.item_id = ''
+  filterValues.ignore_zero = false
+  filterValues.void_user = ''
+  filterValues.supplier_id = ''
+  filterValues.outlet_to = ''
+  filterValues.adjustment_type = ''
   run()
 }
 
 async function run() {
+  if (isInventoryScope.value && usesSupplier.value && !filterValues.supplier_id) {
+    error.value = t('posReports.supplierRequired')
+    return
+  }
   loading.value = true
   error.value = ''
   engine.value = null
@@ -989,8 +1265,8 @@ async function run() {
       outlet_id: filterValues.terminal_id || filterValues.outlet_id || undefined,
       business_source: filterValues.business_source || undefined,
       order_type: filterValues.business_source || undefined,
-      user_id: filterValues.user_id || undefined,
-      created_by: filterValues.user_id || undefined,
+      user_id: filterValues.user_id || (usesVoidUser.value ? filterValues.void_user : '') || undefined,
+      created_by: filterValues.user_id || (usesVoidUser.value ? filterValues.void_user : '') || undefined,
       category_id: filterValues.category_id || undefined,
       sub_category: filterValues.sub_category || undefined,
       department: filterValues.department || undefined,
@@ -1000,6 +1276,13 @@ async function run() {
       tax: filterValues.tax || undefined,
       discount: filterValues.discount || undefined,
       waiter_wise_sales: filterValues.waiter_wise_sales || undefined,
+      department_id: isInventoryScope.value && usesDepartments.value ? (filterValues.outlet_id || undefined) : undefined,
+      item_id: isInventoryScope.value ? (filterValues.item_id || undefined) : undefined,
+      ignore_zero: isInventoryScope.value && filterValues.ignore_zero ? '1' : undefined,
+      void_user: isInventoryScope.value ? (filterValues.void_user || undefined) : undefined,
+      supplier_id: isInventoryScope.value ? (filterValues.supplier_id || undefined) : undefined,
+      outlet_to: isInventoryScope.value ? (filterValues.outlet_to || undefined) : undefined,
+      adjustment_type: isInventoryScope.value ? (filterValues.adjustment_type || undefined) : undefined,
       // A no-charge report must always include the no-charge tickets; force the
       // flag on for the whole NO CHARGE group regardless of the filter toggle.
       include_no_charge: NO_CHARGE_REPORTS.has(activeReport.value) || filterValues.include_no_charge ? '1' : '0',
@@ -1013,7 +1296,8 @@ async function run() {
         from: params.from,
         to: params.to,
         category: INVENTORY_CATEGORIES.has(filterValues.category_id) ? filterValues.category_id : undefined,
-        ignore_zero: 0,
+        department_id: isInventoryScope.value ? (filterValues.outlet_id || undefined) : undefined,
+        ignore_zero: isInventoryScope.value && filterValues.ignore_zero ? 1 : 0,
       })
       stockLedger.value = res.data
       const cats = []
@@ -1419,11 +1703,37 @@ async function loadDepartments() {
   }
 }
 
+async function loadInventoryOptions() {
+  inventoryOptionsLoading.value = true
+  try {
+    const [supplierRes, itemRes] = await Promise.allSettled([
+      supplierApi.index({ per_page: 100 }),
+      inventoryApi.index({ per_page: 100 }),
+    ])
+    const supplierRaw = supplierRes.status === 'fulfilled'
+      ? (supplierRes.value.data?.data || supplierRes.value.data || [])
+      : []
+    const itemRaw = itemRes.status === 'fulfilled'
+      ? (itemRes.value.data?.data || itemRes.value.data || [])
+      : []
+    suppliers.value = Array.isArray(supplierRaw) ? supplierRaw : []
+    inventoryItems.value = Array.isArray(itemRaw) ? itemRaw : []
+  } finally {
+    inventoryOptionsLoading.value = false
+  }
+}
+
 watch(activeReport, () => {
   filterValues.sub_category = ''
   filterValues.category_id = ''
   filterValues.payment = ''
   filterValues.voucher = ''
+  filterValues.item_id = ''
+  filterValues.ignore_zero = false
+  filterValues.void_user = ''
+  filterValues.supplier_id = ''
+  filterValues.outlet_to = ''
+  filterValues.adjustment_type = ''
 })
 
 watch(usesDepartments, (now, before) => {
@@ -1435,12 +1745,24 @@ watch(() => selectedOutlet.value?.outlet_id, () => {
   run()
 })
 
+watch(outlets, () => {
+  if (isInventoryScope.value) applySelectedVenue()
+})
+
 onMounted(() => {
   loadReportLogo()
-  loadOutlets()
-  loadDepartments()
-  applySelectedVenue()
-  run()
+  if (isInventoryScope.value) {
+    loadInventoryOptions()
+    loadOutlets().then(() => {
+      applySelectedVenue()
+      run()
+    })
+  } else {
+    loadOutlets()
+    loadDepartments()
+    applySelectedVenue()
+    run()
+  }
 })
 
 function todayIso() {

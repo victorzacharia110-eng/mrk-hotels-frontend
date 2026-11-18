@@ -18,10 +18,24 @@ vi.mock('@/api', () => ({
   },
 }))
 
-const store = {
+const storeA = {
   outlet_id: 'outlet-store-a',
   name: 'Store A',
   type: 'store',
+  is_active: true,
+}
+
+const storeB = {
+  outlet_id: 'outlet-store-b',
+  name: 'Store B',
+  type: 'store',
+  is_active: true,
+}
+
+const bar = {
+  outlet_id: 'outlet-bar',
+  name: 'Bar 1',
+  type: 'bar',
   is_active: true,
 }
 
@@ -63,84 +77,66 @@ describe('store manager outlet gate', () => {
     loaded.value = false
   })
 
-  it('auto-selects the only store without showing the gate', async () => {
-    outletApi.index.mockResolvedValue({ data: { outlets: [store] } })
+  it('auto-selects the only store and ignores non-store outlets', async () => {
+    outletApi.index.mockResolvedValue({ data: { outlets: [bar, storeA] } })
 
     const wrapper = await mountLayout()
 
     expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(false)
     expect(selectedOutlet.value.outlet_id).toBe('outlet-store-a')
     expect(selectedStore.value.outlet_id).toBe('outlet-store-a')
+    expect(wrapper.find('.sm-outlet-picker').exists()).toBe(false)
   })
 
-  it('shows the exact store after choosing the Store outlet type', async () => {
+  it('shows only stores in the gate and no add-outlet action', async () => {
     outletApi.index.mockResolvedValue({
-      data: {
-        outlets: [
-          store,
-          { outlet_id: 'outlet-store-b', name: 'Store B', type: 'store', is_active: true },
-          { outlet_id: 'outlet-bar', name: 'Bar 1', type: 'bar', is_active: true },
-        ],
-      },
+      data: { outlets: [storeA, storeB, bar] },
     })
 
     const wrapper = await mountLayout()
 
     const gateList = wrapper.find('.sm-outlet-gate-list')
-    expect(gateList.text()).toContain('Bar')
-    expect(gateList.text()).toContain('Store')
-    expect(gateList.text()).not.toContain('Store A')
-
-    const storeType = gateList.findAll('.sm-outlet-option').find((button) => button.text().includes('Store'))
-    await storeType.trigger('click')
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('Which Store?')
-    expect(wrapper.find('.sm-outlet-gate-list').text()).toContain('Store A')
-    expect(wrapper.find('.sm-outlet-gate-list').text()).toContain('Store B')
+    expect(gateList.text()).toContain('Store A')
+    expect(gateList.text()).toContain('Store B')
+    expect(gateList.text()).not.toContain('Bar 1')
+    expect(wrapper.text()).not.toContain('Add another outlet')
   })
 
-  it('asks which store supplies a selling outlet after it is chosen', async () => {
+  it('confirms the chosen store directly', async () => {
     outletApi.index.mockResolvedValue({
-      data: {
-        outlets: [
-          store,
-          { outlet_id: 'outlet-store-b', name: 'Store B', type: 'store', is_active: true },
-          { outlet_id: 'outlet-bar', name: 'Bar 1', type: 'bar', is_active: true },
-        ],
-      },
+      data: { outlets: [storeA, storeB, bar] },
     })
 
     const wrapper = await mountLayout()
 
-    const barType = wrapper.findAll('.sm-outlet-option').find((button) => button.text().includes('Bar'))
-    await barType.trigger('click')
+    const storeOption = wrapper.findAll('.sm-outlet-option').find((button) => button.text().includes('Store B'))
+    await storeOption.trigger('click')
     await flushPromises()
 
-    const bar = wrapper.findAll('.sm-outlet-option').find((button) => button.text().includes('Bar 1'))
-    await bar.trigger('click')
-    await flushPromises()
-
-    expect(selectedOutlet.value.outlet_id).toBe('outlet-bar')
-    expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(true)
-    expect(wrapper.text()).toContain('Which store are you working with?')
-
-    const chosenStore = wrapper.findAll('.sm-outlet-option').find((button) => button.text().includes('Store A'))
-    await chosenStore.trigger('click')
-    await flushPromises()
-
-    expect(selectedStore.value.outlet_id).toBe('outlet-store-a')
+    expect(selectedOutlet.value.outlet_id).toBe('outlet-store-b')
+    expect(selectedStore.value.outlet_id).toBe('outlet-store-b')
     expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(false)
+  })
+
+  it('shows the header picker only when there is more than one store', async () => {
+    outletApi.index.mockResolvedValue({
+      data: { outlets: [storeA, storeB, bar] },
+    })
+
+    const wrapper = await mountLayout()
+
+    const picker = wrapper.find('.sm-outlet-picker select')
+    expect(picker.exists()).toBe(true)
+    expect(picker.findAll('option').map((option) => option.text())).toEqual([
+      expect.any(String),
+      'Store A',
+      'Store B',
+    ])
   })
 
   it('lets the user log out while the outlet gate is open', async () => {
     outletApi.index.mockResolvedValue({
-      data: {
-        outlets: [
-          store,
-          { outlet_id: 'outlet-bar', name: 'Bar 1', type: 'bar', is_active: true },
-        ],
-      },
+      data: { outlets: [storeA, storeB] },
     })
 
     const wrapper = await mountLayout()
