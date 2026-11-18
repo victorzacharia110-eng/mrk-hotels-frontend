@@ -5369,10 +5369,19 @@
       "tabAccounts": "Akaunti",
       "tabCreditors": "Wadai",
       "tabNoChargeAccounts": "Akaunti za Bila Malipo",
+      "tabSettleAccounts": "AKAUNTI ZA MALIPO",
       "searchNoChargeHint": "Tafuta akaunti ya bila malipo iliyosajiliwa...",
+      "searchSettleAccountsHint": "Tafuta akaunti ya mdaiwa au BILA MALIPO iliyosajiliwa...",
       "newNoChargeAccount": "Akaunti mpya ya bila malipo",
       "editNoChargeAccount": "Hariri akaunti ya bila malipo",
+      "newSettleAccount": "Akaunti mpya ya malipo",
+      "editSettleAccount": "Hariri akaunti ya malipo",
       "noNoChargeAccounts": "Hakuna akaunti za bila malipo zilizosajiliwa bado.",
+      "noSettleAccounts": "Hakuna akaunti za malipo zilizosajiliwa bado.",
+      "settleTypes": {
+        "creditor": "Mdaiwa",
+        "no_charge": "BILA MALIPO"
+      },
       "accountName": "Jina la akaunti",
       "searchHint": "Tafuta kwa jina, namba, barua pepe au mji...",
       "searchCreditorsHint": "Tafuta kwa kampuni, mwasiliani, simu, barua pepe au kategoria...",
@@ -5819,6 +5828,9 @@
       "postToAccount": "Weka kwenye Akaunti",
       "creditorAccount": "Akaunti ya Mdaiwa",
       "noChargeAccount": "Akaunti Bila Malipo",
+      "noCreditorAccounts": "Hakuna akaunti za wadai zinazofanya kazi. Zisajili kwenye Utafutaji wa Akaunti.",
+      "noNoChargeAccounts": "Hakuna akaunti za BILA MALIPO zinazofanya kazi. Zisajili kwenye Utafutaji wa Akaunti.",
+      "noSettleAccounts": "Hakuna akaunti za wadai au BILA MALIPO zinazopatikana.",
       "items": "Vitu"
     },
     "printSettings": {

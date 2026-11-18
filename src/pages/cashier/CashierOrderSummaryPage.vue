@@ -356,10 +356,14 @@
               <label>{{ $t('cashier.summary.creditorAccount') || 'Credit Account' }}</label>
               <select v-model="selectedCreditAccountId" class="sm-input" :disabled="savingPay" required>
                 <option value="">{{ $t('common.select') }}</option>
-                <option v-for="acc in creditAccounts.filter(a => a.type === 'creditor' && a.is_active !== false)" :key="acc.credit_account_id" :value="acc.credit_account_id">
+                <option v-for="acc in activeCreditorAccounts" :key="acc.credit_account_id" :value="acc.credit_account_id">
                   {{ acc.name }}
                 </option>
               </select>
+              <p v-if="!activeCreditorAccounts.length" class="pay-account-hint">
+                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                {{ $t('cashier.summary.noCreditorAccounts') }}
+              </p>
             </div>
           </template>
           <template v-else-if="settleMode === 'nocharge'">
@@ -367,10 +371,14 @@
               <label>{{ $t('cashier.summary.noChargeAccount') || 'No Charge Account' }}</label>
               <select v-model="selectedCreditAccountId" class="sm-input" :disabled="savingPay" required>
                 <option value="">{{ $t('common.select') }}</option>
-                <option v-for="acc in creditAccounts.filter(a => a.type === 'no_charge' && a.is_active !== false)" :key="acc.credit_account_id" :value="acc.credit_account_id">
+                <option v-for="acc in activeNoChargeAccounts" :key="acc.credit_account_id" :value="acc.credit_account_id">
                   {{ acc.name }}
                 </option>
               </select>
+              <p v-if="!activeNoChargeAccounts.length" class="pay-account-hint">
+                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                {{ $t('cashier.summary.noNoChargeAccounts') }}
+              </p>
             </div>
           </template>
           <template v-else>
@@ -468,7 +476,7 @@ import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { useOrderRealtime } from '@/composables/useOrderRealtime'
-import { PAYMENT_METHODS } from '@/utils/payments'
+import { normalizeCreditAccounts, PAYMENT_METHODS } from '@/utils/payments'
 import { creditAccountApi } from '@/api'
 import { restorePrinter, printerState, printerSupported } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
@@ -553,6 +561,12 @@ const transferHint = computed(() =>
 const settleMode = ref('collect')
 const rooms = ref([])
 const creditAccounts = ref([])
+const activeCreditorAccounts = computed(() =>
+  creditAccounts.value.filter((account) => account.type === 'creditor' && account.is_active !== false),
+)
+const activeNoChargeAccounts = computed(() =>
+  creditAccounts.value.filter((account) => account.type === 'no_charge' && account.is_active !== false),
+)
 const selectedCreditAccountId = ref('')
 const postRoom = ref('')
 const roomPickId = `room-pick-${Date.now()}`
@@ -1059,7 +1073,7 @@ async function loadRooms() {
 async function loadCreditAccounts() {
   try {
     const { data } = await creditAccountApi.index()
-    creditAccounts.value = data.credit_accounts || data.data || []
+    creditAccounts.value = normalizeCreditAccounts(data)
   } catch {
     creditAccounts.value = []
   }
@@ -1634,6 +1648,15 @@ onUnmounted(() => {
   margin: 4px 0 0;
   font-size: 12px;
   color: #757575;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pay-account-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #a15c00;
   display: flex;
   align-items: center;
   gap: 6px;

@@ -746,6 +746,7 @@
                 </button>
               </div>
             </template>
+            <p v-else class="accomp-hint">{{ $t('cashier.summary.noSettleAccounts') }}</p>
           </div>
         </div>
       </Transition>
@@ -1134,7 +1135,7 @@ import { orderApi, menuItemApi, tableApi, tableLocationApi, reportApi, creditAcc
 import CalendarInput from '@/components/CalendarInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
-import { PAYMENT_METHODS } from '@/utils/payments'
+import { normalizeCreditAccounts, PAYMENT_METHODS } from '@/utils/payments'
 import { restorePrinter } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { useNotificationSettingsStore } from '@/stores/notificationSettings'
@@ -1754,7 +1755,7 @@ const noChargeAccounts = computed(() => creditAccounts.value.filter((a) => a.typ
 async function loadCreditAccounts() {
   try {
     const { data } = await creditAccountApi.index()
-    creditAccounts.value = data.credit_accounts || data.data || []
+    creditAccounts.value = normalizeCreditAccounts(data)
   } catch {
     creditAccounts.value = []
   }

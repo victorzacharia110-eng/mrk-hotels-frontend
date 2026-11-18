@@ -55,6 +55,11 @@ export function normalizePaymentAccount(value) {
   return null
 }
 
+export function normalizeCreditAccounts(payload) {
+  const rows = payload?.accounts ?? payload?.credit_accounts ?? payload?.data ?? payload
+  return Array.isArray(rows) ? rows : []
+}
+
 /** Local provider logos, bundled so the app never depends on a hotlink. */
 import mpesaLogo from '@/assets/logos/providers/mpesa.png'
 import airtelMoneyLogo from '@/assets/logos/providers/airtel_money.png'

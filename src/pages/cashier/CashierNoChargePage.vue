@@ -70,6 +70,7 @@ import OrderPeekModal from '@/components/cashier/OrderPeekModal.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { formatTime, localDateOf, todayISO } from '@/utils/dates'
+import { normalizeCreditAccounts } from '@/utils/payments'
 
 const { t } = useI18n()
 const workingDateStore = useWorkingDateStore()
@@ -117,8 +118,7 @@ function statusChip(order) {
 async function loadCreditAccounts() {
   try {
     const res = await creditAccountApi.index({ type: 'no_charge', per_page: 250 })
-    const rows = res.data.accounts || res.data.data || []
-    creditAccounts.value = Array.isArray(rows) ? rows : []
+    creditAccounts.value = normalizeCreditAccounts(res.data)
   } catch {
     /** keep legacy suggestions when the registry is unreachable */
   }

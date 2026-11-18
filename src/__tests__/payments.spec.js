@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import {
   normalizePaymentAccount,
+  normalizeCreditAccounts,
   MOBILE_MONEY_PROVIDERS,
   ALL_PROVIDERS,
   providersFor,
@@ -45,5 +48,54 @@ describe('payment accounts shape', () => {
     expect(providersFor(METHOD_MOBILE_MONEY)).toEqual(MOBILE_MONEY_PROVIDERS)
     expect(providersFor(METHOD_BANK)).toEqual(['crdb', 'nmb', 'nbc', 'other'])
     expect(providersFor('cash')).toEqual([])
+  })
+})
+
+describe('credit account response shape', () => {
+  const accounts = [
+    { credit_account_id: 'acc-1', name: 'Company A', type: 'creditor' },
+    { credit_account_id: 'acc-2', name: 'Staff Meal', type: 'no_charge' },
+  ]
+
+  it('reads the registry accounts key', () => {
+    expect(normalizeCreditAccounts({ accounts })).toEqual(accounts)
+  })
+
+  it('reads the settle panels credit_accounts key', () => {
+    expect(normalizeCreditAccounts({ credit_accounts: accounts })).toEqual(accounts)
+  })
+
+  it('still reads the legacy data key', () => {
+    expect(normalizeCreditAccounts({ data: accounts })).toEqual(accounts)
+  })
+
+  it('returns an empty list for malformed responses', () => {
+    expect(normalizeCreditAccounts(null)).toEqual([])
+    expect(normalizeCreditAccounts({ accounts: null })).toEqual([])
+  })
+})
+
+describe('cashier and bartender settlement screens', () => {
+  const read = (path) => readFileSync(resolve(process.cwd(), path), 'utf8')
+  const summary = read('src/pages/cashier/CashierOrderSummaryPage.vue')
+  const dashboard = read('src/pages/dashboards/OrderTakerDashboard.vue')
+  const lookup = read('src/pages/cashier/CashierAccountLookupPage.vue')
+
+  it('normalises the credit account response in every settle surface', () => {
+    expect(summary).toContain('normalizeCreditAccounts(data)')
+    expect(dashboard).toContain('normalizeCreditAccounts(data)')
+    expect(lookup).toContain('normalizeCreditAccounts(data)')
+  })
+
+  it('keeps creditor and no-charge settlement sections in the order summary', () => {
+    expect(summary).toContain("switchMode('creditor')")
+    expect(summary).toContain("switchMode('nocharge')")
+    expect(summary).toContain('confirmAccountSettle()')
+  })
+
+  it('lets management register creditor and no-charge settle accounts', () => {
+    expect(lookup).toContain("const settleAccountTypes = ['creditor', 'no_charge']")
+    expect(lookup).toContain('v-model="noChargeForm.type"')
+    expect(lookup).toContain('creditAccountApi.store(noChargeForm.value)')
   })
 })

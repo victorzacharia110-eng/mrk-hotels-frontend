@@ -29,7 +29,7 @@
           <button type="button" class="status-tab" :class="{ active: tab === 'noCharge' }"
             role="tab" :aria-selected="tab === 'noCharge'"
             @click="switchTab('noCharge')">
-            <i class="fas fa-gift" aria-hidden="true"></i> {{ $t('cashier.accounts.tabNoChargeAccounts') }}
+            <i class="fas fa-file-invoice-dollar" aria-hidden="true"></i> {{ $t('cashier.accounts.tabSettleAccounts') }}
           </button>
         </div>
         <div class="panel-head-actions">
@@ -42,7 +42,7 @@
             <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('cashier.accounts.newCreditor') }}
           </button>
           <button v-if="tab === 'noCharge' && canManageCreditAccounts" type="button" class="btn btn-brand" @click="openNewNoCharge">
-            <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('cashier.accounts.newNoChargeAccount') }}
+            <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('cashier.accounts.newSettleAccount') }}
           </button>
         </div>
       </div>
@@ -131,6 +131,7 @@
             <thead>
               <tr>
                 <th>{{ $t('cashier.accounts.name') }}</th>
+                <th>{{ $t('cashier.accounts.type') }}</th>
                 <th>{{ $t('cashier.accounts.contactPerson') }}</th>
                 <th>{{ $t('cashier.accounts.mobile') }}</th>
                 <th>{{ $t('cashier.accounts.email') }}</th>
@@ -142,6 +143,11 @@
             <tbody>
               <tr v-for="account in noChargeAccounts" :key="account.credit_account_id">
                 <td><strong>{{ account.name }}</strong></td>
+                <td>
+                  <span class="cred-badge" :class="account.type === 'creditor' ? 't-lending' : 't-bank'">
+                    {{ account.type === 'creditor' ? $t('cashier.accounts.settleTypes.creditor') : $t('cashier.accounts.settleTypes.no_charge') }}
+                  </span>
+                </td>
                 <td>{{ account.contact_name || '—' }}</td>
                 <td>{{ account.phone || '—' }}</td>
                 <td>{{ account.email || '—' }}</td>
@@ -152,7 +158,7 @@
                   </span>
                 </td>
                 <td v-if="canManageCreditAccounts" class="cred-actions">
-                  <button type="button" class="icon-btn" :aria-label="$t('cashier.accounts.editNoChargeAccount')"
+                  <button type="button" class="icon-btn" :aria-label="$t('cashier.accounts.editSettleAccount')"
                     @click="openEditNoCharge(account)">
                     <i class="fas fa-pen" aria-hidden="true"></i>
                   </button>
@@ -163,8 +169,8 @@
                 </td>
               </tr>
               <tr v-if="!noChargeAccounts.length && !loading">
-                <td :colspan="canManageCreditAccounts ? 7 : 6" class="empty">
-                  <i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.accounts.noNoChargeAccounts') }}
+                <td :colspan="canManageCreditAccounts ? 8 : 7" class="empty">
+                  <i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.accounts.noSettleAccounts') }}
                 </td>
               </tr>
             </tbody>
@@ -272,8 +278,8 @@
       <div class="sm-modal" role="dialog" aria-modal="true">
         <div class="sm-modal-head">
           <h3>
-            <i class="fas fa-gift" aria-hidden="true"></i>
-            {{ editingNoCharge ? $t('cashier.accounts.editNoChargeAccount') : $t('cashier.accounts.newNoChargeAccount') }}
+            <i class="fas fa-file-invoice-dollar" aria-hidden="true"></i>
+            {{ editingNoCharge ? $t('cashier.accounts.editSettleAccount') : $t('cashier.accounts.newSettleAccount') }}
           </h3>
           <button type="button" class="sm-modal-close" :aria-label="$t('common.close')" @click="noChargeModalOpen = false">
             <i class="fas fa-times" aria-hidden="true"></i>
@@ -284,6 +290,14 @@
             <label class="field field--full">
               <span>{{ $t('cashier.accounts.accountName') }} *</span>
               <input v-model.trim="noChargeForm.name" type="text" required maxlength="255" />
+            </label>
+            <label class="field">
+              <span>{{ $t('cashier.accounts.type') }} *</span>
+              <select v-model="noChargeForm.type" required>
+                <option v-for="type in settleAccountTypes" :key="type" :value="type">
+                  {{ $t(`cashier.accounts.settleTypes.${type}`) }}
+                </option>
+              </select>
             </label>
             <label class="field">
               <span>{{ $t('cashier.accounts.contactPerson') }}</span>
@@ -337,6 +351,7 @@ import { getCountries, loadLocationData } from '@/utils/locations'
 import { toast } from '@/utils/toast'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useTenantCurrency } from '@/utils/currency'
+import { normalizeCreditAccounts } from '@/utils/payments'
 
 const { curCode } = useTenantCurrency()
 
@@ -345,6 +360,7 @@ const authStore = useAuthStore()
 
 const MANAGER_ROLES = ['hotel_admin', 'manager', 'accountant', 'store_manager']
 const creditorTypes = ['bank', 'lending', 'leasing', 'landlord', 'contractor', 'utility', 'other']
+const settleAccountTypes = ['creditor', 'no_charge']
 
 const tab = ref('accounts')
 const accounts = ref([])
@@ -375,7 +391,7 @@ const canManageCreditAccounts = computed(() => CREDIT_ACCOUNT_ROLES.includes(aut
 
 const searchHint = computed(() => {
   if (tab.value === 'accounts') return t('cashier.accounts.searchHint')
-  if (tab.value === 'noCharge') return t('cashier.accounts.searchNoChargeHint')
+  if (tab.value === 'noCharge') return t('cashier.accounts.searchSettleAccountsHint')
   return t('cashier.accounts.searchCreditorsHint')
 })
 
@@ -414,7 +430,7 @@ function openEditNoCharge(account) {
   editingNoCharge.value = account
   noChargeForm.value = {
     name: account.name || '',
-    type: 'no_charge',
+    type: account.type || 'no_charge',
     contact_name: account.contact_name || '',
     phone: account.phone || '',
     email: account.email || '',
@@ -530,11 +546,10 @@ async function load() {
     } else if (tab.value === 'noCharge') {
       const { data } = await creditAccountApi.index({
         search: search.value.trim() || undefined,
-        type: 'no_charge',
         per_page: meta.value.per_page,
         page: meta.value.current_page,
       })
-      noChargeAccounts.value = data.accounts || []
+      noChargeAccounts.value = normalizeCreditAccounts(data)
       meta.value = data.pagination || meta.value
     } else {
       const { data } = await posApi.creditors(params)

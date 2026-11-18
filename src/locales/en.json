@@ -5437,6 +5437,9 @@
       "postToAccount": "Post to Account",
       "creditorAccount": "Credit Account",
       "noChargeAccount": "No Charge Account",
+      "noCreditorAccounts": "No active creditor accounts. Register them in Account Lookup.",
+      "noNoChargeAccounts": "No active NO CHARGE accounts. Register them in Account Lookup.",
+      "noSettleAccounts": "No creditor or NO CHARGE accounts available.",
       "total": "TOTAL",
       "items": "Items",
       "actions": "Actions",
@@ -5801,9 +5804,12 @@
       "name": "Name",
       "newCreditor": "New Creditor",
       "newNoChargeAccount": "New No Charge Account",
+      "newSettleAccount": "New Settle Account",
+      "editSettleAccount": "Edit Settle Account",
       "noCreditors": "No creditors",
       "noData": "No data",
       "noNoChargeAccounts": "No no-charge accounts",
+      "noSettleAccounts": "No settle accounts",
       "notes": "Notes",
       "organizationName": "Organization Name",
       "paymentTerms": "Payment Terms",
@@ -5811,8 +5817,13 @@
       "tabAccounts": "ACCOUNTS",
       "tabCreditors": "CREDITORS",
       "tabNoChargeAccounts": "NO CHARGE ACCOUNTS",
+      "tabSettleAccounts": "SETTLE ACCOUNTS",
       "type": "Type",
       "category": "Category",
+      "settleTypes": {
+        "creditor": "Creditor",
+        "no_charge": "NO CHARGE"
+      },
       "creditorTypes": {
         "bank": "Bank",
         "contractor": "Contractor",
@@ -5827,7 +5838,8 @@
       "saved": "Creditor saved.",
       "searchCreditorsHint": "Search by company, contact, phone, email or category...",
       "searchHint": "Search by name, number, email or city...",
-      "searchNoChargeHint": "Search a registered no-charge account..."
+      "searchNoChargeHint": "Search a registered no-charge account...",
+      "searchSettleAccountsHint": "Search a registered creditor or NO CHARGE account..."
     },
     "lookup": {
       "menus": "Menus",
