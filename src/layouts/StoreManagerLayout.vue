@@ -9,7 +9,7 @@
     <aside class="sm-sidebar">
       <router-link :to="{ name: 'store-dashboard' }" class="sm-brand">
         <img src="/MRK_logo_transparent.png" alt="MRK Hotels" class="sm-brand-logo" />
-        <span class="sm-brand-text" v-show="!sidebarCollapsed"><strong>MRK</strong> {{ $t('storeManager.panelTitle') }}</span>
+        <span class="sm-brand-text" v-show="!sidebarCollapsed || mobileOpen"><strong>MRK</strong> {{ $t('storeManager.panelTitle') }}</span>
       </router-link>
 
       <nav class="sm-nav">
@@ -18,10 +18,10 @@
             <button class="sm-nav-link sm-group" :class="{ active: groupActive(item), open: isOpen(item.labelKey) }"
               @click="toggleGroup(item.labelKey)">
               <i :class="item.icon" aria-hidden="true"></i>
-              <span v-show="!sidebarCollapsed">{{ $t(item.labelKey) }}</span>
-              <i v-show="!sidebarCollapsed" class="fas fa-chevron-down sm-chevron" aria-hidden="true"></i>
+              <span v-show="!sidebarCollapsed || mobileOpen">{{ $t(item.labelKey) }}</span>
+              <i v-show="!sidebarCollapsed || mobileOpen" class="fas fa-chevron-down sm-chevron" aria-hidden="true"></i>
             </button>
-            <div class="sm-subnav" :class="{ open: isOpen(item.labelKey) }" v-show="!sidebarCollapsed">
+            <div class="sm-subnav" :class="{ open: isOpen(item.labelKey) }" v-show="!sidebarCollapsed || mobileOpen">
               <div class="sm-subnav-inner">
                 <router-link v-for="child in item.children" :key="child.to" :to="child.to" class="sm-nav-link sm-sub"
                   :class="{ active: isActive(child.to) }" @click="mobileOpen = false">
@@ -32,10 +32,10 @@
             </div>
           </div>
           <router-link v-else :key="item.to" :to="item.to" class="sm-nav-link"
-            :class="{ active: isActive(item.to) }" :title="sidebarCollapsed ? $t(item.labelKey) : undefined"
+            :class="{ active: isActive(item.to) }" :title="sidebarCollapsed && !mobileOpen ? $t(item.labelKey) : undefined"
             @click="mobileOpen = false">
             <i :class="item.icon" aria-hidden="true"></i>
-            <span v-show="!sidebarCollapsed">{{ $t(item.labelKey) }}</span>
+            <span v-show="!sidebarCollapsed || mobileOpen">{{ $t(item.labelKey) }}</span>
           </router-link>
         </template>
       </nav>
@@ -43,7 +43,7 @@
       <div class="sm-sidebar-footer">
         <button @click="handleLogout" class="sm-nav-link sm-logout">
           <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
-          <span v-show="!sidebarCollapsed">{{ $t('common.logout') }}</span>
+          <span v-show="!sidebarCollapsed || mobileOpen">{{ $t('common.logout') }}</span>
         </button>
       </div>
     </aside>

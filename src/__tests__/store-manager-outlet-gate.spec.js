@@ -151,3 +151,30 @@ describe('store manager outlet gate', () => {
     expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(false)
   })
 })
+
+describe('store manager sidebar labels', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    sessionStorage.clear()
+    outlets.value = []
+    selectedOutlet.value = null
+    selectedStore.value = null
+    loaded.value = false
+  })
+
+  it('shows labels when the mobile drawer is open', async () => {
+    outletApi.index.mockResolvedValue({ data: { outlets: [storeA] } })
+    const wrapper = await mountLayout()
+
+    expect(wrapper.find('.sm-brand-text').attributes('style')).toContain('display: none')
+
+    wrapper.vm.mobileOpen = true
+    await flushPromises()
+
+    expect(wrapper.find('.sm-brand-text').attributes('style') || '').not.toContain('display: none')
+    for (const span of wrapper.findAll('.sm-nav-link span')) {
+      expect(span.attributes('style') || '').not.toContain('display: none')
+    }
+    expect(wrapper.find('.sm-subnav').attributes('style') || '').not.toContain('display: none')
+  })
+})
