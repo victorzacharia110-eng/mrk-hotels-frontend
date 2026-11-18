@@ -1,5 +1,5 @@
 <!--
-  Company Data page (route: /app/payments/company-data,
+  Company Database page (route: /app/payments/company-data,
   name: hotel-payments-company-data).
   The corporate-client directory — companies the front desk references when
   posting a stay to a company's credit. Companies carry a credit profile
@@ -10,7 +10,6 @@
     <div class="page-head">
       <div>
         <h1>{{ $t('receptionPanel.companyData') }}</h1>
-        <p class="muted">{{ $t('receptionPanel.companyDataSubtitle') }}</p>
       </div>
       <button class="btn btn-secondary" :disabled="companiesLoading" @click="reset">
         <i class="fas fa-rotate"></i> {{ $t('common.refresh') }}
@@ -24,7 +23,6 @@
       <div class="head-actions" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
         <div>
           <h3 style="margin: 0;">{{ $t('receptionPanel.corporateDirectory') }}</h3>
-          <p class="muted" style="margin: 2px 0 0;">{{ $t('receptionPanel.corporateDirectorySubtitle') }}</p>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
           <input

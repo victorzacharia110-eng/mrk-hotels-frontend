@@ -23,7 +23,7 @@
             type="text"
             class="auth-input"
             required
-            placeholder="e.g. BK-2026-00123"
+            placeholder="e.g. RES-2026-00123"
           />
         </div>
 
@@ -56,6 +56,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { guestPortalApi } from '@/api'
+import { normalizeBookingReference } from '@/utils/bookingReference'
 
 const router = useRouter()
 const loading = ref(false)
@@ -73,7 +74,7 @@ async function handleSubmit() {
   loading.value = true
   try {
     const data = await guestPortalApi.authenticate({
-      booking_reference: form.booking_reference.trim(),
+      booking_reference: normalizeBookingReference(form.booking_reference.trim()),
       phone: form.phone.trim(),
     })
     sessionStorage.setItem('guest_token', data.token)

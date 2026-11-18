@@ -27,7 +27,7 @@
     <div class="card" style="padding: 14px 20px; margin-bottom: 16px;">
       <div class="form-group" style="margin: 0;">
         <label>{{ $t('nightAudit.businessDate') }}</label>
-        <input v-model="selectedDate" type="date" class="input" style="max-width: 220px;" @change="load" />
+        <input v-model="selectedDate" type="date" class="input" style="max-width: 220px;" @change="userPickedDate = true; load" />
       </div>
     </div>
 
@@ -100,17 +100,19 @@
 
 <script setup>
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { paymentApi, nightAuditApi } from '@/api'
+import { useBusinessDateStore } from '@/stores/businessDate'
 import { useTenantCurrency } from '@/utils/currency'
 
 const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 
-const today = new Date().toISOString().slice(0, 10)
-const selectedDate = ref(today)
+const businessDateStore = useBusinessDateStore()
+const selectedDate = ref(businessDateStore.current || new Date().toISOString().slice(0, 10))
+let userPickedDate = false
 const cashPayments = ref([])
 const transactions = ref([])
 const loading = ref(false)
@@ -141,5 +143,18 @@ async function load() {
   }
 }
 
-onMounted(load)
+watch(
+  () => businessDateStore.current,
+  (date) => {
+    if (userPickedDate || !date || date === selectedDate.value) return
+    selectedDate.value = date
+    load()
+  },
+)
+
+onMounted(async () => {
+  await businessDateStore.ensureLoaded()
+  if (!userPickedDate) selectedDate.value = businessDateStore.current || selectedDate.value
+  await load()
+})
 </script>

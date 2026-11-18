@@ -256,7 +256,7 @@
                 <td>{{ r.guest_name }}<span v-if="r.company_name" class="cap"> · {{ r.company_name }}</span></td>
                 <td>{{ r.room }}<span v-if="r.room_type" class="cap"> · {{ r.room_type }}</span></td>
                 <td class="num">{{ r.pax }}</td>
-                <td>{{ r.booking_reference }}</td>
+                <td>{{ displayBookingReference(r.booking_reference) }}</td>
                 <td>
                   <span v-if="r.overdue" class="rb-badge rb-badge-red">{{ $t('reportBrowser.overdue') }}</span>
                   <span v-else-if="r.arrived" class="rb-badge rb-badge-green">{{ $t('reportBrowser.arrived') }}</span>
@@ -525,6 +525,7 @@ import ReportCharts from '@/components/reports/ReportCharts.vue'
 import NightAuditSheet from '@/components/reports/NightAuditSheet.vue'
 import { useAuthStore } from '@/stores/auth'
 import { currencyCode } from '@/utils/currency'
+import { displayBookingReference } from '@/utils/bookingReference'
 import { formatNumber, isIdentifierKey } from '@/utils/numbers'
 import { nightAuditApi, guestReportApi, reportApi, hotelSettingsApi } from '@/api'
 import { exportCSV } from '@/utils/export'
@@ -1348,6 +1349,7 @@ function engineColumnLabel(key, fallback) {
 
 function formatEngineCell(value, key, format) {
   if (value === null || value === undefined || value === '') return '—'
+  if (key === 'booking_reference') return displayBookingReference(value) || '—'
   if (format === 'money' && typeof value === 'number') return money(value)
   if (format === 'pct') return `${value}%`
   if (typeof value === 'number') return formatNumber(value, key)
@@ -1370,6 +1372,7 @@ function engineTotalFor(key, format) {
 }
 
 function engineSummaryValue(value, key) {
+  if (key === 'booking_reference') return displayBookingReference(value) || '—'
   if (typeof value === 'number') {
     if (isIdentifierKey(key)) return String(value)
     return Number.isInteger(value) ? formatNumber(value, key) : money(value)

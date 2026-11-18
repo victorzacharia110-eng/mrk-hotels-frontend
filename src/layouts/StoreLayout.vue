@@ -243,11 +243,17 @@
               </router-link>
             </template>
             <template v-else>
+              <router-link :to="{ name: 'marketing-home' }" class="mobile-link" @click="navOpen = false">
+                <i class="fas fa-home" aria-hidden="true"></i> {{ $t('nav.home') }}
+              </router-link>
               <router-link :to="{ name: 'public-home' }" class="mobile-link" @click="navOpen = false">
                 <i class="fas fa-hotel" aria-hidden="true"></i> {{ $t('nav.hotels') }}
               </router-link>
               <router-link :to="{ name: 'public-booking' }" class="mobile-link" @click="navOpen = false">
                 <i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('nav.bookStay') }}
+              </router-link>
+              <router-link to="/portal/pricing" class="mobile-link" @click="navOpen = false">
+                <i class="fas fa-cloud" aria-hidden="true"></i> {{ $t('nav.poweredByTscl') }}
               </router-link>
             </template>
 
@@ -292,6 +298,9 @@
                  no more jumping between tabs. -->
           </div>
           <div v-else class="nav-links">
+            <router-link :to="{ name: 'marketing-home' }" class="nav-link" @click="navOpen = false">
+              <i class="fas fa-home" aria-hidden="true"></i> {{ $t('nav.home') }}
+            </router-link>
             <router-link :to="{ name: 'public-home' }" class="nav-link" @click="navOpen = false">
               <i class="fas fa-hotel" aria-hidden="true"></i> {{ $t('nav.hotels') }}
             </router-link>
@@ -1081,7 +1090,7 @@ const visibleModules = computed(() => {
   }))
 
   // Expand the flat "night audit" module into an accordion group holding the
-  // three night-audit actions a receptionist runs: Run Night Audit, Night
+  // three night-audit actions a receptionist runs: End of Day Audit, Night
   // Audit Log, and Insert Transaction.
   const expand = (item) => {
     if (item.key === 'night-audit') {
@@ -1147,15 +1156,14 @@ const visibleModules = computed(() => {
     if (byKey.distribution) out.push(byKey.distribution)
     if (byKey.guests) out.push(byKey.guests)
 
-    // Payments dropdown: cashiering, cash drawer, business sources, company
-    // data, POS and exchange rates.
+    // Payments dropdown: billing, cash register, business sources, company
+    // database and exchange rates.
     out.push(
       accordionGroup('reception-payments', 'fas fa-money-bill-wave', 'nav.payments', [
         { to: '/app/payments/cashiering', label: t('receptionMenu.cashieringCenter'), icon: 'fas fa-credit-card' },
         { to: '/app/payments/cash-drawer', label: t('receptionMenu.cashDrawer'), icon: 'fas fa-cash-register' },
         { to: '/app/payments/business-source', label: t('receptionMenu.businessSource'), icon: 'fas fa-diagram-project' },
         { to: '/app/payments/company-data', label: t('receptionMenu.companyData'), icon: 'fas fa-building' },
-        { to: '/app/payments/pos', label: t('receptionMenu.pos'), icon: 'fas fa-basket-shopping' },
         { to: '/app/payments/exchange-rate', label: t('receptionMenu.exchangeRate'), icon: 'fas fa-right-left' },
       ]),
     )
@@ -1276,7 +1284,6 @@ const visibleModules = computed(() => {
         { to: '/app/payments/cash-drawer', label: t('receptionMenu.cashDrawer'), icon: 'fas fa-cash-register' },
         { to: '/app/payments/business-source', label: t('receptionMenu.businessSource'), icon: 'fas fa-diagram-project' },
         { to: '/app/payments/company-data', label: t('receptionMenu.companyData'), icon: 'fas fa-building' },
-        { to: '/app/payments/pos', label: t('receptionMenu.pos'), icon: 'fas fa-basket-shopping' },
         { to: '/app/payments/exchange-rate', label: t('receptionMenu.exchangeRate'), icon: 'fas fa-right-left' },
       ]))
     }
@@ -3109,8 +3116,11 @@ function formatNotifTime(iso) {
     display: none;
   }
 
+  .store-layout:not(.app-shell) .header-actions {
+    display: none;
+  }
+
   .header-actions {
-    display: flex;
     gap: 8px;
   }
 
@@ -3181,6 +3191,22 @@ function formatNotifTime(iso) {
   }
 }
 
+@media (min-width: 768px) and (max-width: 960px) {
+  .store-layout:not(.app-shell) .top-bar,
+  .store-layout:not(.app-shell) .main-nav,
+  .store-layout:not(.app-shell) .header-actions {
+    display: none;
+  }
+
+  .store-layout:not(.app-shell) .hamburger:not(.side-hamburger) {
+    display: flex;
+  }
+
+  .store-layout:not(.app-shell) .mobile-dropdown {
+    display: block;
+  }
+}
+
 /* Tablets: 768px is the classic iPad portrait width, so the phone treatment
    above stops at 767px and this tier takes over. The header keeps the top bar,
    the brand and the staff drawer button — what a tablet actually needs — while
@@ -3223,7 +3249,7 @@ function formatNotifTime(iso) {
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 961px) {
   .mobile-dropdown {
     display: none !important;
   }

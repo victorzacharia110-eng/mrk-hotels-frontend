@@ -4100,6 +4100,230 @@ export const portalAnalyticsApi = {
   },
 };
 
+/** Public marketing site content and lead capture. */
+export const publicMarketingApi = {
+  bootstrap() {
+    return api.get(`${v1}/public/marketing/bootstrap`);
+  },
+  page(slug) {
+    return api.get(`${v1}/public/marketing/pages/${slug}`);
+  },
+  integrations() {
+    return api.get(`${v1}/public/marketing/integrations`);
+  },
+  faqs() {
+    return api.get(`${v1}/public/marketing/faqs`);
+  },
+  team() {
+    return api.get(`${v1}/public/marketing/team`);
+  },
+  media() {
+    return api.get(`${v1}/public/marketing/media`);
+  },
+  pricing(params) {
+    return api.get(`${v1}/public/marketing/pricing`, { params });
+  },
+  contactSubmission(data) {
+    return api.post(`${v1}/public/marketing/contact-submissions`, data);
+  },
+};
+
+/** Superadmin marketing CMS and lead management. */
+export const marketingApi = {
+  pages: {
+    index(params) {
+      return api.get(`${v1}/marketing/pages`, { params });
+    },
+    store(data) {
+      return api.post(`${v1}/marketing/pages`, data);
+    },
+    show(id) {
+      return api.get(`${v1}/marketing/pages/${id}`);
+    },
+    update(id, data) {
+      return api.put(`${v1}/marketing/pages/${id}`, data);
+    },
+    destroy(id) {
+      return api.delete(`${v1}/marketing/pages/${id}`);
+    },
+  },
+  sections: {
+    index(pageId, params) {
+      return api.get(`${v1}/marketing/pages/${pageId}/sections`, { params });
+    },
+    store(pageId, data) {
+      return api.post(`${v1}/marketing/pages/${pageId}/sections`, data);
+    },
+    show(pageId, id) {
+      return api.get(`${v1}/marketing/pages/${pageId}/sections/${id}`);
+    },
+    update(pageId, id, data) {
+      return api.put(`${v1}/marketing/pages/${pageId}/sections/${id}`, data);
+    },
+    destroy(pageId, id) {
+      return api.delete(`${v1}/marketing/pages/${pageId}/sections/${id}`);
+    },
+  },
+  integrations: {
+    index(params) {
+      return api.get(`${v1}/marketing/integrations`, { params });
+    },
+    store(data) {
+      return api.post(`${v1}/marketing/integrations`, data);
+    },
+    show(id) {
+      return api.get(`${v1}/marketing/integrations/${id}`);
+    },
+    update(id, data) {
+      return api.put(`${v1}/marketing/integrations/${id}`, data);
+    },
+    destroy(id) {
+      return api.delete(`${v1}/marketing/integrations/${id}`);
+    },
+  },
+  faqs: {
+    index(params) {
+      return api.get(`${v1}/marketing/faqs`, { params });
+    },
+    store(data) {
+      return api.post(`${v1}/marketing/faqs`, data);
+    },
+    show(id) {
+      return api.get(`${v1}/marketing/faqs/${id}`);
+    },
+    update(id, data) {
+      return api.put(`${v1}/marketing/faqs/${id}`, data);
+    },
+    destroy(id) {
+      return api.delete(`${v1}/marketing/faqs/${id}`);
+    },
+  },
+  teamMembers: {
+    index(params) {
+      return api.get(`${v1}/marketing/team-members`, { params });
+    },
+    store(data) {
+      return api.post(`${v1}/marketing/team-members`, data);
+    },
+    show(id) {
+      return api.get(`${v1}/marketing/team-members/${id}`);
+    },
+    update(id, data) {
+      return api.put(`${v1}/marketing/team-members/${id}`, data);
+    },
+    destroy(id) {
+      return api.delete(`${v1}/marketing/team-members/${id}`);
+    },
+  },
+  contactSubmissions: {
+    index(params) {
+      return api.get(`${v1}/marketing/contact-submissions`, { params });
+    },
+    store(data) {
+      return api.post(`${v1}/marketing/contact-submissions`, data);
+    },
+    show(id) {
+      return api.get(`${v1}/marketing/contact-submissions/${id}`);
+    },
+    update(id, data) {
+      return api.put(`${v1}/marketing/contact-submissions/${id}`, data);
+    },
+    destroy(id) {
+      return api.delete(`${v1}/marketing/contact-submissions/${id}`);
+    },
+  },
+  settings: {
+    index(params) {
+      return api.get(`${v1}/marketing/settings`, { params });
+    },
+    update(data) {
+      return api.put(`${v1}/marketing/settings`, data);
+    },
+    destroy(key) {
+      return api.delete(`${v1}/marketing/settings/${key}`);
+    },
+  },
+  media: {
+    index(params) {
+      return api.get(`${v1}/marketing/media`, { params });
+    },
+    store(data) {
+      if (data instanceof FormData) {
+        return api.post(`${v1}/marketing/media`, data, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+      return api.post(`${v1}/marketing/media`, data);
+    },
+    show(id) {
+      return api.get(`${v1}/marketing/media/${id}`);
+    },
+    update(id, data) {
+      if (data instanceof FormData) {
+        data.append("_method", "PUT");
+        return api.post(`${v1}/marketing/media/${id}`, data, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+      return api.put(`${v1}/marketing/media/${id}`, data);
+    },
+    destroy(id) {
+      return api.delete(`${v1}/marketing/media/${id}`);
+    },
+  },
+  pricingProducts: {
+    index(params) {
+      return api.get(`${v1}/marketing/pricing/products`, { params });
+    },
+    store(data) {
+      return api.post(`${v1}/marketing/pricing/products`, data);
+    },
+    show(id) {
+      return api.get(`${v1}/marketing/pricing/products/${id}`);
+    },
+    update(id, data) {
+      return api.put(`${v1}/marketing/pricing/products/${id}`, data);
+    },
+    destroy(id) {
+      return api.delete(`${v1}/marketing/pricing/products/${id}`);
+    },
+  },
+  pricingFeatures: {
+    index(params) {
+      return api.get(`${v1}/marketing/pricing/features`, { params });
+    },
+    store(data) {
+      return api.post(`${v1}/marketing/pricing/features`, data);
+    },
+    show(id) {
+      return api.get(`${v1}/marketing/pricing/features/${id}`);
+    },
+    update(id, data) {
+      return api.put(`${v1}/marketing/pricing/features/${id}`, data);
+    },
+    destroy(id) {
+      return api.delete(`${v1}/marketing/pricing/features/${id}`);
+    },
+  },
+  pricingPlans: {
+    index(params) {
+      return api.get(`${v1}/marketing/pricing/plans`, { params });
+    },
+    store(data) {
+      return api.post(`${v1}/marketing/pricing/plans`, data);
+    },
+    show(id) {
+      return api.get(`${v1}/marketing/pricing/plans/${id}`);
+    },
+    update(id, data) {
+      return api.put(`${v1}/marketing/pricing/plans/${id}`, data);
+    },
+    destroy(id) {
+      return api.delete(`${v1}/marketing/pricing/plans/${id}`);
+    },
+  },
+};
+
 /**
  * Guest self-service portal API.
  * Uses a separate axios instance with the guest token (not staff auth).

@@ -67,6 +67,15 @@
           <span v-show="!sidebarCollapsed">Plans & Features</span>
         </router-link>
         <router-link
+          to="/superadmin/marketing"
+          class="sa-nav-link"
+          :class="{ active: $route.path.startsWith('/superadmin/marketing') }"
+          @click="sidebarMobileOpen = false"
+        >
+          <i class="fas fa-bullhorn" aria-hidden="true"></i>
+          <span v-show="!sidebarCollapsed">Marketing Site</span>
+        </router-link>
+        <router-link
           to="/superadmin/profile"
           class="sa-nav-link"
           :class="{ active: $route.path.startsWith('/superadmin/profile') }"
@@ -149,7 +158,10 @@ const pageTitle = computed(() => {
     'superadmin-tenant-detail': 'Hotel Details',
     'superadmin-reports': 'Reports',
     'superadmin-profile': 'My Profile',
+    'superadmin-plans': 'Plans & Features',
+    'superadmin-integrations': 'Integration Status',
   }
+  if (route.path.startsWith('/superadmin/marketing')) return 'Marketing Site'
   return titles[route.name] || 'Dashboard'
 })
 

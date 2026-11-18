@@ -899,7 +899,7 @@
           <dl class="detail-grid">
             <div>
               <dt>{{ $t('reservations.bookingReference') }}</dt>
-              <dd>{{ detail.booking_reference || detail.folio_code || '—' }}</dd>
+              <dd>{{ displayBookingReference(detail.booking_reference || detail.folio_code) || '—' }}</dd>
             </div>
             <div>
               <dt>{{ $t('reservations.tableBookingType') }}</dt>
@@ -1121,6 +1121,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useBusinessDateStore } from '@/stores/businessDate'
 import { guestApi, invoiceApi, paymentApi, publicApi, reservationApi } from '@/api'
 import { saveBlob } from '@/utils/download'
+import { displayBookingReference } from '@/utils/bookingReference'
 import { collectAllRows } from '@/utils/export'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import CancelReservationModal from '@/components/CancelReservationModal.vue'
@@ -2110,12 +2111,15 @@ const isEarlyCheckout = computed(() => {
  * to the row if the fetch fails so the modal still opens.
  * @param {Object} reservation - The reservation row to open.
  */
+let detailRequestId = 0
+
 async function openDetail(reservation) {
+  const requestId = ++detailRequestId
   detail.value = reservation
   showDetail.value = true
   try {
     const res = await reservationApi.show(reservation.reservation_id)
-    if (showDetail.value) detail.value = res.data.reservation
+    if (showDetail.value && requestId === detailRequestId) detail.value = res.data.reservation
   } catch (err) {
     // Keep the summary row rather than leaving the modal empty.
     if (!detail.value) error.value = flattenError(err)

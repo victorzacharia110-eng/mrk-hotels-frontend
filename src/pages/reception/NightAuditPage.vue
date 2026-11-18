@@ -113,71 +113,6 @@
     <div v-if="loading" class="alert alert-info">{{ $t('common.loading') }}</div>
 
     <template v-else-if="report">
-      <!-- Revenue breakdown -->
-      <div class="card" style="padding: 20px; margin-bottom: 16px;">
-        <h3 style="margin: 0 0 12px;"><i class="fas fa-chart-line" style="color: var(--mrk-blue);"></i> {{
-          $t('nightAudit.revenue') }}</h3>
-        <div class="kpi-grid">
-          <div class="kpi">
-            <span class="kpi-value">{{ fmtMoney(report.revenue.rooms) }}</span>
-            <span class="kpi-label">{{ $t('nightAudit.rooms') }}</span>
-          </div>
-          <div class="kpi">
-            <span class="kpi-value">{{ fmtMoney(report.revenue.fnb) }}</span>
-            <span class="kpi-label">{{ $t('nightAudit.fnb') }}</span>
-          </div>
-          <div class="kpi">
-            <span class="kpi-value">{{ fmtMoney(report.revenue.laundry) }}</span>
-            <span class="kpi-label">{{ $t('nightAudit.laundry') }}</span>
-          </div>
-          <div class="kpi">
-            <span class="kpi-value">{{ fmtMoney(report.revenue.fun_games) }}</span>
-            <span class="kpi-label">{{ $t('nightAudit.funGames') }}</span>
-          </div>
-          <div class="kpi total">
-            <span class="kpi-value">{{ fmtMoney(report.revenue.total) }}</span>
-            <span class="kpi-label">{{ $t('nightAudit.totalRevenue') }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Collections & financials -->
-      <div class="card" style="padding: 20px; margin-bottom: 16px;">
-        <h3 style="margin: 0 0 12px;"><i class="fas fa-money-bill-wave" style="color: var(--mrk-blue);"></i> {{
-          $t('nightAudit.collections') }}</h3>
-        <div class="kpi-grid">
-          <div v-for="(amount, method) in report.collections.by_method" :key="method" class="kpi">
-            <span class="kpi-value">{{ fmtMoney(amount) }}</span>
-            <span class="kpi-label capitalize">{{ method.replace('_', ' ') }}</span>
-          </div>
-          <div class="kpi total">
-            <span class="kpi-value">{{ fmtMoney(report.collections.total) }}</span>
-            <span class="kpi-label">{{ $t('nightAudit.totalCollected') }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Financial positions -->
-      <div class="card" style="padding: 20px; margin-bottom: 16px;">
-        <h3 style="margin: 0 0 12px;"><i class="fas fa-scale-balanced" style="color: var(--mrk-blue);"></i> {{
-          $t('nightAudit.financials') }}</h3>
-        <div class="kpi-grid">
-          <div class="kpi">
-            <span class="kpi-value">{{ fmtMoney(report.expenses) }}</span>
-            <span class="kpi-label">{{ $t('nightAudit.expenses') }}</span>
-          </div>
-          <div class="kpi">
-            <span class="kpi-value" :class="{ 'text-red': report.cash_in_hand < 0 }">{{ fmtMoney(report.cash_in_hand)
-            }}</span>
-            <span class="kpi-label">{{ $t('nightAudit.cashInHand') }}</span>
-          </div>
-          <div class="kpi">
-            <span class="kpi-value">{{ fmtMoney(report.outstanding) }}</span>
-            <span class="kpi-label">{{ $t('nightAudit.outstanding') }}</span>
-          </div>
-        </div>
-      </div>
-
       <!-- Occupancy counts -->
       <div class="card" style="padding: 20px; margin-bottom: 16px;">
         <h3 style="margin: 0 0 12px;"><i class="fas fa-bed" style="color: var(--mrk-blue);"></i> {{
@@ -198,38 +133,6 @@
           <div class="kpi">
             <span class="kpi-value">{{ report.counts.reservations_created }}</span>
             <span class="kpi-label">{{ $t('nightAudit.newBookings') }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Due Out guests -->
-      <div class="card" style="padding: 20px; margin-bottom: 16px;">
-        <h3 style="margin: 0 0 4px;"><i class="fas fa-hourglass-half" style="color: #d97706;"></i> {{
-          $t('nightAudit.dueOuts') }}</h3>
-        <p class="muted" style="margin: 0 0 12px;">{{ $t('nightAudit.dueOutsSubtitle') }}</p>
-        <div v-if="!dueOuts.length" class="muted">{{ $t('nightAudit.dueOutsEmpty') }}</div>
-        <div v-else class="dueout-list">
-          <div v-for="guest in dueOuts" :key="guest.reservation_id" class="dueout-item"
-            :class="{ overdue: guest.overdue }">
-            <div class="dueout-main">
-              <span class="dueout-name">{{ guest.guest_name }}</span>
-              <span class="dueout-room"><i class="fas fa-bed" aria-hidden="true"></i> {{ guest.room_number || '—'
-              }}</span>
-            </div>
-            <div class="dueout-meta">
-              <span><i class="fas fa-calendar-day" aria-hidden="true"></i> {{ $t('nightAudit.departure') }} {{
-                guest.departure }}</span>
-              <span class="dueout-bal">{{ $t('nightAudit.dueAmount') }}: {{ fmtMoney(guest.balance) }}</span>
-            </div>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <span class="dueout-badge" :class="guest.overdue ? 'badge-overdue' : 'badge-due'">
-                <i class="fas" :class="guest.overdue ? 'fa-triangle-exclamation' : 'fa-hourglass-half'"
-                  aria-hidden="true"></i>
-                {{ guest.overdue ? $t('nightAudit.overdue') : $t('nightAudit.dueToday') }}
-              </span>
-              <button type="button" class="btn btn-sm btn-primary" @click="goToStayviewForGuest(guest)">{{
-                $t('nightAudit.goToStayview') || 'Go to Stayview' }}</button>
-            </div>
           </div>
         </div>
       </div>
@@ -355,32 +258,6 @@
       </template>
     </AlertModal>
 
-    <!-- Close history -->
-    <div class="card" style="padding: 20px; margin-top: 16px;">
-      <h3 style="margin: 0 0 12px;"><i class="fas fa-clock-rotate-left" style="color: var(--mrk-blue);"></i> {{
-        $t('nightAudit.history') }}</h3>
-      <div v-if="!history.length" class="muted">{{ $t('nightAudit.noHistory') }}</div>
-      <div v-else class="table-scroll">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>{{ $t('nightAudit.date') }}</th>
-              <th>{{ $t('nightAudit.totalRevenue') }}</th>
-              <th>{{ $t('nightAudit.totalCollected') }}</th>
-              <th>{{ $t('nightAudit.closedBy') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="d in history" :key="d.day_close_id">
-              <td>{{ d.close_date }}</td>
-              <td>{{ fmtMoney(d.total_revenue) }}</td>
-              <td>{{ fmtMoney(d.total_collected) }}</td>
-              <td>{{ d.closed_by?.full_name || '—' }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -417,8 +294,12 @@ const userPickedDate = ref(false)
 
 watch(
   () => businessDateStore.current,
-  (date) => {
-    if (!userPickedDate.value && date) selectedDate.value = date
+  (date, previousDate) => {
+    if (!date || date === previousDate) return
+    if (!userPickedDate.value) {
+      selectedDate.value = date
+      load()
+    }
   },
 )
 
@@ -598,7 +479,9 @@ const showIssues = ref(false)
 const issueTotal = ref(0)
 const issueSuccess = ref(false)
 const ISSUE_SUCCESS_MS = 5000
+const BUSINESS_DATE_POLL_MS = 30000
 let issueSuccessTimer = null
+let businessDatePollTimer = null
 const openIssueCount = computed(() => dueOuts.value.length + Number(staleArrivals.value.count || 0) + blockerArrivals.value.length)
 const resolvedIssueCount = computed(() =>
   Math.max(0, issueTotal.value - openIssueCount.value),
@@ -691,6 +574,8 @@ watch(openIssueCount, (count) => {
 onUnmounted(() => {
   clearIssueSuccessTimer()
   clearCloseSuccessTimer()
+  if (businessDatePollTimer) clearInterval(businessDatePollTimer)
+  businessDatePollTimer = null
 })
 
 function cancelCloseConfirm() {
@@ -739,8 +624,7 @@ async function confirmCloseDay() {
     closeSuccessTimer = setTimeout(dismissCloseSuccess, CLOSE_SUCCESS_MS)
     // Update business date instantly so stayview reflects new business date
     try {
-      await businessDateStore.load()
-      await businessDateStore.reload?.()
+      await businessDateStore.reload()
     } catch {
       /* ignore */
     }
@@ -877,6 +761,9 @@ onMounted(async () => {
     selectedDate.value = businessDateStore.current
   }
   load()
+  businessDatePollTimer = setInterval(() => {
+    businessDateStore.reload().catch(() => {})
+  }, BUSINESS_DATE_POLL_MS)
   if (savedShowIssues === '1') {
     showIssues.value = true
   }

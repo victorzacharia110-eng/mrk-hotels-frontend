@@ -28,7 +28,7 @@ const STORE_ROUTES = [
 const CASHIER_ROUTES = ['dine-in', 'waiter-assignment', 'take-away', 'room-service', 'delivery', 'no-charge', 'order-summary', 'item-lookup', 'ingredients', 'reports']
 const SUPERADMIN_ROUTES = ['', 'tenants', 'tenants/@id', 'reports', 'plans', 'integrations', 'profile']
 const OWNER_ROUTES = ['', 'profile', 'hotels/@id']
-const PUBLIC_ROUTES = ['/', '/booking', '/hotels/@id', '/login', '/register', '/portal/pricing', '/portal/login', '/portal/register', '/portal/forgot-password', '/portal/reset-password', '/guest/login']
+const PUBLIC_ROUTES = ['/', '/hotels', '/integrations', '/pricing', '/about', '/products/pms', '/booking', '/hotels/@id', '/login', '/register', '/portal/pricing', '/portal/login', '/portal/register', '/portal/forgot-password', '/portal/reset-password', '/guest/login']
 
 /** Runs one route through the smoke assertions. If the tour's stale session
  *  gets bounced to login mid-way (a known race after ~a dozen navigations),

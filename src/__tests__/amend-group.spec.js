@@ -114,6 +114,55 @@ describe('Amend stay for a grouped booking', () => {
     expect(api.reservationApi.update).not.toHaveBeenCalled()
   })
 
+  it('moves one room of a group without changing the rest of the party', async () => {
+    await mountDashboard()
+    wrapper.vm.rooms = [
+      { room_id: 'rm1', room_number: '101', room_type: 'single', price_per_night: 100000 },
+      { room_id: 'rm3', room_number: '103', room_type: 'single', price_per_night: 120000 },
+    ]
+    wrapper.vm.reservations = [
+      { reservation_id: 'r1', room_number: '101', group_id: 'g1', is_primary: true, group: { rooms: GROUP_ROOMS } },
+    ]
+    wrapper.vm.activeBar = {
+      id: 'r1',
+      rawStatus: 'checked_in',
+      label: 'Amina Hassan',
+      roomId: 'rm1',
+      guest_name: 'Amina Hassan',
+    }
+    wrapper.vm.folio = {
+      reservation: {
+        reservation_id: 'r1',
+        first_name: 'Amina',
+        last_name: 'Hassan',
+        room_id: 'rm1',
+        check_in_date: '2026-11-01',
+        check_out_date: '2026-11-03',
+        guest_phone: '',
+      },
+    }
+    await wrapper.vm.$nextTick()
+
+    wrapper.vm.openAmendModal(true)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.vm.amendIsGroup).toBe(true)
+    expect(wrapper.vm.roomMoveOptions.map((o) => o.value)).toEqual(['rm1', 'rm3'])
+
+    wrapper.vm.amendSelectedRoomIds = ['r1']
+    wrapper.vm.amendForm.room_id = 'rm3'
+    await wrapper.vm.submitAmend()
+
+    expect(api.reservationApi.groupAmend).toHaveBeenCalledTimes(1)
+    const [anchorId, payload] = api.reservationApi.groupAmend.mock.calls[0]
+    expect(anchorId).toBe('r1')
+    expect(payload.room_ids).toEqual(['r1'])
+    expect(payload.room_move).toBe(true)
+    expect(payload.room_id).toBe('rm3')
+    expect(payload.release_unselected).toBe(false)
+    expect(api.reservationApi.update).not.toHaveBeenCalled()
+  })
+
   it('edits just the one room for a standalone stay', async () => {
     await mountDashboard()
     wrapper.vm.reservations = [{ reservation_id: 's1', room_number: '201', group_id: null, group: null }]

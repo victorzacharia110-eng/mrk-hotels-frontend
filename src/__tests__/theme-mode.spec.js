@@ -23,7 +23,12 @@ import {
 
 const read = (p) => readFileSync(resolve(process.cwd(), p), 'utf8')
 const layout = read('src/layouts/StoreLayout.vue')
+const marketingLayout = read('src/layouts/MrkMarketingLayout.vue')
+const hotelDirectory = read('src/pages/public/HotelDirectoryPage.vue')
+const hotelDetail = read('src/pages/public/HotelDetailPage.vue')
+const bookingPage = read('src/pages/public/BookingPage.vue')
 const themeCss = read('src/assets/theme.css')
+const marketingCss = read('src/assets/marketing.css')
 const main = read('src/main.js')
 const en = JSON.parse(read('src/locales/en.json'))
 const sw = JSON.parse(read('src/locales/sw.json'))
@@ -264,5 +269,130 @@ describe('theme labels are translated', () => {
     expect(en.topBar.lightMode).toBeTruthy()
     expect(sw.topBar.darkMode).toBeTruthy()
     expect(sw.topBar.lightMode).toBeTruthy()
+  })
+})
+
+describe('marketing site controls', () => {
+  it('offers booking, theme, language and TSCL shortcuts in the public header', () => {
+    expect(marketingLayout).toContain('{ name: \'public-home\' }')
+    expect(marketingLayout).toContain('<ThemeToggle />')
+    expect(marketingLayout).toContain('to="/portal/pricing"')
+    expect(marketingLayout).toContain('@click="setLocale(\'en\')"')
+    expect(marketingLayout).toContain('@click="setLocale(\'sw\')"')
+  })
+
+  it('keeps header controls aligned above a full-width nav row', () => {
+    expect(marketingCss).toMatch(/\.mrk-header-inner \{[\s\S]*?flex-wrap: wrap/)
+    expect(marketingCss).toMatch(/\.mrk-nav \{[\s\S]*?order: 3/)
+  })
+
+  it('repaints the marketing shell in dark mode', () => {
+    expect(marketingCss).toContain("html[data-theme='dark'] .mrk-layout")
+    expect(marketingCss).toContain("html[data-theme='dark'] .mrk-header")
+    expect(marketingCss).toContain("html[data-theme='dark'] .mrk-input")
+  })
+
+  it('uses the login page MRK mark for the marketing brand icon', () => {
+    expect(marketingCss).toContain("/MRK_mark_transparent.png")
+    expect(marketingCss).toMatch(/\.mrk-brand-mark i \{[\s\S]*?opacity: 0/)
+  })
+
+  it('has marketing labels in both languages', () => {
+    for (const key of ['home', 'products', 'integrations', 'pricing', 'about', 'signIn', 'tscl', 'tsclTitle']) {
+      expect(en.marketing[key]).toBeTruthy()
+      expect(sw.marketing[key]).toBeTruthy()
+    }
+  })
+})
+
+describe('hotel directory redesign', () => {
+  it('uses the marketing palette in light and dark mode', () => {
+    expect(hotelDirectory).toContain('.hotels-directory {')
+    expect(hotelDirectory).toContain('--hotel-bg: #f4f7fb')
+    expect(hotelDirectory).toContain("html[data-theme='dark'] .hotels-directory")
+    expect(hotelDirectory).toContain('--hotel-bg: #0b141a')
+  })
+
+  it('keeps the directory content and self-service components', () => {
+    expect(hotelDirectory).toContain("$t('home.heroTitle')")
+    expect(hotelDirectory).toContain('<BookingStatusTracker />')
+    expect(hotelDirectory).toContain('<InvoiceDownloadCard />')
+  })
+
+  it('neutralises inherited card margins so rows stay aligned', () => {
+    expect(hotelDirectory).toContain('.hotel-grid > .card + .card')
+    expect(hotelDirectory).toContain('.directory-tools > :deep(.tracker)')
+    expect(hotelDirectory).toContain('.directory-tools > :deep(.invoice-card)')
+  })
+})
+
+describe('public booking flow redesign', () => {
+  it('uses the marketing palette in light and dark mode', () => {
+    for (const source of [hotelDetail, bookingPage]) {
+      expect(source).toContain('--flow-bg: #f4f7fb')
+      expect(source).toContain('--flow-surface: #ffffff')
+      expect(source).toContain('--flow-primary: #0b5fff')
+      expect(source).toContain("html[data-theme='dark']")
+      expect(source).toContain('--flow-bg: #0b141a')
+      expect(source).toContain('--flow-surface: #202c33')
+      expect(source).toContain('--flow-highlight: #7cc0ff')
+    }
+  })
+
+  it('centres both routes in the same balanced content column', () => {
+    for (const source of [hotelDetail, bookingPage]) {
+      expect(source).toContain('.public-flow-content {')
+      expect(source).toMatch(/\.public-flow-content \{[\s\S]*?max-width: 1200px/)
+      expect(source).toMatch(/\.public-flow-content \{[\s\S]*?margin: 0 auto/)
+    }
+  })
+
+  it('keeps the hotel detail content and aligns its room browser', () => {
+    expect(hotelDetail).toContain("$t('hotelDetail.backToHotels')")
+    expect(hotelDetail).toContain("$t('hotelDetail.rooms')")
+    expect(hotelDetail).toContain('room.price_per_night.toLocaleString()')
+    expect(hotelDetail).toContain('.rooms-card.card')
+    expect(hotelDetail).toMatch(/\.room-browser-bar \{[\s\S]*?grid-template-columns: minmax\(0, 1\.4fr\) repeat\(2, minmax\(0, 1fr\)\) auto/)
+    expect(hotelDetail).toMatch(/\.room-grid \{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/)
+  })
+
+  it('keeps the booking content and aligns every stage of the flow', () => {
+    expect(bookingPage).toContain("$t('bookingPage.checkAvailability')")
+    expect(bookingPage).toContain("$t('bookingPage.submitBooking')")
+    expect(bookingPage).toContain("$t('bookingPage.completePayment')")
+    expect(bookingPage).toContain('<BookingStatusTracker />')
+    expect(bookingPage).toContain('class="card booking-search-card"')
+    expect(bookingPage).toContain('class="card booking-rooms-card"')
+    expect(bookingPage).toContain('class="card booking-submit-card"')
+    expect(bookingPage).toContain('class="card booking-payment-card"')
+    expect(bookingPage).toMatch(/\.search-grid \{[\s\S]*?grid-template-columns: repeat\(4, minmax\(0, 1fr\)\) auto/)
+    expect(bookingPage).toMatch(/\.room-grid \{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/)
+  })
+})
+
+describe('storefront header navigation', () => {
+  it('offers Home immediately before Hotels in the public nav', () => {
+    const nav = layout.slice(layout.indexOf('<div v-else class="nav-links">'), layout.indexOf('<div class="nav-right">'))
+    expect(nav).toContain("{ name: 'marketing-home' }")
+    expect(nav).toContain("$t('nav.home')")
+    expect(nav).toContain("$t('nav.hotels')")
+    expect(nav.indexOf('marketing-home')).toBeLessThan(nav.indexOf('public-home'))
+  })
+
+  it('moves every public control into the mobile dropdown', () => {
+    const dropdown = layout.slice(layout.indexOf('id="mobile-menu"'), layout.indexOf('</header>'))
+    expect(dropdown).toContain("{ name: 'marketing-home' }")
+    expect(dropdown).toContain("$t('nav.hotels')")
+    expect(dropdown).toContain("$t('nav.bookStay')")
+    expect(dropdown).toContain('to="/portal/pricing"')
+    expect(dropdown).toContain('themeStore.toggleTheme()')
+    expect(dropdown).toContain('@click="toggleLocale"')
+    expect(layout).toContain('.store-layout:not(.app-shell) .header-actions')
+    expect(layout).toMatch(/@media \(min-width: 768px\) and \(max-width: 960px\)/)
+  })
+
+  it('translates the Home label in both languages', () => {
+    expect(en.nav.home).toBeTruthy()
+    expect(sw.nav.home).toBeTruthy()
   })
 })

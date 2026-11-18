@@ -8,7 +8,7 @@
       <img v-if="booking?.hotel_logo" :src="booking.hotel_logo" alt="Logo" class="hotel-logo" />
       <div>
         <h1>{{ booking?.hotel_name || 'Your Booking' }}</h1>
-        <p class="ref">Reference: {{ booking?.reference }}</p>
+        <p class="ref">Reference: {{ displayBookingReference(booking?.reference) }}</p>
       </div>
       <button class="logout-btn" @click="logout">Sign out</button>
     </header>
@@ -66,6 +66,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { guestPortalApi } from '@/api'
+import { displayBookingReference } from '@/utils/bookingReference'
 
 import { useTenantCurrency } from '@/utils/currency'
 

@@ -1,15 +1,23 @@
 /**
- * Public storefront smoke + behaviour: home, directory filters, hotel detail
- * room browser (search / sort), the room-number privacy regression and the
- * EN/SW language toggle.
+ * Public storefront smoke + behaviour: marketing home, hotel directory,
+ * filters, hotel detail room browser and room-number privacy regression.
  */
 import { test, expect } from '@playwright/test'
 import { pickSelect, trackPageErrors, expectMounted, hotelId, isoDate } from './helpers'
 
-test.describe('public storefront', () => {
-  test('home lists hotels and links into detail pages', async ({ page }) => {
+test.describe('public site', () => {
+  test('marketing home renders at root', async ({ page }) => {
     const errors = trackPageErrors(page)
     await page.goto('/')
+    await expect(page).toHaveURL(/\/$/)
+    await expect(page.locator('.mrk-layout')).toBeVisible()
+    await expect(page.locator('.mrk-brand').first()).toContainText('MRK Hotel Software')
+    await expectMounted(page, errors)
+  })
+
+  test('hotel directory lists hotels and links into detail pages', async ({ page }) => {
+    const errors = trackPageErrors(page)
+    await page.goto('/hotels')
     await expect(page.locator('h1')).toHaveText('Find Your Perfect Stay')
     await expect(page.locator('.hotel-card').first()).toBeVisible()
     const count = await page.locator('.hotel-card').count()
@@ -22,7 +30,7 @@ test.describe('public storefront', () => {
   })
 
   test('directory country/city filter narrows the hotel grid', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/hotels')
     await expect(page.locator('.hotel-card').first()).toBeVisible()
     const before = await page.locator('.hotel-card').count()
 
@@ -80,8 +88,8 @@ test.describe('public storefront', () => {
     await expectMounted(page, errors)
   })
 
-  test('language toggle switches the storefront to Swahili and back', async ({ page }) => {
-    await page.goto('/')
+  test('language toggle switches the hotel directory to Swahili and back', async ({ page }) => {
+    await page.goto('/hotels')
     await page.getByRole('button', { name: /SW|Kiswahili/i }).first().click()
     await expect(page.locator('h1')).toHaveText('Pata Malazi Yako Bora')
 

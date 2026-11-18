@@ -320,7 +320,7 @@ describe('due-out residents on the stay view', () => {
     expect(wrapper.vm.barsByRoom[1] || []).toHaveLength(0)
   })
 
-  it('counts overdue residents in the due-out and occupied pills', async () => {
+  it('counts overdue residents in the due-out pill without double-counting them as occupied', async () => {
     await mountDashboard()
     await fillBoard([occupiedRoom], [
       {
@@ -336,6 +336,6 @@ describe('due-out residents on the stay view', () => {
     const dueOut = wrapper.vm.pills.find((p) => p.key === 'dueout')
     expect(dueOut.count).toBe(1)
     const occupied = wrapper.vm.pills.find((p) => p.key === 'occupied')
-    expect(occupied.count).toBe(1)
+    expect(occupied.count).toBe(0)
   })
 })

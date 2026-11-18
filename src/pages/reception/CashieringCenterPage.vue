@@ -82,6 +82,8 @@
             <th>{{ $t('payments.guest') }}</th>
             <th>{{ $t('payments.amount') }}</th>
             <th>{{ $t('payments.method') }}</th>
+            <th>{{ $t('common.date') }}</th>
+            <th>{{ $t('nightAudit.user') }}</th>
             <th>{{ $t('payments.status') }}</th>
             <th></th>
           </tr>
@@ -92,6 +94,8 @@
             <td>{{ p.reservation?.guest_name || (p.payment_id ? p.reservation_id?.slice(0, 8) : '—') }}</td>
             <td>{{ fmt(p.amount) }}</td>
             <td class="capitalize">{{ methodLabel(p.payment_method) }}</td>
+            <td>{{ paymentDate(p) }}</td>
+            <td>{{ p.user?.name || p.recorded_by?.name || p.created_by?.name || p.recorded_by || '—' }}</td>
             <td>
               <span class="badge" :class="p.payment_status === 'completed' ? 'badge-success' : 'badge-warning'">
                 {{ statusLabel(p.payment_status) }}
@@ -100,7 +104,7 @@
             <td></td>
           </tr>
           <tr v-if="!payments.length && !loading">
-            <td colspan="6" class="muted">{{ $t('payments.empty') }}</td>
+            <td colspan="8" class="muted">{{ $t('payments.empty') }}</td>
           </tr>
         </tbody>
       </table>
@@ -168,7 +172,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { companyApi, paymentApi, reservationApi } from '@/api'
 import { METHOD_CASH, requiresProvider, providersFor } from '@/utils/payments'
@@ -232,6 +236,13 @@ function statusLabel(s) {
   if (s === 'completed') return t('payments.statusCompleted')
   if (s === 'awaiting_confirmation') return t('payments.statusAwaiting')
   return String(s || '').replace(/_/g, ' ')
+}
+
+function paymentDate(p) {
+  const raw = p.payment_date || p.date || p.created_at
+  if (!raw) return '—'
+  const d = new Date(raw)
+  return Number.isNaN(d.getTime()) ? String(raw) : d.toLocaleDateString()
 }
 
 function methodChanged() {
@@ -302,10 +313,14 @@ async function savePayment() {
   }
 }
 
+const businessDatePollTimer = ref(null)
+
 watch(
   () => businessDateStore.current,
   (date) => {
-    if (!userPickedDate && date) selectedDate.value = date
+    if (userPickedDate || !date || date === selectedDate.value) return
+    selectedDate.value = date
+    load()
   },
 )
 
@@ -313,5 +328,10 @@ onMounted(async () => {
   await businessDateStore.ensureLoaded()
   if (!userPickedDate) selectedDate.value = businessDateStore.current
   await load()
+  businessDatePollTimer.value = setInterval(() => businessDateStore.reload(), 30000)
+})
+
+onUnmounted(() => {
+  if (businessDatePollTimer.value) clearInterval(businessDatePollTimer.value)
 })
 </script>

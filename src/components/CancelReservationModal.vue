@@ -116,8 +116,11 @@ const props = defineProps({
 
 const emit = defineEmits(['confirm', 'cancel'])
 
-// Every room in the party (empty for a standalone booking).
-const rooms = computed(() => props.reservation?.group?.rooms || [])
+// Only rooms still in the party. Released/cancelled rooms must not reappear in
+// this dialog after they have already been cancelled.
+const rooms = computed(() => (props.reservation?.group?.rooms || []).filter(
+  (room) => room.status !== 'cancelled' && !room.released_at,
+))
 // A party is anything with more than one room; a lone room stays a plain confirm.
 const isGroup = computed(() => rooms.value.length > 1)
 
@@ -130,7 +133,7 @@ watch(
   () => props.reservation,
   (reservation) => {
     if (!reservation) return
-    selectedIds.value = (reservation.group?.rooms || []).map((room) => room.reservation_id)
+    selectedIds.value = rooms.value.map((room) => room.reservation_id)
     mode.value = 'group'
   },
   { immediate: true },

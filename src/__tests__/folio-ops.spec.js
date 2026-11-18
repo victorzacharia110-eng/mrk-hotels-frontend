@@ -78,9 +78,6 @@ async function mountDashboard() {
   const { useAuthStore } = await import('@/stores/auth')
   const auth = useAuthStore()
   auth.user = { user_role: 'receptionist', full_name: 'Receptionist Vanessa' }
-  vi.spyOn(window, 'open').mockImplementation(() => ({
-    document: { open: vi.fn(), write: vi.fn(), close: vi.fn() },
-  }))
   for (const fn of api.created) fn.mockReset().mockResolvedValue({ data: {} })
   wrapper = mount(HotelDashboard, { global: { plugins: [i18n] } })
   wrapper.vm.activeBar = activeBar
@@ -91,6 +88,7 @@ async function mountDashboard() {
 
 afterEach(() => {
   wrapper?.unmount()
+  document.getElementById('mrk-print-frame')?.remove()
   vi.restoreAllMocks()
 })
 
@@ -137,27 +135,96 @@ describe('folio operations on the stay view', () => {
     expect(menu.textContent).toContain(i18n.global.t('stayview.paymentEdit'))
   })
 
-  it('opens a real deposit form and records the money as a completed payment', async () => {
+  it('does not expose Add Deposit in the More menu', async () => {
     await mountDashboard()
-    wrapper.vm.openFolioOp('deposit')
+    wrapper.vm.moreOpen = true
     await wrapper.vm.$nextTick()
 
-    const modal = document.querySelector('.sv-modal-op')
-    expect(modal.textContent).toContain(i18n.global.t('stayview.addDeposit'))
-    expect(modal.querySelector('input[type="file"]')).toBeNull()
+    const menu = document.querySelector('.sv-dropdown-menu')
+    expect(menu).toBeTruthy()
+    expect(menu.textContent).not.toContain(i18n.global.t('stayview.addDeposit'))
+  })
 
-    wrapper.vm.folioOpForm.amount = 50000
-    wrapper.vm.folioOpForm.payment_method = 'cash'
+  async function openRowMenuFor(entry) {
+    wrapper.vm.toggleEntryMenu(entry, {
+      currentTarget: { getBoundingClientRect: () => ({ right: 300, bottom: 100 }) },
+    })
     await wrapper.vm.$nextTick()
-    await wrapper.vm.submitFolioOp()
-    await flushPromises()
+    return document.querySelector('.sv-row-menu')
+  }
 
-    expect(api.paymentApi.store).toHaveBeenCalledWith(expect.objectContaining({
-      reservation_id: 501,
+  it('shows NOT AUTHORIZED when a receptionist edits or voids a room charge', async () => {
+    await mountDashboard()
+    const charge = wrapper.vm.folioEntries.find((e) => e.type === 'room_charge')
+    expect(charge.editable).toBe(false)
+
+    let menu = await openRowMenuFor(charge)
+    expect(menu.textContent).toContain(i18n.global.t('folio.edit'))
+    expect(menu.textContent).toContain(i18n.global.t('folio.void'))
+    ;[...menu.querySelectorAll('button')]
+      .find((b) => b.textContent.includes(i18n.global.t('folio.edit')))
+      .click()
+    await wrapper.vm.$nextTick()
+
+    let alert = document.querySelector('[role="alertdialog"]')
+    expect(alert.textContent).toContain(i18n.global.t('folio.notAuthorizedTitle'))
+    expect(alert.textContent).toContain('manager')
+    expect(api.reservationApi.folioEntryUpdate).not.toHaveBeenCalled()
+
+    wrapper.vm.unauthorizedFolioAction = null
+    await wrapper.vm.$nextTick()
+    menu = await openRowMenuFor(charge)
+    ;[...menu.querySelectorAll('button')]
+      .find((b) => b.textContent.includes(i18n.global.t('folio.void')))
+      .click()
+    await wrapper.vm.$nextTick()
+
+    alert = document.querySelector('[role="alertdialog"]')
+    expect(alert.textContent).toContain(i18n.global.t('folio.notAuthorizedVoid', { type: 'room charge' }))
+    expect(api.reservationApi.folioEntryVoid).not.toHaveBeenCalled()
+  })
+
+  it('shows NOT AUTHORIZED when a receptionist voids a department room posting', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    payload.folio_entries.push({
+      folio_entry_id: 9,
+      type: 'room_posting',
       amount: 50000,
-      payment_method: 'cash',
-      payment_status: 'completed',
-    }))
+      date: '2026-11-02',
+      posted_at: '2026-11-02T10:00:00Z',
+      description: 'Bar posting',
+    })
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    const posting = wrapper.vm.folioEntries.find((e) => e.type === 'room_posting')
+    expect(posting).toBeTruthy()
+    const menu = await openRowMenuFor(posting)
+    ;[...menu.querySelectorAll('button')]
+      .find((b) => b.textContent.includes(i18n.global.t('folio.void')))
+      .click()
+    await wrapper.vm.$nextTick()
+
+    const alert = document.querySelector('[role="alertdialog"]')
+    expect(alert.textContent).toContain(i18n.global.t('folio.notAuthorizedVoid', { type: 'room posting' }))
+    expect(api.reservationApi.folioEntryVoid).not.toHaveBeenCalled()
+  })
+
+  it('keeps room-charge edits available to management', async () => {
+    await mountDashboard()
+    const { useAuthStore } = await import('@/stores/auth')
+    useAuthStore().user = { user_role: 'manager', full_name: 'Manager', role_level: 80 }
+    await wrapper.vm.$nextTick()
+
+    const charge = wrapper.vm.folioEntries.find((e) => e.type === 'room_charge')
+    expect(charge.editable).toBe(true)
+
+    wrapper.vm.requestEditEntry(charge)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.folioEdit?.entryId).toBe(charge.entryId)
+    expect(document.querySelector('[role="alertdialog"]')).toBeNull()
   })
 
   it('lists completed payments and refunds the selected one', async () => {
@@ -617,13 +684,12 @@ describe('folio operations on the stay view', () => {
     expect(table.textContent).toContain('TZS')
     await wrapper.vm.printInvoiceBreakdown()
     await flushPromises()
-    expect(window.open).toHaveBeenCalled()
-    const win = window.open.mock.results[0].value
-    const html = win.document.write.mock.calls[0][0]
-    expect(html).toContain('Folio invoice')
-    expect(html).toContain('F-501')
-    expect(html).toContain('Amina Hassan')
-    expect(html).toMatch(/refund/i)
+    const frame = document.getElementById('mrk-print-frame')
+    expect(frame).toBeTruthy()
+    expect(frame.srcdoc).toContain('Folio invoice')
+    expect(frame.srcdoc).toContain('F-501')
+    expect(frame.srcdoc).toContain('Amina Hassan')
+    expect(frame.srcdoc).toMatch(/refund/i)
   })
 
   it('prints the full branded invoice with the company name and ledger particulars', async () => {
@@ -642,19 +708,19 @@ describe('folio operations on the stay view', () => {
     await wrapper.vm.openInvoicePreview(activeBar)
     await wrapper.vm.printInvoiceBreakdown()
     await flushPromises()
-    const html = window.open.mock.results[0].value.document.write.mock.calls[0][0]
-    expect(html).toContain('Azure Bay Resort')
-    expect(html).toContain('Bagamoyo, Tanzania')
-    expect(html).toContain('+255 700 000 000')
-    expect(html).toContain('062a52') // brand navy band/header
-    expect(html).toContain('005eb8') // brand accent & balance figure
-    expect(html).toContain('Room 101')
-    expect(html).toContain('Room &amp; taxes') // a ledger particular with description
-    expect(html).toContain('Check in') // dated particulars block
-    expect(html).toContain('Check out')
-    expect(html).toContain('Balance') // totals row labelled like Folio Operations
-    expect(html).toContain('padding: 14mm') // printed sheet keeps its page padding
-    expect(html).toContain('@page { size: A4 portrait; margin: 0; }')
+    const frame = document.getElementById('mrk-print-frame')
+    expect(frame.srcdoc).toContain('Azure Bay Resort')
+    expect(frame.srcdoc).toContain('Bagamoyo, Tanzania')
+    expect(frame.srcdoc).toContain('+255 700 000 000')
+    expect(frame.srcdoc).toContain('062a52') // brand navy band/header
+    expect(frame.srcdoc).toContain('005eb8') // brand accent & balance figure
+    expect(frame.srcdoc).toContain('Room 101')
+    expect(frame.srcdoc).toContain('Room &amp; taxes') // a ledger particular with description
+    expect(frame.srcdoc).toContain('Check in') // dated particulars block
+    expect(frame.srcdoc).toContain('Check out')
+    expect(frame.srcdoc).toContain('Balance') // totals row labelled like Folio Operations
+    expect(frame.srcdoc).toContain('padding: 14mm') // printed sheet keeps its page padding
+    expect(frame.srcdoc).toContain('@page { size: A4 portrait; margin: 0; }')
   })
 })
 

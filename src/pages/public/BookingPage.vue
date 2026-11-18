@@ -5,16 +5,19 @@
   payment methods.
 -->
 <template>
-  <div class="container page-content">
-    <h1 class="page-title">{{ $t('bookingPage.title') }}</h1>
-    <p class="muted">{{ $t('bookingPage.subtitle') }}</p>
+  <div class="booking-page">
+    <div class="container page-content public-flow-content">
+      <div class="booking-intro">
+        <h1 class="page-title">{{ $t('bookingPage.title') }}</h1>
+        <p class="muted">{{ $t('bookingPage.subtitle') }}</p>
+      </div>
 
     <!-- Feedback banners for request errors and success messages -->
     <div v-if="error" class="alert alert-error">{{ error }}</div>
     <div v-if="success" class="alert alert-success">{{ success }}</div>
 
     <!-- Search form: booking type, hotel, dates and room type used to check availability -->
-    <div class="card">
+    <div class="card booking-search-card">
       <h2 class="card-title">{{ $t('bookingPage.checkAvailability') }}</h2>
       <form @submit.prevent="checkAvailability">
         <div class="form-group booking-type-group">
@@ -55,7 +58,7 @@
     </div>
 
     <!-- Availability results: clickable room cards the guest can select for this stay -->
-    <div v-if="availability" class="card">
+    <div v-if="availability" class="card booking-rooms-card">
       <h2 class="card-title">
         {{ $t('home.roomsAvailable') }}
       </h2>
@@ -120,7 +123,7 @@
     </div>
 
     <!-- Booking submission form, shown only once rooms are available to book -->
-    <div v-if="availability?.available_rooms?.length" class="card">
+    <div v-if="availability?.available_rooms?.length" class="card booking-submit-card">
       <h2 class="card-title">{{ $t('bookingPage.submitBooking') }}</h2>
       <form @submit.prevent="submitBooking">
         <h3 class="section-title">{{ $t('bookingPage.guestInfo') }}</h3>
@@ -268,7 +271,7 @@
     </div>
 
     <!-- Payment step for held bookings: pick a method and settle the amount due -->
-    <div v-if="pendingBooking" class="card">
+    <div v-if="pendingBooking" class="card booking-payment-card">
       <h2 class="card-title">{{ $t('bookingPage.completePayment') }}</h2>
       <p class="hint muted">{{ $t('bookingPage.paymentHeldMessage') }}</p>
       <p class="booking-ref">
@@ -444,7 +447,8 @@
       </form>
     </div>
 
-    <BookingStatusTracker />
+      <BookingStatusTracker />
+    </div>
   </div>
 </template>
 
@@ -1418,5 +1422,415 @@ onMounted(loadHotels)
   margin-top: 2px;
   font-size: 14px;
   color: #0f172a;
+}
+
+.booking-page {
+  --flow-bg: #f4f7fb;
+  --flow-surface: #ffffff;
+  --flow-surface-alt: #eef4ff;
+  --flow-text: #10243f;
+  --flow-muted: #5b6b83;
+  --flow-border: #d9e2f0;
+  --flow-primary: #0b5fff;
+  --flow-primary-dark: #0847bf;
+  --flow-highlight: #0b5fff;
+  --flow-on-primary: #ffffff;
+  --flow-radius: 18px;
+  --flow-shadow: 0 12px 30px rgba(16, 36, 63, 0.08);
+  background: var(--flow-bg);
+  color: var(--flow-text);
+  min-height: calc(100vh - 64px);
+}
+
+html[data-theme='dark'] .booking-page {
+  --flow-bg: #0b141a;
+  --flow-surface: #202c33;
+  --flow-surface-alt: #2a3942;
+  --flow-text: #e9edef;
+  --flow-muted: #95a3ab;
+  --flow-border: #2f3b43;
+  --flow-primary: #2563eb;
+  --flow-primary-dark: #7cc0ff;
+  --flow-highlight: #7cc0ff;
+  --flow-on-primary: #ffffff;
+  --flow-shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
+}
+
+.public-flow-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 12px 64px;
+}
+
+.public-flow-content > :deep(.tracker) {
+  margin-top: 20px;
+}
+
+.booking-intro {
+  position: relative;
+  overflow: hidden;
+  padding: 28px;
+  border-radius: var(--flow-radius);
+  border: 1px solid var(--flow-border);
+  background:
+    radial-gradient(520px 220px at 8% -50%, #dcebff 0, transparent 70%),
+    radial-gradient(420px 200px at 96% 0%, #e2fff6 0, transparent 65%),
+    var(--flow-surface);
+  box-shadow: var(--flow-shadow);
+}
+
+html[data-theme='dark'] .booking-intro {
+  background:
+    radial-gradient(520px 220px at 8% -50%, rgba(37, 99, 235, 0.24) 0, transparent 70%),
+    radial-gradient(420px 200px at 96% 0%, rgba(75, 214, 190, 0.16) 0, transparent 65%),
+    var(--flow-surface);
+}
+
+.booking-intro .page-title {
+  position: relative;
+  margin-bottom: 6px;
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--flow-text);
+}
+
+.booking-intro .muted {
+  position: relative;
+  color: var(--flow-muted);
+  font-size: 15px;
+}
+
+.booking-page .card {
+  padding: 24px;
+  border-radius: var(--flow-radius);
+  border: 1px solid var(--flow-border);
+  background: var(--flow-surface);
+  box-shadow: var(--flow-shadow);
+}
+
+.booking-page .card + .card {
+  margin-top: 20px;
+}
+
+.booking-search-card {
+  background:
+    linear-gradient(90deg, var(--flow-surface-alt) 0, transparent 38%),
+    var(--flow-surface);
+}
+
+.booking-page .card-title {
+  color: var(--flow-text);
+  font-size: 19px;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+
+.booking-page .muted,
+.booking-page .hint {
+  color: var(--flow-muted);
+}
+
+.booking-page .form-group label {
+  color: var(--flow-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.booking-type-group {
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--flow-border);
+  background: var(--flow-surface-alt);
+}
+
+.booking-type-group :deep(.form-group),
+.booking-type-group .form-group {
+  margin-bottom: 6px;
+}
+
+.booking-page .form-grid:not(.search-grid) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.booking-page .input,
+.booking-page .form-group input,
+.booking-page .form-group select,
+.booking-page .form-group textarea,
+.booking-page :deep(.ss-trigger) {
+  height: 46px;
+  min-height: 46px;
+  border-radius: 11px;
+  border: 1px solid var(--flow-border);
+  background: var(--flow-surface-alt);
+  color: var(--flow-text);
+}
+
+.booking-page :deep(.ss-trigger) {
+  padding: 0 14px;
+}
+
+.booking-page :deep(.ss-trigger-label) {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.booking-page :deep(.ss-trigger.is-empty) {
+  color: var(--flow-muted);
+}
+
+.search-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.search-grid > .form-group {
+  min-width: 0;
+  margin: 0;
+}
+
+.search-grid .search-actions {
+  padding-bottom: 0;
+}
+
+.search-actions .btn-primary {
+  height: 46px;
+  border-radius: 11px;
+  padding: 0 20px;
+  background: var(--flow-primary);
+  border-color: var(--flow-primary);
+  color: var(--flow-on-primary);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.section-title {
+  color: var(--flow-text);
+  font-size: 15px;
+  font-weight: 800;
+  margin: 22px 0 12px;
+}
+
+.room-browser-bar {
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) auto;
+  gap: 14px;
+  margin: 14px 0 4px;
+}
+
+.room-browser-bar .form-group {
+  min-width: 0;
+}
+
+.room-browser-dir {
+  height: 46px;
+  border-radius: 11px;
+  border-color: var(--flow-border);
+  color: var(--flow-text);
+  background: var(--flow-surface-alt);
+  white-space: nowrap;
+}
+
+.room-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.room-card {
+  min-height: 164px;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid var(--flow-border);
+  background: var(--flow-surface-alt);
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.room-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--flow-primary);
+}
+
+.room-card.selected {
+  border-color: var(--flow-primary);
+  background: var(--flow-surface);
+  box-shadow: inset 0 0 0 1px var(--flow-primary);
+}
+
+.room-card h3 {
+  color: var(--flow-text);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.room-check {
+  color: var(--flow-highlight);
+}
+
+.room-check input[type='checkbox'] {
+  accent-color: var(--flow-primary);
+}
+
+.room-price {
+  color: var(--flow-highlight);
+  font-size: 16px;
+}
+
+.selected-rooms-summary,
+.price-summary {
+  border-radius: 14px;
+  border: 1px solid var(--flow-border);
+  background: var(--flow-surface-alt);
+  color: var(--flow-text);
+}
+
+.selected-rooms-summary {
+  border-color: var(--flow-primary);
+}
+
+.selected-rooms-summary ul {
+  color: var(--flow-muted);
+}
+
+.price-row {
+  color: var(--flow-text);
+}
+
+.price-row.price-fee,
+.price-row.price-fee span:first-child {
+  color: var(--flow-muted);
+}
+
+.price-row.price-total,
+.price-total {
+  border-top-color: var(--flow-border);
+  color: var(--flow-text);
+}
+
+.pagination .btn-secondary {
+  border-radius: 10px;
+  border-color: var(--flow-border);
+  color: var(--flow-text);
+}
+
+.pagination .muted {
+  color: var(--flow-muted);
+}
+
+.guest-row {
+  border-radius: 14px;
+  border: 1px solid var(--flow-border);
+  background: var(--flow-surface-alt);
+}
+
+.hotel-receiving-details {
+  border-radius: 14px;
+  border: 1px solid var(--flow-border);
+  background: var(--flow-surface-alt);
+}
+
+.receiving-title,
+.pay-instr-lead,
+.pay-instr-others-title {
+  color: var(--flow-highlight);
+}
+
+.receiving-label,
+.receiving-no-account,
+.pay-instr-note,
+.pay-instr-others-sub,
+.pay-instr-wallet,
+.pay-instr-steps li {
+  color: var(--flow-muted);
+}
+
+.receiving-value,
+.pay-instr-other-name {
+  color: var(--flow-text);
+}
+
+.booking-ref code {
+  border-radius: 8px;
+  border: 1px solid var(--flow-border);
+  background: var(--flow-surface-alt);
+  color: var(--flow-text);
+}
+
+.pay-instr,
+.pay-instr-lipa {
+  border-radius: 14px;
+  border: 1px solid var(--flow-border);
+  background: var(--flow-surface);
+}
+
+.pay-instr-number {
+  border-radius: 12px;
+  border-color: var(--flow-primary);
+  background: var(--flow-surface-alt);
+  color: var(--flow-highlight);
+}
+
+.pay-instr-receiver {
+  border-radius: 8px;
+  color: var(--flow-text);
+}
+
+.pay-instr-receiver strong {
+  color: var(--flow-highlight);
+}
+
+.pay-instr-other {
+  border-radius: 10px;
+  border: 1px solid var(--flow-border);
+  background: var(--flow-surface-alt);
+}
+
+.pay-instr-other.chosen {
+  border-color: var(--flow-primary);
+  background: var(--flow-surface);
+}
+
+.pay-instr-other-ussd {
+  border-color: var(--flow-border);
+  background: var(--flow-surface);
+  color: var(--flow-highlight);
+}
+
+@media (max-width: 1100px) {
+  .search-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  }
+
+  .room-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .public-flow-content {
+    padding: 20px 12px 48px;
+  }
+
+  .booking-intro,
+  .booking-page .card {
+    padding: 20px;
+  }
+
+  .booking-page .form-grid:not(.search-grid),
+  .room-browser-bar,
+  .room-grid,
+  .guest-row {
+    grid-template-columns: 1fr;
+  }
+
+  .search-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .search-actions .btn-primary {
+    width: 100%;
+  }
 }
 </style>

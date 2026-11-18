@@ -30,7 +30,8 @@
         <div class="form-grid">
           <div class="form-group">
             <label>{{ $t('nightAudit.businessDate') }} *</label>
-            <input v-model="form.audit_date" type="date" class="input" :max="todayStr" />
+            <input v-model="form.audit_date" type="date" class="input" :max="businessDateStore.current || todayStr"
+              @change="userPickedDate = true; refreshForDate()" />
           </div>
           <div class="form-group">
             <label>{{ $t('nightAudit.guestSearch') }} *</label>
@@ -149,8 +150,9 @@
 
 <script setup>
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { nightAuditApi, reservationApi } from '@/api'
+import { useBusinessDateStore } from '@/stores/businessDate'
 import { useI18n } from 'vue-i18n'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
@@ -161,7 +163,9 @@ const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 
+const businessDateStore = useBusinessDateStore()
 const todayStr = new Date().toISOString().slice(0, 10)
+let userPickedDate = false
 
 const form = ref({
   audit_date: todayStr,
@@ -235,7 +239,7 @@ function fmtMoney(v) {
 }
 
 function resetForm() {
-  form.value = { audit_date: todayStr, amount: 0, tax_percent: 18, guest_name: '', description: '' }
+  form.value = { audit_date: businessDateStore.current || todayStr, amount: 0, tax_percent: 18, guest_name: '', description: '' }
   selectedReservationId.value = ''
   selectedGuest.value = null
   reservationOptions.value = []
@@ -255,6 +259,11 @@ async function load() {
   } finally {
     loading.value = false
   }
+}
+
+async function refreshForDate() {
+  await load()
+  await checkClosed()
 }
 
 async function checkClosed() {
@@ -292,8 +301,7 @@ async function submit() {
     })
     success.value = t('nightAudit.insertSuccess')
     resetForm()
-    await load()
-    await checkClosed()
+    await refreshForDate()
   } catch (err) {
     error.value = err.response?.data?.message || t('common.actionFailed')
   } finally {
@@ -326,9 +334,26 @@ async function confirmDelete() {
   }
 }
 
+const businessDatePollTimer = ref(null)
+
+watch(
+  () => businessDateStore.current,
+  (date) => {
+    if (userPickedDate || !date || date === form.value.audit_date) return
+    form.value.audit_date = date
+    refreshForDate()
+  },
+)
+
 onMounted(async () => {
-  await checkClosed()
-  await load()
+  await businessDateStore.ensureLoaded()
+  if (!userPickedDate && businessDateStore.current) form.value.audit_date = businessDateStore.current
+  await refreshForDate()
+  businessDatePollTimer.value = setInterval(() => businessDateStore.reload(), 30000)
+})
+
+onUnmounted(() => {
+  if (businessDatePollTimer.value) clearInterval(businessDatePollTimer.value)
 })
 </script>
 

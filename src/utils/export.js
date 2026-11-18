@@ -9,7 +9,7 @@
 
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import * as autoTableModule from 'jspdf-autotable'
 import { saveBlob } from './download'
 
 // Keys that add no value to a human-readable export sheet.
@@ -249,7 +249,7 @@ function pdfHeading(doc, header, title, filename) {
   doc.text(title || defaultTitle(filename), margin, y)
   y += 5
   doc.setFontSize(8.5)
-  doc.setFont(undefined, 'normal')
+  doc.setFont('helvetica', 'normal')
   doc.setTextColor(120)
   doc.text(`Generated: ${new Date().toLocaleString()}`, margin, y)
   doc.setTextColor(0)
@@ -272,7 +272,7 @@ export function exportPDF(filename, rows, columns, title, options = {}) {
   const landscape = cols.length > 7
   const doc = new jsPDF({ orientation: landscape ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' })
   const startY = pdfHeading(doc, options.header, options.title || title, filename)
-  autoTable(doc, {
+  const tableOptions = {
     head: [cols.map((c) => c.label)],
     body: rows.map((row) =>
       cols.map((c) => {
@@ -285,7 +285,11 @@ export function exportPDF(filename, rows, columns, title, options = {}) {
     styles: { fontSize: cols.length > 12 ? 6.5 : cols.length > 8 ? 7.5 : 9, cellPadding: cols.length > 8 ? 1 : 2, overflow: 'linebreak' },
     headStyles: { fillColor: [0, 94, 184] },
     margin: { top: 12, bottom: 12, left: 10, right: 10 },
-  })
+  }
+  const addTable = autoTableModule.default || autoTableModule.autoTable
+  if (typeof addTable === 'function') addTable(doc, tableOptions)
+  else if (typeof doc.autoTable === 'function') doc.autoTable(tableOptions)
+  else throw new Error('PDF table exporter is unavailable.')
   // Route through saveBlob (like CSV/Excel) instead of doc.save(): the test
   // suite mocks saveBlob, so unit tests no longer write a stray report.pdf
   // into the working directory on every run.

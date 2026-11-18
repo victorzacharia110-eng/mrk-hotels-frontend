@@ -39,16 +39,14 @@ const hotelChildren = [
   { path: 'guests', name: 'hotel-guests', component: () => import('@/pages/guests/GuestListPage.vue'), meta: { module: 'guests' } },
   // List and confirm payments.
   { path: 'payments', name: 'hotel-payments', component: () => import('@/pages/payments/PaymentListPage.vue'), meta: { module: 'payments' } },
-  // Receptionist Payments dropdown — cashiering center.
+  // Receptionist Payments dropdown — billing.
   { path: 'payments/cashiering', name: 'hotel-payments-cashiering', component: () => import('@/pages/reception/CashieringCenterPage.vue'), meta: { module: 'payments' } },
-  // Receptionist Payments dropdown — cash drawer.
+  // Receptionist Payments dropdown — cash register.
   { path: 'payments/cash-drawer', name: 'hotel-payments-cash-drawer', component: () => import('@/pages/reception/CashDrawerPage.vue'), meta: { module: 'payments' } },
   // Receptionist Payments dropdown — business sources.
   { path: 'payments/business-source', name: 'hotel-payments-business-source', component: () => import('@/pages/reception/BusinessSourcePage.vue'), meta: { module: 'payments' } },
-  // Receptionist Payments dropdown — company data.
+  // Receptionist Payments dropdown — company database.
   { path: 'payments/company-data', name: 'hotel-payments-company-data', component: () => import('@/pages/reception/CompanyDataPage.vue'), meta: { module: 'payments' } },
-  // Receptionist Payments dropdown — point of sale.
-  { path: 'payments/pos', name: 'hotel-payments-pos', component: () => import('@/pages/reception/PosPage.vue'), meta: { module: 'payments' } },
   // Receptionist Payments dropdown — exchange rates.
   { path: 'payments/exchange-rate', name: 'hotel-payments-exchange-rate', component: () => import('@/pages/reception/ExchangeRatePage.vue'), meta: { module: 'payments' } },
   // Respond to public booking requisitions.
@@ -147,30 +145,58 @@ const hotelChildren = [
 ]
 
 const routes = [
-  // Public storefront + the authenticated staff panel under /app.
+  // Public marketing site.
+  {
+    path: '/',
+    component: () => import('@/layouts/MrkMarketingLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'marketing-home',
+        component: () => import('@/pages/marketing/MarketingHomePage.vue'),
+      },
+      {
+        path: 'products/:slug',
+        name: 'marketing-product',
+        component: () => import('@/pages/marketing/MarketingProductPage.vue'),
+      },
+      {
+        path: 'integrations',
+        name: 'marketing-integrations',
+        component: () => import('@/pages/marketing/MarketingIntegrationsPage.vue'),
+      },
+      {
+        path: 'pricing',
+        name: 'marketing-pricing',
+        component: () => import('@/pages/marketing/MarketingPricingPage.vue'),
+      },
+      {
+        path: 'about',
+        name: 'marketing-about',
+        component: () => import('@/pages/marketing/MarketingAboutPage.vue'),
+      },
+    ],
+  },
+  // Public hotel directory + the authenticated staff panel under /app.
   {
     path: '/',
     component: () => import('@/layouts/StoreLayout.vue'),
     children: [
-      // Public landing page listing all hotels.
       {
-        path: '',
+        path: 'hotels',
         name: 'public-home',
         component: () => import('@/pages/public/HotelDirectoryPage.vue'),
       },
-      // Public single-hotel detail page.
       {
         path: 'hotels/:id',
         name: 'public-hotel',
         component: () => import('@/pages/public/HotelDetailPage.vue'),
       },
-      // Public booking form.
       {
         path: 'booking',
         name: 'public-booking',
         component: () => import('@/pages/public/BookingPage.vue'),
       },
-      // Guest self-service portal (authenticated by booking reference + phone).
       {
         path: 'guest/login',
         name: 'guest-login',
@@ -195,7 +221,6 @@ const routes = [
         component: () => import('@/pages/guest/GuestRequestsPage.vue'),
         meta: { requiresGuestAuth: true },
       },
-      // Mount point for the authenticated hotel staff panel.
       {
         path: 'app',
         meta: { requiresAuth: true },
@@ -285,6 +310,24 @@ const routes = [
         path: 'integrations',
         name: 'superadmin-integrations',
         component: () => import('@/pages/superadmin/IntegrationDashboardPage.vue'),
+      },
+      {
+        path: 'marketing',
+        component: () => import('@/pages/superadmin/marketing/MarketingAdminLayout.vue'),
+        redirect: '/superadmin/marketing/pages',
+        children: [
+          { path: 'pages', name: 'superadmin-marketing-pages', component: () => import('@/pages/superadmin/marketing/MarketingPagesPage.vue') },
+          { path: 'sections', name: 'superadmin-marketing-sections', component: () => import('@/pages/superadmin/marketing/MarketingSectionsPage.vue') },
+          { path: 'integrations', name: 'superadmin-marketing-integrations', component: () => import('@/pages/superadmin/marketing/MarketingIntegrationsPage.vue') },
+          { path: 'faqs', name: 'superadmin-marketing-faqs', component: () => import('@/pages/superadmin/marketing/MarketingFaqsPage.vue') },
+          { path: 'team', name: 'superadmin-marketing-team', component: () => import('@/pages/superadmin/marketing/MarketingTeamPage.vue') },
+          { path: 'pricing-products', name: 'superadmin-marketing-pricing-products', component: () => import('@/pages/superadmin/marketing/MarketingPricingProductsPage.vue') },
+          { path: 'pricing-features', name: 'superadmin-marketing-pricing-features', component: () => import('@/pages/superadmin/marketing/MarketingPricingFeaturesPage.vue') },
+          { path: 'pricing-plans', name: 'superadmin-marketing-pricing-plans', component: () => import('@/pages/superadmin/marketing/MarketingPricingPlansPage.vue') },
+          { path: 'media', name: 'superadmin-marketing-media', component: () => import('@/pages/superadmin/marketing/MarketingMediaPage.vue') },
+          { path: 'settings', name: 'superadmin-marketing-settings', component: () => import('@/pages/superadmin/marketing/MarketingSettingsPage.vue') },
+          { path: 'contact-submissions', name: 'superadmin-marketing-contact-submissions', component: () => import('@/pages/superadmin/marketing/MarketingContactSubmissionsPage.vue') },
+        ],
       },
       // Superadmin's own profile.
       {

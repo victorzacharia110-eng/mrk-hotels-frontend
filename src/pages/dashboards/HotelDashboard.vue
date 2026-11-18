@@ -39,7 +39,7 @@
           </span>
         </div>
         <div class="sv-toolbar-right">
-          <button v-if="route.query.from === 'night-audit'" type="button" class="sv-btn sv-btn-ghost"
+          <button v-if="route?.query?.from === 'night-audit'" type="button" class="sv-btn sv-btn-ghost"
             @click="goBackToNightAudit">
             <i class="fas fa-arrow-left" aria-hidden="true"></i> {{ $t('nightAudit.title') || 'Night Audit' }}
           </button>
@@ -770,7 +770,7 @@
                         <i class="fas fa-calendar-check" aria-hidden="true"></i> {{ $t('stayview.amendStay') }}
                       </button>
                     </li>
-                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus) && !amendIsGroup">
+                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
                       <button type="button" @click.stop="openAmendModal(true); moreOpen = false">
                         <i class="fas fa-arrows-left-right" aria-hidden="true"></i> {{ $t('stayview.roomMove') }}
                       </button>
@@ -798,11 +798,6 @@
                     <li v-if="canPostRoomPostings">
                       <button type="button" @click.stop="openFolioOp('move'); moreOpen = false">
                         <i class="fas fa-repeat" aria-hidden="true"></i> {{ $t('stayview.transferFolio') }}
-                      </button>
-                    </li>
-                    <li v-if="['pending', 'confirmed', 'checked_in'].includes(activeBar.rawStatus)">
-                      <button type="button" @click.stop="openFolioOp('deposit'); moreOpen = false">
-                        <i class="fas fa-coins" aria-hidden="true"></i> {{ $t('stayview.addDeposit') }}
                       </button>
                     </li>
                     <li v-if="canRefundPayments">
@@ -1236,7 +1231,7 @@
     <Teleport to="body">
       <Transition name="sv-modal">
         <div v-if="chargeModal" class="sv-modal-backdrop" @click.self="chargeModal = false">
-          <div class="sv-modal sv-modal-sm" role="dialog" aria-modal="true" :aria-label="$t('stayview.addCharges')">
+          <div class="sv-modal sv-modal-sm sv-modal-compact" role="dialog" aria-modal="true" :aria-label="$t('stayview.addCharges')">
             <div class="sv-modal-head bar-blue">
               <span class="sv-modal-head-icon"><i class="fas fa-receipt" aria-hidden="true"></i></span>
               <div class="sv-modal-head-text">
@@ -1284,7 +1279,7 @@
     <Teleport to="body">
       <Transition name="sv-modal">
         <div v-if="folioOp" class="sv-modal-backdrop" @click.self="folioOp = null">
-          <div class="sv-modal sv-modal-sm sv-modal-op" role="dialog" aria-modal="true" :aria-label="folioOpTitle">
+          <div class="sv-modal sv-modal-sm sv-modal-op sv-modal-compact" role="dialog" aria-modal="true" :aria-label="folioOpTitle">
             <div class="sv-modal-head bar-blue">
               <span class="sv-modal-head-icon"><i class="fas fa-folder-open" aria-hidden="true"></i></span>
               <div class="sv-modal-head-text">
@@ -2252,9 +2247,9 @@
               <i class="fas fa-print" aria-hidden="true"></i> {{ $t('stayview.printEntryInvoice') }}
             </button>
           </li>
-          <li v-if="entryMenu.entry.editable">
+          <li v-if="entryMenu.entry.canEditAction">
             <button type="button" role="menuitem" :disabled="actionBusy"
-              @click="closeEntryMenu(); openEditEntry(entryMenu.entry)">
+              @click="requestEditEntry(entryMenu.entry)">
               <i class="fas fa-pen" aria-hidden="true"></i> {{ $t('folio.edit') }}
             </button>
           </li>
@@ -2266,19 +2261,51 @@
           </li>
           <li v-if="entryMenu.entry.entryUrl">
             <a :href="entryMenu.entry.entryUrl" target="_blank" rel="noopener" role="menuitem" @click="closeEntryMenu">
+              <i class="fas fa-eye" aria-hidden="true"></i> {{ $t('common.view') }}
+            </a>
+          </li>
+          <li v-if="entryMenu.entry.entryUrl">
+            <a :href="entryMenu.entry.entryUrl" target="_blank" rel="noopener" download role="menuitem"
+              @click="closeEntryMenu">
               <i class="fas fa-download" aria-hidden="true"></i> {{ $t('folio.download') }}
             </a>
           </li>
-          <li
-            v-if="entryMenu.entry.entryId && !entryMenu.entry.moveLine && (canManageFolioOps || (entryMenu.entry.type !== 'room_charge' && !folioLocked))">
+          <li v-if="entryMenu.entry.entryId && !entryMenu.entry.moveLine">
             <button type="button" role="menuitem" class="danger" :disabled="actionBusy"
-              @click="closeEntryMenu(); entryMenu.entry.entryUrl ? removeFolioAttachment(entryMenu.entry) : voidFolioEntry(entryMenu.entry)">
+              @click="requestVoidEntry(entryMenu.entry)">
               <i class="fas fa-trash-can" aria-hidden="true"></i>
               {{ entryMenu.entry.entryUrl ? $t('folio.remove') : $t('folio.void') }}
             </button>
           </li>
         </ul>
       </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <Transition name="sv-modal">
+        <div v-if="unauthorizedFolioAction" class="sv-modal-backdrop" @click.self="unauthorizedFolioAction = null">
+          <div class="sv-modal sv-modal-sm" role="alertdialog" aria-modal="true"
+            :aria-label="$t('folio.notAuthorizedTitle')">
+            <div class="sv-modal-head sv-bar-blue">
+              <div class="sv-modal-head-text">
+                <h3><i class="fas fa-lock" aria-hidden="true"></i> {{ $t('folio.notAuthorizedTitle') }}</h3>
+              </div>
+              <button type="button" class="sv-modal-close" :aria-label="$t('common.close')"
+                @click="unauthorizedFolioAction = null">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="sv-modal-body">
+              <p class="sv-action-error">{{ unauthorizedFolioMessage }}</p>
+            </div>
+            <div class="sv-modal-actions">
+              <button type="button" class="btn btn-primary" @click="unauthorizedFolioAction = null">
+                {{ $t('common.close') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
     </Teleport>
 
     <!-- Stock ledger modal: build and print the ledger report without leaving the chart -->
@@ -2430,6 +2457,7 @@ import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import { requiresProvider, providersFor, PAYMENT_METHODS, PAYMENT_STATUSES } from '@/utils/payments'
 
 import { folioBreakdown, isFolioRefundEntry } from '@/utils/folio'
+import { displayBookingReference, normalizeBookingReference } from '@/utils/bookingReference'
 import { roomOccupiedToday } from '@/utils/roomOccupancy'
 import { getCountryName } from '@/utils/locations'
 import { toast } from '@/utils/toast'
@@ -2543,7 +2571,7 @@ const searchResults = computed(() => {
       kind: 'reservation',
       icon: 'fas fa-bed',
       title: r.guest_name || '—',
-      subtitle: [room && `${t('stayview.room')} ${room}`, r.booking_reference, r.status]
+      subtitle: [room && `${t('stayview.room')} ${room}`, displayBookingReference(r.booking_reference), r.status]
         .filter(Boolean)
         .join(' · '),
       reservation: r,
@@ -2556,7 +2584,8 @@ const searchResults = computed(() => {
     const name = String(r.guest_name || '').toLowerCase()
     const room = String(r.room?.room_number || '')
     const ref = String(r.booking_reference || '').toLowerCase()
-    if (!name.includes(q) && !room.includes(q) && !ref.includes(q)) continue
+    const alias = normalizeBookingReference(q).toLowerCase()
+    if (!name.includes(q) && !room.includes(q) && !ref.includes(q) && !ref.includes(alias)) continue
     addStay(r)
   }
   for (const room of rooms.value) {
@@ -2901,7 +2930,7 @@ function toPanelBar(r, colorClass = '') {
     paymentPending,
     balance: balance.toLocaleString(),
     // Full client/stay details so the modal shows everything in one place.
-    reference: r.booking_reference || '—',
+    reference: displayBookingReference(r.booking_reference) || '—',
     email: r.guest_email || r.guest?.email || '—',
     guestEmail: r.guest_email || r.guest?.email || '',
     phone: r.guest_phone || '—',
@@ -3080,38 +3109,42 @@ function guestsForStay(r) {
 /** Summary pill counts shown above the chart. */
 const pills = computed(() => {
   const today = businessToday()
-  const count = (statuses) => rooms.value.filter((r) => statuses.includes(r.status)).length
-  // In-house guests on the business date, counted from the STAYS (the same
-  // source as the tape) rather than the room's housekeeping status, so the
-  // "Occupied" pill matches the checked-in reservations the desk sees. A
-  // checked-in guest occupies the room until the desk actually checks them out,
-  // so due-out and overdue residents count too.
-  const inHouse = new Set()
+  const occupied = new Set()
+  const dueOut = new Set()
+  const reserved = new Set()
+
   for (const r of tapeReservations.value) {
-    if (r.status !== 'checked_in') continue
     const roomId = reservationRoomId(r)
-    const { arrival } = reservationDates(r)
-    if (roomId && arrival && arrival <= today) inHouse.add(roomId)
+    if (!roomId) continue
+    const { arrival, departure } = reservationDates(r)
+
+    if (r.status === 'checked_in' && arrival && arrival <= today) {
+      if (departure && departure <= today) dueOut.add(roomId)
+      else occupied.add(roomId)
+    } else if (['pending', 'confirmed'].includes(r.status) && arrival && arrival.getTime() === today.getTime()) {
+      reserved.add(roomId)
+    }
   }
-  const reserved = tapeReservations.value.filter((r) => {
-    if (!['pending', 'confirmed'].includes(r.status)) return false
-    const { arrival } = reservationDates(r)
-    return arrival && arrival >= today
-  }).length
-  const dueOut = tapeReservations.value.filter((r) => {
-    if (r.status !== 'checked_in') return false
-    const { departure } = reservationDates(r)
-    // Due out = checkout day has arrived or already passed (an overdue resident
-    // still in house), not only the exact business date.
-    return departure && departure.getTime() <= today.getTime()
-  }).length
+
+  let vacant = 0
+  let blocked = 0
+  for (const room of rooms.value) {
+    if (dueOut.has(room.room_id) || occupied.has(room.room_id) || reserved.has(room.room_id)) continue
+    if (room.status === 'maintenance' || room.stop_sell) blocked += 1
+    else vacant += 1
+  }
+
   return [
-    { key: 'vacant', label: t('stayview.vacant'), count: count(['available']) },
-    { key: 'occupied', label: t('stayview.occupied'), count: inHouse.size },
-    { key: 'reserved', label: t('stayview.reserved'), count: reserved },
-    { key: 'blocked', label: t('stayview.blocked'), count: count(['maintenance']) },
-    { key: 'dueout', label: t('stayview.dueOut'), count: dueOut },
-    { key: 'dirty', label: t('stayview.dirty'), count: count(['dirty', 'cleaning']) },
+    { key: 'vacant', label: t('stayview.vacant'), count: vacant },
+    { key: 'occupied', label: t('stayview.occupied'), count: occupied.size },
+    { key: 'reserved', label: t('stayview.reserved'), count: reserved.size },
+    { key: 'blocked', label: t('stayview.blocked'), count: blocked },
+    { key: 'dueout', label: t('stayview.dueOut'), count: dueOut.size },
+    {
+      key: 'dirty',
+      label: t('stayview.dirty'),
+      count: rooms.value.filter((r) => ['dirty', 'cleaning'].includes(r.status)).length,
+    },
   ]
 })
 
@@ -3772,7 +3805,7 @@ const bookingGrid = computed(() => {
         ? `${curCode()} ${fmtNum(src.advance_payment, 2)}${src.advance_payment_method ? ` · ${paymentMethodLabel(src.advance_payment_method)}` : ''}`
         : '—',
     },
-    { label: t('stayview.reference'), value: show(src.booking_reference || src.reference) },
+    { label: t('stayview.reference'), value: show(displayBookingReference(src.booking_reference || src.reference)) },
     ...(src.channel || src.external_ref
       ? [{ label: t('reservations.channel'), value: `${show(src.channel)}${src.external_ref ? ` · ${src.external_ref}` : ''}` }]
       : []),
@@ -3798,21 +3831,22 @@ const bookingGrid = computed(() => {
 
 /** Label/value rows for the Guest Details tab. */
 const guestGrid = computed(() => {
-  const res = folio.value?.reservation
-  const g = res?.guest || res || activeBar.value || {}
+  const res = folio.value?.reservation || {}
+  const guest = res.guest || {}
+  const fallback = activeBar.value || {}
   const show = (v) => (v === undefined || v === null || v === '' ? '—' : String(v))
   return [
-    { label: t('stayview.guestName'), value: show(g.full_name || g.guest_name || g.label) },
-    { label: t('stayview.phone'), value: show(formatPhoneGaps(g.phone || g.guest_phone || activeBar.value?.phone)) },
+    { label: t('stayview.guestName'), value: show(res.guest_name || res.full_name || guest.full_name || guest.guest_name || fallback.label) },
+    { label: t('stayview.phone'), value: show(formatPhoneGaps(res.guest_phone || guest.phone || fallback.phone)) },
     // The e-mail of record may live on the guest profile OR the reservation
     // (an amended stay writes reservation.guest_email even when the profile row
     // is blank/legacy), so the tab falls across every source before showing —
     // it must never read "—" while the amended address exists anywhere.
-    { label: t('stayview.email'), value: show(g.email || g.guest_email || g.guestEmail || res?.guest_email || activeBar.value?.guestEmail || '') },
-    { label: t('guests.nationality'), value: show(g.nationality || g.country) },
-    { label: t('guests.idType'), value: show(g.id_type) },
-    { label: t('guests.idNumber'), value: show(g.id_number) },
-    { label: t('guests.vipStatus'), value: show(g.vip_status ? t('guests.typeVip') : t('guests.typeRegular')) },
+    { label: t('stayview.email'), value: show(res.guest_email || guest.email || res.guestEmail || fallback.guestEmail || '') },
+    { label: t('guests.nationality'), value: show(res.nationality || res.country || guest.nationality || guest.country) },
+    { label: t('guests.idType'), value: show(res.id_type || guest.id_type) },
+    { label: t('guests.idNumber'), value: show(res.id_number || guest.id_number) },
+    { label: t('guests.vipStatus'), value: show((res.vip_status ?? guest.vip_status) ? t('guests.typeVip') : t('guests.typeRegular')) },
   ]
 })
 
@@ -4057,11 +4091,11 @@ function buildLedgerEntries(src) {
       // moved; only the target folio's live rows travel again.
       moveLine: /_(out|in)$/.test(e.type),
       entryUrl: e.attachment_url ? reservationApi.folioAttachmentUrl(e.folio_entry_id) : '',
+      canEditAction: ['room_charge', 'extra_charge', 'adjustment', 'discount', 'inclusion'].includes(e.type)
+        && e.folio_entry_id != null,
       editable: ['room_charge', 'extra_charge', 'adjustment', 'discount', 'inclusion'].includes(e.type)
         && e.folio_entry_id != null
-        // Room charges are the frozen stay bill and closed folios are final:
-        // both can only be rewritten by management (manager/accountant+).
-        && (canManageFolioOps.value || (e.type !== 'room_charge' && !folioLocked.value)),
+        && (canManageFolioOps.value || (!restrictedFolioType(e.type) && !folioLocked.value)),
       movedFrom: fromPartner || null,
       movedTo: toPartner || null,
     })
@@ -5012,6 +5046,47 @@ const tenantPlace = computed(() => Boolean(tenantAddress.value || tenantContact.
 
 /** Per-row three-dot action menu, anchored to the clicked button. */
 const entryMenu = ref(null)
+const unauthorizedFolioAction = ref(null)
+
+const unauthorizedFolioMessage = computed(() => {
+  const action = unauthorizedFolioAction.value
+  if (!action) return ''
+  let type = t('folio.notAuthorizedEntry')
+  if (action.type === 'room_charge') type = t('folio.notAuthorizedRoomCharge')
+  if (action.type === 'room_posting') type = t('folio.notAuthorizedRoomPosting')
+  if (action.type === 'laundry') type = t('folio.notAuthorizedLaundry')
+  return t(action.action === 'edit' ? 'folio.notAuthorizedEdit' : 'folio.notAuthorizedVoid', { type })
+})
+
+function restrictedFolioType(type) {
+  return ['room_charge', 'room_posting', 'laundry'].includes(type)
+}
+
+function canVoidEntry(entry) {
+  if (!entry?.entryId || entry.moveLine) return false
+  if (entry.entryUrl) return true
+  if (canManageFolioOps.value) return true
+  return !restrictedFolioType(entry.type) && !folioLocked.value
+}
+
+function requestEditEntry(entry) {
+  closeEntryMenu()
+  if (!entry?.editable) {
+    unauthorizedFolioAction.value = { action: 'edit', type: entry?.type }
+    return
+  }
+  openEditEntry(entry)
+}
+
+function requestVoidEntry(entry) {
+  closeEntryMenu()
+  if (!canVoidEntry(entry)) {
+    unauthorizedFolioAction.value = { action: 'void', type: entry?.type }
+    return
+  }
+  if (entry.entryUrl) removeFolioAttachment(entry)
+  else voidFolioEntry(entry)
+}
 
 function toggleEntryMenu(entry, event) {
   if (entryMenu.value?.entry === entry) {
@@ -5074,12 +5149,22 @@ const amendTouched = ref(false)
 const amendSnapshot = ref({})
 
 /** Rooms as searchable options for the amend/room-move picker. */
-const roomMoveOptions = computed(() =>
-  rooms.value.map((room) => ({
-    value: room.room_id,
-    label: `${room.room_number} · ${roomTypeLabel(room.room_type)} · ${curCode()} ${formatPrice(room.price_per_night)}`,
-  })),
-)
+const roomMoveOptions = computed(() => {
+  const currentRoomId = folio.value?.reservation?.room_id || activeBar.value?.room_id
+  const currentType = rooms.value.find((r) => r.room_id === currentRoomId)?.room_type
+  return [...rooms.value]
+    .sort((a, b) => {
+      if (currentType && a.room_type !== b.room_type) {
+        if (a.room_type === currentType) return -1
+        if (b.room_type === currentType) return 1
+      }
+      return String(a.room_number).localeCompare(String(b.room_number), undefined, { numeric: true })
+    })
+    .map((room) => ({
+      value: room.room_id,
+      label: `${room.room_number} · ${roomTypeLabel(room.room_type)} · ${curCode()} ${formatPrice(room.price_per_night)}`,
+    }))
+})
 
 /**
  * The rooms of the booking party when the bar being amended belongs to a
@@ -5227,6 +5312,23 @@ async function submitAmend() {
   // matches the reservation) so the folio/Guest-Details/send-invoice always
   // read the address of record from the reservation after an amendment.
   if (f.guest_email) payload.guest_email = f.guest_email
+  if (amendIsGroup.value && amendIsRoomMove.value) {
+    const ids = amendSelectedRoomIds.value.slice()
+    if (!ids.length) {
+      amendErrors.value = { ...amendErrors.value, room_id: t('stayview.selectAtLeastOneRoom') }
+      return
+    }
+    const groupPayload = {
+      ...payload,
+      room_ids: [ids[0]],
+      room_move: true,
+      release_unselected: false,
+    }
+    amendModal.value = false
+    await runStayAction(() => reservationApi.groupAmend(activeBar.value.id, groupPayload))
+    if (actionError.value) amendModal.value = true
+    return
+  }
   if (amendIsGroup.value) {
     // Every room keeps its own assignment (no room move here); the ticked
     // rooms are amended and any unticked active room is released.
@@ -5332,16 +5434,38 @@ function printReceptionDocument(html) {
   return true
 }
 
-/** Opens the (self-printing) A4 document in a popup window — the fallback path. */
+/** Prints the A4 document in a hidden frame so no separate Chrome tab opens. */
 function openPrintWindow(html) {
-  const win = window.open('', '_blank', 'width=860,height=1000')
-  if (!win) {
-    actionError.value = t('stayview.printEntryInvoiceBlocked')
-    return false
+  document.getElementById('mrk-print-frame')?.remove()
+  const frame = document.createElement('iframe')
+  frame.id = 'mrk-print-frame'
+  frame.title = t('stayview.printEntryInvoice')
+  frame.setAttribute('aria-hidden', 'true')
+  frame.style.position = 'fixed'
+  frame.style.left = '-9999px'
+  frame.style.width = '0'
+  frame.style.height = '0'
+  frame.style.border = '0'
+  document.body.appendChild(frame)
+
+  const printableHtml = html.replace(
+    /<script>window\.onload\s*=\s*\(\)\s*=>\s*window\.print\(\)<\/script>/i,
+    '',
+  )
+  let printed = false
+  const printAndCleanup = () => {
+    if (printed) return
+    printed = true
+    try {
+      frame.contentWindow?.focus?.()
+      frame.contentWindow?.print?.()
+    } finally {
+      setTimeout(() => frame.remove(), 1000)
+    }
   }
-  win.document.open()
-  win.document.write(html)
-  win.document.close()
+  frame.onload = printAndCleanup
+  frame.srcdoc = printableHtml
+  setTimeout(printAndCleanup, 250)
   return true
 }
 
@@ -6405,6 +6529,15 @@ const bookingGuestLookup = ref({ loading: false, found: null, matches: [] })
 let bookingPhoneTimer
 let bookingNameTimer
 
+function guestProfileMatchesTypedName(profile) {
+  const normalize = (value) => String(value || '').trim().toLowerCase()
+  const first = normalize(bookingForm.value.first_name)
+  const last = normalize(bookingForm.value.last_name)
+  if (!first && !last) return true
+  return (!first || first === normalize(profile.first_name))
+    && (!last || last === normalize(profile.last_name))
+}
+
 function applyGuestToBooking(g) {
   if (!g) return
   bookingGuestLookup.value = { loading: false, found: g, matches: [] }
@@ -6437,7 +6570,15 @@ watch(
         const matches = res.data.guests || res.data.data || []
         if (Array.isArray(matches) && matches.length === 1) {
           const g = matches[0]
-          applyGuestToBooking(g)
+          // A phone lookup alone is not proof of identity. Only adopt the
+          // profile when the typed name agrees; otherwise leave the entered
+          // guest details untouched so one phone number cannot turn every
+          // different booking into the same guest.
+          if (guestProfileMatchesTypedName(g)) {
+            applyGuestToBooking(g)
+          } else {
+            bookingGuestLookup.value = { loading: false, found: null, matches: [] }
+          }
         } else if (Array.isArray(matches) && matches.length > 1) {
           bookingGuestLookup.value = { loading: false, found: null, matches }
         } else {
@@ -6542,6 +6683,26 @@ function resetBookingForm() {
   roomPickerOpen.value = false
   bookingGuestLookup.value = { loading: false, found: null, matches: [] }
 }
+
+/**
+ * A room opened from the dashboard stays selected when the desk switches the
+ * booking to a group, instead of silently disappearing from the party.
+ */
+watch(
+  () => bookingForm.value.booking_type,
+  (type) => {
+    if (type !== 'group' || roomSelectionsArray.value.length || !bookingForm.value.room_id) return
+    const room = rooms.value.find((r) => r.room_id === bookingForm.value.room_id)
+    if (!room) return
+    roomSelectionsArray.value.push({
+      room_id: room.room_id,
+      room_number: room.room_number,
+      room_type: room.room_type,
+      price_per_night: room.price_per_night,
+    })
+    bookingForm.value.primary_room_id = room.room_id
+  },
+)
 
 /** Nights between the selected arrival and departure dates. */
 const bookingNights = computed(() => {
@@ -8620,6 +8781,10 @@ onUnmounted(() => clearInterval(refreshTimer))
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+}
+
+.sv-modal-compact {
+  max-height: 70vh;
 }
 
 .sv-modal-body {
