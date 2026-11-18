@@ -190,7 +190,7 @@
                 @change="onTableDropdownChange" />
             </div>
             <label class="oh-check">
-              <input type="checkbox" disabled />
+              <input v-model="form.is_vip" type="checkbox" :disabled="vipSaving || selectingTable" @change="saveVipStatus" />
               <span>{{ $t('orderTaker.vip') }}</span>
             </label>
             <button v-if="canManageTables" type="button" class="oh-manage" @click="openTableManager">
@@ -240,21 +240,21 @@
             </div>
           </div>
 
-        <!-- PDF order pad: the SEND ORDER action and the TOTAL amount swap
-             positions (Send left, Total right). The action keeps its SEND
-             ORDER label; renaming it TOTAL would make the button meaningless. -->
+        <!-- PDF order pad: the amount block sits on the left and the action on
+             the right. Per the order-pad review, the two labels are swapped:
+             the amount block reads Send Order and the action button reads Total. -->
         <div class="order-send-row">
             <p v-if="sendError" class="send-error">{{ sendError }}</p>
+            <div class="total-bar">
+              <span>{{ $t('orderTaker.send') }}</span>
+              <strong>{{ curCode() }} {{ money(grandTotal) }}</strong>
+            </div>
             <button type="button" class="send-btn" :disabled="!pendingLineCount || sending || selectingTable"
               @click="sendOrder">
               <i v-if="sending" class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
               <i v-else class="fas fa-paper-plane" aria-hidden="true"></i>
-              {{ sending ? $t('orderTaker.sending') : $t('orderTaker.send') }}
+              {{ sending ? $t('orderTaker.sending') : $t('orderTaker.total') }}
             </button>
-            <div class="total-bar">
-              <span>{{ $t('orderTaker.total') }}</span>
-              <strong>{{ curCode() }} {{ money(grandTotal) }}</strong>
-            </div>
           </div>
         </div>
       </div>
@@ -455,9 +455,6 @@
           <button type="button" :class="{ active: openStatus === 'running' }" @click="openStatus = 'running'">
             {{ $t('orderTaker.filterRunning') }} · {{ openRunningCount }}
           </button>
-          <button type="button" :class="{ active: openStatus === 'settled' }" @click="openStatus = 'settled'">
-            {{ $t('orderTaker.filterSettled') }} · {{ openSettledCount }}
-          </button>
         </div>
       </div>
       <p v-if="openError" class="send-error">{{ openError }}</p>
@@ -467,42 +464,7 @@
       <div v-else class="open-grid">
         <article v-for="order in openFiltered" :key="order.order_id" class="open-card"
           @dblclick="toggleSelectOrder(order)">
-          <header class="open-card-head">
-            <label class="open-check">
-              <input type="checkbox" :value="order.order_id" v-model="selectedVoid"
-                :disabled="!(['pending', 'preparing', 'in_progress', 'processing'].includes(order.status) && order.payment_status === 'unpaid')"
-                :aria-label="$t('orderTaker.voidSelected')" />
-            </label>
-            <strong>{{ order.order_number }}</strong>
-            <span class="open-badge" :class="statusBadge(order.status)">{{ statusLabel(order.status) }}</span>
-            <span class="open-timer"
-              :title="$t('orderTaker.openFor', { time: formatOrderDateTime(order.created_at || order.order_date) })">
-              <i class="fas fa-stopwatch" aria-hidden="true"></i> {{ elapsedLabel(order) }}
-            </span>
-          </header>
-          <!-- Single-tap lifecycle: next status, payment, bill to room -->
-          <div class="open-actions">
-            <button v-if="!isWaiterRole && order.status === 'pending'" type="button" class="open-btn warn"
-              @click="advanceOrder(order, 'preparing')">
-              <i class="fas fa-fire-burner" aria-hidden="true"></i> {{ $t('orderTaker.markPreparing') }}
-            </button>
-            <button v-else-if="!isWaiterRole && ['preparing', 'in_progress', 'processing'].includes(order.status)"
-              type="button" class="open-btn info" @click="advanceOrder(order, 'ready')">
-              <i class="fas fa-bell-concierge" aria-hidden="true"></i> {{ $t('orderTaker.markReady') }}
-            </button>
-            <button v-else-if="!isWaiterRole && order.status === 'ready'" type="button" class="open-btn ok"
-              @click="advanceOrder(order, 'served')">
-              <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('orderTaker.markServed') }}
-            </button>
-            <template v-if="order.payment_status === 'unpaid' && canCollect">
-              <button type="button" class="open-btn pay" @click="openPay(order)">
-                <i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('orderTaker.collectPayment') }}
-              </button>
-              <button v-if="order.room_number && canBillToRoom" type="button" class="open-btn room"
-                @click="billToRoom(order)">
-                <i class="fas fa-bed" aria-hidden="true"></i> {{ $t('orderTaker.billToRoom') }}
-              </button>
-            </template>
+          <div class="open-actions open-bill-actions" @dblclick.stop>
             <template v-if="!['completed', 'cancelled'].includes(order.status) && (order.items || []).length > 1">
               <button type="button" class="open-btn ghost" @click="openSplit(order)">
                 <i class="fas fa-scissors" aria-hidden="true"></i> {{ $t('orderTaker.split') }}
@@ -525,8 +487,49 @@
             <button
               v-if="['pending', 'preparing', 'in_progress', 'processing'].includes(order.status) && order.payment_status === 'unpaid'"
               type="button" class="open-btn ghost danger" @click="openVoid(order)">
-              <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('orderTaker.voidOrder') }}
+              <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('orderTaker.void') }}
             </button>
+          </div>
+          <header class="open-card-head">
+            <label class="open-check">
+              <input type="checkbox" :value="order.order_id" v-model="selectedVoid"
+                :disabled="!(['pending', 'preparing', 'in_progress', 'processing'].includes(order.status) && order.payment_status === 'unpaid')"
+                :aria-label="$t('orderTaker.voidSelected')" />
+            </label>
+            <div class="open-title">
+              <span class="open-order-line">
+                <span class="open-order-label">{{ $t('orderTaker.orderNo') }}</span>
+                <strong>{{ order.order_number }}</strong>
+              </span>
+              <span class="open-when">
+                <i class="fas fa-clock" aria-hidden="true"></i>
+                {{ formatOrderDateTime(order.created_at || order.order_date) }}
+              </span>
+            </div>
+            <span class="open-badge" :class="statusBadge(order.status)">{{ statusLabel(order.status) }}</span>
+            <span class="open-timer"
+              :title="$t('orderTaker.openFor', { time: formatOrderDateTime(order.created_at || order.order_date) })">
+              <i class="fas fa-stopwatch" aria-hidden="true"></i> {{ elapsedLabel(order) }}
+            </span>
+          </header>
+          <div class="open-actions" @dblclick.stop>
+            <button v-if="!isWaiterRole && ['preparing', 'in_progress', 'processing'].includes(order.status)"
+              type="button" class="open-btn info" @click="advanceOrder(order, 'ready')">
+              <i class="fas fa-bell-concierge" aria-hidden="true"></i> {{ $t('orderTaker.markReady') }}
+            </button>
+            <button v-else-if="!isWaiterRole && order.status === 'ready'" type="button" class="open-btn ok"
+              @click="advanceOrder(order, 'served')">
+              <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('orderTaker.markServed') }}
+            </button>
+            <template v-if="order.payment_status === 'unpaid' && canCollect">
+              <button type="button" class="open-btn pay" @click="openPay(order)">
+                <i class="fas fa-money-bill-wave" aria-hidden="true"></i> {{ $t('orderTaker.collectPayment') }}
+              </button>
+              <button v-if="order.room_number && canBillToRoom" type="button" class="open-btn room"
+                @click="billToRoom(order)">
+                <i class="fas fa-bed" aria-hidden="true"></i> {{ $t('orderTaker.billToRoom') }}
+              </button>
+            </template>
             <button v-if="!isWaiterRole && !isPosRole && order.status === 'served' && order.payment_status !== 'unpaid'"
               type="button" class="open-btn done" @click="advanceOrder(order, 'completed')">
               <i class="fas fa-check" aria-hidden="true"></i> {{ $t('orderTaker.markCompleted') }}
@@ -545,9 +548,6 @@
             <template v-if="order.covers">
               · <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('orderTaker.diners') }}: {{ order.covers }}
             </template>
-            · <i class="fas fa-clock" aria-hidden="true"></i> {{ formatOrderDateTime(order.created_at ||
-              order.order_date)
-            }}
           </p>
           <ul class="open-items">
             <li class="open-items-head">
@@ -1224,16 +1224,12 @@ const openError = ref('')
 const openDate = ref(workingDateStore.workingDate)
 const isOpenToday = computed(() => openDate.value === workingDateStore.workingDate)
 
-// Open-orders board filters: instant search across the ticket identity fields,
-// plus quick status chips (all / running / ready / served / unpaid).
+// Open-orders board filters: instant waiter search plus the all / running chips.
 const openSearch = ref('')
 const openStatus = ref('')
 
 const openRunningCount = computed(
   () => openOrders.value.filter((o) => ['pending', 'preparing', 'in_progress', 'processing'].includes(o.status)).length,
-)
-const openSettledCount = computed(
-  () => openOrders.value.filter((o) => o.status === 'completed' || (o.payment_status && o.payment_status !== 'unpaid')).length,
 )
 
 /** The board rows after search + status chips, keeping the load order. */
@@ -1241,8 +1237,6 @@ const openFiltered = computed(() => {
   let rows = openOrders.value
   if (openStatus.value === 'running') {
     rows = rows.filter((o) => ['pending', 'preparing', 'in_progress', 'processing'].includes(o.status))
-  } else if (openStatus.value === 'settled') {
-    rows = rows.filter((o) => o.status === 'completed' || (o.payment_status && o.payment_status !== 'unpaid'))
   }
   const term = openSearch.value.trim().toLowerCase()
   if (term) {
@@ -2012,9 +2006,11 @@ const form = ref({
   covers: 0,
   order_type: defaultOrderType(),
   notes: '',
+  is_vip: false,
 })
 const orderLines = ref([])
 const sending = ref(false)
+const vipSaving = ref(false)
 const sendError = ref('')
 const sentToast = ref('')
 // When a waiter re-opens one of their own tables, this holds the running order
@@ -2024,6 +2020,23 @@ const continueOrderId = ref(null)
 // still loading must not let the older response overwrite the newer choice.
 const selectingTable = ref(false)
 const tableSelectionToken = ref(0)
+
+/** Persists a VIP change on a reopened order. New tickets simply carry the
+ *  checkbox in their create payload; failed updates restore the saved value. */
+async function saveVipStatus() {
+  if (!continueOrderId.value || vipSaving.value) return
+  const next = !!form.value.is_vip
+  vipSaving.value = true
+  sendError.value = ''
+  try {
+    await orderApi.update(continueOrderId.value, { is_vip: next })
+  } catch (err) {
+    form.value.is_vip = !next
+    sendError.value = err.response?.data?.message || t('orderTaker.vipUpdateError')
+  } finally {
+    vipSaving.value = false
+  }
+}
 
 // Physical tables managed by the manager; the waiter only picks one.
 const tables = ref([])
@@ -2129,14 +2142,14 @@ function tableHasLiveOrder(name) {
 function tableOccupiedByOther(name) {
   const occupant = occupiedTables.value.get(String(name))
   if (!occupant) return false
-  return String(occupant).toLowerCase() !== String(waiterName.value).toLowerCase()
+  return String(occupant).trim().toLowerCase() !== String(waiterName.value).trim().toLowerCase()
 }
 
 /** True when the named table is held by this waiter's own open ticket. */
 function tableOccupiedBySelf(name) {
   const occupant = occupiedTables.value.get(String(name))
   if (!occupant) return false
-  return String(occupant).toLowerCase() === String(waiterName.value).toLowerCase()
+  return String(occupant).trim().toLowerCase() === String(waiterName.value).trim().toLowerCase()
 }
 
 /** The waiter's own running order sitting on the named table, if any. */
@@ -2144,7 +2157,7 @@ function ownLiveOrderForTable(name) {
   return openOrders.value.find(
     (o) =>
       String(o.table_number) === String(name) &&
-      String(o.waiter_name || '').toLowerCase() === String(waiterName.value).toLowerCase() &&
+      String(o.waiter_name || '').trim().toLowerCase() === String(waiterName.value).trim().toLowerCase() &&
       !['completed', 'cancelled'].includes(o.status),
   )
 }
@@ -2184,7 +2197,7 @@ async function loadOwnLiveOrderForTable(name) {
   const snapshot = deptOrders.value.find(
     (o) =>
       String(o.table_number) === String(name) &&
-      String(o.waiter_name || '').toLowerCase() === String(waiterName.value).toLowerCase() &&
+      String(o.waiter_name || '').trim().toLowerCase() === String(waiterName.value).trim().toLowerCase() &&
       !['completed', 'cancelled'].includes(o.status),
   )
   if (!snapshot?.order_id) return null
@@ -2209,7 +2222,10 @@ function releaseTable() {
   activeSubCategory.value = ''
   searchQuery.value = ''
   sendError.value = ''
-  if (wasContinued) orderLines.value = []
+  if (wasContinued) {
+    orderLines.value = []
+    form.value.is_vip = false
+  }
 }
 
 /** Selects a table for the ticket. Re-opening the waiter's own occupied table
@@ -2217,17 +2233,15 @@ function releaseTable() {
  *  other table keeps the working item tab as-is, so items picked menu-first
  *  survive the table-selection step (issue 2.2.4).
  *
+ *  Re-tapping the table that is already selected is a no-op: the summary and
+ *  any unsent lines stay on screen. Clearing is the explicit UNSELECT action,
+ *  never a side effect of revisiting the same table.
+ *
  *  The header dropdown resolves through this same function and only commits its
- *  model after any existing order has loaded. `allowRelease` is false there so
- *  choosing the already-selected option does not immediately clear it. */
-async function selectTable(tbl, { allowRelease = true } = {}) {
+ *  model after any existing order has loaded. */
+async function selectTable(tbl) {
   const name = tbl.table_name
-  // Tapping the already-selected table releases it, so the categories/menu
-  // lock is undone without needing a separate clear button.
-  if (allowRelease && String(form.value.table_number || '') === String(name)) {
-    releaseTable()
-    return
-  }
+  if (String(form.value.table_number || '') === String(name)) return
   // Another staff member's live ticket: do not even start a fresh order here.
   if (tableOccupiedByOther(name)) {
     sendError.value = t('orderTaker.tableOccupied')
@@ -2275,6 +2289,8 @@ async function selectTable(tbl, { allowRelease = true } = {}) {
 
   form.value.table_number = name
   form.value.covers = continueTarget?.covers || form.value.covers || 0
+  if (continueTarget) form.value.is_vip = !!continueTarget.is_vip
+  else if (wasContinued) form.value.is_vip = false
 }
 
 /** The Order Summary page's + button hands an existing ticket here so the
@@ -2289,6 +2305,7 @@ async function applyAddToOrder(orderId) {
     form.value.table_number = order.table_number || ''
     form.value.covers = order.covers || 0
     form.value.order_type = order.order_type || defaultOrderType()
+    form.value.is_vip = !!order.is_vip
     orderLines.value = orderLinesFromOrder(order)
     const query = { ...route.query }
     delete query.addToOrder
@@ -2305,7 +2322,7 @@ function onTableDropdownChange(option) {
   const name = option?.value
   const tbl = servingTables.value.find((t) => String(t.table_name) === String(name))
   if (tbl) {
-    selectTable(tbl, { allowRelease: false })
+    selectTable(tbl)
   } else if (!name) {
     releaseTable()
   }
@@ -2317,7 +2334,7 @@ const tableOptions = computed(() =>
   servingTables.value.map((tbl) => {
     const name = String(tbl.table_name)
     const occupant = occupiedTables.value.get(name)
-    const isSelf = occupant && String(occupant).toLowerCase() === String(waiterName.value).toLowerCase()
+    const isSelf = occupant && String(occupant).trim().toLowerCase() === String(waiterName.value).trim().toLowerCase()
     const disabled = Boolean(occupant) && !isSelf
     const label = tbl.section ? `${tbl.table_name} · ${tbl.section}` : tbl.table_name
     return {
@@ -2362,7 +2379,7 @@ const transferTableOptions = computed(() =>
     .map((tbl) => {
       const name = String(tbl.table_name)
       const occupant = occupiedTables.value.get(name)
-      const mine = occupant && String(occupant).toLowerCase() === String(waiterName.value).toLowerCase()
+      const mine = occupant && String(occupant).trim().toLowerCase() === String(waiterName.value).trim().toLowerCase()
       const disabled = Boolean(occupant) && !mine
       const label = tbl.section ? `${tbl.table_name} · ${tbl.section}` : tbl.table_name
       return { value: tbl.table_name, label, disabled, mine: Boolean(mine), occupant: occupant || '' }
@@ -3000,16 +3017,28 @@ async function sendOrder() {
         outlet_id: selectedOutlet.value?.outlet_id || null,
         table_number: form.value.table_number || null,
         covers: form.value.covers || null,
+        is_vip: !!form.value.is_vip,
         waiter_name: waiterName.value,
         order_type: defaultOrderType(),
         notes: form.value.notes || null,
         items: itemsPayload,
       })
-      const number = res.data?.order?.order_number || ''
+      const created = res.data?.order
+      const number = created?.order_number || ''
       sentToast.value = t('orderTaker.sent', { number })
-      await printNewOrderTicket(res.data?.order)
-      orderLines.value = []
-      form.value = { table_number: '', covers: 0, order_type: defaultOrderType(), notes: '' }
+      await printNewOrderTicket(created)
+      if (created?.order_id) {
+        // Keep the table and its summary on screen so the waiter can add a
+        // second round without hunting for the table again. The lines are
+        // marked as already sent, so the next send appends (and prints) only
+        // the new quantities.
+        continueOrderId.value = created.order_id
+        orderLines.value = orderLinesFromOrder(created)
+        form.value.notes = ''
+      } else {
+        orderLines.value = []
+        form.value = { table_number: '', covers: 0, order_type: defaultOrderType(), notes: '', is_vip: false }
+      }
     }
     setTimeout(() => (sentToast.value = ''), 4000)
     loadOpenOrders()
@@ -3251,9 +3280,11 @@ function onKey(e) {
   display: flex;
   flex-direction: column;
   /* Reserve enough height for the header plus two complete card rows, including
-     their price and outlet-stock lines. On shorter windows the categories column
-     scrolls rather than squeezing the second row into a clipped strip. */
-  min-height: 320px;
+     their price and outlet-stock lines. Bar names and stock labels wrap onto
+     extra lines, so a flat two-row calculation is not enough; the larger floor
+     keeps both rows whole instead of clipping the second one. On shorter
+     windows the categories column scrolls rather than squeezing the rows. */
+  min-height: 400px;
   /* Takes whatever height the category and sub-category rails leave behind, and
      is the part that gives way when the column runs short. */
   flex: 1 1 auto;
@@ -3296,7 +3327,9 @@ function onKey(e) {
 .inline-grid {
   max-height: none;
   flex: 1 1 auto;
-  min-height: 0;
+  /* Two card rows, the gap between them and the grid padding. This is a floor,
+     not a cap: wrapped bar names make the rows taller and the grid scrolls. */
+  min-height: calc(2 * 96px + 10px + 32px);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -4572,8 +4605,49 @@ function onKey(e) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   font-size: 15px;
   color: #27272a;
+}
+
+.open-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.open-order-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.open-order-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #71717a;
+  white-space: nowrap;
+}
+
+.open-order-line strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.open-when {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #71717a;
+  white-space: nowrap;
 }
 
 /* Waiter account order summary */
@@ -4871,41 +4945,6 @@ function onKey(e) {
   min-width: 0;
 }
 
-.item-status-pill {
-  display: inline-block;
-  padding: 2px 9px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-.item-advance {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid #d4d4d8;
-  border-radius: 999px;
-  background: #fafafa;
-  color: #52525b;
-  cursor: pointer;
-  font-size: 12px;
-  flex-shrink: 0;
-}
-
-.item-advance:hover {
-  background: #e4e4e7;
-}
-
-.item-advance:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
 .open-timer {
   display: inline-flex;
   align-items: center;
@@ -4924,6 +4963,7 @@ function onKey(e) {
   margin: 0;
   font-size: 13px;
   color: #52525b;
+  text-align: right;
 }
 
 .pay-unpaid {

@@ -4,11 +4,10 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import i18n from '@/locales/i18n'
 
 /**
- * The sync-to-stock picker holds the whole stock catalogue, which can run to
- * hundreds of items. The panel scrolls internally, so every loaded option has
- * to be rendered — slicing the list capped it at the first hundred and hid
- * later-alphabet items (e.g. "Zanzi 250ml") that could never be reached by
- * scrolling.
+ * The requisition and sync-to-stock pickers hold the whole stock catalogue,
+ * which can run past five hundred items. The panel scrolls internally, so
+ * every loaded option has to be rendered — slicing the list hid later-alphabet
+ * items (e.g. "Zanzi 250ml") that could never be reached by scrolling.
  */
 function buildOptions(count) {
   return Array.from({ length: count }, (_, i) => ({
@@ -22,8 +21,8 @@ function panelOptions() {
 }
 
 describe('SearchableSelect option rendering', () => {
-  it('renders options past the first hundred so a late item is reachable', async () => {
-    const options = [...buildOptions(150), { value: 'zanzi', label: 'Zanzi 250ml' }]
+  it('renders options past five hundred so a late item is reachable', async () => {
+    const options = [...buildOptions(550), { value: 'zanzi', label: 'Zanzi 250ml' }]
     const wrapper = mount(SearchableSelect, {
       props: { modelValue: '', options, forceSearch: true },
       global: { plugins: [i18n] },

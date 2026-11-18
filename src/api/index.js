@@ -1800,6 +1800,43 @@ export const tableLocationApi = {
   },
 };
 
+/** Delivery driver roster used by the Delivery Manager board. */
+export const deliveryDriverApi = {
+  /**
+   * Lists the tenant's registered delivery drivers.
+   * @param {object} params - Optional filters (is_active, search).
+   * @returns {Promise} Axios response with { drivers }.
+   */
+  index(params) {
+    return api.get(`${v1}/delivery-drivers`, { params });
+  },
+  /**
+   * Registers a delivery driver.
+   * @param {object} data - Driver payload (full_name, phone, is_active).
+   * @returns {Promise} Axios response with the created driver.
+   */
+  store(data) {
+    return api.post(`${v1}/delivery-drivers`, data);
+  },
+  /**
+   * Updates a delivery driver.
+   * @param {string} id - Driver identifier.
+   * @param {object} data - Fields to update.
+   * @returns {Promise} Axios response with the updated driver.
+   */
+  update(id, data) {
+    return api.put(`${v1}/delivery-drivers/${id}`, data);
+  },
+  /**
+   * Removes a delivery driver from the roster.
+   * @param {string} id - Driver identifier.
+   * @returns {Promise} Axios response confirming deletion.
+   */
+  destroy(id) {
+    return api.delete(`${v1}/delivery-drivers/${id}`);
+  },
+};
+
 /** F&B orders: cash/room-folio settlement and per-item kitchen status. */
 export const orderApi = {
   /**

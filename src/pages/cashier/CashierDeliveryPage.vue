@@ -1,8 +1,9 @@
 <!--
   CashierDeliveryPage — the Delivery Manager board.
-  Pending / Settled / Voided tabs with live counts, waiter / sender / driver
-  columns, plus an "Add Delivery Order" flow that captures contact details,
-  the delivery address, the driver and the expected delivery time.
+  Pending / Settled / Voided tabs with live counts, a combined Sender /
+  Driver column, plus an "Add Delivery Order" flow that captures contact
+  details, the delivery address, the registered driver and the expected
+  delivery time.
 -->
 
 <template>
@@ -18,6 +19,9 @@
       <label class="sm-inline-label" for="dl-date">{{ $t('cashier.summary.workingDate') }}</label>
       <OrderDateNav input-id="dl-date" v-model="date" :today="workingDateStore.workingDate"
         :today-label="$t('cashier.delivery.today')" @change="load" />
+      <router-link :to="{ name: 'cashier-drivers' }" class="sm-btn sm ghost">
+        <i class="fas fa-id-card" aria-hidden="true"></i> {{ $t('cashier.delivery.drivers') }}
+      </router-link>
       <button class="sm-btn sm success" @click="showModal = true">
         {{ $t('cashier.delivery.addOrder') }}
       </button>
@@ -32,8 +36,7 @@
             <th>{{ $t('cashier.summary.order') }}</th>
             <th>{{ $t('cashier.roomService.guest') }}</th>
             <th>{{ $t('cashier.summary.waiter') }}</th>
-            <th>{{ $t('cashier.delivery.sender') }}</th>
-            <th>{{ $t('cashier.delivery.driver') }}</th>
+            <th>{{ $t('cashier.delivery.senderDriver') }}</th>
             <th>{{ $t('cashier.delivery.time') }}</th>
             <th>{{ $t('cashier.delivery.phone') }}</th>
             <th>{{ $t('cashier.delivery.address') }}</th>
@@ -46,8 +49,7 @@
             <td><button class="order-link" @click="peekId = order.order_id">{{ order.order_number }}</button></td>
             <td>{{ order.guest_name || '—' }}</td>
             <td>{{ order.waiter_name || '—' }}</td>
-            <td>{{ senderOf(order) }}</td>
-            <td>{{ order.driver_name || '—' }}</td>
+            <td>{{ order.driver_name || senderOf(order) }}</td>
             <td>{{ timeOf(order) }}</td>
             <td>{{ order.delivery_phone || '—' }}</td>
             <td class="addr-cell">{{ order.delivery_address || '—' }}</td>
@@ -55,16 +57,28 @@
             <td>{{ money(order.total_amount) }}</td>
           </tr>
           <tr v-if="!filteredOrders.length">
-            <td colspan="10" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.delivery.none') }}</td>
+            <td colspan="9" class="empty"><i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('cashier.delivery.none') }}</td>
           </tr>
         </tbody>
       </table>
       </div>
     </section>
 
-    <NewOrderModal v-if="showModal" mode="delivery" :title="$t('cashier.delivery.addOrder')"
-      @close="showModal = false" @created="onCreated" />
-    <OrderPeekModal :open="!!peekId" :order-id="peekId" @close="peekId = null" />
+    <NewOrderModal
+      v-if="showModal || continuingOrder"
+      mode="delivery"
+      :title="continuingOrder ? $t('cashier.order.continueOrder', { number: continuingOrder.order_number }) : $t('cashier.delivery.addOrder')"
+      :existing-order="continuingOrder"
+      @close="closeOrderModal"
+      @created="onCreated"
+    />
+    <OrderPeekModal
+      :open="!!peekId"
+      :order-id="peekId"
+      can-add-items
+      @close="peekId = null"
+      @add-items="continueOrder"
+    />
   </div>
 </template>
 
@@ -87,6 +101,7 @@ const orders = ref([])
 const loading = ref(true)
 const activeTab = ref('pending')
 const showModal = ref(false)
+const continuingOrder = ref(null)
 const date = ref('')
 const peekId = ref(null)
 
@@ -149,8 +164,18 @@ async function load() {
   }
 }
 
-function onCreated() {
+function continueOrder(order) {
+  continuingOrder.value = order
+  peekId.value = null
+}
+
+function closeOrderModal() {
   showModal.value = false
+  continuingOrder.value = null
+}
+
+function onCreated() {
+  closeOrderModal()
   load()
 }
 

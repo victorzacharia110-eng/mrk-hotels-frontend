@@ -114,7 +114,9 @@ describe('waiter pad: categories wrap so every one is visible, food scrolls down
     // the page instead of scrolling itself.
     const grid = rule(styles, '.inline-grid')
     expect(grid).toMatch(/overflow-y:\s*auto/)
-    expect(grid).toMatch(/min-height:\s*0/)
+    // The floor is two card rows plus the gap and padding, not zero: the grid
+    // must never collapse into a single clipped row.
+    expect(grid).toMatch(/min-height:\s*calc\(2 \* 96px \+ 10px \+ 32px\)/)
     // And the wrapper has to be a column for the grid to take the leftover
     // height rather than being sized by its content.
     expect(rule(styles, '.inline-items')).toMatch(/display:\s*flex/)
@@ -122,8 +124,9 @@ describe('waiter pad: categories wrap so every one is visible, food scrolls down
 
   it('reserves enough height for two complete stock-bearing item rows', () => {
     // Two 96px cards, the row gap and grid padding need more than the old 230px
-    // wrapper once the header is included. The larger floor keeps row two whole.
-    expect(rule(styles, '.inline-items')).toMatch(/min-height:\s*320px/)
+    // wrapper once the header is included. Bar names and stock labels wrap, so
+    // the larger floor keeps row two whole even when the cards grow.
+    expect(rule(styles, '.inline-items')).toMatch(/min-height:\s*400px/)
     expect(rule(styles, '.cat-item')).toMatch(/min-height:\s*96px/)
     expect(rule(styles, '.cat-pop-grid')).toMatch(/gap:\s*10px/)
     expect(rule(styles, '.cat-pop-grid')).toMatch(/padding:\s*16px/)
@@ -205,17 +208,17 @@ describe('waiter pad: the order table fills the width with Send beside the total
     expect(rule(styles, '.order-body')).toMatch(/width:\s*100%/)
   })
 
-  it('places Send on the left and the total on the right', () => {
+  it('places the amount on the left and swaps the Total and Send Order labels', () => {
     const rowAt = pad.indexOf('class="order-send-row"')
-    const sendAt = pad.indexOf('class="send-btn"', rowAt)
     const totalAt = pad.indexOf('class="total-bar"', rowAt)
+    const sendAt = pad.indexOf('class="send-btn"', rowAt)
     expect(rowAt, 'send row not found').toBeGreaterThan(-1)
-    expect(sendAt, 'send button not found in the action row').toBeGreaterThan(rowAt)
-    expect(totalAt, 'total bar not found in the action row').toBeGreaterThan(sendAt)
-    // The blocks swap positions; the action is still labelled Send Order and
-    // the amount is still labelled Total (not a literal word-for-word rename).
-    expect(pad.slice(sendAt, totalAt)).toMatch(/\$t\('orderTaker\.send'\)/)
-    expect(pad.slice(totalAt, pad.indexOf('</div>', totalAt))).toMatch(/\$t\('orderTaker\.total'\)/)
+    expect(totalAt, 'amount block not found in the action row').toBeGreaterThan(rowAt)
+    expect(sendAt, 'send button not found in the action row').toBeGreaterThan(totalAt)
+    // The order-pad review asks for a literal label swap: the amount block is
+    // headed Send Order and the action button reads Total.
+    expect(pad.slice(totalAt, sendAt)).toMatch(/\$t\('orderTaker\.send'\)/)
+    expect(pad.slice(sendAt, pad.indexOf('</button>', sendAt))).toMatch(/\$t\('orderTaker\.total'\)/)
     expect(pad).not.toMatch(/class="pager-row"/)
   })
 

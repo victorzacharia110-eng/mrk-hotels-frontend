@@ -44,6 +44,7 @@ vi.mock('@/utils/printer', async (importOriginal) => ({
 const api = vi.hoisted(() => ({
   store: vi.fn(),
   show: vi.fn(),
+  update: vi.fn(),
   addItems: vi.fn(),
   index: vi.fn(),
   formOptions: vi.fn(),
@@ -55,7 +56,7 @@ const api = vi.hoisted(() => ({
 }))
 
 vi.mock('@/api', () => ({
-  orderApi: { store: api.store, show: api.show, addItems: api.addItems, index: api.index },
+  orderApi: { store: api.store, show: api.show, update: api.update, addItems: api.addItems, index: api.index },
   menuItemApi: { index: api.items, categories: api.categories, items: api.items },
   menuAccompanimentApi: { index: vi.fn().mockResolvedValue({ data: { data: [] } }) },
   waiterApi: { index: vi.fn().mockResolvedValue({ data: { data: [] } }) },
@@ -131,6 +132,7 @@ beforeEach(() => {
   })
   api.store.mockResolvedValue({ data: { order: ORDER() } })
   api.show.mockResolvedValue({ data: { order: ORDER() } })
+  api.update.mockResolvedValue({ data: { order: ORDER() } })
   api.index.mockResolvedValue({ data: { data: [] } })
   api.tables.mockResolvedValue({
     data: { data: [{ table_id: 1, table_name: '4', section: 'restaurant', outlet_id: 1, is_active: 1 }] },
@@ -239,12 +241,13 @@ describe('food ticket on the waiter order-taker panel', () => {
    * waiter's name, which is what puts the panel into "continue this order"
    * mode so the item-added trigger is exercised.
    */
-  async function sendTicket({ ownLiveOrder = null } = {}) {
+  async function sendTicket({ ownLiveOrder = null, isVip = false, notes = '' } = {}) {
     useAuthStore().user = { full_name: 'LYDIA MANASE', user_role: 'waiter' }
     api.index.mockResolvedValue({ data: { data: ownLiveOrder ? [ownLiveOrder] : [] } })
 
     const wrapper = mount(OrderTakerDashboard, { global: { plugins: [i18n] } })
     await flushPromises()
+    if (isVip) await wrapper.find('.oh-check input').setValue(true)
 
     // Categories/search stay hidden until a table is chosen.
     await wrapper.find('.table-chip').trigger('click')
@@ -257,12 +260,20 @@ describe('food ticket on the waiter order-taker panel', () => {
 
     await wrapper.find('.cat-item').trigger('click')
     await nextTick()
+    if (notes) await wrapper.find('.notes-line').setValue(notes)
     await wrapper.find('.send-btn').trigger('click')
     await flushPromises()
 
     wrapper.unmount()
     return wrapper
   }
+
+  it('includes the selected VIP status when creating an order', async () => {
+    await sendTicket({ isVip: true })
+
+    expect(api.store).toHaveBeenCalledWith(expect.objectContaining({ is_vip: true }))
+    expect(api.update).not.toHaveBeenCalled()
+  })
 
   it('prints a food ticket when the waiter places a new order', async () => {
     const store = usePrintSettingsStore()
@@ -280,6 +291,18 @@ describe('food ticket on the waiter order-taker panel', () => {
       expect.anything(),
       expect.objectContaining({ printer: expect.objectContaining({ name: 'Kitchen' }) }),
     )
+  })
+
+  it('prints the order comment on the new-order kitchen ticket', async () => {
+    const store = usePrintSettingsStore()
+    const kitchen = store.addTicketPrinter({ name: 'Kitchen', transport: 'network', endpoint: 'http://10.0.0.7:9720' })
+    store.saveSettings({ departmentRouting: { restaurant: kitchen } })
+    api.store.mockResolvedValue({ data: { order: ORDER({ notes: 'E SPICY' }) } })
+
+    await sendTicket({ notes: 'E SPICY' })
+
+    expect(api.store).toHaveBeenCalledWith(expect.objectContaining({ notes: 'E SPICY' }))
+    expect(printedText()).toContain('NOTE: E SPICY')
   })
 
   it('prints nothing when the food-ticket flag is off', async () => {
@@ -380,6 +403,13 @@ describe('waiter live tickets and table release', () => {
     unit_price: 8000,
     subtotal: 8000 * quantity,
   })
+  const ugaliLine = (quantity = 1) => ({
+    menu_item_id: 1,
+    item_name: 'Ugali',
+    quantity,
+    unit_price: 3000,
+    subtotal: 3000 * quantity,
+  })
 
   async function mountPanel() {
     useAuthStore().user = { full_name: 'LYDIA MANASE', user_role: 'waiter' }
@@ -387,6 +417,40 @@ describe('waiter live tickets and table release', () => {
     await flushPromises()
     return wrapper
   }
+
+  it('loads and updates the saved VIP status on a live order', async () => {
+    const liveOrder = ORDER({ order_id: 'o-live', is_vip: true, items: [pizzaLine()] })
+    api.index.mockResolvedValue({ data: { data: [liveOrder] } })
+
+    const wrapper = await mountPanel()
+    await wrapper.find('.table-chip').trigger('click')
+    await flushPromises()
+    const checkbox = wrapper.find('.oh-check input')
+    expect(checkbox.element.checked).toBe(true)
+
+    await checkbox.setValue(false)
+    await flushPromises()
+    expect(api.update).toHaveBeenCalledWith('o-live', { is_vip: false })
+    expect(checkbox.element.checked).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('rolls back the VIP checkbox when an existing-order update fails', async () => {
+    const liveOrder = ORDER({ order_id: 'o-live', is_vip: false, items: [pizzaLine()] })
+    api.index.mockResolvedValue({ data: { data: [liveOrder] } })
+    api.update.mockRejectedValue(new Error('offline'))
+
+    const wrapper = await mountPanel()
+    await wrapper.find('.table-chip').trigger('click')
+    await flushPromises()
+    const checkbox = wrapper.find('.oh-check input')
+    await checkbox.setValue(true)
+    await flushPromises()
+
+    expect(checkbox.element.checked).toBe(false)
+    expect(wrapper.text()).toContain('Could not update the VIP status')
+    wrapper.unmount()
+  })
 
   it('appends only the extra quantity and protects the sent quantity', async () => {
     const liveOrder = ORDER({ order_id: 'o-live', items: [pizzaLine(2)] })
@@ -510,6 +574,60 @@ describe('waiter live tickets and table release', () => {
     expect(wrapper.text()).toContain('Pizza')
     expect(wrapper.find('.lines-table .qty-step span').text()).toBe('2')
     expect(wrapper.find('.send-btn').attributes('disabled')).toBeDefined()
+    wrapper.unmount()
+  })
+
+  it('keeps the loaded summary when the selected table is tapped again', async () => {
+    const liveOrder = ORDER({ order_id: 'o-live', items: [pizzaLine()] })
+    api.index.mockImplementation((params = {}) => Promise.resolve({
+      data: { data: params.occupancy ? [liveOrder] : [liveOrder] },
+    }))
+
+    const wrapper = await mountPanel()
+    await wrapper.find('.table-chip').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('Pizza')
+
+    await wrapper.find('.table-chip').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.table-unselect').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Pizza')
+    expect(wrapper.find('.send-btn').attributes('disabled')).toBeDefined()
+    wrapper.unmount()
+  })
+
+  it('keeps a newly sent order open so the next send appends only the extra items', async () => {
+    api.store.mockResolvedValue({ data: { order: ORDER({ order_id: 'o-new', items: [ugaliLine()] }) } })
+    api.addItems.mockResolvedValue({
+      data: { order: ORDER({ order_id: 'o-new', items: [ugaliLine(2)] }) },
+    })
+
+    const wrapper = await mountPanel()
+    await wrapper.find('.table-chip').trigger('click')
+    await flushPromises()
+
+    const search = wrapper.find('.cat-search')
+    search.element.value = 'ugali'
+    await search.trigger('input')
+    await nextTick()
+    await wrapper.find('.cat-item').trigger('click')
+    await nextTick()
+    await wrapper.find('.send-btn').trigger('click')
+    await flushPromises()
+
+    expect(api.store).toHaveBeenCalledTimes(1)
+    expect(wrapper.find('.table-unselect').exists()).toBe(true)
+    expect(wrapper.find('.lines-table .qty-step span').text()).toBe('1')
+    expect(wrapper.find('.send-btn').attributes('disabled')).toBeDefined()
+
+    await wrapper.findAll('.lines-table .qty-step button')[1].trigger('click')
+    await wrapper.find('.send-btn').trigger('click')
+    await flushPromises()
+
+    expect(api.addItems).toHaveBeenCalledWith('o-new', {
+      items: [{ menu_item_id: 1, quantity: 1, accompaniment: null }],
+    })
     wrapper.unmount()
   })
 

@@ -117,6 +117,10 @@
               </button>
               <span v-if="order.is_frozen" class="frozen-tag"><i class="fas fa-snowflake" aria-hidden="true"></i> {{ $t('storeManager.common.frozen') }}</span>
               <span v-if="order.is_no_charge" class="nc-tag">{{ $t('cashier.noCharge.tag') }}</span>
+              <span v-if="order.status === 'cancelled' && order.void_reason" class="void-reason">
+                <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
+                {{ $t('storeManager.common.reason') }}: {{ order.void_reason }}
+              </span>
             </td>
             <td>{{ order.waiter_name || '—' }}</td>
             <td>{{ timeOf(order) }}</td>
@@ -637,9 +641,11 @@ const NON_PLACEABLE_TYPES = ['takeaway', 'delivery']
 const canMoveBill = (order) =>
   !!order && !['cancelled', 'merged'].includes(order.status) && !NON_PLACEABLE_TYPES.includes(order.order_type)
 
-const orderTypeOptions = computed(() =>
-  [...new Set(orders.value.map((order) => order.order_type).filter(Boolean))].sort(),
-)
+const ORDER_TYPE_FILTERS = ['dine_in', 'room_service', 'delivery', 'no_charge', 'takeaway']
+const orderTypeOptions = computed(() => {
+  const present = orders.value.map((order) => order.order_type).filter(Boolean)
+  return [...new Set([...ORDER_TYPE_FILTERS, ...present])]
+})
 
 const filteredOrders = computed(() => {
   const term = search.value.trim().toLowerCase()
@@ -687,8 +693,15 @@ function statusLabel(order) {
   return te(key) ? t(key) : order.status
 }
 
+const TYPE_LABEL_KEYS = {
+  dine_in: 'cashier.orderTypes.dineIn',
+  takeaway: 'cashier.orderTypes.takeAway',
+  room_service: 'cashier.orderTypes.roomService',
+  delivery: 'cashier.orderTypes.delivery',
+  no_charge: 'cashier.orderTypes.noCharge',
+}
 function typeLabel(type) {
-  const key = `cashier.types.${type}`
+  const key = TYPE_LABEL_KEYS[type] || `cashier.types.${type}`
   return te(key) ? t(key) : type
 }
 
@@ -855,6 +868,9 @@ async function confirmVoid() {
       reason: voidReason.value.trim(),
       ...(canVoidSettled.value ? { override: true } : {}),
     })
+    // closeDrawer refuses while a save is in flight, so release the guard
+    // first — otherwise the void succeeds but leaves the stale drawer open.
+    savingVoid.value = false
     closeDrawer()
     await load()
     toast(t('cashier.summary.voided'), 'success')
@@ -1240,6 +1256,14 @@ onUnmounted(() => {
 .order-link i { font-size: 12px; opacity: 0.7; }
 .frozen-tag { margin-left: 8px; font-size: 11px; color: #00468c; background: #e8f1fa; border-radius: 999px; padding: 2px 8px; font-weight: 700; }
 .nc-tag { margin-left: 6px; font-size: 11px; color: #333333; background: #ececec; border-radius: 999px; padding: 2px 8px; font-weight: 700; }
+.void-reason {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #b91c1c;
+  line-height: 1.35;
+}
+.void-reason i { margin-right: 4px; }
 .sm-inline-label { font-size: 13px; color: #475569; font-weight: 600; }
 
 /* Action bar above the table: every order action runs on the ticked rows. */

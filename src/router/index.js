@@ -338,6 +338,12 @@ const routes = [
         meta: { titleKey: 'cashier.nav.delivery' },
       },
       {
+        path: 'drivers',
+        name: 'cashier-drivers',
+        component: () => import('@/pages/cashier/CashierDriversPage.vue'),
+        meta: { titleKey: 'cashier.nav.drivers' },
+      },
+      {
         path: 'no-charge',
         name: 'cashier-no-charge',
         component: () => import('@/pages/cashier/CashierNoChargePage.vue'),

@@ -67,7 +67,7 @@
             <div v-for="(itemsInCat, cat) in filteredMenu" :key="cat" class="cat-group">
               <p class="cat-title">{{ cat }}</p>
               <button v-for="item in itemsInCat" :key="item.menu_item_id" class="cat-item"
-                :class="{ 'out-of-stock': item.is_available === false || item.is_in_stock === false }"
+                :class="{ 'out-of-stock': isBlocked(item) }"
                 @click="addItem(item)">
                 <span class="cat-item-name">{{ dishName(item) }}</span>
                 <!-- Review item 4: take-away, room service and delivery order
@@ -84,7 +84,7 @@
                     {{ $t('cashier.order.stockCount', { qty: item.quantity_on_hand, unit: item.linked_item_unit || '' }) }}
                   </template>
                 </span>
-                <span v-if="item.is_available === false || item.is_in_stock === false" class="cat-item-oos">
+                <span v-if="isBlocked(item)" class="cat-item-oos">
                   {{ $t('orderTaker.outOfStock') }}
                 </span>
                 <span class="cat-item-price">{{ money(item.price) }}</span>
@@ -132,10 +132,15 @@
             <SearchableSelect
               id="no-driver"
               v-model="form.driver_name"
-              :options="waiterOptions"
+              :options="driverOptions"
               :placeholder="$t('cashier.order.driverPlaceholder')"
               :empty-label="$t('common.none')"
             />
+            <p v-if="!driverOptions.length" class="fld-hint">
+              <i class="fas fa-circle-info" aria-hidden="true"></i>
+              {{ $t('cashier.order.driverRegistryEmpty') }}
+              <router-link :to="{ name: 'cashier-drivers' }">{{ $t('cashier.order.driverRegistryLink') }}</router-link>
+            </p>
           </div>
           <div v-if="mode === 'delivery'" class="fld-row2">
             <div class="fld-col">
@@ -181,6 +186,15 @@
             <input id="no-covers" v-model.number="form.covers" class="sm-input" type="number" min="0" max="999" />
           </div>
 
+          <div v-if="existingLines.length" class="lines existing-lines">
+            <p class="fld-label">{{ $t('cashier.order.existingItems') }}</p>
+            <div v-for="line in existingLines" :key="line.order_item_id" class="line-row">
+              <span class="line-name">{{ line.item_name }}</span>
+              <div class="line-qty"><strong>{{ line.quantity }}</strong></div>
+              <span class="line-sum">{{ money(line.subtotal ?? line.unit_price * line.quantity) }}</span>
+            </div>
+          </div>
+
           <div class="lines">
             <p class="fld-label">{{ $t('cashier.order.lines') }}</p>
             <p v-if="!lines.length" class="empty">{{ $t('cashier.order.emptyLines') }}</p>
@@ -205,8 +219,9 @@
 
           <p v-if="error" class="form-error">{{ error }}</p>
 
-          <button class="sm-btn success submit-btn" :disabled="busy || !lines.length" @click="submit">
-            <i class="fas fa-check" aria-hidden="true"></i> {{ busy ? $t('common.saving') : $t('cashier.order.placeOrder') }}
+          <button class="sm-btn success submit-btn" :disabled="busy || (!lines.length && !existing)" @click="submit">
+            <i class="fas fa-check" aria-hidden="true"></i>
+            {{ busy ? $t('common.saving') : existing ? $t('cashier.order.saveChanges') : $t('cashier.order.placeOrder') }}
           </button>
         </section>
       </div>
@@ -269,7 +284,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { menuItemApi, orderApi } from '@/api'
+import { deliveryDriverApi, menuItemApi, orderApi } from '@/api'
 import { selectedOutlet } from '@/pages/cashier/outlet-context'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import AccompanimentManager from '@/components/AccompanimentManager.vue'
@@ -291,6 +306,10 @@ const props = defineProps({
   // Registered F&B credit accounts (from fnb/credit-accounts) shown in the
   // no-charge account picker ahead of the legacy hard-coded account list.
   creditAccounts: { type: Array, default: () => [] },
+  // Existing open ticket: when present the modal becomes a continuation
+  // screen. Header fields are editable, existing lines stay read-only and
+  // only the newly picked lines are appended.
+  existingOrder: { type: Object, default: null },
 })
 const emit = defineEmits(['close', 'created'])
 
@@ -309,6 +328,7 @@ const selfName = computed(
 
 const menu = ref([])
 const waiters = ref([])
+const drivers = ref([])
 const inHouseRooms = ref([])
 const search = ref('')
 const activeCat = ref('')
@@ -357,22 +377,34 @@ watch(dept, () => {
   loadMenu(1)
 })
 
+const existing = computed(() => props.existingOrder || null)
+const existingLines = computed(() => existing.value?.items || [])
+/** Room-service and delivery may record items the kitchen marked unavailable. */
+const allowsUnavailable = computed(() => ['room_service', 'delivery'].includes(props.mode))
+
 const form = reactive({
-  guest_name: props.guestNamePrefill || '',
-  room_number: props.roomNumber || '',
+  guest_name: existing.value?.guest_name || props.guestNamePrefill || '',
+  room_number: existing.value?.room_number || props.roomNumber || '',
   // Default the waiter to the person taking the order (cashier/bartender).
   // They can still reassign it to another waiter via the searchable select.
-  waiter_name: selfName.value,
-  driver_name: '',
-  covers: null,
-  no_charge_account: '',
-  delivery_phone: '',
-  delivery_address: '',
-  expected_minutes: 30,
+  waiter_name: existing.value?.waiter_name || selfName.value,
+  driver_name: existing.value?.driver_name || '',
+  covers: existing.value?.covers ?? null,
+  no_charge_account: existing.value?.no_charge_account || '',
+  delivery_phone: existing.value?.delivery_phone || '',
+  delivery_address: existing.value?.delivery_address || '',
+  expected_minutes: existing.value?.expected_minutes ?? 30,
 })
 
 const waiterOptions = computed(() =>
   waiters.value.map(w => ({ value: w.full_name, label: w.full_name }))
+)
+
+const driverOptions = computed(() =>
+  drivers.value.map(d => ({
+    value: d.full_name,
+    label: d.phone ? `${d.full_name} — ${d.phone}` : d.full_name,
+  }))
 )
 
 /** In-house rooms as searchable "Room N — Guest" choices for room billing. */
@@ -429,7 +461,11 @@ watch(
   },
 )
 
-const total = computed(() => lines.value.reduce((sum, l) => sum + l.price * l.quantity, 0))
+const total = computed(() => {
+  const added = lines.value.reduce((sum, l) => sum + l.price * l.quantity, 0)
+  const previous = Number(existing.value?.total_amount || 0)
+  return previous + added
+})
 
 /** Category names available for the active department, in menu order. */
 const categories = computed(() => {
@@ -454,8 +490,13 @@ const filteredMenu = computed(() => {
   return groups
 })
 
+function isBlocked(item) {
+  if (allowsUnavailable.value) return false
+  return item.is_available === false || item.is_in_stock === false
+}
+
 function addItem(item) {
-  if (item.is_available === false || item.is_in_stock === false) {
+  if (isBlocked(item)) {
     toast(t('orderTaker.outOfStockToast', { name: dishName(item) }), 'error')
     return
   }
@@ -550,26 +591,49 @@ async function submit() {
   }
   busy.value = true
   try {
+    const itemLines = lines.value.map((l) => ({
+      menu_item_id: l.menu_item_id,
+      quantity: l.quantity,
+      accompaniment: l.accompaniment || null,
+    }))
+    const header = {
+      room_number: form.room_number || props.roomNumber || null,
+      guest_name: form.guest_name || null,
+      waiter_name: form.waiter_name || null,
+    }
+    if (props.mode === 'dine_in' && form.covers != null) header.covers = form.covers
+    if (props.mode === 'delivery') {
+      header.delivery_phone = form.delivery_phone || null
+      header.delivery_address = form.delivery_address || null
+      header.expected_minutes = form.expected_minutes || null
+      header.driver_name = form.driver_name || null
+    }
+
+    if (existing.value) {
+      // Continuation: update the header first, then append only the new lines
+      // so the ticket total and its original items stay intact.
+      await orderApi.update(existing.value.order_id, header)
+      let order = existing.value
+      if (itemLines.length) {
+        const { data } = await orderApi.addItems(existing.value.order_id, { items: itemLines })
+        order = data.order || order
+      }
+      emit('created', order)
+      emit('close')
+      return
+    }
+
     const payload = {
       department: dept.value,
       outlet_id: selectedOutlet.value?.outlet_id || null,
       order_type: ORDER_TYPE[props.mode],
       table_number: props.tableNumber,
-      room_number: form.room_number || props.roomNumber || null,
-      guest_name: form.guest_name || null,
-      waiter_name: form.waiter_name || null,
-      items: lines.value.map((l) => ({ menu_item_id: l.menu_item_id, quantity: l.quantity, accompaniment: l.accompaniment || null })),
+      ...header,
+      items: itemLines,
     }
-    if (props.mode === 'dine_in' && form.covers != null) payload.covers = form.covers
     if (props.mode === 'no_charge') {
       payload.is_no_charge = true
       payload.no_charge_account = form.no_charge_account
-    }
-    if (props.mode === 'delivery') {
-      payload.delivery_phone = form.delivery_phone
-      payload.delivery_address = form.delivery_address
-      payload.expected_minutes = form.expected_minutes || undefined
-      payload.driver_name = form.driver_name || null
     }
 
     const { data } = await orderApi.store(payload)
@@ -643,17 +707,29 @@ onMounted(async () => {
   try {
     const { data } = await orderApi.formOptions()
     waiters.value = data.waiters || []
+    drivers.value = data.drivers || []
     inHouseRooms.value = data.in_house_guests || []
     // Snap the prefilled waiter to the exact waiter-list entry (case/spacing
     // differences between the auth profile and the waiter roster) so the order
-    // resolves to a real waiter. Leaves an unmatched name as-is.
-    const self = selfName.value.trim().toLowerCase()
-    if (self) {
-      const match = waiters.value.find((w) => (w.full_name || '').trim().toLowerCase() === self)
-      if (match) form.waiter_name = match.full_name
+    // resolves to a real waiter. An existing ticket keeps its assigned waiter.
+    if (!existing.value) {
+      const self = selfName.value.trim().toLowerCase()
+      if (self) {
+        const match = waiters.value.find((w) => (w.full_name || '').trim().toLowerCase() === self)
+        if (match) form.waiter_name = match.full_name
+      }
     }
   } catch (e) {
     error.value = e.message
+  }
+  // The driver roster is optional; the order form still works if it fails.
+  if (props.mode === 'delivery' && !drivers.value.length) {
+    try {
+      const { data } = await deliveryDriverApi.index({ is_active: true })
+      drivers.value = data.drivers || []
+    } catch {
+      /* leave the picker empty; drivers can be registered from the panel */
+    }
   }
 })
 </script>

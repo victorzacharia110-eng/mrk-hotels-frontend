@@ -131,4 +131,68 @@ describe('RequisitionPage catalogue', () => {
     expect(empty.status).toBe('out_of_stock')
     expect(empty.label).toContain('Out of Stock')
   })
+
+  it('loads every catalogue page instead of stopping at a fixed page cap', async () => {
+    const totalPages = 30
+    api.inventoryOpsApi.requisitionItems.mockReset()
+    api.inventoryOpsApi.requisitionItems.mockImplementation(({ page }) => Promise.resolve({
+      data: {
+        data: [{
+          item_id: `item-${page}`,
+          item_name: `Item ${page}`,
+          unit: 'PCS',
+          quantity_in_stock: 5,
+          shelf_quantity_in_stock: 5,
+          department_id: 'bar-1',
+          departments: [{ department_id: 'bar-1', name: 'Bar' }],
+        }],
+        last_page: totalPages,
+      },
+    }))
+    api.inventoryOpsApi.departments.mockResolvedValue({
+      data: { departments: [{ department_id: 'bar-1', name: 'Bar' }] },
+    })
+    api.inventoryOpsApi.indents.mockResolvedValue({ data: { indents: [], meta: { total: 0, last_page: 1 } } })
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(api.inventoryOpsApi.requisitionItems).toHaveBeenCalledTimes(totalPages)
+    expect(api.inventoryOpsApi.requisitionItems).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: totalPages }),
+    )
+    expect(wrapper.vm.itemOptions).toHaveLength(totalPages)
+  })
+
+  it('drops the search bar and business-date column but shows the date count', async () => {
+    api.inventoryOpsApi.requisitionItems.mockResolvedValue({ data: { data: [], last_page: 1 } })
+    api.inventoryOpsApi.departments.mockResolvedValue({ data: { departments: [] } })
+    api.inventoryOpsApi.indents.mockResolvedValue({
+      data: {
+        indents: [{
+          indent_id: 'indent-1',
+          indent_number: 'RQ-2026-0001',
+          status: 'pending',
+          department_name: 'Bar',
+          outlet_name: 'Main Bar',
+          cost_value: 1000,
+        }],
+        meta: { total: 1, last_page: 1 },
+      },
+    })
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(wrapper.find('.rq-search').exists()).toBe(false)
+    const headings = wrapper.findAll('th').map((th) => th.text())
+    expect(headings).not.toContain(i18n.global.t('requisitionPanel.businessDate'))
+    expect(headings).toEqual([
+      i18n.global.t('requisitionPanel.sn'),
+      i18n.global.t('requisitionPanel.department'),
+      i18n.global.t('requisitionPanel.outlet'),
+      i18n.global.t('requisitionPanel.costValue'),
+    ])
+    expect(wrapper.find('.rq-count').exists()).toBe(true)
+  })
 })

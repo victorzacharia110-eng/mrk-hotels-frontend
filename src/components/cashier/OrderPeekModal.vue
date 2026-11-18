@@ -52,6 +52,14 @@
           </template>
         </div>
         <div class="din-modal-foot">
+          <button
+            v-if="canAdd"
+            type="button"
+            class="sm-btn success"
+            @click="$emit('add-items', order)"
+          >
+            <i class="fas fa-plus" aria-hidden="true"></i> {{ $t('cashier.order.addItems') }}
+          </button>
           <button class="sm-btn ghost" @click="$emit('close')">{{ $t('common.close') }}</button>
         </div>
       </div>
@@ -60,17 +68,25 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { orderApi } from '@/api'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
   orderId: { type: [String, Number], default: null },
+  canAddItems: { type: Boolean, default: false },
 })
-defineEmits(['close'])
+defineEmits(['close', 'add-items'])
 
 const order = ref(null)
 const loading = ref(false)
+
+/** Only an open, unpaid ticket accepts more lines. */
+const canAdd = computed(() => {
+  if (!props.canAddItems || !order.value) return false
+  if (['cancelled', 'completed'].includes(order.value.status)) return false
+  return !order.value.payment_status || order.value.payment_status === 'unpaid'
+})
 
 watch(
   () => [props.open, props.orderId],

@@ -3,7 +3,7 @@
   Every staff member requests registered store items on their own department
   (management and the store keeper may use any department), saves drafts,
   edits/recalls, sends, and accepts the store's answer. The store keeper's
-  "Indent forward" tab answers pending requisitions by filling the quantity
+  "Indent received" tab answers pending requisitions by filling the quantity
   available and supplied, then forwarding them back for acceptance.
 -->
 <template>
@@ -50,12 +50,13 @@
           {{ $t('requisitionPanel.statusComplete') }}
         </button>
       </div>
-      <div class="rq-search">
-        <i class="fas fa-magnifying-glass"></i>
-        <input v-model="q" type="text" :placeholder="$t('requisitionPanel.searchPlaceholder')" />
-      </div>
       <span v-if="restricted" class="rq-dept-badge"><i class="fas fa-building"></i> {{ deptName }}</span>
     </div>
+
+    <p v-if="!loading" class="rq-count">
+      <i class="fas fa-list" aria-hidden="true"></i>
+      {{ $t('requisitionPanel.countForDate', { count: totalCount, date: businessDateLabel }) }}
+    </p>
 
     <!-- List -->
     <section class="rq-card">
@@ -66,7 +67,6 @@
           <thead>
             <tr>
               <th>{{ $t('requisitionPanel.sn') }}</th>
-              <th>{{ $t('requisitionPanel.businessDate') }}</th>
               <th>{{ $t('requisitionPanel.department') }}</th>
               <th>{{ $t('requisitionPanel.outlet') }}</th>
               <th>{{ $t('requisitionPanel.costValue') }}</th>
@@ -77,7 +77,6 @@
               <td>
                 <button class="rq-ref" @click.stop="openDetail(indent)">{{ indent.indent_number }}</button>
               </td>
-              <td>{{ businessDateOf(indent) }}</td>
               <td>{{ indent.department_name || indent.department || '—' }}</td>
               <td>{{ indent.outlet_name || '—' }}</td>
               <td><strong>{{ money(costValue(indent)) }}</strong></td>
@@ -354,7 +353,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { inventoryOpsApi } from '@/api'
@@ -411,13 +410,18 @@ const tabs = computed(() => {
 
 /** One business date, synced to day close, drives both lists. */
 const businessDate = ref(workingDateStore.workingDate)
+const businessDateLabel = computed(() => {
+  const value = businessDate.value
+  if (!value) return ''
+  const date = String(value).length === 10 ? new Date(`${value}T00:00:00`) : new Date(value)
+  return date.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+})
 const outletFilter = ref('')
 const statusFilter = ref('pending')
-const q = ref('')
 const page = ref(1)
 const lastPage = ref(1)
+const totalCount = ref(0)
 const PER_PAGE = 15
-let searchTimer = null
 
 const tab = ref(isStoreManager.value ? 'received' : 'mine')
 const indents = ref([])
@@ -534,7 +538,6 @@ function unitOf(itemId) {
 }
 
 const emptyText = computed(() => {
-  if (q.value.trim()) return t('common.noResults')
   if (tab.value === 'received') return t('requisitionPanel.emptyReceived')
   if (tab.value === 'forward' || tab.value === 'inbox') return t('requisitionPanel.emptyInbox')
   return t('requisitionPanel.emptyMine')
@@ -608,7 +611,7 @@ async function loadItems() {
       if (Array.isArray(pageItems)) all.push(...pageItems)
       last = res.data?.last_page ?? 1
       itemPage += 1
-    } while (itemPage <= last && itemPage <= 25)
+    } while (itemPage <= last)
     items.value = all
   } catch {
     items.value = []
@@ -630,6 +633,7 @@ async function load() {
     if (!tabStatuses.value.length) {
       indents.value = []
       lastPage.value = 1
+      totalCount.value = 0
       return
     }
     const params = {
@@ -640,9 +644,9 @@ async function load() {
     }
     if (businessDate.value) params.date = businessDate.value
     if (outletFilter.value) params.outlet_id = outletFilter.value
-    if (q.value.trim()) params.q = q.value.trim()
     const res = await inventoryOpsApi.indents(params)
     indents.value = res.data.indents || []
+    totalCount.value = Number(res.data.meta?.total ?? indents.value.length)
     const nextLastPage = Math.max(1, Number(res.data.meta?.last_page || 1))
     if (page.value > nextLastPage) {
       page.value = nextLastPage
@@ -989,16 +993,6 @@ onMounted(async () => {
 // outlet the user just left, which is how two bars end up requisitioning from
 // each other's stock without anybody noticing.
 watch(() => selectedOutlet.value?.outlet_id, loadItems)
-
-watch(q, () => {
-  clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => {
-    page.value = 1
-    load()
-  }, 300)
-})
-
-onBeforeUnmount(() => clearTimeout(searchTimer))
 </script>
 
 <style scoped>
@@ -1013,15 +1007,14 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
   color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; font-family: inherit;
 }
 .rq-tab.on { color: #005eb8; border-bottom-color: #005eb8; }
-.rq-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
-.rq-search { position: relative; flex: 1; min-width: 180px; }
-.rq-search i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 13px; }
-.rq-search input { width: 100%; padding: 9px 12px 9px 34px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; }
+.rq-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+.rq-count { margin: 0 0 14px; color: #64748b; font-size: 12px; font-weight: 600; }
+.rq-count i { color: #005eb8; margin-right: 4px; }
 .rq-select, .rq-input {
   border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px 12px; font-size: 13px;
   background: #fff; color: #1f2937; font-family: inherit;
 }
-.rq-select:focus, .rq-input:focus, .rq-search input:focus { outline: none; border-color: #005eb8; box-shadow: 0 0 0 3px rgba(0, 94, 184, 0.12); }
+.rq-select:focus, .rq-input:focus { outline: none; border-color: #005eb8; box-shadow: 0 0 0 3px rgba(0, 94, 184, 0.12); }
 .rq-select.grow { flex: 1; }
 .rq-input.slim { width: 90px; }
 .rq-input.area { width: 100%; resize: vertical; }

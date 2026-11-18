@@ -108,11 +108,23 @@
       </Transition>
     </Teleport>
 
-    <OrderPeekModal :open="!!peekId" :order-id="peekId" @close="peekId = null" />
-    <NewOrderModal v-if="activeGuest" mode="room_service"
-      :title="$t('cashier.roomService.newOrderFor', { room: activeGuest.room_number, guest: activeGuest.guest_name })"
-      :room-number="activeGuest.room_number" :guest-name-prefill="activeGuest.guest_name" @close="activeGuest = null"
-      @created="onCreated" />
+    <OrderPeekModal
+      :open="!!peekId"
+      :order-id="peekId"
+      can-add-items
+      @close="peekId = null"
+      @add-items="continueOrder"
+    />
+    <NewOrderModal
+      v-if="activeGuest || continuingOrder"
+      mode="room_service"
+      :title="orderModalTitle"
+      :room-number="orderContext.room_number"
+      :guest-name-prefill="orderContext.guest_name"
+      :existing-order="continuingOrder"
+      @close="closeOrderModal"
+      @created="onCreated"
+    />
   </div>
 </template>
 
@@ -152,6 +164,7 @@ const guestsLoading = ref(false)
 const search = ref('')
 const guests = ref([])
 const activeGuest = ref(null)
+const continuingOrder = ref(null)
 
 // ---- Status buckets ------------------------------------------------------
 const isSettled = (o) => o.status === 'completed' || (o.payment_status && o.payment_status !== 'unpaid')
@@ -230,8 +243,33 @@ function openOrder(guest) {
   activeGuest.value = guest
 }
 
-function onCreated() {
+/** Opens the existing ticket in continuation mode (header edit + add lines). */
+function continueOrder(order) {
+  continuingOrder.value = order
+  peekId.value = null
+}
+
+const orderContext = computed(() => ({
+  room_number: continuingOrder.value?.room_number || activeGuest.value?.room_number || '',
+  guest_name: continuingOrder.value?.guest_name || activeGuest.value?.guest_name || '',
+}))
+
+const orderModalTitle = computed(() =>
+  continuingOrder.value
+    ? t('cashier.order.continueOrder', { number: continuingOrder.value.order_number })
+    : t('cashier.roomService.newOrderFor', {
+        room: orderContext.value.room_number,
+        guest: orderContext.value.guest_name,
+      })
+)
+
+function closeOrderModal() {
   activeGuest.value = null
+  continuingOrder.value = null
+}
+
+function onCreated() {
+  closeOrderModal()
   load()
 }
 

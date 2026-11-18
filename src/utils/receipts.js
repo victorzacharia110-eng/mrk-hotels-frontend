@@ -274,8 +274,9 @@ export function kitchenTicketLines(order, opts = {}) {
     [String(order.order_number || ''), false, 2],
     [`Table: ${order.table_number || order.room_number || '-'}   Waiter: ${order.waiter_name || '-'}`],
     [`Type: ${order.order_type || 'dine_in'}   Covers: ${order.covers ?? '-'}`],
-    [''],
   )
+  if (order.is_vip) lines.push(['*** VIP TABLE ***', true])
+  lines.push([''])
 
   // A reprint must never be mistaken for the original ticket: stamp the
   // watermark across the top of the paper, directly under the ticket title and

@@ -110,22 +110,18 @@ const showSearch = computed(
   () => props.searchable && (props.options.length >= 0 || props.forceSearch),
 )
 
-// The panel scrolls internally, so every loaded option is rendered: slicing
+// The panel scrolls internally, so every loaded option is rendered. Slicing
 // the list here made anything past the first slice unreachable by scrolling,
 // which is what hid later-alphabet stock items (e.g. "Zanzi 250ml") in the
-// sync-to-stock picker. Typing still filters, capped so a broad query on a
-// huge set stays responsive.
-const OPTION_RENDER_LIMIT = 500
+// requisition and sync-to-stock pickers.
 const filteredOptions = computed(() => {
   const q = query.value.trim().toLowerCase()
-  if (!q) return props.options.slice(0, OPTION_RENDER_LIMIT)
-  return props.options
-    .filter((option) =>
-      String(option.label || '')
-        .toLowerCase()
-        .includes(q),
-    )
-    .slice(0, OPTION_RENDER_LIMIT)
+  if (!q) return props.options
+  return props.options.filter((option) =>
+    String(option.label || '')
+      .toLowerCase()
+      .includes(q),
+  )
 })
 
 /**

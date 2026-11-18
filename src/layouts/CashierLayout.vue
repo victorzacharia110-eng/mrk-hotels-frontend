@@ -107,6 +107,11 @@
             <i class="fas fa-users" aria-hidden="true"></i>
             <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.accountLookup') }}</span>
           </router-link>
+          <router-link :to="{ name: 'cashier-drivers' }" class="pos-nav-link"
+            :class="{ active: isActive('/cashier/drivers') }" @click="mobileOpen = false">
+            <i class="fas fa-id-card" aria-hidden="true"></i>
+            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.drivers') }}</span>
+          </router-link>
           </div>
         </div>
 

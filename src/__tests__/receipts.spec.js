@@ -131,6 +131,11 @@ describe('receipt line widths', () => {
     for (const [row] of lines) expect(String(row).length).toBeLessThanOrEqual(48)
   })
 
+  it('marks VIP orders on kitchen and bar tickets', () => {
+    expect(kitchenTicketLines({ ...order, is_vip: true }).map((l) => l[0]).join('\n')).toContain('*** VIP TABLE ***')
+    expect(kitchenTicketLines(order).map((l) => l[0]).join('\n')).not.toContain('VIP TABLE')
+  })
+
   it('reprinted KOT is watermarked REPRINTED under the header', () => {
     const lines = kitchenTicketLines(order, { reprinted: true })
     const text = lines.map((l) => l[0]).join('\n')
