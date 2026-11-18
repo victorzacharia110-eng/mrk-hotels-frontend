@@ -61,6 +61,22 @@ export const useNotificationStore = defineStore('notifications', () => {
     })
   }
 
+  /**
+   * Restock alerts are broadcast on the hotel channel (like every other
+   * notification) but only the requesting department should see the modal.
+   */
+  function isRestockForMe(event) {
+    if (event?.type !== 'restock_available') return true
+
+    const user = useAuthStore().user || {}
+    const departmentId = event.data?.department_id
+    const departmentName = String(event.data?.department || '').trim().toLowerCase()
+    const myDepartmentName = String(user.department || '').trim().toLowerCase()
+
+    if (departmentId && user.department_id && departmentId === user.department_id) return true
+    return Boolean(departmentName) && departmentName === myDepartmentName
+  }
+
   /** True when a staff/portal session token exists — public visitors never poll. */
   function hasSession() {
     return Boolean(useAuthStore().token)
@@ -168,6 +184,7 @@ export const useNotificationStore = defineStore('notifications', () => {
 
     echoListener = echo.private(`tenant.${tenantId}`)
       .listen('.notification.created', (event) => {
+        if (!isRestockForMe(event)) return
         unreadCount.value++
         // If it's an alert type, add to alerts, increment alertCount and
         // surface it at the desk as a SweetAlert modal.

@@ -62,6 +62,13 @@ function buttonByText(wrapper, text) {
   return wrapper.findAll('button').find((button) => button.text().includes(text))
 }
 
+async function enterPin(wrapper, pin) {
+  for (const digit of pin) {
+    const key = wrapper.findAll('.gate-key').find((button) => button.text() === digit)
+    await key.trigger('click')
+  }
+}
+
 describe('cashier outlet gate', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -71,7 +78,7 @@ describe('cashier outlet gate', () => {
     loaded.value = false
   })
 
-  it('opens the gate for a fresh session and asks for the counter access code', async () => {
+  it('opens the gate for a fresh session and asks for the counter PIN', async () => {
     outletApi.index.mockResolvedValue({ data: { outlets: [bar] } })
     outletApi.verifyAccess.mockResolvedValue({ data: { outlet: bar } })
 
@@ -84,20 +91,18 @@ describe('cashier outlet gate', () => {
     expect(wrapper.text()).toContain('Which Bar?')
 
     await wrapper.find('.outlet-option').trigger('click')
-    expect(wrapper.find('#gate-access-code').exists()).toBe(true)
-    expect(wrapper.find('#gate-access-code').attributes('type')).toBe('password')
+    expect(wrapper.find('#gate-access-code').exists()).toBe(false)
+    expect(wrapper.findAll('.gate-pin-slot')).toHaveLength(4)
+    expect(wrapper.findAll('.gate-key')).toHaveLength(12)
 
-    await wrapper.find('.gate-code-toggle').trigger('click')
-    expect(wrapper.find('#gate-access-code').attributes('type')).toBe('text')
-    await wrapper.find('.gate-code-toggle').trigger('click')
-    expect(wrapper.find('#gate-access-code').attributes('type')).toBe('password')
-
-    await wrapper.find('#gate-access-code').setValue('THB-BAR-1-ABC123')
-    await buttonByText(wrapper, 'Unlock counter').trigger('click')
+    expect(buttonByText(wrapper, 'Unlock counter')).toBeUndefined()
+    await enterPin(wrapper, '482')
+    expect(wrapper.findAll('.gate-pin-slot.filled')).toHaveLength(3)
+    await enterPin(wrapper, '1')
     await flushPromises()
 
     expect(outletApi.verifyAccess).toHaveBeenCalledWith('outlet-bar-1', {
-      access_code: 'THB-BAR-1-ABC123',
+      access_code: '4821',
     })
     expect(selectedOutlet.value.outlet_id).toBe('outlet-bar-1')
     expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(false)
@@ -110,8 +115,7 @@ describe('cashier outlet gate', () => {
     const first = await mountLayout()
     await first.find('.outlet-option').trigger('click')
     await first.find('.outlet-option').trigger('click')
-    await first.find('#gate-access-code').setValue('THB-BAR-1-ABC123')
-    await buttonByText(first, 'Unlock counter').trigger('click')
+    await enterPin(first, '4821')
     await flushPromises()
 
     expect(first.find('.sm-modal-backdrop').exists()).toBe(false)
@@ -124,11 +128,11 @@ describe('cashier outlet gate', () => {
     expect(selectedOutlet.value.outlet_id).toBe('outlet-bar-1')
   })
 
-  it('lets a cashier create the first counter and shows the default code once', async () => {
+  it('lets a cashier create the first counter and shows the default PIN once', async () => {
     outletApi.index.mockResolvedValue({ data: { outlets: [] } })
     outletApi.storeSellingPoint.mockResolvedValue({
       data: {
-        access_code: 'THB-BAR-1-NEW123',
+        access_code: '4821',
         outlet: { ...bar, has_access_code: true },
       },
     })
@@ -143,14 +147,14 @@ describe('cashier outlet gate', () => {
     await flushPromises()
 
     expect(outletApi.storeSellingPoint).toHaveBeenCalledWith({ name: 'Bar 1', type: 'bar' })
-    expect(wrapper.find('.gate-code').text()).toBe('THB-BAR-1-NEW123')
+    expect(wrapper.find('.gate-code').text()).toBe('4821')
 
     const writeText = vi.fn().mockResolvedValue()
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
     await wrapper.find('.gate-code-copy').trigger('click')
     await flushPromises()
-    expect(writeText).toHaveBeenCalledWith('THB-BAR-1-NEW123')
-    expect(wrapper.text()).toContain('Access code copied')
+    expect(writeText).toHaveBeenCalledWith('4821')
+    expect(wrapper.text()).toContain('PIN copied')
 
     await buttonByText(wrapper, 'I saved it, continue').trigger('click')
     await flushPromises()

@@ -180,6 +180,32 @@
       </div>
     </div>
 
+    <!-- Out-of-stock warning: the request is already submitted, but the
+         department is now waiting for the store to replenish these lines. -->
+    <div v-if="outOfStockNotice" class="rq-overlay" @click.self="dismissOutOfStock">
+      <div class="rq-modal">
+        <div class="rq-modal-head">
+          <h3><i class="fas fa-triangle-exclamation"></i> {{ $t('requisitionPanel.outOfStockTitle') }}</h3>
+          <button class="rq-x" @click="dismissOutOfStock">×</button>
+        </div>
+        <div class="rq-modal-body">
+          <p class="rq-hint">{{ $t('requisitionPanel.outOfStockBody') }}</p>
+          <ul class="rq-warning-list">
+            <li v-for="item in outOfStockNotice.items" :key="item.item_id">
+              <strong>{{ item.item_name }}</strong>
+              <span>{{ $t('requisitionPanel.requested') }}: {{ item.quantity }} {{ item.unit }}</span>
+            </li>
+          </ul>
+          <p class="rq-hint">{{ $t('requisitionPanel.outOfStockHint') }}</p>
+        </div>
+        <div class="rq-modal-foot">
+          <button class="rq-btn primary" @click="dismissOutOfStock">
+            {{ $t('requisitionPanel.outOfStockContinue') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Notify modal (send the requisition by e-mail and/or SMS) -->
     <div v-if="modal === 'notify'" class="rq-overlay" @click.self="modal = null">
       <div class="rq-modal">
@@ -392,6 +418,11 @@ const notifyChannel = ref('email')
 const notifyTo = ref('')
 const notifySending = ref(false)
 const notifyErr = ref('')
+// The requisition is submitted before this warning is shown, so the dialog is
+// purely informational: it lists the empty shelf lines the department is now
+// waiting on. `notifyAfterWarning` continues the normal notify prompt.
+const outOfStockNotice = ref(null)
+const notifyAfterWarning = ref(null)
 
 const channels = [
   { key: 'email', label: 'common.email', icon: 'fas fa-envelope' },
@@ -639,19 +670,34 @@ async function save(forStatus) {
   err.value = ''
   try {
     if (modal.value === 'edit' && editing.value) {
-      await inventoryOpsApi.updateIndent(editing.value.indent_id, payload)
+      const res = await inventoryOpsApi.updateIndent(editing.value.indent_id, payload)
       notice.value = t('requisitionPanel.updated')
+      const outOfStock = res.data?.out_of_stock_items || []
+      if (outOfStock.length) {
+        modal.value = null
+        await load()
+        saving.value = false
+        showOutOfStock(outOfStock)
+        return
+      }
     } else {
       const res = await inventoryOpsApi.storeIndent(payload)
+      // The backend replies with the created requisition as `indent`. Fall
+      // back to `data` for older responses so the notify step still works.
+      const created = res.data?.indent ?? res.data?.data ?? res.data
+      const outOfStock = res.data?.out_of_stock_items || []
       notice.value = payloadStatus === 'draft' ? t('requisitionPanel.savedDraft') : t('requisitionPanel.created')
       // A saved draft is not ready to notify; a submitted request is — offer to
       // push it out right away (the operator can still cancel and send later).
-      const created = res.data?.data ?? res.data
       if (payloadStatus === 'pending' && created?.indent_id) {
         modal.value = null
         await load()
         saving.value = false
-        openNotify(created)
+        if (outOfStock.length) {
+          showOutOfStock(outOfStock, created)
+        } else {
+          openNotify(created)
+        }
         return
       }
     }
@@ -669,13 +715,20 @@ async function send(indent) {
   saving.value = true
   err.value = ''
   try {
-    await inventoryOpsApi.sendIndent(indent.indent_id)
+    const res = await inventoryOpsApi.sendIndent(indent.indent_id)
+    const sent = res.data?.indent ?? res.data?.data ?? res.data
+    const outOfStock = res.data?.out_of_stock_items || []
     notice.value = t('requisitionPanel.sent')
     await load()
     // Sending is exactly when the recipient must hear about it, so offer the
-    // notify dialog straight away.
+    // notify dialog straight away — after warning about empty shelf lines.
     saving.value = false
-    openNotify(indent)
+    const target = sent?.indent_id ? sent : indent
+    if (outOfStock.length) {
+      showOutOfStock(outOfStock, target)
+    } else {
+      openNotify(target)
+    }
   } catch (e) { err.value = loadMessage(e) } finally { saving.value = false }
 }
 
@@ -805,6 +858,20 @@ function printDetail() {
   })
 }
 
+// Show the out-of-stock warning after the requisition has already been
+// submitted. The optional indent continues to the notify dialog on dismiss.
+function showOutOfStock(items, indent = null) {
+  outOfStockNotice.value = { items }
+  notifyAfterWarning.value = indent
+}
+
+function dismissOutOfStock() {
+  const next = notifyAfterWarning.value
+  outOfStockNotice.value = null
+  notifyAfterWarning.value = null
+  if (next) openNotify(next)
+}
+
 // Open the notify dialog for a requisition, defaulting to e-mail with no
 // explicit recipient: leaving it blank lets the backend use the hotel's
 // registered e-mail/phone, which is what most operators want.
@@ -928,6 +995,13 @@ watch(() => selectedOutlet.value?.outlet_id, loadItems)
 .rq-loading, .rq-empty { padding: 40px; text-align: center; color: #64748b; font-size: 14px; }
 .rq-empty-inline { text-align: center; color: #94a3b8; padding: 20px; }
 .rq-hint { color: #64748b; font-size: 12px; margin: 4px 0 10px; }
+.rq-warning-list {
+  list-style: none; margin: 0; padding: 12px 14px; border-radius: 10px;
+  background: #fff7ed; border: 1px solid #fed7aa; display: flex;
+  flex-direction: column; gap: 8px;
+}
+.rq-warning-list li { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: #9a3412; }
+.rq-warning-list li span { color: #b45309; white-space: nowrap; }
 .rq-channels { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
 .rq-channel {
   display: flex; align-items: center; gap: 8px; padding: 9px 14px; border: 1px solid #e2e8f0;

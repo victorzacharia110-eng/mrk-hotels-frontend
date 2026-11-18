@@ -349,26 +349,30 @@
           </div>
 
           <template v-if="pendingOutlet?.has_access_code">
-            <p class="gate-hint">{{ $t('cashier.outletGate.accessHint') }}</p>
-            <label for="gate-access-code">{{ $t('cashier.outletGate.accessLabel') }}</label>
-            <div class="gate-code-field">
-              <input id="gate-access-code" v-model="accessCodeInput" :type="showAccessCode ? 'text' : 'password'"
-                maxlength="100" autocomplete="off"
-                :placeholder="$t('cashier.outletGate.accessPlaceholder')"
-                @keyup.enter="unlockCounter" />
-              <button type="button" class="gate-code-toggle"
-                :aria-label="$t(showAccessCode ? 'cashier.outletGate.hideCode' : 'cashier.outletGate.showCode')"
-                :title="$t(showAccessCode ? 'cashier.outletGate.hideCode' : 'cashier.outletGate.showCode')"
-                @click="showAccessCode = !showAccessCode">
-                <i :class="showAccessCode ? 'fas fa-eye-slash' : 'fas fa-eye'" aria-hidden="true"></i>
+            <p class="gate-hint">{{ $t('cashier.outletGate.pinHint') }}</p>
+            <div class="gate-pin" role="group" :aria-label="$t('cashier.outletGate.pinLabel')">
+              <span v-for="slot in 4" :key="slot" class="gate-pin-slot"
+                :class="{ filled: accessCodeInput.length >= slot }">
+                {{ accessCodeInput[slot - 1] ? '•' : '' }}
+              </span>
+            </div>
+            <div class="gate-keypad">
+              <button v-for="digit in [1, 2, 3, 4, 5, 6, 7, 8, 9]" :key="digit" type="button"
+                class="gate-key" @click="appendPin(digit)">
+                {{ digit }}
+              </button>
+              <button type="button" class="gate-key gate-key-soft" :disabled="!accessCodeInput"
+                @click="clearPin">
+                {{ $t('cashier.outletGate.clearPin') }}
+              </button>
+              <button type="button" class="gate-key" @click="appendPin(0)">0</button>
+              <button type="button" class="gate-key gate-key-soft" :disabled="!accessCodeInput"
+                :aria-label="$t('cashier.outletGate.backspacePin')"
+                :title="$t('cashier.outletGate.backspacePin')" @click="backspacePin">
+                <i class="fas fa-delete-left" aria-hidden="true"></i>
               </button>
             </div>
             <p v-if="gateError" class="gate-error">{{ gateError }}</p>
-            <button type="button" class="sm-btn" :disabled="gateBusy || !accessCodeInput.trim()"
-              @click="unlockCounter">
-              <i class="fas fa-lock-open" aria-hidden="true"></i>
-              {{ gateBusy ? $t('cashier.outletGate.unlocking') : $t('cashier.outletGate.unlockButton') }}
-            </button>
           </template>
 
           <template v-else>
@@ -474,7 +478,6 @@ const gateType = ref('')
 const pendingOutlet = ref(null)
 const duplicateOutlet = ref(null)
 const accessCodeInput = ref('')
-const showAccessCode = ref(false)
 const createdCode = ref('')
 const codeCopied = ref(false)
 const gateError = ref('')
@@ -698,7 +701,6 @@ function resetGate() {
   pendingOutlet.value = null
   duplicateOutlet.value = null
   accessCodeInput.value = ''
-  showAccessCode.value = false
   createdCode.value = ''
   codeCopied.value = false
   gateError.value = ''
@@ -739,22 +741,41 @@ function beginUnlock(outlet) {
   pendingOutlet.value = outlet
   duplicateOutlet.value = null
   accessCodeInput.value = ''
-  showAccessCode.value = false
   gateError.value = ''
   gateStep.value = 'unlock'
 }
 
+function appendPin(digit) {
+  if (gateBusy.value || accessCodeInput.value.length >= 4) return
+  gateError.value = ''
+  accessCodeInput.value += String(digit)
+  if (accessCodeInput.value.length === 4) unlockCounter()
+}
+
+function backspacePin() {
+  if (gateBusy.value || !accessCodeInput.value) return
+  gateError.value = ''
+  accessCodeInput.value = accessCodeInput.value.slice(0, -1)
+}
+
+function clearPin() {
+  if (gateBusy.value) return
+  gateError.value = ''
+  accessCodeInput.value = ''
+}
+
 async function unlockCounter() {
-  if (!pendingOutlet.value || !accessCodeInput.value.trim()) return
+  if (!pendingOutlet.value || accessCodeInput.value.length !== 4) return
   gateBusy.value = true
   gateError.value = ''
   try {
     const { data } = await outletApi.verifyAccess(pendingOutlet.value.outlet_id, {
-      access_code: accessCodeInput.value.trim(),
+      access_code: accessCodeInput.value,
     })
     applyOutlet(data.outlet || pendingOutlet.value)
   } catch (error) {
     gateError.value = error.response?.data?.message || t('cashier.outletGate.invalidCode')
+    accessCodeInput.value = ''
   } finally {
     gateBusy.value = false
   }
@@ -1226,15 +1247,23 @@ html[data-theme='dark'] .sm-lang-btn.active {
 }
 .gate-form input:focus,
 .gate-form select:focus { outline: 2px solid var(--mrk-blue-tint); border-color: var(--mrk-blue); }
-.gate-code-field { position: relative; }
-.gate-code-field input { padding-right: 42px; }
-.gate-code-toggle {
-  position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
+.gate-pin { display: flex; justify-content: center; gap: 10px; margin: 4px 0 2px; }
+.gate-pin-slot {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; border: 0; border-radius: 8px;
-  background: transparent; color: #64748b; cursor: pointer;
+  width: 46px; height: 52px; border: 1px solid #cbd5e1; border-radius: 12px;
+  background: #fff; color: var(--mrk-blue-deep); font-size: 24px; font-weight: 800;
+  line-height: 1; transition: border-color 0.15s ease, background 0.15s ease;
 }
-.gate-code-toggle:hover { background: var(--mrk-blue-pale); color: var(--mrk-blue); }
+.gate-pin-slot.filled { border-color: var(--mrk-blue); background: var(--mrk-blue-pale); }
+.gate-keypad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.gate-key {
+  border: 1px solid #cbd5e1; border-radius: 10px; background: #fff;
+  padding: 12px 0; font: inherit; font-size: 18px; font-weight: 700;
+  color: var(--mrk-charcoal); cursor: pointer;
+}
+.gate-key:hover { border-color: var(--mrk-blue); background: var(--mrk-blue-pale); }
+.gate-key:disabled { cursor: not-allowed; opacity: 0.45; }
+.gate-key-soft { font-size: 12px; font-weight: 700; color: #64748b; }
 .gate-form .sm-btn { justify-content: center; margin-top: 4px; }
 .gate-error { margin: 0; color: #b91c1c; font-size: 12.5px; font-weight: 600; }
 .gate-counter {
