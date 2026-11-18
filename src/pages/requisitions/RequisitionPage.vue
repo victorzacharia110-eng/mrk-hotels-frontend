@@ -35,8 +35,8 @@
 
     <!-- Toolbar: one business date, outlet and Pending/Complete filter -->
     <div class="rq-toolbar">
-      <CalendarInput v-model="businessDate" :clearable="false" @change="load" />
-      <select v-model="outletFilter" class="rq-select" @change="load">
+      <CalendarInput v-model="businessDate" :clearable="false" @change="reload" />
+      <select v-model="outletFilter" class="rq-select" @change="reload">
         <option value="">{{ $t('requisitionPanel.allOutlets') }}</option>
         <option v-for="outlet in outlets" :key="outlet.outlet_id" :value="outlet.outlet_id">
           {{ outlet.name }}
@@ -50,34 +50,49 @@
           {{ $t('requisitionPanel.statusComplete') }}
         </button>
       </div>
+      <div class="rq-search">
+        <i class="fas fa-magnifying-glass"></i>
+        <input v-model="q" type="text" :placeholder="$t('requisitionPanel.searchPlaceholder')" />
+      </div>
       <span v-if="restricted" class="rq-dept-badge"><i class="fas fa-building"></i> {{ deptName }}</span>
     </div>
 
     <!-- List -->
     <section class="rq-card">
       <div v-if="loading" class="rq-loading"><i class="fas fa-circle-notch"></i> {{ $t('common.loading') }}</div>
-      <p v-else-if="!filtered.length" class="rq-empty">{{ emptyText }}</p>
+      <p v-else-if="!indents.length" class="rq-empty">{{ emptyText }}</p>
       <div v-else class="rq-table-scroll">
         <table class="rq-table">
           <thead>
             <tr>
               <th>{{ $t('requisitionPanel.sn') }}</th>
+              <th>{{ $t('requisitionPanel.businessDate') }}</th>
               <th>{{ $t('requisitionPanel.department') }}</th>
               <th>{{ $t('requisitionPanel.outlet') }}</th>
               <th>{{ $t('requisitionPanel.costValue') }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="indent in filtered" :key="indent.indent_id" class="rq-row" @click="openDetail(indent)">
+            <tr v-for="indent in indents" :key="indent.indent_id" class="rq-row" @click="openDetail(indent)">
               <td>
                 <button class="rq-ref" @click.stop="openDetail(indent)">{{ indent.indent_number }}</button>
               </td>
+              <td>{{ businessDateOf(indent) }}</td>
               <td>{{ indent.department_name || indent.department || '—' }}</td>
               <td>{{ indent.outlet_name || '—' }}</td>
               <td><strong>{{ money(costValue(indent)) }}</strong></td>
             </tr>
           </tbody>
         </table>
+      </div>
+      <div v-if="lastPage > 1" class="rq-pagination">
+        <button class="rq-btn sm ghost" :disabled="page <= 1" @click="goToPage(page - 1)">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <span>{{ page }} / {{ lastPage }}</span>
+        <button class="rq-btn sm ghost" :disabled="page >= lastPage" @click="goToPage(page + 1)">
+          <i class="fas fa-chevron-right"></i>
+        </button>
       </div>
     </section>
 
@@ -269,6 +284,7 @@
         </div>
         <div class="rq-modal-body">
           <div class="rq-meta">
+            <span><strong>{{ $t('requisitionPanel.businessDate') }}:</strong> {{ businessDateOf(editing) }}</span>
             <span><strong>{{ $t('requisitionPanel.department') }}:</strong> {{ editing?.department_name || '—' }}</span>
             <span><strong>{{ $t('requisitionPanel.outlet') }}:</strong> {{ editing?.outlet_name || '—' }}</span>
             <span><strong>{{ $t('requisitionPanel.requestedBy') }}:</strong> {{ editing?.requester_name || '—' }}</span>
@@ -338,7 +354,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { inventoryOpsApi } from '@/api'
@@ -397,6 +413,11 @@ const tabs = computed(() => {
 const businessDate = ref(workingDateStore.workingDate)
 const outletFilter = ref('')
 const statusFilter = ref('pending')
+const q = ref('')
+const page = ref(1)
+const lastPage = ref(1)
+const PER_PAGE = 15
+let searchTimer = null
 
 const tab = ref(isStoreManager.value ? 'received' : 'mine')
 const indents = ref([])
@@ -437,6 +458,12 @@ const supplyLines = ref([])
 
 const pendingStatuses = ['draft', 'pending']
 const completeStatuses = ['forwarded', 'approved', 'fulfilled', 'rejected', 'voided']
+const tabStatuses = computed(() => {
+  let statuses = statusFilter.value === 'complete' ? completeStatuses : pendingStatuses
+  if (tab.value === 'inbox' || tab.value === 'received') statuses = statuses.filter((s) => s !== 'draft')
+  if (tab.value === 'forward') statuses = statuses.filter((s) => ['forwarded', 'approved', 'fulfilled'].includes(s))
+  return statuses
+})
 const statusKeyMap = {
   draft: 'requisitionPanel.statusDraft',
   pending: 'requisitionPanel.statusPending',
@@ -507,20 +534,10 @@ function unitOf(itemId) {
 }
 
 const emptyText = computed(() => {
+  if (q.value.trim()) return t('common.noResults')
   if (tab.value === 'received') return t('requisitionPanel.emptyReceived')
   if (tab.value === 'forward' || tab.value === 'inbox') return t('requisitionPanel.emptyInbox')
   return t('requisitionPanel.emptyMine')
-})
-
-const filtered = computed(() => {
-  let list = indents.value
-  if (tab.value === 'inbox') list = list.filter((i) => i.status !== 'draft')
-  else if (tab.value === 'received') list = list.filter((i) => i.status !== 'draft')
-  else if (tab.value === 'forward') list = list.filter((i) => ['forwarded', 'approved', 'fulfilled'].includes(i.status))
-  const bucket = statusFilter.value === 'complete' ? completeStatuses : pendingStatuses
-  list = list.filter((i) => bucket.includes(i.status))
-  if (outletFilter.value) list = list.filter((i) => i.outlet_id === outletFilter.value)
-  return list
 })
 
 function statusLabel(s) {
@@ -528,6 +545,12 @@ function statusLabel(s) {
 }
 function money(value) {
   return formatMoney(value || 0)
+}
+function businessDateOf(indent) {
+  const value = indent?.business_date || indent?.created_at
+  if (!value) return '—'
+  const date = String(value).length === 10 ? new Date(`${value}T00:00:00`) : new Date(value)
+  return date.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
 }
 function costValue(indent) {
   if (!indent) return 0
@@ -572,7 +595,7 @@ function loadMessage(e, fallback) {
 async function loadItems() {
   try {
     const all = []
-    let page = 1
+    let itemPage = 1
     let last = 1
     // "Each outlet has its own requisition", so the request is raised against
     // the outlet the user picked: the picker then reads that outlet's own shelf
@@ -580,12 +603,12 @@ async function loadItems() {
     // two bar counters ask for stock separately.
     const outletId = selectedOutlet.value?.outlet_id || undefined
     do {
-      const res = await inventoryOpsApi.requisitionItems({ per_page: 100, page, outlet_id: outletId })
+      const res = await inventoryOpsApi.requisitionItems({ per_page: 100, page: itemPage, outlet_id: outletId })
       const pageItems = res.data?.data || res.data || []
       if (Array.isArray(pageItems)) all.push(...pageItems)
       last = res.data?.last_page ?? 1
-      page += 1
-    } while (page <= last && page <= 25)
+      itemPage += 1
+    } while (itemPage <= last && itemPage <= 25)
     items.value = all
   } catch {
     items.value = []
@@ -604,12 +627,28 @@ async function load() {
   err.value = ''
   notice.value = ''
   try {
-    const params = { per_page: 250 }
-    params.mine = tab.value === 'mine' ? 1 : 0
+    if (!tabStatuses.value.length) {
+      indents.value = []
+      lastPage.value = 1
+      return
+    }
+    const params = {
+      per_page: PER_PAGE,
+      page: page.value,
+      mine: tab.value === 'mine' ? 1 : 0,
+      statuses: tabStatuses.value,
+    }
     if (businessDate.value) params.date = businessDate.value
     if (outletFilter.value) params.outlet_id = outletFilter.value
+    if (q.value.trim()) params.q = q.value.trim()
     const res = await inventoryOpsApi.indents(params)
     indents.value = res.data.indents || []
+    const nextLastPage = Math.max(1, Number(res.data.meta?.last_page || 1))
+    if (page.value > nextLastPage) {
+      page.value = nextLastPage
+      return load()
+    }
+    lastPage.value = nextLastPage
   } catch (e) {
     err.value = loadMessage(e)
   } finally {
@@ -617,12 +656,23 @@ async function load() {
   }
 }
 
+function reload() {
+  page.value = 1
+  load()
+}
+
+function goToPage(next) {
+  page.value = next
+  load()
+}
+
 function switchTab(next) {
   tab.value = next
-  load()
+  reload()
 }
 function setStatusFilter(next) {
   statusFilter.value = next
+  reload()
 }
 
 function openCreate() {
@@ -671,6 +721,8 @@ async function save(forStatus) {
   try {
     if (modal.value === 'edit' && editing.value) {
       const res = await inventoryOpsApi.updateIndent(editing.value.indent_id, payload)
+      const updated = res.data?.indent ?? res.data?.data ?? res.data
+      if (updated?.business_date) businessDate.value = updated.business_date
       notice.value = t('requisitionPanel.updated')
       const outOfStock = res.data?.out_of_stock_items || []
       if (outOfStock.length) {
@@ -690,6 +742,9 @@ async function save(forStatus) {
       // A saved draft is not ready to notify; a submitted request is — offer to
       // push it out right away (the operator can still cancel and send later).
       if (payloadStatus === 'pending' && created?.indent_id) {
+        // Show the new request even if the operator had another date selected:
+        // it belongs to the hotel's current business date, not the filter.
+        if (created.business_date) businessDate.value = created.business_date
         modal.value = null
         await load()
         saving.value = false
@@ -700,6 +755,7 @@ async function save(forStatus) {
         }
         return
       }
+      if (created?.business_date) businessDate.value = created.business_date
     }
     modal.value = null
     await load()
@@ -718,6 +774,9 @@ async function send(indent) {
     const res = await inventoryOpsApi.sendIndent(indent.indent_id)
     const sent = res.data?.indent ?? res.data?.data ?? res.data
     const outOfStock = res.data?.out_of_stock_items || []
+    // Keep the list on the date the requisition belongs to, which is the date
+    // it was created — sending it later must not move it.
+    if (sent?.business_date) businessDate.value = sent.business_date
     notice.value = t('requisitionPanel.sent')
     await load()
     // Sending is exactly when the recipient must hear about it, so offer the
@@ -930,6 +989,16 @@ onMounted(async () => {
 // outlet the user just left, which is how two bars end up requisitioning from
 // each other's stock without anybody noticing.
 watch(() => selectedOutlet.value?.outlet_id, loadItems)
+
+watch(q, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    page.value = 1
+    load()
+  }, 300)
+})
+
+onBeforeUnmount(() => clearTimeout(searchTimer))
 </script>
 
 <style scoped>
@@ -959,6 +1028,10 @@ watch(() => selectedOutlet.value?.outlet_id, loadItems)
 .rq-dept-badge { display: inline-flex; align-items: center; gap: 6px; background: #e8f1fa; color: #005eb8; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; }
 .rq-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); }
 .rq-table-scroll { overflow-x: auto; }
+.rq-pagination {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 12px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #475569;
+}
 .rq-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
 .rq-table th { text-align: left; padding: 12px 16px; background: #f8fafc; color: #475569; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #e2e8f0; }
 .rq-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }

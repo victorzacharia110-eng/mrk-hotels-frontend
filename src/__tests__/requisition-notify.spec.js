@@ -141,4 +141,37 @@ describe('RequisitionPage notify', () => {
     expect(wrapper.vm.modal).toBe('notify')
     expect(wrapper.vm.notifyIndent).toEqual(INDENT)
   })
+
+  it('follows the business date returned when sending a draft', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const sent = { ...INDENT, business_date: '2026-11-14' }
+    api.inventoryOpsApi.sendIndent.mockResolvedValueOnce({ data: { indent: sent } })
+
+    await wrapper.vm.send(INDENT)
+
+    expect(wrapper.vm.businessDate).toBe('2026-11-14')
+    expect(wrapper.vm.notifyIndent).toEqual(sent)
+  })
+
+  it('keeps a submitted requisition visible on its business date', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    const created = { indent_id: 9, indent_number: 'IND-0009', business_date: '2026-11-14', items: [] }
+    api.inventoryOpsApi.storeIndent.mockResolvedValueOnce({
+      data: { message: 'Requisition submitted.', indent: created },
+    })
+
+    wrapper.vm.modal = 'create'
+    wrapper.vm.form.lines = [{ item_id: 'item-1', quantity: 2 }]
+    await wrapper.vm.save('pending')
+
+    expect(api.inventoryOpsApi.storeIndent).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'pending', items: [{ item_id: 'item-1', quantity: 2 }] }),
+    )
+    expect(wrapper.vm.businessDate).toBe('2026-11-14')
+    expect(wrapper.vm.modal).toBe('notify')
+    expect(wrapper.vm.notifyIndent).toEqual(created)
+  })
 })

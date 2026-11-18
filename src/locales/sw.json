@@ -2054,7 +2054,9 @@
     "bothHint": "Hutuma barua pepe kwa anwani ya hoteli na SMS kwa namba yake ya simu iliyohifadhiwa.",
     "sn": "Namba",
     "outlet": "Outlets",
+    "businessDate": "Tarehe ya biashara",
     "costValue": "Thamani ya gharama",
+    "searchPlaceholder": "Tafuta namba ya ombi, idara au outlet...",
     "allOutlets": "Outlets zote",
     "statusComplete": "Zilizokamilika",
     "answerForward": "Jibu na urudishe"

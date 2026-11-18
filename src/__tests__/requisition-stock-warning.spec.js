@@ -70,6 +70,7 @@ async function preparePage() {
 
 describe('RequisitionPage out-of-stock warning', () => {
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
     vi.clearAllMocks()
   })
@@ -131,5 +132,63 @@ describe('RequisitionPage out-of-stock warning', () => {
 
     expect(wrapper.vm.outOfStockNotice).toBe(null)
     expect(wrapper.vm.modal).toBe('notify')
+  })
+
+  it('searches completed requisitions and shows the date they belong to', async () => {
+    const completed = {
+      indent_id: 'indent-9',
+      indent_number: 'IND-0009',
+      status: 'fulfilled',
+      business_date: '2026-11-14',
+      department_name: 'Bar',
+      outlet_name: 'Main Bar',
+      items: [],
+    }
+    api.inventoryOpsApi.requisitionItems.mockResolvedValue({ data: { data: [], last_page: 1 } })
+    api.inventoryOpsApi.departments.mockResolvedValue({ data: { departments: [] } })
+    api.inventoryOpsApi.indents.mockResolvedValue({
+      data: { indents: [completed], meta: { current_page: 1, last_page: 1 } },
+    })
+
+    vi.useFakeTimers()
+    const wrapper = mountPage()
+    await flushPromises()
+    wrapper.vm.setStatusFilter('complete')
+    await flushPromises()
+    await wrapper.find('.rq-search input').setValue('IND-0009')
+    vi.advanceTimersByTime(350)
+    await flushPromises()
+
+    expect(api.inventoryOpsApi.indents).toHaveBeenLastCalledWith(
+      expect.objectContaining({ q: 'IND-0009', page: 1, statuses: expect.arrayContaining(['fulfilled']) }),
+    )
+    expect(wrapper.findAll('.rq-row')).toHaveLength(1)
+    expect(wrapper.text()).toContain(wrapper.vm.businessDateOf(completed))
+
+    wrapper.vm.openDetail(completed)
+    await flushPromises()
+    expect(wrapper.text()).toContain('Business date')
+  })
+
+  it('paginates completed requisitions instead of showing every record at once', async () => {
+    api.inventoryOpsApi.requisitionItems.mockResolvedValue({ data: { data: [], last_page: 1 } })
+    api.inventoryOpsApi.departments.mockResolvedValue({ data: { departments: [] } })
+    api.inventoryOpsApi.indents.mockResolvedValue({
+      data: {
+        indents: [{ ...INDENT, status: 'fulfilled', business_date: '2026-11-14' }],
+        meta: { current_page: 1, last_page: 3 },
+      },
+    })
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(wrapper.findAll('.rq-pagination button')).toHaveLength(2)
+    await wrapper.findAll('.rq-pagination button')[1].trigger('click')
+    await flushPromises()
+
+    expect(api.inventoryOpsApi.indents).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 2, per_page: 15 }),
+    )
   })
 })

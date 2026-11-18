@@ -2054,7 +2054,9 @@
     "bothHint": "Sends the e-mail to the hotel's e-mail address and the SMS to its phone number on file.",
     "sn": "S/N",
     "outlet": "Outlet",
+    "businessDate": "Business date",
     "costValue": "Cost value",
+    "searchPlaceholder": "Search requisition no., department or outlet...",
     "allOutlets": "All outlets",
     "statusComplete": "Complete",
     "answerForward": "Answer & forward"
