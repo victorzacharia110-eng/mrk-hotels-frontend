@@ -78,6 +78,21 @@ describe('StorePurchaseOrdersPage', () => {
     vi.useRealTimers()
   })
 
+  it('defaults the delivery date to the business date with an enabled calendar', async () => {
+    api.fbDayCloseApi.index.mockResolvedValue({ data: { close_date: '2026-11-20' } })
+
+    const wrapper = mountPage()
+    await flushPromises()
+    await wrapper.vm.openCreate()
+    await flushPromises()
+
+    expect(wrapper.vm.form.delivery_date).toBe('2026-11-20')
+    const calendars = wrapper.findAllComponents(stubs.CalendarInput)
+    const calendar = calendars[calendars.length - 1]
+    expect(calendar.props('min')).toBe('2026-11-20')
+    expect(typeof calendar.props('min')).toBe('string')
+  })
+
   it('collapses workflow statuses onto the three display states', async () => {
     const wrapper = mountPage()
     await flushPromises()

@@ -85,7 +85,7 @@
                 <option v-for="r in approvedReqs" :key="r.requisition_id" :value="r.requisition_id">{{ r.requisition_number }}</option>
               </select>
             </div>
-            <div class="form-field"><label>{{ $t('purchaseOrders.deliveryDate') }}</label><CalendarInput v-model="form.delivery_date" :min="todayStr" :clearable="false" /></div>
+            <div class="form-field"><label>{{ $t('purchaseOrders.deliveryDate') }}</label><CalendarInput v-model="form.delivery_date" :min="todayStr()" :clearable="false" /></div>
             <div class="form-field"><label>{{ $t('suppliers.paymentTerms') }}</label><input v-model="form.payment_terms" class="sm-input" placeholder="Net 30" /></div>
             <div class="form-field full"><label>{{ $t('purchaseOrders.deliveryAddress') }}</label><input v-model="form.delivery_address" class="sm-input" /></div>
             <div class="form-field full"><label>{{ $t('common.notes') }}</label><textarea v-model="form.notes" rows="2" class="sm-textarea"></textarea></div>
