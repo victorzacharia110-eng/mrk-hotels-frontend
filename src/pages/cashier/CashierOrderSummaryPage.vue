@@ -1236,12 +1236,29 @@ onMounted(async () => {
   await workingDateStore.ensureLoaded()
   const queryDate = Array.isArray(route.query.date) ? route.query.date[0] : route.query.date
   date.value = queryDate || workingDateStore.workingDate
-  load()
+  await load()
   loadTables()
   loadLogo()
   // Refresh state from an already-open QZ Tray session without prompting:
   // connecting here would fire the "Allow this site" dialog on every load.
   restorePrinter()
+
+  const focusId = [route.query.order, route.query.focus].flat().find(Boolean)
+  if (!focusId) return
+  let target = orders.value.find((o) => o.order_id === focusId)
+  if (!target) {
+    try {
+      const { data } = await orderApi.show(focusId)
+      target = data?.order || null
+    } catch {
+      target = null
+    }
+  }
+  if (!target) return
+  if (target.status === 'cancelled') activeTab.value = 'voided'
+  else if (isSettled(target)) activeTab.value = 'settled'
+  else activeTab.value = 'running'
+  await openDrawer(target)
 })
 
 onUnmounted(() => {

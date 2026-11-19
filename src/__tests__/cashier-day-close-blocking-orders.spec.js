@@ -153,7 +153,7 @@ describe('cashier day close — blocking orders', () => {
 
     expect(replace).toHaveBeenCalledWith({
       name: 'cashier-order-summary',
-      query: { date: '2026-10-11' },
+      query: { date: '2026-10-11', order: 'o1' },
     })
 
     wrapper.unmount()

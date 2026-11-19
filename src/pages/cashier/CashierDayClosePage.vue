@@ -268,11 +268,12 @@ async function load({ redirectToSummary = false } = {}) {
     // not from the Day Close screen. Opening Day Close with blockers sends
     // them straight to the order list for the affected business date.
     if (redirectToSummary && route.name === 'cashier-day-close' && blockingOrders.value.length) {
-      const targetDate = blockingOrders.value[0]?.business_date || status.value.close_date
-      await router.replace({
-        name: 'cashier-order-summary',
-        query: targetDate ? { date: targetDate } : {},
-      })
+      const target = blockingOrders.value[0]
+      const targetDate = target?.business_date || status.value.close_date
+      const query = {}
+      if (targetDate) query.date = targetDate
+      if (target?.order_id) query.order = target.order_id
+      await router.replace({ name: 'cashier-order-summary', query })
     }
   } catch (err) {
     error.value = err.response?.data?.message || t('common.loadError')
