@@ -22,6 +22,8 @@ const props = defineProps({
   canProceedRoles: { type: Array, default: () => [] },
   /** The signed-in user's role, checked against canProceedRoles. */
   role: { type: String, default: '' },
+  /** Optional order-pad route offered straight from the reminder. */
+  newOrderRoute: { type: String, default: '' },
 })
 
 const { t, d } = useI18n()
@@ -45,6 +47,12 @@ const openLabel = computed(() => {
 })
 
 const canProceed = computed(() => props.canProceedRoles.includes(props.role))
+const showUnsettledOrders = computed(
+  () => workingDateStore.hasUnsettledOrders && !!props.newOrderRoute,
+)
+const unsettledCount = computed(
+  () => workingDateStore.unsettledOrdersCount || workingDateStore.runningOrdersCount,
+)
 
 function confirm() {
   workingDateStore.dismissDayCloseReminder()
@@ -54,6 +62,11 @@ function proceed() {
   workingDateStore.dismissDayCloseReminder()
   router.push({ name: props.proceedRoute })
 }
+
+function takeNewOrders() {
+  workingDateStore.dismissDayCloseReminder()
+  router.push({ name: props.newOrderRoute })
+}
 </script>
 
 <template>
@@ -62,21 +75,36 @@ function proceed() {
       <div class="dc-reminder-head">
         <h3>
           <i class="fas fa-calendar-check" aria-hidden="true"></i>
-          {{ t('cashier.dayClose.reminderTitle') }}
+          {{ t(showUnsettledOrders ? 'cashier.dayClose.unsettledReminderTitle' : 'cashier.dayClose.reminderTitle') }}
         </h3>
       </div>
-      <p class="dc-reminder-text">
+      <p v-if="showUnsettledOrders" class="dc-reminder-text">
+        {{ t('cashier.dayClose.unsettledReminderText', { count: unsettledCount }) }}
+      </p>
+      <p v-else class="dc-reminder-text">
         {{ t('cashier.dayClose.reminderText', { today: openLabel }) }}
       </p>
       <div class="dc-reminder-foot">
-        <button v-if="canProceed" type="button" class="dc-btn ok" @click="proceed">
-          <i class="fas fa-calendar-check" aria-hidden="true"></i>
-          {{ t('cashier.dayClose.proceed') }}
-        </button>
-        <button type="button" class="dc-btn" @click="confirm">
-          <i class="fas fa-check" aria-hidden="true"></i>
-          {{ t('cashier.dayClose.confirm') }}
-        </button>
+        <template v-if="showUnsettledOrders">
+          <button v-if="canProceed" type="button" class="dc-btn ok" @click="proceed">
+            <i class="fas fa-calendar-check" aria-hidden="true"></i>
+            {{ t('cashier.dayClose.proceed') }}
+          </button>
+          <button type="button" class="dc-btn" @click="takeNewOrders">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+            {{ t('cashier.dayClose.takeNewOrders') }}
+          </button>
+        </template>
+        <template v-else>
+          <button v-if="canProceed" type="button" class="dc-btn ok" @click="proceed">
+            <i class="fas fa-calendar-check" aria-hidden="true"></i>
+            {{ t('cashier.dayClose.proceed') }}
+          </button>
+          <button type="button" class="dc-btn" @click="confirm">
+            <i class="fas fa-check" aria-hidden="true"></i>
+            {{ t('cashier.dayClose.confirm') }}
+          </button>
+        </template>
       </div>
     </div>
   </div>

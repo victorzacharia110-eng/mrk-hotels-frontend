@@ -80,6 +80,10 @@ export const useWorkingDateStore = defineStore('workingDate', () => {
     () => Boolean(openDate.value) && openDate.value < today.value,
   )
 
+  const hasUnsettledOrders = computed(
+    () => unsettledOrdersCount.value > 0 || runningOrdersCount.value > 0,
+  )
+
   /**
    * The Day Close reminder is shared state rather than a per-component ref:
    * exactly one modal may be on screen, no matter how many of the panels that
@@ -87,10 +91,10 @@ export const useWorkingDateStore = defineStore('workingDate', () => {
    */
   const dayCloseReminderVisible = ref(false)
 
-  /** Loads the business date, then raises the reminder if the day rolled over. */
+  /** Loads the business date, then raises the reminder when action is needed. */
   async function initDayCloseReminder() {
     await ensureLoaded()
-    if (needsDayClose.value && !sessionStorage.getItem(DAY_CLOSE_REMINDER_KEY)) {
+    if ((needsDayClose.value || hasUnsettledOrders.value) && !sessionStorage.getItem(DAY_CLOSE_REMINDER_KEY)) {
       dayCloseReminderVisible.value = true
     }
   }
@@ -144,6 +148,7 @@ export const useWorkingDateStore = defineStore('workingDate', () => {
     workingDate,
     today,
     needsDayClose,
+    hasUnsettledOrders,
     dayCloseReminderVisible,
     initDayCloseReminder,
     dismissDayCloseReminder,

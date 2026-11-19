@@ -5753,6 +5753,9 @@
       "proceed": "Proceed to Day Close",
       "reminderText": "Orders you enter will be saved under the business date: {today}.",
       "reminderTitle": "Close Day",
+      "unsettledReminderTitle": "Unsettled orders",
+      "unsettledReminderText": "There are {count} orders not taken care of yet. Settle or void them in Day Close, or continue taking new orders under the current business date.",
+      "takeNewOrders": "Take New Orders",
       "timezoneSaved": "Standard time updated successfully."
     },
     "blockedDevices": {},

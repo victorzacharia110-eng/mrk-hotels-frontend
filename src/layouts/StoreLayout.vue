@@ -657,11 +657,11 @@
       </div>
     </div>
 
-    <!-- Review item 18: the staff order pad lives in this shell, so the waiter
-         and bar-tender panels get the Day Close reminder from here now that
-         the page no longer carries its own copy. -->
+    <!-- The staff order pad lives in this shell, so the waiter and bar-tender
+         panels get the unsettled-order Day Close reminder from here. -->
     <DayCloseReminderModal
       proceed-route="cashier-day-close"
+      new-order-route="cashier-dine-in"
       :can-proceed-roles="DAY_CLOSE_ROLES"
       :role="authStore.user?.user_role"
     />

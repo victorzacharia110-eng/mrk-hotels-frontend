@@ -32,9 +32,9 @@ const CAN_PROCEED = ['cashier', 'bartender', 'waiter', 'store_manager', 'hotel_a
 
 let pinia
 
-const mountModal = (role, proceedRoute = 'cashier-day-close') =>
+const mountModal = (role, proceedRoute = 'cashier-day-close', newOrderRoute = '') =>
   mount(DayCloseReminderModal, {
-    props: { proceedRoute, canProceedRoles: CAN_PROCEED, role },
+    props: { proceedRoute, canProceedRoles: CAN_PROCEED, role, newOrderRoute },
     // The SAME pinia the assertions read from — a second instance here would
     // give the component an empty store.
     global: { plugins: [pinia, i18n] },
@@ -132,6 +132,18 @@ describe('workingDate store — one shared reminder', () => {
     await store.initDayCloseReminder()
     expect(store.dayCloseReminderVisible).toBe(false)
   })
+
+  it('raises it on login when orders are still unsettled', async () => {
+    index.mockResolvedValue({
+      data: { open_date: '2026-09-26', timezone: TZ, unsettled_orders_count: 3 },
+    })
+    const store = useWorkingDateStore()
+
+    await store.initDayCloseReminder()
+    expect(store.needsDayClose).toBe(false)
+    expect(store.hasUnsettledOrders).toBe(true)
+    expect(store.dayCloseReminderVisible).toBe(true)
+  })
 })
 
 describe('DayCloseReminderModal', () => {
@@ -140,8 +152,11 @@ describe('DayCloseReminderModal', () => {
     setActivePinia(pinia)
     sessionStorage.clear()
     push.mockReset()
-    useWorkingDateStore().dayCloseReminderVisible = true
-    useWorkingDateStore().openDate = '2026-09-25'
+    const store = useWorkingDateStore()
+    store.dayCloseReminderVisible = true
+    store.openDate = '2026-09-25'
+    store.unsettledOrdersCount = 0
+    store.runningOrdersCount = 0
   })
 
   it('states the date the new orders are filed under', () => {
@@ -178,5 +193,32 @@ describe('DayCloseReminderModal', () => {
     store.dayCloseReminderVisible = true
     await mountModal('cashier').findAll('button')[0].trigger('click')
     expect(push).toHaveBeenCalledWith({ name: 'cashier-day-close' })
+  })
+
+  it('explains unsettled orders and offers both actions from the modal', async () => {
+    const store = useWorkingDateStore()
+    store.unsettledOrdersCount = 2
+
+    const wrapper = mountModal('cashier', 'cashier-day-close', 'cashier-dine-in')
+
+    expect(wrapper.text()).toContain('Unsettled orders')
+    expect(wrapper.text()).toContain('There are 2 orders not taken care of yet.')
+    expect(wrapper.text()).toContain('Proceed to Day Close')
+    expect(wrapper.text()).toContain('Take New Orders')
+
+    await wrapper.findAll('button')[0].trigger('click')
+    expect(push).toHaveBeenCalledWith({ name: 'cashier-day-close' })
+    expect(store.dayCloseReminderVisible).toBe(false)
+  })
+
+  it('opens the new-order tab straight from the unsettled-orders modal', async () => {
+    const store = useWorkingDateStore()
+    store.unsettledOrdersCount = 1
+
+    const wrapper = mountModal('bartender', 'cashier-day-close', 'cashier-dine-in')
+    await wrapper.findAll('button')[1].trigger('click')
+
+    expect(push).toHaveBeenCalledWith({ name: 'cashier-dine-in' })
+    expect(store.dayCloseReminderVisible).toBe(false)
   })
 })

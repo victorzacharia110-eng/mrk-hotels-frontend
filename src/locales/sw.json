@@ -6023,6 +6023,9 @@
       "reasonPlaceholder": "mf. mgeni aliondoka, imeingizwa kwa makosa",
       "reminderTitle": "Funga Siku",
       "reminderText": "Oda unazoingiza zitahifadhiwa chini ya tarehe ya kazi: {today}.",
+      "unsettledReminderTitle": "Oda zisizojaliwa",
+      "unsettledReminderText": "Kuna oda {count} ambazo bado hazijashughulikiwa. Zilipize au uzifute kwenye Funga Siku, au endelea kuchukua oda mpya chini ya siku ya kazi ya sasa.",
+      "takeNewOrders": "Chukua Oda Mpya",
       "proceed": "Endelea na Siku ya Kufunga",
       "confirm": "Thibitisha",
       "workingDate": "Tarehe ya Kazi"

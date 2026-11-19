@@ -441,12 +441,12 @@
       </div>
     </div>
 
-    <!-- Day Close reminder (review item 18): a new calendar day started but
-         the open business day has not been closed, so every order taken now
-         still joins the running orders of the open day. The modal is shared
-         with the other panels so it can never appear twice at once. -->
+    <!-- Day Close reminder: a new calendar day started or orders are still
+         unsettled, so staff can settle them or continue taking orders. The
+         modal is shared with the other panels so it can never appear twice. -->
     <DayCloseReminderModal
       proceed-route="cashier-day-close"
+      new-order-route="cashier-dine-in"
       :can-proceed-roles="DAY_CLOSE_ROLES"
       :role="authStore.user?.user_role"
     />
