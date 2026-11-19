@@ -119,6 +119,16 @@
               ><span class="stat-label">{{ $t('owner.roomsTotal') }}</span>
             </div>
           </div>
+          <router-link class="stat-card marketing-stat" :to="{ name: 'owner-marketing' }">
+            <div class="stat-icon marketing"><i class="fas fa-bullhorn"></i></div>
+            <div>
+              <span class="stat-value">{{ marketingPending }}</span
+              ><span class="stat-label">{{ $t('owner.marketingPending') }}</span>
+              <span class="marketing-link"
+                >{{ $t('owner.marketingReview') }} <i class="fas fa-arrow-right"></i
+              ></span>
+            </div>
+          </router-link>
         </div>
 
         <!-- Side-by-side comparison of every hotel the owner manages -->
@@ -199,7 +209,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { ownerApi } from '@/api'
+import { ownerApi, ownerMarketingApi } from '@/api'
 import { useNotificationStore } from '@/stores/notifications'
 import TableExportButton from '@/components/TableExportButton.vue'
 import AlertModal from '@/components/AlertModal.vue'
@@ -215,6 +225,7 @@ const notifStore = useNotificationStore()
 const data = ref(null)
 const loading = ref(false)
 const error = ref('')
+const marketingPending = ref(0)
 
 /**
  * Remembers the chosen hotel in localStorage so the app panel opens in its
@@ -251,9 +262,20 @@ async function load() {
   }
 }
 
+async function loadMarketingPending() {
+  try {
+    const res = await ownerMarketingApi.requests({ status: 'pending' })
+    const requests = res.data?.requests
+    marketingPending.value = Array.isArray(requests) ? requests.length : 0
+  } catch {
+    marketingPending.value = 0
+  }
+}
+
 onMounted(() => {
   load()
   notifStore.fetchAlerts()
+  loadMarketingPending()
 })
 
 /** Alert modal logic. */
@@ -370,6 +392,27 @@ function dismissCurrentAlert() {
 .stat-icon.rooms {
   background: #fdecea;
   color: #c0392b;
+}
+
+.stat-icon.marketing {
+  background: #eaf4ff;
+  color: #005eb8;
+}
+
+.stat-card.marketing-stat {
+  text-decoration: none;
+}
+
+.stat-card.marketing-stat:hover {
+  border-color: #005eb8;
+}
+
+.marketing-link {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #005eb8;
 }
 
 .stat-value {

@@ -122,6 +122,7 @@ export const MODULES = [
   // payment accounts. These print on invoices, receipts and every export, so the
   // manager needs one place to change them.
   { key: 'hotel-settings', to: '/app/settings/hotel', icon: 'fas fa-building-circle-check', labelKey: 'hotelSettings.title', roles: ['hotel_admin', 'manager', 'accountant', 'receptionist'] },
+  { key: 'hotel-marketing', to: '/app/marketing', icon: 'fas fa-bullhorn', labelKey: 'hotelMarketing.title', roles: ['hotel_admin', 'manager'] },
   // Computers/terminals trusted to sign in with a 4-digit PIN — admins
   // revoke any they no longer recognise (security review item).
   { key: 'trusted-devices', to: '/app/settings/trusted-devices', icon: 'fas fa-mobile-screen-button', labelKey: 'nav.trustedDevices', roles: ['hotel_admin', 'manager'] },

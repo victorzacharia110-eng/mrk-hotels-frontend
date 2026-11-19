@@ -3023,6 +3023,42 @@ export const ownerApi = {
   },
 };
 
+export const ownerMarketingApi = {
+  profile(tenantId) {
+    return api.get(`${v1}/owner/marketing/profile`, { params: { tenant_id: tenantId } });
+  },
+  saveProfile(data) {
+    return api.put(`${v1}/owner/marketing/profile`, data);
+  },
+  requests(params) {
+    return api.get(`${v1}/owner/marketing/change-requests`, { params });
+  },
+  approve(id) {
+    return api.post(`${v1}/owner/marketing/change-requests/${id}/approve`);
+  },
+  reject(id, data = {}) {
+    return api.post(`${v1}/owner/marketing/change-requests/${id}/reject`, data);
+  },
+  preferences() {
+    return api.get(`${v1}/owner/marketing/preferences`);
+  },
+  updatePreferences(data) {
+    return api.put(`${v1}/owner/marketing/preferences`, data);
+  },
+};
+
+export const hotelMarketingApi = {
+  profile() {
+    return api.get(`${v1}/hotel-marketing/profile`);
+  },
+  requests() {
+    return api.get(`${v1}/hotel-marketing/change-requests`);
+  },
+  propose(data) {
+    return api.post(`${v1}/hotel-marketing/change-requests`, data);
+  },
+};
+
 /** 1:1 staff conversations and their messages. */
 export const conversationApi = {
   /**

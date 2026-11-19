@@ -109,3 +109,25 @@ describe('the guest / public storefront header has the theme switch', () => {
     expect(layout).toContain('class="mobile-link theme-toggle"')
   })
 })
+
+describe('owner panel header', () => {
+  const layout = read('src/layouts/OwnerLayout.vue')
+
+  it('shows one role badge instead of duplicate owner labels', () => {
+    expect(layout.match(/<RoleBadge \/>/g) || []).toHaveLength(1)
+    expect(layout).not.toContain('class="sa-badge"')
+  })
+
+  it('ends the header with the shared avatar profile menu', () => {
+    expect(layout).toContain('class="sa-profile-trigger"')
+    expect(layout).toContain('class="sa-profile-panel"')
+    expect(layout).toContain('class="sa-profile-link"')
+    expect(layout).toContain(":aria-label=\"$t('nav.profile')\"")
+    expect(layout).not.toContain('class="sa-user"')
+  })
+
+  it('keeps the hamburger visible for expanding and collapsing the sidebar', () => {
+    expect(layout).toMatch(/\.sa-hamburger\s*\{\s*display:\s*flex/)
+    expect(layout).toContain('sidebarCollapsed.value = !sidebarCollapsed.value')
+  })
+})
