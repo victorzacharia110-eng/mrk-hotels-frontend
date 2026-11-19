@@ -308,11 +308,13 @@ import ProviderLogo from '@/components/ProviderLogo.vue'
 import { METHOD_CASH, PAYMENT_METHODS, requiresProvider } from '@/utils/payments'
 
 import { useTenantCurrency } from '@/utils/currency'
+import { useBusinessDateStore } from '@/stores/businessDate'
 
 const { curCode } = useTenantCurrency()
 
 const { t } = useI18n()
 const authStore = useAuthStore()
+const businessDateStore = useBusinessDateStore()
 
 // Permission gate: whether the current user can operate on payments.
 const canOperate = computed(() => authStore.canOperate)
@@ -397,10 +399,12 @@ const paymentMethodOptions = computed(() =>
 
 /** Confirmed reservations as selectable options, showing their balance. */
 const reservationOptions = computed(() =>
-  reservations.value.map((reservation) => ({
-    value: reservation.reservation_id,
-    label: `${reservation.guest_name} · ${curCode()} ${Number(reservation.balance).toLocaleString()} ${t('payments.balance')}`,
-  })),
+  reservations.value
+    .filter((reservation) => Number(reservation.balance_due ?? reservation.balance ?? 0) > 1)
+    .map((reservation) => ({
+      value: reservation.reservation_id,
+      label: `${reservation.guest_name} · ${curCode()} ${Number(reservation.balance_due ?? reservation.balance ?? 0).toLocaleString()} ${t('payments.balance')}`,
+    })),
 )
 
 /** Maps a payment status to its badge CSS class for the table. */
@@ -455,7 +459,7 @@ async function load() {
 /** Loads the confirmed reservations available for a new payment. */
 async function loadReservations() {
   try {
-    const res = await reservationApi.index({ status: 'confirmed', per_page: 100 })
+    const res = await reservationApi.index({ status: 'confirmed,checked_in', per_page: 100 })
     reservations.value = res.data.data || []
   } catch {
     // ignore
@@ -486,8 +490,8 @@ function clearFilters() {
   page.value = 1
   filters.status = ''
   filters.method = ''
-  filters.from = ''
-  filters.to = ''
+  filters.from = businessDateStore.current || ''
+  filters.to = filters.from
   load()
 }
 
@@ -638,7 +642,21 @@ function flattenError(err) {
     : err.response?.data?.message || t('common.actionFailed')
 }
 
-onMounted(() => {
+watch(
+  () => businessDateStore.current,
+  (date) => {
+    if (!date || date === filters.from) return
+    filters.from = date
+    filters.to = date
+    page.value = 1
+    load()
+  },
+)
+
+onMounted(async () => {
+  await businessDateStore.ensureLoaded()
+  filters.from = businessDateStore.current || ''
+  filters.to = filters.from
   load()
   loadReservations()
 })

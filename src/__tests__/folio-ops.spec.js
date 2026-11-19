@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import HotelDashboard from '@/pages/dashboards/HotelDashboard.vue'
 import i18n from '@/locales/i18n'
 import { folioBreakdown, isFolioRefundEntry } from '@/utils/folio'
+import { saveBlob } from '@/utils/download'
 
 const api = vi.hoisted(() => {
   const created = []
@@ -43,6 +44,11 @@ vi.mock('@/api', () => ({
   paymentApi: api.paymentApi,
   companyApi: api.companyApi,
 }))
+
+vi.mock('@/utils/download', () => ({ saveBlob: vi.fn() }))
+
+const originalCreateObjectURL = URL.createObjectURL
+const originalRevokeObjectURL = URL.revokeObjectURL
 
 const activeBar = { id: 501, label: 'Amina Hassan', folio_code: 'F-501', guestEmail: 'amina@example.com', roomNumber: '101' }
 
@@ -89,6 +95,8 @@ async function mountDashboard() {
 afterEach(() => {
   wrapper?.unmount()
   document.getElementById('mrk-print-frame')?.remove()
+  URL.createObjectURL = originalCreateObjectURL
+  URL.revokeObjectURL = originalRevokeObjectURL
   vi.restoreAllMocks()
 })
 
@@ -152,6 +160,50 @@ describe('folio operations on the stay view', () => {
     await wrapper.vm.$nextTick()
     return document.querySelector('.sv-row-menu')
   }
+
+  it('views and downloads folio attachments through the authenticated API', async () => {
+    await mountDashboard()
+    vi.mocked(saveBlob).mockClear()
+    const blob = new Blob(['%PDF-1.4'], { type: 'application/pdf' })
+    api.reservationApi.folioAttachment.mockResolvedValue({ data: blob })
+    wrapper.vm.folio.folio_entries.push({
+      folio_entry_id: 9,
+      type: 'attachment',
+      amount: 0,
+      date: '2026-11-01',
+      description: 'Attachment',
+      attachment_url: '/storage/folio/guest-id.pdf',
+      attachment_name: 'guest-id.pdf',
+    })
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    const entry = wrapper.vm.folioEntries.find((e) => e.hasAttachment)
+    expect(entry).toBeTruthy()
+
+    const createObjectURL = vi.fn(() => 'blob:guest-id')
+    const revokeObjectURL = vi.fn()
+    URL.createObjectURL = createObjectURL
+    URL.revokeObjectURL = revokeObjectURL
+    const open = vi.spyOn(window, 'open').mockReturnValue({})
+
+    let menu = await openRowMenuFor(entry)
+    expect(menu.querySelector('a[download]')).toBeNull()
+    menu.querySelector('[data-test="folio-attachment-view"]').click()
+    await flushPromises()
+
+    expect(api.reservationApi.folioAttachment).toHaveBeenCalledWith(9)
+    expect(createObjectURL).toHaveBeenCalledWith(blob)
+    expect(open).toHaveBeenCalledWith('blob:guest-id', '_blank', 'noopener,noreferrer')
+    expect(saveBlob).not.toHaveBeenCalled()
+
+    menu = await openRowMenuFor(entry)
+    menu.querySelector('[data-test="folio-attachment-download"]').click()
+    await flushPromises()
+
+    expect(api.reservationApi.folioAttachment).toHaveBeenCalledTimes(2)
+    expect(saveBlob).toHaveBeenCalledWith(blob, 'guest-id.pdf')
+  })
 
   it('shows NOT AUTHORIZED when a receptionist edits or voids a room charge', async () => {
     await mountDashboard()
@@ -1023,5 +1075,62 @@ describe('transfer/split math per the reception adjustments', () => {
     // a fresh rent line (that was the "room charges reappear" glitch).
     expect(wrapper.vm.folioEntries.filter((e) => e.rental)).toHaveLength(0)
     expect(wrapper.vm.folioTotals.charges).toBe(250000)
+  })
+})
+
+describe('advance source vendor', () => {
+  it('shows a vendor field for mobile-money and bank advances only', async () => {
+    await mountDashboard()
+    wrapper.vm.resetBookingForm()
+    wrapper.vm.bookingForm.advance_payment = 10000
+    wrapper.vm.bookingForm.advance_payment_method = 'mobile_money'
+    wrapper.vm.bookingModal = true
+    await wrapper.vm.$nextTick()
+
+    expect(document.querySelector('[data-field="advance_payment_provider"]')).toBeTruthy()
+
+    wrapper.vm.bookingForm.advance_payment_method = 'cash'
+    await wrapper.vm.$nextTick()
+    expect(document.querySelector('[data-field="advance_payment_provider"]')).toBeNull()
+  })
+
+  it('requires the vendor and sends it with the reservation', async () => {
+    await mountDashboard()
+    wrapper.vm.resetBookingForm()
+    Object.assign(wrapper.vm.bookingForm, {
+      first_name: 'Asha',
+      last_name: 'Juma',
+      guest_phone: '712000111',
+      booking_type: 'single',
+      room_id: 'rm1',
+      check_in_date: '2026-11-18',
+      check_out_date: '2026-11-19',
+      total_amount: 90000,
+      advance_payment: 10000,
+      advance_payment_method: 'mobile_money',
+    })
+
+    await wrapper.vm.submitBooking('reservation')
+    expect(wrapper.vm.bookingErrors.advance_payment_provider).toBeTruthy()
+    expect(api.reservationApi.store).not.toHaveBeenCalled()
+
+    wrapper.vm.bookingForm.advance_payment_provider = 'mpesa'
+    await wrapper.vm.submitBooking('reservation')
+    expect(api.reservationApi.store).toHaveBeenCalled()
+    expect(api.reservationApi.store.mock.calls[0][0].advance_payment_provider).toBe('mpesa')
+  })
+
+  it('keeps the advance vendor visible on the folio deposit line', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    payload.payments = []
+    payload.reservation.advance_payment_method = 'mobile_money'
+    payload.reservation.advance_payment_provider = 'mpesa'
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+
+    const deposit = wrapper.vm.folioEntries.find((entry) => entry.kind === 'deposit')
+    expect(deposit.detail).toContain(i18n.global.t('paymentFields.methods.mobile_money'))
+    expect(deposit.detail).toContain('M-Pesa')
   })
 })

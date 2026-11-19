@@ -14,7 +14,7 @@
         <p class="muted">{{ $t('nightAudit.insertSubtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-secondary" :disabled="loading" @click="load">
+        <button class="btn btn-secondary" data-test="insert-transaction-refresh" :disabled="loading" @click="refreshForDate">
           <i class="fas fa-rotate"></i> {{ $t('common.refresh') }}
         </button>
       </div>

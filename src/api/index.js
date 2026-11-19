@@ -920,11 +920,13 @@ export const reservationApi = {
     return api.delete(`${v1}/folio/entries/${entryId}/attachment`);
   },
   /**
-   * URL used to download an uploaded folio attachment.
+   * Streams an uploaded folio attachment through the authenticated API.
+   * The bearer token and tenant headers ride on this request, unlike a plain
+   * <a href> which would be rejected by the protected download endpoint.
    * @param entryId - Folio entry identifier.
    */
-  folioAttachmentUrl(entryId) {
-    return `${api.defaults.baseURL}${v1}/folio/entries/${entryId}/attachment`;
+  folioAttachment(entryId) {
+    return api.get(`${v1}/folio/entries/${entryId}/attachment`, { responseType: "blob" });
   },
   /**
    * Checks a guest into their reserved room.

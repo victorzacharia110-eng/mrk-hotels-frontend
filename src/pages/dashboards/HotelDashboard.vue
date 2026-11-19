@@ -1919,12 +1919,27 @@
                       class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.advance_payment_method
                       }}</span>
                 </label>
-                <label class="sv-field">
-                  <span>{{ $t('stayview.advanceDate') }}</span>
-                  <input v-model="bookingForm.advance_payment_date" type="date" class="input" />
-                </label>
-              </div>
-              <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
+                  <label class="sv-field">
+                    <span>{{ $t('stayview.advanceDate') }}</span>
+                    <input v-model="bookingForm.advance_payment_date" type="date" class="input" />
+                  </label>
+                </div>
+                <div v-if="requiresProvider(bookingForm.advance_payment_method)" class="sv-field-row">
+                  <label class="sv-field">
+                    <span>{{ $t('stayview.advanceProvider') }}</span>
+                    <select v-model="bookingForm.advance_payment_provider" class="input" data-field="advance_payment_provider"
+                      :class="{ 'sv-input-error': bookingErrors.advance_payment_provider }">
+                      <option value="">—</option>
+                      <option v-for="provider in bookingAdvanceProviderOptions" :key="provider.value" :value="provider.value">
+                        {{ provider.label }}
+                      </option>
+                    </select>
+                    <span v-if="bookingErrors.advance_payment_provider" class="sv-field-msg" role="alert"><i
+                        class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.advance_payment_provider
+                        }}</span>
+                  </label>
+                </div>
+                <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
             </div>
             <div class="sv-modal-actions">
               <!-- Walk-in → immediate check-in (green bar). Reservation → held
@@ -2258,22 +2273,25 @@
               <i class="fas fa-pen" aria-hidden="true"></i> {{ $t('stayview.paymentEdit') }}
             </button>
           </li>
-          <li v-if="entryMenu.entry.entryUrl">
-            <a :href="entryMenu.entry.entryUrl" target="_blank" rel="noopener" role="menuitem" @click="closeEntryMenu">
+          <li v-if="entryMenu.entry.hasAttachment">
+            <button type="button" role="menuitem" data-test="folio-attachment-view"
+              :disabled="attachmentActionBusy === entryMenu.entry.entryId"
+              @click="viewFolioAttachment(entryMenu.entry)">
               <i class="fas fa-eye" aria-hidden="true"></i> {{ $t('common.view') }}
-            </a>
+            </button>
           </li>
-          <li v-if="entryMenu.entry.entryUrl">
-            <a :href="entryMenu.entry.entryUrl" target="_blank" rel="noopener" download role="menuitem"
-              @click="closeEntryMenu">
+          <li v-if="entryMenu.entry.hasAttachment">
+            <button type="button" role="menuitem" data-test="folio-attachment-download"
+              :disabled="attachmentActionBusy === entryMenu.entry.entryId"
+              @click="downloadFolioAttachment(entryMenu.entry)">
               <i class="fas fa-download" aria-hidden="true"></i> {{ $t('folio.download') }}
-            </a>
+            </button>
           </li>
           <li v-if="entryMenu.entry.entryId && !entryMenu.entry.moveLine">
             <button type="button" role="menuitem" class="danger" :disabled="actionBusy"
               @click="requestVoidEntry(entryMenu.entry)">
               <i class="fas fa-trash-can" aria-hidden="true"></i>
-              {{ entryMenu.entry.entryUrl ? $t('folio.remove') : $t('folio.void') }}
+              {{ entryMenu.entry.hasAttachment ? $t('folio.remove') : $t('folio.void') }}
             </button>
           </li>
         </ul>
@@ -2478,6 +2496,7 @@ import { useCategoriesStore } from '@/stores/categories'
 import { useBusinessDateStore } from '@/stores/businessDate'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { printHtmlSilently } from '@/utils/reportPrint'
+import { saveBlob } from '@/utils/download'
 
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -3299,6 +3318,8 @@ const activeBar = ref(null)
 const returnToNightAuditModal = ref(false)
 const folio = ref(null)
 const folioLoading = ref(false)
+let folioRequestId = 0
+let relatedFolioRequestId = 0
 
 /**
  * Opens the reservation summary modal for the clicked bar and, when the stay
@@ -3308,6 +3329,8 @@ function openBarModal(bar) {
   hideBarTip()
   activeBar.value = bar
   folio.value = null
+  folioRequestId += 1
+  relatedFolioRequestId += 1
   // A switcher VIEW is per-stay: opening a different bar must not keep showing
   // the previous stay's related folio in the ledger.
   viewingFolio.value = null
@@ -3358,6 +3381,8 @@ function closeBarModal() {
   activeBar.value = null
   folio.value = null
   folioLoading.value = false
+  folioRequestId += 1
+  relatedFolioRequestId += 1
   viewingFolio.value = null
   stayTab.value = 'folio'
   moreOpen.value = false
@@ -3410,19 +3435,28 @@ function paymentDescription(payment) {
   return provider ? `${method} · ${provider}` : method
 }
 
+/** Advance source with the receiving vendor kept visible (M-Pesa, CRDB, ...). */
+function advanceSourceLabel(source) {
+  const method = paymentMethodLabel(source?.advance_payment_method)
+  const provider = paymentProviderLabel(source?.advance_payment_provider)
+  return provider ? `${method} · ${provider}` : method
+}
+
 /**
  * Loads the reservation folio (payments, restaurant/bar orders, laundry and
  * audit trail) shown in the stay-view modal. Non-fatal on error.
  */
 async function loadFolio(id) {
+  const requestId = ++folioRequestId
   folioLoading.value = true
   try {
     const res = await reservationApi.folio(id)
+    if (requestId !== folioRequestId) return
     folio.value = res.data
   } catch {
-    folio.value = null
+    if (requestId === folioRequestId) folio.value = null
   } finally {
-    folioLoading.value = false
+    if (requestId === folioRequestId) folioLoading.value = false
   }
 }
 
@@ -3693,17 +3727,19 @@ async function switchFolio(item) {
     return
   }
   if (viewingFolio.value?.reservation?.reservation_id === id) return
+  const requestId = ++relatedFolioRequestId
   folioLoading.value = true
   try {
     const res = await reservationApi.folio(id)
+    if (requestId !== relatedFolioRequestId) return
     viewingFolio.value = res.data
     const loaded = totalsForEntries(buildLedgerEntries(res.data))
     const bal = Math.round((loaded.charges - loaded.credits) * 100) / 100
     if (Number.isFinite(bal)) relatedBalanceCache.value[id] = bal
   } catch (err) {
-    actionError.value = apiErrorMsg(err, t('stayview.actionError'))
+    if (requestId === relatedFolioRequestId) actionError.value = apiErrorMsg(err, t('stayview.actionError'))
   } finally {
-    folioLoading.value = false
+    if (requestId === relatedFolioRequestId) folioLoading.value = false
   }
 }
 
@@ -3801,10 +3837,10 @@ const bookingGrid = computed(() => {
     {
       label: t('stayview.advancePaid'),
       value: Number(src.advance_payment || 0) > 0
-        ? `${curCode()} ${fmtNum(src.advance_payment, 2)}${src.advance_payment_method ? ` · ${paymentMethodLabel(src.advance_payment_method)}` : ''}`
+        ? `${curCode()} ${fmtNum(src.advance_payment, 2)}${src.advance_payment_method ? ` · ${advanceSourceLabel(src)}` : ''}`
         : '—',
     },
-    { label: t('stayview.reference'), value: show(displayBookingReference(src.booking_reference || src.reference)) },
+    { label: t('stayview.reference'), value: show(displayBookingReference(src.booking_code || src.booking_reference || src.reference)) },
     ...(src.channel || src.external_ref
       ? [{ label: t('reservations.channel'), value: `${show(src.channel)}${src.external_ref ? ` · ${src.external_ref}` : ''}` }]
       : []),
@@ -4089,7 +4125,8 @@ function buildLedgerEntries(src) {
       // (its effect already lives in room_charges), so it cannot be voided or
       // moved; only the target folio's live rows travel again.
       moveLine: /_(out|in)$/.test(e.type),
-      entryUrl: e.attachment_url ? reservationApi.folioAttachmentUrl(e.folio_entry_id) : '',
+      hasAttachment: Boolean(e.attachment_url && e.folio_entry_id),
+      attachmentName: e.attachment_name || '',
       canEditAction: ['room_charge', 'extra_charge', 'adjustment', 'discount', 'inclusion'].includes(e.type)
         && e.folio_entry_id != null,
       editable: ['room_charge', 'extra_charge', 'adjustment', 'discount', 'inclusion'].includes(e.type)
@@ -4154,7 +4191,7 @@ function buildLedgerEntries(src) {
       time: '',
       particular: t('folio.payment'),
       description: t('stayview.advancePaid'),
-      detail: '',
+      detail: f.reservation?.advance_payment_method ? advanceSourceLabel(f.reservation) : '',
       user: '—',
       amount: deposit,
       credit: true,
@@ -4216,6 +4253,7 @@ const currentFolioTotals = computed(() => totalsForEntries(currentFolioEntries.v
 const roomTasks = ref([])
 const roomTasksLoading = ref(false)
 const roomTasksLoaded = ref(false)
+let roomTasksPollTimer = null
 
 /** Loads open tasks filtered to the active stay's room. Non-fatal on error. */
 async function loadRoomTasks() {
@@ -4256,7 +4294,7 @@ async function runRoomTask(task, verb) {
 function setStayTab(key) {
   stayTab.value = key
   moreOpen.value = false
-  if (key === 'tasks' && !roomTasksLoaded.value) loadRoomTasks()
+  if (key === 'tasks') loadRoomTasks()
 }
 
 /* ---------------- In-place front-desk actions (no navigation) ---------------- */
@@ -4264,6 +4302,7 @@ function setStayTab(key) {
 // Shared busy/error state for every modal action on this page.
 const actionBusy = ref(false)
 const actionError = ref('')
+const attachmentActionBusy = ref(null)
 
 /** Reads the most specific error a backend call returned: the first field
  * validation error, then the API message, then a locale fallback — so the
@@ -4992,6 +5031,42 @@ async function removeFolioAttachment(e) {
   await runStayAction(() => reservationApi.folioEntryDeleteAttachment(e.entryId))
 }
 
+async function loadFolioAttachment(e) {
+  if (!e?.entryId || attachmentActionBusy.value) return null
+  actionError.value = ''
+  attachmentActionBusy.value = e.entryId
+  try {
+    const res = await reservationApi.folioAttachment(e.entryId)
+    const blob = res.data instanceof Blob ? res.data : new Blob([res.data], { type: 'application/octet-stream' })
+    return { blob, name: e.attachmentName || `attachment-${e.entryId}` }
+  } catch (err) {
+    actionError.value = apiErrorMsg(err, t('stayview.actionError'))
+    return null
+  } finally {
+    attachmentActionBusy.value = null
+  }
+}
+
+async function viewFolioAttachment(e) {
+  closeEntryMenu()
+  const loaded = await loadFolioAttachment(e)
+  if (!loaded) return
+  try {
+    const url = URL.createObjectURL(loaded.blob)
+    const opened = window.open(url, '_blank', 'noopener,noreferrer')
+    if (!opened) saveBlob(loaded.blob, loaded.name)
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+  } catch (err) {
+    actionError.value = apiErrorMsg(err, t('stayview.actionError'))
+  }
+}
+
+async function downloadFolioAttachment(e) {
+  closeEntryMenu()
+  const loaded = await loadFolioAttachment(e)
+  if (loaded) saveBlob(loaded.blob, loaded.name)
+}
+
 /* ----- Edit folio entry (reword the note or fix the posted amount) ----- */
 const folioEdit = ref(null)
 const folioEditForm = ref({})
@@ -5063,7 +5138,7 @@ function restrictedFolioType(type) {
 
 function canVoidEntry(entry) {
   if (!entry?.entryId || entry.moveLine) return false
-  if (entry.entryUrl) return true
+  if (entry.hasAttachment) return true
   if (canManageFolioOps.value) return true
   return !restrictedFolioType(entry.type) && !folioLocked.value
 }
@@ -5083,7 +5158,7 @@ function requestVoidEntry(entry) {
     unauthorizedFolioAction.value = { action: 'void', type: entry?.type }
     return
   }
-  if (entry.entryUrl) removeFolioAttachment(entry)
+  if (entry.hasAttachment) removeFolioAttachment(entry)
   else voidFolioEntry(entry)
 }
 
@@ -6628,10 +6703,18 @@ const roomSort = ref('room')
 
 /** User-edited booking fields (the suggested total auto-updates separately). */
 function bookingSnapshotKeys(form) {
-  return ['first_name', 'last_name', 'guest_phone', 'country_code', 'booking_type', 'room_id', 'check_in_date', 'check_out_date', 'advance_payment', 'advance_payment_method', 'advance_payment_date', 'company_name', 'business_source'].map(
+  return ['first_name', 'last_name', 'guest_phone', 'country_code', 'booking_type', 'room_id', 'check_in_date', 'check_out_date', 'advance_payment', 'advance_payment_method', 'advance_payment_provider', 'advance_payment_date', 'company_name', 'business_source'].map(
     (key) => form[key],
   )
 }
+
+/** Providers (M-Pesa, CRDB, …) valid for the selected advance method. */
+const bookingAdvanceProviderOptions = computed(() =>
+  providersFor(bookingForm.value.advance_payment_method).map((provider) => ({
+    value: provider,
+    label: paymentProviderLabel(provider),
+  })),
+)
 
 /** Booking-source dropdown mirroring the backend enum (walk_in … ota). */
 const bookingSourceOptions = computed(() => [
@@ -6665,6 +6748,7 @@ function resetBookingForm() {
     total_amount: null,
     advance_payment: 0,
     advance_payment_method: '',
+    advance_payment_provider: '',
     advance_payment_date: today,
     company_name: '',
     business_source: 'walk_in',
@@ -6699,6 +6783,14 @@ watch(
       price_per_night: room.price_per_night,
     })
     bookingForm.value.primary_room_id = room.room_id
+  },
+)
+
+/** Keep the advance vendor field in step with the selected means of payment. */
+watch(
+  () => bookingForm.value.advance_payment_method,
+  (method) => {
+    if (!requiresProvider(method)) bookingForm.value.advance_payment_provider = ''
   },
 )
 
@@ -6940,6 +7032,9 @@ function bookingRules() {
     // payment account too — without a method the date is dropped server-side
     // and the advance would show with no recorded date.
     { field: 'advance_payment_method', check: (v, form) => (Number(form.advance_payment || 0) > 0 && isBlank(v) ? t('validations.fieldRequired') : '') },
+    // Mobile-money and bank advances are incomplete without the vendor that
+    // received the funds (M-Pesa, CRDB, ...), which is shown on the folio.
+    { field: 'advance_payment_provider', check: (v, form) => (requiresProvider(form.advance_payment_method) && isBlank(v) ? t('validations.fieldRequired') : '') },
   ]
 }
 async function submitBooking(mode = 'reservation') {
@@ -6955,7 +7050,10 @@ async function submitBooking(mode = 'reservation') {
     let payload = { ...f }
     if (!payload.advance_payment_method) {
       delete payload.advance_payment_method
+      delete payload.advance_payment_provider
       delete payload.advance_payment_date
+    } else if (!requiresProvider(payload.advance_payment_method)) {
+      delete payload.advance_payment_provider
     }
     // total_amount is a live two-way binding seeded from bookingTotal (see the
     // watch below), so it always reflects nights × rate unless the desk typed an
@@ -7259,9 +7357,15 @@ onMounted(async () => {
       load(true)
     })
   }, 30000)
+  roomTasksPollTimer = setInterval(() => {
+    if (activeBar.value && stayTab.value === 'tasks' && !roomTasksLoading.value) loadRoomTasks()
+  }, 8000)
 })
 
-onUnmounted(() => clearInterval(refreshTimer))
+onUnmounted(() => {
+  clearInterval(refreshTimer)
+  clearInterval(roomTasksPollTimer)
+})
 </script>
 
 

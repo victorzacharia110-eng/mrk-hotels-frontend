@@ -28,16 +28,16 @@
     <div class="card" style="padding: 14px 20px; margin-bottom: 16px;">
       <div class="form-group" style="margin: 0;">
         <label>{{ $t('nightAudit.businessDate') }}</label>
-        <input v-model="selectedDate" type="date" class="input" style="max-width: 220px;" @change="userPickedDate = true; load" />
+        <input v-model="selectedDate" type="date" class="input" style="max-width: 220px;" @change="load" />
       </div>
     </div>
 
     <div class="card" style="padding: 20px; margin-bottom: 16px;">
       <h3 style="margin: 0 0 12px;"><i class="fas fa-money-bill-wave" style="color: var(--mrk-blue);"></i> {{ $t('receptionPanel.collectionsForDate') }}</h3>
       <div class="kpi-grid">
-        <div v-for="(amount, method) in totals" :key="method" class="kpi">
+        <div v-for="(amount, provider) in totals" :key="provider" class="kpi">
           <span class="kpi-value">{{ fmt(amount) }}</span>
-          <span class="kpi-label capitalize">{{ methodLabel(method) }}</span>
+          <span class="kpi-label capitalize">{{ providerLabel(provider) }}</span>
         </div>
         <div class="kpi total">
           <span class="kpi-value">{{ fmt(total) }}</span>
@@ -95,7 +95,7 @@
             <td>{{ fmt(p.amount) }}</td>
             <td class="capitalize">{{ methodLabel(p.payment_method) }}</td>
             <td>{{ paymentDate(p) }}</td>
-            <td>{{ p.user?.name || p.recorded_by?.name || p.created_by?.name || p.recorded_by || '—' }}</td>
+            <td>{{ p.received_by_name || p.user?.name || p.recorded_by?.name || p.created_by?.name || p.recorded_by || '—' }}</td>
             <td>
               <span class="badge" :class="p.payment_status === 'completed' ? 'badge-success' : 'badge-warning'">
                 {{ statusLabel(p.payment_status) }}
@@ -124,8 +124,8 @@
             <label>{{ $t('payments.guest') }}</label>
             <select v-model="form.reservation_id" class="input" @change="form.company_id = null">
               <option :value="null">{{ $t('cashiering.selectGuest') }}</option>
-              <option v-for="r in reservations" :key="r.reservation_id" :value="r.reservation_id">
-                {{ r.guest_name }} · {{ r.room?.room_number || r.room_number || '' }} · {{ curCode() }} {{ r.balance_due ?? r.balance ?? 0 }}
+              <option v-for="r in guestOptions" :key="r.reservation_id" :value="r.reservation_id">
+                {{ r.guest_name }} · {{ r.room?.room_number || r.room_number || '' }} · {{ curCode() }} {{ Number(r.balance_due ?? r.balance ?? 0).toLocaleString() }}
               </option>
             </select>
           </div>
@@ -186,7 +186,6 @@ const { t } = useI18n()
 
 const businessDateStore = useBusinessDateStore()
 const selectedDate = ref(businessDateStore.current)
-let userPickedDate = false
 const payments = ref([])
 const reservations = ref([])
 const companies = ref([])
@@ -213,11 +212,16 @@ const creditorsOwed = computed(() =>
   companies.value.filter((c) => Number(c.current_balance ?? 0) > 1),
 )
 
+const guestOptions = computed(() =>
+  reservations.value.filter((r) => Number(r.balance_due ?? r.balance ?? 0) > 1),
+)
+
 const totals = computed(() => {
   const map = {}
   for (const p of payments.value) {
     if (p.payment_status === 'completed') {
-      map[p.payment_method] = (map[p.payment_method] || 0) + Number(p.amount)
+      const provider = p.payment_provider || p.payment_method || 'other'
+      map[provider] = (map[provider] || 0) + Number(p.amount)
     }
   }
   return map
@@ -230,6 +234,12 @@ const fmt = (n) => `${curCode()} ` + Number(n || 0).toLocaleString()
 function methodLabel(m) {
   const found = methodOptions.find((o) => o.value === m)
   return found ? found.label : String(m || '').replace(/_/g, ' ')
+}
+
+function providerLabel(provider) {
+  return t(`paymentFields.providers.${provider}`) === `paymentFields.providers.${provider}`
+    ? methodLabel(provider)
+    : t(`paymentFields.providers.${provider}`)
 }
 
 function statusLabel(s) {
@@ -252,7 +262,7 @@ function methodChanged() {
 
 function openRecord() {
   error.value = ''
-  form.value = { reservation_id: reservations.value[0]?.reservation_id || null, company_id: null, amount: null, payment_method: METHOD_CASH, payment_provider: null, paid_by: '' }
+  form.value = { reservation_id: guestOptions.value[0]?.reservation_id || null, company_id: null, amount: null, payment_method: METHOD_CASH, payment_provider: null, paid_by: '' }
   showModal.value = true
 }
 
@@ -318,7 +328,7 @@ const businessDatePollTimer = ref(null)
 watch(
   () => businessDateStore.current,
   (date) => {
-    if (userPickedDate || !date || date === selectedDate.value) return
+    if (!date || date === selectedDate.value) return
     selectedDate.value = date
     load()
   },
@@ -326,7 +336,7 @@ watch(
 
 onMounted(async () => {
   await businessDateStore.ensureLoaded()
-  if (!userPickedDate) selectedDate.value = businessDateStore.current
+  selectedDate.value = businessDateStore.current
   await load()
   businessDatePollTimer.value = setInterval(() => businessDateStore.reload(), 30000)
 })

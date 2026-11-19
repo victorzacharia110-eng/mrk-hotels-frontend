@@ -899,7 +899,11 @@
           <dl class="detail-grid">
             <div>
               <dt>{{ $t('reservations.bookingReference') }}</dt>
-              <dd>{{ displayBookingReference(detail.booking_reference || detail.folio_code) || '—' }}</dd>
+              <dd>{{ displayBookingReference(detail.booking_code || detail.booking_reference || detail.folio_code) || '—' }}</dd>
+            </div>
+            <div v-if="detail.external_ref">
+              <dt>{{ $t('reservations.channelReference') }}</dt>
+              <dd>{{ detail.channel ? `${detail.channel}: ` : '' }}{{ detail.external_ref }}</dd>
             </div>
             <div>
               <dt>{{ $t('reservations.tableBookingType') }}</dt>

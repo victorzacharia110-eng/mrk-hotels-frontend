@@ -55,6 +55,7 @@
             <th>{{ $t('payments.amount') }}</th>
             <th>{{ $t('receptionPanel.paidBy') }}</th>
             <th>{{ $t('receptionPanel.forReservation') }}</th>
+            <th>{{ $t('receptionPanel.recordedBy') }}</th>
             <th>{{ $t('receptionPanel.recorded') }}</th>
           </tr>
         </thead>
@@ -63,10 +64,11 @@
             <td>{{ fmt(p.amount) }}</td>
             <td>{{ p.paid_by || '—' }}</td>
             <td>{{ p.reservation?.guest_name || p.reservation_id?.slice(0, 8) || '—' }}</td>
+            <td data-test="cash-payment-user">{{ p.received_by_name || '—' }}</td>
             <td>{{ p.created_at ? new Date(p.created_at).toLocaleTimeString() : '—' }}</td>
           </tr>
           <tr v-if="!cashPayments.length && !loading">
-            <td colspan="4" class="muted">{{ $t('payments.empty') }}</td>
+            <td colspan="5" class="muted">{{ $t('payments.empty') }}</td>
           </tr>
         </tbody>
       </table>

@@ -286,10 +286,21 @@ export function exportPDF(filename, rows, columns, title, options = {}) {
     headStyles: { fillColor: [0, 94, 184] },
     margin: { top: 12, bottom: 12, left: 10, right: 10 },
   }
-  const addTable = autoTableModule.default || autoTableModule.autoTable
-  if (typeof addTable === 'function') addTable(doc, tableOptions)
-  else if (typeof doc.autoTable === 'function') doc.autoTable(tableOptions)
-  else throw new Error('PDF table exporter is unavailable.')
+  const addTable = [
+    autoTableModule.autoTable,
+    autoTableModule.default?.default,
+    autoTableModule.default?.autoTable,
+    autoTableModule.default,
+  ].find((fn) => typeof fn === 'function' && fn !== autoTableModule.applyPlugin)
+  if (typeof addTable === 'function') {
+    addTable(doc, tableOptions)
+  } else {
+    const applyPlugin = autoTableModule.applyPlugin || autoTableModule.default?.applyPlugin
+    if (typeof applyPlugin !== 'function') throw new Error('PDF table exporter is unavailable.')
+    applyPlugin(doc)
+    if (typeof doc.autoTable !== 'function') throw new Error('PDF table exporter is unavailable.')
+    doc.autoTable(tableOptions)
+  }
   // Route through saveBlob (like CSV/Excel) instead of doc.save(): the test
   // suite mocks saveBlob, so unit tests no longer write a stray report.pdf
   // into the working directory on every run.

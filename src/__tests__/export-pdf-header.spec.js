@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const text = vi.fn()
 const line = vi.fn()
 const save = vi.fn()
+const autoTable = vi.fn()
 const pageSize = { width: 210, height: 297 }
 
 vi.mock('jspdf', () => ({
@@ -25,11 +26,12 @@ vi.mock('jspdf', () => ({
     line = line
     save = save
     addPage = vi.fn()
+    output = vi.fn(() => new ArrayBuffer(8))
     lastAutoTable = { finalY: 10 }
   },
 }))
 
-vi.mock('jspdf-autotable', () => ({ default: vi.fn() }))
+vi.mock('jspdf-autotable', () => ({ autoTable: undefined, applyPlugin: undefined, default: { default: autoTable } }))
 
 const HEADER = {
   name: 'MRK Grand Hotel',
@@ -47,6 +49,7 @@ describe('exportPDF letterhead', () => {
     text.mockClear()
     line.mockClear()
     save.mockClear()
+    autoTable.mockClear()
   })
 
   it('keeps the company name on the left and right-aligns the contact block', async () => {
@@ -58,6 +61,8 @@ describe('exportPDF letterhead', () => {
       // jsPDF/autotable layout is not available in jsdom; the draw calls made
       // before that point are what matters here.
     }
+
+    expect(autoTable, 'the nested jspdf-autotable default export is used').toHaveBeenCalled()
 
     const margin = 14
     const rightEdge = pageSize.width - margin

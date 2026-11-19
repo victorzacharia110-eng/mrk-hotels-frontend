@@ -704,7 +704,7 @@
       "mobile_money": "Pesa kwa simu",
       "bank": "Benki",
       "selcom": "Selcom",
-      "card": "Kadi",
+      "card": "Kadi ya mkopo",
       "clickpesa": "ClickPesa"
     },
     "providers": {
@@ -2957,6 +2957,7 @@
     "status": "Hali",
     "source": "Chanzo",
     "channel": "Njia",
+    "channelReference": "Rejea ya njia",
     "company": "Kampuni",
     "agency": "Wakala",
     "country": "Nchi",
@@ -4188,6 +4189,7 @@
     "ledgerEmpty": "Hakuna miamala ya stoo katika kipindi hiki.",
     "ledgerError": "Imeshindwa kutengeneza ripoti.",
     "advanceAccount": "Chanzo cha malipo ya mapema",
+    "advanceProvider": "Mtoa huduma wa malipo ya mapema",
     "advanceDate": "Tarehe ya malipo ya mapema",
     "resNo": "Namba ya Res.",
     "balance": "Mizani",
@@ -6158,6 +6160,7 @@
     "ratePerTzs": "Kiwango hadi TZS",
     "rateToTzs": "Kiwango hadi TZS",
     "recorded": "Imerekodiwa",
+    "recordedBy": "Imerekodiwa na",
     "selectRoom": "Mgeni wa ndani / chumba",
     "symbol": "Alama",
     "todayCashPayments": "Malipo ya Fedha Taslimu",

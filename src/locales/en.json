@@ -704,7 +704,7 @@
       "mobile_money": "Mobile money",
       "bank": "Bank",
       "selcom": "Selcom",
-      "card": "Card",
+      "card": "Credit Card",
       "clickpesa": "ClickPesa"
     },
     "providers": {
@@ -2957,6 +2957,7 @@
     "status": "Status",
     "source": "Source",
     "channel": "Channel",
+    "channelReference": "Channel reference",
     "company": "Company",
     "agency": "Agency",
     "country": "Country",
@@ -4100,6 +4101,7 @@
     "total": "Total",
     "advancePaid": "Advance paid",
     "advanceAccount": "Advance source",
+    "advanceProvider": "Advance vendor",
     "advanceDate": "Advance date",
     "adults": "adults",
     "children": "children",
@@ -6087,6 +6089,7 @@
     "amount": "Amount",
     "postedAt": "Posted at",
     "recorded": "Recorded",
+    "recordedBy": "Recorded by",
     "noTransactions": "No transactions posted for this date.",
     "paidBy": "Paid by",
     "forReservation": "Reservation / guest",

@@ -60,7 +60,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { getOfficialHeader as useOfficialHeader } from '@/utils/officialHeader'
+import { getOfficialHeader } from '@/utils/officialHeader'
 import { exportCSV, exportExcel, exportPDF } from '@/utils/export'
 
 const props = defineProps({
@@ -81,10 +81,6 @@ const busy = ref(false)
 const busyLabel = ref('')
 const error = ref('')
 const trigger = ref(null)
-
-// Official hotel details printed above the exported table. Cached in a shared
-// module so saving new hotel details can invalidate it — see invalidateOfficialHeader.
-const { getOfficialHeader } = useOfficialHeader()
 
 /**
  * Toggles the menu and moves focus to the first item on open so keyboard
@@ -115,9 +111,10 @@ async function doExport(kind) {
       error.value = t('common.noData')
       return
     }
-    if (kind === 'csv') exportCSV(props.filename, data, props.columns, { header: await getOfficialHeader(), title: props.title })
-    else if (kind === 'xlsx') exportExcel(props.filename, data, props.columns, 'Data', { header: await getOfficialHeader(), title: props.title })
-    else exportPDF(props.filename, data, props.columns, props.title, { header: await getOfficialHeader() })
+    const header = await getOfficialHeader()
+    if (kind === 'csv') exportCSV(props.filename, data, props.columns, { header, title: props.title })
+    else if (kind === 'xlsx') exportExcel(props.filename, data, props.columns, 'Data', { header, title: props.title })
+    else exportPDF(props.filename, data, props.columns, props.title, { header })
     emit('exported', kind)
   } catch (err) {
     error.value = err.response?.data?.message || err.message || t('common.actionFailed')
