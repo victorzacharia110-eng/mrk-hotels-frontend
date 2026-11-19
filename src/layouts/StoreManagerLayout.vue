@@ -357,8 +357,14 @@ async function openOutletGateIfNeeded() {
   await loadOutletList()
   if (!roleCanSelectOutlet(authStore.user?.user_role)) return
 
-  outletGateOpen.value = true
-  departmentGateOpen.value = false
+  if (!selectedStore.value) {
+    outletGateOpen.value = true
+    departmentGateOpen.value = false
+    return
+  }
+
+  outletGateOpen.value = false
+  await openDepartmentGate()
 }
 
 /** Confirms the store whose shelf the panel will work against. */

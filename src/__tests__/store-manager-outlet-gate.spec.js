@@ -108,6 +108,32 @@ describe('store manager outlet gate', () => {
     ])
   })
 
+  it('does not ask for the store or department again on refresh when both are saved', async () => {
+    sessionStorage.setItem('active_outlet', storeA.outlet_id)
+    sessionStorage.setItem('active_store_outlet', storeA.outlet_id)
+    sessionStorage.setItem(`active_department:${storeA.outlet_id}`, JSON.stringify(housekeeping))
+    outletApi.index.mockResolvedValue({ data: { outlets: [storeA, storeB] } })
+
+    const wrapper = await mountLayout()
+
+    expect(selectedOutlet.value.outlet_id).toBe('outlet-store-a')
+    expect(selectedStore.value.outlet_id).toBe('outlet-store-a')
+    expect(selectedDepartment.value.department_id).toBe('dept-housekeeping')
+    expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(false)
+  })
+
+  it('skips the saved store on refresh but still asks for its department', async () => {
+    sessionStorage.setItem('active_outlet', storeA.outlet_id)
+    sessionStorage.setItem('active_store_outlet', storeA.outlet_id)
+    outletApi.index.mockResolvedValue({ data: { outlets: [storeA, storeB] } })
+
+    const wrapper = await mountLayout()
+
+    expect(selectedStore.value.outlet_id).toBe('outlet-store-a')
+    expect(wrapper.text()).not.toContain('Which store are you working with?')
+    expect(wrapper.text()).toContain('Which department are you working with?')
+  })
+
   it('shows only stores in the gate and no add-outlet action', async () => {
     outletApi.index.mockResolvedValue({
       data: { outlets: [storeA, storeB, bar] },

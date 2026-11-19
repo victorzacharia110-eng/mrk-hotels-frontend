@@ -733,9 +733,12 @@ function markOutletUnlocked(outlet) {
 async function loadOutlets() {
   await loadOutletList({ sellingOnly: true })
   resetGate()
-  if (selectedOutlet.value && isOutletUnlocked(selectedOutlet.value)) {
-    gateOpen.value = false
-    return
+  if (selectedOutlet.value) {
+    if (isOutletUnlocked(selectedOutlet.value)) {
+      gateOpen.value = false
+      return
+    }
+    beginUnlock(selectedOutlet.value)
   }
   gateOpen.value = true
 }

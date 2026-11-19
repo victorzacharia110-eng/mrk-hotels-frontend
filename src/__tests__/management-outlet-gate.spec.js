@@ -13,4 +13,15 @@ describe('management outlet gate', () => {
 
     expect(opener).toContain('roleNeedsOutletGate(authStore.user?.user_role)')
   })
+
+  it('skips the gate when a saved outlet and store are still valid', () => {
+    const opener = layout.slice(
+      layout.indexOf('async function openOutletGateIfNeeded'),
+      layout.indexOf('function chooseType'),
+    )
+
+    expect(opener).toContain('needsStoreStep(selectedOutlet.value)')
+    expect(opener).toContain('selectedStore.value')
+    expect(opener.indexOf('selectedOutlet.value &&')).toBeLessThan(opener.indexOf('outlets.value.length === 1'))
+  })
 })

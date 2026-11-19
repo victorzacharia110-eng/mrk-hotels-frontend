@@ -894,6 +894,10 @@ async function openOutletGateIfNeeded() {
     outletGateOpen.value = false
     return
   }
+  if (selectedOutlet.value && (!needsStoreStep(selectedOutlet.value) || selectedStore.value)) {
+    outletGateOpen.value = false
+    return
+  }
   if (outlets.value.length === 1 && selectedOutlet.value) {
     if (needsStoreStep(selectedOutlet.value)) {
       gateStep.value = 'store'

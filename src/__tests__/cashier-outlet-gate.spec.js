@@ -131,6 +131,19 @@ describe('cashier outlet gate', () => {
     expect(selectedOutlet.value.outlet_id).toBe('outlet-bar-1')
   })
 
+  it('does not ask a cashier to choose the counter again after a refresh', async () => {
+    sessionStorage.setItem('active_outlet', bar.outlet_id)
+    outletApi.index.mockResolvedValue({ data: { outlets: [bar] } })
+
+    const wrapper = await mountLayout()
+
+    expect(selectedOutlet.value.outlet_id).toBe('outlet-bar-1')
+    expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('Choose a selling point')
+    expect(wrapper.findAll('.gate-pin-slot')).toHaveLength(4)
+    expect(outletApi.verifyAccess).not.toHaveBeenCalled()
+  })
+
   it('keeps the unlock for the same user but not for a different user', async () => {
     outletApi.index.mockResolvedValue({ data: { outlets: [bar] } })
     outletApi.verifyAccess.mockResolvedValue({ data: { outlet: bar } })
@@ -152,6 +165,8 @@ describe('cashier outlet gate', () => {
       name: 'Dan Cashier',
     })
     expect(otherUser.find('.sm-modal-backdrop').exists()).toBe(true)
+    expect(otherUser.text()).not.toContain('Choose a selling point')
+    expect(otherUser.findAll('.gate-pin-slot')).toHaveLength(4)
   })
 
   it('lets a cashier create the first counter and shows the default PIN once', async () => {
