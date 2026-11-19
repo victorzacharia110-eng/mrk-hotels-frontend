@@ -222,9 +222,13 @@ describe('waiter pad: the order table fills the width with Send beside the total
     expect(pad).not.toMatch(/class="pager-row"/)
   })
 
-  it('shows the send error instead of failing silently', () => {
-    expect(pad).toMatch(/v-if="sendError"/)
-    expect(pad).toMatch(/class="send-error"/)
+  it('shows the send error in a modal instead of beside the Total button', () => {
+    const rowAt = pad.indexOf('class="order-send-row"')
+    const totalAt = pad.indexOf('class="total-bar"', rowAt)
+    expect(pad.slice(rowAt, totalAt)).not.toMatch(/class="send-error"/)
+    expect(pad).toMatch(/:show="!!sendError"/)
+    expect(pad).toMatch(/:body="sendError"/)
+    expect(pad).toMatch(/orderTaker\.sendErrorTitle/)
   })
 })
 

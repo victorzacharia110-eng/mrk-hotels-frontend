@@ -448,7 +448,7 @@ describe('waiter live tickets and table release', () => {
     await flushPromises()
 
     expect(checkbox.element.checked).toBe(false)
-    expect(wrapper.text()).toContain('Could not update the VIP status')
+    expect(document.querySelector('.alert-modal-message')?.textContent).toContain('Could not update the VIP status')
     wrapper.unmount()
   })
 

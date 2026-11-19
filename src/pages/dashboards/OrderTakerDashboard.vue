@@ -244,7 +244,6 @@
              the right. Per the order-pad review, the two labels are swapped:
              the amount block reads Send Order and the action button reads Total. -->
         <div class="order-send-row">
-            <p v-if="sendError" class="send-error">{{ sendError }}</p>
             <div class="total-bar">
               <span>{{ $t('orderTaker.send') }}</span>
               <strong>{{ curCode() }} {{ money(grandTotal) }}</strong>
@@ -1117,6 +1116,14 @@
       </Transition>
     </Teleport>
 
+    <AlertModal
+      :show="!!sendError"
+      type="error"
+      :title="$t('orderTaker.sendErrorTitle')"
+      :body="sendError"
+      @dismiss="sendError = ''"
+    />
+
     <!-- Success toast -->
     <Transition name="fade">
       <div v-if="sentToast" class="toast"><i class="fas fa-check-circle" aria-hidden="true"></i> {{ sentToast }}</div>
@@ -1146,6 +1153,7 @@ import { isGrillMenuItem, canManageAccompaniments } from '@/utils/menuAccompanim
 import { useAccompaniments } from '@/composables/useAccompaniments'
 import { outlets, selectedOutlet } from '@/composables/useOutletContext'
 import AccompanimentManager from '@/components/AccompanimentManager.vue'
+import AlertModal from '@/components/AlertModal.vue'
 import { toast } from '@/utils/toast'
 
 import { useTenantCurrency } from '@/utils/currency'

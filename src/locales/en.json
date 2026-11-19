@@ -4451,6 +4451,7 @@
     "sending": "Sending...",
     "sent": "Order {number} sent to the kitchen/bar",
     "sendError": "Could not send the order. Please try again.",
+    "sendErrorTitle": "Order not sent",
     "loadOrderError": "Could not load the existing order for this table. Please try again.",
     "searchMenu": "Search menu...",
     "orderNo": "Order No.",

@@ -4451,6 +4451,7 @@
     "sending": "Inatuma...",
     "sent": "Oda {number} imetumwa jikoni/baa",
     "sendError": "Imeshindwa kutuma oda. Tafadhali jaribu tena.",
+    "sendErrorTitle": "Oda haitumwa",
     "loadOrderError": "Imeshindwa kupakia oda inayoendelea kwa meza hii. Tafadhali jaribu tena.",
     "searchMenu": "Tafuta menyu...",
     "orderNo": "Namba ya Oda",

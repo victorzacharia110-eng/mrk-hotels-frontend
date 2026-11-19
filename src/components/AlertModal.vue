@@ -78,6 +78,7 @@ const iconClass = computed(() => {
     case 'payment': return 'fas fa-money-bill-wave'
     case 'approval': return 'fas fa-clipboard-check'
     case 'reservation': return 'fas fa-calendar-check'
+    case 'error': return 'fas fa-triangle-exclamation'
     default: return 'fas fa-bell'
   }
 })
@@ -158,6 +159,10 @@ function formatTime(iso) {
   background: linear-gradient(135deg, #e0e7ff, #a5b4fc);
 }
 
+.alert-modal-head--error {
+  background: linear-gradient(135deg, #fee2e2, #fca5a5);
+}
+
 .alert-modal-icon {
   width: 40px;
   height: 40px;
@@ -175,6 +180,7 @@ function formatTime(iso) {
 .alert-modal-head--approval .alert-modal-icon { background: #3b82f6; }
 .alert-modal-head--reservation .alert-modal-icon { background: #10b981; }
 .alert-modal-head--info .alert-modal-icon { background: #6366f1; }
+.alert-modal-head--error .alert-modal-icon { background: #dc2626; }
 
 .alert-modal-title {
   flex: 1;
