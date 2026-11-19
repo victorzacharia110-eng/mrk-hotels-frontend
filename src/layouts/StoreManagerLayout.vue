@@ -352,22 +352,11 @@ function isMainStore(store) {
   return !!store?.outlet_id && store.outlet_id === mainStore.value?.outlet_id
 }
 
-/** Opens the store picker after sign-in, unless there is no real choice. */
+/** Opens the store picker after sign-in before any department is chosen. */
 async function openOutletGateIfNeeded() {
   await loadOutletList()
   if (!roleCanSelectOutlet(authStore.user?.user_role)) return
 
-  if (inventoryOutlets.value.length <= 1) {
-    if (inventoryOutlets.value[0]) selectOutlet(inventoryOutlets.value[0])
-    outletGateOpen.value = false
-    await openDepartmentGate()
-    return
-  }
-
-  const currentIsStore = inventoryOutlets.value.some(
-    (store) => store.outlet_id === selectedOutlet.value?.outlet_id,
-  )
-  if (!currentIsStore) selectOutlet(inventoryOutlets.value[0])
   outletGateOpen.value = true
   departmentGateOpen.value = false
 }

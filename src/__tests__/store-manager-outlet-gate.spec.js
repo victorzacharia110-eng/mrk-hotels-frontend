@@ -83,14 +83,24 @@ describe('store manager outlet gate', () => {
     loaded.value = false
   })
 
-  it('auto-selects the only store, ignores non-store outlets, then asks for a department', async () => {
+  it('asks for the store before the department even when there is only one store', async () => {
     outletApi.index.mockResolvedValue({ data: { outlets: [bar, storeA] } })
 
     const wrapper = await mountLayout()
 
+    expect(selectedOutlet.value).toBe(null)
+    expect(selectedStore.value).toBe(null)
+    expect(wrapper.text()).toContain('Which store are you working with?')
+    expect(wrapper.text()).not.toContain('Which department are you working with?')
+    expect(wrapper.findAll('.sm-outlet-option').map((button) => button.text())).toEqual([
+      expect.stringContaining('Store A'),
+    ])
+
+    await wrapper.findAll('.sm-outlet-option')[0].trigger('click')
+    await flushPromises()
+
     expect(selectedOutlet.value.outlet_id).toBe('outlet-store-a')
     expect(selectedStore.value.outlet_id).toBe('outlet-store-a')
-    expect(wrapper.find('.sm-outlet-picker').exists()).toBe(false)
     expect(wrapper.text()).toContain('Which department are you working with?')
     expect(wrapper.findAll('.sm-department-option').map((button) => button.text())).toEqual([
       expect.stringContaining('Housekeeping'),
