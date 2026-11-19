@@ -42,8 +42,9 @@ const bar = {
 
 const housekeeping = { department_id: 'dept-housekeeping', name: 'Housekeeping' }
 const barDepartment = { department_id: 'dept-bar', name: 'Bar' }
+const restaurant = { department_id: 'dept-restaurant', name: 'Restaurant' }
 
-async function mountLayout() {
+async function mountLayout(initialPath = '/store-manager') {
   const pinia = createPinia()
   setActivePinia(pinia)
 
@@ -54,7 +55,7 @@ async function mountLayout() {
       { path: '/:pathMatch(.*)*', component: { template: '<div />' } },
     ],
   })
-  await router.push('/store-manager')
+  await router.push(initialPath)
   await router.isReady()
 
   const { useAuthStore } = await import('@/stores/auth')
@@ -75,7 +76,7 @@ describe('store manager outlet gate', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     sessionStorage.clear()
-    departmentApi.index.mockResolvedValue({ data: { departments: [housekeeping, barDepartment] } })
+    departmentApi.index.mockResolvedValue({ data: { departments: [housekeeping, barDepartment, restaurant] } })
     outlets.value = []
     selectedOutlet.value = null
     selectedStore.value = null
@@ -83,7 +84,7 @@ describe('store manager outlet gate', () => {
     loaded.value = false
   })
 
-  it('asks for the store before the department even when there is only one store', async () => {
+  it('asks only for the store even when there is one store and defaults to restaurant', async () => {
     outletApi.index.mockResolvedValue({ data: { outlets: [bar, storeA] } })
 
     const wrapper = await mountLayout()
@@ -101,11 +102,21 @@ describe('store manager outlet gate', () => {
 
     expect(selectedOutlet.value.outlet_id).toBe('outlet-store-a')
     expect(selectedStore.value.outlet_id).toBe('outlet-store-a')
-    expect(wrapper.text()).toContain('Which department are you working with?')
-    expect(wrapper.findAll('.sm-department-option').map((button) => button.text())).toEqual([
-      expect.stringContaining('Housekeeping'),
-      expect.stringContaining('Bar'),
-    ])
+    expect(selectedDepartment.value.department_id).toBe('dept-restaurant')
+    expect(wrapper.text()).not.toContain('Which department are you working with?')
+    expect(wrapper.find('.sm-dept-picker').text()).toContain('Restaurant')
+  })
+
+  it('returns to the dashboard after choosing a store from the login gate', async () => {
+    outletApi.index.mockResolvedValue({ data: { outlets: [storeA, storeB] } })
+
+    const wrapper = await mountLayout('/store-manager/inventory')
+    expect(wrapper.vm.$route.path).toBe('/store-manager/inventory')
+
+    await wrapper.findAll('.sm-outlet-option')[0].trigger('click')
+    await flushPromises()
+
+    expect(wrapper.vm.$route.path).toBe('/store-manager')
   })
 
   it('does not ask for the store or department again on refresh when both are saved', async () => {
@@ -122,7 +133,7 @@ describe('store manager outlet gate', () => {
     expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(false)
   })
 
-  it('skips the saved store on refresh but still asks for its department', async () => {
+  it('skips the saved store on refresh and defaults to restaurant', async () => {
     sessionStorage.setItem('active_outlet', storeA.outlet_id)
     sessionStorage.setItem('active_store_outlet', storeA.outlet_id)
     outletApi.index.mockResolvedValue({ data: { outlets: [storeA, storeB] } })
@@ -130,8 +141,10 @@ describe('store manager outlet gate', () => {
     const wrapper = await mountLayout()
 
     expect(selectedStore.value.outlet_id).toBe('outlet-store-a')
+    expect(selectedDepartment.value.department_id).toBe('dept-restaurant')
     expect(wrapper.text()).not.toContain('Which store are you working with?')
-    expect(wrapper.text()).toContain('Which department are you working with?')
+    expect(wrapper.text()).not.toContain('Which department are you working with?')
+    expect(wrapper.find('.sm-dept-picker').text()).toContain('Restaurant')
   })
 
   it('shows only stores in the gate and no add-outlet action', async () => {
@@ -148,7 +161,7 @@ describe('store manager outlet gate', () => {
     expect(wrapper.text()).not.toContain('Add another outlet')
   })
 
-  it('opens the department gate after a store is chosen', async () => {
+  it('opens the department chooser from the header without blocking login', async () => {
     outletApi.index.mockResolvedValue({
       data: { outlets: [storeA, storeB, bar] },
     })
@@ -161,9 +174,12 @@ describe('store manager outlet gate', () => {
 
     expect(selectedOutlet.value.outlet_id).toBe('outlet-store-b')
     expect(selectedStore.value.outlet_id).toBe('outlet-store-b')
-    expect(wrapper.text()).toContain('Which department are you working with?')
+    expect(selectedDepartment.value.department_id).toBe('dept-restaurant')
+    expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(false)
     expect(departmentApi.index).toHaveBeenCalled()
 
+    await wrapper.find('.sm-dept-picker').trigger('click')
+    await flushPromises()
     const departmentOption = wrapper.findAll('.sm-department-option').find((button) => button.text().includes('Housekeeping'))
     await departmentOption.trigger('click')
     await flushPromises()
@@ -189,11 +205,14 @@ describe('store manager outlet gate', () => {
     ])
   })
 
-  it('asks for a department again when the store changes', async () => {
+  it('resets the department to restaurant when the store changes', async () => {
     outletApi.index.mockResolvedValue({ data: { outlets: [storeA, storeB] } })
 
     const wrapper = await mountLayout()
     await wrapper.findAll('.sm-outlet-option').find((button) => button.text().includes('Store A')).trigger('click')
+    await flushPromises()
+
+    await wrapper.find('.sm-dept-picker').trigger('click')
     await flushPromises()
     await wrapper.findAll('.sm-department-option').find((button) => button.text().includes('Housekeeping')).trigger('click')
     await flushPromises()
@@ -204,8 +223,9 @@ describe('store manager outlet gate', () => {
     await flushPromises()
 
     expect(selectedStore.value.outlet_id).toBe('outlet-store-b')
-    expect(selectedDepartment.value).toBe(null)
-    expect(wrapper.text()).toContain('Which department are you working with?')
+    expect(selectedDepartment.value.department_id).toBe('dept-restaurant')
+    expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(false)
+    expect(wrapper.find('.sm-dept-picker').text()).toContain('Restaurant')
   })
 
   it('lets the user change department from the header', async () => {
@@ -213,8 +233,6 @@ describe('store manager outlet gate', () => {
 
     const wrapper = await mountLayout()
     await wrapper.findAll('.sm-outlet-option').find((button) => button.text().includes('Store A')).trigger('click')
-    await flushPromises()
-    await wrapper.findAll('.sm-department-option').find((button) => button.text().includes('Housekeeping')).trigger('click')
     await flushPromises()
 
     await wrapper.find('.sm-dept-picker').trigger('click')
@@ -248,7 +266,7 @@ describe('store manager sidebar labels', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     sessionStorage.clear()
-    departmentApi.index.mockResolvedValue({ data: { departments: [housekeeping, barDepartment] } })
+    departmentApi.index.mockResolvedValue({ data: { departments: [housekeeping, barDepartment, restaurant] } })
     outlets.value = []
     selectedOutlet.value = null
     selectedStore.value = null

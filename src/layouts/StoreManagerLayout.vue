@@ -204,7 +204,7 @@
         <p class="sm-gate-hint">{{ $t('outlet.gateHint') }}</p>
         <div class="sm-outlet-gate-list">
           <button v-for="o in inventoryOutlets" :key="o.outlet_id" type="button" class="sm-outlet-option"
-            @click="chooseOutlet(o)">
+            @click="chooseOutlet(o, { navigateToDashboard: true })">
             <i class="fas fa-warehouse" aria-hidden="true"></i>
             <span>
               <strong>{{ o.name }}</strong>
@@ -348,11 +348,25 @@ function chooseDepartment(department) {
   departmentGateOpen.value = false
 }
 
+function findRestaurantDepartment() {
+  const departments = departmentOptions.value.length
+    ? departmentOptions.value
+    : inventoryOutlets.value.map((outlet) => outlet.stock_department).filter(Boolean)
+  return departments.find((department) => String(department.name || '').trim().toLowerCase() === 'restaurant') || null
+}
+
+async function applyDefaultDepartment() {
+  if (selectedDepartment.value) return
+  await loadDepartments()
+  const restaurant = findRestaurantDepartment()
+  if (restaurant) selectDepartment(restaurant)
+}
+
 function isMainStore(store) {
   return !!store?.outlet_id && store.outlet_id === mainStore.value?.outlet_id
 }
 
-/** Opens the store picker after sign-in before any department is chosen. */
+/** Opens only the store picker after sign-in; the header supplies the department. */
 async function openOutletGateIfNeeded() {
   await loadOutletList()
   if (!roleCanSelectOutlet(authStore.user?.user_role)) return
@@ -360,19 +374,24 @@ async function openOutletGateIfNeeded() {
   if (!selectedStore.value) {
     outletGateOpen.value = true
     departmentGateOpen.value = false
+    await loadDepartments()
     return
   }
 
   outletGateOpen.value = false
-  await openDepartmentGate()
+  departmentGateOpen.value = false
+  await applyDefaultDepartment()
 }
 
 /** Confirms the store whose shelf the panel will work against. */
-function chooseOutlet(outlet) {
+async function chooseOutlet(outlet, options = {}) {
   selectOutlet(outlet)
   outletGateOpen.value = false
   departmentGateOpen.value = false
-  openDepartmentGate(true)
+  await applyDefaultDepartment()
+  if (options.navigateToDashboard && route.path !== '/store-manager') {
+    await router.push('/store-manager')
+  }
 }
 
 /** Activates a different store from the header picker. */
