@@ -3,12 +3,13 @@ import { mount, flushPromises, RouterLinkStub } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import i18n from '@/locales/i18n'
-import { outletApi } from '@/api'
-import { outlets, selectedOutlet, selectedStore, loaded } from '@/composables/useOutletContext'
+import { departmentApi, outletApi } from '@/api'
+import { outlets, selectedOutlet, selectedStore, selectedDepartment, loaded } from '@/composables/useOutletContext'
 import StoreManagerLayout from '@/layouts/StoreManagerLayout.vue'
 
 vi.mock('@/api', () => ({
   outletApi: { index: vi.fn() },
+  departmentApi: { index: vi.fn() },
   authApi: { logout: vi.fn().mockResolvedValue({ data: {} }) },
   fbDayCloseApi: { index: vi.fn().mockResolvedValue({ data: {} }) },
   notificationApi: {
@@ -38,6 +39,9 @@ const bar = {
   type: 'bar',
   is_active: true,
 }
+
+const housekeeping = { department_id: 'dept-housekeeping', name: 'Housekeeping' }
+const barDepartment = { department_id: 'dept-bar', name: 'Bar' }
 
 async function mountLayout() {
   const pinia = createPinia()
@@ -71,21 +75,27 @@ describe('store manager outlet gate', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     sessionStorage.clear()
+    departmentApi.index.mockResolvedValue({ data: { departments: [housekeeping, barDepartment] } })
     outlets.value = []
     selectedOutlet.value = null
     selectedStore.value = null
+    selectedDepartment.value = null
     loaded.value = false
   })
 
-  it('auto-selects the only store and ignores non-store outlets', async () => {
+  it('auto-selects the only store, ignores non-store outlets, then asks for a department', async () => {
     outletApi.index.mockResolvedValue({ data: { outlets: [bar, storeA] } })
 
     const wrapper = await mountLayout()
 
-    expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(false)
     expect(selectedOutlet.value.outlet_id).toBe('outlet-store-a')
     expect(selectedStore.value.outlet_id).toBe('outlet-store-a')
     expect(wrapper.find('.sm-outlet-picker').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Which department are you working with?')
+    expect(wrapper.findAll('.sm-department-option').map((button) => button.text())).toEqual([
+      expect.stringContaining('Housekeeping'),
+      expect.stringContaining('Bar'),
+    ])
   })
 
   it('shows only stores in the gate and no add-outlet action', async () => {
@@ -102,7 +112,7 @@ describe('store manager outlet gate', () => {
     expect(wrapper.text()).not.toContain('Add another outlet')
   })
 
-  it('confirms the chosen store directly', async () => {
+  it('opens the department gate after a store is chosen', async () => {
     outletApi.index.mockResolvedValue({
       data: { outlets: [storeA, storeB, bar] },
     })
@@ -115,7 +125,16 @@ describe('store manager outlet gate', () => {
 
     expect(selectedOutlet.value.outlet_id).toBe('outlet-store-b')
     expect(selectedStore.value.outlet_id).toBe('outlet-store-b')
+    expect(wrapper.text()).toContain('Which department are you working with?')
+    expect(departmentApi.index).toHaveBeenCalled()
+
+    const departmentOption = wrapper.findAll('.sm-department-option').find((button) => button.text().includes('Housekeeping'))
+    await departmentOption.trigger('click')
+    await flushPromises()
+
+    expect(selectedDepartment.value.department_id).toBe('dept-housekeeping')
     expect(wrapper.find('.sm-modal-backdrop').exists()).toBe(false)
+    expect(wrapper.find('.sm-dept-picker').text()).toContain('Housekeeping')
   })
 
   it('shows the header picker only when there is more than one store', async () => {
@@ -132,6 +151,43 @@ describe('store manager outlet gate', () => {
       'Store A',
       'Store B',
     ])
+  })
+
+  it('asks for a department again when the store changes', async () => {
+    outletApi.index.mockResolvedValue({ data: { outlets: [storeA, storeB] } })
+
+    const wrapper = await mountLayout()
+    await wrapper.findAll('.sm-outlet-option').find((button) => button.text().includes('Store A')).trigger('click')
+    await flushPromises()
+    await wrapper.findAll('.sm-department-option').find((button) => button.text().includes('Housekeeping')).trigger('click')
+    await flushPromises()
+
+    expect(selectedDepartment.value.department_id).toBe('dept-housekeeping')
+
+    await wrapper.find('.sm-outlet-picker select').setValue('outlet-store-b')
+    await flushPromises()
+
+    expect(selectedStore.value.outlet_id).toBe('outlet-store-b')
+    expect(selectedDepartment.value).toBe(null)
+    expect(wrapper.text()).toContain('Which department are you working with?')
+  })
+
+  it('lets the user change department from the header', async () => {
+    outletApi.index.mockResolvedValue({ data: { outlets: [storeA, storeB] } })
+
+    const wrapper = await mountLayout()
+    await wrapper.findAll('.sm-outlet-option').find((button) => button.text().includes('Store A')).trigger('click')
+    await flushPromises()
+    await wrapper.findAll('.sm-department-option').find((button) => button.text().includes('Housekeeping')).trigger('click')
+    await flushPromises()
+
+    await wrapper.find('.sm-dept-picker').trigger('click')
+    await flushPromises()
+    await wrapper.findAll('.sm-department-option').find((button) => button.text().includes('Bar')).trigger('click')
+    await flushPromises()
+
+    expect(selectedDepartment.value.department_id).toBe('dept-bar')
+    expect(wrapper.find('.sm-dept-picker').text()).toContain('Bar')
   })
 
   it('lets the user log out while the outlet gate is open', async () => {
@@ -156,9 +212,11 @@ describe('store manager sidebar labels', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     sessionStorage.clear()
+    departmentApi.index.mockResolvedValue({ data: { departments: [housekeeping, barDepartment] } })
     outlets.value = []
     selectedOutlet.value = null
     selectedStore.value = null
+    selectedDepartment.value = null
     loaded.value = false
   })
 

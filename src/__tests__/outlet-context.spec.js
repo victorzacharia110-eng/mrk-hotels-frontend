@@ -10,7 +10,7 @@
  * and the panel must agree on one selection rather than keeping private copies.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useOutletContext } from '@/composables/useOutletContext'
+import { useOutletContext, selectedDepartment } from '@/composables/useOutletContext'
 
 const outletIndex = vi.hoisted(() => vi.fn())
 
@@ -28,6 +28,7 @@ const OUTLETS = {
 beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
+  selectedDepartment.value = null
   vi.clearAllMocks()
   outletIndex.mockResolvedValue({ data: OUTLETS })
 })
@@ -45,6 +46,15 @@ describe('outlet context', () => {
     // The one carve-out in the review. Offering it there would be a control
     // with no meaning behind it.
     expect(useOutletContext().roleCanSelectOutlet('receptionist')).toBe(false)
+  })
+
+  it('does not hold management at the post-login outlet gate', () => {
+    const ctx = useOutletContext()
+    expect(ctx.roleNeedsOutletGate('hotel_admin')).toBe(false)
+    expect(ctx.roleNeedsOutletGate('manager')).toBe(false)
+    expect(ctx.roleNeedsOutletGate('accountant')).toBe(false)
+    expect(ctx.roleNeedsOutletGate('waiter')).toBe(true)
+    expect(ctx.roleNeedsOutletGate('receptionist')).toBe(false)
   })
 
   it('offers nothing to a signed-out visitor', () => {
@@ -196,5 +206,39 @@ describe('outlet context', () => {
 
     expect(ctx.hasOutlet.value).toBe(false)
     expect(sessionStorage.getItem('active_outlet')).toBe(null)
+  })
+
+  it('remembers the department per store and asks again for another store', async () => {
+    const storeA = { outlet_id: 'out-store-a', name: 'Store A', type: 'store' }
+    const storeB = { outlet_id: 'out-store-b', name: 'Store B', type: 'store' }
+    outletIndex.mockResolvedValue({ data: { outlets: [storeA, storeB] } })
+    const ctx = useOutletContext()
+    await ctx.loadOutlets()
+
+    ctx.selectStore(storeA)
+    ctx.selectDepartment({ department_id: 'd-a', name: 'Housekeeping' })
+
+    expect(ctx.selectedDepartmentId.value).toBe('d-a')
+    expect(sessionStorage.getItem('active_department:out-store-a')).toContain('d-a')
+
+    ctx.selectStore(storeB)
+    expect(ctx.selectedDepartmentId.value).toBe(null)
+
+    ctx.selectDepartment({ department_id: 'd-b', name: 'Bar' })
+    ctx.selectStore(storeA)
+    expect(ctx.selectedDepartment.value).toEqual({ department_id: 'd-a', name: 'Housekeeping' })
+  })
+
+  it('re-applies the remembered department when outlets reload', async () => {
+    const storeA = { outlet_id: 'out-store-a', name: 'Store A', type: 'store' }
+    sessionStorage.setItem('active_store_outlet', storeA.outlet_id)
+    sessionStorage.setItem('active_department:out-store-a', JSON.stringify({ department_id: 'd-a', name: 'Housekeeping' }))
+    outletIndex.mockResolvedValue({ data: { outlets: [storeA] } })
+    const ctx = useOutletContext()
+
+    await ctx.loadOutlets()
+
+    expect(ctx.selectedDepartmentId.value).toBe('d-a')
+    expect(ctx.selectedDepartment.value.name).toBe('Housekeeping')
   })
 })

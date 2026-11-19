@@ -59,6 +59,19 @@ describe('outlet manager PIN display', () => {
     departmentApi.index.mockResolvedValue({ data: { data: [] } })
   })
 
+  it('labels the outlet type selector as Department in the modal', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await buttonByText(wrapper, 'New Outlet').trigger('click')
+    await flushPromises()
+
+    const modalLabels = wrapper.findAll('.modal .form-group label').map((label) => label.text())
+    expect(modalLabels).toContain('Department')
+    expect(modalLabels).not.toContain('Type')
+    expect(wrapper.findAll('th').map((cell) => cell.text())).toContain('Type')
+  })
+
   it('shows the generated PIN once when a counter is created', async () => {
     outletApi.store.mockResolvedValue({
       data: { access_code: '4821', outlet },

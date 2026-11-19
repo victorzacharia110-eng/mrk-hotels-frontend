@@ -71,6 +71,17 @@
               </optgroup>
             </select>
           </div>
+          <button
+            v-if="showDepartmentPicker"
+            type="button"
+            class="sm-dept-picker"
+            :aria-label="$t('outlet.chooseDepartmentPlaceholder')"
+            @click="openDepartmentGate(true)"
+          >
+            <i class="fas fa-layer-group" aria-hidden="true"></i>
+            <span>{{ selectedDepartment?.name || $t('outlet.chooseDepartmentPlaceholder') }}</span>
+            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+          </button>
           <button class="sm-icon-btn sm-notif-bell" :title="$t('notifications.title')"
             :aria-label="$t('notifications.unreadCount', { count: notifStore.unreadCount })"
             @click="toggleNotifDropdown">
@@ -214,6 +225,37 @@
         </div>
       </div>
     </div>
+
+    <div v-if="departmentGateOpen" class="sm-modal-backdrop">
+      <div class="sm-modal" role="dialog" aria-modal="true">
+        <div class="sm-modal-head">
+          <h3><i class="fas fa-layer-group" aria-hidden="true"></i> {{ $t('outlet.gateChooseDepartment') }}</h3>
+        </div>
+        <p class="sm-gate-hint">
+          {{ $t('outlet.gateDepartmentHint', { store: selectedStore?.name || '' }) }}
+        </p>
+        <div class="sm-outlet-gate-list">
+          <button
+            v-for="department in departmentChoices"
+            :key="department.department_id"
+            type="button"
+            class="sm-outlet-option sm-department-option"
+            @click="chooseDepartment(department)"
+          >
+            <i class="fas fa-layer-group" aria-hidden="true"></i>
+            <span><strong>{{ department.name }}</strong></span>
+            <i class="fas fa-chevron-right sm-gate-arrow" aria-hidden="true"></i>
+          </button>
+          <p v-if="!departmentChoices.length" class="sm-gate-hint">{{ $t('outlet.gateNoDepartments') }}</p>
+        </div>
+        <div class="sm-gate-foot">
+          <button type="button" class="sm-gate-logout" @click="handleLogout">
+            <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+            {{ $t('common.logout') }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -225,6 +267,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notifications'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { useThemeStore } from '@/stores/theme'
+import { departmentApi } from '@/api'
 import DayCloseReminderModal from '@/components/cashier/DayCloseReminderModal.vue'
 import { useOutletContext } from '@/composables/useOutletContext'
 
@@ -240,11 +283,14 @@ const themeStore = useThemeStore()
 // the whole app. The store manager only works through STORE outlets.
 const {
   selectedOutlet,
+  selectedStore,
   hasChoice,
   storeOutlets,
   mainStore,
+  selectedDepartment,
   loadOutlets: loadOutletList,
   selectOutlet,
+  selectDepartment,
   roleCanSelectOutlet,
 } = useOutletContext()
 
@@ -253,6 +299,54 @@ const showOutletPicker = computed(
   () => inventoryOutlets.value.length > 1 && roleCanSelectOutlet(authStore.user?.user_role),
 )
 const outletGateOpen = ref(false)
+const departmentGateOpen = ref(false)
+const departmentOptions = ref([])
+const departmentsLoaded = ref(false)
+
+const departmentChoices = computed(() => {
+  const choices = departmentOptions.value.slice()
+  if (selectedDepartment.value && !choices.some((d) => d.department_id === selectedDepartment.value.department_id)) {
+    choices.unshift(selectedDepartment.value)
+  }
+  return choices
+})
+
+const showDepartmentPicker = computed(
+  () => !!selectedStore.value && roleCanSelectOutlet(authStore.user?.user_role),
+)
+
+async function loadDepartments() {
+  if (departmentsLoaded.value) return
+  try {
+    const { data } = await departmentApi.index()
+    departmentOptions.value = data.departments || []
+  } catch {
+    const fallback = []
+    const seen = new Set()
+    for (const outlet of inventoryOutlets.value) {
+      const department = outlet.stock_department
+      if (department?.department_id && !seen.has(department.department_id)) {
+        seen.add(department.department_id)
+        fallback.push(department)
+      }
+    }
+    departmentOptions.value = fallback
+  } finally {
+    departmentsLoaded.value = true
+  }
+}
+
+async function openDepartmentGate(force = false) {
+  if (!selectedStore.value || !roleCanSelectOutlet(authStore.user?.user_role)) return
+  if (selectedDepartment.value && !force) return
+  await loadDepartments()
+  departmentGateOpen.value = true
+}
+
+function chooseDepartment(department) {
+  selectDepartment(department)
+  departmentGateOpen.value = false
+}
 
 function isMainStore(store) {
   return !!store?.outlet_id && store.outlet_id === mainStore.value?.outlet_id
@@ -266,6 +360,7 @@ async function openOutletGateIfNeeded() {
   if (inventoryOutlets.value.length <= 1) {
     if (inventoryOutlets.value[0]) selectOutlet(inventoryOutlets.value[0])
     outletGateOpen.value = false
+    await openDepartmentGate()
     return
   }
 
@@ -274,18 +369,21 @@ async function openOutletGateIfNeeded() {
   )
   if (!currentIsStore) selectOutlet(inventoryOutlets.value[0])
   outletGateOpen.value = true
+  departmentGateOpen.value = false
 }
 
 /** Confirms the store whose shelf the panel will work against. */
 function chooseOutlet(outlet) {
   selectOutlet(outlet)
   outletGateOpen.value = false
+  departmentGateOpen.value = false
+  openDepartmentGate(true)
 }
 
 /** Activates a different store from the header picker. */
 function onOutletChange(outletId) {
   const outlet = inventoryOutlets.value.find((o) => o.outlet_id === outletId) || null
-  selectOutlet(outlet)
+  chooseOutlet(outlet)
 }
 
 const sidebarCollapsed = ref(true)
@@ -390,6 +488,7 @@ function setLocale(lang) {
 
 async function handleLogout() {
   outletGateOpen.value = false
+  departmentGateOpen.value = false
   await authStore.logout()
   router.push({ name: 'login' })
 }
@@ -576,6 +675,15 @@ const DAY_CLOSE_ROLES = ['store_manager', 'cashier', 'bartender', 'waiter', 'hot
   max-width: 180px;
 }
 .sm-outlet-select:focus-visible { outline: 2px solid var(--sm-blue); outline-offset: 2px; }
+.sm-dept-picker {
+  display: inline-flex; align-items: center; gap: 8px; height: 38px;
+  padding: 0 12px; border: 1px solid #bfdbfe; border-radius: 10px;
+  background: #fff; color: var(--sm-blue-dark); font: inherit;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.sm-dept-picker:hover { background: var(--sm-blue-light); border-color: var(--sm-blue); }
+.sm-dept-picker span { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sm-dept-picker .fa-chevron-down { font-size: 10px; color: var(--sm-muted); }
 .sm-gate-hint { margin: 4px 0 14px; color: var(--sm-muted); font-size: 13px; line-height: 1.5; }
 .sm-gate-form { display: flex; flex-direction: column; gap: 10px; }
 .sm-gate-form label { color: var(--sm-text); font-size: 13px; font-weight: 600; }

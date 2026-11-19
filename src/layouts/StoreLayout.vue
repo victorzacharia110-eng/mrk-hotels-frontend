@@ -802,6 +802,7 @@ const {
   selectOutlet,
   selectStore,
   roleCanSelectOutlet,
+  roleNeedsOutletGate,
 } = useOutletContext()
 
 const showOutletPicker = computed(
@@ -889,7 +890,10 @@ function needsStoreStep(outlet) {
 /** Opens the picker when the role may choose and there is a real choice. */
 async function openOutletGateIfNeeded() {
   await loadOutletList({ autoSelectSingle: true })
-  if (!authStore.isAuthenticated || !roleCanSelectOutlet(authStore.user?.user_role)) return
+  if (!authStore.isAuthenticated || !roleNeedsOutletGate(authStore.user?.user_role)) {
+    outletGateOpen.value = false
+    return
+  }
   if (outlets.value.length === 1 && selectedOutlet.value) {
     if (needsStoreStep(selectedOutlet.value)) {
       gateStep.value = 'store'

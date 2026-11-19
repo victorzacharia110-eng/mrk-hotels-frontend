@@ -266,7 +266,7 @@ import { useBulkSelection } from '@/composables/useBulkSelection'
 import { formatCategory } from '@/utils/format'
 import { useCategoriesStore } from '@/stores/categories'
 import { useAuthStore } from '@/stores/auth'
-import { selectedOutlet, selectedStore, shelfId, shelfName } from '@/composables/useOutletContext'
+import { selectedOutlet, selectedStore, shelfId, shelfName, selectedDepartment, selectedDepartmentId } from '@/composables/useOutletContext'
 
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -300,14 +300,14 @@ const bulk = useBulkSelection(() => items.value, { idKey: 'item_id' })
 const showBulkDelete = ref(false)
 const deleting = ref(false)
 
-// Department scope follows the outlet picked for the session. The store
-// manager no longer picks a shelf here: switching outlet in the header changes
-// the stock, documents and reports for the whole panel.
+// Department scope follows the store chosen in the layout gate, with the
+// store's configured shelf as the fallback until a department is chosen.
 const departments = ref([])
-const departmentId = computed(() => shelfId.value)
+const departmentId = computed(() => selectedDepartmentId.value || shelfId.value)
 
 const activeDepartmentName = computed(() =>
-  shelfName.value
+  selectedDepartment.value?.name
+  || shelfName.value
   || selectedOutlet.value?.name
   || t('storeManager.inventory.allDepartments'))
 
@@ -420,7 +420,7 @@ function go(page) { load(page) }
 
 function openCreate() {
   editing.value = null
-  Object.assign(form, { item_name: '', category: 'other', unit: '', si_units: [], currency_type: '', quantity_in_stock: 0, reorder_level: 0, unit_cost: 0, supplier: '', notes: '', department_id: '', department_ids: shelfId.value ? [shelfId.value] : [] })
+  Object.assign(form, { item_name: '', category: 'other', unit: '', si_units: [], currency_type: '', quantity_in_stock: 0, reorder_level: 0, unit_cost: 0, supplier: '', notes: '', department_id: '', department_ids: departmentId.value ? [departmentId.value] : [] })
   formError.value = ''
   showForm.value = true
 }
@@ -552,7 +552,7 @@ async function openUnitsModal() {
   showUnitsModal.value = true
 }
 
-watch(shelfId, () => {
+watch(departmentId, () => {
   load(1)
 })
 

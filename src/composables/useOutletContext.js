@@ -23,6 +23,8 @@ const outlets = ref([])
 const selectedOutlet = ref(null)
 /** The warehouse/store outlet whose shelf holds the stock being worked on. */
 const selectedStore = ref(null)
+/** Department the store manager is currently working on inside that store. */
+const selectedDepartment = ref(null)
 /** True once the list has been fetched at least once. */
 const loaded = ref(false)
 /** Set while a fetch is in flight, so two layouts don't both request it. */
@@ -30,6 +32,7 @@ let inflight = null
 
 const STORAGE_KEY = 'active_outlet'
 const STORE_STORAGE_KEY = 'active_store_outlet'
+const DEPARTMENT_STORAGE_PREFIX = 'active_department:'
 
 /** True once an outlet has been picked for this session. */
 const hasOutlet = computed(() => selectedOutlet.value !== null)
@@ -59,6 +62,43 @@ const hasStoreChoice = computed(() => storeOutlets.value.length > 0)
 /** The store that should be selected by default: the one holding the data. */
 const mainStore = computed(() => storeOutlets.value[0] || null)
 
+/** Session key for the department chosen inside a particular store. */
+function departmentStorageKey(storeId) {
+  return `${DEPARTMENT_STORAGE_PREFIX}${storeId}`
+}
+
+/** Re-applies the remembered department for the currently selected store. */
+function restoreDepartmentForStore() {
+  const storeId = selectedStore.value?.outlet_id
+  if (!storeId) {
+    selectedDepartment.value = null
+    return null
+  }
+
+  let saved = null
+  try {
+    saved = JSON.parse(sessionStorage.getItem(departmentStorageKey(storeId)) || 'null')
+  } catch {
+    sessionStorage.removeItem(departmentStorageKey(storeId))
+  }
+  selectedDepartment.value = saved && saved.department_id ? saved : null
+  return selectedDepartment.value
+}
+
+/** Sets the department to work on and remembers it for this store. */
+function selectDepartment(department) {
+  selectedDepartment.value = department && department.department_id ? department : null
+  const storeId = selectedStore.value?.outlet_id
+  if (selectedDepartment.value && storeId) {
+    sessionStorage.setItem(departmentStorageKey(storeId), JSON.stringify({
+      department_id: selectedDepartment.value.department_id,
+      name: selectedDepartment.value.name || '',
+    }))
+  } else if (storeId) {
+    sessionStorage.removeItem(departmentStorageKey(storeId))
+  }
+}
+
 /**
  * The shelf the stock work is scoped to.
  *
@@ -72,6 +112,9 @@ const activeShelf = computed(
 
 /** Shelf/department id for stock and document calls. */
 const shelfId = computed(() => activeShelf.value?.department_id || null)
+
+/** Department id chosen for the selected store's inventory, or null. */
+const selectedDepartmentId = computed(() => selectedDepartment.value?.department_id || null)
 
 /** Human-readable shelf name for scope labels. */
 const shelfName = computed(() => activeShelf.value?.name || '')
@@ -130,12 +173,14 @@ async function loadOutlets(opts = {}) {
       selectedStore.value = outletIsStore
         ? selectedOutlet.value
         : savedStore || (selectedOutlet.value ? mainStore.value : null)
+      restoreDepartmentForStore()
     } catch {
       // A property with no reachable outlet list keeps the panel usable rather
       // than blocking it; the POS gate still guards the cashier flow.
       outlets.value = []
       selectedOutlet.value = null
       selectedStore.value = null
+      selectedDepartment.value = null
     } finally {
       loaded.value = true
       inflight = null
@@ -176,17 +221,21 @@ function selectOutlet(outlet) {
  *                             selected outlet's own shelf.
  */
 function selectStore(store) {
-  selectedStore.value = String(store?.type || '').toLowerCase() === 'store' ? store : null
+  const nextStore = String(store?.type || '').toLowerCase() === 'store' ? store : null
+  const changed = nextStore?.outlet_id !== selectedStore.value?.outlet_id
+  selectedStore.value = nextStore
   if (selectedStore.value?.outlet_id) {
     sessionStorage.setItem(STORE_STORAGE_KEY, selectedStore.value.outlet_id)
   } else {
     sessionStorage.removeItem(STORE_STORAGE_KEY)
   }
+  if (changed) restoreDepartmentForStore()
 }
 
 /** Clears the store selection and falls back to the outlet's shelf. */
 function clearStore() {
   selectedStore.value = null
+  selectedDepartment.value = null
   sessionStorage.removeItem(STORE_STORAGE_KEY)
 }
 
@@ -214,6 +263,12 @@ function roleCanSelectOutlet(role) {
   return !!role && role !== 'receptionist'
 }
 
+const MANAGEMENT_PANEL_ROLES = ['hotel_admin', 'manager', 'accountant']
+
+function roleNeedsOutletGate(role) {
+  return roleCanSelectOutlet(role) && !MANAGEMENT_PANEL_ROLES.includes(role)
+}
+
 export function useOutletContext() {
   return {
     outlets,
@@ -227,15 +282,20 @@ export function useOutletContext() {
     hasStoreChoice,
     activeShelf,
     shelfId,
+    selectedDepartment,
+    selectedDepartmentId,
     shelfName,
     storeOutlets,
     mainStore,
     loadOutlets,
     selectOutlet,
     selectStore,
+    selectDepartment,
+    restoreDepartmentForStore,
     clearStore,
     clearOutlet,
     roleCanSelectOutlet,
+    roleNeedsOutletGate,
   }
 }
 
@@ -245,4 +305,4 @@ export function useOutletContext() {
  * moment -- it is a single read at submit time. They are the same refs the
  * function above hands out, so there is still only one selection per session.
  */
-export { outlets, selectedOutlet, selectedStore, hasOutlet, hasChoice, loaded, outletId, storeOutletId, hasStoreChoice, activeShelf, shelfId, shelfName, storeOutlets, mainStore }
+export { outlets, selectedOutlet, selectedStore, hasOutlet, hasChoice, loaded, outletId, storeOutletId, hasStoreChoice, activeShelf, shelfId, selectedDepartment, selectedDepartmentId, shelfName, storeOutlets, mainStore }

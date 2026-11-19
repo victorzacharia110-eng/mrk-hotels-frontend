@@ -131,7 +131,7 @@
               <input v-model="form.name" type="text" class="input" required maxlength="100" />
             </div>
             <div class="form-group">
-              <label>{{ $t('outlets.type') }}</label>
+              <label>{{ $t('common.department') }}</label>
               <SearchableSelect v-model="form.type" :options="typeOptions" />
             </div>
             <div class="form-group">
