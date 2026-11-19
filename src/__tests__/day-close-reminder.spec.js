@@ -133,6 +133,19 @@ describe('workingDate store — one shared reminder', () => {
     expect(store.dayCloseReminderVisible).toBe(false)
   })
 
+  it('raises it on login when previous-date orders are still blocking', async () => {
+    index.mockResolvedValue({
+      data: { open_date: '2026-09-26', timezone: TZ, blocking_orders_count: 5 },
+    })
+    const store = useWorkingDateStore()
+
+    await store.initDayCloseReminder()
+    expect(store.needsDayClose).toBe(false)
+    expect(store.blockingOrdersCount).toBe(5)
+    expect(store.hasUnsettledOrders).toBe(true)
+    expect(store.dayCloseReminderVisible).toBe(true)
+  })
+
   it('raises it on login when orders are still unsettled', async () => {
     index.mockResolvedValue({
       data: { open_date: '2026-09-26', timezone: TZ, unsettled_orders_count: 3 },
@@ -157,6 +170,7 @@ describe('DayCloseReminderModal', () => {
     store.openDate = '2026-09-25'
     store.unsettledOrdersCount = 0
     store.runningOrdersCount = 0
+    store.blockingOrdersCount = 0
   })
 
   it('states the date the new orders are filed under', () => {
@@ -195,14 +209,15 @@ describe('DayCloseReminderModal', () => {
     expect(push).toHaveBeenCalledWith({ name: 'cashier-day-close' })
   })
 
-  it('explains unsettled orders and offers both actions from the modal', async () => {
+  it('explains blocking orders and offers both actions from the modal', async () => {
     const store = useWorkingDateStore()
-    store.unsettledOrdersCount = 2
+    store.blockingOrdersCount = 5
 
     const wrapper = mountModal('cashier', 'cashier-day-close', 'cashier-dine-in')
 
     expect(wrapper.text()).toContain('Unsettled orders')
-    expect(wrapper.text()).toContain('There are 2 orders not taken care of yet.')
+    expect(wrapper.text()).toContain('5 order(s) from a previous business date are still running or unpaid.')
+    expect(wrapper.text()).toContain(`new working date (${store.today})`)
     expect(wrapper.text()).toContain('Proceed to Day Close')
     expect(wrapper.text()).toContain('Take New Orders')
 
@@ -211,9 +226,9 @@ describe('DayCloseReminderModal', () => {
     expect(store.dayCloseReminderVisible).toBe(false)
   })
 
-  it('opens the new-order tab straight from the unsettled-orders modal', async () => {
+  it('opens the new-order tab straight from the blocking-orders modal', async () => {
     const store = useWorkingDateStore()
-    store.unsettledOrdersCount = 1
+    store.blockingOrdersCount = 1
 
     const wrapper = mountModal('bartender', 'cashier-day-close', 'cashier-dine-in')
     await wrapper.findAll('button')[1].trigger('click')

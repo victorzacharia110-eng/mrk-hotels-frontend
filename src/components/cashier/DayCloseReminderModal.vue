@@ -51,8 +51,9 @@ const showUnsettledOrders = computed(
   () => workingDateStore.hasUnsettledOrders && !!props.newOrderRoute,
 )
 const unsettledCount = computed(
-  () => workingDateStore.unsettledOrdersCount || workingDateStore.runningOrdersCount,
+  () => workingDateStore.blockingOrdersCount || workingDateStore.unsettledOrdersCount || workingDateStore.runningOrdersCount,
 )
+const newWorkingDate = computed(() => workingDateStore.today)
 
 function confirm() {
   workingDateStore.dismissDayCloseReminder()
@@ -79,7 +80,7 @@ function takeNewOrders() {
         </h3>
       </div>
       <p v-if="showUnsettledOrders" class="dc-reminder-text">
-        {{ t('cashier.dayClose.unsettledReminderText', { count: unsettledCount }) }}
+        {{ t('cashier.dayClose.unsettledReminderText', { count: unsettledCount, today: newWorkingDate }) }}
       </p>
       <p v-else class="dc-reminder-text">
         {{ t('cashier.dayClose.reminderText', { today: openLabel }) }}

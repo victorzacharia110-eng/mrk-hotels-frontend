@@ -11,6 +11,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi } from '@/api'
 import { ownerHotelFeatures } from '@/utils/ownerView'
+import { DAY_CLOSE_REMINDER_KEY, useWorkingDateStore } from '@/stores/workingDate'
 
 // Numeric seniority per role; `can(level)` checks against these.
 const ROLE_LEVELS = {
@@ -120,6 +121,8 @@ export const useAuthStore = defineStore('auth', () => {
     mustChangePassword.value = payload.must_change_password || false
     permissions.value = payload.permissions || user.value?.permissions || []
     sessionStorage.setItem('auth_token', payload.token)
+    sessionStorage.removeItem(DAY_CLOSE_REMINDER_KEY)
+    useWorkingDateStore().reset()
   }
 
   /**
@@ -245,6 +248,7 @@ export const useAuthStore = defineStore('auth', () => {
       sessionStorage.removeItem('active_store_outlet')
       // Unlocked counters are a per-session convenience, not device trust.
       sessionStorage.removeItem('cashier_unlocked_outlets')
+      sessionStorage.removeItem(DAY_CLOSE_REMINDER_KEY)
       // The trusted-device key is deliberately kept: sign-out ends the session,
       // not the device's trust (only expiry or the Trusted Devices screen
       // revokes that), and wiping it here is what made PIN sign-in fail with
@@ -277,6 +281,7 @@ export const useAuthStore = defineStore('auth', () => {
         mustChangePassword.value = false
         sessionStorage.removeItem('auth_token')
         sessionStorage.removeItem('cashier_unlocked_outlets')
+        sessionStorage.removeItem(DAY_CLOSE_REMINDER_KEY)
         // Device trust survives a dead session — see logout() above.
       }
       throw error

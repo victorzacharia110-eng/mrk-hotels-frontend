@@ -50,13 +50,14 @@ const dateInTimezone = (timezone) => {
  * separate keys, so a cashier sitting on the order pad got the layout modal
  * AND the page banner stacked on top of each other.
  */
-const DAY_CLOSE_REMINDER_KEY = 'fnb_day_close_reminder_ack'
+export const DAY_CLOSE_REMINDER_KEY = 'fnb_day_close_reminder_ack'
 
 export const useWorkingDateStore = defineStore('workingDate', () => {
   const openDate = ref('')
   const timezone = ref('')
   const runningOrdersCount = ref(0)
   const unsettledOrdersCount = ref(0)
+  const blockingOrdersCount = ref(0)
   const loading = ref(false)
   const loaded = ref(false)
   // Layouts and pages often request the business date at the same time. Every
@@ -81,7 +82,7 @@ export const useWorkingDateStore = defineStore('workingDate', () => {
   )
 
   const hasUnsettledOrders = computed(
-    () => unsettledOrdersCount.value > 0 || runningOrdersCount.value > 0,
+    () => blockingOrdersCount.value > 0 || unsettledOrdersCount.value > 0 || runningOrdersCount.value > 0,
   )
 
   /**
@@ -119,6 +120,7 @@ export const useWorkingDateStore = defineStore('workingDate', () => {
         timezone.value = data?.timezone || ''
         runningOrdersCount.value = Number(data?.running_orders_count ?? 0)
         unsettledOrdersCount.value = Number(data?.unsettled_orders_count ?? 0)
+        blockingOrdersCount.value = Number(data?.blocking_orders_count ?? 0)
         loaded.value = true
       } catch {
         // Keep the local-today fallback so panels always render.
@@ -131,10 +133,19 @@ export const useWorkingDateStore = defineStore('workingDate', () => {
     return inflight
   }
 
-  /** Force-refetches the business date (used after a Day Close succeeds). */
-  async function reload() {
+  function reset() {
     loaded.value = false
     openDate.value = ''
+    timezone.value = ''
+    runningOrdersCount.value = 0
+    unsettledOrdersCount.value = 0
+    blockingOrdersCount.value = 0
+    dayCloseReminderVisible.value = false
+  }
+
+  /** Force-refetches the business date (used after login and Day Close). */
+  async function reload() {
+    reset()
     await ensureLoaded()
   }
 
@@ -143,6 +154,7 @@ export const useWorkingDateStore = defineStore('workingDate', () => {
     timezone,
     runningOrdersCount,
     unsettledOrdersCount,
+    blockingOrdersCount,
     loading,
     loaded,
     workingDate,
@@ -154,5 +166,6 @@ export const useWorkingDateStore = defineStore('workingDate', () => {
     dismissDayCloseReminder,
     ensureLoaded,
     reload,
+    reset,
   }
 })

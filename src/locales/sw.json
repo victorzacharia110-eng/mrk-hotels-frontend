@@ -6024,7 +6024,7 @@
       "reminderTitle": "Funga Siku",
       "reminderText": "Oda unazoingiza zitahifadhiwa chini ya tarehe ya kazi: {today}.",
       "unsettledReminderTitle": "Oda zisizojaliwa",
-      "unsettledReminderText": "Kuna oda {count} ambazo bado hazijashughulikiwa. Zilipize au uzifute kwenye Funga Siku, au endelea kuchukua oda mpya chini ya siku ya kazi ya sasa.",
+      "unsettledReminderText": "Oda {count} kutoka siku ya biashara iliyopita bado zinaendelea au hazijalipwa. Zilipize au uzifute kwenye skrini ya Funga Siku, kisha endesha Funga Siku kabla ya kuchukua oda kwenye siku mpya ya kazi ({today}).",
       "takeNewOrders": "Chukua Oda Mpya",
       "proceed": "Endelea na Siku ya Kufunga",
       "confirm": "Thibitisha",

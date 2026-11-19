@@ -51,6 +51,7 @@ describe('auth store', () => {
     it('stores token and user on successful login', async () => {
       const payload = { token: 'tok_abc', user: { user_role: 'receptionist', full_name: 'Jane' } }
       authApi.login.mockResolvedValue({ data: payload })
+      sessionStorage.setItem('fnb_day_close_reminder_ack', '1')
 
       const store = useAuthStore()
       const result = await store.login({ email: 'j@test.com', password: 'pass' })
@@ -59,6 +60,7 @@ describe('auth store', () => {
       expect(store.isAuthenticated).toBe(true)
       expect(store.user.user_role).toBe('receptionist')
       expect(sessionStorage.getItem('auth_token')).toBe('tok_abc')
+      expect(sessionStorage.getItem('fnb_day_close_reminder_ack')).toBeNull()
     })
 
     it('clears owner hotel selection on login', async () => {
@@ -191,6 +193,7 @@ describe('auth store', () => {
       const store = useAuthStore()
       await store.login({ email: 'a@b.com', password: 'p' })
       expect(store.isAuthenticated).toBe(true)
+      sessionStorage.setItem('fnb_day_close_reminder_ack', '1')
 
       authApi.logout.mockResolvedValue()
       await store.logout()
@@ -199,6 +202,7 @@ describe('auth store', () => {
       expect(store.user).toBeNull()
       expect(store.permissions).toEqual([])
       expect(sessionStorage.getItem('auth_token')).toBeNull()
+      expect(sessionStorage.getItem('fnb_day_close_reminder_ack')).toBeNull()
     })
 
     it('clears state even when server logout fails', async () => {

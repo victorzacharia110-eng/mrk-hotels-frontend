@@ -5754,7 +5754,7 @@
       "reminderText": "Orders you enter will be saved under the business date: {today}.",
       "reminderTitle": "Close Day",
       "unsettledReminderTitle": "Unsettled orders",
-      "unsettledReminderText": "There are {count} orders not taken care of yet. Settle or void them in Day Close, or continue taking new orders under the current business date.",
+      "unsettledReminderText": "{count} order(s) from a previous business date are still running or unpaid. Settle or void them on the Day Close screen, then run DAY CLOSE before taking orders on the new working date ({today}).",
       "takeNewOrders": "Take New Orders",
       "timezoneSaved": "Standard time updated successfully."
     },
