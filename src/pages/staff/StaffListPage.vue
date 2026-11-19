@@ -524,6 +524,7 @@ const ROLES = [
   { value: 'hotel_admin', label: t('common.roles.hotelAdmin') },
   { value: 'manager', label: t('common.roles.manager') },
   { value: 'accountant', label: t('common.roles.accountant') },
+  { value: 'cashier', label: t('common.roles.cashier') },
   { value: 'receptionist', label: t('common.roles.receptionist') },
   { value: 'procurement_officer', label: t('common.roles.procurementOfficer') },
   { value: 'housekeeping', label: t('common.roles.housekeeping') },

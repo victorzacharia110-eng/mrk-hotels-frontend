@@ -91,6 +91,32 @@ describe('staff page outlet loading', () => {
     expect(values).toContain('o2')
   })
 
+  it('offers cashier in the role picker when editing staff', async () => {
+    userIndex.mockResolvedValue({
+      data: {
+        data: [{
+          user_id: 'user-cashier',
+          full_name: 'Cashier One',
+          email: 'cashier@example.com',
+          phone: '',
+          user_role: 'cashier',
+          department: 'restaurant',
+          position: 'cashier',
+          is_active: true,
+        }],
+        current_page: 1,
+      },
+    })
+
+    const wrapper = await mountPage()
+    const edit = wrapper.findAll('button').find((button) => button.text().includes('Edit'))
+    await edit.trigger('click')
+    await flushPromises()
+
+    const roleValues = wrapper.findAll('.modal option').map((option) => option.attributes('value'))
+    expect(roleValues).toContain('cashier')
+  })
+
   it('mounts without crashing when /outlets returns { outlets: [...] }', async () => {
     const wrapper = await mountPage()
     await openCreateModal(wrapper)
