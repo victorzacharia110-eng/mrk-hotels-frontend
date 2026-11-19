@@ -5913,6 +5913,11 @@
         "supplier": "Supplier",
         "utility": "Utility"
       },
+      "statuses": {
+        "active": "Active",
+        "blocked": "Blocked",
+        "inactive": "Inactive"
+      },
       "deleteConfirm": "Delete this creditor account?",
       "saved": "Creditor saved.",
       "searchCreditorsHint": "Search by company, contact, phone, email or category...",
@@ -5990,11 +5995,6 @@
       "confirm": "Confirm",
       "submit": "Submit",
       "ok": "OK"
-    },
-    "accounts.statuses": {
-      "active": "Active",
-      "blocked": "Blocked",
-      "inactive": "Inactive"
     },
     "waiterAssignment": {
       "title": "WAITER ASSIGNMENT",

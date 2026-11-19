@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import i18n from '@/locales/i18n'
 
 /**
  * Locale parity between English and Swahili.
@@ -73,6 +74,20 @@ describe('locale parity', () => {
   it('reads both locale files', () => {
     expect(EN.size).toBeGreaterThan(1000)
     expect(SW.size).toBeGreaterThan(1000)
+  })
+
+  it('resolves cashier account status keys through dotted i18n paths', () => {
+    const expected = {
+      en: { active: 'Active', blocked: 'Blocked', inactive: 'Inactive' },
+      sw: { active: 'Inayotumika', blocked: 'Imefungwa', inactive: 'Haifanyi Kazi' },
+    }
+
+    for (const [locale, labels] of Object.entries(expected)) {
+      i18n.global.locale.value = locale
+      for (const [status, label] of Object.entries(labels)) {
+        expect(i18n.global.t(`cashier.accounts.statuses.${status}`)).toBe(label)
+      }
+    }
   })
 
   it('has no key in one locale that the other lacks', () => {
