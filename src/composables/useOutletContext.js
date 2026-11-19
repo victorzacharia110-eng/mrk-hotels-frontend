@@ -263,7 +263,7 @@ function roleCanSelectOutlet(role) {
   return !!role && role !== 'receptionist'
 }
 
-const MANAGEMENT_PANEL_ROLES = ['hotel_admin', 'manager', 'accountant']
+const MANAGEMENT_PANEL_ROLES = ['hotel_admin', 'manager', 'accountant', 'owner']
 
 function roleNeedsOutletGate(role) {
   return roleCanSelectOutlet(role) && !MANAGEMENT_PANEL_ROLES.includes(role)

@@ -53,6 +53,7 @@ describe('outlet context', () => {
     expect(ctx.roleNeedsOutletGate('hotel_admin')).toBe(false)
     expect(ctx.roleNeedsOutletGate('manager')).toBe(false)
     expect(ctx.roleNeedsOutletGate('accountant')).toBe(false)
+    expect(ctx.roleNeedsOutletGate('owner')).toBe(false)
     expect(ctx.roleNeedsOutletGate('waiter')).toBe(true)
     expect(ctx.roleNeedsOutletGate('receptionist')).toBe(false)
   })
