@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-if="pricingEnabled">
     <section v-if="page" class="mrk-hero">
       <div class="mrk-container">
         <div v-if="heroSection?.subheading" class="mrk-eyebrow">{{ heroSection.subheading }}</div>
@@ -25,13 +25,20 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useMarketingContent } from '@/composables/useMarketingContent'
 import MarketingSections from './MarketingSections.vue'
 import PricingExplorer from './PricingExplorer.vue'
 
-const { bootstrap, getPage } = useMarketingContent()
+const router = useRouter()
+const { bootstrap, getPage, isSettingEnabled } = useMarketingContent()
+const pricingEnabled = computed(() => isSettingEnabled('show_pricing', false))
 const page = computed(() => getPage('pricing'))
+
+onMounted(() => {
+  if (!pricingEnabled.value) router.replace({ name: 'marketing-home' })
+})
 
 const sections = computed(() => (page.value?.sections || []).filter((s) => s && s.is_active !== false))
 const heroSection = computed(() => sections.value.find((s) => s.section_type === 'hero'))

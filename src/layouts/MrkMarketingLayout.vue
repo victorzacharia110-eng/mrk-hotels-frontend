@@ -10,24 +10,36 @@
         <nav class="mrk-nav" aria-label="Primary">
           <router-link :to="{ name: 'marketing-home' }" class="mrk-nav-link">{{ $t('marketing.home') }}</router-link>
 
-          <div class="mrk-dropdown" @mouseenter="productsOpen = true" @mouseleave="productsOpen = false">
+          <div
+            class="mrk-dropdown"
+            @mouseenter="openProductsMenu"
+            @mouseleave="scheduleProductsClose"
+            @focusin="openProductsMenu"
+            @focusout="handleProductsFocusOut"
+          >
             <button
               type="button"
               class="mrk-nav-button"
               :aria-expanded="productsOpen ? 'true' : 'false'"
-              @click="productsOpen = !productsOpen"
-              @keydown.esc="productsOpen = false"
+              @click="toggleProductsMenu"
+              @keydown.esc="closeProductsMenu"
             >
               {{ $t('marketing.products') }} <i class="fas fa-chevron-down" aria-hidden="true"></i>
             </button>
-            <div v-if="productsOpen" class="mrk-dropdown-menu" role="menu">
+            <div
+              v-if="productsOpen"
+              class="mrk-dropdown-menu"
+              role="menu"
+              @mouseenter="openProductsMenu"
+              @mouseleave="scheduleProductsClose"
+            >
               <router-link
                 v-for="page in productPages"
                 :key="page.slug"
                 :to="pageLink(page)"
                 class="mrk-dropdown-item"
                 role="menuitem"
-                @click="productsOpen = false"
+                @click="closeProductsMenu"
               >
                 {{ page.nav_label || page.title }}
               </router-link>
@@ -36,7 +48,7 @@
           </div>
 
           <router-link :to="{ name: 'marketing-integrations' }" class="mrk-nav-link">{{ $t('marketing.integrations') }}</router-link>
-          <router-link :to="{ name: 'marketing-pricing' }" class="mrk-nav-link">{{ $t('marketing.pricing') }}</router-link>
+          <router-link v-if="pricingEnabled" :to="{ name: 'marketing-pricing' }" class="mrk-nav-link">{{ $t('marketing.pricing') }}</router-link>
           <router-link :to="{ name: 'marketing-about' }" class="mrk-nav-link mrk-nav-upper">{{ $t('marketing.about') }}</router-link>
         </nav>
 
@@ -95,7 +107,7 @@
             {{ page.nav_label || page.title }}
           </router-link>
           <router-link :to="{ name: 'marketing-integrations' }" class="mrk-nav-link" @click="mobileOpen = false">{{ $t('marketing.integrations') }}</router-link>
-          <router-link :to="{ name: 'marketing-pricing' }" class="mrk-nav-link" @click="mobileOpen = false">{{ $t('marketing.pricing') }}</router-link>
+          <router-link v-if="pricingEnabled" :to="{ name: 'marketing-pricing' }" class="mrk-nav-link" @click="mobileOpen = false">{{ $t('marketing.pricing') }}</router-link>
           <router-link :to="{ name: 'marketing-about' }" class="mrk-nav-link mrk-nav-upper" @click="mobileOpen = false">{{ $t('marketing.about') }}</router-link>
           <router-link to="/login" class="mrk-nav-link" @click="mobileOpen = false">{{ $t('marketing.signIn') }}</router-link>
           <router-link :to="{ name: 'public-home' }" class="mrk-btn mrk-btn-secondary" @click="mobileOpen = false">
@@ -182,7 +194,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { useMarketingContent } from '@/composables/useMarketingContent'
@@ -190,7 +202,40 @@ import { useMarketingContent } from '@/composables/useMarketingContent'
 const { locale, t } = useI18n()
 const mobileOpen = ref(false)
 const productsOpen = ref(false)
-const { bootstrap, loading, error, loadBootstrap, getSetting } = useMarketingContent()
+let productsCloseTimer = null
+const { bootstrap, loading, error, loadBootstrap, getSetting, isSettingEnabled } = useMarketingContent()
+
+const pricingEnabled = computed(() => isSettingEnabled('show_pricing', false))
+
+function openProductsMenu() {
+  clearTimeout(productsCloseTimer)
+  productsCloseTimer = null
+  productsOpen.value = true
+}
+
+function closeProductsMenu() {
+  clearTimeout(productsCloseTimer)
+  productsCloseTimer = null
+  productsOpen.value = false
+}
+
+function toggleProductsMenu() {
+  if (productsOpen.value) closeProductsMenu()
+  else openProductsMenu()
+}
+
+function scheduleProductsClose() {
+  clearTimeout(productsCloseTimer)
+  productsCloseTimer = setTimeout(() => {
+    productsOpen.value = false
+    productsCloseTimer = null
+  }, 180)
+}
+
+function handleProductsFocusOut(event) {
+  if (event.currentTarget?.contains(event.relatedTarget)) return
+  scheduleProductsClose()
+}
 
 function setLocale(lang) {
   locale.value = lang
@@ -199,6 +244,10 @@ function setLocale(lang) {
 
 onMounted(() => {
   loadBootstrap().catch(() => {})
+})
+
+onBeforeUnmount(() => {
+  clearTimeout(productsCloseTimer)
 })
 
 const productPages = computed(() => {

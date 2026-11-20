@@ -120,6 +120,7 @@
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
+  z-index: 20;
   min-width: 240px;
   background: #fff;
   border: 1px solid var(--mrk-border);
@@ -128,6 +129,15 @@
   padding: 8px;
   display: grid;
   gap: 4px;
+}
+
+.mrk-dropdown-menu::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 0;
+  right: 0;
+  height: 12px;
 }
 
 .mrk-dropdown-item {

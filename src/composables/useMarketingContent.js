@@ -116,6 +116,14 @@ function getSetting(key, fallback = undefined) {
   return value === undefined || value === null ? fallback : value
 }
 
+function isSettingEnabled(key, fallback = false) {
+  const value = getSetting(key, fallback)
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'number') return value === 1
+  if (typeof value === 'string') return ['true', '1', 'yes', 'on'].includes(value.trim().toLowerCase())
+  return fallback
+}
+
 function getPage(slug) {
   return bootstrap.value?.pages?.find((p) => p.slug === slug) || null
 }
@@ -132,6 +140,7 @@ export function useMarketingContent() {
     error,
     loadBootstrap,
     getSetting,
+    isSettingEnabled,
     getPage,
     clearBootstrap,
     translateMarketing,
