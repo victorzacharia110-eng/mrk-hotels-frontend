@@ -31,7 +31,7 @@
               >
                 {{ page.nav_label || page.title }}
               </router-link>
-              <span v-if="!productPages.length" class="mrk-dropdown-item mrk-muted">No products available</span>
+              <span v-if="!productPages.length" class="mrk-dropdown-item mrk-muted">{{ $t('marketingCopy.noProducts') }}</span>
             </div>
           </div>
 
@@ -118,10 +118,10 @@
 
     <main class="mrk-main">
       <div v-if="loading && !bootstrap" class="mrk-section">
-        <div class="mrk-container"><div class="mrk-empty">Loading marketing content...</div></div>
+        <div class="mrk-container"><div class="mrk-empty">{{ $t('marketingCopy.loadingMarketing') }}</div></div>
       </div>
       <div v-else-if="error && !bootstrap" class="mrk-section">
-        <div class="mrk-container"><div class="mrk-empty">Marketing content is unavailable.</div></div>
+        <div class="mrk-container"><div class="mrk-empty">{{ $t('marketingCopy.marketingUnavailable') }}</div></div>
       </div>
       <router-view v-else />
     </main>
@@ -139,34 +139,34 @@
         </div>
 
         <div v-if="footer.modules?.length">
-          <h4>Modules</h4>
+          <h4>{{ $t('marketingCopy.modules') }}</h4>
           <ul>
             <li v-for="item in footer.modules" :key="'mod-' + item"><span>{{ item }}</span></li>
           </ul>
         </div>
 
         <div v-if="footer.solutions?.length">
-          <h4>Solutions</h4>
+          <h4>{{ $t('marketingCopy.solutions') }}</h4>
           <ul>
             <li v-for="item in footer.solutions" :key="'sol-' + item"><span>{{ item }}</span></li>
           </ul>
         </div>
 
         <div v-if="footer.company?.length">
-          <h4>Company</h4>
+          <h4>{{ $t('marketingCopy.company') }}</h4>
           <ul>
             <li v-for="item in footer.company" :key="'co-' + item"><span>{{ item }}</span></li>
           </ul>
         </div>
 
         <div v-if="legalLinks.length || socialLinks.length">
-          <h4 v-if="legalLinks.length">Legal</h4>
+          <h4 v-if="legalLinks.length">{{ $t('marketingCopy.legal') }}</h4>
           <ul v-if="legalLinks.length">
             <li v-for="item in legalLinks" :key="'legal-' + item.label">
               <a :href="item.url" target="_blank" rel="noopener">{{ item.label }}</a>
             </li>
           </ul>
-          <h4 v-if="socialLinks.length" style="margin-top:16px;">Social</h4>
+          <h4 v-if="socialLinks.length" style="margin-top:16px;">{{ $t('marketingCopy.social') }}</h4>
           <ul v-if="socialLinks.length">
             <li v-for="item in socialLinks" :key="'social-' + item.label">
               <a :href="item.url" target="_blank" rel="noopener">{{ item.label }}</a>
@@ -187,7 +187,7 @@ import { useI18n } from 'vue-i18n'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { useMarketingContent } from '@/composables/useMarketingContent'
 
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 const mobileOpen = ref(false)
 const productsOpen = ref(false)
 const { bootstrap, loading, error, loadBootstrap, getSetting } = useMarketingContent()
@@ -243,7 +243,7 @@ const socialLinks = computed(() => validLinks(footer.value.social || getSetting(
 const copyrightText = computed(() => {
   const value = getSetting('copyright')
   if (typeof value === 'string' && value) return value
-  return `© ${new Date().getFullYear()} MRK Hotel Software. All rights reserved.`
+  return t('marketingCopy.copyrightFallback', { year: new Date().getFullYear() })
 })
 
 function pageLink(page) {

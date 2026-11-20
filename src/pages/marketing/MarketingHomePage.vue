@@ -6,7 +6,7 @@
       :integrations="bootstrap?.integrations || []"
       :team-members="bootstrap?.team_members || []"
     />
-    <div v-else class="mrk-section"><div class="mrk-container"><div class="mrk-empty">Home content is unavailable.</div></div></div>
+    <div v-else class="mrk-section"><div class="mrk-container"><div class="mrk-empty">{{ $t('marketingCopy.homeUnavailable') }}</div></div></div>
   </div>
 </template>
 

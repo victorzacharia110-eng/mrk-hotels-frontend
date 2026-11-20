@@ -766,6 +766,13 @@ const routes = [
         redirect: '/owner/marketing/content/pages',
         children: marketingCmsChildren('owner-marketing', false),
       },
+      {
+        path: 'payment-methods',
+        name: 'owner-payment-methods',
+        component: () => import('@/pages/settings/HotelSettingsPage.vue'),
+        props: { paymentMethodsOnly: true },
+        meta: { module: 'owner-payment-methods' },
+      },
       // The owner's own account: personal info and password.
       {
         path: 'profile',

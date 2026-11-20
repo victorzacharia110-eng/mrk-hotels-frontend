@@ -122,15 +122,73 @@
         </div>
         <div class="sa-header-right">
           <ThemeToggle />
-          <span class="sa-badge"
-            ><i class="fas fa-shield-halved" aria-hidden="true"></i> Superadmin</span
-          >
           <RoleBadge />
-          <span class="sa-user-chip">
-            <span class="sa-user-avatar has-image" v-if="accountAvatarUrl" aria-hidden="true"><img :src="accountAvatarUrl" alt="" class="sa-user-avatar-img" /></span>
-            <span v-else class="sa-user-avatar" aria-hidden="true">{{ userInitials }}</span>
-            <span class="sa-user">{{ authStore.user?.full_name || authStore.user?.name }}</span>
-          </span>
+          <div class="sa-profile-menu">
+            <button
+              type="button"
+              class="sa-profile-trigger"
+              :aria-expanded="profileOpen"
+              :aria-label="$t('nav.profile')"
+              @click="profileOpen = !profileOpen"
+            >
+              <span v-if="accountAvatarUrl" class="sa-profile-avatar has-image" aria-hidden="true"><img :src="accountAvatarUrl" alt="" class="sa-profile-avatar-img" /></span>
+              <span v-else class="sa-profile-avatar" aria-hidden="true">{{ userInitials }}</span>
+            </button>
+            <div v-if="profileOpen" class="sa-profile-backdrop" @click="profileOpen = false"></div>
+            <div v-if="profileOpen" class="sa-profile-panel">
+              <div class="sa-profile-head">
+                <span v-if="accountAvatarUrl" class="sa-profile-avatar has-image" aria-hidden="true"><img :src="accountAvatarUrl" alt="" class="sa-profile-avatar-img" /></span>
+                <span v-else class="sa-profile-avatar" aria-hidden="true">{{ userInitials }}</span>
+                <div>
+                  <strong>{{ accountName }}</strong>
+                  <small>{{ authStore.user?.email }}</small>
+                </div>
+              </div>
+              <router-link
+                :to="{ name: 'user-manual' }"
+                class="sa-profile-link"
+                @click="profileOpen = false"
+              >
+                <i class="fas fa-book-open" aria-hidden="true"></i> {{ $t('nav.userManual') }}
+              </router-link>
+              <router-link
+                :to="{ name: 'superadmin-profile' }"
+                class="sa-profile-link"
+                @click="profileOpen = false"
+              >
+                <i class="fas fa-user-circle" aria-hidden="true"></i> {{ $t('nav.profile') }}
+              </router-link>
+              <div class="sa-profile-lang" role="group" :aria-label="$t('topBar.language')">
+                <button
+                  type="button"
+                  class="sa-lang-option"
+                  :class="{ active: locale === 'en' }"
+                  :title="$t('topBar.switchToEnglish')"
+                  :aria-pressed="locale === 'en'"
+                  @click="setLocale('en')"
+                >
+                  EN
+                </button>
+                <button
+                  type="button"
+                  class="sa-lang-option"
+                  :class="{ active: locale === 'sw' }"
+                  :title="$t('topBar.switchToSwahili')"
+                  :aria-pressed="locale === 'sw'"
+                  @click="setLocale('sw')"
+                >
+                  SW
+                </button>
+              </div>
+              <button
+                type="button"
+                class="sa-profile-link sa-profile-logout"
+                @click="profileOpen = false; handleLogout()"
+              >
+                <i class="fas fa-right-from-bracket" aria-hidden="true"></i> {{ $t('common.logout') }}
+              </button>
+            </div>
+          </div>
         </div>
       </header>
       <main id="superadmin-content" class="sa-content" tabindex="-1">
@@ -141,8 +199,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import RoleBadge from '@/components/RoleBadge.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
@@ -150,9 +209,11 @@ import ThemeToggle from '@/components/ThemeToggle.vue'
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const { locale } = useI18n()
 // Sidebar UI state: collapsed on desktop, or open as an overlay on mobile.
 const sidebarCollapsed = ref(true)
 const sidebarMobileOpen = ref(false)
+const profileOpen = ref(false)
 
 /** Title shown in the header, derived from the current route name. */
 const pageTitle = computed(() => {
@@ -169,9 +230,16 @@ const pageTitle = computed(() => {
   return titles[route.name] || 'Dashboard'
 })
 
+const accountName = computed(() => (
+  authStore.user?.full_name
+  || authStore.user?.name
+  || [authStore.user?.first_name, authStore.user?.last_name].filter(Boolean).join(' ')
+  || (authStore.user?.email || '').split('@')[0]
+  || ''
+))
+
 const userInitials = computed(() => {
-  const name = authStore.user?.full_name || authStore.user?.name || ''
-  const parts = name.split(' ').filter(Boolean)
+  const parts = accountName.value.split(' ').filter(Boolean)
   if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return 'SA'
@@ -183,6 +251,7 @@ const accountAvatarUrl = computed(() => authStore.user?.profile_picture || '')
  * collapsed/expanded state on larger ones.
  */
 function toggleSidebar() {
+  profileOpen.value = false
   if (window.innerWidth <= 768) {
     sidebarMobileOpen.value = !sidebarMobileOpen.value
   } else {
@@ -190,12 +259,24 @@ function toggleSidebar() {
   }
 }
 
+function setLocale(lang) {
+  profileOpen.value = false
+  locale.value = lang
+  localStorage.setItem('locale', lang)
+}
+
+watch(() => route.path, () => {
+  profileOpen.value = false
+  sidebarMobileOpen.value = false
+})
+
 /**
  * Logs the superadmin out via the auth store and redirects to the login page.
  *
  * @returns {Promise<void>}
  */
 async function handleLogout() {
+  profileOpen.value = false
   await authStore.logout()
   router.push('/login')
 }
@@ -365,32 +446,176 @@ async function handleLogout() {
   gap: 16px;
 }
 
-.sa-badge {
-  background: #fef5f5;
-  color: #005eb8;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
+.sa-profile-menu {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
 }
 
-.sa-user-chip { display: inline-flex; align-items: center; gap: 8px; }
-.sa-user-avatar {
-  width: 32px; height: 32px; border-radius: 50%;
+.sa-profile-trigger {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sa-profile-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
   background: linear-gradient(135deg, #005eb8, #0a7ee8);
-  color: #fff; font-weight: 700; font-size: 12px;
-  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
   overflow: hidden;
 }
-.sa-user-avatar.has-image { background: #e2e8f0; }
-.sa-user-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.sa-user {
+
+.sa-profile-avatar.has-image { background: #e2e8f0; }
+.sa-profile-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.sa-profile-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  background: transparent;
+}
+
+.sa-profile-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 260px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+  z-index: 96;
+  overflow: hidden;
+}
+
+.sa-profile-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.sa-profile-head .sa-profile-avatar {
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+}
+
+.sa-profile-head strong {
+  display: block;
   font-size: 14px;
-  font-weight: 500;
-  color: #555;
+  color: #333;
+}
+
+.sa-profile-head small {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.sa-profile-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+  text-decoration: none;
+  font-size: 13px;
+  font-family: inherit;
+  color: #334155;
+  cursor: pointer;
+}
+
+.sa-profile-link i {
+  width: 18px;
+  text-align: center;
+  color: #64748b;
+}
+
+.sa-profile-link:hover {
+  background: #f8fafc;
+}
+
+.sa-profile-lang {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.sa-lang-option {
+  flex: 1;
+  padding: 6px 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sa-lang-option.active {
+  background: #eaf4ff;
+  border-color: #005eb8;
+  color: #005eb8;
+}
+
+.sa-profile-logout,
+.sa-profile-logout i {
+  color: #dc2626;
+}
+
+html[data-theme='dark'] .sa-profile-panel {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html[data-theme='dark'] .sa-profile-head {
+  border-bottom-color: #334155;
+}
+
+html[data-theme='dark'] .sa-profile-head strong {
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] .sa-profile-link {
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .sa-profile-link:hover {
+  background: #334155;
+}
+
+html[data-theme='dark'] .sa-profile-lang {
+  border-color: #334155;
+}
+
+html[data-theme='dark'] .sa-lang-option {
+  background: #1e293b;
+  border-color: #475569;
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .sa-lang-option.active {
+  background: rgba(18, 105, 189, 0.3);
+  border-color: #60a5fa;
+  color: #bfdbfe;
 }
 
 .sa-content {
@@ -461,10 +686,6 @@ async function handleLogout() {
 
   .sa-header {
     padding: 16px;
-  }
-
-  .sa-badge {
-    display: none;
   }
 
   .sa-content {

@@ -58,6 +58,16 @@
           <span v-show="!sidebarCollapsed">{{ $t('owner.marketingSiteContent') }}</span>
         </router-link>
         <router-link
+          v-if="paymentMethodsEnabled"
+          to="/owner/payment-methods"
+          class="sa-nav-link"
+          :class="{ active: $route.name === 'owner-payment-methods' }"
+          @click="sidebarMobileOpen = false"
+        >
+          <i class="fas fa-credit-card" aria-hidden="true"></i>
+          <span v-show="!sidebarCollapsed">{{ $t('hotelSettings.paymentSection') }}</span>
+        </router-link>
+        <router-link
           to="/owner/profile"
           class="sa-nav-link"
           :class="{ active: $route.name === 'owner-profile' }"
@@ -192,10 +202,16 @@ const pageTitle = computed(() => {
     'owner-dashboard': 'Dashboard',
     'owner-hotel-detail': 'Hotel Details',
     'owner-marketing': 'Marketing',
+    'owner-payment-methods': 'Payment Methods',
     'owner-profile': 'Profile',
   }
   if (typeof route.name === 'string' && route.name.startsWith('owner-marketing-')) return 'Marketing Site'
   return titles[route.name] || 'Dashboard'
+})
+
+const paymentMethodsEnabled = computed(() => {
+  const features = authStore.enabledFeatures
+  return !features || features.includes('payment_methods')
 })
 
 const accountName = computed(() => (

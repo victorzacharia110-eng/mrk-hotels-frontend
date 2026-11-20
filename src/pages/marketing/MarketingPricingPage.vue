@@ -12,7 +12,7 @@
 
     <section v-if="!page" class="mrk-section">
       <div class="mrk-container">
-        <h1 class="mrk-page-title">Pricing</h1>
+        <h1 class="mrk-page-title">{{ $t('marketing.pricing') }}</h1>
         <PricingExplorer />
       </div>
     </section>

@@ -1,7 +1,7 @@
 <template>
   <div>
-    <div v-if="loading" class="mrk-section"><div class="mrk-container"><div class="mrk-empty">Loading page...</div></div></div>
-    <div v-else-if="notFound" class="mrk-section"><div class="mrk-container"><div class="mrk-empty">Page not available.</div></div></div>
+    <div v-if="loading" class="mrk-section"><div class="mrk-container"><div class="mrk-empty">{{ $t('marketingCopy.loadingPage') }}</div></div></div>
+    <div v-else-if="notFound" class="mrk-section"><div class="mrk-container"><div class="mrk-empty">{{ $t('marketingCopy.pageNotAvailable') }}</div></div></div>
     <MarketingSections v-else :page="page" :integrations="bootstrap?.integrations || []" :team-members="bootstrap?.team_members || []" />
   </div>
 </template>
@@ -9,7 +9,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useMarketingContent } from '@/composables/useMarketingContent'
+import { localizeMarketingPage, useMarketingContent } from '@/composables/useMarketingContent'
 import { publicMarketingApi } from '@/api'
 import MarketingSections from './MarketingSections.vue'
 
@@ -49,7 +49,7 @@ async function load() {
       notFound.value = true
       return
     }
-    if (!handleBookingRedirect(p)) page.value = p
+    if (!handleBookingRedirect(p)) page.value = localizeMarketingPage(p)
   } catch {
     notFound.value = true
   } finally {

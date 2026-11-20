@@ -2,35 +2,35 @@
   <div>
     <div class="mrk-pricing-toolbar">
       <div class="mrk-field">
-        <label for="pricing-product">Product</label>
+        <label for="pricing-product">{{ $t('marketingCopy.product') }}</label>
         <select id="pricing-product" v-model="filters.product" class="mrk-select">
-          <option value="">All products</option>
+          <option value="">{{ $t('marketingCopy.allProducts') }}</option>
           <option v-for="p in products" :key="p.id || p.slug" :value="p.slug">{{ p.name }}</option>
         </select>
       </div>
       <div class="mrk-field">
-        <label for="pricing-country">Country</label>
+        <label for="pricing-country">{{ $t('marketingCopy.country') }}</label>
         <select id="pricing-country" v-model="filters.country" class="mrk-select">
-          <option value="">All countries</option>
+          <option value="">{{ $t('marketingCopy.allCountries') }}</option>
           <option v-for="c in countries" :key="c.code" :value="c.code">{{ c.name }}</option>
         </select>
       </div>
       <div class="mrk-field">
-        <label for="pricing-rooms">Rooms</label>
-        <input id="pricing-rooms" v-model.number="filters.rooms" type="number" min="0" class="mrk-input" placeholder="Number of rooms" />
+        <label for="pricing-rooms">{{ $t('marketingCopy.rooms') }}</label>
+        <input id="pricing-rooms" v-model.number="filters.rooms" type="number" min="0" class="mrk-input" :placeholder="$t('marketingCopy.numberOfRooms')" />
       </div>
       <div class="mrk-field">
-        <label>Billing</label>
-        <div class="mrk-toggle" role="group" aria-label="Billing period">
-          <button type="button" :class="{ active: filters.billing === 'monthly' }" @click="filters.billing = 'monthly'">Monthly</button>
-          <button type="button" :class="{ active: filters.billing === 'annual' }" @click="filters.billing = 'annual'">Annual</button>
+        <label>{{ $t('marketingCopy.billing') }}</label>
+        <div class="mrk-toggle" role="group" :aria-label="$t('marketingCopy.billingPeriod')">
+          <button type="button" :class="{ active: filters.billing === 'monthly' }" @click="filters.billing = 'monthly'">{{ $t('marketingCopy.monthly') }}</button>
+          <button type="button" :class="{ active: filters.billing === 'annual' }" @click="filters.billing = 'annual'">{{ $t('marketingCopy.annual') }}</button>
         </div>
       </div>
     </div>
 
-    <div v-if="loading" class="mrk-empty">Loading pricing...</div>
-    <div v-else-if="error" class="mrk-empty">Pricing is unavailable.</div>
-    <div v-else-if="!plans.length" class="mrk-empty">No plans available for the selected filters.</div>
+    <div v-if="loading" class="mrk-empty">{{ $t('marketingCopy.loadingPricing') }}</div>
+    <div v-else-if="error" class="mrk-empty">{{ $t('marketingCopy.pricingUnavailable') }}</div>
+    <div v-else-if="!plans.length" class="mrk-empty">{{ $t('marketingCopy.noPlans') }}</div>
     <div v-else class="mrk-grid mrk-grid-3">
       <article v-for="plan in plans" :key="plan.id || plan.slug" class="mrk-card">
         <span v-if="productName(plan)" class="mrk-pill">{{ productName(plan) }}</span>
@@ -45,8 +45,8 @@
           </li>
         </ul>
         <div class="mrk-actions" style="margin-top:20px;">
-          <a v-if="isContactSales(plan)" href="#contact" class="mrk-btn mrk-btn-primary">Contact sales</a>
-          <a v-else href="/portal/pricing" class="mrk-btn mrk-btn-primary">Get started</a>
+          <a v-if="isContactSales(plan)" href="#contact" class="mrk-btn mrk-btn-primary">{{ $t('marketingCopy.contactSales') }}</a>
+          <a v-else href="/portal/pricing" class="mrk-btn mrk-btn-primary">{{ $t('marketingCopy.getStarted') }}</a>
         </div>
       </article>
     </div>
@@ -55,10 +55,12 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { publicMarketingApi } from '@/api'
 import { useMarketingContent } from '@/composables/useMarketingContent'
 import { getCountries, loadLocationData } from '@/utils/locations'
 
+const { t } = useI18n()
 const { bootstrap } = useMarketingContent()
 const filters = reactive({
   product: '',
@@ -98,8 +100,8 @@ async function loadPricing() {
     if (filters.rooms !== '' && filters.rooms !== null && filters.rooms !== undefined) params.rooms = filters.rooms
     const res = await publicMarketingApi.pricing(params)
     pricing.value = res.data || { products: [], features: [], plans: [] }
-  } catch (err) {
-    error.value = err?.response?.data?.message || 'Failed to load pricing'
+  } catch {
+    error.value = t('marketingCopy.failedToLoadPricing')
     pricing.value = bootstrap.value?.pricing || { products: [], features: [], plans: [] }
   } finally {
     loading.value = false
@@ -116,9 +118,9 @@ function isContactSales(plan) {
 }
 
 function formatPrice(plan) {
-  if (isContactSales(plan)) return 'Contact sales'
+  if (isContactSales(plan)) return t('marketingCopy.contactSales')
   const value = Number(amount(plan))
-  if (Number.isNaN(value)) return 'Contact sales'
+  if (Number.isNaN(value)) return t('marketingCopy.contactSales')
   const currency = plan.currency_code || ''
   const period = filters.billing === 'annual' ? '/year' : '/month'
   return `${currency ? currency + ' ' : ''}${value.toLocaleString()}${period}`
@@ -127,10 +129,10 @@ function formatPrice(plan) {
 function roomRange(plan) {
   const min = plan.room_count_min
   const max = plan.room_count_max
-  if (min == null && max == null) return 'Room range not specified'
-  if (min != null && max != null) return `${min}–${max} rooms`
-  if (min != null) return `${min}+ rooms`
-  return `Up to ${max} rooms`
+  if (min == null && max == null) return t('marketingCopy.roomRangeNotSpecified')
+  if (min != null && max != null) return t('marketingCopy.roomRangeBetween', { min, max })
+  if (min != null) return t('marketingCopy.roomRangeMin', { min })
+  return t('marketingCopy.roomRangeMax', { max })
 }
 
 function productName(plan) {

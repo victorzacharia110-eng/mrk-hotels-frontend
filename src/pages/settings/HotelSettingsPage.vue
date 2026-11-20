@@ -7,8 +7,8 @@
   <div class="dashboard-page container">
     <div class="page-head">
       <div>
-        <h1>{{ $t('hotelSettings.title') }}</h1>
-        <p class="muted">{{ $t('hotelSettings.hint') }}</p>
+        <h1>{{ paymentMethodsOnly ? $t('hotelSettings.paymentSection') : $t('hotelSettings.title') }}</h1>
+        <p class="muted">{{ paymentMethodsOnly ? $t('hotelSettings.methodsHint', 'Add custom payment methods (name and description).') : $t('hotelSettings.hint') }}</p>
       </div>
     </div>
 
@@ -21,7 +21,7 @@
     <div v-if="loading" class="card"><p class="muted">{{ $t('common.loading') }}</p></div>
 
     <form v-else class="settings-form" @submit.prevent="save">
-      <div class="card">
+      <div v-if="!paymentMethodsOnly" class="card">
         <h3>{{ $t('hotelSettings.identitySection') }}</h3>
 
         <div class="filter-grid narrow-grid">
@@ -91,7 +91,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div v-if="!paymentMethodsOnly" class="card">
         <h3>{{ $t('hotelSettings.taxSection') }}</h3>
         <p class="muted">{{ $t('hotelSettings.taxHint') }}</p>
 
@@ -115,7 +115,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div v-if="!paymentMethodsOnly" class="card">
         <h3>{{ $t('hotelSettings.logoSection') }}</h3>
         <p class="muted">{{ $t('hotelSettings.logoHint') }}</p>
 
@@ -136,7 +136,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div v-if="paymentMethodsEnabled" class="card">
         <h3>{{ $t('hotelSettings.paymentSection') }}</h3>
 
         <div class="subsection">
@@ -237,10 +237,18 @@ import { useAuthStore } from '@/stores/auth'
 import { hotelSettingsApi } from '@/api'
 import { invalidateOfficialHeader } from '@/utils/officialHeader'
 
+const props = defineProps({
+  paymentMethodsOnly: { type: Boolean, default: false },
+})
+
 const { t } = useI18n()
 const authStore = useAuthStore()
 
 const canEdit = computed(() => authStore.can(80))
+const paymentMethodsEnabled = computed(() => {
+  const features = authStore.enabledFeatures
+  return !features || features.includes('payment_methods')
+})
 
 const TIMEZONES = [
   'Africa/Dar_es_Salaam',
@@ -559,20 +567,24 @@ async function save() {
   error.value = ''
   try {
     const payload = new FormData()
-    payload.append('hotel_name', form.hotel_name)
-    payload.append('registration_code', String(form.registration_code || '').replace(/\D/g, '').slice(0, 6))
-    payload.append('contact_person', form.contact_person)
-    payload.append('email', form.email)
-    payload.append('phone', form.phone)
-    payload.append('address', serializeAddress(form))
-    payload.append('city', form.city)
-    payload.append('country', form.country)
-    payload.append('tin', form.tin)
-    payload.append('vrn', form.vrn)
-    payload.append('timezone', form.timezone)
-    payload.append('payment_methods', JSON.stringify(serializeMethods()))
-    payload.append('payment_accounts', JSON.stringify(serializeAccounts()))
-    if (logoFile.value) payload.append('logo', logoFile.value)
+    if (!props.paymentMethodsOnly) {
+      payload.append('hotel_name', form.hotel_name)
+      payload.append('registration_code', String(form.registration_code || '').replace(/\D/g, '').slice(0, 6))
+      payload.append('contact_person', form.contact_person)
+      payload.append('email', form.email)
+      payload.append('phone', form.phone)
+      payload.append('address', serializeAddress(form))
+      payload.append('city', form.city)
+      payload.append('country', form.country)
+      payload.append('tin', form.tin)
+      payload.append('vrn', form.vrn)
+      payload.append('timezone', form.timezone)
+    }
+    if (paymentMethodsEnabled.value) {
+      payload.append('payment_methods', JSON.stringify(serializeMethods()))
+      payload.append('payment_accounts', JSON.stringify(serializeAccounts()))
+    }
+    if (!props.paymentMethodsOnly && logoFile.value) payload.append('logo', logoFile.value)
 
     const res = await hotelSettingsApi.update(payload)
     hydrate(res.data?.hotel || {})

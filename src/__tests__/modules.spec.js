@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { MODULES, moduleByKey, moduleByPath } from '@/config/modules'
+import { MODULES, OWNER_MODULES, moduleByKey, moduleByPath } from '@/config/modules'
 
 describe('module config', () => {
   describe('moduleByKey', () => {
@@ -8,6 +8,13 @@ describe('module config', () => {
       expect(mod).toBeDefined()
       expect(mod.to).toBe('/app/reservations')
       expect(mod.roles).toContain('receptionist')
+    })
+
+    it('finds owner-only modules by key', () => {
+      const mod = moduleByKey('owner-payment-methods')
+      expect(mod.to).toBe('/owner/payment-methods')
+      expect(mod.feature).toBe('payment_methods')
+      expect(mod.roles).toEqual(['hotel_admin'])
     })
 
     it('returns undefined for unknown key', () => {
@@ -162,6 +169,14 @@ describe('module config', () => {
         expect(mod.icon).toBeTruthy()
         expect(mod.labelKey).toBeTruthy()
         expect(Array.isArray(mod.roles)).toBe(true)
+      }
+    })
+
+    it('keeps owner-only modules out of the hotel panel navigation list', () => {
+      for (const mod of OWNER_MODULES) {
+        expect(mod.key).toBeTruthy()
+        expect(mod.to.startsWith('/owner/')).toBe(true)
+        expect(MODULES.some((item) => item.key === mod.key)).toBe(false)
       }
     })
   })

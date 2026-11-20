@@ -1,7 +1,9 @@
-import { ref } from 'vue'
+import { computed, ref, unref } from 'vue'
+import i18n from '@/locales/i18n'
+import swMessages from '@/locales/sw.json'
 import { publicMarketingApi } from '@/api'
 
-const bootstrap = ref(null)
+const rawBootstrap = ref(null)
 const loading = ref(false)
 const error = ref('')
 let inflight = null
@@ -32,20 +34,73 @@ function normalizeBootstrap(payload) {
   }
 }
 
+export function translateMarketing(value) {
+  if (typeof value !== 'string' || unref(i18n.global.locale) !== 'sw') return value
+  const strings = swMessages.marketingContent?.strings || {}
+  return strings[value] ?? value
+}
+
+function localizeDeep(value) {
+  if (typeof value === 'string') return translateMarketing(value)
+  if (Array.isArray(value)) return value.map(localizeDeep)
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, localizeDeep(item)]))
+  }
+  return value
+}
+
+function localizeMarketingSection(section) {
+  if (!section) return section
+  return {
+    ...section,
+    heading: translateMarketing(section.heading),
+    subheading: translateMarketing(section.subheading),
+    body_json: localizeDeep(section.body_json),
+  }
+}
+
+export function localizeMarketingPage(page) {
+  if (!page) return page
+  return {
+    ...page,
+    title: translateMarketing(page.title),
+    nav_label: translateMarketing(page.nav_label),
+    meta_title: translateMarketing(page.meta_title),
+    meta_description: translateMarketing(page.meta_description),
+    sections: Array.isArray(page.sections) ? page.sections.map(localizeMarketingSection) : [],
+  }
+}
+
+function localizeMarketingBootstrap(payload) {
+  if (!payload) return payload
+  return {
+    ...payload,
+    settings: localizeDeep(payload.settings),
+    pages: (payload.pages || []).map(localizeMarketingPage),
+    integrations: localizeDeep(payload.integrations),
+    faqs: localizeDeep(payload.faqs),
+    team_members: localizeDeep(payload.team_members),
+    media: localizeDeep(payload.media),
+    pricing: localizeDeep(payload.pricing),
+  }
+}
+
+const bootstrap = computed(() => localizeMarketingBootstrap(rawBootstrap.value))
+
 async function loadBootstrap(force = false) {
-  if (bootstrap.value && !force) return bootstrap.value
+  if (rawBootstrap.value && !force) return bootstrap.value
   if (inflight) return inflight
   loading.value = true
   error.value = ''
   inflight = publicMarketingApi
     .bootstrap()
     .then((res) => {
-      bootstrap.value = normalizeBootstrap(res.data || {})
+      rawBootstrap.value = normalizeBootstrap(res.data || {})
       return bootstrap.value
     })
     .catch((err) => {
-      error.value = err?.response?.data?.message || err?.message || 'Failed to load marketing content'
-      bootstrap.value = null
+      error.value = err?.response?.data?.message || i18n.global.t('marketingCopy.marketingUnavailable')
+      rawBootstrap.value = null
       throw err
     })
     .finally(() => {
@@ -66,7 +121,7 @@ function getPage(slug) {
 }
 
 function clearBootstrap() {
-  bootstrap.value = null
+  rawBootstrap.value = null
   error.value = ''
 }
 
@@ -79,5 +134,7 @@ export function useMarketingContent() {
     getSetting,
     getPage,
     clearBootstrap,
+    translateMarketing,
+    localizeMarketingPage,
   }
 }

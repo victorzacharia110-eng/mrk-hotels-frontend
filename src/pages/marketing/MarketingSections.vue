@@ -35,7 +35,7 @@
           <div class="mrk-grid mrk-grid-2">
             <div>
               <div v-if="section.subheading" class="mrk-eyebrow">{{ section.subheading }}</div>
-              <h2>{{ section.heading || 'Contact us' }}</h2>
+              <h2>{{ section.heading || $t('marketingCopy.contactUs') }}</h2>
               <p v-if="bodyText(section)" class="mrk-subheading">{{ bodyText(section) }}</p>
               <ul v-if="labels(section).length" class="mrk-list">
                 <li v-for="label in labels(section)" :key="label">{{ label }}</li>
@@ -65,7 +65,7 @@
                 <div v-if="contactSuccess" class="mrk-alert mrk-alert-success">{{ contactSuccess }}</div>
                 <div>
                   <button type="submit" class="mrk-btn mrk-btn-primary" :disabled="contactSubmitting">
-                    {{ contactSubmitting ? 'Sending...' : contactLabels.submit }}
+                    {{ contactSubmitting ? $t('marketingCopy.sending') : contactLabels.submit }}
                   </button>
                 </div>
               </form>
@@ -76,7 +76,7 @@
         <template v-else-if="section.section_type === 'integrations'">
           <div class="mrk-center" style="margin-bottom:24px;">
             <div v-if="section.subheading" class="mrk-eyebrow">{{ section.subheading }}</div>
-            <h2>{{ section.heading || 'Integrations' }}</h2>
+            <h2>{{ section.heading || $t('marketing.integrations') }}</h2>
             <p v-if="bodyText(section)" class="mrk-subheading" style="margin:0 auto;">{{ bodyText(section) }}</p>
           </div>
           <div v-if="groupedIntegrations.length">
@@ -87,25 +87,25 @@
                   <h3>{{ item.name }}</h3>
                   <p v-if="item.description">{{ item.description }}</p>
                   <div v-if="item.external_url" class="mrk-actions" style="margin-top:16px;">
-                    <a :href="item.external_url" target="_blank" rel="noopener" class="mrk-btn mrk-btn-secondary">Learn more</a>
+                    <a :href="item.external_url" target="_blank" rel="noopener" class="mrk-btn mrk-btn-secondary">{{ $t('marketingCopy.learnMore') }}</a>
                   </div>
                 </article>
               </div>
             </div>
           </div>
-          <div v-else class="mrk-empty">No integrations available.</div>
+          <div v-else class="mrk-empty">{{ $t('marketingCopy.noIntegrations') }}</div>
         </template>
 
         <template v-else-if="section.section_type === 'workflow'">
           <div v-if="section.subheading" class="mrk-eyebrow">{{ section.subheading }}</div>
-          <h2>{{ section.heading || 'Workflow' }}</h2>
+          <h2>{{ section.heading || $t('marketingCopy.workflow') }}</h2>
           <p v-if="bodyText(section)" class="mrk-subheading">{{ bodyText(section) }}</p>
           <div v-if="modules(section).length" class="mrk-grid mrk-grid-3" style="margin-top:24px;">
             <div v-for="mod in modules(section)" :key="mod" class="mrk-card">
               <h3>{{ mod }}</h3>
             </div>
           </div>
-          <div v-else class="mrk-empty" style="margin-top:24px;">No workflow modules available.</div>
+          <div v-else class="mrk-empty" style="margin-top:24px;">{{ $t('marketingCopy.noWorkflowModules') }}</div>
         </template>
 
         <template v-else-if="section.section_type === 'product'">
@@ -138,7 +138,7 @@
         <template v-else-if="section.section_type === 'cta'">
           <div class="mrk-card mrk-center" style="padding:40px;">
             <div v-if="section.subheading" class="mrk-eyebrow">{{ section.subheading }}</div>
-            <h2>{{ section.heading || 'Get started' }}</h2>
+            <h2>{{ section.heading || $t('marketingCopy.getStarted') }}</h2>
             <p v-if="bodyText(section)" class="mrk-subheading" style="margin:0 auto;">{{ bodyText(section) }}</p>
             <div v-if="ctas(section).length" class="mrk-actions" style="justify-content:center;">
               <a
@@ -155,7 +155,7 @@
         <template v-else-if="section.section_type === 'pricing'">
           <div class="mrk-center" style="margin-bottom:24px;">
             <div v-if="section.subheading" class="mrk-eyebrow">{{ section.subheading }}</div>
-            <h2>{{ section.heading || 'Pricing' }}</h2>
+            <h2>{{ section.heading || $t('marketing.pricing') }}</h2>
             <p v-if="bodyText(section)" class="mrk-subheading" style="margin:0 auto;">{{ bodyText(section) }}</p>
           </div>
           <PricingExplorer />
@@ -163,46 +163,46 @@
 
         <template v-else-if="section.section_type === 'mission'">
           <div class="mrk-card">
-            <div class="mrk-eyebrow">Mission</div>
-            <h2>{{ section.heading || 'Our mission' }}</h2>
-            <p class="mrk-subheading">{{ section.subheading || bodyText(section) || 'Mission statement unavailable.' }}</p>
+            <div class="mrk-eyebrow">{{ $t('marketingCopy.mission') }}</div>
+            <h2>{{ section.heading || $t('marketingCopy.ourMission') }}</h2>
+            <p class="mrk-subheading">{{ section.subheading || bodyText(section) || $t('marketingCopy.missionUnavailable') }}</p>
           </div>
         </template>
 
         <template v-else-if="section.section_type === 'pillars'">
           <div v-if="section.subheading" class="mrk-eyebrow">{{ section.subheading }}</div>
-          <h2>{{ section.heading || 'Pillars' }}</h2>
+          <h2>{{ section.heading || $t('marketingCopy.pillars') }}</h2>
           <div v-if="items(section).length" class="mrk-grid mrk-grid-3" style="margin-top:20px;">
             <div v-for="item in items(section)" :key="item" class="mrk-card">
               <h3>{{ item }}</h3>
             </div>
           </div>
-          <div v-else class="mrk-empty" style="margin-top:20px;">No pillars available.</div>
+          <div v-else class="mrk-empty" style="margin-top:20px;">{{ $t('marketingCopy.noPillars') }}</div>
         </template>
 
         <template v-else-if="section.section_type === 'stats'">
           <div v-if="section.subheading" class="mrk-eyebrow">{{ section.subheading }}</div>
-          <h2>{{ section.heading || 'Stats' }}</h2>
+          <h2>{{ section.heading || $t('marketingCopy.stats') }}</h2>
           <div v-if="stats(section).length" class="mrk-stats">
             <div v-for="stat in stats(section)" :key="stat.label + stat.value" class="mrk-stat">
               <div class="mrk-stat-value">{{ stat.value || '—' }}</div>
               <div class="mrk-stat-label">{{ stat.label }}</div>
             </div>
           </div>
-          <div v-else class="mrk-empty" style="margin-top:20px;">No stats available.</div>
+          <div v-else class="mrk-empty" style="margin-top:20px;">{{ $t('marketingCopy.noStats') }}</div>
         </template>
 
         <template v-else-if="section.section_type === 'global_presence'">
           <div class="mrk-card">
             <div v-if="section.subheading" class="mrk-eyebrow">{{ section.subheading }}</div>
-            <h2>{{ section.heading || 'Global presence' }}</h2>
-            <p class="mrk-subheading">{{ bodyText(section) || 'Global presence information unavailable.' }}</p>
+            <h2>{{ section.heading || $t('marketingCopy.globalPresence') }}</h2>
+            <p class="mrk-subheading">{{ bodyText(section) || $t('marketingCopy.globalPresenceUnavailable') }}</p>
           </div>
         </template>
 
         <template v-else-if="section.section_type === 'leadership'">
           <div v-if="section.subheading" class="mrk-eyebrow">{{ section.subheading }}</div>
-          <h2>{{ section.heading || 'Leadership' }}</h2>
+          <h2>{{ section.heading || $t('marketingCopy.leadership') }}</h2>
           <div v-if="teamList.length" class="mrk-grid mrk-team-grid" style="margin-top:20px;">
             <article v-for="member in teamList" :key="member.id || member.name" class="mrk-card">
               <h3>{{ member.name }}</h3>
@@ -216,14 +216,14 @@
               <p class="mrk-pill">{{ member.role }}</p>
             </article>
           </div>
-          <div v-else class="mrk-empty" style="margin-top:20px;">No team members available.</div>
+          <div v-else class="mrk-empty" style="margin-top:20px;">{{ $t('marketingCopy.noTeamMembers') }}</div>
         </template>
 
         <template v-else-if="section.section_type === 'booking'"></template>
 
         <template v-else>
           <div v-if="section.subheading" class="mrk-eyebrow">{{ section.subheading }}</div>
-          <h2>{{ section.heading || page?.title || 'Section' }}</h2>
+          <h2>{{ section.heading || page?.title || $t('marketingCopy.section') }}</h2>
           <p v-if="bodyText(section)" class="mrk-subheading">{{ bodyText(section) }}</p>
         </template>
       </div>
@@ -233,8 +233,12 @@
 
 <script setup>
 import { computed, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { publicMarketingApi } from '@/api'
+import { translateMarketing } from '@/composables/useMarketingContent'
 import PricingExplorer from './PricingExplorer.vue'
+
+const { t } = useI18n()
 
 const props = defineProps({
   page: { type: Object, default: null },
@@ -254,7 +258,7 @@ const activeSections = computed(() =>
 const groupedIntegrations = computed(() => {
   const groups = new Map()
   for (const item of props.integrations || []) {
-    const key = item.category || 'Other'
+    const key = item.category || t('marketingCopy.other')
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key).push(item)
   }
@@ -267,11 +271,11 @@ const contactLabels = computed(() => {
   const section = (props.page?.sections || []).find((item) => item.section_type === 'contact')
   const values = labels(section)
   return {
-    name: values[0] || 'Name',
-    email: values[1] || 'Email',
-    businessName: values[2] || 'Business name',
-    businessAddress: values[3] || 'Business address',
-    submit: values[4] || 'Send message',
+    name: values[0] || t('marketingContact.name'),
+    email: values[1] || t('marketingContact.email'),
+    businessName: values[2] || t('marketingContact.businessName'),
+    businessAddress: values[3] || t('marketingContact.businessAddress'),
+    submit: values[4] || t('marketingContact.submit'),
   }
 })
 
@@ -305,7 +309,7 @@ function ctas(section) {
 }
 
 function ctaPrimary(cta) {
-  return /demo|start|contact|book/i.test(cta.label || '')
+  return /demo|start|contact|book|onyesho|anza|wasiliana|uhifadhi/i.test(cta.label || '')
 }
 
 function labels(section) {
@@ -353,7 +357,7 @@ async function submitContact() {
   contactSubmitting.value = true
   try {
     const res = await publicMarketingApi.contactSubmission({ ...contact })
-    contactSuccess.value = res.data?.message || 'Message sent.'
+    contactSuccess.value = translateMarketing(res.data?.message) || t('marketingCopy.messageSent')
     contact.name = ''
     contact.email = ''
     contact.business_name = ''
@@ -362,9 +366,9 @@ async function submitContact() {
     const data = err?.response?.data
     if (data?.errors) {
       const first = Object.values(data.errors).flat().find(Boolean)
-      contactError.value = first || data.message || 'Unable to send message.'
+      contactError.value = translateMarketing(first || data.message) || t('marketingCopy.unableToSend')
     } else {
-      contactError.value = data?.message || 'Unable to send message.'
+      contactError.value = translateMarketing(data?.message) || t('marketingCopy.unableToSend')
     }
   } finally {
     contactSubmitting.value = false

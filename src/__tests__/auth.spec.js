@@ -353,6 +353,21 @@ describe('auth store', () => {
       expect(store.canAccess({ key: 'staff', roles: ['hotel_admin', 'manager'], permission: null })).toBe(true)
     })
 
+    it('gates owner payment methods on the viewed hotel feature list', () => {
+      sessionStorage.setItem('owner_viewing_hotel_features', JSON.stringify(['reservations']))
+      const store = useAuthStore()
+      store.user = { user_role: 'owner' }
+      const module = { key: 'owner-payment-methods', roles: ['hotel_admin'], permission: null, feature: 'payment_methods' }
+
+      expect(store.canAccess(module)).toBe(false)
+
+      setActivePinia(createPinia())
+      sessionStorage.setItem('owner_viewing_hotel_features', JSON.stringify(['payment_methods']))
+      const enabledStore = useAuthStore()
+      enabledStore.user = { user_role: 'owner' }
+      expect(enabledStore.canAccess(module)).toBe(true)
+    })
+
     it('returns false when no user is set', () => {
       const store = useAuthStore()
       expect(store.canAccess({ key: 'dashboard', roles: [], permission: null })).toBe(false)

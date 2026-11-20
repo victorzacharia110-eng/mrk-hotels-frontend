@@ -484,7 +484,7 @@ const featureGroups = computed(() => {
   }
   const grouping = {
     reservations: coreOps, rooms: coreOps, guests: coreOps,
-    payments: coreOps, booking_requisitions: coreOps, staff: coreOps,
+    payments: coreOps, payment_methods: coreOps, booking_requisitions: coreOps, staff: coreOps,
     profile: coreOps, reports: coreOps, overview: coreOps,
     orders: fb, menu: fb,
     housekeeping: ops, laundry: ops, fun_games: ops,

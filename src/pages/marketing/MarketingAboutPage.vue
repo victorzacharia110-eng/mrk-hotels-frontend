@@ -5,7 +5,7 @@
       :page="page"
       :team-members="bootstrap?.team_members || []"
     />
-    <div v-else class="mrk-section"><div class="mrk-container"><div class="mrk-empty">About content is unavailable.</div></div></div>
+    <div v-else class="mrk-section"><div class="mrk-container"><div class="mrk-empty">{{ $t('marketingCopy.aboutUnavailable') }}</div></div></div>
   </div>
 </template>
 

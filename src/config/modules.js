@@ -148,13 +148,17 @@ export const MODULES = [
   { key: 'store-settings', to: '/app/store/settings', icon: 'fas fa-briefcase', labelKey: 'nav.backOffice', roles: ['hotel_admin', 'manager'] },
 ]
 
+export const OWNER_MODULES = [
+  { key: 'owner-payment-methods', to: '/owner/payment-methods', icon: 'fas fa-credit-card', labelKey: 'hotelSettings.paymentSection', roles: ['hotel_admin'], feature: 'payment_methods' },
+]
+
 /**
  * Looks up a module config by its key.
  * @param {string} key - Module key, e.g. 'reservations'.
  * @returns {object|undefined} The matching module config.
  */
 export function moduleByKey(key) {
-  return MODULES.find((m) => m.key === key)
+  return [...MODULES, ...OWNER_MODULES].find((m) => m.key === key)
 }
 
 /**
@@ -163,5 +167,5 @@ export function moduleByKey(key) {
  * @returns {object|undefined} The matching module config.
  */
 export function moduleByPath(path) {
-  return MODULES.find((m) => m.to === path)
+  return [...MODULES, ...OWNER_MODULES].find((m) => m.to === path)
 }
