@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import i18n from '@/locales/i18n'
+import { useAuthStore } from '@/stores/auth'
 
 const show = vi.fn()
 const update = vi.fn()
@@ -129,5 +130,22 @@ describe('HotelSettingsPage', () => {
 
     expect(removeLogo).toHaveBeenCalled()
     expect(wrapper.vm.logoUrl).toBe('')
+  })
+
+  it('uses live hotel features instead of stale owner session features', async () => {
+    sessionStorage.setItem('owner_viewing_hotel_features', JSON.stringify(['reservations']))
+    const authStore = useAuthStore(pinia)
+    authStore.user = { user_role: 'owner', tenant: { features: ['reservations'] }, permissions: [] }
+    show.mockResolvedValue({ data: { hotel: { ...HOTEL, features: ['payment_methods'] } } })
+
+    const wrapper = mount(HotelSettingsPage, {
+      props: { paymentMethodsOnly: true },
+      global: { plugins: [pinia, i18n] },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('Payment methods are disabled')
+    expect(wrapper.text()).toContain('Payment Providers & Accounts')
+    sessionStorage.removeItem('owner_viewing_hotel_features')
   })
 })

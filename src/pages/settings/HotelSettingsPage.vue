@@ -250,8 +250,9 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 
 const canEdit = computed(() => authStore.can(80))
+const tenantFeatures = ref(null)
 const paymentMethodsEnabled = computed(() => {
-  const features = authStore.enabledFeatures
+  const features = props.paymentMethodsOnly ? tenantFeatures.value : authStore.enabledFeatures
   return !features || features.includes('payment_methods')
 })
 
@@ -558,8 +559,11 @@ async function load() {
   error.value = ''
   try {
     const res = await hotelSettingsApi.show()
-    hydrate(res.data?.hotel || res.data?.data || {})
+    const hotel = res.data?.hotel || res.data?.data || {}
+    tenantFeatures.value = Array.isArray(hotel.features) ? hotel.features : null
+    hydrate(hotel)
   } catch (err) {
+    if (props.paymentMethodsOnly && err?.response?.status === 403) tenantFeatures.value = []
     error.value = flattenError(err)
   } finally {
     loading.value = false
