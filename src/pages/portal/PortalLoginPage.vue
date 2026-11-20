@@ -69,7 +69,7 @@ async function handleLogin() {
   error.value = null
   submitting.value = true
   try {
-    await authStore.login({ email: email.value, password: password.value })
+    await authStore.login({ email: email.value, password: password.value, portal_login: true })
     const role = authStore.user?.user_role
     if (role === 'superadmin') {
       router.push('/superadmin')
