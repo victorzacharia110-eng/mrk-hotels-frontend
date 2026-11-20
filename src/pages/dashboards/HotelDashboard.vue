@@ -2916,7 +2916,19 @@ const visibleReservations = computed(() => {
  *  stays disabled after the guest's e-mail arrives via amend-stay). */
 function toPanelBar(r, colorClass = '') {
   const { arrival, departure } = reservationDates(r)
-  const balance = Number(r.balance_due ?? r.balance ?? 0)
+  // A group is one party at the front desk: net its rooms into a single
+  // outstanding figure. A deposit on the booker's room must clear what the
+  // companion rooms still owe instead of showing each room as a separate debt.
+  const partyRooms = Array.isArray(r.group?.rooms)
+    ? r.group.rooms.filter((room) => !room.released_at && room.status !== 'cancelled' && room.status !== 'no_show')
+    : []
+  const partyBalance = partyRooms.reduce(
+    (sum, room) => sum + Number(room.balance_due ?? room.outstanding_balance ?? 0),
+    0,
+  )
+  const balance = partyRooms.length > 1
+    ? Math.max(0, Number.isFinite(partyBalance) ? partyBalance : 0)
+    : Number(r.balance_due ?? r.balance ?? 0)
   const paymentPending = balance > 0
   if (!colorClass && departure) {
     colorClass =

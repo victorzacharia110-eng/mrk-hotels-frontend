@@ -80,4 +80,10 @@ describe('stay-view task and channel state', () => {
     expect(reservations).toMatch(/detail\.external_ref/)
     expect(reservations).toMatch(/channelReference/)
   })
+
+  it('nets a group party into one outstanding balance on the stay bars', () => {
+    expect(dashboard).toMatch(/const partyRooms = Array\.isArray\(r\.group\?\.rooms\)/)
+    expect(dashboard).toMatch(/const partyBalance = partyRooms\.reduce/)
+    expect(dashboard).toMatch(/partyRooms\.length > 1/)
+  })
 })

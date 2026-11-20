@@ -313,6 +313,7 @@ describe('NightAuditPage — layout, auto-dismiss and consequences', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     vi.useFakeTimers({ shouldAdvanceTime: true })
+    report.mockResolvedValue({ data: { report: REPORT_OPEN, closed: false, due_outs: [] } })
     history.mockResolvedValue({ data: { day_closes: [] } })
     close.mockResolvedValue({ data: {} })
     checkOut.mockResolvedValue({ data: {} })
@@ -458,6 +459,51 @@ describe('NightAuditPage — layout, auto-dismiss and consequences', () => {
     vi.advanceTimersByTime(1500)
     await flushPromises()
     expect(document.querySelector('.alert-modal')).toBeNull()
+  })
+
+  it('shows one group due-out with the party balance and checks out every room', async () => {
+    const groupId = 'G-1'
+    const departure = shift(todayIso(), -1)
+    const room = (id, number, balance, primary) => ({
+      reservation_id: id,
+      guest_name: 'Asha Juma',
+      room_number: number,
+      departure,
+      arrival: shift(departure, -1),
+      balance,
+      overdue: true,
+      group_id: groupId,
+      group_reference: 'BK-GROUP-1',
+      is_group: true,
+      is_primary: primary,
+      group_balance: 50000,
+      reservation_ids: ['R-1', 'R-2'],
+      due_room_numbers: ['101', '102'],
+      room_count: 2,
+    })
+    open(false, {
+      due_outs: [room('R-1', '101', 0, true), room('R-2', '102', 50000, false)],
+    })
+
+    const wrapper = await mountPage()
+    await wrapper.find('input[type="date"]').setValue(departure)
+    await flushPromises()
+    await closeButton(wrapper).trigger('click')
+    await flushPromises()
+
+    const items = document.querySelectorAll('.na-issue-item')
+    expect(items.length).toBe(1)
+    expect(items[0].textContent).toContain('101, 102')
+    expect(items[0].textContent).toContain('50,000')
+    expect(items[0].textContent).toMatch(/Group · 2 rooms/)
+
+    document.querySelector('.na-issue-item .btn-primary')
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushPromises()
+
+    expect(checkOut).toHaveBeenCalledTimes(2)
+    expect(checkOut).toHaveBeenCalledWith('R-1', {})
+    expect(checkOut).toHaveBeenCalledWith('R-2', {})
   })
 
   it('shows the close success inside the dialog for five seconds', async () => {

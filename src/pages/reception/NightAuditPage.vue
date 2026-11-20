@@ -189,19 +189,24 @@
           </div>
           <p class="na-intro">{{ $t('nightAudit.closePrompt') }}</p>
           <p v-if="issueError" class="alert alert-error" style="margin:0 0 12px;">{{ issueError }}</p>
-          <div v-if="dueOuts.length" class="na-issue-block">
+          <div v-if="displayDueOuts.length" class="na-issue-block">
             <h4><i class="fas fa-hourglass-half" style="color:#d97706;"></i> {{ $t('nightAudit.dueOuts') }}</h4>
-            <div v-for="guest in dueOuts" :key="guest.reservation_id" class="na-issue-item">
+            <div v-for="guest in displayDueOuts" :key="guest.group_id || guest.reservation_id" class="na-issue-item">
               <div class="na-issue-main">
-                <div><strong>{{ guest.guest_name }}</strong> · {{ guest.room_number || '—' }} · {{
-                  $t('nightAudit.departure') }} {{ guest.departure }}</div>
+                <div>
+                  <strong>{{ guest.guest_name }}</strong> · {{ guest.room_number || '—' }}
+                  <span v-if="guest.isGroup" class="na-group-badge">{{
+                    $t('reservations.groupBadge', { count: guest.room_count }) }}</span>
+                  · {{ $t('nightAudit.departure') }} {{ guest.departure }}
+                </div>
                 <div>{{ $t('nightAudit.dueAmount') }}: {{ fmtMoney(guest.balance) }}</div>
               </div>
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button type="button" class="btn btn-sm btn-primary" :disabled="checkingOutId === guest.reservation_id"
+                <button type="button" class="btn btn-sm btn-primary"
+                  :disabled="checkingOutId === (guest.group_id || guest.reservation_id)"
                   @click="checkOutDueOut(guest)">
                   <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
-                  {{ checkingOutId === guest.reservation_id ? $t('common.saving') : ($t('nightAudit.checkOut') ||
+                  {{ checkingOutId === (guest.group_id || guest.reservation_id) ? $t('common.saving') : ($t('nightAudit.checkOut') ||
                     'Checkout') }}
                 </button>
                 <button type="button" class="btn btn-sm btn-secondary" @click="goToStayviewForGuest(guest)">{{
@@ -465,6 +470,76 @@ const oldestMissedDay = computed(() => missedDays.value[missedDays.value.length 
 const canClose = computed(() => Boolean(selectedDate.value) && !report.value?.closed && dateHasPassed.value)
 const report = ref(null)
 const dueOuts = ref([])
+
+/**
+ * The audit keeps one row per room so each reservation can be followed up, but
+ * a group is one party to the desk. Collapse its rooms into one row and show
+ * the party's netted outstanding balance; a single-room stay is unchanged.
+ */
+const displayDueOuts = computed(() => {
+  const groups = new Map()
+  const rows = []
+
+  for (const guest of dueOuts.value || []) {
+    const groupId = guest.group_id
+    if (!groupId || !guest.is_group) {
+      rows.push({
+        ...guest,
+        isGroup: false,
+        reservation_ids: guest.reservation_ids?.length ? guest.reservation_ids : [guest.reservation_id],
+        room_number: guest.room_number || guest.due_room_numbers?.join(', ') || '—',
+        room_count: guest.room_count || 1,
+      })
+      continue
+    }
+
+    let party = groups.get(groupId)
+    if (!party) {
+      party = {
+        ...guest,
+        isGroup: true,
+        reservation_ids: [],
+        room_number: '',
+        room_count: 0,
+        balance: 0,
+        overdue: false,
+      }
+      groups.set(groupId, party)
+      rows.push(party)
+    }
+
+    const ids = guest.reservation_ids?.length ? guest.reservation_ids : [guest.reservation_id]
+    for (const id of ids) {
+      if (!party.reservation_ids.includes(id)) party.reservation_ids.push(id)
+    }
+    const rooms = guest.due_room_numbers?.length
+      ? guest.due_room_numbers
+      : [guest.room_number].filter(Boolean)
+    for (const room of rooms) {
+      if (!party.room_number.includes(room)) party.room_number += `${party.room_number ? ', ' : ''}${room}`
+    }
+    party.room_count = party.reservation_ids.length
+    party.arrival = !party.arrival || (guest.arrival && guest.arrival < party.arrival) ? guest.arrival || party.arrival : party.arrival
+    party.departure = !party.departure || (guest.departure && guest.departure < party.departure)
+      ? guest.departure || party.departure
+      : party.departure
+    party.overdue = party.overdue || Boolean(guest.overdue)
+    if (guest.is_primary) {
+      party.reservation_id = guest.reservation_id
+      party.guest_name = guest.guest_name
+      party.group_reference = guest.group_reference || party.group_reference
+    }
+    const groupTotal = Number(guest.group_balance)
+    if (Number.isFinite(groupTotal)) {
+      party.balance = Math.max(party.balance, Math.max(0, groupTotal))
+    } else {
+      party.balance += Number(guest.balance || 0)
+    }
+  }
+
+  return rows
+})
+
 const history = ref([])
 const staleArrivals = ref({ count: 0, items: [] })
 const loading = ref(false)
@@ -482,7 +557,7 @@ const ISSUE_SUCCESS_MS = 5000
 const BUSINESS_DATE_POLL_MS = 30000
 let issueSuccessTimer = null
 let businessDatePollTimer = null
-const openIssueCount = computed(() => dueOuts.value.length + Number(staleArrivals.value.count || 0) + blockerArrivals.value.length)
+const openIssueCount = computed(() => displayDueOuts.value.length + Number(staleArrivals.value.count || 0) + blockerArrivals.value.length)
 const resolvedIssueCount = computed(() =>
   Math.max(0, issueTotal.value - openIssueCount.value),
 )
@@ -599,8 +674,8 @@ function openCloseConfirm() {
   closeSuccessTitle.value = ''
   closeSuccessBody.value = ''
   // If there are unfinished businesses/issues, show issues modal with actions
-  if (dueOuts.value.length || staleArrivals.value.count || blockerArrivals.value.length) {
-    issueTotal.value = (dueOuts.value.length + Number(staleArrivals.value.count || 0) + blockerArrivals.value.length)
+  if (displayDueOuts.value.length || staleArrivals.value.count || blockerArrivals.value.length) {
+    issueTotal.value = (displayDueOuts.value.length + Number(staleArrivals.value.count || 0) + blockerArrivals.value.length)
     issueSuccess.value = false
     clearIssueSuccessTimer()
     showIssues.value = true
@@ -657,10 +732,16 @@ async function confirmCloseDay() {
  */
 async function checkOutDueOut(guest) {
   if (!guest?.reservation_id || checkingOutId.value) return
-  checkingOutId.value = guest.reservation_id
+  const key = guest.group_id || guest.reservation_id
+  const ids = guest.reservation_ids?.length ? guest.reservation_ids : [guest.reservation_id]
+  checkingOutId.value = key
   issueError.value = ''
   try {
-    await reservationApi.checkOut(guest.reservation_id, {})
+    // A party leaves together: clearing only the booker's room leaves the
+    // other group folios checked in and still blocking the audit close.
+    for (const id of ids) {
+      await reservationApi.checkOut(id, {})
+    }
     await load()
   } catch (err) {
     issueError.value = err.response?.data?.message || t('common.actionFailed')
@@ -1270,6 +1351,17 @@ onMounted(async () => {
   flex: 1 1 220px;
 }
 
+.na-group-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #5b21b6;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .na-warn-list {
   list-style: none;
   margin: 0;
@@ -1358,6 +1450,11 @@ html[data-theme='dark'] .na-issue-item {
 
 html[data-theme='dark'] .na-issue-main {
   color: #e9edef;
+}
+
+html[data-theme='dark'] .na-group-badge {
+  background: #3b2f63;
+  color: #ddd6fe;
 }
 
 html[data-theme='dark'] .na-warn {
