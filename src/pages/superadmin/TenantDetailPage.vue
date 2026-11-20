@@ -521,7 +521,6 @@ async function applyFeatureSelection(next, previous = [...selectedFeatures.value
   featuresSaving.value = true
   try {
     const res = await tenantApi.updateSubscription(route.params.id, {
-      ...subForm.value,
       features: selectedFeatures.value,
     })
     notifySuccess(res, t('superadmin.featureUpdated'))

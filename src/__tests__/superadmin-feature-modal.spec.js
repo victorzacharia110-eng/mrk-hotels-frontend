@@ -86,7 +86,7 @@ describe('superadmin feature feedback modal', () => {
     await flushPromises()
 
     expect(updateSubscription).toHaveBeenCalled()
-    expect(updateSubscription.mock.calls[0][1].features).not.toContain('reservations')
+    expect(updateSubscription.mock.calls[0][1]).toEqual({ features: ['payment_methods'] })
     expect(state.show).toBe(true)
     expect(state.type).toBe('success')
     expect(state.message).toBe('Saved')
