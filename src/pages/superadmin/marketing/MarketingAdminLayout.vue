@@ -22,8 +22,9 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
+const isOwner = computed(() => route.path.startsWith('/owner'))
 const basePath = computed(() => (
-  route.path.startsWith('/owner') ? '/owner/marketing/content' : '/superadmin/marketing'
+  isOwner.value ? '/owner/marketing/content' : '/superadmin/marketing'
 ))
 const tabs = computed(() => [
   { path: 'pages', label: 'Pages' },
@@ -35,7 +36,7 @@ const tabs = computed(() => [
   { path: 'pricing-features', label: 'Pricing Features' },
   { path: 'pricing-plans', label: 'Pricing Plans' },
   { path: 'media', label: 'Media' },
-  { path: 'settings', label: 'Settings' },
+  ...(isOwner.value ? [] : [{ path: 'settings', label: 'Settings' }]),
   { path: 'contact-submissions', label: 'Contact Submissions' },
 ].map((tab) => ({ ...tab, to: `${basePath.value}/${tab.path}` })))
 </script>

@@ -157,7 +157,7 @@ const hotelChildren = [
   { path: 'import', name: 'hotel-import', component: () => import('@/pages/imports/ImportPage.vue'), meta: { module: 'imports' } },
 ]
 
-const marketingCmsChildren = (namePrefix) => [
+const marketingCmsChildren = (namePrefix, includeSettings = true) => [
   { path: 'pages', name: `${namePrefix}-pages`, component: () => import('@/pages/superadmin/marketing/MarketingPagesPage.vue') },
   { path: 'sections', name: `${namePrefix}-sections`, component: () => import('@/pages/superadmin/marketing/MarketingSectionsPage.vue') },
   { path: 'integrations', name: `${namePrefix}-integrations`, component: () => import('@/pages/superadmin/marketing/MarketingIntegrationsPage.vue') },
@@ -167,7 +167,7 @@ const marketingCmsChildren = (namePrefix) => [
   { path: 'pricing-features', name: `${namePrefix}-pricing-features`, component: () => import('@/pages/superadmin/marketing/MarketingPricingFeaturesPage.vue') },
   { path: 'pricing-plans', name: `${namePrefix}-pricing-plans`, component: () => import('@/pages/superadmin/marketing/MarketingPricingPlansPage.vue') },
   { path: 'media', name: `${namePrefix}-media`, component: () => import('@/pages/superadmin/marketing/MarketingMediaPage.vue') },
-  { path: 'settings', name: `${namePrefix}-settings`, component: () => import('@/pages/superadmin/marketing/MarketingSettingsPage.vue') },
+  ...(includeSettings ? [{ path: 'settings', name: `${namePrefix}-settings`, component: () => import('@/pages/superadmin/marketing/MarketingSettingsPage.vue') }] : []),
   { path: 'contact-submissions', name: `${namePrefix}-contact-submissions`, component: () => import('@/pages/superadmin/marketing/MarketingContactSubmissionsPage.vue') },
 ]
 
@@ -764,7 +764,7 @@ const routes = [
         path: 'marketing/content',
         component: () => import('@/pages/superadmin/marketing/MarketingAdminLayout.vue'),
         redirect: '/owner/marketing/content/pages',
-        children: marketingCmsChildren('owner-marketing'),
+        children: marketingCmsChildren('owner-marketing', false),
       },
       // The owner's own account: personal info and password.
       {

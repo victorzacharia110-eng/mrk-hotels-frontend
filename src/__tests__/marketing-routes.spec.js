@@ -49,6 +49,6 @@ describe('marketing routes', () => {
     const byPath = (p) => router.resolve(p).matched.map((m) => m.name || m.path)
     expect(byPath('/owner/marketing/content/pages').join()).toContain('owner-marketing-pages')
     expect(byPath('/owner/marketing/content/pricing-plans').join()).toContain('owner-marketing-pricing-plans')
-    expect(byPath('/owner/marketing/content/settings').join()).toContain('owner-marketing-settings')
+    expect(findByName('owner-marketing-settings')).toBeNull()
   })
 })
