@@ -116,7 +116,7 @@ describe('cashier summary: void selected only', () => {
 
   it('keeps every action in the toolbar above the table', () => {
     expect(cashier).toMatch(/class="table-actions"/)
-    expect(cashier).toMatch(/@click="actOnSingle\(settle\)"/)
+    expect(cashier).toMatch(/@click="openSettleSelected"/)
     expect(cashier).toMatch(/@click="actOnSingle\(freeze\)"/)
     expect(cashier).toMatch(/@click="actOnSingle\(reprint\)"/)
     expect(cashier).toMatch(/@click="actOnSingle\(reprintKot\)"/)

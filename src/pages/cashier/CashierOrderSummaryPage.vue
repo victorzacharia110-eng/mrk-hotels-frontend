@@ -48,9 +48,9 @@
         void-selected works on every ticked order this role may void.
       -->
       <div class="table-actions">
-        <button type="button" class="sm-btn sm ghost" :disabled="!canSettleSelected"
-          :title="$t('cashier.summary.settle')" @click="actOnSingle(settle)">
-          <i class="fas fa-money-bill" aria-hidden="true"></i> {{ $t('cashier.summary.settle') }}
+        <button type="button" class="sm-btn sm ghost" :disabled="!selectedRunningOrders.length"
+          :title="$t('cashier.summary.settle')" @click="openSettleSelected">
+          <i class="fas fa-money-bill" aria-hidden="true"></i> {{ $t('cashier.summary.settle') }}<template v-if="selectedRunningOrders.length > 1"> ({{ selectedRunningOrders.length }})</template>
         </button>
         <button type="button" class="sm-btn sm" :disabled="!canFreezeSelected"
           :title="$t('storeManager.common.freeze')" @click="actOnSingle(freeze)">
@@ -308,12 +308,20 @@
 
         <p v-if="payError" class="alert alert-error">{{ payError }}</p>
 
-        <p v-if="payingOrder" class="pay-order-line">
+        <p v-if="payingOrders.length === 1" class="pay-order-line">
           <strong>{{ payingOrder.order_number }}</strong>
           <span> — {{ payingOrder.table_number || payingOrder.room_number || '—' }}</span>
         </p>
+        <template v-else-if="payingOrders.length > 1">
+          <p class="pay-order-line">
+            {{ $t('cashier.summary.settleSelectedSummary', { count: payingOrders.length }) }}
+          </p>
+          <p class="void-order-list">
+            <span v-for="order in payingOrders" :key="order.order_id" class="void-order-chip">{{ order.order_number }}</span>
+          </p>
+        </template>
         <p class="pay-amount-label">{{ $t('cashier.summary.settleAmount') }}</p>
-        <p class="pay-amount">{{ money(payingOrder?.total_amount ?? 0) }}</p>
+        <p class="pay-amount">{{ money(payTotal) }}</p>
 
         <form @submit.prevent="confirmPay">
           <!-- Collect cash/mobile/bank, or post the ticket to an in-house room. -->
@@ -518,7 +526,9 @@ const supported = computed(() => printerSupported() && !!printStore.resolveTillP
 const connecting = ref(false)
 
 const payOpen = ref(false)
-const payingOrder = ref(null)
+const payingOrders = ref([])
+const payingOrder = computed(() => payingOrders.value[0] || null)
+const payTotal = computed(() => payingOrders.value.reduce((sum, order) => sum + Number(order.total_amount || 0), 0))
 const payMethod = ref('cash')
 const payProvider = ref('')
 const payRef = ref('')
@@ -771,15 +781,27 @@ async function freeze(order) {
   await load()
 }
 
-/** Opens the payment modal for a running ticket. */
-function settle(order) {
+function resetPayForm() {
   payError.value = ''
-  payingOrder.value = order
   payMethod.value = 'cash'
   payProvider.value = ''
   payRef.value = ''
   settleMode.value = 'collect'
   postRoom.value = ''
+  selectedCreditAccountId.value = ''
+}
+
+/** Opens the payment modal for a running ticket. */
+function settle(order) {
+  resetPayForm()
+  payingOrders.value = [order]
+  payOpen.value = true
+}
+
+function openSettleSelected() {
+  if (!selectedRunningOrders.value.length) return
+  resetPayForm()
+  payingOrders.value = [...selectedRunningOrders.value]
   payOpen.value = true
 }
 
@@ -916,14 +938,15 @@ const selectedVoidTotal = computed(() =>
 /* ---------------- Checkbox-driven table actions ----------------
  * The table carries no action column: every button sits in the action bar
  * above it and runs on the ticked orders. Single-ticket actions (view,
- * settle, freeze/unfreeze, recall, reprints) arm only when exactly one
- * listed order is ticked; void-selected takes every ticked, voidable order. */
+ * freeze/unfreeze, recall, reprints) arm only when exactly one listed order
+ * is ticked; settle and void-selected work on every ticked running/voidable
+ * order. */
 const pickedOrders = computed(() =>
   filteredOrders.value.filter((order) => selected.value.includes(order.order_id)),
 )
+const selectedRunningOrders = computed(() => pickedOrders.value.filter(isRunning))
 const singleSelected = computed(() => (pickedOrders.value.length === 1 ? pickedOrders.value[0] : null))
-const canSettleSelected = computed(() => !!singleSelected.value && isRunning(singleSelected.value))
-const canFreezeSelected = computed(() => canSettleSelected.value && !singleSelected.value.is_frozen)
+const canFreezeSelected = computed(() => !!singleSelected.value && isRunning(singleSelected.value) && !singleSelected.value.is_frozen)
 /** Runs a single-ticket action from the action bar on the one ticked order. */
 function actOnSingle(action) {
   if (singleSelected.value) action(singleSelected.value)
@@ -1080,91 +1103,140 @@ async function loadCreditAccounts() {
 function closePay() {
   if (savingPay.value) return
   payOpen.value = false
-  payingOrder.value = null
+  payingOrders.value = []
+}
+
+async function finalizeBatchSettle(targets, done, failed, settledOrders, successMessage) {
+  savingPay.value = false
+  if (done) {
+    const settledIds = new Set(settledOrders.map((o) => o.order_id))
+    selected.value = selected.value.filter((id) => !settledIds.has(id))
+  }
+  if (failed) {
+    payOpen.value = false
+    payingOrders.value = []
+    postRoom.value = ''
+    await load()
+    toast(t('cashier.summary.settlePartial', { done, total: targets.length, failed }), 'error')
+    return
+  }
+  payOpen.value = false
+  payingOrders.value = []
+  postRoom.value = ''
+  if (printStore.printOnSettle) {
+    for (const settled of settledOrders) await doPrint(settled, 'receipt')
+  }
+  await load()
+  toast(successMessage, 'success')
 }
 
 /**
- * Settles the ticket: either posts it to an in-house room folio, or collects
- * the payment with the chosen method (cash, mobile money, bank, ...), then
- * prints the paid bill so the guest walks away with a receipt.
+ * Settles tickets: either posts them to an in-house room folio, or collects
+ * payment with the chosen method, then prints receipts for settled tickets.
  */
 async function confirmPay() {
-  if (!payingOrder.value) return
+  if (!payingOrders.value.length) return
   if (settleMode.value === 'room') return confirmRoomPost()
   if (settleMode.value === 'creditor' || settleMode.value === 'nocharge') return confirmAccountSettle()
   payError.value = ''
   savingPay.value = true
-  try {
-    const { data } = await orderApi.pay(payingOrder.value.order_id, {
-      method: payMethod.value,
-      provider: payProvider.value || null,
-      transaction_reference: payRef.value || null,
-    })
-    const settled = data.order
-    settled._payment = data.payment
-    if (!settled.items?.length) {
-      const { data: detail } = await orderApi.show(settled.order_id)
-      settled.items = detail.order.items
+  const targets = [...payingOrders.value]
+  let done = 0
+  let failed = 0
+  const settledOrders = []
+  for (const order of targets) {
+    try {
+      const { data } = await orderApi.pay(order.order_id, {
+        method: payMethod.value,
+        provider: payProvider.value || null,
+        transaction_reference: payRef.value || null,
+      })
+      const settled = data.order
+      settled._payment = data.payment
+      if (!settled.items?.length) {
+        const { data: detail } = await orderApi.show(settled.order_id)
+        settled.items = detail.order.items
+      }
+      settledOrders.push(settled)
+      done += 1
+    } catch {
+      failed += 1
     }
-    payOpen.value = false
-    payingOrder.value = null
-    if (printStore.printOnSettle) doPrint(settled, 'receipt')
-    await load()
-  } catch (err) {
-    payError.value = err.response?.data?.message || t('common.actionFailed')
-  } finally {
-    savingPay.value = false
   }
+  await finalizeBatchSettle(
+    targets,
+    done,
+    failed,
+    settledOrders,
+    t('cashier.summary.settleDone', { count: done }),
+  )
 }
 
 async function confirmAccountSettle() {
-  if (!payingOrder.value || !selectedCreditAccountId.value) return
+  if (!payingOrders.value.length || !selectedCreditAccountId.value) return
   payError.value = ''
   savingPay.value = true
-  try {
-    const { data } = await orderApi.settleCreditAccount(payingOrder.value.order_id, {
-      credit_account_id: selectedCreditAccountId.value,
-    })
-    const settled = data.order
-    if (!settled.items?.length) {
-      const { data: detail } = await orderApi.show(settled.order_id)
-      settled.items = detail.order.items
+  const targets = [...payingOrders.value]
+  let done = 0
+  let failed = 0
+  const settledOrders = []
+  for (const order of targets) {
+    try {
+      const { data } = await orderApi.settleCreditAccount(order.order_id, {
+        credit_account_id: selectedCreditAccountId.value,
+      })
+      const settled = data.order
+      if (!settled.items?.length) {
+        const { data: detail } = await orderApi.show(settled.order_id)
+        settled.items = detail.order.items
+      }
+      settledOrders.push(settled)
+      done += 1
+    } catch {
+      failed += 1
     }
-    payOpen.value = false
-    payingOrder.value = null
-    if (printStore.printOnSettle) doPrint(settled, 'receipt')
-    await load()
-  } catch (err) {
-    payError.value = err.response?.data?.message || t('common.actionFailed')
-  } finally {
-    savingPay.value = false
   }
+  await finalizeBatchSettle(
+    targets,
+    done,
+    failed,
+    settledOrders,
+    t('cashier.summary.settleDone', { count: done }),
+  )
 }
 
-/** Posts the ticket to the chosen in-house room; the charge lands on the folio. */
+/** Posts tickets to the chosen in-house room; the charges land on the folio. */
 async function confirmRoomPost() {
+  if (!payingOrders.value.length || !postRoom.value) return
   payError.value = ''
   savingPay.value = true
-  try {
-    const { data } = await orderApi.billToRoom(payingOrder.value.order_id, {
-      room_number: postRoom.value,
-    })
-    const billed = data.order
-    if (!billed.items?.length) {
-      const { data: detail } = await orderApi.show(billed.order_id)
-      billed.items = detail.order.items
+  const targets = [...payingOrders.value]
+  let done = 0
+  let failed = 0
+  const settledOrders = []
+  for (const order of targets) {
+    try {
+      const { data } = await orderApi.billToRoom(order.order_id, {
+        room_number: postRoom.value,
+      })
+      const billed = data.order
+      if (!billed.items?.length) {
+        const { data: detail } = await orderApi.show(billed.order_id)
+        billed.items = detail.order.items
+      }
+      settledOrders.push(billed)
+      done += 1
+    } catch {
+      failed += 1
     }
-    payOpen.value = false
-    payingOrder.value = null
-    postRoom.value = ''
-    if (printStore.printOnSettle) doPrint(billed, 'receipt')
-    await load()
-    toast(t('cashier.summary.roomPosted'), 'success')
-  } catch (err) {
-    payError.value = err.response?.data?.message || t('common.actionFailed')
-  } finally {
-    savingPay.value = false
   }
+  await finalizeBatchSettle(
+    targets,
+    done,
+    failed,
+    settledOrders,
+    failed ? t('cashier.summary.roomPosted') : (targets.length > 1 ? t('cashier.summary.settleDone', { count: done }) : t('cashier.summary.roomPosted')),
+  )
 }
 
 async function doPrint(order, kind) {
