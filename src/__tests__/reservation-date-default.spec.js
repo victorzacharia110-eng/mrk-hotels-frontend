@@ -5,14 +5,13 @@ import i18n from '@/locales/i18n'
 
 const index = vi.fn()
 const show = vi.fn()
-const options = vi.fn()
 
 vi.mock('@/api', () => ({
   reservationApi: {
     index: (...a) => index(...a),
     show: (...a) => show(...a),
   },
-  guestApi: { options: (...a) => options(...a) },
+  guestApi: {},
   invoiceApi: {},
   paymentApi: {},
   publicApi: {},
@@ -44,68 +43,64 @@ function emptyPage() {
   return { data: { data: [], current_page: 1, last_page: 1, total: 0 } }
 }
 
-/**
- * Manager review: the reservations FROM/TO filters opened on the browser's date
- * rather than the date the night audit had left the hotel on, so after an audit
- * rolled the business date forward management was looking at yesterday. It also
- * filters on overlap (window_start/window_end) rather than exact date equality,
- * so a stay spanning the window is not hidden.
- *
- * This deliberately exercises the filter state and the query it builds rather
- * than the whole mounted page: the page's onMounted awaits several stores, which
- * is exactly what made a previous attempt at this test hang.
- */
-describe('ReservationListPage business-date range', () => {
+describe('ReservationListPage business-date tabs', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     businessDate.value = '2026-10-02'
     index.mockReset().mockResolvedValue(emptyPage())
     show.mockReset().mockResolvedValue({ data: { reservation: {} } })
-    options.mockReset().mockResolvedValue({ data: { data: [] } })
   })
 
-  it('defaults FROM and TO to the hotel business date, not the browser date', async () => {
-    const wrapper = build()
+  it('loads reserved arrivals for the current business date by default', async () => {
+    await build()
     await flushPromises()
 
-    expect(wrapper.vm.filters.from).toBe('2026-10-02')
-    expect(wrapper.vm.filters.to).toBe('2026-10-02')
+    expect(index).toHaveBeenCalled()
+    const params = index.mock.calls.at(-1)[0]
+    expect(params.from).toBe('2026-10-02')
+    expect(params.window_end).toBe('2026-10-02')
+    expect(params.exclude_status).toEqual(['cancelled', 'no_show', 'checked_out'])
   })
 
-  it('leaves the range alone when the business date is not known yet', async () => {
-    businessDate.value = ''
-    const wrapper = build()
-    await flushPromises()
-
-    // No business date means no default; the manager can still pick a range.
-    expect(wrapper.vm.filters.from).toBe('')
-    expect(wrapper.vm.filters.to).toBe('')
-  })
-
-  it('picks up a business date that advanced past the browser date', async () => {
-    const wrapper = build()
-    await flushPromises()
-    expect(wrapper.vm.filters.from).toBe('2026-10-02')
-
-    // A night audit rolls the hotel forward; re-applying moves the range.
-    businessDate.value = '2026-10-03'
-    wrapper.vm.applyBusinessDate()
-    expect(wrapper.vm.filters.from).toBe('2026-10-03')
-    expect(wrapper.vm.filters.to).toBe('2026-10-03')
-  })
-
-  it('queries by overlap window so a stay spanning the range is not hidden', async () => {
+  it('loads active in-house reservations for the current business date', async () => {
     const wrapper = build()
     await flushPromises()
     index.mockClear()
 
-    wrapper.vm.filters.from = '2026-10-01'
-    wrapper.vm.filters.to = '2026-10-05'
-    await wrapper.vm.load()
+    wrapper.vm.switchTab('active')
     await flushPromises()
 
-    const params = index.mock.calls[0][0]
-    expect(params.window_start).toBe('2026-10-01')
-    expect(params.window_end).toBe('2026-10-05')
+    const params = index.mock.calls.at(-1)[0]
+    expect(params.status).toBe('checked_in')
+    expect(params.window_start).toBe('2026-10-02')
+    expect(params.window_end).toBe('2026-10-02')
+  })
+
+  it('loads checked-out departures for the current business date', async () => {
+    const wrapper = build()
+    await flushPromises()
+    index.mockClear()
+
+    wrapper.vm.switchTab('checked_out')
+    await flushPromises()
+
+    const params = index.mock.calls.at(-1)[0]
+    expect(params.status).toBe('checked_out')
+    expect(params.window_start).toBe('2026-10-02')
+    expect(params.to).toBe('2026-10-02')
+  })
+
+  it('loads cancelled/no-show reservations for the current business date context', async () => {
+    const wrapper = build()
+    await flushPromises()
+    index.mockClear()
+
+    wrapper.vm.switchTab('cancelled')
+    await flushPromises()
+
+    const params = index.mock.calls.at(-1)[0]
+    expect(params.status).toBe('cancelled,no_show')
+    expect(params.window_start).toBe('2026-10-02')
+    expect(params.window_end).toBe('2026-10-02')
   })
 })

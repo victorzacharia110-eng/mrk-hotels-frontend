@@ -15,14 +15,14 @@
       <div class="profile-header">
         <div class="avatar">
           <img
-            v-if="authStore.user?.profile_picture"
-            :src="authStore.user.profile_picture"
-            :alt="authStore.user?.full_name"
+            v-if="avatarSrc"
+            :src="avatarSrc"
+            :alt="form.full_name || authStore.user?.full_name || 'Profile'"
           />
-          <i v-else class="fas fa-user"></i>
+          <span v-else class="avatar-initials">{{ avatarInitials }}</span>
         </div>
         <div class="profile-header-info">
-          <span class="profile-name">{{ form.full_name }}</span>
+          <span class="profile-name">{{ form.full_name || [form.first_name, form.last_name].filter(Boolean).join(' ') }}</span>
           <span class="profile-sub">{{ authStore.user?.user_role }}</span>
           <span class="badge" :class="authStore.user?.is_active ? 'badge-green' : 'badge-red'">
             {{ authStore.user?.is_active ? $t('profile.active') : $t('profile.inactive') }}
@@ -35,7 +35,7 @@
       <!-- Editable personal information form -->
       <form @submit.prevent="save">
         <h3 class="form-section-title"><i class="fas fa-pen"></i> {{ $t('profile.personalInfo') }}</h3>
-        <div class="profile-grid">
+        <div class="profile-grid profile-form-grid">
           <div class="form-group">
             <label>{{ $t('profile.firstName') }}</label>
             <input v-model="form.first_name" class="input" />
@@ -56,16 +56,17 @@
             <label>{{ $t('profile.idType') }}</label>
             <select v-model="form.id_type" class="input">
               <option value="">{{ $t('common.none') }}</option>
-              <option v-for="t in idTypes" :key="t" :value="t">{{ t }}</option>
+              <option v-for="opt in idTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
             </select>
           </div>
           <div class="form-group">
             <label>{{ $t('profile.idNumber') }}</label>
             <input v-model="form.id_number" class="input" />
           </div>
-          <div class="form-group">
+          <div class="form-group form-full">
             <label>{{ $t('profile.profilePhoto') }}</label>
             <input type="file" accept="image/*" class="input" @change="onPhoto" />
+            <small v-if="photo" class="muted">{{ photo.name }}</small>
           </div>
         </div>
         <div class="form-actions">
@@ -107,7 +108,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/api'
@@ -118,7 +119,11 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 
 // Allowed identification document types and the editable profile fields
-const idTypes = ['national_id', 'passport']
+const idTypeOptions = computed(() => [
+  { value: 'national_id', label: t('profile.idTypes.national_id') },
+  { value: 'passport', label: t('profile.idTypes.passport') },
+  { value: 'drivers_license', label: t('profile.idTypes.drivers_license') },
+])
 const form = reactive({
   first_name: '',
   last_name: '',
@@ -130,9 +135,17 @@ const form = reactive({
   id_number: '',
 })
 const photo = ref(null)
+const photoPreview = ref('')
 const saving = ref(false)
 const message = ref('')
 const error = ref(false)
+
+const avatarSrc = computed(() => photoPreview.value || authStore.user?.profile_picture || '')
+const avatarInitials = computed(() => {
+  const parts = [form.first_name || authStore.user?.first_name, form.last_name || authStore.user?.last_name].filter(Boolean)
+  const initials = parts.map((p) => String(p)[0]?.toUpperCase() || '').join('').slice(0, 2)
+  return initials || 'U'
+})
 
 /** Copies the current user from the auth store into the editable form fields. */
 function fillForm() {
@@ -153,6 +166,8 @@ function fillForm() {
  */
 function onPhoto(e) {
   photo.value = e.target.files?.[0] || null
+  if (photoPreview.value) URL.revokeObjectURL(photoPreview.value)
+  photoPreview.value = photo.value ? URL.createObjectURL(photo.value) : ''
 }
 
 /** Submits the profile as multipart form data, then refreshes the store and form. */
@@ -173,8 +188,11 @@ async function save() {
 
     const { data } = await authApi.updateProfile(fd)
     authStore.user = data.user
+    await authStore.fetchProfile().catch(() => {})
     fillForm()
     photo.value = null
+    if (photoPreview.value) URL.revokeObjectURL(photoPreview.value)
+    photoPreview.value = ''
     message.value = data.message || t('profile.saved')
   } catch (err) {
     error.value = true
@@ -260,6 +278,8 @@ onMounted(fillForm)
   height: 100%;
   object-fit: cover;
 }
+.avatar-initials { font-size: 22px; font-weight: 700; letter-spacing: .5px; }
+.profile-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 .profile-header-info {
   display: flex;

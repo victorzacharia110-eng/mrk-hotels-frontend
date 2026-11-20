@@ -133,31 +133,13 @@ describe('Wide tables stay usable when the screen is small', () => {
     }
   })
 
-  it('pins the header, the identity column and the actions on the reservations table', async () => {
+  it('pins the header and the identity column on the reservations table', async () => {
     const wrapper = build(ReservationListPage)
     await flushPromises()
 
     const table = wrapper.find('.table-scroll.is-pinned table.table-pinned')
     expect(table.exists()).toBe(true)
-    for (const cls of ['pin-col', 'actions-col']) {
-      expect(table.findAll(`thead th.${cls}`).length).toBe(1)
-      expect(table.findAll(`tbody tr td.${cls}`).length).toBe(1)
-    }
-  })
-
-  it('pins the same way whichever lifecycle the reservation is in', async () => {
-    // The action buttons change with status, so a row can go from five wide
-    // buttons to one. The columns must not drift with them.
-    for (const status of ['pending', 'confirmed', 'checked_in', 'checked_out', 'cancelled']) {
-      reservationIndex.mockResolvedValue(reservationPage(status))
-      const wrapper = build(ReservationListPage)
-      await flushPromises()
-
-      const row = wrapper.find('.table-pinned tbody tr')
-      expect(row.find('td.pin-col').exists()).toBe(true)
-      expect(row.find('td.actions-col').exists()).toBe(true)
-      wrapper.unmount()
-    }
+    expect(table.findAll('thead th.pin-col').length).toBe(1)
   })
 
   it('does not let a table clip itself out of its own sticky header', () => {
@@ -232,44 +214,28 @@ describe('Wide tables stay usable when the screen is small', () => {
     }
   })
 
-  it('does not collapse a button that has no icon to fall back on', async () => {
-    // Two reservation actions had text but no icon, so there was nothing left
-    // to show once the label was hidden. Every button needs both halves.
-    //
-    // Signed in at the front desk, which renders the full set of row actions,
-    // so the sweep below actually inspects the buttons that were broken.
-    const seen = new Set()
+  it('keeps reservation guest names clickable for viewing details', async () => {
+    const wrapper = build(ReservationListPage)
+    await flushPromises()
 
-    for (const status of ['pending', 'confirmed', 'checked_in', 'checked_out', 'cancelled']) {
-      reservationIndex.mockResolvedValue(reservationPage(status))
-      const wrapper = build(ReservationListPage, { user_role: 'receptionist' })
-      await flushPromises()
-
-      const buttons = wrapper.findAll('td.actions-col .actions button')
-      for (const btn of buttons) {
-        const label = btn.find('.btn-label').text()
-        expect(btn.find('.btn-label').exists()).toBe(true)
-        expect(btn.find('i').exists()).toBe(true)
-        seen.add(label)
-      }
-      wrapper.unmount()
-    }
-
-    // Guards the gap above: if only management actions render, the sweep proves
-    // nothing, so insist the front-desk buttons were the ones inspected.
-    // Delete Permanently is management-only, so it is not in this front-desk
-    // sweep. Read the labels from i18n rather than hardcoding them, so
-    // rewording a button does not read as a failure here.
-    const t = i18n.global.t.bind(i18n.global)
-    const expected = [
-      t('common.view'),
-      t('reservations.checkIn'),
-      t('reservations.checkOut'),
-      t('reservations.noShow'),
-      t('common.cancel'),
+    wrapper.vm.reservations = [
+      {
+        reservation_id: 'res1',
+        guest_name: 'Amina Juma',
+        booking_type: 'single',
+        room: { room_number: '101', room_type: 'single' },
+        arrival_date: '2026-10-02',
+        departure_date: '2026-10-03',
+        num_days: 1,
+        num_adults: 1,
+        total_amount: 100000,
+        balance_due: 0,
+        status: 'confirmed',
+      },
     ]
-    for (const action of expected) {
-      expect(seen).toContain(action)
-    }
+    await flushPromises()
+
+    const guestButton = wrapper.find('td.pin-col .guest-link')
+    expect(guestButton.exists()).toBe(true)
   })
 })

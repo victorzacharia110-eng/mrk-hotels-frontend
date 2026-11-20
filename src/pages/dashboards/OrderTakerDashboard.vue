@@ -1142,7 +1142,7 @@ import { orderApi, menuItemApi, tableApi, tableLocationApi, reportApi, creditAcc
 import CalendarInput from '@/components/CalendarInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaginationBar from '@/components/store/PaginationBar.vue'
-import { normalizeCreditAccounts, PAYMENT_METHODS } from '@/utils/payments'
+import { normalizeCreditAccounts, PAYMENT_METHODS, effectivePaymentMethods } from '@/utils/payments'
 import { restorePrinter } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { useNotificationSettingsStore } from '@/stores/notificationSettings'
@@ -1424,9 +1424,9 @@ function floorStaffOrders(rows) {
 // and up — same gate as the backend's `level:60` middleware on that route.
 const canBillToRoom = computed(() => authStore.can(60) && authStore.canOperate)
 
-const paymentMethodOptions = PAYMENT_METHODS.map((method) => ({
-  value: method,
-  label: t(`paymentFields.methods.${method}`),
+const paymentMethodOptions = effectivePaymentMethods(authStore.user?.tenant?.payment_methods, PAYMENT_METHODS).map((method) => ({
+  value: method.value,
+  label: method.label || t(`paymentFields.methods.${method.value}`),
 }))
 
 /** Switches to the open-orders tab and refreshes it. */
@@ -1600,7 +1600,7 @@ async function loadDashboard() {
 
 /** Loads the waiter's orders for the picked day and keeps only this waiter's.
  *  Waiters cover restaurant + bar, so their totals (TOTAL RUNNING — RESTA+BAR,
- *  SETTLED and VOIDED) always span BOTH sides of the floor. */
+  *  SETTLED and VOID) always span BOTH sides of the floor. */
 async function loadOrderSummary() {
   summaryLoading.value = true
   summaryError.value = ''

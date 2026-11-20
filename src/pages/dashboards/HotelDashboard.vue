@@ -248,7 +248,7 @@
         <span>
           <template v-if="barTip.rawStatus === 'checked_in'">{{ $t('stayview.balanceDue') }}</template>
           <template v-else>{{ barTip.paymentPending ? $t('stayview.paymentPending') : $t('stayview.paymentPaid')
-            }}</template>
+          }}</template>
           <strong v-if="barTip.paymentPending"> · {{ curCode() }} {{ barTip.balance }}</strong>
         </span>
       </div>
@@ -278,7 +278,7 @@
         <li v-for="task in hkTip.tasks" :key="task.task_id" class="sv-hk-item" :class="task.priority">
           <div class="sv-hk-item-top">
             <span class="sv-hk-task-type"><i class="fas fa-broom" aria-hidden="true"></i> {{ hkLabel(task, 'task_type')
-              }}</span>
+            }}</span>
             <span class="sv-hk-status" :class="task.status">{{ hkLabel(task, 'status') }}</span>
           </div>
           <div class="sv-hk-item-meta">
@@ -333,7 +333,7 @@
               <span><i class="fas fa-layer-group" aria-hidden="true"></i> {{ order.items_count ?? 0 }} {{
                 $t('laundry.items') }}</span>
               <span><i class="fas fa-coins" aria-hidden="true"></i> {{ curCode() }} {{ fmtNum(order.total_charge)
-              }}</span>
+                }}</span>
               <span v-if="order.attendant?.full_name"><i class="fas fa-user-gear" aria-hidden="true"></i> {{
                 order.attendant.full_name }}</span>
             </div>
@@ -422,14 +422,14 @@
                           </td>
                           <td>
                             {{ r.guest_name || r.label }}<template v-if="r.room_number"> · {{ r.room_number
-                              }}</template>
+                            }}</template>
                           </td>
                           <td class="sv-folio-col-num">
                             <template v-if="ledgerHeader.guest">{{ folioRowBalanceText(r) }}</template>
                           </td>
                           <td class="sv-folio-col-num">
                             <strong :class="{ 'sv-balance-negative': folioRowBalance(r) < 0 }">{{ folioRowBalanceText(r)
-                              }}</strong>
+                            }}</strong>
                           </td>
                           <td class="sv-folio-col-view">
                             <button type="button" class="sv-folio-print-btn" :disabled="printBusy || folioLoading"
@@ -452,7 +452,7 @@
                   <i class="fas fa-book-bookmark" aria-hidden="true"></i>
                   <span>{{ $t('stayview.viewingFolio') }} <strong>{{ ledgerHeader.code }}</strong> — {{
                     ledgerHeader.guest
-                    }}</span>
+                  }}</span>
                   <button type="button" class="sv-folio-return" :disabled="folioLoading"
                     @click="switchFolio({ reservation_id: activeBar.id })">
                     <i class="fas fa-arrow-left" aria-hidden="true"></i> {{ $t('stayview.backToCurrentFolio') }}
@@ -470,7 +470,7 @@
                   <div class="sv-panel-card" :class="activeBar.paymentPending ? 'pay-pending' : 'pay-ok'">
                     <span>{{ $t('stayview.balance') }}</span>
                     <strong :class="{ 'sv-balance-negative': balanceDisplay.negative }">{{ balanceDisplay.text
-                      }}</strong>
+                    }}</strong>
                   </div>
                 </div>
 
@@ -541,7 +541,7 @@
                           <td colspan="4">{{ $t('folio.balance') }}</td>
                           <td class="num">
                             <strong :class="{ 'sv-balance-negative': ledgerBalance.negative }">{{ ledgerBalance.text
-                              }}</strong>
+                            }}</strong>
                           </td>
                           <td></td>
                         </tr>
@@ -607,7 +607,7 @@
                     <strong>{{ curCode() }} {{ fmtNum((folio?.folio?.total_amount ?? 0) + (folio?.folio?.room_charges ??
                       0),
                       2)
-                    }}</strong>
+                      }}</strong>
                   </div>
                   <div class="sv-panel-card">
                     <span>{{ $t('stayview.totalPaid') }}</span>
@@ -616,7 +616,7 @@
                   <div class="sv-panel-card">
                     <span>{{ $t('folio.balance') }}</span>
                     <strong :class="{ 'sv-balance-negative': balanceDisplay.negative }">{{ balanceDisplay.text
-                      }}</strong>
+                    }}</strong>
                   </div>
                 </div>
                 <div v-if="chargeNights.length" class="sv-table-wrap">
@@ -1161,7 +1161,7 @@
                     style="display:flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:12px;background:#fff;">
                     <input type="checkbox" :value="room.value" v-model="amendSelectedRoomIds" />
                     <span>{{ room.room_number }}<template v-if="room.room_type"> · {{ roomTypeLabel(room.room_type)
-                    }}</template></span>
+                        }}</template></span>
                     <span v-if="room.is_primary" class="sv-tag-primary">{{ $t('stayview.primaryRoom') }}</span>
                   </label>
                 </div>
@@ -1230,7 +1230,8 @@
     <Teleport to="body">
       <Transition name="sv-modal">
         <div v-if="chargeModal" class="sv-modal-backdrop" @click.self="chargeModal = false">
-          <div class="sv-modal sv-modal-sm sv-modal-compact" role="dialog" aria-modal="true" :aria-label="$t('stayview.addCharges')">
+          <div class="sv-modal sv-modal-sm sv-modal-compact" role="dialog" aria-modal="true"
+            :aria-label="$t('stayview.addCharges')">
             <div class="sv-modal-head bar-blue">
               <span class="sv-modal-head-icon"><i class="fas fa-receipt" aria-hidden="true"></i></span>
               <div class="sv-modal-head-text">
@@ -1278,7 +1279,8 @@
     <Teleport to="body">
       <Transition name="sv-modal">
         <div v-if="folioOp" class="sv-modal-backdrop" @click.self="folioOp = null">
-          <div class="sv-modal sv-modal-sm sv-modal-op sv-modal-compact" role="dialog" aria-modal="true" :aria-label="folioOpTitle">
+          <div class="sv-modal sv-modal-sm sv-modal-op sv-modal-compact" role="dialog" aria-modal="true"
+            :aria-label="folioOpTitle">
             <div class="sv-modal-head bar-blue">
               <span class="sv-modal-head-icon"><i class="fas fa-folder-open" aria-hidden="true"></i></span>
               <div class="sv-modal-head-text">
@@ -1443,7 +1445,7 @@
                           :disabled="actionBusy || newFolioBusy || tt.reservation_id === activeBar?.id" />
                         <span class="sv-split-op-text">
                           <span><strong>{{ tt.guest_name || '—' }}</strong> <span class="sv-cap">· {{ tt.folio_code
-                              }}</span></span>
+                          }}</span></span>
                           <span class="sv-cap sv-muted">{{ tt.room_number || '—' }} · {{ (tt.status || '').replace('_',
                             ' ') }}</span>
                         </span>
@@ -1623,7 +1625,7 @@
                     <div class="sv-receipt-total-row">
                       <span>{{ $t('folio.billAmount') }}</span>
                       <strong>{{ curCode() }} {{ fmtNum(viewEntryReceipt.billAmount ?? viewEntryReceipt.amount, 2)
-                      }}</strong>
+                        }}</strong>
                     </div>
                     <div class="sv-receipt-total-row">
                       <span>{{ $t('folio.tax') }}</span>
@@ -1847,7 +1849,7 @@
                       <span class="sv-room-picker-trigger-main">
                         <i class="fas fa-door-open" aria-hidden="true"></i>
                         <span>{{ roomSelectionsArray.length ? $t('stayview.editRooms') : $t('stayview.selectRooms')
-                        }}</span>
+                          }}</span>
                       </span>
                       <span v-if="roomSelectionsArray.length" class="sv-room-picker-count">
                         {{ $t('stayview.roomsSelected', { count: roomSelectionsArray.length }) }}
@@ -1910,36 +1912,37 @@
                   <select v-model="bookingForm.advance_payment_method" class="input" data-field="advance_payment_method"
                     :class="{ 'sv-input-error': bookingErrors.advance_payment_method }">
                     <option value="">—</option>
-                    <option value="cash">{{ $t('paymentFields.methods.cash') }}</option>
-                    <option value="mobile_money">{{ $t('paymentFields.methods.mobile_money') }}</option>
-                    <option value="bank">{{ $t('common.paymentMethods.bankTransfer') }}</option>
-                    <option value="card">{{ $t('paymentFields.methods.card') }}</option>
+                    <option v-for="opt in paymentMethodOptions" :key="opt.value" :value="opt.value">{{ opt.label }}
+                    </option>
                   </select>
                   <span v-if="bookingErrors.advance_payment_method" class="sv-field-msg" role="alert"><i
                       class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.advance_payment_method
                       }}</span>
                 </label>
-                  <label class="sv-field">
-                    <span>{{ $t('stayview.advanceDate') }}</span>
-                    <input v-model="bookingForm.advance_payment_date" type="date" class="input" />
-                  </label>
-                </div>
-                <div v-if="requiresProvider(bookingForm.advance_payment_method)" class="sv-field-row">
-                  <label class="sv-field">
-                    <span>{{ $t('stayview.advanceProvider') }}</span>
-                    <select v-model="bookingForm.advance_payment_provider" class="input" data-field="advance_payment_provider"
-                      :class="{ 'sv-input-error': bookingErrors.advance_payment_provider }">
-                      <option value="">—</option>
-                      <option v-for="provider in bookingAdvanceProviderOptions" :key="provider.value" :value="provider.value">
-                        {{ provider.label }}
-                      </option>
-                    </select>
-                    <span v-if="bookingErrors.advance_payment_provider" class="sv-field-msg" role="alert"><i
-                        class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ bookingErrors.advance_payment_provider
-                        }}</span>
-                  </label>
-                </div>
-                <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
+                <label class="sv-field">
+                  <span>{{ $t('stayview.advanceDate') }}</span>
+                  <input v-model="bookingForm.advance_payment_date" type="date" class="input" />
+                </label>
+              </div>
+              <div v-if="requiresProvider(bookingForm.advance_payment_method)" class="sv-field-row">
+                <label class="sv-field">
+                  <span>{{ $t('stayview.advanceProvider') }}</span>
+                  <select v-model="bookingForm.advance_payment_provider" class="input"
+                    data-field="advance_payment_provider"
+                    :class="{ 'sv-input-error': bookingErrors.advance_payment_provider }">
+                    <option value="">—</option>
+                    <option v-for="provider in bookingAdvanceProviderOptions" :key="provider.value"
+                      :value="provider.value">
+                      {{ provider.label }}
+                    </option>
+                  </select>
+                  <span v-if="bookingErrors.advance_payment_provider" class="sv-field-msg" role="alert"><i
+                      class="fas fa-circle-exclamation" aria-hidden="true"></i> {{
+                        bookingErrors.advance_payment_provider
+                    }}</span>
+                </label>
+              </div>
+              <p v-if="actionError" class="sv-action-error">{{ actionError }}</p>
             </div>
             <div class="sv-modal-actions">
               <!-- Walk-in → immediate check-in (green bar). Reservation → held
@@ -2023,7 +2026,7 @@
                         <div class="sv-group-selected-name">{{ sel.room_number }} · {{ roomTypeLabel(sel.room_type) }}
                         </div>
                         <div class="muted sv-group-selected-price">{{ curCode() }} {{ formatPrice(sel.price_per_night)
-                        }}
+                          }}
                         </div>
                       </div>
                       <div class="sv-room-summary-tags">
@@ -2196,7 +2199,7 @@
                 <i class="fas fa-layer-group" aria-hidden="true"></i>
                 <span>{{ roomTypeLabel(roomModal.room_type) }} · {{ curCode() }} {{
                   formatPrice(roomModal.price_per_night)
-                }}</span>
+                  }}</span>
               </div>
               <header class="sv-dot-rules-head">
                 <i class="fas fa-circle-info" aria-hidden="true"></i>
@@ -2262,8 +2265,7 @@
             </button>
           </li>
           <li v-if="entryMenu.entry.canEditAction">
-            <button type="button" role="menuitem" :disabled="actionBusy"
-              @click="requestEditEntry(entryMenu.entry)">
+            <button type="button" role="menuitem" :disabled="actionBusy" @click="requestEditEntry(entryMenu.entry)">
               <i class="fas fa-pen" aria-hidden="true"></i> {{ $t('folio.edit') }}
             </button>
           </li>
@@ -2471,7 +2473,7 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
-import { requiresProvider, providersFor, PAYMENT_METHODS, PAYMENT_STATUSES } from '@/utils/payments'
+import { requiresProvider, providersFor, PAYMENT_METHODS, PAYMENT_STATUSES, effectivePaymentMethods } from '@/utils/payments'
 
 import { folioBreakdown, isFolioRefundEntry } from '@/utils/folio'
 import { displayBookingReference, normalizeBookingReference } from '@/utils/bookingReference'
@@ -3417,6 +3419,10 @@ function fmtNum(n, decimals = 0) {
 /** Human-readable label for a payment method (falls back to the raw value). */
 function paymentMethodLabel(method) {
   if (!method) return '—'
+  const configured = effectivePaymentMethods(authStore.user?.tenant?.payment_methods, PAYMENT_METHODS).find(
+    (m) => m.value === method,
+  )
+  if (configured?.label) return configured.label
   const key = `paymentFields.methods.${method}`
   return te(key) ? t(key) : String(method).replace(/_/g, ' ')
 }
@@ -4599,7 +4605,10 @@ const paymentEditSnapshot = ref({})
 const paymentEditTarget = ref(null)
 
 const paymentMethodOptions = computed(() =>
-  PAYMENT_METHODS.map((m) => ({ value: m, label: t(`paymentFields.methods.${m}`) })),
+  effectivePaymentMethods(authStore.user?.tenant?.payment_methods, PAYMENT_METHODS).map((m) => ({
+    value: m.value,
+    label: m.label || t(`paymentFields.methods.${m.value}`),
+  })),
 )
 const paymentProviderOptions = computed(() =>
   providersFor(paymentEditForm.value.payment_method).map((p) => ({ value: p, label: t(`paymentFields.providers.${p}`) })),

@@ -1,6 +1,9 @@
 <!-- StoreExpensesPage — expense tracking with categories and totals. -->
 <template>
   <div class="sm-page">
+    <div class="page-head compact">
+      <h2><i class="fas fa-file-invoice-dollar"></i> {{ $t('storeManager.expenses.title') || 'Expenses' }}</h2>
+    </div>
     <div class="sm-toolbar">
       <div class="sm-search"><i class="fas fa-magnifying-glass"></i><input v-model="q" type="text" :placeholder="$t('common.search')" @input="debouncedLoad" /></div>
     <CalendarInput v-model="businessDate" :clearable="false" @change="load(1)" />

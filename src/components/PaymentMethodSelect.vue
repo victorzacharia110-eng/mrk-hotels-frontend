@@ -56,10 +56,12 @@ import { useI18n } from 'vue-i18n'
 import {
   PAYMENT_METHODS,
   METHOD_BANK,
+  effectivePaymentMethods,
   isAutoPaid,
   providersFor,
   requiresConfirmation,
 } from '@/utils/payments'
+import { useAuthStore } from '@/stores/auth'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import ProviderLogo from '@/components/ProviderLogo.vue'
 
@@ -77,6 +79,7 @@ const props = defineProps({
 const emit = defineEmits(['update:method', 'update:provider'])
 
 const { t } = useI18n()
+const authStore = useAuthStore()
 // Scopes the label/datalist ids so several instances can coexist on a page.
 const uid = `pay-${Math.random().toString(36).slice(2, 8)}`
 
@@ -84,9 +87,17 @@ const uid = `pay-${Math.random().toString(36).slice(2, 8)}`
 // method/provider dropdown options, and the label for the provider field.
 const providers = computed(() => providersFor(props.method))
 
-const methodOptions = computed(() =>
-  props.methods.map((method) => ({ value: method, label: t(`paymentFields.methods.${method}`) })),
-)
+const methodOptions = computed(() => {
+  const configured = authStore.user?.tenant?.payment_methods || []
+  const source = props.methods === PAYMENT_METHODS ? effectivePaymentMethods(configured, PAYMENT_METHODS) : props.methods
+  return (Array.isArray(source) ? source : []).map((method) => {
+    const value = typeof method === 'string' ? method : String(method.value ?? method.key ?? method.name ?? '').trim()
+    return {
+      value,
+      label: method.label || t(`paymentFields.methods.${value}`),
+    }
+  }).filter((method) => method.value)
+})
 const providerOptions = computed(() =>
   providers.value.map((provider) => ({
     value: provider,

@@ -85,9 +85,23 @@ const ALL_TILES = [
     to: { name: 'hotel-printer' },
   },
   {
+    key: 'menu',
+    icon: 'fas fa-book-open',
+    titleKey: 'nav.menu',
+    descKey: 'backOffice.tiles.menu',
+    to: { name: 'hotel-menu' },
+  },
+  {
+    key: 'outlets',
+    icon: 'fas fa-store',
+    titleKey: 'nav.outlets',
+    descKey: 'backOffice.tiles.outlets',
+    to: { name: 'hotel-outlets' },
+  },
+  {
     key: 'store-settings',
     icon: 'fas fa-receipt',
-    titleKey: 'nav.backOffice',
+    titleKey: 'backOffice.tiles.receiptTitle',
     descKey: 'backOffice.tiles.receipt',
     to: { name: 'hotel-store-settings' },
   },
@@ -143,6 +157,8 @@ const EDITORS = {
   'hotel-info': defineAsyncComponent(() => import('@/pages/settings/HotelSettingsPage.vue')),
   rates: defineAsyncComponent(() => import('@/pages/rooms/RoomListPage.vue')),
   printer: defineAsyncComponent(() => import('@/pages/printer/PrinterSettingsPage.vue')),
+  menu: defineAsyncComponent(() => import('@/pages/menu/MenuListPage.vue')),
+  outlets: defineAsyncComponent(() => import('@/pages/outlets/OutletManagePage.vue')),
   'store-settings': defineAsyncComponent(() => import('@/pages/store/StoreSettingsPage.vue')),
   departments: defineAsyncComponent(() => import('@/pages/inventory/DepartmentListPage.vue')),
   categories: defineAsyncComponent(() => import('@/pages/inventory/CategoryListPage.vue')),
@@ -157,6 +173,8 @@ const EDITORS = {
 const ROLE_GATES = {
   staff: ['hotel_admin', 'manager'],
   'trusted-devices': ['hotel_admin', 'manager'],
+  menu: ['hotel_admin', 'manager'],
+  outlets: ['hotel_admin', 'manager'],
   import: ['hotel_admin'],
 }
 
@@ -173,7 +191,7 @@ const GROUPS = [
     key: 'operations',
     icon: 'fas fa-gears',
     titleKey: 'backOffice.groups.operations',
-    tileKeys: ['printer', 'suppliers'],
+    tileKeys: ['printer', 'menu', 'outlets', 'suppliers'],
   },
   {
     key: 'access',

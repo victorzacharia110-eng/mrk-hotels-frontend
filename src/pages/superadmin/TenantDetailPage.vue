@@ -287,13 +287,27 @@
       <div class="method-grid">
         <label
           v-for="m in paymentMethods"
-          :key="m"
+          :key="m.value"
           class="method-toggle"
-          :class="{ checked: paymentForm.methods.includes(m) }"
+          :class="{ checked: paymentForm.methods.includes(m.value) }"
         >
-          <input v-model="paymentForm.methods" type="checkbox" :value="m" />
-          <span>{{ $t(`paymentFields.methods.${m}`) }}</span>
+          <input v-model="paymentForm.methods" type="checkbox" :value="m.value" />
+          <span>{{ m.label }}</span>
         </label>
+      </div>
+
+      <div class="custom-method-row">
+        <input
+          v-model.trim="customPaymentMethod"
+          type="text"
+          class="input"
+          :placeholder="$t('superadmin.customPaymentMethodPlaceholder')"
+          maxlength="64"
+          @keyup.enter="addCustomPaymentMethod"
+        />
+        <button type="button" class="btn" :disabled="!customPaymentMethod" @click="addCustomPaymentMethod">
+          {{ $t('superadmin.addPaymentMethod') }}
+        </button>
       </div>
 
       <!-- Account fields only for the providers matching the enabled payment methods -->
@@ -356,6 +370,7 @@ import {
   MOBILE_MONEY_PROVIDERS,
   PAYMENT_METHODS,
   normalizePaymentAccount,
+  normalizePaymentMethods,
 } from '@/utils/payments'
 import ProviderLogo from '@/components/ProviderLogo.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
@@ -413,8 +428,20 @@ const subscriptionStatusOptions = computed(() => [
   { value: 'cancelled', label: t('superadmin.subscriptionCancelled') },
 ])
 // Static payment configuration plus the form collecting enabled methods and accounts
-const paymentMethods = PAYMENT_METHODS
+const customPaymentMethod = ref('')
+const customPaymentLabels = ref({})
 const paymentForm = ref({ methods: defaultPaymentMethods(), accounts: emptyAccounts() })
+const paymentMethods = computed(() => {
+  const configured = normalizePaymentMethods(tenant.value?.payment_methods)
+  const values = [...new Set([...PAYMENT_METHODS, ...paymentForm.value.methods, ...configured.map((m) => m.value)])]
+  return values.map((value) => {
+    const configuredMethod = configured.find((m) => m.value === value)
+    return {
+      value,
+      label: configuredMethod?.label || customPaymentLabels.value[value] || t(`paymentFields.methods.${value}`),
+    }
+  })
+})
 
 // Feature toggle logic.
 const allFeatureKeys = computed(() => Object.keys(planFeatureLabels.value))
@@ -512,6 +539,19 @@ function defaultPaymentMethods() {
   return PAYMENT_METHODS.slice()
 }
 
+function addCustomPaymentMethod() {
+  const label = customPaymentMethod.value.trim()
+  const value = label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 64)
+  if (!value) return
+  customPaymentLabels.value = { ...customPaymentLabels.value, [value]: label }
+  if (!paymentForm.value.methods.includes(value)) paymentForm.value.methods.push(value)
+  customPaymentMethod.value = ''
+}
+
 /**
  * Builds the per-provider account form entries in the object shape (number /
  * lipa_number / name). Bank providers only use the number field.
@@ -566,10 +606,15 @@ async function load() {
     contactForm.value.city = tenant.value.city || ''
     contactForm.value.country = tenant.value.country || ''
     ownerForm.value.owner_id = tenant.value.owner_id || ''
-    paymentForm.value.methods =
-      tenant.value.payment_methods && tenant.value.payment_methods.length
-        ? tenant.value.payment_methods
-        : defaultPaymentMethods()
+    const configuredMethods = normalizePaymentMethods(tenant.value.payment_methods)
+    paymentForm.value.methods = configuredMethods.length
+      ? configuredMethods.map((m) => m.value)
+      : defaultPaymentMethods()
+    customPaymentLabels.value = Object.fromEntries(
+      configuredMethods
+        .filter((m) => m.label && !PAYMENT_METHODS.includes(m.value))
+        .map((m) => [m.value, m.label]),
+    )
     const accounts = tenant.value.payment_accounts || {}
     ALL_PROVIDERS.forEach((p) => {
       paymentForm.value.accounts[p] =
@@ -656,10 +701,9 @@ async function saveCode() {
   codeSaving.value = true
   error.value = ''
   try {
-    const res = await tenantApi.update(route.params.id, {
-      registration_code: codeForm.value.registration_code.toUpperCase(),
-    })
-    tenant.value.registration_code = res.data.tenant?.registration_code ?? codeForm.value.registration_code.toUpperCase()
+    const code = String(codeForm.value.registration_code || '').replace(/\D/g, '').slice(0, 6)
+    const res = await tenantApi.update(route.params.id, { registration_code: code })
+    tenant.value.registration_code = res.data.tenant?.registration_code ?? code
     window.alert(res.data.message || t('superadmin.codeSaved'))
   } catch (err) {
     error.value = err.response?.data?.message || t('superadmin.codeSaveError')
@@ -792,11 +836,14 @@ async function savePaymentMethods() {
         ([, v]) => !!v,
       ),
     )
+    const methods = paymentForm.value.methods.map((value) =>
+      customPaymentLabels.value[value] ? { value, label: customPaymentLabels.value[value] } : value,
+    )
     const res = await tenantApi.update(route.params.id, {
-      payment_methods: paymentForm.value.methods,
+      payment_methods: methods,
       payment_accounts: accounts,
     })
-    tenant.value.payment_methods = paymentForm.value.methods
+    tenant.value.payment_methods = methods
     tenant.value.payment_accounts = res.data.tenant?.payment_accounts || accounts
     window.alert(res.data.message || t('superadmin.paymentMethodsSaved'))
   } catch (err) {
@@ -894,6 +941,17 @@ onMounted(async () => {
 
 .method-toggle input {
   accent-color: #005EB8;
+}
+
+.custom-method-row {
+  display: flex;
+  gap: 8px;
+  margin: -4px 0 16px;
+  max-width: 420px;
+}
+
+.custom-method-row .input {
+  flex: 1;
 }
 
 .accounts-section {

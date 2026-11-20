@@ -49,6 +49,15 @@
           <span v-show="!sidebarCollapsed">{{ $t('owner.marketing') }}</span>
         </router-link>
         <router-link
+          to="/owner/marketing/content/pages"
+          class="sa-nav-link"
+          :class="{ active: String($route.name || '').startsWith('owner-marketing-') }"
+          @click="sidebarMobileOpen = false"
+        >
+          <i class="fas fa-globe" aria-hidden="true"></i>
+          <span v-show="!sidebarCollapsed">{{ $t('owner.marketingSiteContent') }}</span>
+        </router-link>
+        <router-link
           to="/owner/profile"
           class="sa-nav-link"
           :class="{ active: $route.name === 'owner-profile' }"
@@ -185,6 +194,7 @@ const pageTitle = computed(() => {
     'owner-marketing': 'Marketing',
     'owner-profile': 'Profile',
   }
+  if (typeof route.name === 'string' && route.name.startsWith('owner-marketing-')) return 'Marketing Site'
   return titles[route.name] || 'Dashboard'
 })
 
@@ -425,7 +435,10 @@ async function handleLogout() {
   justify-content: center;
   font-weight: 700;
   font-size: 14px;
+  overflow: hidden;
 }
+.sa-profile-avatar.has-image { background: #e2e8f0; }
+.sa-profile-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .sa-profile-backdrop {
   position: fixed;

@@ -28,11 +28,12 @@
 
     <div class="card">
       <div class="table-scroll">
-        <SkeletonLoader v-if="loading" variant="table" :count="4" :cols="5" />
+        <SkeletonLoader v-if="loading" variant="table" :count="4" :cols="6" />
         <table v-else class="sm-table">
           <thead>
             <tr>
               <th>{{ $t('trustedDevices.device') }}</th>
+              <th>{{ $t('trustedDevices.ipAddress') }}</th>
               <th>{{ $t('trustedDevices.trustedUntil') }}</th>
               <th>{{ $t('trustedDevices.lastSeen') }}</th>
               <th>{{ $t('trustedDevices.status') }}</th>
@@ -42,9 +43,10 @@
           <tbody>
             <tr v-for="device in devices" :key="device.id">
               <td>
-                <strong>{{ device.label || $t('trustedDevices.unknownDevice') }}</strong>
-                <div class="muted">{{ fmtTime(device.created_at) }}</div>
+                <strong>{{ device.device_name || device.label || $t('trustedDevices.unknownDevice') }}</strong>
+                <div class="muted">{{ device.device_name ? device.label : fmtTime(device.created_at) }}</div>
               </td>
+              <td>{{ device.ip_address || '—' }}</td>
               <td>{{ fmtTime(device.trusted_until) }}</td>
               <td>{{ fmtTime(device.last_seen_at) }}</td>
               <td>
@@ -60,7 +62,7 @@
               </td>
             </tr>
             <tr v-if="!devices.length && !loading">
-              <td colspan="5" class="empty">
+              <td colspan="6" class="empty">
                 <i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('trustedDevices.empty') }}
               </td>
             </tr>

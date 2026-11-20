@@ -18,19 +18,26 @@
 </template>
 
 <script setup>
-const tabs = [
-  { to: '/superadmin/marketing/pages', label: 'Pages' },
-  { to: '/superadmin/marketing/sections', label: 'Sections' },
-  { to: '/superadmin/marketing/integrations', label: 'Integrations' },
-  { to: '/superadmin/marketing/faqs', label: 'FAQs' },
-  { to: '/superadmin/marketing/team', label: 'Team' },
-  { to: '/superadmin/marketing/pricing-products', label: 'Pricing Products' },
-  { to: '/superadmin/marketing/pricing-features', label: 'Pricing Features' },
-  { to: '/superadmin/marketing/pricing-plans', label: 'Pricing Plans' },
-  { to: '/superadmin/marketing/media', label: 'Media' },
-  { to: '/superadmin/marketing/settings', label: 'Settings' },
-  { to: '/superadmin/marketing/contact-submissions', label: 'Contact Submissions' },
-]
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+const basePath = computed(() => (
+  route.path.startsWith('/owner') ? '/owner/marketing/content' : '/superadmin/marketing'
+))
+const tabs = computed(() => [
+  { path: 'pages', label: 'Pages' },
+  { path: 'sections', label: 'Sections' },
+  { path: 'integrations', label: 'Integrations' },
+  { path: 'faqs', label: 'FAQs' },
+  { path: 'team', label: 'Team' },
+  { path: 'pricing-products', label: 'Pricing Products' },
+  { path: 'pricing-features', label: 'Pricing Features' },
+  { path: 'pricing-plans', label: 'Pricing Plans' },
+  { path: 'media', label: 'Media' },
+  { path: 'settings', label: 'Settings' },
+  { path: 'contact-submissions', label: 'Contact Submissions' },
+].map((tab) => ({ ...tab, to: `${basePath.value}/${tab.path}` })))
 </script>
 
 <style scoped>

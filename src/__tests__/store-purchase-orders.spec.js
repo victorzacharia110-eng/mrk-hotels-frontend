@@ -17,6 +17,7 @@ const api = vi.hoisted(() => {
       },
     )
   return {
+    goodsReceivedNoteApi: mk(),
     purchaseOrderApi: mk(),
     purchaseRequisitionApi: mk(),
     supplierApi: mk(),
@@ -26,6 +27,7 @@ const api = vi.hoisted(() => {
 })
 
 vi.mock('@/api', () => ({
+  goodsReceivedNoteApi: api.goodsReceivedNoteApi,
   purchaseOrderApi: api.purchaseOrderApi,
   purchaseRequisitionApi: api.purchaseRequisitionApi,
   supplierApi: api.supplierApi,
@@ -39,7 +41,7 @@ vi.mock('@/stores/auth', () => ({
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
-  useRoute: () => ({ query: {} }),
+  useRoute: () => ({ query: {}, path: '/app/purchase-orders', meta: { management: true } }),
 }))
 
 // Silent report printing is exercised by its own suite; here we only care that
@@ -183,30 +185,45 @@ describe('StorePurchaseOrdersPage', () => {
     expect(wrapper.vm.editingId).toBe(3)
   })
 
-  it('keeps the detail modal open when voiding is cancelled', async () => {
+  it('shows the GRN confirmation when voiding a purchase order with linked receipts', async () => {
     const wrapper = mountPage()
     await flushPromises()
-    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    api.goodsReceivedNoteApi.index.mockResolvedValue({ data: { data: [{ grn_id: 1, voided_at: null }] } })
     wrapper.vm.detail = { po_id: 4, po_number: 'PO-0004', items: [] }
 
     await wrapper.vm.voidPo()
 
-    expect(wrapper.vm.detail).toEqual({ po_id: 4, po_number: 'PO-0004', items: [] })
+    expect(wrapper.vm.detail).toBeNull()
+    expect(wrapper.vm.pendingVoid.po_id).toBe(4)
+    expect(wrapper.vm.linkedGrns).toBe(1)
     expect(api.purchaseOrderApi.void).not.toHaveBeenCalled()
   })
 
-  it('closes the detail modal when voiding is confirmed', async () => {
+  it('voids a purchase order directly when it has no active linked receipts', async () => {
     const wrapper = mountPage()
     await flushPromises()
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
-    vi.spyOn(window, 'prompt').mockReturnValue('Damaged stock')
+    api.goodsReceivedNoteApi.index.mockResolvedValue({ data: { data: [] } })
     api.purchaseOrderApi.void.mockResolvedValue({ data: { purchase_order: { po_id: 5, po_number: 'PO-0005', status: 'voided' } } })
     wrapper.vm.detail = { po_id: 5, po_number: 'PO-0005', items: [] }
 
     await wrapper.vm.voidPo()
     await flushPromises()
 
-    expect(api.purchaseOrderApi.void).toHaveBeenCalledWith(5, { reason: 'Damaged stock' })
+    expect(api.purchaseOrderApi.void).toHaveBeenCalledWith(5, { reason: 'Voided from the management panel.' })
+  })
+
+  it('voids linked goods received notes after the operator proceeds', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    api.goodsReceivedNoteApi.index.mockResolvedValue({ data: { data: [{ grn_id: 1, voided_at: null }] } })
+    api.purchaseOrderApi.void.mockResolvedValue({ data: { purchase_order: { po_id: 6, po_number: 'PO-0006', status: 'voided' } } })
+    wrapper.vm.detail = { po_id: 6, po_number: 'PO-0006', items: [] }
+
+    await wrapper.vm.voidPo()
+    await wrapper.vm.confirmVoidPo()
+    await flushPromises()
+
+    expect(api.purchaseOrderApi.void).toHaveBeenCalledWith(6, { reason: 'Purchase order voided together with 1 linked goods received note(s).' })
   })
 
   it('scales the inherited price by the selected SI unit factor', async () => {

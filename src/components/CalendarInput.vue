@@ -240,7 +240,7 @@ function onDocKey(e) {
 .calwrap {
   position: relative;
   display: inline-block;
-  min-width: 150px;
+  min-width: 128px;
 }
 
 .cal-field {
@@ -275,7 +275,7 @@ function onDocKey(e) {
   position: absolute;
   top: calc(100% + 4px);
   z-index: 60;
-  width: 248px;
+  width: 224px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;

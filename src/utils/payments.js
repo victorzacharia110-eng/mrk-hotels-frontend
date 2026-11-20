@@ -60,6 +60,36 @@ export function normalizeCreditAccounts(payload) {
   return Array.isArray(rows) ? rows : []
 }
 
+export function normalizePaymentMethods(methods) {
+  if (!Array.isArray(methods)) return []
+  return methods
+    .map((method) => {
+      if (typeof method === 'string') {
+        const value = method.trim()
+        return value ? { value } : null
+      }
+      if (!method || typeof method !== 'object') return null
+      const value = String(method.value ?? method.key ?? method.name ?? '').trim()
+      if (!value) return null
+      const out = { value }
+      for (const key of ['label', 'description']) {
+        if (method[key] != null && String(method[key]).trim()) out[key] = String(method[key]).trim()
+      }
+      return out
+    })
+    .filter(Boolean)
+}
+
+export function effectivePaymentMethods(configured, base = PAYMENT_METHODS) {
+  const methods = new Map()
+  for (const method of normalizePaymentMethods(base)) methods.set(method.value, method)
+  for (const method of normalizePaymentMethods(configured)) {
+    const existing = methods.get(method.value) || {}
+    methods.set(method.value, { ...existing, ...method })
+  }
+  return [...methods.values()]
+}
+
 /** Local provider logos, bundled so the app never depends on a hotlink. */
 import mpesaLogo from '@/assets/logos/providers/mpesa.png'
 import airtelMoneyLogo from '@/assets/logos/providers/airtel_money.png'

@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
   normalizePaymentAccount,
+  normalizePaymentMethods,
+  effectivePaymentMethods,
   normalizeCreditAccounts,
   MOBILE_MONEY_PROVIDERS,
   ALL_PROVIDERS,
@@ -10,6 +12,27 @@ import {
   METHOD_MOBILE_MONEY,
   METHOD_BANK,
 } from '@/utils/payments'
+
+describe('payment methods shape', () => {
+  it('normalises built-in and custom methods without dropping labels', () => {
+    expect(normalizePaymentMethods(['cash', { value: 'crypto', label: 'Crypto', description: 'Wallet' }, '  '])).toEqual([
+      { value: 'cash' },
+      { value: 'crypto', label: 'Crypto', description: 'Wallet' },
+    ])
+  })
+
+  it('merges tenant-defined methods into the built-in options', () => {
+    expect(effectivePaymentMethods([{ value: 'cash', label: 'Cash desk' }, 'evil_wallet']).map((m) => m.value)).toEqual([
+      'cash',
+      'mobile_money',
+      'bank',
+      'selcom',
+      'card',
+      'evil_wallet',
+    ])
+    expect(effectivePaymentMethods(['evil_wallet']).find((m) => m.value === 'evil_wallet')).toEqual({ value: 'evil_wallet' })
+  })
+})
 
 describe('payment accounts shape', () => {
   it('normalises a legacy flat account number string', () => {

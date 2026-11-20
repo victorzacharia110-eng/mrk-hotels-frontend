@@ -318,7 +318,7 @@ import PhoneInput from '@/components/PhoneInput.vue'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import { loadLocationData, getCountryName } from '@/utils/locations'
 import { validatePhoneNumber } from '@/utils/phone'
-import { METHOD_CASH, requiresProvider, providersFor } from '@/utils/payments'
+import { METHOD_CASH, METHOD_CLICKPESA, PAYMENT_METHODS, effectivePaymentMethods, requiresProvider, providersFor } from '@/utils/payments'
 import { useTenantCurrency } from '@/utils/currency'
 
 const { curCode } = useTenantCurrency()
@@ -354,14 +354,12 @@ const postingsTotalPosted = ref(0)
 const postingsTotalReceived = ref(0)
 const selectedPostings = ref([])
 
-const methodOptions = [
-  { value: METHOD_CASH, label: t('paymentFields.methods.cash') },
-  { value: 'mobile_money', label: t('paymentFields.methods.mobile_money') },
-  { value: 'bank', label: t('paymentFields.methods.bank') || 'Bank transfer' },
-  { value: 'card', label: t('paymentFields.methods.card') },
-  { value: 'selcom', label: t('paymentFields.methods.selcom') },
-  { value: 'clickpesa', label: 'ClickPesa' },
-]
+const methodOptions = computed(() =>
+  effectivePaymentMethods(authStore.user?.tenant?.payment_methods, [...PAYMENT_METHODS, METHOD_CLICKPESA]).map((m) => ({
+    value: m.value,
+    label: m.label || t(`paymentFields.methods.${m.value}`),
+  })),
+)
 
 const selectedPostingsSum = computed(() => {
   const sum = postingsRows.value

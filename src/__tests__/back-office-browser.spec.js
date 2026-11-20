@@ -25,6 +25,8 @@ const { editorModule } = vi.hoisted(() => {
 vi.mock('@/pages/settings/HotelSettingsPage.vue', () => editorModule)
 vi.mock('@/pages/rooms/RoomListPage.vue', () => editorModule)
 vi.mock('@/pages/printer/PrinterSettingsPage.vue', () => editorModule)
+vi.mock('@/pages/menu/MenuListPage.vue', () => editorModule)
+vi.mock('@/pages/outlets/OutletManagePage.vue', () => editorModule)
 vi.mock('@/pages/store/StoreSettingsPage.vue', () => editorModule)
 vi.mock('@/pages/inventory/DepartmentListPage.vue', () => editorModule)
 vi.mock('@/pages/inventory/CategoryListPage.vue', () => editorModule)

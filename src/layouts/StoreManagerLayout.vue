@@ -748,7 +748,10 @@ const DAY_CLOSE_ROLES = ['store_manager', 'cashier', 'bartender', 'waiter', 'hot
   background: linear-gradient(135deg, #005eb8, #0a7ee8); color: #fff;
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 14px; letter-spacing: 0.3px;
+  overflow: hidden;
 }
+.sm-user-avatar.has-image { background: #e2e8f0; }
+.sm-user-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .sm-profile-backdrop { position: fixed; inset: 0; z-index: 94; }
 .sm-profile-panel {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 95;

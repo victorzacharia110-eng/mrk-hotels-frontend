@@ -27,7 +27,7 @@
           </div>
           <div class="top-bar-right">
             <span class="top-bar-tagline"><i class="fas fa-hotel" aria-hidden="true"></i> {{ $t('topBar.tagline')
-              }}</span>
+            }}</span>
           </div>
         </div>
       </div>
@@ -35,11 +35,15 @@
       <!-- Main header: logo, directory search and account/language actions. -->
       <div class="main-header">
         <div class="container main-header-inner">
-          <button v-if="isAppMode" class="hamburger side-hamburger" :class="{ active: sideOpen }"
-            @click="sideOpen = !sideOpen" :aria-expanded="sideOpen" :aria-label="$t('nav.menuToggle')"
-            aria-controls="staff-drawer">
-            <span></span><span></span><span></span>
-          </button>
+          <div v-if="isAppMode" class="app-nav-triggers">
+            <button type="button" class="home-drawer-btn" :aria-label="$t('nav.home')" @click="openDepartments">
+              <i class="fas fa-home" aria-hidden="true"></i>
+            </button>
+            <button class="hamburger side-hamburger" :class="{ active: sideOpen }" @click="openDepartmentPages"
+              :aria-expanded="sideOpen" :aria-label="$t('nav.menuToggle')" aria-controls="staff-drawer">
+              <span></span><span></span><span></span>
+            </button>
+          </div>
 
           <router-link :to="homeLink" class="logo" @click="navOpen = false"
             :aria-label="$t('nav.portal') + ' — MRK Hotels'">
@@ -81,12 +85,8 @@
             <div v-if="showOutletPicker" class="outlet-picker">
               <label class="visually-hidden" for="active-outlet">{{ $t('outlet.switchLabel') }}</label>
               <i class="fas fa-store outlet-picker-icon" aria-hidden="true"></i>
-              <select
-                id="active-outlet"
-                class="outlet-picker-select"
-                :value="selectedOutlet?.outlet_id || ''"
-                @change="onOutletChange($event.target.value)"
-              >
+              <select id="active-outlet" class="outlet-picker-select" :value="selectedOutlet?.outlet_id || ''"
+                @change="onOutletChange($event.target.value)">
                 <option value="">{{ $t('outlet.choosePlaceholder') }}</option>
                 <option v-for="o in outlets" :key="o.outlet_id" :value="o.outlet_id">{{ o.name }}</option>
               </select>
@@ -97,12 +97,8 @@
             <div v-if="showStorePicker" class="outlet-picker outlet-store-picker">
               <label class="visually-hidden" for="active-store">{{ $t('outlet.storePickerLabel') }}</label>
               <i class="fas fa-warehouse outlet-picker-icon" aria-hidden="true"></i>
-              <select
-                id="active-store"
-                class="outlet-picker-select"
-                :value="selectedStore?.outlet_id || ''"
-                @change="onStoreChange($event.target.value)"
-              >
+              <select id="active-store" class="outlet-picker-select" :value="selectedStore?.outlet_id || ''"
+                @change="onStoreChange($event.target.value)">
                 <option value="">{{ $t('outlet.chooseStorePlaceholder') }}</option>
                 <option v-for="store in storeOutlets" :key="store.outlet_id" :value="store.outlet_id">
                   {{ store.name }}{{ isMainStore(store) ? ` · ${$t('outlet.mainStore')}` : '' }}
@@ -129,12 +125,18 @@
                 <div class="profile-menu">
                   <button type="button" class="profile-menu-trigger" :aria-expanded="profileOpen"
                     :aria-label="$t('nav.profile')" @click="profileOpen = !profileOpen">
-                    <span class="profile-menu-avatar" aria-hidden="true">{{ accountInitials }}</span>
+                    <span class="profile-menu-avatar has-image" v-if="accountAvatarUrl" aria-hidden="true">
+                      <img :src="accountAvatarUrl" :alt="accountName" class="profile-menu-avatar-img" />
+                    </span>
+                    <span v-else class="profile-menu-avatar" aria-hidden="true">{{ accountInitials }}</span>
                   </button>
                   <div v-if="profileOpen" class="profile-menu-backdrop" @click="profileOpen = false"></div>
                   <div v-if="profileOpen" class="profile-menu-panel">
                     <div class="profile-menu-head">
-                      <span class="profile-menu-avatar" aria-hidden="true">{{ accountInitials }}</span>
+                      <span class="profile-menu-avatar has-image" v-if="accountAvatarUrl" aria-hidden="true">
+                        <img :src="accountAvatarUrl" :alt="accountName" class="profile-menu-avatar-img" />
+                      </span>
+                      <span v-else class="profile-menu-avatar" aria-hidden="true">{{ accountInitials }}</span>
                       <strong class="profile-menu-name">{{ accountName }}</strong>
                     </div>
                     <router-link :to="{ name: 'public-home' }" class="profile-menu-link" @click="profileOpen = false">
@@ -154,14 +156,12 @@
                     </button>
                     <div class="profile-menu-lang" role="group" :aria-label="$t('topBar.language')">
                       <button type="button" class="lang-option" :class="{ active: locale === 'en' }"
-                        @click="setLocale('en')" :title="$t('topBar.switchToEnglish')"
-                        :aria-pressed="locale === 'en'">
+                        @click="setLocale('en')" :title="$t('topBar.switchToEnglish')" :aria-pressed="locale === 'en'">
                         <span class="lang-flag" aria-hidden="true">🇬🇧</span>
                         <span class="lang-code">EN</span>
                       </button>
                       <button type="button" class="lang-option" :class="{ active: locale === 'sw' }"
-                        @click="setLocale('sw')" :title="$t('topBar.switchToSwahili')"
-                        :aria-pressed="locale === 'sw'">
+                        @click="setLocale('sw')" :title="$t('topBar.switchToSwahili')" :aria-pressed="locale === 'sw'">
                         <span class="lang-flag" aria-hidden="true">🇹🇿</span>
                         <span class="lang-code">SW</span>
                       </button>
@@ -328,7 +328,7 @@
                 notifStore.unreadCount }}</span>
             </button>
             <span v-else class="nav-text"><i class="fas fa-moon" aria-hidden="true"></i> {{ $t('nav.fastBooking')
-              }}</span>
+            }}</span>
           </div>
         </div>
       </nav>
@@ -354,14 +354,30 @@
           </button>
         </div>
         <div v-if="isAppMode && authStore.isAuthenticated" class="drawer-user">
-          <span class="drawer-user-avatar" aria-hidden="true">{{ accountInitials }}</span>
+          <span class="drawer-user-avatar has-image" v-if="accountAvatarUrl" aria-hidden="true">
+            <img :src="accountAvatarUrl" :alt="accountName" class="drawer-user-avatar-img" />
+          </span>
+          <span v-else class="drawer-user-avatar" aria-hidden="true">{{ accountInitials }}</span>
           <span class="drawer-user-meta">
             <strong>{{ accountName }}</strong>
             <RoleBadge />
           </span>
         </div>
         <nav class="drawer-nav">
-          <template v-for="item in visibleModules" :key="item.to || item.key">
+          <template v-if="drawerMode === 'departments'">
+            <button
+              v-for="department in departments"
+              :key="department.key"
+              type="button"
+              class="drawer-link drawer-department"
+              @click="selectDepartment(department)"
+            >
+              <i :class="department.icon" aria-hidden="true"></i> {{ department.label }}
+              <i class="fas fa-arrow-right drawer-department-arrow" aria-hidden="true"></i>
+            </button>
+          </template>
+          <template v-else>
+          <template v-for="item in drawerModules" :key="item.to || item.key">
             <template v-if="item.children">
               <button type="button" class="drawer-link drawer-acc-head" @click="toggleAccordion(item.key)">
                 <i :class="item.icon" aria-hidden="true"></i> {{ item.label }}
@@ -406,10 +422,11 @@
                 </div>
               </div>
             </template>
-            <router-link v-else :key="item.to" :to="item.to" class="drawer-link"
-              :class="{ 'is-exact': item.exact }" @click="sideOpen = false">
+            <router-link v-else :key="item.to" :to="item.to" class="drawer-link" :class="{ 'is-exact': item.exact }"
+              @click="sideOpen = false">
               <i :class="item.icon" aria-hidden="true"></i> {{ item.label }}
             </router-link>
+          </template>
           </template>
         </nav>
         <div class="drawer-foot">
@@ -611,8 +628,7 @@
         </div>
 
         <div v-else-if="gateStep === 'store'" class="outlet-gate-list">
-          <button v-if="selectedStore" type="button" class="outlet-gate-option"
-            @click="chooseStore(selectedStore)">
+          <button v-if="selectedStore" type="button" class="outlet-gate-option" @click="chooseStore(selectedStore)">
             <i class="fas fa-warehouse" aria-hidden="true"></i>
             <span class="outlet-gate-copy">
               <strong>{{ selectedStore.name }}</strong>
@@ -659,12 +675,8 @@
 
     <!-- The staff order pad lives in this shell, so the waiter and bar-tender
          panels get the unsettled-order Day Close reminder from here. -->
-    <DayCloseReminderModal
-      proceed-route="cashier-day-close"
-      new-order-route="cashier-dine-in"
-      :can-proceed-roles="DAY_CLOSE_ROLES"
-      :role="authStore.user?.user_role"
-    />
+    <DayCloseReminderModal proceed-route="cashier-day-close" new-order-route="cashier-dine-in"
+      :can-proceed-roles="DAY_CLOSE_ROLES" :role="authStore.user?.user_role" />
   </div>
 </template>
 
@@ -720,14 +732,98 @@ const accountInitials = computed(() => {
   return (parts.slice(0, 2).map((part) => part[0]?.toUpperCase() || '').join('') || 'U')
 })
 
+const accountAvatarUrl = computed(() => authStore.user?.profile_picture || '')
+
 const { holiday } = useHoliday()
 
 const year = new Date().getFullYear()
 // Header UI state: the mobile menu toggle, the directory search query, and notification dropdown.
 const navOpen = ref(false)
-// Staff drawer (hamburger menu) open state — collapsed by default.
+// Staff drawer (hamburger menu) open state — collapsed by default. The home
+// button opens the department picker; the hamburger opens pages for the
+// department the user is currently in.
 const sideOpen = ref(false)
+const drawerMode = ref('pages')
+const activeDepartment = ref('')
 const showNotifDropdown = ref(false)
+
+/** Department picker shown by the home icon, with each department's landing page. */
+const departments = computed(() => [
+  {
+    key: 'dashboard',
+    icon: 'fas fa-gauge-high',
+    label: t(isManagement.value ? 'overview.title' : 'nav.dashboard'),
+    to: isManagement.value ? '/app/overview' : '/app',
+  },
+  { key: 'front-desk', icon: 'fas fa-bed', label: t('accordion.frontDesk'), to: '/app' },
+  { key: 'restaurant-bar', icon: 'fas fa-utensils', label: t('accordion.foodBeverage'), to: '/app/pos/dine-in' },
+  { key: 'guest-services', icon: 'fas fa-broom', label: t('accordion.guestServices'), to: '/app/housekeeping' },
+  { key: 'inventory-procurement', icon: 'fas fa-boxes-stacked', label: t('accordion.inventoryProcurement'), to: '/app/store/dashboard' },
+  { key: 'communication', icon: 'fas fa-comments', label: t('accordion.communication'), to: '/app/messages' },
+  { key: 'back-office', icon: 'fas fa-briefcase', label: t('backOffice.title'), to: '/app/back-office' },
+])
+
+const departmentModuleKeys = {
+  dashboard: ['dashboard', 'overview'],
+  'front-desk': [
+    'front-desk', 'reception-reservations', 'reception-payments', 'rates', 'dashboard',
+    'reservations', 'rooms', 'guests', 'payments', 'booking-requisitions', 'night-audit',
+    'distribution', 'activity-log-report', 'overrides', 'reports', 'group-front-desk',
+  ],
+  'restaurant-bar': [
+    'restaurant-bar', 'group-fnb', 'take-order', 'orders', 'menu', 'outlets',
+    'issue-reports', 'pos-reports', 'item-lookup', 'pos-sales', 'shift', 'dashboard',
+  ],
+  'guest-services': ['guest-services', 'housekeeping', 'laundry', 'fun-games'],
+  'inventory-procurement': [
+    'inventory-procurement', 'group-stock', 'store-dashboard', 'store-reports',
+    'store-expenses', 'store-cash-register', 'stock-counts', 'stock-adjust',
+    'inventory', 'departments', 'categories', 'suppliers', 'requisitions',
+    'purchase-requisitions', 'purchase-orders', 'goods-received', 'accounting',
+  ],
+  communication: ['communication', 'group-comms', 'messages', 'statuses', 'requisitions'],
+  'back-office': [
+    'back-office', 'group-admin', 'staff', 'hotel-settings', 'hotel-marketing',
+    'trusted-devices', 'activity-log-report', 'overrides', 'imports', 'reports',
+    'printer', 'accounting', 'integrations/booking-com', 'integrations/quickbooks',
+    'integrations/xero',
+  ],
+}
+
+function openDepartments() {
+  drawerMode.value = 'departments'
+  sideOpen.value = true
+}
+
+function openDepartmentPages() {
+  drawerMode.value = 'pages'
+  sideOpen.value = !sideOpen.value
+}
+
+function selectDepartment(department) {
+  activeDepartment.value = department.key
+  drawerMode.value = 'pages'
+  sideOpen.value = false
+  router.push(department.to)
+}
+
+/** Infers the active department from a route so the hamburger stays scoped. */
+function inferDepartment(path) {
+  if (path === '/app/overview') return 'dashboard'
+  if (path.startsWith('/app/back-office') || path.startsWith('/app/settings')
+    || path.startsWith('/app/staff') || path.startsWith('/app/import')) return 'back-office'
+  if (path.startsWith('/app/store') || path.startsWith('/app/purchase')
+    || path.startsWith('/app/goods-received') || path.startsWith('/app/inventory')
+    || path.startsWith('/app/suppliers') || path.startsWith('/app/requisitions')) return 'inventory-procurement'
+  if (path.startsWith('/app/pos') || path.startsWith('/app/take-order')
+    || path.startsWith('/app/orders') || path.startsWith('/app/menu')
+    || path.startsWith('/app/outlets')) return 'restaurant-bar'
+  if (path.startsWith('/app/housekeeping') || path.startsWith('/app/laundry')
+    || path.startsWith('/app/fun-games')) return 'guest-services'
+  if (path.startsWith('/app/messages') || path.startsWith('/app/statuses')) return 'communication'
+  return 'front-desk'
+}
+
 const showNotifSound = ref(false)
 // Staff profile dropdown (top-right initials circle). It closes on route
 // change so navigating out of the panel never strands it open.
@@ -736,6 +832,7 @@ watch(
   () => route.fullPath,
   () => {
     profileOpen.value = false
+    if (route.path.startsWith('/app')) activeDepartment.value = inferDepartment(route.path)
   },
 )
 // Return cue for the Back Office browser: its editors are separate routes, so
@@ -1323,27 +1420,22 @@ const visibleModules = computed(() => {
     const restaurantBar = []
     if (byKey.orders || byKey['take-order']) {
       restaurantBar.push(subGroup('fnb-ordering', 'fas fa-cash-register', t('accordion.ordering'), [
-        { key: 'dine-in', to: { name: 'cashier-dine-in' }, icon: 'fas fa-chair', label: t('cashier.nav.dineIn') },
-        { key: 'take-away', to: { name: 'cashier-take-away' }, icon: 'fas fa-bag-shopping', label: t('cashier.nav.takeAway') },
-        { key: 'room-service', to: { name: 'cashier-room-service' }, icon: 'fas fa-bed', label: t('cashier.nav.roomService') },
-        { key: 'delivery', to: { name: 'cashier-delivery' }, icon: 'fas fa-motorcycle', label: t('cashier.nav.delivery') },
-        { key: 'no-charge', to: { name: 'cashier-no-charge' }, icon: 'fas fa-gift', label: t('cashier.nav.noCharge') },
-        { key: 'waiter-assignment', to: { name: 'cashier-waiter-assignment' }, icon: 'fas fa-user-group', label: t('cashier.nav.waiterAssignment') },
-        // Management panel review: management gets the same Restaurant & Bar
-        // UX as the cashier/bartender, "plus more authority such as void
-        // order". Voiding lives on the POS order summary (`canVoidSettled`
-        // already admits hotel_admin/manager).
-        { key: 'order-summary', to: { name: 'cashier-order-summary' }, icon: 'fas fa-receipt', label: t('cashier.nav.orderSummary') },
+        { key: 'dine-in', to: { name: 'app-pos-dine-in' }, icon: 'fas fa-chair', label: t('cashier.nav.dineIn') },
+        { key: 'take-away', to: { name: 'app-pos-take-away' }, icon: 'fas fa-bag-shopping', label: t('cashier.nav.takeAway') },
+        { key: 'room-service', to: { name: 'app-pos-room-service' }, icon: 'fas fa-bed', label: t('cashier.nav.roomService') },
+        { key: 'delivery', to: { name: 'app-pos-delivery' }, icon: 'fas fa-motorcycle', label: t('cashier.nav.delivery') },
+        { key: 'no-charge', to: { name: 'app-pos-no-charge' }, icon: 'fas fa-gift', label: t('cashier.nav.noCharge') },
+        { key: 'order-summary', to: { name: 'app-pos-order-summary' }, icon: 'fas fa-receipt', label: t('cashier.nav.orderSummary') },
       ]))
     }
     // `reports` (the Report Browser) is deliberately absent: it belongs to the
     // FRONT DESK administration submenu above, per the manager review. POS
     // Reports stays here as the department-scoped F&B browser.
-    const manager = pick(['menu', 'outlets', 'staff-reports', 'pos-reports', 'item-lookup', 'shift', 'devices'])
+    const manager = pick(['staff-reports', 'pos-reports', 'item-lookup', 'shift'])
     // Day Close is the cashier panel's F&B business-day close (it used to
     // point at the accounting report); Expense / Income Voucher stay the
     // store expense ledger and the accounting workbench.
-    manager.push({ key: 'day-close', to: { name: 'cashier-day-close' }, icon: 'fas fa-calendar-check', label: t('nav.dayClose') })
+    manager.push({ key: 'day-close', to: { name: 'app-pos-day-close' }, icon: 'fas fa-calendar-check', label: t('nav.dayClose') })
     if (byKey['store-expenses']) manager.push({ key: 'expense-voucher', to: byKey['store-expenses'].to, icon: 'fas fa-file-invoice-dollar', label: t('nav.expenseVoucher') })
     if (byKey.accounting) manager.push({ key: 'income-voucher', to: byKey.accounting.to, icon: 'fas fa-sack-dollar', label: t('nav.incomeVoucher') })
     // The rest of the cashier panel's Manager group, offered to every
@@ -1352,17 +1444,13 @@ const visibleModules = computed(() => {
     // registered before it can be picked on a no-charge order, so the
     // creditors registry stays reachable from here.
     manager.push(
-      { key: 'ingredients', to: { name: 'cashier-ingredients' }, icon: 'fas fa-flask', label: t('cashier.nav.ingredients') },
-      { key: 'transaction-lock', to: { name: 'cashier-transaction-lock' }, icon: 'fas fa-lock', label: t('cashier.nav.transactionLock') },
-      { key: 'credit-accounts', to: { name: 'cashier-account-lookup' }, icon: 'fas fa-users', label: t('cashier.nav.accountLookup') },
+      { key: 'ingredients', to: { name: 'app-pos-ingredients' }, icon: 'fas fa-flask', label: t('cashier.nav.ingredients') },
+      { key: 'transaction-lock', to: { name: 'app-pos-transaction-lock' }, icon: 'fas fa-lock', label: t('cashier.nav.transactionLock') },
+      { key: 'credit-accounts', to: { name: 'app-pos-account-lookup' }, icon: 'fas fa-users', label: t('cashier.nav.accountLookup') },
     )
     if (manager.length) restaurantBar.push(subGroup('fnb-manager', 'fas fa-user-gear', t('accordion.manager'), manager))
     const rbInventory = pick(['requisitions', 'stock-counts', 'stock-adjust'])
     if (rbInventory.length) restaurantBar.push(subGroup('fnb-inventory', 'fas fa-boxes-stacked', t('accordion.inventory'), rbInventory))
-    if (byKey.printer) {
-      restaurantBar.push(byKey.printer)
-      restaurantBar.push({ key: 'print-settings', to: { name: 'cashier-print-settings' }, icon: 'fas fa-cloud-arrow-up', label: t('cashier.nav.printSettings') })
-    }
     if (byKey['issue-reports']) restaurantBar.push(byKey['issue-reports'])
     if (restaurantBar.length) out.push(accordionGroup('restaurant-bar', 'fas fa-utensils', 'accordion.foodBeverage', restaurantBar))
 
@@ -1377,7 +1465,7 @@ const visibleModules = computed(() => {
     // the old "Back Office" (store settings) page is removed from this group;
     // SUPPLIER stays. ACCOUNTING is accountant-only.
     const inventoryProcurement = [
-      ...pick(['store-dashboard', 'purchase-orders', 'goods-received', 'store-expenses', 'store-cash-register', 'store-reports', 'inventory', 'suppliers']),
+      ...pick(['store-dashboard', 'purchase-orders', 'goods-received', 'store-expenses', 'store-cash-register', 'store-reports', 'requisitions', 'inventory', 'suppliers']),
     ]
     if (authStore.user?.user_role === 'accountant') {
       inventoryProcurement.push(...pick(['accounting']))
@@ -1450,6 +1538,13 @@ const visibleModules = computed(() => {
   }
 
   return [...standalone, ...grouped]
+})
+
+/** Pages shown by the hamburger, scoped to the department the user is in. */
+const drawerModules = computed(() => {
+  if (drawerMode.value !== 'pages' || !activeDepartment.value) return visibleModules.value
+  const keys = departmentModuleKeys[activeDepartment.value] || []
+  return visibleModules.value.filter((item) => keys.includes(item.key) || keys.includes(item.labelKey))
 })
 
 /** Flat list of every module (used by the mobile menu so nothing is hidden). */
@@ -2228,6 +2323,31 @@ function formatNotifTime(iso) {
   transition: all 0.3s;
 }
 
+.app-nav-triggers {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.home-drawer-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #333;
+  font-size: 18px;
+  border-radius: 8px;
+}
+
+.home-drawer-btn:hover {
+  background: #f1f5f9;
+  color: var(--brand, #005eb8);
+}
+
 /* Staff drawer: dark overlay + sliding panel */
 .drawer-overlay {
   position: fixed;
@@ -2305,6 +2425,18 @@ function formatNotifTime(iso) {
   font-weight: 800;
   letter-spacing: 0.4px;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.drawer-user-avatar.has-image {
+  background: #334155;
+}
+
+.drawer-user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .drawer-user-meta {
@@ -2395,6 +2527,18 @@ function formatNotifTime(iso) {
 
 .drawer-link.logout {
   color: #ffd7d7;
+}
+
+.drawer-department {
+  justify-content: flex-start;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.drawer-department-arrow {
+  margin-left: auto;
+  width: auto;
+  font-size: 12px;
+  opacity: 0.7;
 }
 
 /* Night Audit accordion group in the staff drawer. */
@@ -3200,6 +3344,7 @@ function formatNotifTime(iso) {
 }
 
 @media (min-width: 768px) and (max-width: 960px) {
+
   .store-layout:not(.app-shell) .top-bar,
   .store-layout:not(.app-shell) .main-nav,
   .store-layout:not(.app-shell) .header-actions {
@@ -3531,6 +3676,7 @@ function formatNotifTime(iso) {
   gap: 12px;
   margin-bottom: 16px;
 }
+
 .outlet-gate-back {
   margin-left: auto;
   display: inline-flex;
@@ -3544,6 +3690,7 @@ function formatNotifTime(iso) {
   font-weight: 700;
   cursor: pointer;
 }
+
 .outlet-gate-foot {
   display: flex;
   justify-content: flex-end;
@@ -3551,6 +3698,7 @@ function formatNotifTime(iso) {
   padding-top: 14px;
   border-top: 1px solid #e2e8f0;
 }
+
 .outlet-gate-logout {
   display: inline-flex;
   align-items: center;
@@ -3563,34 +3711,119 @@ function formatNotifTime(iso) {
   font-weight: 700;
   cursor: pointer;
 }
-.outlet-gate-logout:hover { color: #b91c1c; }
-.outlet-gate-logout:disabled { opacity: .6; cursor: not-allowed; }
-.outlet-gate-copy { display: flex; flex: 1; flex-direction: column; gap: 2px; }
-.outlet-gate-copy small { color: #64748b; font-size: 11.5px; font-weight: 500; }
-.outlet-gate-arrow { color: #94a3b8; font-size: 12px; }
-.outlet-gate-empty { margin: 0; color: #64748b; font-size: 13px; }
-.outlet-gate-create {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  width: 100%; padding: 11px 14px; border: 1px dashed #93c5fd; border-radius: 10px;
-  background: #eff6ff; color: #005eb8; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
-}
-.outlet-gate-create:hover { background: #dbeafe; }
-.outlet-gate-form { display: flex; flex-direction: column; gap: 10px; }
-.outlet-gate-form label { font-size: 13px; font-weight: 700; color: #334155; }
-.outlet-gate-form input {
-  width: 100%; padding: 11px 12px; border: 1px solid #cbd5e1; border-radius: 10px;
-  font: inherit; font-size: 14px; color: #1e293b; background: #fff;
-}
-.outlet-gate-form input:focus { outline: 2px solid #005eb8; outline-offset: 1px; border-color: #005eb8; }
-.outlet-gate-error { margin: 0; color: #b91c1c; font-size: 12.5px; }
-.outlet-gate-submit {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  width: 100%; padding: 12px 14px; border: 0; border-radius: 10px;
-  background: #005eb8; color: #fff; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
-}
-.outlet-gate-submit:disabled { opacity: .6; cursor: not-allowed; }
 
-.outlet-gate-head > i {
+.outlet-gate-logout:hover {
+  color: #b91c1c;
+}
+
+.outlet-gate-logout:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.outlet-gate-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.outlet-gate-copy small {
+  color: #64748b;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.outlet-gate-arrow {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.outlet-gate-empty {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.outlet-gate-create {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px dashed #93c5fd;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #005eb8;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.outlet-gate-create:hover {
+  background: #dbeafe;
+}
+
+.outlet-gate-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.outlet-gate-form label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.outlet-gate-form input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  color: #1e293b;
+  background: #fff;
+}
+
+.outlet-gate-form input:focus {
+  outline: 2px solid #005eb8;
+  outline-offset: 1px;
+  border-color: #005eb8;
+}
+
+.outlet-gate-error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 12.5px;
+}
+
+.outlet-gate-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #005eb8;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.outlet-gate-submit:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.outlet-gate-head>i {
   color: #005eb8;
   font-size: 22px;
   margin-top: 2px;

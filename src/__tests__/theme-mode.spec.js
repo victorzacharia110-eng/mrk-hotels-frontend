@@ -153,14 +153,29 @@ describe('dark theme stylesheet', () => {
   it('repaints the other report pages too', () => {
     expect(themeCss).toContain("html[data-theme='dark'] .rp-section")
     expect(themeCss).toContain("html[data-theme='dark'] .tab-btn")
-    expect(themeCss).toMatch(/--text-muted: #95a3ab/)
+    expect(themeCss).toMatch(/--text-muted: #c2ced4/)
   })
 
   it('uses the WhatsApp-style dark palette', () => {
     expect(themeCss).toMatch(/--bg: #0b141a/)
     expect(themeCss).toMatch(/--card: #202c33/)
     expect(themeCss).toMatch(/--text: #e9edef/)
-    expect(themeCss).toMatch(/--muted: #95a3ab/)
+    expect(themeCss).toMatch(/--muted: #c2ced4/)
+  })
+
+  it('keeps secondary text clearly readable on dark surfaces', () => {
+    expect(themeCss).not.toContain('#8696a0')
+    expect(themeCss).toMatch(/color: #b7c3ca/)
+    for (const sel of [
+      "html[data-theme='dark'] .tab-link",
+      "html[data-theme='dark'] .cp-mode-btn",
+      "html[data-theme='dark'] .cp-key",
+      "html[data-theme='dark'] .saved-profile",
+      "html[data-theme='dark'] .gate-hint",
+      "html[data-theme='dark'] .room-tag",
+    ]) {
+      expect(themeCss).toContain(sel)
+    }
   })
 
   it('repaints the sign-in pages dark too', () => {

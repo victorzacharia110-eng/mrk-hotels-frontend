@@ -41,6 +41,7 @@ const ROLE_LEVELS = {
  */
 const DEVICE_KEY = 'trusted_device_key'
 const DEVICE_UNTIL = 'trusted_device_until'
+const LOGIN_PROFILES_KEY = 'mrk_login_profiles'
 
 /**
  * Reads the trusted-device key, migrating a legacy sessionStorage copy.
@@ -67,6 +68,46 @@ function readDeviceKey() {
 function rememberDeviceKey(key, until) {
   if (key) localStorage.setItem(DEVICE_KEY, key)
   if (until) localStorage.setItem(DEVICE_UNTIL, until)
+}
+
+function trustedDeviceIsActive() {
+  if (!readDeviceKey()) return false
+  const until = localStorage.getItem(DEVICE_UNTIL)
+  if (!until) return true
+  const expires = Date.parse(until)
+  return Number.isNaN(expires) || expires > Date.now()
+}
+
+function readLoginProfiles() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LOGIN_PROFILES_KEY) || '[]')
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((p) => p && typeof p.email === 'string' && p.email.trim())
+      .sort((a, b) => String(b.last_used_at || '').localeCompare(String(a.last_used_at || '')))
+      .slice(0, 5)
+  } catch {
+    return []
+  }
+}
+
+function rememberLoginProfile(email, propertyCode = '') {
+  const normalizedEmail = String(email || '').trim().toLowerCase()
+  if (!normalizedEmail) return
+  const profiles = readLoginProfiles().filter((p) => p.email.toLowerCase() !== normalizedEmail)
+  profiles.unshift({
+    email: normalizedEmail,
+    property_code: String(propertyCode || '').replace(/\D/g, '').slice(0, 6),
+    last_used_at: new Date().toISOString(),
+  })
+  localStorage.setItem(LOGIN_PROFILES_KEY, JSON.stringify(profiles.slice(0, 5)))
+}
+
+function clearTrustedDevice() {
+  localStorage.removeItem(DEVICE_KEY)
+  localStorage.removeItem(DEVICE_UNTIL)
+  sessionStorage.removeItem(DEVICE_KEY)
+  sessionStorage.removeItem(DEVICE_UNTIL)
 }
 
 // Central auth store: session token, current user and role-based access checks.
@@ -340,6 +381,11 @@ export const useAuthStore = defineStore('auth', () => {
     return response.data
   }
 
+  async function changePin(data) {
+    const response = await authApi.changePin(data)
+    return response.data
+  }
+
   return {
     user,
     token,
@@ -351,6 +397,10 @@ export const useAuthStore = defineStore('auth', () => {
     isHotelAdmin,
     roleLevel,
     canOperate,
+    isTrustedDevice: trustedDeviceIsActive,
+    loginProfiles: readLoginProfiles,
+    rememberLoginProfile,
+    clearTrustedDevice,
     enabledFeatures,
     login,
     verifyDevice,
@@ -359,6 +409,7 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     fetchProfile,
     changePassword,
+    changePin,
     can,
     canAccess,
     hasPermission,

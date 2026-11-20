@@ -175,8 +175,9 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { companyApi, paymentApi, reservationApi } from '@/api'
-import { METHOD_CASH, requiresProvider, providersFor } from '@/utils/payments'
+import { METHOD_CASH, METHOD_CLICKPESA, PAYMENT_METHODS, effectivePaymentMethods, requiresProvider, providersFor } from '@/utils/payments'
 import { useBusinessDateStore } from '@/stores/businessDate'
+import { useAuthStore } from '@/stores/auth'
 
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -185,6 +186,7 @@ const { curCode } = useTenantCurrency()
 const { t } = useI18n()
 
 const businessDateStore = useBusinessDateStore()
+const authStore = useAuthStore()
 const selectedDate = ref(businessDateStore.current)
 const payments = ref([])
 const reservations = ref([])
@@ -195,14 +197,12 @@ const success = ref('')
 const error = ref('')
 const showModal = ref(false)
 
-const methodOptions = [
-  { value: METHOD_CASH, label: t('paymentFields.methods.cash') },
-  { value: 'mobile_money', label: t('paymentFields.methods.mobile_money') },
-  { value: 'bank', label: t('paymentFields.methods.bank') || 'Bank transfer' },
-  { value: 'card', label: t('paymentFields.methods.card') },
-  { value: 'selcom', label: t('paymentFields.methods.selcom') },
-  { value: 'clickpesa', label: 'ClickPesa' },
-]
+const methodOptions = computed(() =>
+  effectivePaymentMethods(authStore.user?.tenant?.payment_methods, [...PAYMENT_METHODS, METHOD_CLICKPESA]).map((m) => ({
+    value: m.value,
+    label: m.label || t(`paymentFields.methods.${m.value}`),
+  })),
+)
 
 const form = ref({ reservation_id: null, company_id: null, amount: null, payment_method: METHOD_CASH, payment_provider: null, paid_by: '' })
 
@@ -232,7 +232,7 @@ const total = computed(() => Object.values(totals.value).reduce((a, b) => a + b,
 const fmt = (n) => `${curCode()} ` + Number(n || 0).toLocaleString()
 
 function methodLabel(m) {
-  const found = methodOptions.find((o) => o.value === m)
+  const found = methodOptions.value.find((o) => o.value === m)
   return found ? found.label : String(m || '').replace(/_/g, ' ')
 }
 

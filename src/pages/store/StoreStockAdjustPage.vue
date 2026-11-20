@@ -622,7 +622,7 @@ function printSheet(row) {
     .map((line, idx) => `<tr><td>${idx + 1}</td><td>${escapeHtml(line.item_name)}</td><td>${escapeHtml(line.note || '—')}</td><td>${line.quantity_before}</td><td>${line.quantity_after}</td><td>${escapeHtml(line.unit || '')}</td><td>${money(line.unit_cost)}</td><td>${money(line.total_cost)}</td></tr>`)
     .join('')
   const voidBanner = row.status === 'voided'
-    ? `<div class="voided">VOIDED — ${escapeHtml(row.void_reason || '')}</div>`
+    ? `<div class="voided">VOID — ${escapeHtml(row.void_reason || '')}</div>`
     : ''
   const w = window.open('', '_blank')
   if (!w) return

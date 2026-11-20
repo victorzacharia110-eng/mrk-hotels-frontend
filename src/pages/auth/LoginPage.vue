@@ -24,10 +24,21 @@
 
       <!-- Sign-in mode switcher: classic password form vs. iPOS-style PIN keypad.
            Hidden while an OTP challenge is pending so it can't wipe it. -->
+      <div v-if="savedProfiles.length && mode === 'password' && !deviceVerify.required" class="saved-profiles">
+        <span class="saved-label">{{ $t('auth.savedProfiles') }}</span>
+        <button v-for="profile in savedProfiles" :key="profile.email" type="button" class="saved-profile"
+          :class="{ active: selectedProfile === profile.email }" :disabled="loading" @click="selectProfile(profile)">
+          {{ profile.email }}
+        </button>
+        <button type="button" class="saved-profile add-profile" :disabled="loading" @click="addAccount">
+          <i class="fas fa-plus"></i> {{ $t('auth.addAccount') }}
+        </button>
+      </div>
+
       <div v-if="!deviceVerify.required" class="mode-switch">
         <button type="button" class="mode-btn" :class="{ active: mode === 'password' }" :disabled="loading"
           @click="switchMode('password')"><i class="fas fa-keyboard"></i> {{ $t('auth.modePassword') }}</button>
-        <button type="button" class="mode-btn" :class="{ active: mode === 'pin' }" :disabled="loading"
+        <button v-if="canUsePin" type="button" class="mode-btn" :class="{ active: mode === 'pin' }" :disabled="loading"
           @click="switchMode('pin')"><i class="fas fa-calculator"></i> {{ $t('auth.modePin') }}</button>
       </div>
 
@@ -59,8 +70,8 @@
         <!-- Property code field (disambiguates email shared across hotels) -->
         <div class="form-group" :class="{ 'has-error': errors.property_code }">
           <label>{{ $t('auth.hotelCode', 'Property code') }}</label>
-          <input v-model="form.property_code" type="text" placeholder="HTL001" autocomplete="off"
-            @blur="touch('property_code')" @input="validateField('property_code')" />
+          <input id="login-property-code" v-model="form.property_code" type="text" inputmode="numeric" maxlength="6" placeholder="000000"
+            autocomplete="off" @blur="touch('property_code')" @input="onPropertyCodeInput" />
           <span class="field-error" v-if="errors.property_code"><i class="fas fa-exclamation-triangle"></i> {{
             errors.property_code }}</span>
         </div>
@@ -71,7 +82,7 @@
           device key, and the PIN keypad can only answer "this device is not
           trusted". On by default; untick for a shared/public machine.
         -->
-        <label class="trust-device">
+        <label v-if="!canUsePin" class="trust-device">
           <input v-model="form.trust_device" type="checkbox" />
           <span>
             <strong>{{ $t('auth.trustDeviceLabel') }}</strong>
@@ -140,7 +151,7 @@
       </div>
 
       <!-- PIN sign-in mode: just the 4-digit PIN entered via the on-screen keypad; auto-submits at 4 digits -->
-      <div v-if="mode === 'pin' && !deviceVerify.required" class="pin-mode">
+      <div v-if="mode === 'pin' && canUsePin && !deviceVerify.required" class="pin-mode">
         <!-- 4-dot progress indicator; dots fill as PIN digits are entered -->
         <div class="pin-dots">
           <span v-for="i in 4" :key="i" class="pin-dot" :class="{ filled: pinForm.pin.length >= i }"></span>
@@ -182,7 +193,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { resolveLanding } from '@/router'
@@ -228,7 +239,26 @@ const deviceVerify = ref({
   trustMonths: 3,
 })
 const trustOptions = [1, 3, 6]
+
+function describeDevice() {
+  const clientHints = navigator.userAgentData
+  if (clientHints?.brands?.length) {
+    return `${clientHints.brands[0].brand} ${clientHints.brands[0].version} on ${clientHints.platform || 'this device'}`.trim()
+  }
+
+  const ua = navigator.userAgent || ''
+  const browser = ua.match(/(Edg|Chrome|Firefox|Safari|Opera)\/[\d.]+/)?.[0] || 'Browser'
+  const os = ua.match(/Windows NT [\d.]+|Mac OS X [\d_]+|Android [\d.]+|iPhone OS [\d_]+|Linux/)?.[0] || 'this device'
+
+  return `${browser} on ${os}`.trim()
+}
+
 const resendCooldown = ref(0)
+const savedProfiles = ref([])
+const selectedProfile = ref('')
+const forcePasswordLogin = ref(false)
+const hasTrustedDevice = ref(authStore.isTrustedDevice())
+const canUsePin = computed(() => hasTrustedDevice.value && !forcePasswordLogin.value)
 let resendTimer = null
 
 // Timer handle for the temporary password-rotation toast.
@@ -236,10 +266,36 @@ let toastTimer = null
 
 // When redirected here after a forced password rotation, surface the new default password once.
 onMounted(() => {
+  hasTrustedDevice.value = authStore.isTrustedDevice()
+  if (!hasTrustedDevice.value) {
+    forcePasswordLogin.value = true
+    mode.value = 'password'
+  }
+  savedProfiles.value = authStore.loginProfiles()
+  if (savedProfiles.value.length) selectProfile(savedProfiles.value[0])
   if (route.query.rotated) {
     showToast(`${t('auth.passwordRotated')} ${route.query.default_password || ''}`)
   }
 })
+
+function selectProfile(profile) {
+  selectedProfile.value = profile.email
+  form.value.email = profile.email
+  form.value.property_code = profile.property_code || ''
+}
+
+function addAccount() {
+  selectedProfile.value = ''
+  form.value.email = ''
+  form.value.password = ''
+  form.value.property_code = ''
+}
+
+function onPropertyCodeInput(event) {
+  form.value.property_code = String(event?.target?.value ?? '').replace(/\D/g, '').slice(0, 6)
+  if (event?.target) event.target.value = form.value.property_code
+  validateField('property_code')
+}
 
 /**
  * Shows a transient toast message that clears itself after 6 seconds.
@@ -279,8 +335,7 @@ function validateField(field) {
       else delete errors.value.password
       break
     case 'property_code':
-      // property code is optional in general, but if the user enters one validate length lightly
-      if (form.value.property_code && form.value.property_code.trim().length < 1) errors.value.property_code = 'Property code is required'
+      if (!/^\d{6}$/.test(String(value || '').trim())) errors.value.property_code = t('auth.validation.propertyCodeInvalid')
       else delete errors.value.property_code
       break
   }
@@ -292,11 +347,11 @@ function validateField(field) {
  * @returns {boolean} True when neither email nor password has an error.
  */
 function validateAll() {
-  ;['email', 'password'].forEach((f) => {
+  ;['email', 'password', 'property_code'].forEach((f) => {
     touched.value[f] = true
     validateField(f)
   })
-  return !errors.value.email && !errors.value.password
+  return !errors.value.email && !errors.value.password && !errors.value.property_code
 }
 
 /**
@@ -323,6 +378,11 @@ async function handleLogin() {
       loading.value = false
       return
     }
+    forcePasswordLogin.value = false
+    hasTrustedDevice.value = authStore.isTrustedDevice()
+    authStore.rememberLoginProfile(form.value.email, form.value.property_code)
+    savedProfiles.value = authStore.loginProfiles()
+    selectedProfile.value = form.value.email.trim().toLowerCase()
     sessionStore.start()
     const redirect = route.query.redirect
     if (redirect) {
@@ -354,7 +414,7 @@ async function handleLogin() {
  * @param {string} m - The mode to activate ('password' | 'pin').
  */
 function switchMode(m) {
-  if (mode.value === m || loading.value) return
+  if (mode.value === m || loading.value || (m === 'pin' && !canUsePin.value)) return
   mode.value = m
   errors.value = {}
   serverErrors.value = []
@@ -426,11 +486,13 @@ async function submitPin() {
     const msg = e.response?.data?.message
     const pinLocked = e.response?.data?.pin_locked
     const deviceUntrusted = e.response?.data?.device_untrusted
-    if (deviceUntrusted) {
-      serverErrors.value = [msg || 'This device is not trusted. Sign in with email, password and property code.']
-      switchMode('password')
-    } else if (pinLocked) {
-      serverErrors.value = [msg || 'PIN is locked. Sign in with email, password and property code to unlock.']
+    if (deviceUntrusted || pinLocked) {
+      forcePasswordLogin.value = true
+      hasTrustedDevice.value = false
+      authStore.clearTrustedDevice()
+      serverErrors.value = [msg || (pinLocked
+        ? 'PIN is locked. Sign in with email, password and property code to unlock.'
+        : 'This device is not trusted. Sign in with email, password and property code.')]
       switchMode('password')
     } else if (e.response?.data?.attempts_remaining !== undefined) {
       serverErrors.value = [msg ? `${msg} Attempts remaining: ${e.response.data.attempts_remaining}` : `Invalid credentials. Attempts remaining: ${e.response.data.attempts_remaining}`]
@@ -460,8 +522,14 @@ async function submitDeviceVerification() {
       challenge: deviceVerify.value.challenge,
       code: deviceVerify.value.code.trim(),
       trust_months: Number(deviceVerify.value.trustMonths),
+      device_name: describeDevice(),
     })
     // The store persists the returned device key itself — no second copy here.
+    forcePasswordLogin.value = false
+    hasTrustedDevice.value = authStore.isTrustedDevice()
+    authStore.rememberLoginProfile(form.value.email, form.value.property_code)
+    savedProfiles.value = authStore.loginProfiles()
+    selectedProfile.value = form.value.email.trim().toLowerCase()
     sessionStore.start()
     const redirect = route.query.redirect
     if (redirect) {
@@ -732,7 +800,44 @@ function startResendCooldown() {
   color: #005EB8;
 }
 
-/* Segmented sign-in mode switcher (Password / PIN) */
+.saved-profiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.saved-label {
+  width: 100%;
+  font-size: 12px;
+  color: #667085;
+}
+
+.saved-profile {
+  border: 1px solid #d0d5dd;
+  border-radius: 999px;
+  background: #fff;
+  color: #344054;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 6px 10px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-profile.active {
+  border-color: #005EB8;
+  color: #005EB8;
+  background: #eef6ff;
+}
+
+.saved-profile.add-profile {
+  border-style: dashed;
+}
+
 .mode-switch {
   display: flex;
   gap: 4px;

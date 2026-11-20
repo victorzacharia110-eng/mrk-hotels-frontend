@@ -702,7 +702,7 @@ const filterTabs = computed(() => [
     label: t('cashier.summary.tabSettled') || 'SETTLED',
     count: orders.value.filter(isSettled).length,
   },
-  { key: 'voided', label: t('cashier.summary.tabVoided') || 'VOIDED', count: orders.value.filter((o) => o.status === 'cancelled').length },
+  { key: 'voided', label: t('cashier.summary.tabVoided') || 'VOID', count: orders.value.filter((o) => o.status === 'cancelled').length },
 ])
 
 function chipFor(order) {
@@ -753,17 +753,30 @@ function money(value) {
 
 async function load() {
   loading.value = true
+  error.value = ''
   try {
-    const params = { per_page: 100, outlet_id: selectedOutlet.value?.outlet_id || undefined }
+    const base = { per_page: 100, outlet_id: selectedOutlet.value?.outlet_id || undefined }
 
     // Older dates are exact; the open business date is a lower bound so
     // tickets created after midnight still join the day that has not closed.
     if (date.value) {
-      if (date.value < workingDateStore.workingDate) params.date = date.value
-      else params.from_date = date.value
+      if (date.value < workingDateStore.workingDate) base.date = date.value
+      else base.from_date = date.value
     }
-    const { data } = await orderApi.index(params)
-    orders.value = data.data || []
+
+    const all = []
+    let pageNo = 1
+    let last = 1
+    do {
+      const { data } = await orderApi.index({ ...base, page: pageNo })
+      const rows = data.data || []
+      all.push(...rows)
+      const info = data.meta || data.pagination || {}
+      last = Number(info.last_page) || (rows.length === base.per_page ? pageNo + 1 : pageNo)
+      pageNo += 1
+    } while (pageNo <= last)
+
+    orders.value = all
     // Drop any ticked ids that are no longer on the board (the checkboxes now
     // drive every action, not just void, so any listed status stays tickable).
     selected.value = selected.value.filter((id) =>

@@ -63,11 +63,19 @@ async function mountLogin() {
 async function submitCredentials(wrapper) {
   await wrapper.find('input[type="email"]').setValue('manager@mrkhotels.test')
   await wrapper.find('input[type="password"]').setValue('password')
+  await wrapper.find('#login-property-code').setValue('123456')
   await wrapper.find('form').trigger('submit')
   await flushPromises()
 }
 
 describe('LoginPage — device trust OTP step', () => {
+  it('hides the PIN keypad until this device is trusted', async () => {
+    const wrapper = await mountLogin()
+
+    expect(wrapper.findAll('.mode-btn')).toHaveLength(1)
+    expect(wrapper.find('.pin-mode').exists()).toBe(false)
+  })
+
   it('asks the backend to trust the device so an OTP is actually issued', async () => {
     loginMock.mockResolvedValue({ data: CHALLENGE })
     const wrapper = await mountLogin()
@@ -118,6 +126,7 @@ describe('LoginPage — device trust OTP step', () => {
       challenge: 'ch_123',
       code: '123456',
       trust_months: 3,
+      device_name: expect.any(String),
     })
   })
 

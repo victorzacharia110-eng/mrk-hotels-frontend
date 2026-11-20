@@ -274,7 +274,7 @@
 
     <!-- Printable GRN document -->
     <div v-if="printData" class="print-area">
-      <div v-if="printData.voided_by || printData.status === 'voided'" class="print-void">VOIDED</div>
+      <div v-if="printData.voided_by || printData.status === 'voided'" class="print-void">VOID</div>
       <h2>{{ printData.grn_number }}</h2>
       <table class="print-meta">
         <tbody>
@@ -317,6 +317,7 @@ import { useWorkingDateStore } from '@/stores/workingDate'
 import { useAuthStore } from '@/stores/auth'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { printElementSilently } from '@/utils/reportPrint'
+import { toast } from '@/utils/toast'
 
 import { useTenantCurrency } from '@/utils/currency'
 import { useOutletContext } from '@/composables/useOutletContext'
@@ -395,11 +396,10 @@ const canRecall = computed(() => {
   if (!sameDay(detail.value.received_date)) return auth.can(80)
   return true
 })
-const canVoidGrn = computed(() => {
-  if (!detail.value || detail.value.voided_by || detail.value.recalled_by) return false
-  if (!sameDay(detail.value.received_date)) return auth.can(80)
-  return true
-})
+const canVoidGrn = computed(() =>
+  !!detail.value && !detail.value.voided_by && !detail.value.recalled_by,
+)
+const isManagementPanel = computed(() => route.meta?.management === true || String(route.path || '').startsWith('/app/goods-received'))
 
 // Ledger mode: ?view=ledger-detail swaps the GRN list for the Stock Ledger
 // detail table (date/time + reference per movement). The old Stock Movement
@@ -511,6 +511,7 @@ async function openCreate() {
 async function startRecall() {
   const grn = detail.value
   if (!grn || !grn.items?.length) return
+  detail.value = null
   editingGrnId.value = grn.grn_id
   Object.assign(form, {
     po_id: grn.po_id || '',
@@ -669,6 +670,10 @@ async function emailSupplier() {
 
 async function voidGrn() {
   const grn = detail.value
+  if (!isManagementPanel.value) {
+    toast(t('purchaseOrders.accessDenied'), 'error')
+    return
+  }
   if (!window.confirm(t('goodsReceived.voidConfirm', { reference: grn.grn_number }))) return
   const reason = window.prompt(t('goodsReceived.voidReason'))
   if (reason === null) return
@@ -680,6 +685,7 @@ async function voidGrn() {
     await goodsReceivedNoteApi.void(grn.grn_id, { reason: reason.trim() })
     await load()
     await refreshDetail(grn.grn_id)
+    toast(t('goodsReceived.voidSuccess'), 'success')
   } catch (e) {
     window.alert(e.response?.data?.message || t('common.error'))
   }

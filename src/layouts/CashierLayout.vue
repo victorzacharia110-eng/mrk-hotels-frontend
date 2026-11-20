@@ -46,6 +46,13 @@
           <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.orderSummary') }}</span>
         </router-link>
 
+        <router-link :to="{ name: 'cashier-sales' }" class="pos-nav-link"
+          :class="{ active: isActive('/cashier/sales') }" @click="mobileOpen = false"
+          :title="$t('cashier.nav.sales')">
+          <i class="fas fa-receipt" aria-hidden="true"></i>
+          <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.sales') }}</span>
+        </router-link>
+
         <button type="button" class="pos-nav-heading pos-group" :class="{ open: isOpen('reports') }"
           @click="toggleGroup('reports')" v-show="!sidebarCollapsed"
           :aria-expanded="isOpen('reports')">
@@ -158,11 +165,6 @@
             :class="{ active: isActive('/cashier/printer') }" @click="mobileOpen = false">
             <i class="fas fa-print" aria-hidden="true"></i>
             <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.printer') }}</span>
-          </router-link>
-          <router-link :to="{ name: 'cashier-print-settings' }" class="pos-nav-link"
-            :class="{ active: isActive('/cashier/print-settings') }" @click="mobileOpen = false">
-            <i class="fas fa-cloud-arrow-up" aria-hidden="true"></i>
-            <span v-show="!sidebarCollapsed">{{ $t('cashier.nav.printSettings') }}</span>
           </router-link>
           </div>
         </div>
@@ -548,13 +550,12 @@ watch(() => route.path, () => {
   // Keep the parent group open so the active item stays visible (exclusive:
   // navigating to another group's page expands that group instead).
   if (route.path.startsWith('/cashier/item-lookup') || route.path.startsWith('/cashier/ingredients')
-    || route.path.startsWith('/cashier/shift-manager') || route.path.startsWith('/cashier/blocked-devices')
-    || route.path.startsWith('/cashier/transaction-lock') || route.path.startsWith('/cashier/account-lookup')
-    || route.path.startsWith('/cashier/day-close')) {
+    || route.path.startsWith('/cashier/shift-manager') || route.path.startsWith('/cashier/transaction-lock')
+    || route.path.startsWith('/cashier/account-lookup') || route.path.startsWith('/cashier/day-close')) {
     openGroup.value = 'manager'
   } else if (route.path.startsWith('/cashier/inventory')) {
     openGroup.value = 'inventory'
-  } else if (route.path.startsWith('/cashier/printer') || route.path.startsWith('/cashier/print-settings')) {
+  } else if (route.path.startsWith('/cashier/printer')) {
     openGroup.value = 'printer'
   } else if (route.path.startsWith('/cashier/reports') || route.path.startsWith('/cashier/report-browser')) {
     openGroup.value = 'reports'
@@ -1016,8 +1017,7 @@ onMounted(() => {
   margin: 10px 8px 2px;
   font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   color: #b0cde9;
 }
 .pos-group {
@@ -1123,7 +1123,10 @@ onMounted(() => {
   background: var(--mrk-blue); color: #fff;
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 14px;
+  overflow: hidden;
 }
+.sm-user-avatar.has-image { background: #e2e8f0; }
+.sm-user-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .sm-user-trigger {
   display: flex;
   align-items: center;

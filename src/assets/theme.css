@@ -14,14 +14,14 @@
  *
  * Palette: mirrors WhatsApp's dark mode — near-black desaturated background
  * (#0b141a), raised slate panels (#202c33) and inputs (#2a3942), near-white
- * text (#e9edef) and grey captions (#8696a0) — while keeping the hotel's blue
+ * text (#e9edef) and grey captions (#b7c3ca) — while keeping the hotel's blue
  * brand accent. Light mode is untouched.
  */
 
 html[data-theme='dark'] {
   --text: #e9edef;
-  --muted: #95a3ab;
-  --text-muted: #95a3ab;
+  --muted: #c2ced4;
+  --text-muted: #c2ced4;
   --border: #2f3b43;
   --bg: #0b141a;
   --card: #202c33;
@@ -63,7 +63,7 @@ html[data-theme='dark'] .section-title {
 
 html[data-theme='dark'] .section-subtitle,
 html[data-theme='dark'] .kpi-label {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .kpi-value {
@@ -81,7 +81,7 @@ html[data-theme='dark'] .table {
 
 html[data-theme='dark'] .table th {
   background: #2a3942;
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .table th,
@@ -127,7 +127,7 @@ html[data-theme='dark'] .input::placeholder,
 html[data-theme='dark'] .textarea::placeholder,
 html[data-theme='dark'] input::placeholder,
 html[data-theme='dark'] textarea::placeholder {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] input[type='checkbox'],
@@ -147,7 +147,7 @@ html[data-theme='dark'] .modal {
 }
 
 html[data-theme='dark'] .modal-close {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .modal-close:hover {
@@ -283,7 +283,7 @@ html[data-theme='dark'] .lang-switch {
 }
 
 html[data-theme='dark'] .lang-option {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .lang-option:hover {
@@ -327,7 +327,7 @@ html[data-theme='dark'] .mobile-search input {
 /* ── Reports browser ──────────────────────────────────────────────────────────
    The report browser was built as a paper-on-screen document: a white sheet
    (.rb-paper), navy headings (--mrk-dark), pale KPI/table surfaces and grey
-   captions (#8696a0 / #8696a0). Left untouched in dark mode that reads as faint
+   captions (#b7c3ca / #b7c3ca). Left untouched in dark mode that reads as faint
    grey text on a dark page, which is what the client flagged. Here the sheet and
    its panels become dark surfaces and the captions are lifted to a readable
    slate. The navy group/ledger bands keep their dark fill, since they already
@@ -385,7 +385,7 @@ html[data-theme='dark'] .ledger-item-balance {
 
 html[data-theme='dark'] .rb-empty,
 html[data-theme='dark'] .rb-report i {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 /* Panels, KPI tiles and hover fills get a raised dark surface. */
@@ -409,7 +409,7 @@ html[data-theme='dark'] .posr-col {
 
 html[data-theme='dark'] .rb-cat-head .fa-chevron-right,
 html[data-theme='dark'] .rb-cat-head .fa-chevron-down {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .rb-cat-icon,
@@ -510,7 +510,7 @@ html[data-theme='dark'] .cat-loading {
 html[data-theme='dark'] .rp-meta,
 html[data-theme='dark'] .rp-req-list small,
 html[data-theme='dark'] .rp-empty {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .rp-section,
@@ -569,7 +569,7 @@ html[data-theme='dark'] .room-status-item {
 html[data-theme='dark'] .room-status-label,
 html[data-theme='dark'] .occ-label,
 html[data-theme='dark'] .muted {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .occ-value {
@@ -613,7 +613,7 @@ html[data-theme='dark'] .pin-hint,
 html[data-theme='dark'] .auth-link,
 html[data-theme='dark'] .home-version,
 html[data-theme='dark'] .back-link {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .home-link {
@@ -640,12 +640,12 @@ html[data-theme='dark'] .form-group.has-error input {
 html[data-theme='dark'] .auth-page input::placeholder,
 html[data-theme='dark'] .auth-page textarea::placeholder,
 html[data-theme='dark'] .guest-login-page input::placeholder {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .pw-toggle,
 html[data-theme='dark'] .password-toggle {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .pw-toggle:hover,
@@ -659,7 +659,7 @@ html[data-theme='dark'] .mode-switch {
 }
 
 html[data-theme='dark'] .mode-btn {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .mode-btn.active {
@@ -678,7 +678,7 @@ html[data-theme='dark'] .trust-device strong {
 }
 
 html[data-theme='dark'] .trust-device small {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .pin-dot {
@@ -725,7 +725,7 @@ html[data-theme='dark'] .auth-input {
 }
 
 html[data-theme='dark'] .auth-links {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .auth-links a {
@@ -746,7 +746,7 @@ html[data-theme='dark'] .login-card {
 }
 
 html[data-theme='dark'] .input-hint {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .alert--error {
@@ -850,7 +850,7 @@ html[data-theme='dark'] .taker-page input::placeholder,
 html[data-theme='dark'] .taker-page textarea::placeholder,
 html[data-theme='dark'] .cat-pop input::placeholder,
 html[data-theme='dark'] .cat-pop textarea::placeholder {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 /* Hover backgrounds that were still light */
@@ -927,7 +927,7 @@ html[data-theme='dark'] .cat-item.out-of-stock .cat-item-price,
 html[data-theme='dark'] .summary-items .cat-empty,
 html[data-theme='dark'] .receipt .rc-line,
 html[data-theme='dark'] .receipt .rc-thanks {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 /* Primary copy */
@@ -1035,12 +1035,12 @@ html[data-theme='dark'] .open-btn.ghost.danger {
 html[data-theme='dark'] .dept-toggle button.locked,
 html[data-theme='dark'] .dept-toggle button.locked.active {
   background: #202c33;
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .tm-chip-del {
   background: #2a3942;
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .line-remove {
@@ -1135,7 +1135,7 @@ html[data-theme='dark'] .sv-pill.dirty {
 html[data-theme='dark'] .sv-search {
   background: #2a3942;
   border-color: #374248;
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-search input {
@@ -1184,7 +1184,7 @@ html[data-theme='dark'] .sv-room-picker-modal .sv-group-primary-mark {
 }
 
 html[data-theme='dark'] .sv-room-picker-modal .sv-room-picker-sort {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-room-picker-shell .sv-room-picker-chip {
@@ -1209,7 +1209,7 @@ html[data-theme='dark'] .sv-room-picker-bar .sv-room-picker-count {
 }
 
 html[data-theme='dark'] .sv-search-hit i {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-hit-main {
@@ -1218,7 +1218,7 @@ html[data-theme='dark'] .sv-hit-main {
 
 html[data-theme='dark'] .sv-hit-sub,
 html[data-theme='dark'] .sv-search-empty {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-tool-btn {
@@ -1273,7 +1273,7 @@ html[data-theme='dark'] .sv-day-head {
 }
 
 html[data-theme='dark'] .sv-day-head .dow {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-day-head .dom {
@@ -1336,7 +1336,7 @@ html[data-theme='dark'] .sv-room-number {
 }
 
 html[data-theme='dark'] .sv-room-flag {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 /* Booking-bar lanes */
@@ -1424,7 +1424,7 @@ html[data-theme='dark'] .sv-cal-day {
 }
 
 html[data-theme='dark'] .sv-cal-dow {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-cal-day:hover:not(.blank):not(:disabled) {
@@ -1442,7 +1442,7 @@ html[data-theme='dark'] .sv-cal-day.weekend:not(.business) {
 
 html[data-theme='dark'] .sv-cal-day.blank,
 html[data-theme='dark'] .sv-cal-reset {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 /* Hover popover on a booking bar */
@@ -1468,7 +1468,7 @@ html[data-theme='dark'] .sv-popover-row {
 }
 
 html[data-theme='dark'] .sv-popover-row i {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 /* Housekeeping floating card */
@@ -1484,11 +1484,11 @@ html[data-theme='dark'] .sv-hk-task-type {
 }
 
 html[data-theme='dark'] .sv-hk-card-guest {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-hk-card-close {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-hk-item {
@@ -1523,7 +1523,7 @@ html[data-theme='dark'] .sv-modal-row {
 }
 
 html[data-theme='dark'] .sv-modal-row i {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-ledger-head {
@@ -1532,7 +1532,7 @@ html[data-theme='dark'] .sv-ledger-head {
 }
 
 html[data-theme='dark'] .sv-ledger-head small {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-ledger-preview {
@@ -1547,7 +1547,7 @@ html[data-theme='dark'] .sv-ledger-table td {
 
 html[data-theme='dark'] .sv-ledger-table th {
   background: #2a3942;
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-ledger-table .cat-row td {
@@ -1564,7 +1564,7 @@ html[data-theme='dark'] .sv-stay-item span,
 html[data-theme='dark'] .sv-tab-section,
 html[data-theme='dark'] .sv-panel-card span,
 html[data-theme='dark'] .sv-grid-item span {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-stay-item strong,
@@ -1578,7 +1578,7 @@ html[data-theme='dark'] .sv-tabs {
 }
 
 html[data-theme='dark'] .sv-tab {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-tab:hover {
@@ -1619,7 +1619,7 @@ html[data-theme='dark'] .sv-table-wrap {
 
 html[data-theme='dark'] .sv-table th {
   background: #2a3942;
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-table th,
@@ -1651,11 +1651,11 @@ html[data-theme='dark'] .sv-folio-table .sv-folio-balance td {
 html[data-theme='dark'] .sv-folio-table .row-muted td,
 html[data-theme='dark'] .sv-folio-table .sv-muted-cell,
 html[data-theme='dark'] .sv-folio-hint {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-folio-table .sv-icon-link {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-amount-charge {
@@ -1738,7 +1738,7 @@ html[data-theme='dark'] .sv-room-picker-grid {
 }
 
 html[data-theme='dark'] .sv-empty-state {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-empty-state i {
@@ -1757,7 +1757,7 @@ html[data-theme='dark'] .sv-dropdown-menu li button {
 }
 
 html[data-theme='dark'] .sv-dropdown-menu li button i {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-dropdown-menu li button:hover {
@@ -1772,7 +1772,7 @@ html[data-theme='dark'] .sv-receipt-total-pay {
 }
 
 html[data-theme='dark'] .sv-receipt-head .sv-receipt-line {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-receipt-meta {
@@ -1785,7 +1785,7 @@ html[data-theme='dark'] .sv-receipt-meta-row > :nth-child(n+1) {
 
 html[data-theme='dark'] .sv-receipt-key {
   background: #2a3942;
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sv-receipt-val {
@@ -2014,7 +2014,7 @@ html[data-theme='dark'] .sm-search input {
 }
 
 html[data-theme='dark'] .sm-search i {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .sm-select,
@@ -2388,7 +2388,7 @@ html[data-theme='dark'] .mode-btn.active {
 
 html[data-theme='dark'] .drawer-item-price,
 html[data-theme='dark'] .drawer-empty {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .order-link,
@@ -2434,7 +2434,7 @@ html[data-theme='dark'] .rail-close:hover {
 }
 
 html[data-theme='dark'] .unassigned-tag {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 /* Cashier credit badges, shift/day-close states, lookup rows, modals */
@@ -2635,7 +2635,7 @@ html[data-theme='dark'] .accomp-option {
 html[data-theme='dark'] .accomp-hint,
 html[data-theme='dark'] .dept-loading,
 html[data-theme='dark'] .cat-title {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .dc-reminder-modal {
@@ -2846,7 +2846,7 @@ html[data-theme='dark'] .poll-multiple-toggle {
 }
 
 html[data-theme='dark'] .chat-thread-placeholder {
-  color: #8696a0;
+  color: #b7c3ca;
 }
 
 html[data-theme='dark'] .avatar-room {
@@ -3158,7 +3158,7 @@ html[data-theme='dark'] .section-divider span { color:#aebac1; }
 html[data-theme='dark'] .auth-success { background:#202c33; color:#7ee2a8; }
 html[data-theme='dark'] .bo-detail-head { border-bottom-color:#2f3b43; }
 html[data-theme='dark'] .bo-detail-icon { background:#2a3942; color:#7cc0ff; }
-html[data-theme='dark'] .bo-detail-group { color:#8696a0; }
+html[data-theme='dark'] .bo-detail-group { color:#b7c3ca; }
 /* The detail heading is deliberately the palette near-white, not #fff, so it
    does not glare on the dark sheet. */
 html[data-theme='dark'] .bo-detail-title { color:#e9edef; }
@@ -4145,4 +4145,85 @@ html[data-theme='dark'] .icon-btn:hover:not(:disabled) {
   background: #374248;
   border-color: #3f5c67;
   color: #7cc0ff;
+}
+
+html[data-theme='dark'] .tab-link,
+html[data-theme='dark'] .sa-user,
+html[data-theme='dark'] .home-drawer-btn,
+html[data-theme='dark'] .panel-head p,
+html[data-theme='dark'] .room-tag,
+html[data-theme='dark'] .table-actions-hint,
+html[data-theme='dark'] .cp-pin-hint,
+html[data-theme='dark'] .sm-profile-head small,
+html[data-theme='dark'] .tm-filter-label,
+html[data-theme='dark'] .open-order-label,
+html[data-theme='dark'] .open-when,
+html[data-theme='dark'] .item-line-amount,
+html[data-theme='dark'] .void-copy,
+html[data-theme='dark'] .ref-cell,
+html[data-theme='dark'] .icon-filter,
+html[data-theme='dark'] .list-foot,
+html[data-theme='dark'] .line-note,
+html[data-theme='dark'] .tab-copy,
+html[data-theme='dark'] .description-line span,
+html[data-theme='dark'] .description-box span,
+html[data-theme='dark'] .confirm-intro,
+html[data-theme='dark'] .gate-back,
+html[data-theme='dark'] .gate-logout,
+html[data-theme='dark'] .gate-empty,
+html[data-theme='dark'] .gate-key-soft,
+html[data-theme='dark'] .gate-counter small,
+html[data-theme='dark'] .gate-code-copy,
+html[data-theme='dark'] .outlet-gate-logout,
+html[data-theme='dark'] .outlet-gate-copy small,
+html[data-theme='dark'] .outlet-gate-empty,
+html[data-theme='dark'] .outlet-gate-form label,
+html[data-theme='dark'] .outlet-gate-hint,
+html[data-theme='dark'] .saved-label,
+html[data-theme='dark'] .trust-device small {
+  color: #b7c3ca;
+}
+
+html[data-theme='dark'] .cp-mode-btn,
+html[data-theme='dark'] .saved-profile,
+html[data-theme='dark'] .gate-code-copy,
+html[data-theme='dark'] .outlet-gate-form input {
+  background: #2a3942;
+  border-color: #374248;
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .cp-mode-btn.active,
+html[data-theme='dark'] .saved-profile.active {
+  background: #1d4f9c;
+  border-color: #7cc0ff;
+  color: #fff;
+}
+
+html[data-theme='dark'] .cp-pin-dots i {
+  border-color: #8b9aa4;
+}
+
+html[data-theme='dark'] .cp-key {
+  background: #2a3942;
+  border-color: #374248;
+  color: #e9edef;
+}
+
+html[data-theme='dark'] .cp-key:hover {
+  background: #374248;
+}
+
+html[data-theme='dark'] .gate-error,
+html[data-theme='dark'] .outlet-gate-error,
+html[data-theme='dark'] .sm-gate-logout:hover {
+  color: #ff9b9b;
+}
+
+html[data-theme='dark'] .gate-copied {
+  color: #7ee2a8;
+}
+
+html[data-theme='dark'] .trust-device strong {
+  color: #e9edef;
 }

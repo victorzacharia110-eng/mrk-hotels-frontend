@@ -44,4 +44,11 @@ describe('marketing routes', () => {
     expect(byPath('/superadmin/marketing/pricing-plans').join()).toContain('superadmin-marketing-pricing-plans')
     expect(byPath('/superadmin/marketing/settings').join()).toContain('superadmin-marketing-settings')
   })
+
+  it('registers owner marketing CMS routes', () => {
+    const byPath = (p) => router.resolve(p).matched.map((m) => m.name || m.path)
+    expect(byPath('/owner/marketing/content/pages').join()).toContain('owner-marketing-pages')
+    expect(byPath('/owner/marketing/content/pricing-plans').join()).toContain('owner-marketing-pricing-plans')
+    expect(byPath('/owner/marketing/content/settings').join()).toContain('owner-marketing-settings')
+  })
 })

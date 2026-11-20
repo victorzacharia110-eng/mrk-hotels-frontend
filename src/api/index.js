@@ -142,6 +142,9 @@ export const authApi = {
   changePassword(data) {
     return api.post(`${v1}/auth/change-password`, data);
   },
+  changePin(data) {
+    return api.post(`${v1}/auth/change-pin`, data);
+  },
   /**
    * Updates the current user's profile fields.
    * @param {object} data - Profile fields to update.

@@ -130,12 +130,12 @@ export const MODULES = [
   { key: 'overrides', to: '/app/overrides', icon: 'fas fa-user-shield', labelKey: 'nav.overrideApprovals', roles: ['hotel_admin', 'manager', 'receptionist'] },
   // Bulk data import (CSV) — administrators only, since commits write records.
   { key: 'imports', to: '/app/import', icon: 'fas fa-file-import', labelKey: 'nav.importData', roles: ['hotel_admin'] },
-  // POS manager screens shared with the cashier panel (Item Lookup, Shift
-  // Manager and Blocked Devices) surfaced in the Restaurant & Bar Manager sub.
-  // The accountant is included: management panels mirror the cashier's tools.
+  // POS manager screens shared with the cashier panel (Product Library and
+  // Shift Manager) surfaced in the Restaurant & Bar Manager sub. The accountant
+  // is included: management panels mirror the cashier's tools.
   { key: 'item-lookup', to: '/app/pos/item-lookup', icon: 'fas fa-magnifying-glass', labelKey: 'nav.itemLookup', roles: ['hotel_admin', 'manager', 'accountant'] },
+  { key: 'pos-sales', to: '/app/pos/sales', icon: 'fas fa-receipt', labelKey: 'cashier.nav.sales', roles: ['hotel_admin', 'manager', 'accountant'] },
   { key: 'shift', to: '/app/pos/shift', icon: 'fas fa-user-clock', labelKey: 'nav.shiftManager', roles: ['hotel_admin', 'manager', 'accountant'] },
-  { key: 'devices', to: '/app/pos/devices', icon: 'fas fa-tablet-screen-button', labelKey: 'nav.blockedDevices', roles: ['hotel_admin', 'manager', 'accountant'] },
   // Store management screens shared with the store-manager panel, surfaced in
   // the Inventory & Procurement accordion (Dashboard, Expenses, Cash Register,
   // Reports, Physical Stock, Stock Adjustment, Back Office).

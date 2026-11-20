@@ -185,7 +185,7 @@ describe('cashier summary: review follow-ups', () => {
   })
 
   it('keeps after-midnight tickets on the open business date', () => {
-    expect(cashier).toMatch(/date\.value < workingDateStore\.workingDate\)\s+params\.date = date\.value\s+else\s+params\.from_date = date\.value/)
+    expect(cashier).toMatch(/date\.value < workingDateStore\.workingDate\)\s*base\.date = date\.value\s*else\s*base\.from_date = date\.value/)
     expect(pad).toMatch(/if \(isOpenToday\.value\) params\.from_date = openDate\.value\s+else params\.date = openDate\.value/)
   })
 })

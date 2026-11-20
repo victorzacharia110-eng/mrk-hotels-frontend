@@ -630,7 +630,7 @@ function printTransfer(tr) {
   }).join('')
   const total = Number(tr.total_cost || (tr.items || []).reduce((sum, l) => sum + Number(l.quantity || 0) * Number(l.item?.unit_cost || 0), 0))
   const voided = tr.status === 'voided'
-    ? `<div class="voided">VOIDED${tr.void_reason ? ` — ${esc(tr.void_reason)}` : ''}</div>`
+    ? `<div class="voided">VOID${tr.void_reason ? ` — ${esc(tr.void_reason)}` : ''}</div>`
     : ''
   const w = window.open('', '_blank')
   if (!w) return

@@ -140,12 +140,24 @@ describe('StoreGoodsReceivedPage', () => {
     wrapper.vm.detail = { grn_id: 5, received_date: '2000-01-01', items: [] }
     await flushPromises()
     expect(wrapper.vm.canRecall).toBe(false)
-    expect(wrapper.vm.canVoidGrn).toBe(false)
+    expect(wrapper.vm.canVoidGrn).toBe(true)
 
     authState.can = () => true
     wrapper.vm.detail = { grn_id: 5, received_date: '2000-01-01', items: [] }
     await flushPromises()
     expect(wrapper.vm.canRecall).toBe(true)
     expect(wrapper.vm.canVoidGrn).toBe(true)
+  })
+
+  it('denies voiding from the inventory panel', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => true)
+    const wrapper = mountPage()
+    await flushPromises()
+    wrapper.vm.detail = { grn_id: 5, grn_number: 'GRN-0005', received_date: '2000-01-01', items: [] }
+
+    await wrapper.vm.voidGrn()
+
+    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(api.goodsReceivedNoteApi.void).not.toHaveBeenCalled()
   })
 })

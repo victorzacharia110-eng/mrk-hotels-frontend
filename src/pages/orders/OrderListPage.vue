@@ -627,7 +627,7 @@ import { orderApi, menuItemApi, tableApi } from '@/api'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import AccompanimentManager from '@/components/AccompanimentManager.vue'
-import { PAYMENT_METHODS } from '@/utils/payments'
+import { PAYMENT_METHODS, effectivePaymentMethods } from '@/utils/payments'
 import { isGrillMenuItem, canManageAccompaniments, lockedAccompanimentDepartment } from '@/utils/menuAccompaniment'
 import { useAccompaniments } from '@/composables/useAccompaniments'
 import { selectedOutlet } from '@/composables/useOutletContext'
@@ -742,9 +742,9 @@ const paymentStatusOptions = [
   { value: 'billed_to_room', label: t('orders.paymentBilledToRoom') },
 ]
 
-const paymentMethodOptions = PAYMENT_METHODS.map((method) => ({
-  value: method,
-  label: t(`paymentFields.methods.${method}`),
+const paymentMethodOptions = effectivePaymentMethods(authStore.user?.tenant?.payment_methods, PAYMENT_METHODS).map((method) => ({
+  value: method.value,
+  label: method.label || t(`paymentFields.methods.${method.value}`),
 }))
 
 /** Menu items as selectable options (id → "name · price"), narrowed by the chosen category. */

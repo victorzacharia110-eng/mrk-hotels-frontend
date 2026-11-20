@@ -305,7 +305,7 @@ import { useBulkSelection } from '@/composables/useBulkSelection'
 import { collectAllRows } from '@/utils/export'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import ProviderLogo from '@/components/ProviderLogo.vue'
-import { METHOD_CASH, PAYMENT_METHODS, requiresProvider } from '@/utils/payments'
+import { METHOD_CASH, PAYMENT_METHODS, effectivePaymentMethods, requiresProvider } from '@/utils/payments'
 
 import { useTenantCurrency } from '@/utils/currency'
 import { useBusinessDateStore } from '@/stores/businessDate'
@@ -394,7 +394,10 @@ const paymentStatusOptions = computed(() => [
 ])
 
 const paymentMethodOptions = computed(() =>
-  PAYMENT_METHODS.map((method) => ({ value: method, label: t(`paymentFields.methods.${method}`) })),
+  effectivePaymentMethods(authStore.user?.tenant?.payment_methods, PAYMENT_METHODS).map((method) => ({
+    value: method.value,
+    label: method.label || t(`paymentFields.methods.${method.value}`),
+  })),
 )
 
 /** Confirmed reservations as selectable options, showing their balance. */
@@ -510,7 +513,10 @@ function openCreate() {
 
 /** Translates a payment method code into its display label. */
 function methodLabel(method) {
-  return t(`paymentFields.methods.${method}`)
+  const configured = effectivePaymentMethods(authStore.user?.tenant?.payment_methods, PAYMENT_METHODS).find(
+    (m) => m.value === method,
+  )
+  return configured?.label || t(`paymentFields.methods.${method}`)
 }
 
 /** Translates a payment provider code into its display label. */

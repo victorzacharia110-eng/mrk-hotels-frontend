@@ -1,11 +1,8 @@
 <!--
   AdminOverviewPage.vue
-  Hotel admin/owner overview (route /app/overview). Combines KPI stat cards,
-  an interactive staff directory with role/status filters, pagination and
-  activate/deactivate actions, an in-house guest list with balances and
-  check-out shortcuts, upcoming arrivals, and a housekeeping task list with
-  assign/confirm/verify/complete actions. Each section's filters reload the
-  overview API with debouncing. Authenticated back-office route.
+  Read-only hotel admin/owner overview (route /app/overview). Summarises
+  occupancy, arrivals, staff and housekeeping status; operational actions stay
+  on the front-desk and department panels.
 -->
 
 <template>
@@ -23,9 +20,8 @@
         <span class="role-badge"><i class="fas fa-user-shield"></i> {{ hotelName }}</span>
       </div>
 
-      <!-- Inline feedback banners (e.g. after toggling a staff account) -->
+      <!-- Inline feedback banner for failed overview loads -->
       <div v-if="error" class="alert alert-error">{{ error }}</div>
-      <div v-if="success" class="alert alert-success">{{ success }}</div>
 
       <!-- Summary status pills (stay-view style) computed from the same data -->
       <div class="sv-pills">
@@ -306,7 +302,6 @@
               <span class="sv-popover-sub">{{ formatDate(r.arrival_date) }} → {{ formatDate(r.departure_date) }} · {{ r.num_days || r.nights }} {{ $t('reservations.nights') }}</span>
               <span class="sv-popover-sub" :class="{ due: Number(r.balance) > 0 }">{{ curCode() }} {{ Number(r.balance).toLocaleString() }}</span>
             </div>
-            <button class="btn btn-sm btn-primary" @click="checkOut(r)"><i class="fas fa-right-from-bracket"></i> {{ $t('overview.checkOut') }}</button>
           </div>
         </template>
 
@@ -332,36 +327,6 @@
               </div>
               <span class="badge" :class="houseBadge(task.status)">{{ houseStatusLabel(task.status) }}</span>
             </div>
-            <div class="sv-popover-actions">
-              <button
-                v-if="task.status === 'dirty'"
-                class="btn btn-sm btn-secondary"
-                @click="openAssign(task)"
-              >
-                <i class="fas fa-user-plus"></i> {{ $t('housekeeping.assign') }}
-              </button>
-              <button
-                v-if="task.status === 'in_progress' && canConfirm"
-                class="btn btn-sm btn-secondary"
-                @click="confirmTask(task)"
-              >
-                {{ $t('overview.confirm') }}
-              </button>
-              <button
-                v-if="task.status === 'confirmed' && canVerify"
-                class="btn btn-sm btn-secondary"
-                @click="verifyTask(task)"
-              >
-                {{ $t('overview.verify') }}
-              </button>
-              <button
-                v-if="task.status === 'verified'"
-                class="btn btn-sm btn-success"
-                @click="completeTask(task)"
-              >
-                {{ $t('overview.complete') }}
-              </button>
-            </div>
           </div>
         </template>
 
@@ -374,39 +339,6 @@
         </template>
       </div>
     </template>
-
-    <!-- Assign housekeeping task modal -->
-    <div v-if="showAssign" class="modal-overlay" @click.self="showAssign = false">
-      <div class="modal modal-sm">
-        <div class="modal-head">
-          <h2><i class="fas fa-user-plus"></i> {{ $t('housekeeping.assignTo') }}</h2>
-          <button class="modal-close" @click="showAssign = false">
-            <i class="fas fa-xmark"></i>
-          </button>
-        </div>
-        <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
-        <form @submit.prevent="assignTask">
-          <div class="form-group">
-            <label>{{ $t('housekeeping.assignTo') }} *</label>
-            <SearchableSelect
-              v-model="assignUserId"
-              :options="housekeeperOptions"
-              :empty-label="$t('overview.unassigned')"
-              required
-            />
-          </div>
-          <div class="modal-foot">
-            <button type="button" class="btn btn-secondary" @click="showAssign = false">
-              {{ $t('common.cancel') }}
-            </button>
-            <button type="submit" class="btn btn-primary" :disabled="saving">
-              <i class="fas fa-check"></i>
-              {{ saving ? $t('common.saving') : $t('housekeeping.assign') }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
 
     <!-- Dashboard alert modal for urgent notifications -->
     <AlertModal
@@ -429,8 +361,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notifications'
-import { reportApi, reservationApi, housekeepingApi } from '@/api'
-import SearchableSelect from '@/components/SearchableSelect.vue'
+import { reportApi } from '@/api'
 import AlertModal from '@/components/AlertModal.vue'
 
 import { useTenantCurrency } from '@/utils/currency'
@@ -444,19 +375,11 @@ const { t } = useI18n()
 const data = ref(null)
 const loading = ref(false)
 const error = ref('')
-const success = ref('')
 
 // Filter/page controls for the three dashboard sections (in-house, upcoming, housekeeping).
 const inHouse = reactive({ search: '', page: 1 })
 const upcoming = reactive({ search: '', page: 1 })
 const housekeeping = reactive({ status: '', page: 1 })
-
-// Housekeeping assign-modal state.
-const showAssign = ref(false)
-const assignTaskId = ref('')
-const assignUserId = ref('')
-const modalError = ref('')
-const saving = ref(false)
 
 /* ---------------- Bar hover popover (stay-view popover style) ---------------- */
 
@@ -600,29 +523,14 @@ function tipSummary(key) {
 // Derived value: the tenant's hotel name shown in greeting text.
 const hotelName = computed(() => authStore.user?.tenant?.hotel_name || 'MRK Hotels')
 
-// Action permissions and housekeeper options for the assign modal.
-const canConfirm = computed(() => authStore.can(80) && authStore.canOperate)
-const canVerify = computed(
-  () => authStore.canOperate && (!!authStore.user?.is_sub_manager || authStore.can(80)),
-)
-const housekeepers = computed(() =>
-  (data.value?.staff?.data || []).filter(
-    (user) =>
-      user.is_active && (user.user_role === 'housekeeping' || user.department === 'housekeeping'),
-  ),
-)
-const housekeeperOptions = computed(() =>
-  housekeepers.value.map((user) => ({ value: user.user_id, label: user.full_name })),
-)
-
-// Housekeeping room-status summary: clean (available), dirty and under
-// maintenance/cleaning buckets derived from the backend room status counts.
+// Housekeeping room-status summary: clean (available), dirty (including rooms
+// being cleaned) and blocked rooms, matching the receptionist panel buckets.
 const roomStatus = computed(() => {
   const rs = data.value?.stats?.room_status || {}
   return {
     clean: Number(rs.available) || 0,
     dirty: Number(rs.dirty) || 0,
-    blocked: (Number(rs.maintenance) || 0) + (Number(rs.cleaning) || 0),
+    blocked: Number(rs.maintenance) || 0,
   }
 })
 
@@ -788,68 +696,6 @@ async function load() {
     error.value = flattenError(err)
   } finally {
     loading.value = false
-  }
-}
-
-/**
- * Runs an action against the API with an optional confirmation prompt,
- * then shows its success message and reloads the overview.
- * @param {Function} fn - The API call to perform.
- * @param {string} message - Default success message.
- * @param {string} [confirmMsg] - Optional confirm dialog text; skipped when absent.
- */
-async function runAction(fn, message, confirmMsg) {
-  if (confirmMsg && !window.confirm(confirmMsg)) return
-  error.value = ''
-  success.value = ''
-  try {
-    const res = await fn()
-    success.value = res.data.message || message
-    await load()
-  } catch (err) {
-    error.value = flattenError(err)
-  }
-}
-
-// One-liner wrapper binding the check-out action shown in the in-house popover.
-const checkOut = (reservation) =>
-  runAction(
-    () => reservationApi.checkOut(reservation.reservation_id),
-    t('overview.checkedOut', { name: reservation.guest_name }),
-    t('overview.confirmCheckOut', { name: reservation.guest_name }),
-  )
-
-// Housekeeping task actions shown in the housekeeping hover popover.
-const confirmTask = (task) =>
-  runAction(() => housekeepingApi.confirm(task.task_id), t('overview.confirmed'))
-const verifyTask = (task) =>
-  runAction(() => housekeepingApi.verify(task.task_id), t('overview.verified'))
-const completeTask = (task) =>
-  runAction(() => housekeepingApi.complete(task.task_id), t('overview.completed'))
-
-/** Opens the assign modal for the given housekeeping task. */
-function openAssign(task) {
-  modalError.value = ''
-  assignTaskId.value = task.task_id
-  assignUserId.value = ''
-  showAssign.value = true
-}
-
-/** Assigns the selected housekeeper to the task and reloads the overview on success. */
-async function assignTask() {
-  modalError.value = ''
-  saving.value = true
-  try {
-    const res = await housekeepingApi.assign(assignTaskId.value, {
-      assigned_to: assignUserId.value,
-    })
-    success.value = res.data.message || t('housekeeping.assigned')
-    showAssign.value = false
-    await load()
-  } catch (err) {
-    modalError.value = flattenError(err)
-  } finally {
-    saving.value = false
   }
 }
 
@@ -1622,16 +1468,6 @@ function dismissCurrentAlert() {
   justify-content: space-between;
   gap: 10px;
 }
-.sv-popover-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.sv-popover-actions .btn {
-  padding: 5px 10px;
-  font-size: 12px;
-}
-
 .sv-popover-main {
   min-width: 0;
   display: flex;

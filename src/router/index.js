@@ -100,9 +100,9 @@ const hotelChildren = [
   // Purchase requisitions submitted to procurement.
   { path: 'purchase-requisitions', name: 'hotel-purchase-requisitions', component: () => import('@/pages/procurement/RequisitionListPage.vue'), meta: { module: 'purchase-requisitions' } },
   // Purchase orders workflow.
-  { path: 'purchase-orders', name: 'hotel-purchase-orders', component: () => import('@/pages/procurement/PurchaseOrderListPage.vue'), meta: { module: 'purchase-orders' } },
+  { path: 'purchase-orders', name: 'hotel-purchase-orders', component: () => import('@/pages/store/StorePurchaseOrdersPage.vue'), meta: { module: 'purchase-orders', management: true } },
   // Goods received notes.
-  { path: 'goods-received', name: 'hotel-goods-received', component: () => import('@/pages/procurement/GoodsReceivedNoteListPage.vue'), meta: { module: 'goods-received' } },
+  { path: 'goods-received', name: 'hotel-goods-received', component: () => import('@/pages/store/StoreGoodsReceivedPage.vue'), meta: { module: 'goods-received', management: true } },
   // Staff/user management.
   { path: 'staff', name: 'hotel-staff', component: () => import('@/pages/staff/StaffListPage.vue'), meta: { module: 'staff' } },
   // Business reports.
@@ -118,7 +118,19 @@ const hotelChildren = [
   // POS manager screens shared with the cashier panel (Restaurant & Bar > Manager).
   { path: 'pos/item-lookup', name: 'hotel-pos-item-lookup', component: () => import('@/pages/cashier/CashierItemLookupPage.vue'), meta: { module: 'item-lookup' } },
   { path: 'pos/shift', name: 'hotel-pos-shift', component: () => import('@/pages/cashier/CashierShiftManagerPage.vue'), meta: { module: 'shift' } },
-  { path: 'pos/devices', name: 'hotel-pos-devices', component: () => import('@/pages/cashier/CashierBlockedDevicesPage.vue'), meta: { module: 'devices' } },
+  // Restaurant & Bar pages mounted under StoreLayout so management keeps the
+  // main department navigation while using the cashier screens.
+  { path: 'pos/dine-in', name: 'app-pos-dine-in', component: () => import('@/pages/dashboards/OrderTakerDashboard.vue'), meta: { titleKey: 'cashier.nav.dineIn' } },
+  { path: 'pos/take-away', name: 'app-pos-take-away', component: () => import('@/pages/cashier/CashierTakeAwayPage.vue'), meta: { titleKey: 'cashier.nav.takeAway' } },
+  { path: 'pos/room-service', name: 'app-pos-room-service', component: () => import('@/pages/cashier/CashierRoomServicePage.vue'), meta: { titleKey: 'cashier.nav.roomService' } },
+  { path: 'pos/delivery', name: 'app-pos-delivery', component: () => import('@/pages/cashier/CashierDeliveryPage.vue'), meta: { titleKey: 'cashier.nav.delivery' } },
+  { path: 'pos/no-charge', name: 'app-pos-no-charge', component: () => import('@/pages/cashier/CashierNoChargePage.vue'), meta: { titleKey: 'cashier.nav.noCharge' } },
+  { path: 'pos/order-summary', name: 'app-pos-order-summary', component: () => import('@/pages/cashier/CashierOrderSummaryPage.vue'), meta: { titleKey: 'cashier.nav.orderSummary' } },
+  { path: 'pos/sales', name: 'app-pos-sales', component: () => import('@/pages/cashier/CashierSalesPage.vue'), meta: { titleKey: 'cashier.nav.sales', module: 'pos-sales' } },
+  { path: 'pos/day-close', name: 'app-pos-day-close', component: () => import('@/pages/cashier/CashierDayClosePage.vue'), meta: { titleKey: 'cashier.nav.dayClose' } },
+  { path: 'pos/ingredients', name: 'app-pos-ingredients', component: () => import('@/pages/cashier/CashierIngredientsPage.vue'), meta: { titleKey: 'cashier.nav.ingredients' } },
+  { path: 'pos/transaction-lock', name: 'app-pos-transaction-lock', component: () => import('@/pages/cashier/CashierTransactionLockPage.vue'), meta: { titleKey: 'cashier.nav.transactionLock' } },
+  { path: 'pos/account-lookup', name: 'app-pos-account-lookup', component: () => import('@/pages/cashier/CashierAccountLookupPage.vue'), meta: { titleKey: 'cashier.nav.accountLookup' } },
   // Store management screens shared with the store-manager panel
   // (Inventory & Procurement accordion).
   { path: 'store/dashboard', name: 'hotel-store-dashboard', component: () => import('@/pages/store/StoreDashboardPage.vue'), meta: { module: 'store-dashboard' } },
@@ -143,6 +155,20 @@ const hotelChildren = [
   { path: 'overrides', name: 'override-approvals', component: () => import('@/pages/overrides/OverrideApprovalsPage.vue'), meta: { title: 'Override Approvals' } },
   // Bulk data import (CSV dry-run then commit) — hotel admins.
   { path: 'import', name: 'hotel-import', component: () => import('@/pages/imports/ImportPage.vue'), meta: { module: 'imports' } },
+]
+
+const marketingCmsChildren = (namePrefix) => [
+  { path: 'pages', name: `${namePrefix}-pages`, component: () => import('@/pages/superadmin/marketing/MarketingPagesPage.vue') },
+  { path: 'sections', name: `${namePrefix}-sections`, component: () => import('@/pages/superadmin/marketing/MarketingSectionsPage.vue') },
+  { path: 'integrations', name: `${namePrefix}-integrations`, component: () => import('@/pages/superadmin/marketing/MarketingIntegrationsPage.vue') },
+  { path: 'faqs', name: `${namePrefix}-faqs`, component: () => import('@/pages/superadmin/marketing/MarketingFaqsPage.vue') },
+  { path: 'team', name: `${namePrefix}-team`, component: () => import('@/pages/superadmin/marketing/MarketingTeamPage.vue') },
+  { path: 'pricing-products', name: `${namePrefix}-pricing-products`, component: () => import('@/pages/superadmin/marketing/MarketingPricingProductsPage.vue') },
+  { path: 'pricing-features', name: `${namePrefix}-pricing-features`, component: () => import('@/pages/superadmin/marketing/MarketingPricingFeaturesPage.vue') },
+  { path: 'pricing-plans', name: `${namePrefix}-pricing-plans`, component: () => import('@/pages/superadmin/marketing/MarketingPricingPlansPage.vue') },
+  { path: 'media', name: `${namePrefix}-media`, component: () => import('@/pages/superadmin/marketing/MarketingMediaPage.vue') },
+  { path: 'settings', name: `${namePrefix}-settings`, component: () => import('@/pages/superadmin/marketing/MarketingSettingsPage.vue') },
+  { path: 'contact-submissions', name: `${namePrefix}-contact-submissions`, component: () => import('@/pages/superadmin/marketing/MarketingContactSubmissionsPage.vue') },
 ]
 
 const routes = [
@@ -316,19 +342,7 @@ const routes = [
         path: 'marketing',
         component: () => import('@/pages/superadmin/marketing/MarketingAdminLayout.vue'),
         redirect: '/superadmin/marketing/pages',
-        children: [
-          { path: 'pages', name: 'superadmin-marketing-pages', component: () => import('@/pages/superadmin/marketing/MarketingPagesPage.vue') },
-          { path: 'sections', name: 'superadmin-marketing-sections', component: () => import('@/pages/superadmin/marketing/MarketingSectionsPage.vue') },
-          { path: 'integrations', name: 'superadmin-marketing-integrations', component: () => import('@/pages/superadmin/marketing/MarketingIntegrationsPage.vue') },
-          { path: 'faqs', name: 'superadmin-marketing-faqs', component: () => import('@/pages/superadmin/marketing/MarketingFaqsPage.vue') },
-          { path: 'team', name: 'superadmin-marketing-team', component: () => import('@/pages/superadmin/marketing/MarketingTeamPage.vue') },
-          { path: 'pricing-products', name: 'superadmin-marketing-pricing-products', component: () => import('@/pages/superadmin/marketing/MarketingPricingProductsPage.vue') },
-          { path: 'pricing-features', name: 'superadmin-marketing-pricing-features', component: () => import('@/pages/superadmin/marketing/MarketingPricingFeaturesPage.vue') },
-          { path: 'pricing-plans', name: 'superadmin-marketing-pricing-plans', component: () => import('@/pages/superadmin/marketing/MarketingPricingPlansPage.vue') },
-          { path: 'media', name: 'superadmin-marketing-media', component: () => import('@/pages/superadmin/marketing/MarketingMediaPage.vue') },
-          { path: 'settings', name: 'superadmin-marketing-settings', component: () => import('@/pages/superadmin/marketing/MarketingSettingsPage.vue') },
-          { path: 'contact-submissions', name: 'superadmin-marketing-contact-submissions', component: () => import('@/pages/superadmin/marketing/MarketingContactSubmissionsPage.vue') },
-        ],
+        children: marketingCmsChildren('superadmin-marketing'),
       },
       // Superadmin's own profile.
       {
@@ -361,7 +375,7 @@ const routes = [
         path: 'waiter-assignment',
         name: 'cashier-waiter-assignment',
         component: () => import('@/pages/cashier/CashierWaiterAssignmentPage.vue'),
-        meta: { titleKey: 'cashier.nav.waiterAssignment' },
+        meta: { titleKey: 'cashier.nav.waiterAssignment', deactivated: true },
       },
       {
         path: 'take-away',
@@ -400,16 +414,16 @@ const routes = [
         meta: { titleKey: 'cashier.nav.orderSummary' },
       },
       {
+        path: 'sales',
+        name: 'cashier-sales',
+        component: () => import('@/pages/cashier/CashierSalesPage.vue'),
+        meta: { titleKey: 'cashier.nav.sales' },
+      },
+      {
         path: 'printer',
         name: 'cashier-printer',
         component: () => import('@/pages/printer/PrinterSettingsPage.vue'),
         meta: { titleKey: 'cashier.nav.printer' },
-      },
-      {
-        path: 'print-settings',
-        name: 'cashier-print-settings',
-        component: () => import('@/pages/cashier/CashierPrintSettingsPage.vue'),
-        meta: { titleKey: 'cashier.nav.printSettings' },
       },
       {
         path: 'item-lookup',
@@ -428,12 +442,6 @@ const routes = [
         name: 'cashier-shift-manager',
         component: () => import('@/pages/cashier/CashierShiftManagerPage.vue'),
         meta: { titleKey: 'cashier.nav.shiftManager' },
-      },
-      {
-        path: 'blocked-devices',
-        name: 'cashier-blocked-devices',
-        component: () => import('@/pages/cashier/CashierBlockedDevicesPage.vue'),
-        meta: { titleKey: 'cashier.nav.blockedDevices' },
       },
       {
         path: 'transaction-lock',
@@ -752,6 +760,12 @@ const routes = [
         name: 'owner-marketing',
         component: () => import('@/pages/owner/OwnerMarketingPage.vue'),
       },
+      {
+        path: 'marketing/content',
+        component: () => import('@/pages/superadmin/marketing/MarketingAdminLayout.vue'),
+        redirect: '/owner/marketing/content/pages',
+        children: marketingCmsChildren('owner-marketing'),
+      },
       // The owner's own account: personal info and password.
       {
         path: 'profile',
@@ -860,6 +874,11 @@ router.beforeEach(async (to) => {
   // Unauthenticated users are sent to login, remembering where they came from.
   if (to.meta.requiresAuth && !token) {
     return { name: 'login', query: { redirect: to.fullPath } }
+  }
+
+  // Deactivated pages stay in source control but are unreachable in the UI.
+  if (to.meta.deactivated) {
+    return authStore.user?.user_role === 'bartender' ? '/cashier' : '/app'
   }
 
   // Signed-in users can't visit guest-only pages; send them to their dashboard.

@@ -126,7 +126,11 @@
             ><i class="fas fa-shield-halved" aria-hidden="true"></i> Superadmin</span
           >
           <RoleBadge />
-          <span class="sa-user">{{ authStore.user?.full_name }}</span>
+          <span class="sa-user-chip">
+            <span class="sa-user-avatar has-image" v-if="accountAvatarUrl" aria-hidden="true"><img :src="accountAvatarUrl" alt="" class="sa-user-avatar-img" /></span>
+            <span v-else class="sa-user-avatar" aria-hidden="true">{{ userInitials }}</span>
+            <span class="sa-user">{{ authStore.user?.full_name || authStore.user?.name }}</span>
+          </span>
         </div>
       </header>
       <main id="superadmin-content" class="sa-content" tabindex="-1">
@@ -164,6 +168,15 @@ const pageTitle = computed(() => {
   if (route.path.startsWith('/superadmin/marketing')) return 'Marketing Site'
   return titles[route.name] || 'Dashboard'
 })
+
+const userInitials = computed(() => {
+  const name = authStore.user?.full_name || authStore.user?.name || ''
+  const parts = name.split(' ').filter(Boolean)
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return 'SA'
+})
+const accountAvatarUrl = computed(() => authStore.user?.profile_picture || '')
 
 /**
  * Toggles the sidebar: switches the mobile overlay on small screens and the
@@ -364,6 +377,16 @@ async function handleLogout() {
   gap: 6px;
 }
 
+.sa-user-chip { display: inline-flex; align-items: center; gap: 8px; }
+.sa-user-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, #005eb8, #0a7ee8);
+  color: #fff; font-weight: 700; font-size: 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.sa-user-avatar.has-image { background: #e2e8f0; }
+.sa-user-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .sa-user {
   font-size: 14px;
   font-weight: 500;

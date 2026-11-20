@@ -86,6 +86,27 @@ describe('auth store', () => {
       expect(store.mustChangePassword).toBe(true)
     })
 
+    it('reports a trusted device only while its stored key is active', () => {
+      localStorage.setItem('trusted_device_key', 'dev-key-77')
+      localStorage.setItem('trusted_device_until', '2999-01-01T00:00:00.000Z')
+      const store = useAuthStore()
+      expect(store.isTrustedDevice()).toBe(true)
+
+      localStorage.setItem('trusted_device_until', '2000-01-01T00:00:00.000Z')
+      expect(store.isTrustedDevice()).toBe(false)
+    })
+
+    it('stores up to five saved email profiles without passwords', () => {
+      const store = useAuthStore()
+      store.rememberLoginProfile('Victor@example.com', '123456')
+      store.rememberLoginProfile('emmanuel@gmail.com', '654321')
+
+      const profiles = store.loginProfiles()
+      expect(profiles[0]).toMatchObject({ email: 'emmanuel@gmail.com', property_code: '654321' })
+      expect(profiles[1]).toMatchObject({ email: 'victor@example.com', property_code: '123456' })
+      expect(JSON.stringify(profiles)).not.toContain('password')
+    })
+
     it('sends the stored device key so a trusted terminal skips the one-time code', async () => {
       localStorage.setItem('trusted_device_key', 'dev-key-77')
       authApi.login.mockResolvedValue({ data: { token: 't', user: { user_role: 'staff' } } })

@@ -170,9 +170,25 @@
       </div>
     </div>
 
+    <div v-if="pendingVoid" class="sm-modal-backdrop" @click.self="pendingVoid = null">
+      <div class="sm-modal">
+        <div class="sm-modal-head">
+          <h3>{{ $t('purchaseOrders.voidAction') }} · {{ pendingVoid.po_number }}</h3>
+          <button class="sm-modal-close" @click="pendingVoid = null"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="sm-modal-body">
+          <p>{{ $t('purchaseOrders.voidGrnConfirm', { count: linkedGrns }) }}</p>
+          <div class="sm-modal-foot">
+            <button type="button" class="sm-btn ghost" @click="pendingVoid = null">{{ $t('common.cancel') }}</button>
+            <button type="button" class="sm-btn danger" @click="confirmVoidPo">{{ $t('common.proceed') }}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Printable PO document -->
     <div v-if="printData" class="print-area">
-      <div v-if="isVoided(printData.status)" class="print-void">VOIDED</div>
+      <div v-if="isVoided(printData.status)" class="print-void">VOID</div>
       <h2>{{ printData.po_number }}</h2>
       <table class="print-meta">
         <tbody>
@@ -201,14 +217,14 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { purchaseOrderApi, purchaseRequisitionApi, supplierApi } from '@/api'
+import { goodsReceivedNoteApi, purchaseOrderApi, purchaseRequisitionApi, supplierApi } from '@/api'
 import { fetchAllInventoryItems } from '@/utils/inventoryItems'
 import CalendarInput from '@/components/CalendarInput.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
-import { useAuthStore } from '@/stores/auth'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { printElementSilently } from '@/utils/reportPrint'
+import { toast } from '@/utils/toast'
 
 import { useTenantCurrency } from '@/utils/currency'
 import { useOutletContext } from '@/composables/useOutletContext'
@@ -223,7 +239,6 @@ const printStore = usePrintSettingsStore()
 const { selectedOutlet } = useOutletContext()
 const outletId = computed(() => selectedOutlet.value?.outlet_id || undefined)
 
-const auth = useAuthStore()
 const orders = ref([])
 const q = ref('')
 let searchTimer = null
@@ -241,6 +256,8 @@ const detail = ref(null)
 const editingId = ref(null)
 const formError = ref('')
 const printData = ref(null)
+const pendingVoid = ref(null)
+const linkedGrns = ref(0)
 
 function todayStr() {
   return workingDateStore.workingDate
@@ -357,9 +374,10 @@ const emptyText = computed(() => {
 })
 
 const canEdit = computed(() => detail.value && ['pending', 'manager_approved', 'approved'].includes(detail.value.status))
-const canVoid = computed(() => auth.can(80) && detail.value && ['pending', 'manager_approved', 'approved'].includes(detail.value.status) && !detail.value.voided_by)
+const canVoid = computed(() => detail.value && ['pending', 'manager_approved', 'approved', 'partially_received', 'received'].includes(detail.value.status) && !detail.value.voided_by)
+const isManagementPanel = computed(() => route.meta?.management === true || String(route.path || '').startsWith('/app/purchase-orders'))
 
-/** Whether a PO should print with the VOIDED stamp. */
+/** Whether a PO should print with the VOID stamp. */
 function isVoided(status) {
   return ['voided', 'cancelled', 'rejected'].includes(status)
 }
@@ -544,30 +562,47 @@ async function sendToSupplier(channel) {
   }
 }
 
-async function voidPo() {
-  const po = detail.value
-  if (!window.confirm(t('purchaseOrders.voidConfirm', { reference: po.po_number }))) return
-  // Only close the detail modal once the operator has committed to voiding, so
-  // cancelling the confirm leaves it open; the reason prompt then has no modal
-  // behind it.
-  detail.value = null
-  const reason = window.prompt(t('purchaseOrders.voidReason'))
-  if (reason === null) {
-    detail.value = po
-    return
-  }
-  if (!reason.trim()) {
-    detail.value = po
-    formError.value = t('common.error')
-    return
-  }
+async function performVoidPo(po, reason) {
   try {
-    const res = await purchaseOrderApi.void(po.po_id, { reason: reason.trim() })
+    const res = await purchaseOrderApi.void(po.po_id, { reason })
     detail.value = res.data.purchase_order || res.data.data || res.data
     await load()
+    toast(t('purchaseOrders.voidSuccess'), 'success')
   } catch (e) {
     window.alert(e.response?.data?.message || t('common.error'))
   }
+}
+
+async function voidPo() {
+  const po = detail.value
+  if (!isManagementPanel.value) {
+    toast(t('purchaseOrders.accessDenied'), 'error')
+    return
+  }
+
+  const grns = await goodsReceivedNoteApi
+    .index({ po_id: po.po_id, per_page: 100 })
+    .then((res) => (res.data.data || []).filter((grn) => !grn.voided_at))
+    .catch(() => [])
+
+  detail.value = null
+
+  if (!grns.length) {
+    await performVoidPo(po, t('purchaseOrders.voidReasonManagement'))
+    return
+  }
+
+  linkedGrns.value = grns.length
+  pendingVoid.value = po
+}
+
+async function confirmVoidPo() {
+  const po = pendingVoid.value
+  const count = linkedGrns.value
+  pendingVoid.value = null
+  linkedGrns.value = 0
+  if (!po) return
+  await performVoidPo(po, t('purchaseOrders.voidReasonGrn', { count }))
 }
 
 async function handleRouteIntent() {

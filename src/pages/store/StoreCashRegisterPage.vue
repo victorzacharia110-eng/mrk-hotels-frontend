@@ -1,6 +1,9 @@
 <!-- StoreCashRegisterPage — open/close drawer and shift history. -->
 <template>
   <div class="sm-page">
+    <div class="page-head compact">
+      <h2><i class="fas fa-cash-register"></i> {{ $t('storeManager.register.title') || 'Cash Register' }}</h2>
+    </div>
     <div class="kpi-grid">
       <div class="kpi">
         <span class="kpi-label">{{ $t('storeManager.register.status') }}</span>

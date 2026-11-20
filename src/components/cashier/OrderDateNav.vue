@@ -27,5 +27,5 @@ function emitChange() {
 </script>
 
 <style scoped>
-.date-nav-input { min-width: 150px; }
+.date-nav-input { min-width: 118px; }
 </style>

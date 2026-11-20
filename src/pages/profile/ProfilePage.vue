@@ -18,14 +18,14 @@
       <div class="profile-header">
         <div class="avatar">
           <img
-            v-if="authStore.user?.profile_picture"
-            :src="authStore.user.profile_picture"
-            :alt="authStore.user?.full_name"
+            v-if="avatarSrc"
+            :src="avatarSrc"
+            :alt="form.full_name || authStore.user?.full_name || 'Profile'"
           />
-          <i v-else class="fas fa-user"></i>
+          <span v-else class="avatar-initials">{{ avatarInitials }}</span>
         </div>
         <div class="profile-header-info">
-          <span class="profile-name">{{ form.full_name }}</span>
+          <span class="profile-name">{{ form.full_name || [form.first_name, form.last_name].filter(Boolean).join(' ') }}</span>
           <span class="profile-sub">{{ authStore.user?.user_role }}</span>
           <span class="badge" :class="authStore.user?.is_active ? 'badge-green' : 'badge-red'">
             {{ authStore.user?.is_active ? $t('profile.active') : $t('profile.inactive') }}
@@ -42,7 +42,7 @@
         <h3 class="form-section-title">
           <i class="fas fa-pen"></i> {{ $t('profile.personalInfo') }}
         </h3>
-        <div class="profile-grid">
+        <div class="profile-grid profile-form-grid">
           <div class="form-group">
             <label>{{ $t('profile.firstName') }}</label>
             <input v-model="form.first_name" class="input" />
@@ -63,7 +63,7 @@
             <label>{{ $t('profile.idType') }}</label>
             <select v-model="form.id_type" class="input">
               <option value="">{{ $t('common.none') }}</option>
-              <option v-for="t in idTypes" :key="t" :value="t">{{ t }}</option>
+              <option v-for="opt in idTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
             </select>
           </div>
           <div class="form-group">
@@ -72,11 +72,15 @@
           </div>
           <div class="form-group">
             <label>{{ $t('profile.position') }}</label>
-            <input v-model="form.position" class="input" />
+            <select v-model="form.position" class="input">
+              <option value="">{{ $t('common.none') }}</option>
+              <option v-for="pos in positionOptions" :key="pos" :value="pos">{{ pos }}</option>
+            </select>
           </div>
-          <div class="form-group">
+          <div class="form-group form-full">
             <label>{{ $t('profile.profilePhoto') }}</label>
             <input type="file" accept="image/*" class="input" @change="onPhoto" />
+            <small v-if="photo" class="muted">{{ photo.name }}</small>
           </div>
         </div>
         <div class="form-actions">
@@ -336,71 +340,131 @@
       <div v-if="hotelSettingsError" class="alert alert-error">{{ hotelSettingsError }}</div>
       <div v-if="hotelSettingsSuccess" class="alert alert-success">{{ hotelSettingsSuccess }}</div>
       <form @submit.prevent="saveHotelSettings">
-        <div class="profile-grid">
+        <div class="profile-grid narrow-inputs">
           <div class="form-group">
             <label>{{ $t('hotelSettings.hotelName') }}</label>
-            <input v-model="hotelForm.hotel_name" type="text" class="input" required />
+            <input v-model.trim="hotelForm.hotel_name" type="text" class="input" required />
           </div>
           <div class="form-group">
             <label>{{ $t('hotelSettings.registrationCode') }}</label>
-            <input v-model="hotelForm.registration_code" type="text" class="input" maxlength="6" style="text-transform: uppercase; font-family: monospace;" />
+            <input v-model.trim="hotelForm.registration_code" type="text" class="input" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" :placeholder="$t('hotelSettings.registrationPlaceholder', '6-digit code')" />
+            <small class="muted">{{ $t('hotelSettings.registrationHint', '6-digit property code (existing codes remain valid).') }}</small>
           </div>
           <div class="form-group">
             <label>{{ $t('hotelSettings.contactPerson') }}</label>
-            <input v-model="hotelForm.contact_person" type="text" class="input" />
+            <input v-model.trim="hotelForm.contact_person" type="text" class="input" />
           </div>
           <div class="form-group">
             <label>{{ $t('hotelSettings.email') }}</label>
-            <input v-model="hotelForm.email" type="email" class="input" />
+            <input v-model.trim="hotelForm.email" type="email" class="input" />
           </div>
           <div class="form-group">
             <label>{{ $t('hotelSettings.phone') }}</label>
-            <input v-model="hotelForm.phone" type="text" class="input" />
+            <input v-model.trim="hotelForm.phone" type="text" class="input" />
           </div>
           <div class="form-group">
             <label>{{ $t('hotelSettings.city') }}</label>
-            <input v-model="hotelForm.city" type="text" class="input" />
+            <input v-model.trim="hotelForm.city" type="text" class="input" />
           </div>
           <div class="form-group">
             <label>{{ $t('hotelSettings.country') }}</label>
-            <input v-model="hotelForm.country" type="text" class="input" />
+            <input v-model.trim="hotelForm.country" type="text" class="input" />
+          </div>
+          <div class="form-group">
+            <label>{{ $t('hotelSettings.addressCoordinates', 'Coordinates') }}</label>
+            <input v-model.trim="hotelForm.address_coordinates" type="text" class="input" placeholder="e.g. -6.7924, 39.2083" />
+          </div>
+          <div class="form-group">
+            <label>{{ $t('hotelSettings.addressPoBox', 'P.O. Box') }}</label>
+            <input v-model.trim="hotelForm.address_po_box" type="text" class="input" placeholder="P.O. Box" />
           </div>
           <div class="form-group form-full">
-            <label>{{ $t('hotelSettings.address') }}</label>
-            <input v-model="hotelForm.address" type="text" class="input" />
+            <label>{{ $t('hotelSettings.addressStreet', 'Street address') }}</label>
+            <input v-model.trim="hotelForm.address_street" type="text" class="input" placeholder="Street address" />
           </div>
           <div class="form-group">
             <label>TIN</label>
-            <input v-model="hotelForm.tin" type="text" class="input" placeholder="Taxpayer Identification Number" />
+            <input v-model.trim="hotelForm.tin" type="text" class="input" placeholder="Taxpayer Identification Number" />
           </div>
           <div class="form-group">
             <label>VRN</label>
-            <input v-model="hotelForm.vrn" type="text" class="input" placeholder="VAT Registration Number" />
+            <input v-model.trim="hotelForm.vrn" type="text" class="input" placeholder="VAT Registration Number" />
           </div>
         </div>
 
-        <!-- Payment methods and account numbers -->
-        <h3 class="card-subtitle">{{ $t('hotelSettings.paymentSection') }}</h3>
-        <div class="payment-methods-grid">
-          <label v-for="m in allPaymentMethods" :key="m" class="checkbox-label">
-            <input type="checkbox" :value="m" v-model="hotelForm.payment_methods" />
-            {{ $t(`paymentFields.methods.${m}`) }}
-          </label>
-        </div>
-        <div v-if="hotelAccountProviders.length" class="payment-accounts-grid">
-          <div v-for="p in hotelAccountProviders" :key="p" class="form-group">
-            <label class="account-label">
-              <ProviderLogo :provider="p" />
-              {{ $t(`paymentFields.providers.${p}`) }}
-            </label>
-            <input v-model="hotelForm.payment_accounts[p].number" type="text" class="input" :placeholder="$t('hotelSettings.accountPlaceholder')" />
-            <div v-if="p === METHOD_MOBILE_MONEY || MOBILE_MONEY_PROVIDERS.includes(p)" class="account-subfields">
-              <label class="account-sublabel">{{ $t('hotelSettings.lipaNumberLabel') }}</label>
-              <input v-model="hotelForm.payment_accounts[p].lipa_number" type="text" class="input" :placeholder="$t('hotelSettings.lipaNumberPlaceholder')" />
-              <label class="account-sublabel">{{ $t('hotelSettings.receiverNameLabel') }}</label>
-              <input v-model="hotelForm.payment_accounts[p].name" type="text" class="input" :placeholder="$t('hotelSettings.receiverNamePlaceholder')" />
+        <div class="hotel-subsection">
+          <div class="hotel-subsection-head">
+            <div>
+              <h3 class="card-subtitle">{{ $t('hotelSettings.acceptedMethods') }}</h3>
+              <p class="muted">{{ $t('hotelSettings.methodsHint', 'Add custom payment methods (name and description).') }}</p>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" @click="addMethod">
+              <i class="fas fa-plus"></i> {{ $t('hotelSettings.addMethod', 'Add method') }}
+            </button>
+          </div>
+          <div v-if="hotelForm.payment_methods.length" class="custom-list">
+            <div v-for="(method, idx) in hotelForm.payment_methods" :key="method._id || idx" class="custom-row method-row">
+              <label class="checkbox-label compact-check">
+                <input type="checkbox" v-model="method.enabled" />
+                {{ $t('hotelSettings.enabled', 'Enabled') }}
+              </label>
+              <div class="form-group">
+                <label>{{ $t('common.name', 'Name') }}</label>
+                <input v-model.trim="method.label" type="text" class="input" placeholder="e.g. CASH, MOBILE MONEY" @input="syncMethodValue(method)" />
+              </div>
+              <div class="form-group">
+                <label>{{ $t('common.description', 'Description') }}</label>
+                <input v-model.trim="method.description" type="text" class="input" placeholder="Description" />
+              </div>
+              <button type="button" class="btn btn-danger btn-sm icon-btn" @click="removeMethod(idx)" :title="$t('common.remove', 'Remove')">
+                <i class="fas fa-trash"></i>
+              </button>
             </div>
           </div>
+          <p v-else class="muted">{{ $t('hotelSettings.noMethods', 'No payment methods configured.') }}</p>
+        </div>
+
+        <div class="hotel-subsection">
+          <div class="hotel-subsection-head">
+            <div>
+              <h3 class="card-subtitle">{{ $t('hotelSettings.providersAccounts', 'Payment Providers & Accounts') }}</h3>
+              <p class="muted">{{ $t('hotelSettings.providersHint', 'Add provider/account details and link each to a registered payment method.') }}</p>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" @click="addProviderAccount">
+              <i class="fas fa-plus"></i> {{ $t('hotelSettings.addProvider', 'Add provider') }}
+            </button>
+          </div>
+          <div v-if="hotelForm.payment_accounts_list.length" class="custom-list">
+            <div v-for="(acc, idx) in hotelForm.payment_accounts_list" :key="acc._id || idx" class="custom-row provider-row">
+              <div class="form-group">
+                <label>{{ $t('common.name', 'Name') }}</label>
+                <input v-model.trim="acc.provider_name" type="text" class="input" placeholder="Provider name" @input="syncAccountKey(acc)" />
+              </div>
+              <div class="form-group">
+                <label>{{ $t('hotelSettings.accountPlaceholder') }}</label>
+                <input v-model.trim="acc.number" type="text" class="input" :placeholder="$t('hotelSettings.accountPlaceholder')" />
+              </div>
+              <div class="form-group">
+                <label>{{ $t('hotelSettings.linkedMethod', 'Payment method') }}</label>
+                <select v-model="acc.method" class="input">
+                  <option value="">{{ $t('common.select', 'Select') }}</option>
+                  <option v-for="m in enabledMethodOptions" :key="m.value" :value="m.value">{{ m.label }}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>{{ $t('hotelSettings.lipaNumberLabel') }}</label>
+                <input v-model.trim="acc.lipa_number" type="text" class="input" :placeholder="$t('hotelSettings.lipaNumberPlaceholder')" />
+              </div>
+              <div class="form-group">
+                <label>{{ $t('hotelSettings.receiverNameLabel') }}</label>
+                <input v-model.trim="acc.name" type="text" class="input" :placeholder="$t('hotelSettings.receiverNamePlaceholder')" />
+              </div>
+              <button type="button" class="btn btn-danger btn-sm icon-btn" @click="removeProviderAccount(idx)" :title="$t('common.remove', 'Remove')">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+          <p v-else class="muted">{{ $t('hotelSettings.noProviders', 'No payment provider accounts configured.') }}</p>
         </div>
 
         <div class="form-actions">
@@ -559,13 +623,11 @@ import QRCode from 'qrcode'
 import { useAuthStore } from '@/stores/auth'
 import { useSessionSettingsStore } from '@/stores/sessionSettings'
 import { attendanceApi, authApi, hotelSettingsApi } from '@/api'
-import { PAYMENT_METHODS, METHOD_MOBILE_MONEY, METHOD_BANK, MOBILE_MONEY_PROVIDERS, ALL_PROVIDERS, normalizePaymentAccount } from '@/utils/payments'
 import ChangePasswordForm from '@/components/ChangePasswordForm.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
 import AttendanceQrScanner from '@/components/AttendanceQrScanner.vue'
 import AttendanceSelfieCapture from '@/components/AttendanceSelfieCapture.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
-import ProviderLogo from '@/components/ProviderLogo.vue'
 import {
   getDeviceId,
   getDeviceFingerprint,
@@ -665,37 +727,183 @@ const canManageHotel = computed(() => authStore.can(80))
 // credentials are issued and rotated by a manager (the API returns 403).
 const canChangePassword = computed(() => !['waiter', 'cashier', 'kitchen'].includes(authStore.user?.user_role))
 
-// Hotel business details form state.
-const allPaymentMethods = PAYMENT_METHODS
+// Hotel business details form state (aligned with hotel settings contract).
+function uid(prefix = 'id') {
+  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`
+}
+function slugify(value) {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+}
+function parseAddress(raw) {
+  if (raw && typeof raw === 'object') {
+    return {
+      coordinates: raw.coordinates || raw.coords || '',
+      po_box: raw.po_box || raw.pobox || raw.poBox || '',
+      street: raw.street || raw.street_address || raw.streetAddress || raw.address || '',
+    }
+  }
+  const text = String(raw || '').trim()
+  if (!text) return { coordinates: '', po_box: '', street: '' }
+  try {
+    const parsed = JSON.parse(text)
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parseAddress(parsed)
+  } catch {
+    return { coordinates: '', po_box: '', street: text }
+  }
+  return { coordinates: '', po_box: '', street: text }
+}
+function serializeAddress() {
+  const payload = {
+    coordinates: (hotelForm.address_coordinates || '').trim(),
+    po_box: (hotelForm.address_po_box || '').trim(),
+    street: (hotelForm.address_street || '').trim(),
+  }
+  if (!payload.coordinates && !payload.po_box && !payload.street) return ''
+  return JSON.stringify(payload)
+}
+const DEFAULT_METHODS = [
+  { value: 'cash', label: 'CASH', description: '' },
+  { value: 'mobile_money', label: 'MOBILE MONEY', description: '' },
+  { value: 'bank', label: 'BANKs', description: '' },
+  { value: 'card', label: 'CARD', description: '' },
+  { value: 'digital_wallets', label: 'DIGITAL WALLETS', description: '' },
+]
+function normalizeMethodEntry(entry) {
+  if (typeof entry === 'string') {
+    const value = slugify(entry) || entry
+    return { _id: uid('m'), enabled: true, value, label: entry.toUpperCase?.() || entry, description: '' }
+  }
+  if (entry && typeof entry === 'object') {
+    const label = String(entry.label || entry.name || entry.value || entry.key || '').trim()
+    const value = slugify(entry.value || entry.key || label)
+    return { _id: uid('m'), enabled: entry.enabled !== false, value: value || label || uid('method'), label: label || value || 'METHOD', description: String(entry.description || '').trim() }
+  }
+  return null
+}
+function normalizeMethods(methods) {
+  const list = Array.isArray(methods) ? methods : []
+  const out = []
+  const seen = new Set()
+  for (const item of list) {
+    const m = normalizeMethodEntry(item)
+    if (!m) continue
+    const key = slugify(m.value || m.label)
+    if (!key || seen.has(key)) continue
+    seen.add(key); m.value = key; out.push(m)
+  }
+  if (!out.length) return DEFAULT_METHODS.map((m) => ({ _id: uid('m'), enabled: true, ...m }))
+  return out
+}
+function normalizeAccountsList(accounts) {
+  const list = []
+  if (Array.isArray(accounts)) {
+    for (const a of accounts) {
+      if (!a || typeof a !== 'object') continue
+      const key = String(a.key || a.provider || slugify(a.provider_name || a.name || '')).trim()
+      list.push({ _id: uid('a'), key: key || uid('provider'), provider_name: String(a.provider_name || a.name || a.provider || a.key || '').trim(), number: String(a.number || a.account_number || '').trim(), lipa_number: String(a.lipa_number || '').trim(), name: String(a.name || a.receiver_name || '').trim(), method: String(a.method || a.payment_method || '').trim(), description: String(a.description || '').trim() })
+    }
+    return list
+  }
+  if (accounts && typeof accounts === 'object') {
+    for (const [key, value] of Object.entries(accounts)) {
+      if (!value) continue
+      if (typeof value === 'string') {
+        list.push({ _id: uid('a'), key, provider_name: key.replace(/_/g, ' ').toUpperCase(), number: value, lipa_number: '', name: '', method: '', description: '' })
+        continue
+      }
+      if (typeof value === 'object') {
+        list.push({ _id: uid('a'), key: String(key), provider_name: String(value.provider_name || key.replace(/_/g, ' ').toUpperCase()).trim(), number: String(value.number || '').trim(), lipa_number: String(value.lipa_number || '').trim(), name: String(value.name || '').trim(), method: String(value.method || value.payment_method || '').trim(), description: String(value.description || '').trim() })
+      }
+    }
+  }
+  return list
+}
+
 const hotelForm = reactive({
   hotel_name: '',
   registration_code: '',
   contact_person: '',
   email: '',
   phone: '',
-  address: '',
+  address_coordinates: '',
+  address_po_box: '',
+  address_street: '',
   city: '',
   country: '',
   tin: '',
   vrn: '',
-  payment_methods: [],
-  payment_accounts: {},
+  payment_methods: DEFAULT_METHODS.map((m) => ({ _id: uid('m'), enabled: true, ...m })),
+  payment_accounts_list: [],
 })
 const savingHotelSettings = ref(false)
 const hotelSettingsError = ref('')
 const hotelSettingsSuccess = ref('')
 
-/** Which provider account inputs to show based on enabled payment methods. */
-const hotelAccountProviders = computed(() => {
-  const methods = hotelForm.payment_methods
-  if (!methods.length) return []
-  return ALL_PROVIDERS.filter((p) =>
-    methods.includes(MOBILE_MONEY_PROVIDERS.includes(p) ? METHOD_MOBILE_MONEY : METHOD_BANK),
-  )
-})
-
+const enabledMethodOptions = computed(() =>
+  (hotelForm.payment_methods || []).filter((m) => m.enabled && (m.label || m.value)).map((m) => ({ value: slugify(m.value || m.label), label: m.label || m.value }))
+)
+function addMethod() { hotelForm.payment_methods.push({ _id: uid('m'), enabled: true, value: '', label: '', description: '' }) }
+function removeMethod(idx) { hotelForm.payment_methods.splice(idx, 1) }
+function syncMethodValue(method) { if (!method._touchedValue) method.value = slugify(method.label) }
+function addProviderAccount() { hotelForm.payment_accounts_list.push({ _id: uid('a'), key: '', provider_name: '', number: '', lipa_number: '', name: '', method: enabledMethodOptions.value[0]?.value || '', description: '' }) }
+function removeProviderAccount(idx) { hotelForm.payment_accounts_list.splice(idx, 1) }
+function syncAccountKey(acc) { if (!acc._touchedKey) acc.key = slugify(acc.provider_name) || uid('provider') }
+function serializeMethods() {
+  const out = []; const seen = new Set()
+  for (const m of hotelForm.payment_methods) {
+    const label = String(m.label || '').trim()
+    const value = slugify(m.value || label)
+    if (!label && !value) continue
+    const key = value || slugify(label)
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    out.push({ value: key, label: label || key.toUpperCase(), description: String(m.description || '').trim(), enabled: !!m.enabled })
+  }
+  return out.filter((m) => m.enabled).map((m) => ({ value: m.value, label: m.label, description: m.description }))
+}
+function serializeAccounts() {
+  const out = {}
+  for (const acc of hotelForm.payment_accounts_list) {
+    const providerName = String(acc.provider_name || '').trim()
+    const key = slugify(acc.key || providerName)
+    const number = String(acc.number || '').trim()
+    const lipa = String(acc.lipa_number || '').trim()
+    const receiver = String(acc.name || '').trim()
+    const method = String(acc.method || '').trim()
+    const description = String(acc.description || '').trim()
+    if (!key && !providerName && !number && !lipa && !receiver && !method) continue
+    const finalKey = key || uid('provider')
+    const entry = {}
+    if (number) entry.number = number
+    if (lipa) entry.lipa_number = lipa
+    if (receiver) entry.name = receiver
+    if (providerName) entry.provider_name = providerName
+    if (method) entry.method = method
+    if (description) entry.description = description
+    if (Object.keys(entry).length) out[finalKey] = entry
+  }
+  return out
+}
 // Profile form config: allowed ID types and the editable fields.
-const idTypes = ['national_id', 'passport']
+const idTypeOptions = computed(() => [
+  { value: 'national_id', label: t('profile.idTypes.national_id') },
+  { value: 'passport', label: t('profile.idTypes.passport') },
+  { value: 'drivers_license', label: t('profile.idTypes.drivers_license') },
+])
+const positionOptions = [
+  'Hotel Admin',
+  'Manager',
+  'Accountant',
+  'Receptionist',
+  'Cashier',
+  'Bartender',
+  'Waiter',
+  'Kitchen',
+  'Housekeeping',
+  'Store Manager',
+  'Director',
+  'Supervisor',
+]
 const form = reactive({
   first_name: '',
   last_name: '',
@@ -709,9 +917,17 @@ const form = reactive({
 })
 // Save state: optional photo file, in-flight flag and feedback message.
 const photo = ref(null)
+const photoPreview = ref('')
 const saving = ref(false)
 const message = ref('')
 const error = ref(false)
+
+const avatarSrc = computed(() => photoPreview.value || authStore.user?.profile_picture || '')
+const avatarInitials = computed(() => {
+  const parts = [form.first_name || authStore.user?.first_name, form.last_name || authStore.user?.last_name].filter(Boolean)
+  const initials = parts.map((p) => String(p)[0]?.toUpperCase() || '').join('').slice(0, 2)
+  return initials || 'U'
+})
 
 /** Copies the current user's data from the auth store into the editable form. */
 function fillForm() {
@@ -730,6 +946,8 @@ function fillForm() {
 /** Stores the photo file picked in the file input. */
 function onPhoto(event) {
   photo.value = event.target.files?.[0] || null
+  if (photoPreview.value) URL.revokeObjectURL(photoPreview.value)
+  photoPreview.value = photo.value ? URL.createObjectURL(photo.value) : ''
 }
 
 /** Submits the profile form (with optional photo) and refreshes the user in the auth store. */
@@ -751,8 +969,11 @@ async function save() {
 
     const { data } = await authApi.updateProfile(fd)
     authStore.user = data.user
+    await authStore.fetchProfile().catch(() => {})
     fillForm()
     photo.value = null
+    if (photoPreview.value) URL.revokeObjectURL(photoPreview.value)
+    photoPreview.value = ''
     message.value = data.message || t('profile.saved')
   } catch (err) {
     error.value = true
@@ -1074,23 +1295,22 @@ async function saveSettings() {
 async function loadHotelSettings() {
   try {
     const { data } = await hotelSettingsApi.show()
-    const h = data.hotel
+    const h = data.hotel || {}
+    const addr = parseAddress(h.address)
     hotelForm.hotel_name = h.hotel_name || ''
     hotelForm.registration_code = h.registration_code || ''
     hotelForm.contact_person = h.contact_person || ''
     hotelForm.email = h.email || ''
     hotelForm.phone = h.phone || ''
-    hotelForm.address = h.address || ''
+    hotelForm.address_coordinates = addr.coordinates || ''
+    hotelForm.address_po_box = addr.po_box || ''
+    hotelForm.address_street = addr.street || ''
     hotelForm.city = h.city || ''
     hotelForm.country = h.country || ''
     hotelForm.tin = h.tin || ''
     hotelForm.vrn = h.vrn || ''
-    hotelForm.payment_methods = h.payment_methods || []
-    hotelForm.payment_accounts = {}
-    ALL_PROVIDERS.forEach((p) => {
-      hotelForm.payment_accounts[p] =
-        normalizePaymentAccount(h.payment_accounts?.[p]) || { number: '', lipa_number: '', name: '' }
-    })
+    hotelForm.payment_methods = normalizeMethods(h.payment_method_definitions || h.payment_methods)
+    hotelForm.payment_accounts_list = normalizeAccountsList(h.payment_accounts_list || h.payment_accounts)
   } catch {
     // Silently ignore — the card simply won't show data.
   }
@@ -1102,14 +1322,23 @@ async function saveHotelSettings() {
   hotelSettingsError.value = ''
   hotelSettingsSuccess.value = ''
   try {
-    const payload = { ...hotelForm }
-    // Rebuild accounts into the per-provider object shape, dropping blanks.
-    payload.payment_accounts = Object.fromEntries(
-      ALL_PROVIDERS.map((p) => [p, normalizePaymentAccount(hotelForm.payment_accounts[p])])
-        .filter(([, v]) => !!v),
-    )
+    const payload = {
+      hotel_name: hotelForm.hotel_name,
+      registration_code: String(hotelForm.registration_code || '').replace(/\D/g, '').slice(0, 6),
+      contact_person: hotelForm.contact_person,
+      email: hotelForm.email,
+      phone: hotelForm.phone,
+      address: serializeAddress(),
+      city: hotelForm.city,
+      country: hotelForm.country,
+      tin: hotelForm.tin,
+      vrn: hotelForm.vrn,
+      payment_methods: serializeMethods(),
+      payment_accounts: serializeAccounts(),
+    }
     const { data } = await hotelSettingsApi.update(payload)
     hotelSettingsSuccess.value = data.message || t('hotelSettings.saved')
+    await loadHotelSettings()
   } catch (err) {
     hotelSettingsError.value = flattenError(err)
   } finally {
@@ -1288,7 +1517,10 @@ onMounted(() => {
   }
 })
 
-onUnmounted(() => clearInterval(qrTimer))
+onUnmounted(() => {
+  clearInterval(qrTimer)
+  if (photoPreview.value) URL.revokeObjectURL(photoPreview.value)
+})
 </script>
 
 <style scoped>
@@ -1335,6 +1567,16 @@ onUnmounted(() => clearInterval(qrTimer))
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.avatar-initials {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.profile-form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .profile-header-info {
@@ -1572,52 +1814,20 @@ onUnmounted(() => clearInterval(qrTimer))
   grid-column: 1 / -1;
 }
 
-.payment-methods-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.checkbox-label input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: #005eb8;
-}
-
-.payment-accounts-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.account-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-
-.account-subfields {
-  margin-top: 8px;
-  display: grid;
-  gap: 4px;
-}
-
-.account-sublabel {
-  font-size: 12px;
-  color: #64748b;
-  margin-top: 6px;
+.narrow-inputs .form-group .input { max-width: 420px; width: 100%; }
+.hotel-subsection { margin-top: 16px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+.hotel-subsection-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.hotel-subsection-head .card-subtitle { margin: 0 0 4px; padding-top: 0; border-top: 0; }
+.custom-list { display: flex; flex-direction: column; gap: 12px; }
+.custom-row { display: grid; gap: 10px; align-items: end; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; }
+.method-row { grid-template-columns: auto minmax(180px, 280px) minmax(220px, 1fr) auto; }
+.provider-row { grid-template-columns: repeat(3, minmax(160px, 260px)) auto; }
+.checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
+.checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: #005eb8; }
+.compact-check { padding-bottom: 8px; white-space: nowrap; }
+.icon-btn { height: 38px; align-self: end; }
+@media (max-width: 900px) {
+  .method-row, .provider-row { grid-template-columns: 1fr; }
+  .icon-btn { width: fit-content; }
 }
 </style>
