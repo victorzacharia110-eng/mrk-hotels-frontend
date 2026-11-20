@@ -40,7 +40,9 @@
 <script setup>
 import { ref } from 'vue'
 import { marketingApi } from '@/api'
+import { useSuperadminResult } from '@/composables/useSuperadminResult'
 
+const { showSuccess, showError, actionError } = useSuperadminResult()
 const jsonText = ref('{}')
 const loading = ref(false)
 const saving = ref(false)
@@ -84,14 +86,16 @@ async function save() {
     const parsed = JSON.parse(jsonText.value || '{}')
     await marketingApi.settings.update({ settings: parsed })
     success.value = 'Settings saved.'
+    showSuccess(success.value)
     await load()
   } catch (err) {
     if (err instanceof SyntaxError) {
       error.value = 'Settings JSON is invalid.'
     } else {
-      error.value = err?.response?.data?.message || 'Failed to save settings'
+      error.value = actionError(err, 'Failed to save settings')
       errorDetails.value = extractErrors(err)
     }
+    showError(error.value)
   } finally {
     saving.value = false
   }
@@ -106,11 +110,13 @@ async function removeKey() {
   try {
     await marketingApi.settings.destroy(deleteKey.value)
     success.value = `Deleted setting "${deleteKey.value}".`
+    showSuccess(success.value)
     deleteKey.value = ''
     await load()
   } catch (err) {
-    error.value = err?.response?.data?.message || 'Failed to delete setting'
+    error.value = actionError(err, 'Failed to delete setting')
     errorDetails.value = extractErrors(err)
+    showError(error.value)
   } finally {
     deleting.value = false
   }

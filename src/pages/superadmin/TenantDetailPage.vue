@@ -146,13 +146,13 @@
       <template v-else>
         <!-- Quick actions -->
         <div class="feature-quick-actions">
-          <button type="button" class="btn btn-sm btn-secondary" @click="selectAllFeatures">
+          <button type="button" class="btn btn-sm btn-secondary" :disabled="featuresSaving" @click="selectAllFeatures">
             <i class="fas fa-check-double"></i> {{ $t('superadmin.selectAll') }}
           </button>
-          <button type="button" class="btn btn-sm btn-secondary" @click="deselectAllFeatures">
+          <button type="button" class="btn btn-sm btn-secondary" :disabled="featuresSaving" @click="deselectAllFeatures">
             <i class="fas fa-xmark"></i> {{ $t('superadmin.deselectAll') }}
           </button>
-          <button type="button" class="btn btn-sm btn-secondary" @click="loadPlanFeatures">
+          <button type="button" class="btn btn-sm btn-secondary" :disabled="featuresSaving" @click="resetFeatureSelection">
             <i class="fas fa-rotate"></i> {{ $t('superadmin.resetToPlan') }}
           </button>
         </div>
@@ -165,8 +165,10 @@
                 <input
                   type="checkbox"
                   :value="feat.key"
-                  v-model="selectedFeatures"
+                  :checked="selectedFeatures.includes(feat.key)"
+                  :disabled="featuresSaving"
                   class="feature-checkbox"
+                  @change="toggleFeature(feat.key)"
                 />
                 <span class="feature-info">
                   <span class="feature-name">{{ feat.label }}</span>
@@ -374,6 +376,7 @@ import {
 } from '@/utils/payments'
 import ProviderLogo from '@/components/ProviderLogo.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+import { useSuperadminResult } from '@/composables/useSuperadminResult'
 
 import { useTenantCurrency } from '@/utils/currency'
 
@@ -381,6 +384,7 @@ const { curCode } = useTenantCurrency()
 
 const route = useRoute()
 const { t } = useI18n()
+const { showSuccess, showError, actionError } = useSuperadminResult()
 const tenant = ref(null)
 const analytics = ref(null)
 const loading = ref(false)
@@ -402,6 +406,7 @@ const newOwner = ref({ full_name: '', email: '' })
 const savingOwner = ref(false)
 const creatingOwner = ref(false)
 const selectedFeatures = ref([])
+const featuresSaving = ref(false)
 const planFeatures = ref({})
 const planFeatureLabels = ref({})
 const planFeaturePrices = ref({})
@@ -500,34 +505,79 @@ const featureGroups = computed(() => {
   return Object.fromEntries(Object.entries(groups).filter(([, v]) => v.length > 0))
 })
 
+function notifySuccess(res, fallback) {
+  showSuccess(res?.data?.message || fallback)
+}
+
+function notifyError(err, fallback) {
+  const message = actionError(err, fallback)
+  error.value = message
+  showError(message)
+}
+
+async function applyFeatureSelection(next, previous = [...selectedFeatures.value]) {
+  if (featuresSaving.value) return
+  selectedFeatures.value = [...next]
+  featuresSaving.value = true
+  try {
+    const res = await tenantApi.updateSubscription(route.params.id, {
+      ...subForm.value,
+      features: selectedFeatures.value,
+    })
+    notifySuccess(res, t('superadmin.featureUpdated'))
+    await load()
+  } catch (err) {
+    selectedFeatures.value = [...previous]
+    notifyError(err, t('superadmin.featureUpdateFailed'))
+  } finally {
+    featuresSaving.value = false
+  }
+}
+
+function toggleFeature(key) {
+  const next = selectedFeatures.value.includes(key)
+    ? selectedFeatures.value.filter((feat) => feat !== key)
+    : [...selectedFeatures.value, key]
+  return applyFeatureSelection(next)
+}
+
 function selectAllFeatures() {
-  selectedFeatures.value = [...allFeatureKeys.value]
+  return applyFeatureSelection([...allFeatureKeys.value])
 }
 
 function deselectAllFeatures() {
-  selectedFeatures.value = []
+  return applyFeatureSelection([])
 }
 
-async function loadPlanFeatures() {
+async function loadPlanFeatures({ notify = false } = {}) {
   planFeatureLabelsLoading.value = true
   try {
     const { data } = await planApi.index()
     planFeatures.value = Object.fromEntries((data.plans || []).map((p) => [p.slug, p]))
     planFeatureLabels.value = data.feature_labels || {}
     planFeaturePrices.value = data.feature_prices || {}
-  } catch { /* ignore */ }
-  planFeatureLabelsLoading.value = false
+  } catch (err) {
+    if (notify) notifyError(err, t('superadmin.failedToLoadFeatures'))
+  } finally {
+    planFeatureLabelsLoading.value = false
+  }
+}
+
+function planFeatureKeys(plan = tenant.value?.subscription_plan) {
+  const planKey = planFeatures.value[plan] ? plan : (plan === 'trial' ? 'starter' : 'enterprise')
+  return planFeatures.value[planKey]?.features || allFeatureKeys.value
+}
+
+async function resetFeatureSelection() {
+  await loadPlanFeatures({ notify: true })
+  return applyFeatureSelection(planFeatureKeys())
 }
 
 function seedFeaturesFromTenant() {
-  // If tenant has explicit features, use them; otherwise use the plan's set.
   if (tenant.value?.features && tenant.value.features.length) {
     selectedFeatures.value = [...tenant.value.features]
   } else {
-    const stored = tenant.value?.subscription_plan
-    const planKey = planFeatures.value[stored] ? stored : (stored === 'trial' ? 'starter' : 'enterprise')
-    const planFeat = planFeatures.value[planKey]?.features || allFeatureKeys.value
-    selectedFeatures.value = [...planFeat]
+    selectedFeatures.value = [...planFeatureKeys(tenant.value?.subscription_plan)]
   }
 }
 
@@ -642,10 +692,10 @@ async function updateSubscription() {
   try {
     const payload = { ...subForm.value, features: selectedFeatures.value }
     const res = await tenantApi.updateSubscription(route.params.id, payload)
-    window.alert(res.data.message || t('superadmin.subscriptionUpdated'))
+    notifySuccess(res, t('superadmin.subscriptionUpdated'))
     await load()
   } catch (err) {
-    error.value = err.response?.data?.message || t('superadmin.subscriptionUpdateError')
+    notifyError(err, t('superadmin.subscriptionUpdateError'))
   } finally {
     saving.value = false
   }
@@ -662,9 +712,9 @@ async function saveTaxDetails() {
     })
     tenant.value.tin = res.data.tenant?.tin ?? taxForm.value.tin
     tenant.value.vrn = res.data.tenant?.vrn ?? taxForm.value.vrn
-    window.alert(res.data.message || t('superadmin.taxDetailsSaved'))
+    notifySuccess(res, t('superadmin.taxDetailsSaved'))
   } catch (err) {
-    error.value = err.response?.data?.message || t('superadmin.taxDetailsSaveError')
+    notifyError(err, t('superadmin.taxDetailsSaveError'))
   } finally {
     savingTax.value = false
   }
@@ -688,9 +738,9 @@ async function saveContact() {
     ;['hotel_name', 'contact_person', 'email', 'phone', 'address', 'city', 'country'].forEach((key) => {
       if (updated[key] !== undefined) tenant.value[key] = updated[key]
     })
-    window.alert(res.data.message || t('superadmin.updateSuccess'))
+    notifySuccess(res, t('superadmin.updateSuccess'))
   } catch (err) {
-    error.value = err.response?.data?.message || t('superadmin.updateError')
+    notifyError(err, t('superadmin.updateError'))
   } finally {
     savingContact.value = false
   }
@@ -704,9 +754,9 @@ async function saveCode() {
     const code = String(codeForm.value.registration_code || '').replace(/\D/g, '').slice(0, 6)
     const res = await tenantApi.update(route.params.id, { registration_code: code })
     tenant.value.registration_code = res.data.tenant?.registration_code ?? code
-    window.alert(res.data.message || t('superadmin.codeSaved'))
+    notifySuccess(res, t('superadmin.codeSaved'))
   } catch (err) {
-    error.value = err.response?.data?.message || t('superadmin.codeSaveError')
+    notifyError(err, t('superadmin.codeSaveError'))
   } finally {
     codeSaving.value = false
   }
@@ -724,8 +774,9 @@ async function downloadBackup() {
     a.download = `backup-${tenant.value.hotel_name}-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
+    notifySuccess(null, t('superadmin.backupDownloaded'))
   } catch (err) {
-    error.value = err.response?.data?.message || t('superadmin.backupFailed')
+    notifyError(err, t('superadmin.backupFailed'))
   }
 }
 
@@ -753,9 +804,9 @@ async function saveBranding() {
     tenant.value.signature_url = res.data.tenant?.signature_url ?? null
     tenant.value.stamp_url = res.data.tenant?.stamp_url ?? null
     brandingFiles.value = { logo: null, signature: null, stamp: null }
-    window.alert(res.data.message || t('superadmin.brandingSaved'))
+    notifySuccess(res, t('superadmin.brandingSaved'))
   } catch (err) {
-    error.value = err.response?.data?.message || t('superadmin.brandingSaveError')
+    notifyError(err, t('superadmin.brandingSaveError'))
   } finally {
     savingBranding.value = false
   }
@@ -775,8 +826,9 @@ async function removeBranding(asset) {
     tenant.value.logo_url = res.data.tenant?.logo_url ?? null
     tenant.value.signature_url = res.data.tenant?.signature_url ?? null
     tenant.value.stamp_url = res.data.tenant?.stamp_url ?? null
+    notifySuccess(res, t('superadmin.brandingRemoved'))
   } catch (err) {
-    error.value = err.response?.data?.message || t('superadmin.brandingSaveError')
+    notifyError(err, t('superadmin.brandingSaveError'))
   } finally {
     savingBranding.value = false
   }
@@ -789,9 +841,9 @@ async function saveOwner() {
   try {
     const res = await tenantApi.update(route.params.id, { owner_id: ownerForm.value.owner_id || null })
     tenant.value.owner_id = res.data.tenant?.owner_id ?? ownerForm.value.owner_id
-    window.alert(res.data.message || t('superadmin.ownerSaved'))
+    notifySuccess(res, t('superadmin.ownerSaved'))
   } catch (err) {
-    error.value = err.response?.data?.message || t('superadmin.ownerSaveError')
+    notifyError(err, t('superadmin.ownerSaveError'))
   } finally {
     savingOwner.value = false
   }
@@ -808,9 +860,9 @@ async function createOwner() {
     if (res.data.owner?.user_id) {
       ownerForm.value.owner_id = res.data.owner.user_id
     }
-    window.alert(res.data.message || '')
+    notifySuccess(res, t('superadmin.ownerCreated'))
   } catch (err) {
-    error.value = err.response?.data?.message || t('superadmin.ownerCreateError')
+    notifyError(err, t('superadmin.ownerCreateError'))
   } finally {
     creatingOwner.value = false
   }
@@ -845,9 +897,9 @@ async function savePaymentMethods() {
     })
     tenant.value.payment_methods = methods
     tenant.value.payment_accounts = res.data.tenant?.payment_accounts || accounts
-    window.alert(res.data.message || t('superadmin.paymentMethodsSaved'))
+    notifySuccess(res, t('superadmin.paymentMethodsSaved'))
   } catch (err) {
-    error.value = err.response?.data?.message || t('superadmin.paymentMethodsSaveError')
+    notifyError(err, t('superadmin.paymentMethodsSaveError'))
   } finally {
     savingPayment.value = false
   }

@@ -133,6 +133,7 @@
 
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
+import { useSuperadminResult } from '@/composables/useSuperadminResult'
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -151,6 +152,8 @@ const props = defineProps({
   listParams: { type: Object, default: () => ({}) },
   onBeforeSave: { type: Function, default: null },
 })
+
+const { showSuccess, showError, actionError } = useSuperadminResult()
 
 const items = ref([])
 const loading = ref(false)
@@ -365,15 +368,17 @@ async function save() {
       await props.api.store(body)
       success.value = 'Record created.'
     }
+    showSuccess(success.value)
     closeForm()
     await load()
   } catch (err) {
     if (err instanceof SyntaxError) {
       formError.value = 'Invalid JSON in one of the fields.'
     } else {
-      formError.value = err?.response?.data?.message || err?.message || 'Failed to save record'
+      formError.value = actionError(err, 'Failed to save record')
       formErrors.value = extractErrors(err)
     }
+    showError(formError.value)
   } finally {
     saving.value = false
   }
@@ -388,9 +393,11 @@ async function remove(item) {
   try {
     await props.api.destroy(id)
     success.value = 'Record deleted.'
+    showSuccess(success.value)
     await load()
   } catch (err) {
-    error.value = err?.response?.data?.message || err?.message || 'Failed to delete record'
+    error.value = actionError(err, 'Failed to delete record')
+    showError(error.value)
   }
 }
 

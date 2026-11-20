@@ -188,8 +188,10 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { planApi } from '@/api'
+import { useSuperadminResult } from '@/composables/useSuperadminResult'
 
 const { t } = useI18n()
+const { showSuccess, showError, actionError } = useSuperadminResult()
 
 const plansList = ref([])
 const featureLabels = ref({})
@@ -244,9 +246,11 @@ async function savePlan(plan) {
       is_active: plan.is_active,
     })
     success.value = t('superadmin.planUpdated', { name: plan.label })
+    showSuccess(success.value)
     setTimeout(() => { success.value = null }, 3000)
   } catch (e) {
-    error.value = e.response?.data?.message || t('superadmin.failedToSavePlan')
+    error.value = actionError(e, t('superadmin.failedToSavePlan'))
+    showError(error.value)
   } finally {
     plan._saving = false
   }
@@ -258,13 +262,16 @@ async function deletePlan(plan) {
   try {
     await planApi.destroy(plan.slug)
     plansList.value = plansList.value.filter((p) => p.slug !== plan.slug)
+    showSuccess(t('superadmin.planDeleted', { name: plan.label }))
   } catch (e) {
-    error.value = e.response?.data?.message || t('superadmin.failedToDeletePlan')
+    error.value = actionError(e, t('superadmin.failedToDeletePlan'))
+    showError(error.value)
   }
 }
 
 async function createPlan() {
   error.value = null
+  const planLabel = newPlan.label
   try {
     const { data } = await planApi.store({
       slug: newPlan.slug,
@@ -278,10 +285,11 @@ async function createPlan() {
     })
     plansList.value.push(data.plan)
     showCreateModal.value = false
-    // Reset form
     Object.assign(newPlan, { slug: '', label: '', description: '', price_monthly: 0, trial_days: 14, client_tier: 'small', features: [] })
+    showSuccess(t('superadmin.planCreated', { name: planLabel }))
   } catch (e) {
-    error.value = e.response?.data?.message || t('superadmin.failedToCreatePlan')
+    error.value = actionError(e, t('superadmin.failedToCreatePlan'))
+    showError(error.value)
   }
 }
 

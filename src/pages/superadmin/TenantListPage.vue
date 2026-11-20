@@ -251,8 +251,10 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { normalizePhoneNumber } from '@/utils/phone'
 import { collectAllRows } from '@/utils/export'
+import { useSuperadminResult } from '@/composables/useSuperadminResult'
 
 const { t } = useI18n()
+const { showSuccess, showError, actionError } = useSuperadminResult()
 
 // List state: tenant rows, filters (search text, status, plan) and feedback flags.
 const tenants = ref([])
@@ -403,12 +405,14 @@ async function createHotel() {
     })
     showCreate.value = false
     success.value = res.data.message || t('superadmin.created')
+    showSuccess(success.value)
     await load()
   } catch (err) {
     const messages = err.response?.data?.errors
     createError.value = messages
       ? Object.values(messages).flat().join(' ')
-      : err.response?.data?.message || t('superadmin.createError')
+      : actionError(err, t('superadmin.createError'))
+    showError(createError.value)
   } finally {
     creating.value = false
   }
@@ -425,9 +429,10 @@ async function runAction(id, fn, message) {
   try {
     await fn(id)
     await load()
-    window.alert(message)
+    showSuccess(message)
   } catch (err) {
-    error.value = err.response?.data?.message || t('common.actionFailed')
+    error.value = actionError(err, t('common.actionFailed'))
+    showError(error.value)
   }
 }
 

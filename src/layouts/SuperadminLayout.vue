@@ -195,6 +195,7 @@
         <router-view />
       </main>
     </div>
+    <SuperadminResultModal />
   </div>
 </template>
 
@@ -205,6 +206,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import RoleBadge from '@/components/RoleBadge.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import SuperadminResultModal from '@/components/SuperadminResultModal.vue'
 
 const router = useRouter()
 const route = useRoute()
