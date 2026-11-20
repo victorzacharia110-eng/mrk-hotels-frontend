@@ -217,7 +217,12 @@
         </div>
       </div>
 
-      <div class="form-actions">
+      <div v-else-if="paymentMethodsOnly" class="card">
+        <h3>{{ $t('hotelSettings.paymentSection') }}</h3>
+        <div class="alert alert-warning">{{ $t('hotelSettings.paymentMethodsDisabled') }}</div>
+      </div>
+
+      <div v-if="!paymentMethodsOnly || paymentMethodsEnabled" class="form-actions">
         <button type="submit" class="btn btn-primary" :disabled="!canEdit || saving">
           <i class="fas fa-floppy-disk"></i>
           {{ saving ? $t('common.saving') : $t('common.save') }}

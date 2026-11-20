@@ -13,7 +13,7 @@ describe('module config', () => {
     it('finds owner-only modules by key', () => {
       const mod = moduleByKey('owner-payment-methods')
       expect(mod.to).toBe('/owner/payment-methods')
-      expect(mod.feature).toBe('payment_methods')
+      expect(mod.feature).toBeUndefined()
       expect(mod.roles).toEqual(['hotel_admin'])
     })
 

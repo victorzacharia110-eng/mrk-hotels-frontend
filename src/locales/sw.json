@@ -4079,6 +4079,7 @@
     "city": "Jiji",
     "country": "Nchi",
     "paymentSection": "Njia za Malipo na Akaunti",
+    "paymentMethodsDisabled": "Njia za malipo zimezimwa kwa hoteli hii. Muuliza msimamizi awezeshe kipengele cha Njia za Malipo.",
     "accountPlaceholder": "Nambari ya akaunti au pochi",
     "lipaNumberLabel": "Namba ya Lipa / POS",
     "lipaNumberPlaceholder": "Namba ya Lipa unayotumia kupokea malipo (mf. 4001202)",

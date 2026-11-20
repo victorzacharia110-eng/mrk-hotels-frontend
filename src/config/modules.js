@@ -149,7 +149,7 @@ export const MODULES = [
 ]
 
 export const OWNER_MODULES = [
-  { key: 'owner-payment-methods', to: '/owner/payment-methods', icon: 'fas fa-credit-card', labelKey: 'hotelSettings.paymentSection', roles: ['hotel_admin'], feature: 'payment_methods' },
+  { key: 'owner-payment-methods', to: '/owner/payment-methods', icon: 'fas fa-credit-card', labelKey: 'hotelSettings.paymentSection', roles: ['hotel_admin'] },
 ]
 
 /**

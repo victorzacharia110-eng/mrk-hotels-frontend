@@ -4079,6 +4079,7 @@
     "city": "City",
     "country": "Country",
     "paymentSection": "Payment Methods & Accounts",
+    "paymentMethodsDisabled": "Payment methods are disabled for this hotel. Ask the administrator to enable the Payment Methods feature.",
     "accountPlaceholder": "Account or wallet number",
     "lipaNumberLabel": "Lipa / POS number",
     "lipaNumberPlaceholder": "Lipa number you bill against (e.g. 4001202)",

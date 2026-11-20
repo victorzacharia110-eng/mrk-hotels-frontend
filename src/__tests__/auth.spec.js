@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
+import { moduleByKey } from '@/config/modules'
 
 vi.mock('@/api', () => ({
   authApi: {
@@ -353,13 +354,13 @@ describe('auth store', () => {
       expect(store.canAccess({ key: 'staff', roles: ['hotel_admin', 'manager'], permission: null })).toBe(true)
     })
 
-    it('gates owner payment methods on the viewed hotel feature list', () => {
+    it('allows owner payment methods entry regardless of cached feature list', () => {
       sessionStorage.setItem('owner_viewing_hotel_features', JSON.stringify(['reservations']))
       const store = useAuthStore()
       store.user = { user_role: 'owner' }
-      const module = { key: 'owner-payment-methods', roles: ['hotel_admin'], permission: null, feature: 'payment_methods' }
+      const module = moduleByKey('owner-payment-methods')
 
-      expect(store.canAccess(module)).toBe(false)
+      expect(store.canAccess(module)).toBe(true)
 
       setActivePinia(createPinia())
       sessionStorage.setItem('owner_viewing_hotel_features', JSON.stringify(['payment_methods']))
