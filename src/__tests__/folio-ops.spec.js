@@ -264,6 +264,72 @@ describe('folio operations on the stay view', () => {
     expect(api.reservationApi.folioEntryVoid).not.toHaveBeenCalled()
   })
 
+  it('uses compact dialogs for the four manual charge actions', async () => {
+    await mountDashboard()
+
+    wrapper.vm.chargeModal = true
+    await wrapper.vm.$nextTick()
+    const charge = document.querySelector('.sv-modal-action[aria-label="Add Charges"]')
+    expect(charge).toBeTruthy()
+    expect(charge.classList.contains('sv-modal-op')).toBe(false)
+
+    for (const op of ['discount', 'adjustment', 'inclusion']) {
+      wrapper.vm.openFolioOp(op)
+      await wrapper.vm.$nextTick()
+      const modal = document.querySelector('.sv-modal-action[role="dialog"]')
+      expect(modal).toBeTruthy()
+      expect(modal.classList.contains('sv-modal-op')).toBe(false)
+    }
+
+    wrapper.vm.openFolioOp('move')
+    await wrapper.vm.$nextTick()
+    expect(document.querySelector('.sv-modal.sv-modal-op')).toBeTruthy()
+  })
+
+  it('lets reception edit and void manual charges after checkout', async () => {
+    await mountDashboard()
+    wrapper.vm.activeBar = { ...activeBar, rawStatus: 'checked_out' }
+    const payload = folioPayload()
+    for (const [id, type] of [
+      [4, 'extra_charge'],
+      [5, 'discount'],
+      [6, 'adjustment'],
+      [7, 'inclusion'],
+    ]) {
+      payload.folio_entries.push({
+        folio_entry_id: id,
+        type,
+        amount: type === 'discount' ? -5000 : 5000,
+        date: '2026-11-02',
+        description: type,
+        reference: `REF-${id}`,
+      })
+    }
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    const manual = wrapper.vm.folioEntries.filter((e) =>
+      ['extra_charge', 'discount', 'adjustment', 'inclusion'].includes(e.type),
+    )
+    expect(manual).toHaveLength(4)
+    for (const entry of manual) {
+      expect(entry.particular).toBe(i18n.global.t('folio.extraCharges'))
+      expect(entry.editable).toBe(true)
+      expect(wrapper.vm.canVoidEntry(entry)).toBe(true)
+    }
+
+    const discount = manual.find((e) => e.type === 'discount')
+    wrapper.vm.requestEditEntry(discount)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.folioEdit?.entryId).toBe(discount.entryId)
+
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    wrapper.vm.requestVoidEntry(discount)
+    await flushPromises()
+    expect(api.reservationApi.folioEntryVoid).toHaveBeenCalledWith(discount.entryId)
+  })
+
   it('keeps room-charge edits available to management', async () => {
     await mountDashboard()
     const { useAuthStore } = await import('@/stores/auth')

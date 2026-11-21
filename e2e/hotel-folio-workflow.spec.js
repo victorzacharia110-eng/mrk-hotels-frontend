@@ -664,7 +664,7 @@ test.describe('hotel folio workflow', () => {
     expect(errors).toEqual([])
   })
 
-  test('D1 - folio edit/void is management-only after checkout', async ({ page }) => {
+  test('D1 - room charge edit/void is management-only after checkout', async ({ page }) => {
     const errors = trackPageErrors(page)
     await signIn(page, { email: 'reception' })
     const last = guestName('co')
@@ -681,12 +681,12 @@ test.describe('hotel folio workflow', () => {
     await waitForBarClass(page, last, 'bar-blue')
 
     modal = await openStay(page, last)
-    // Bug D1: a receptionist still sees Edit/Void on a checked-out folio; the
-    // document says these become management-only once the guest is out.
-    const editable = modal.locator(
-      '.sv-folio-table tbody tr button[title="Edit"], .sv-folio-table tbody tr button[title="Void"]',
-    )
-    await expect(editable).toHaveCount(0)
+    // Manual desk charges stay correctable, but the nightly room charge is
+    // the frozen bill and must remain management-only once the guest is out.
+    const roomCharge = modal.locator('.sv-folio-table tbody tr').filter({ hasText: /Room Charges/i }).first()
+    await roomCharge.locator('.sv-row-menu-btn').click()
+    const actions = page.locator('.sv-row-menu button', { hasText: /^(Edit|Void)$/i })
+    await expect(actions).toHaveCount(0)
     expect(errors).toEqual([])
   })
 

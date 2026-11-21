@@ -1230,7 +1230,7 @@
     <Teleport to="body">
       <Transition name="sv-modal">
         <div v-if="chargeModal" class="sv-modal-backdrop" @click.self="chargeModal = false">
-          <div class="sv-modal sv-modal-sm sv-modal-compact" role="dialog" aria-modal="true"
+          <div class="sv-modal sv-modal-sm sv-modal-compact sv-modal-action" role="dialog" aria-modal="true"
             :aria-label="$t('stayview.addCharges')">
             <div class="sv-modal-head bar-blue">
               <span class="sv-modal-head-icon"><i class="fas fa-receipt" aria-hidden="true"></i></span>
@@ -1279,7 +1279,8 @@
     <Teleport to="body">
       <Transition name="sv-modal">
         <div v-if="folioOp" class="sv-modal-backdrop" @click.self="folioOp = null">
-          <div class="sv-modal sv-modal-sm sv-modal-op sv-modal-compact" role="dialog" aria-modal="true"
+          <div class="sv-modal sv-modal-sm sv-modal-compact"
+            :class="folioOpIsWide(folioOp) ? 'sv-modal-op' : 'sv-modal-action'" role="dialog" aria-modal="true"
             :aria-label="folioOpTitle">
             <div class="sv-modal-head bar-blue">
               <span class="sv-modal-head-icon"><i class="fas fa-folder-open" aria-hidden="true"></i></span>
@@ -4110,7 +4111,7 @@ function buildLedgerEntries(src) {
       // EXTRA CHARGES on the folio; their own label stays in the description.
       particular: isRefund
         ? t('stayview.refundLine')
-        : (['extra_charge', 'adjustment', 'inclusion'].includes(e.type)
+        : (isManualFolioType(e.type)
           ? t('folio.extraCharges')
           : folioEntryLabel(e.type)),
       description: isRefund
@@ -4149,7 +4150,7 @@ function buildLedgerEntries(src) {
         && e.folio_entry_id != null,
       editable: ['room_charge', 'extra_charge', 'adjustment', 'discount', 'inclusion'].includes(e.type)
         && e.folio_entry_id != null
-        && (canManageFolioOps.value || (!restrictedFolioType(e.type) && !folioLocked.value)),
+        && (canManageFolioOps.value || isManualFolioType(e.type) || (!restrictedFolioType(e.type) && !folioLocked.value)),
       movedFrom: fromPartner || null,
       movedTo: toPartner || null,
     })
@@ -4967,6 +4968,10 @@ const folioOpCanPost = computed(() => {
   return f.files && f.files.length > 0
 })
 
+function folioOpIsWide(op) {
+  return ['move', 'refund', 'upload'].includes(op)
+}
+
 function openFolioOp(op, mode = 'transfer') {
   moreOpen.value = false
   // Discounts/adjustments/inclusions land on the folio being viewed; moving
@@ -5157,11 +5162,15 @@ function restrictedFolioType(type) {
   return ['room_charge', 'room_posting', 'laundry'].includes(type)
 }
 
+function isManualFolioType(type) {
+  return ['extra_charge', 'discount', 'adjustment', 'inclusion'].includes(type)
+}
+
 function canVoidEntry(entry) {
   if (!entry?.entryId || entry.moveLine) return false
   if (entry.hasAttachment) return true
   if (canManageFolioOps.value) return true
-  return !restrictedFolioType(entry.type) && !folioLocked.value
+  return isManualFolioType(entry.type) || (!restrictedFolioType(entry.type) && !folioLocked.value)
 }
 
 function requestEditEntry(entry) {
@@ -8908,6 +8917,14 @@ onUnmounted(() => {
 
 .sv-modal-compact {
   max-height: 70vh;
+}
+
+.sv-modal-action {
+  max-height: 46vh;
+}
+
+.sv-modal-action .sv-modal-body {
+  padding: 12px 16px;
 }
 
 .sv-modal-body {
