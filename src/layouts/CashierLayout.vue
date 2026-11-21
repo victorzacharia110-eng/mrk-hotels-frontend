@@ -221,12 +221,18 @@
           </button>
           <div class="sm-user" style="position: relative;">
             <button type="button" class="sm-user-trigger" @click="toggleProfile" aria-haspopup="true" :aria-expanded="profileOpen">
-              <span class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
+              <span v-if="accountAvatarUrl" class="sm-user-avatar has-image" aria-hidden="true">
+                <img :src="accountAvatarUrl" alt="" class="sm-user-avatar-img" />
+              </span>
+              <span v-else class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
             </button>
             <div v-if="profileOpen" class="sm-profile-backdrop" @click="closeProfile"></div>
             <div v-if="profileOpen" class="sm-profile-panel">
               <div class="sm-profile-head">
-                <span class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
+                <span v-if="accountAvatarUrl" class="sm-user-avatar has-image" aria-hidden="true">
+                  <img :src="accountAvatarUrl" alt="" class="sm-user-avatar-img" />
+                </span>
+                <span v-else class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
                 <div>
                   <strong>{{ authStore.user?.name }}</strong>
                   <small>{{ authStore.user?.email }}</small>
@@ -461,6 +467,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { outletApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
+import { avatarUrl } from '@/utils/format'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { selectedOutlet } from '@/pages/cashier/outlet-context'
 import { useOutletContext } from '@/composables/useOutletContext'
@@ -595,6 +602,7 @@ const userInitials = computed(() => {
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return (authStore.user?.user_role || 'CS').slice(0, 2).toUpperCase()
 })
+const accountAvatarUrl = computed(() => avatarUrl(authStore.user?.profile_picture))
 const hotelName = computed(() => authStore.tenant?.hotel_name || '')
 
 const OUTLET_TYPE_META = {

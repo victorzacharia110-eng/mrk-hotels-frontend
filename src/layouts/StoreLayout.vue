@@ -689,6 +689,7 @@ import RoleBadge from '@/components/RoleBadge.vue'
 import { outletApi, publicApi } from '@/api'
 import { MODULES } from '@/config/modules'
 import { clearOwnerHotel, ownerHotelId, ownerHotelName } from '@/utils/ownerView'
+import { avatarUrl } from '@/utils/format'
 import { useHoliday } from '@/composables/useHoliday'
 import HolidayDecor from '@/components/HolidayDecor.vue'
 import { initEcho, destroyEcho } from '@/plugins/echo'
@@ -732,7 +733,7 @@ const accountInitials = computed(() => {
   return (parts.slice(0, 2).map((part) => part[0]?.toUpperCase() || '').join('') || 'U')
 })
 
-const accountAvatarUrl = computed(() => authStore.user?.profile_picture || '')
+const accountAvatarUrl = computed(() => avatarUrl(authStore.user?.profile_picture))
 
 const { holiday } = useHoliday()
 
@@ -2199,6 +2200,18 @@ function formatNotifTime(iso) {
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.4px;
+  overflow: hidden;
+}
+
+.profile-menu-avatar.has-image {
+  background: #e2e8f0;
+}
+
+.profile-menu-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 /* Full-screen transparent layer so a click anywhere closes the menu. */

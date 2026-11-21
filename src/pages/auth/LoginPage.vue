@@ -96,9 +96,6 @@
             {{ msg }}</div>
         </div>
 
-        <!-- Transient toast, e.g. showing the default password after a forced rotation -->
-        <div v-if="toastMsg" class="password-toast"><i class="fas fa-key"></i> {{ toastMsg }}</div>
-
         <!-- Submit stays disabled while the login request is in flight -->
         <button type="submit" class="btn btn-primary full-width" :disabled="loading"><i
             class="fas fa-right-to-bracket"></i> {{ loading ? $t('auth.signInLoading') : $t('auth.signIn') }}</button>
@@ -220,7 +217,6 @@ const serverErrors = ref([])
 const touched = ref({})
 const loading = ref(false)
 const showPw = ref(false)
-const toastMsg = ref('')
 
 // Sign-in mode: 'password' (classic form) or 'pin' (iPOS-style keypad).
 const mode = ref('password')
@@ -261,10 +257,6 @@ const hasTrustedDevice = ref(authStore.isTrustedDevice())
 const canUsePin = computed(() => hasTrustedDevice.value && !forcePasswordLogin.value)
 let resendTimer = null
 
-// Timer handle for the temporary password-rotation toast.
-let toastTimer = null
-
-// When redirected here after a forced password rotation, surface the new default password once.
 onMounted(() => {
   hasTrustedDevice.value = authStore.isTrustedDevice()
   if (!hasTrustedDevice.value) {
@@ -273,9 +265,6 @@ onMounted(() => {
   }
   savedProfiles.value = authStore.loginProfiles()
   if (savedProfiles.value.length) selectProfile(savedProfiles.value[0])
-  if (route.query.rotated) {
-    showToast(`${t('auth.passwordRotated')} ${route.query.default_password || ''}`)
-  }
 })
 
 function selectProfile(profile) {
@@ -295,16 +284,6 @@ function onPropertyCodeInput(event) {
   form.value.property_code = String(event?.target?.value ?? '').replace(/\D/g, '').slice(0, 6)
   if (event?.target) event.target.value = form.value.property_code
   validateField('property_code')
-}
-
-/**
- * Shows a transient toast message that clears itself after 6 seconds.
- * @param {string} msg - Text to display inside the toast.
- */
-function showToast(msg) {
-  toastMsg.value = msg
-  clearTimeout(toastTimer)
-  toastTimer = setTimeout(() => (toastMsg.value = ''), 6000)
 }
 
 /**
@@ -393,9 +372,6 @@ async function handleLogin() {
       router.push('/owner')
     } else {
       router.push(resolveLanding(authStore))
-    }
-    if (data?.password_rotated) {
-      showToast(`${t('auth.passwordRotated')} ${data.default_password}`)
     }
   } catch (e) {
     if (e.response?.data?.message) {
@@ -780,24 +756,6 @@ function startResendCooldown() {
 .server-error i {
   font-size: 12px;
   flex-shrink: 0;
-}
-
-.password-toast {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: #fef9e7;
-  border: 1px solid #f3e5ab;
-  border-radius: 6px;
-  color: #7d6608;
-  font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 12px;
-}
-
-.password-toast i {
-  color: #005EB8;
 }
 
 .saved-profiles {

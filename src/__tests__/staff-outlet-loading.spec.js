@@ -21,9 +21,10 @@ import StaffListPage from '@/pages/staff/StaffListPage.vue'
  * mismatch cannot quietly return.
  */
 
-const { outletIndex, userIndex } = vi.hoisted(() => ({
+const { outletIndex, userIndex, inviteIndex } = vi.hoisted(() => ({
   outletIndex: vi.fn(),
   userIndex: vi.fn(),
+  inviteIndex: vi.fn(),
 }))
 
 vi.mock('@/api', () => ({
@@ -32,6 +33,7 @@ vi.mock('@/api', () => ({
     index: (...a) => userIndex(...a),
     update: vi.fn().mockResolvedValue({ data: { data: {} } }),
     store: vi.fn().mockResolvedValue({ data: { data: {} } }),
+    invite: (...a) => inviteIndex(...a),
   },
 }))
 
@@ -61,6 +63,7 @@ beforeEach(() => {
   auth.token = 'test-token'
 
   userIndex.mockResolvedValue({ data: { data: [], current_page: 1 } })
+  inviteIndex.mockResolvedValue({ data: { message: 'Invitation generated.', invitation: {} } })
   // The real production shape, not the usual `{ data: [...] }`.
   outletIndex.mockResolvedValue({ data: { outlets: OUTLETS } })
 })
@@ -150,5 +153,38 @@ describe('staff page outlet loading', () => {
     await openCreateModal(wrapper)
 
     expect(wrapper.find('.modal').exists()).toBe(true)
+  })
+
+  it('does not display a default password returned with an invitation', async () => {
+    userIndex.mockResolvedValue({
+      data: {
+        data: [{
+          user_id: 'user-waiter',
+          full_name: 'New Waiter',
+          email: 'waiter@example.com',
+          user_role: 'waiter',
+          department: 'restaurant',
+          is_active: true,
+        }],
+        current_page: 1,
+      },
+    })
+    inviteIndex.mockResolvedValue({
+      data: {
+        message: 'Invitation generated.',
+        invitation: {
+          token: 'invite-token',
+          default_password: 'NEW WAITER',
+          expires_at: '2026-12-01T00:00:00.000Z',
+        },
+      },
+    })
+
+    const wrapper = await mountPage()
+    const invite = wrapper.findAll('button').find((button) => button.text().includes('Invite'))
+    await invite.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('NEW WAITER')
   })
 })

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { avatarUrl } from '@/utils/format'
 
 /**
  * Guards that every panel which does not use StoreLayout's profile menu still
@@ -129,5 +130,62 @@ describe('owner panel header', () => {
   it('keeps the hamburger visible for expanding and collapsing the sidebar', () => {
     expect(layout).toMatch(/\.sa-hamburger\s*\{\s*display:\s*flex/)
     expect(layout).toContain('sidebarCollapsed.value = !sidebarCollapsed.value')
+  })
+})
+
+describe('profile avatar URLs', () => {
+  const apiBase = 'http://localhost:8000/storage/staff/profile-pictures/a.jpg'
+
+  it('resolves storage paths against the API origin', () => {
+    expect(avatarUrl('/storage/staff/profile-pictures/a.jpg')).toBe(apiBase)
+    expect(avatarUrl('storage/staff/profile-pictures/a.jpg')).toBe(apiBase)
+  })
+
+  it('keeps absolute URLs and blank values intact', () => {
+    expect(avatarUrl('https://cdn.example.com/a.jpg')).toBe('https://cdn.example.com/a.jpg')
+    expect(avatarUrl('')).toBe('')
+  })
+})
+
+const AVATAR_PANELS = [
+  { label: 'store', path: 'src/layouts/StoreLayout.vue' },
+  { label: 'superadmin', path: 'src/layouts/SuperadminLayout.vue' },
+  { label: 'owner', path: 'src/layouts/OwnerLayout.vue' },
+  { label: 'cashier', path: 'src/layouts/CashierLayout.vue' },
+  { label: 'store manager', path: 'src/layouts/StoreManagerLayout.vue' },
+]
+
+describe.each(AVATAR_PANELS)('$label panel renders the profile photo', ({ path }) => {
+  const layout = read(path)
+
+  it('renders the resolved avatar URL with initials fallback', () => {
+    expect(layout).toContain("import { avatarUrl } from '@/utils/format'")
+    expect(layout).toContain('const accountAvatarUrl = computed(() => avatarUrl(authStore.user?.profile_picture))')
+    expect(layout).toContain(':src="accountAvatarUrl"')
+    expect(layout).toMatch(/\{\{ (?:userInitials|accountInitials) \}\}/)
+  })
+})
+
+const PROFILE_PAGES = [
+  { label: 'staff', path: 'src/pages/profile/ProfilePage.vue' },
+  { label: 'owner', path: 'src/pages/owner/ProfilePage.vue' },
+  { label: 'superadmin', path: 'src/pages/superadmin/ProfilePage.vue' },
+]
+
+describe.each(PROFILE_PAGES)('$label profile can remove the photo', ({ path }) => {
+  const page = read(path)
+
+  it('sends the removal flag and clears the local preview', () => {
+    expect(page).toContain('@click="removePhoto"')
+    expect(page).toContain("fd.append('remove_profile_picture', '1')")
+    expect(page).toContain("message.value = t('profile.photoRemoved')")
+    expect(page).toContain('photoInput.value.value =')
+  })
+})
+
+describe('profile photo removal translations', () => {
+  it('exists in English and Swahili', () => {
+    expect(read('src/locales/en.json')).toContain('"removePhoto": "Remove photo"')
+    expect(read('src/locales/sw.json')).toContain('"removePhoto": "Ondoa picha"')
   })
 })

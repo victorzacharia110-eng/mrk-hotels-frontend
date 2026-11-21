@@ -204,6 +204,7 @@ import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { avatarUrl } from '@/utils/format'
 import RoleBadge from '@/components/RoleBadge.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import SuperadminResultModal from '@/components/SuperadminResultModal.vue'
@@ -246,7 +247,7 @@ const userInitials = computed(() => {
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return 'SA'
 })
-const accountAvatarUrl = computed(() => authStore.user?.profile_picture || '')
+const accountAvatarUrl = computed(() => avatarUrl(authStore.user?.profile_picture))
 
 /**
  * Toggles the sidebar: switches the mobile overlay on small screens and the

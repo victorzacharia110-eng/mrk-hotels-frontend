@@ -13,8 +13,8 @@
         <div class="profile-header">
           <div class="avatar">
             <img
-              v-if="authStore.user?.profile_picture"
-              :src="authStore.user.profile_picture"
+              v-if="avatarSrc"
+              :src="avatarSrc"
               :alt="authStore.user?.full_name"
             />
             <i v-else class="fas fa-user"></i>
@@ -135,10 +135,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { authApi, hotelSettingsApi } from '@/api'
+import { avatarUrl } from '@/utils/format'
 import ChangePasswordForm from '@/components/ChangePasswordForm.vue'
 
 const { t } = useI18n()
@@ -148,6 +149,7 @@ const saving = ref(false)
 const message = ref('')
 const error = ref(false)
 const tenant = ref(null)
+const avatarSrc = computed(() => avatarUrl(authStore.user?.profile_picture))
 
 const form = reactive({
   first_name: '',

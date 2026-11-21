@@ -111,7 +111,7 @@
             <td>
               <div class="staff-cell">
                 <span class="avatar-wrap">
-                  <img v-if="u.profile_picture" :src="u.profile_picture" class="avatar" alt="" />
+                  <img v-if="u.profile_picture" :src="avatarUrl(u.profile_picture)" class="avatar" alt="" />
                   <span v-else class="avatar avatar-icon"><i class="fas fa-user"></i></span>
                   <span
                     v-if="isOnline(u.user_id)"
@@ -237,11 +237,8 @@
 
         <div v-if="modalError" class="alert alert-error">{{ modalError }}</div>
         <div v-if="invitation" class="alert alert-success">
-          <strong>{{ $t('staff.accountReady') }}</strong> {{ $t('staff.defaultPassword') }}
-          <code>{{ invitation.default_password }}</code>
-          <div class="muted">
-            {{ $t('staff.resetToFullName') }}. {{ $t('staff.shareWithStaff') }}
-          </div>
+          <strong>{{ $t('staff.accountReady') }}</strong>
+          <div class="muted">{{ $t('staff.pinReadyHint') }}</div>
         </div>
 
         <form @submit.prevent="save">
@@ -321,7 +318,7 @@
               <div class="picture-field">
                 <img
                   v-if="form.picture_preview"
-                  :src="form.picture_preview"
+                  :src="avatarUrl(form.picture_preview)"
                   class="picture-preview"
                   alt=""
                 />
@@ -513,6 +510,7 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import TableExportButton from '@/components/TableExportButton.vue'
 import { collectAllRows } from '@/utils/export'
 import { normalizePhoneNumber } from '@/utils/phone'
+import { avatarUrl } from '@/utils/format'
 import { isOnline } from '@/composables/usePresence'
 
 const { t } = useI18n()
@@ -728,8 +726,7 @@ function formatBytes(bytes) {
  * @returns {string} The absolute URL of the stored file.
  */
 function attachmentUrl(att) {
-  const base = (import.meta.env.VITE_API_URL || '').replace(/\/api$/, '')
-  return `${base}/storage/${att.file_path}`
+  return avatarUrl(`/storage/${att.file_path}`)
 }
 
 /**
@@ -1027,7 +1024,6 @@ function buildPayload() {
   return fd
 }
 
-/** Creates or updates the staff account and surfaces the invitation credentials. */
 async function save() {
   modalError.value = ''
   invitation.value = null
@@ -1110,12 +1106,7 @@ async function runAction(user, fn, message, confirmMsg) {
 }
 
 // Per-row lifecycle actions, all funnelled through the shared runAction helper.
-const invite = (user) =>
-  runAction(
-    user,
-    userApi.invite,
-    t('staff.invitationSent', { email: user.email, password: user.full_name.toUpperCase() }),
-  )
+const invite = (user) => runAction(user, userApi.invite, t('staff.invitationSent', { email: user.email }))
 const activate = (user) =>
   runAction(user, userApi.activate, t('staff.activated', { name: user.full_name }))
 const deactivate = (user) =>

@@ -113,12 +113,18 @@
               :aria-label="$t('nav.profile')"
               @click="profileOpen = !profileOpen"
             >
-              <span class="sa-profile-avatar" aria-hidden="true">{{ userInitials }}</span>
+              <span v-if="accountAvatarUrl" class="sa-profile-avatar has-image" aria-hidden="true">
+                <img :src="accountAvatarUrl" alt="" class="sa-profile-avatar-img" />
+              </span>
+              <span v-else class="sa-profile-avatar" aria-hidden="true">{{ userInitials }}</span>
             </button>
             <div v-if="profileOpen" class="sa-profile-backdrop" @click="profileOpen = false"></div>
             <div v-if="profileOpen" class="sa-profile-panel">
               <div class="sa-profile-head">
-                <span class="sa-profile-avatar" aria-hidden="true">{{ userInitials }}</span>
+                <span v-if="accountAvatarUrl" class="sa-profile-avatar has-image" aria-hidden="true">
+                  <img :src="accountAvatarUrl" alt="" class="sa-profile-avatar-img" />
+                </span>
+                <span v-else class="sa-profile-avatar" aria-hidden="true">{{ userInitials }}</span>
                 <div>
                   <strong>{{ accountName }}</strong>
                   <small>{{ authStore.user?.email }}</small>
@@ -183,6 +189,7 @@ import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { avatarUrl } from '@/utils/format'
 import RoleBadge from '@/components/RoleBadge.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 
@@ -222,6 +229,7 @@ const userInitials = computed(() => {
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return (authStore.user?.user_role || 'OW').slice(0, 2).toUpperCase()
 })
+const accountAvatarUrl = computed(() => avatarUrl(authStore.user?.profile_picture))
 
 /**
  * Toggles the sidebar: switches the mobile overlay on small screens and the

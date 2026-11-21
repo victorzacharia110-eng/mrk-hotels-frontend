@@ -96,12 +96,18 @@
           <div class="sm-profile">
             <button type="button" class="sm-user" :aria-expanded="profileOpen"
               :aria-label="$t('nav.profile')" @click="profileOpen = !profileOpen">
-              <span class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
+              <span v-if="accountAvatarUrl" class="sm-user-avatar has-image" aria-hidden="true">
+                <img :src="accountAvatarUrl" alt="" class="sm-user-avatar-img" />
+              </span>
+              <span v-else class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
             </button>
             <div v-if="profileOpen" class="sm-profile-backdrop" @click="profileOpen = false"></div>
             <div v-if="profileOpen" class="sm-profile-panel">
               <div class="sm-profile-head">
-                <span class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
+                <span v-if="accountAvatarUrl" class="sm-user-avatar has-image" aria-hidden="true">
+                  <img :src="accountAvatarUrl" alt="" class="sm-user-avatar-img" />
+                </span>
+                <span v-else class="sm-user-avatar" aria-hidden="true">{{ userInitials }}</span>
                 <strong>{{ accountName }}</strong>
               </div>
               <router-link :to="{ name: 'user-manual' }" class="sm-profile-link" @click="profileOpen = false">
@@ -264,6 +270,7 @@ import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { avatarUrl } from '@/utils/format'
 import { useNotificationStore } from '@/stores/notifications'
 import { useWorkingDateStore } from '@/stores/workingDate'
 import { useThemeStore } from '@/stores/theme'
@@ -494,6 +501,7 @@ const userInitials = computed(() => {
   const name = accountName.value
   return name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || 'SM'
 })
+const accountAvatarUrl = computed(() => avatarUrl(authStore.user?.profile_picture))
 
 function setLocale(lang) {
   locale.value = lang

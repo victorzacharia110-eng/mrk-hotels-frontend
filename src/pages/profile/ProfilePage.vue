@@ -79,8 +79,11 @@
           </div>
           <div class="form-group form-full">
             <label>{{ $t('profile.profilePhoto') }}</label>
-            <input type="file" accept="image/*" class="input" @change="onPhoto" />
+            <input ref="photoInput" type="file" accept="image/*" class="input" @change="onPhoto" />
             <small v-if="photo" class="muted">{{ photo.name }}</small>
+            <button v-if="avatarSrc" type="button" class="btn btn-danger btn-sm" :disabled="saving" @click="removePhoto">
+              <i class="fas fa-trash"></i> {{ $t('profile.removePhoto') }}
+            </button>
           </div>
         </div>
         <div class="form-actions">
@@ -621,6 +624,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import QRCode from 'qrcode'
 import { useAuthStore } from '@/stores/auth'
+import { avatarUrl } from '@/utils/format'
 import { useSessionSettingsStore } from '@/stores/sessionSettings'
 import { attendanceApi, authApi, hotelSettingsApi } from '@/api'
 import ChangePasswordForm from '@/components/ChangePasswordForm.vue'
@@ -917,12 +921,13 @@ const form = reactive({
 })
 // Save state: optional photo file, in-flight flag and feedback message.
 const photo = ref(null)
+const photoInput = ref(null)
 const photoPreview = ref('')
 const saving = ref(false)
 const message = ref('')
 const error = ref(false)
 
-const avatarSrc = computed(() => photoPreview.value || authStore.user?.profile_picture || '')
+const avatarSrc = computed(() => photoPreview.value || avatarUrl(authStore.user?.profile_picture))
 const avatarInitials = computed(() => {
   const parts = [form.first_name || authStore.user?.first_name, form.last_name || authStore.user?.last_name].filter(Boolean)
   const initials = parts.map((p) => String(p)[0]?.toUpperCase() || '').join('').slice(0, 2)
@@ -950,6 +955,30 @@ function onPhoto(event) {
   photoPreview.value = photo.value ? URL.createObjectURL(photo.value) : ''
 }
 
+async function removePhoto() {
+  saving.value = true
+  message.value = ''
+  error.value = false
+  try {
+    const fd = new FormData()
+    fd.append('remove_profile_picture', '1')
+
+    const { data } = await authApi.updateProfile(fd)
+    authStore.user = data.user
+    await authStore.fetchProfile().catch(() => {})
+    photo.value = null
+    if (photoInput.value) photoInput.value.value = ''
+    if (photoPreview.value) URL.revokeObjectURL(photoPreview.value)
+    photoPreview.value = ''
+    message.value = t('profile.photoRemoved')
+  } catch (err) {
+    error.value = true
+    message.value = flattenError(err)
+  } finally {
+    saving.value = false
+  }
+}
+
 /** Submits the profile form (with optional photo) and refreshes the user in the auth store. */
 async function save() {
   saving.value = true
@@ -972,6 +1001,7 @@ async function save() {
     await authStore.fetchProfile().catch(() => {})
     fillForm()
     photo.value = null
+    if (photoInput.value) photoInput.value.value = ''
     if (photoPreview.value) URL.revokeObjectURL(photoPreview.value)
     photoPreview.value = ''
     message.value = data.message || t('profile.saved')
