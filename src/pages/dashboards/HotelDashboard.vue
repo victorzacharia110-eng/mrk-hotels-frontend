@@ -2285,7 +2285,7 @@
             <button type="button" role="menuitem" data-test="folio-attachment-view"
               :disabled="attachmentActionBusy === entryMenu.entry.entryId"
               @click="viewFolioAttachment(entryMenu.entry)">
-              <i class="fas fa-eye" aria-hidden="true"></i> {{ $t('common.view') }}
+              <i class="fas fa-paperclip" aria-hidden="true"></i> {{ $t('folio.viewAttachment') }}
             </button>
           </li>
           <li v-if="entryMenu.entry.hasAttachment">
@@ -4050,7 +4050,7 @@ function buildLedgerEntries(src) {
       key: `o${o.order_id ?? o.order_number}`,
       date: o.date,
       time: o.posted_at || o.date || '',
-      particular: t('folio.roomPosting'),
+      particular: particularLabel(o.particular, t('folio.roomPosting')),
       description: o.reference || o.order_number || t('folio.order'),
       detail: o.order_type || '',
       user: o.user || '—',
@@ -4114,11 +4114,7 @@ function buildLedgerEntries(src) {
       type: e.type,
       // Desk-added charges (add charge, adjustment, inclusion) all read as
       // EXTRA CHARGES on the folio; their own label stays in the description.
-      particular: isRefund
-        ? t('stayview.refundLine')
-        : (isManualFolioType(e.type)
-          ? t('folio.extraCharges')
-          : folioEntryLabel(e.type)),
+      particular: folioEntryParticular(e),
       description: isRefund
         ? (e.description || t('stayview.refundLine'))
         : (e.description || folioEntryLabel(e.type)),
@@ -4759,6 +4755,22 @@ function folioEntryLabel(type) {
   const camel = `folio.${raw.replace(/_([a-z])/g, (_, c) => c.toUpperCase())}`
   if (te(camel)) return t(camel)
   return raw.replace(/_/g, ' ')
+}
+
+function particularLabel(raw, fallback) {
+  const value = String(raw || '').trim()
+  if (!value) return fallback
+  const key = value.toUpperCase()
+  if (key === 'EXTRA CHARGES') return t('folio.extraCharges')
+  if (key === 'ROOM CHARGES') return t('folio.roomCharge')
+  if (key === 'ROOM POSTING') return t('folio.roomPosting')
+  return value
+}
+
+function folioEntryParticular(entry) {
+  if (isFolioRefundEntry(entry.type)) return t('stayview.refundLine')
+  if (isManualFolioType(entry.type)) return t('folio.extraCharges')
+  return particularLabel(entry.particular, folioEntryLabel(entry.type))
 }
 
 /** Transfer/split/cut/new-folio mode buttons for the move modal. */
@@ -5847,7 +5859,7 @@ function buildInvoiceLines(f) {
 
   for (const o of f?.orders || []) {
     if (o.payment_status !== 'billed_to_room') continue
-    push(o.posted_at || o.date, t('folio.roomPosting'), o.reference || o.order_number || t('folio.order'), o.total_amount ?? o.total ?? 0)
+    push(o.posted_at || o.date, particularLabel(o.particular, t('folio.roomPosting')), o.reference || o.order_number || t('folio.order'), o.total_amount ?? o.total ?? 0)
   }
   for (const l of f?.laundry || []) {
     if (l.payment_status !== 'billed_to_room') continue
@@ -5856,7 +5868,7 @@ function buildInvoiceLines(f) {
   for (const e of f?.folio_entries || []) {
     if (e.type === 'attachment') continue
     const amount = Number(e.amount ?? 0)
-    push(e.posted_at || e.date, isFolioRefundEntry(e.type) ? t('stayview.refundLine') : folioEntryLabel(e.type), e.description || '', amount)
+    push(e.posted_at || e.date, folioEntryParticular(e), e.description || '', amount)
   }
   const advancePaid = Number(fol.advance_payment ?? res.advance_payment ?? 0)
   let paymentsShown = 0

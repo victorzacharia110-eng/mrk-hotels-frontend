@@ -6581,7 +6581,8 @@
     "notAuthorizedRoomPosting": "mchango wa chumba",
     "notAuthorizedLaundry": "mchango wa dobi",
     "notAuthorizedEntry": "muingizo wa folio",
-    "view": "Ona",
+    "view": "Ona muingizo",
+    "viewAttachment": "Ona kiambatisho",
     "viewHint": "Onyesho la kusoma pekee. Shughuli hii haiwezi kubadilishwa hapa.",
     "viewTitle": "Muingizo wa folio"
   },

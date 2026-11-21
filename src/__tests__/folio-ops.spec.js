@@ -121,6 +121,55 @@ describe('folio operations on the stay view', () => {
     expect(document.querySelectorAll('.sv-folio-send-btn')).toHaveLength(0)
   })
 
+  it('uses the recorded particular for room-billed manual charges', async () => {
+    await mountDashboard()
+    wrapper.vm.folio.orders = [
+      {
+        order_id: 91,
+        payment_status: 'billed_to_room',
+        particular: 'EXTRA CHARGES',
+        order_number: 'ORD-MC-1',
+        total_amount: 25000,
+        date: '2026-11-02',
+        user: 'Receptionist Vanessa',
+      },
+      {
+        order_id: 92,
+        payment_status: 'billed_to_room',
+        particular: 'ROOM CHARGES',
+        order_number: 'ORD-MC-2',
+        total_amount: 10000,
+        date: '2026-11-02',
+        user: 'Receptionist Vanessa',
+      },
+    ]
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    const particulars = wrapper.vm.folioEntries.map((e) => e.particular)
+    expect(particulars).toContain(i18n.global.t('folio.extraCharges'))
+    expect(particulars).toContain(i18n.global.t('folio.roomCharge'))
+
+    const cells = [...document.querySelectorAll('.sv-folio-table .sv-particular')].map((el) => el.textContent.trim())
+    expect(cells).toContain(i18n.global.t('folio.extraCharges'))
+  })
+
+  it('falls back to a backend particular for an unrecognised folio entry', async () => {
+    await mountDashboard()
+    wrapper.vm.folio.folio_entries.push({
+      folio_entry_id: 10,
+      type: 'custom_posting',
+      particular: 'EXTRA CHARGES',
+      amount: 5000,
+      date: '2026-11-02',
+      description: 'Custom posting',
+    })
+    await wrapper.vm.$nextTick()
+
+    const entry = wrapper.vm.folioEntries.find((e) => e.entryId === 10)
+    expect(entry.particular).toBe(i18n.global.t('folio.extraCharges'))
+  })
+
   it('skips print buttons when the folio is still loading', async () => {
     await mountDashboard()
     wrapper.vm.folioLoading = true
@@ -160,6 +209,29 @@ describe('folio operations on the stay view', () => {
     await wrapper.vm.$nextTick()
     return document.querySelector('.sv-row-menu')
   }
+
+  it('shows distinct view actions for a folio row with an attachment', async () => {
+    await mountDashboard()
+    wrapper.vm.folio.folio_entries.push({
+      folio_entry_id: 11,
+      type: 'attachment',
+      amount: 0,
+      date: '2026-11-01',
+      description: 'Guest ID',
+      attachment_url: '/storage/folio/guest-id.pdf',
+    })
+    await wrapper.vm.$nextTick()
+    const entry = wrapper.vm.folioEntries.find((e) => e.entryId === 11)
+    expect(entry.hasAttachment).toBe(true)
+
+    const menu = await openRowMenuFor(entry)
+    const labels = [...menu.querySelectorAll('button')].map((button) => button.textContent.trim())
+    expect(labels.filter((label) => /view|ona/i.test(label))).toEqual([
+      i18n.global.t('folio.view'),
+      i18n.global.t('folio.viewAttachment'),
+    ])
+    expect(menu.querySelectorAll('.fa-eye')).toHaveLength(1)
+  })
 
   it('views and downloads folio attachments through the authenticated API', async () => {
     await mountDashboard()
