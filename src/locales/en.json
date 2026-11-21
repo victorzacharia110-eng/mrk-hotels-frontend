@@ -4469,6 +4469,7 @@
     "housekeepingStatus": "Housekeeping status (temporary)",
     "tasksAutoHint": "Cleaning tasks are generated automatically at check-out and by night audit.",
     "amendIndividualHint": "Only the ticked rooms are amended; the rest of the party keeps its current stay. Use Cancel booking to remove a room.",
+    "amendThisGuest": "Amend this guest",
     "blockRoom": "Block room",
     "unblockRoom": "Unblock room",
     "actionError": "The action failed. Please try again.",

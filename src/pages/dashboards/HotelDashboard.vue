@@ -1157,13 +1157,18 @@
                   }) }}</span>
                 </div>
                 <div class="sv-room-picker-grid">
-                  <label v-for="room in amendGroupRoomOptions" :key="room.value"
-                    style="display:flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:12px;background:#fff;">
-                    <input type="checkbox" :value="room.value" v-model="amendSelectedRoomIds" />
-                    <span>{{ room.room_number }}<template v-if="room.room_type"> · {{ roomTypeLabel(room.room_type)
-                        }}</template></span>
-                    <span v-if="room.is_primary" class="sv-tag-primary">{{ $t('stayview.primaryRoom') }}</span>
-                  </label>
+                  <div v-for="room in amendGroupRoomOptions" :key="room.value" class="sv-room-picker-item">
+                    <label class="sv-room-picker-label">
+                      <input type="checkbox" :value="room.value" v-model="amendSelectedRoomIds" />
+                      <span>{{ room.guest_name || $t('stayview.guestName') }} · {{ room.room_number }}<template
+                          v-if="room.room_type"> · {{ roomTypeLabel(room.room_type) }}</template></span>
+                      <span v-if="room.is_primary" class="sv-tag-primary">{{ $t('stayview.primaryRoom') }}</span>
+                    </label>
+                    <button type="button" class="sv-room-focus" data-test="amend-focus-guest"
+                      @click="focusAmendRoom(room)">
+                      <i class="fas fa-user-pen" aria-hidden="true"></i> {{ $t('stayview.amendThisGuest') }}
+                    </button>
+                  </div>
                 </div>
                 <div style="margin-top:4px;font-size:11px;color:#888;">
                   <i class="fas fa-circle-info" aria-hidden="true"></i> {{ $t('stayview.amendIndividualHint') }}
@@ -4173,6 +4178,7 @@ function buildLedgerEntries(src) {
   }
   for (const p of f.payments || []) {
     const refunded = p.payment_status === 'refunded'
+    const settled = p.payment_status === 'completed'
     entries.push({
       key: `p${p.payment_id ?? p.transaction_reference}`,
       date: p.date,
@@ -4180,15 +4186,17 @@ function buildLedgerEntries(src) {
       particular: refunded ? t('stayview.refundLine') : t('folio.payment'),
       description: refunded
         ? `${paymentDescription(p)} · ${t('paymentFields.statuses.refunded')}`
-        : paymentDescription(p),
+        : (settled
+          ? paymentDescription(p)
+          : `${paymentDescription(p)} · ${t(`paymentFields.statuses.${p.payment_status}`)}`),
       detail: p.transaction_reference || p.clickpesa_reference || '',
       user: p.user || '—',
       amount: Number(p.amount ?? 0),
       credit: true,
       // A refunded payment already released its credit from the advance; the
       // row stays visible as history but must not move the ledger again.
-      balanceNeutral: refunded,
-      kind: refunded ? 'refunded' : 'payment',
+      balanceNeutral: refunded || !settled,
+      kind: refunded ? 'refunded' : (settled ? 'payment' : 'unsettled_payment'),
       payment: p,
       editableByPayment: p.payment_id != null,
     })
@@ -5311,6 +5319,15 @@ const amendGroupRoomOptions = computed(() => {
         price: Number(full?.price_per_night) || 0,
         is_primary: !!room.is_primary,
         guest_name: room.guest_name || '',
+        first_name: room.first_name || '',
+        last_name: room.last_name || '',
+        guest_email: room.guest_email || '',
+        guest_phone: room.guest_phone || '',
+        country_code: room.country_code || '',
+        check_in_date: room.check_in_date || '',
+        check_out_date: room.check_out_date || '',
+        num_adults: room.num_adults,
+        num_children: room.num_children,
       }
     })
   return sortRoomOptions(options, amendRoomSort.value)
@@ -5341,6 +5358,28 @@ function setAmendGroupRooms(rooms, activeId = null) {
   // only the viewed stay starts ticked. Cancelled/released rooms are hidden.
   const current = activeRooms.find((r) => String(r.reservation_id) === String(activeId))
   amendSelectedRoomIds.value = current ? [current.reservation_id] : []
+}
+
+function focusAmendRoom(room) {
+  amendSelectedRoomIds.value = [room.value]
+  const target = amendGroupRooms.value.find((r) => String(r.reservation_id) === String(room.value))
+  if (!target) return
+  const names = String(room.guest_name || target.guest_name || '').trim().split(/\s+/)
+  amendForm.value = {
+    ...amendForm.value,
+    first_name: room.first_name || names.shift() || '',
+    last_name: room.last_name || names.join(' ') || '',
+    guest_phone: formatPhoneNational(room.guest_phone || target.guest_phone),
+    guest_email: room.guest_email || target.guest_email || '',
+    country_code: room.country_code || target.country_code || amendForm.value.country_code || 'TZ',
+    check_in_date: room.check_in_date || target.check_in_date || amendForm.value.check_in_date,
+    check_out_date: room.check_out_date || target.check_out_date || amendForm.value.check_out_date,
+    num_adults: room.num_adults ?? target.num_adults ?? amendForm.value.num_adults,
+    num_children: room.num_children ?? target.num_children ?? amendForm.value.num_children,
+  }
+  amendSnapshot.value = { ...amendForm.value }
+  amendTouched.value = false
+  amendErrors.value = {}
 }
 
 function openAmendModal(roomMove = false) {
@@ -9524,6 +9563,38 @@ onUnmounted(() => {
   border: 1px solid #eee;
   border-radius: 4px;
   background: #fff;
+}
+
+.sv-room-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 12px;
+  background: #fff;
+}
+
+.sv-room-picker-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.sv-room-focus {
+  border: 0;
+  background: transparent;
+  color: #005eb8;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+}
+
+.sv-room-focus:hover {
+  color: #003f78;
+  text-decoration: underline;
 }
 
 .sv-tag-released {

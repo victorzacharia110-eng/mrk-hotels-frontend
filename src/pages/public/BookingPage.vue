@@ -508,7 +508,7 @@ const hotelOptions = computed(() =>
 )
 
 const selectedRoomOptions = computed(() =>
-  booking.value.selected_rooms.map((room, i) => ({ value: room.room_id, label: `${t('bookingPage.room')} ${i + 1} — ${roomTypeLabel(room.room_type)}` })),
+  booking.value.selected_rooms.slice(1).map((room, i) => ({ value: room.room_id, label: `${t('bookingPage.room')} ${i + 2} — ${roomTypeLabel(room.room_type)}` })),
 )
 
 // Search/sort/paginate the available rooms client-side; selections live in
@@ -828,14 +828,20 @@ async function submitBooking() {
     let message = ''
     if (hasSelection) {
       // The guest picked exact rooms, so reserve them for real.
-      const res = await publicApi.reservations({
+      const payload = {
         ...guest,
         guest_email: guest.email,
         guest_phone: guest.phone,
         num_adults: guest.adults,
         num_children: guest.children,
         room_selections: booking.value.selected_rooms.map(({ room_id, room_number }) => ({ room_id, room_number })),
-      })
+      }
+      if (booking.value.booking_type === 'group') {
+        payload.additional_guests = booking.value.additional_guests
+          .filter((g) => g.room_id && g.first_name?.trim())
+          .map(({ room_id, first_name, last_name }) => ({ room_id, first_name, last_name }))
+      }
+      const res = await publicApi.reservations(payload)
       // Rooms are held as pending until the guest pays for them.
       pendingBooking.value = {
         booking_reference: res.data.booking_reference,

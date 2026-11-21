@@ -442,6 +442,39 @@ describe('folio operations on the stay view', () => {
     expect(wrapper.vm.balanceDisplay.text).toContain('250,000')
   })
 
+  it('applies a pending payment to the balance when it is edited to completed', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    payload.folio.advance_payment = 0
+    payload.reservation.advance_payment = 0
+    payload.folio_entries = [
+      { folio_entry_id: 1, type: 'room_charge', amount: 300000, date: '2026-11-01', description: 'Room & taxes' },
+    ]
+    payload.payments = [
+      { payment_id: 8, amount: 200000, payment_method: 'cash', payment_status: 'pending', transaction_reference: 'T-202', date: '2026-11-01' },
+    ]
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.vm.folioTotals.paid).toBe(0)
+    expect(wrapper.vm.balanceDisplay.text).toContain('300,000')
+
+    const updated = JSON.parse(JSON.stringify(payload))
+    updated.payments[0].payment_status = 'completed'
+    updated.folio.advance_payment = 200000
+    updated.reservation.advance_payment = 200000
+    api.reservationApi.folio.mockResolvedValue({ data: updated })
+
+    wrapper.vm.openPaymentEdit({ payment: payload.payments[0] })
+    wrapper.vm.paymentEditForm.payment_status = 'completed'
+    await wrapper.vm.submitPaymentEdit()
+    await flushPromises()
+
+    expect(wrapper.vm.folioTotals.paid).toBe(200000)
+    expect(wrapper.vm.balanceDisplay.text).toContain('100,000')
+  })
+
   it('itemises the rental one row per night with the room and date in the folio ledger', async () => {
     await mountDashboard()
     const payload = folioPayload()

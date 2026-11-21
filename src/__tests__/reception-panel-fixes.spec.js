@@ -26,6 +26,9 @@ describe('insert transaction refresh', () => {
     const page = read('src/pages/reception/InsertTransactionPage.vue')
 
     expect(page).toMatch(/data-test="insert-transaction-refresh"[^>]*@click="refreshForDate"/)
+    expect(page).toMatch(/status: 'checked_in', per_page: 50/)
+    expect(page).toMatch(/await searchReservations\(''\)/)
+    expect(page).not.toMatch(/userPickedDate/)
   })
 })
 

@@ -43,7 +43,17 @@ vi.mock('@/api', () => ({
 
 const GROUP_ROOMS = [
   { reservation_id: 'r1', room_id: 'rm1', room_number: '101', status: 'confirmed', is_primary: true, guest_name: 'Amina Hassan' },
-  { reservation_id: 'r2', room_id: 'rm2', room_number: '102', is_primary: false, guest_name: 'Lot 2' },
+  {
+    reservation_id: 'r2',
+    room_id: 'rm2',
+    room_number: '102',
+    is_primary: false,
+    guest_name: 'Peter Pan',
+    first_name: 'Peter',
+    last_name: 'Pan',
+    guest_email: 'peter@example.com',
+    guest_phone: '+255713000333',
+  },
 ]
 
 let wrapper
@@ -223,6 +233,41 @@ describe('Amend stay for a grouped booking', () => {
     expect(anchorId).toBe('r1')
     expect(payload.room_ids).toEqual(['r2'])
     expect(payload.release_unselected).toBe(false)
+  })
+
+  it('shows each guest and can focus an individual guest for amendment', async () => {
+    await mountDashboard()
+    wrapper.vm.reservations = [
+      { reservation_id: 'r1', room_number: '101', group_id: 'g1', is_primary: true, group: { rooms: GROUP_ROOMS } },
+    ]
+    wrapper.vm.activeBar = { id: 'r1', rawStatus: 'confirmed', label: 'Amina Hassan', roomId: 'rm1' }
+    wrapper.vm.folio = {
+      reservation: {
+        reservation_id: 'r1',
+        first_name: 'Amina',
+        last_name: 'Hassan',
+        room_id: 'rm1',
+        check_in_date: '2026-11-01',
+        check_out_date: '2026-11-03',
+        guest_phone: '',
+      },
+    }
+    await wrapper.vm.$nextTick()
+
+    wrapper.vm.openAmendModal(false)
+    await wrapper.vm.$nextTick()
+
+    const picker = document.querySelector('.sv-room-picker-grid')
+    expect(picker?.textContent).toContain('Amina Hassan')
+    expect(picker?.textContent).toContain('Peter Pan')
+    expect(document.querySelectorAll('[data-test="amend-focus-guest"]')).toHaveLength(2)
+
+    await wrapper.vm.focusAmendRoom(wrapper.vm.amendGroupRoomOptions[1])
+
+    expect(wrapper.vm.amendSelectedRoomIds).toEqual(['r2'])
+    expect(wrapper.vm.amendForm.first_name).toBe('Peter')
+    expect(wrapper.vm.amendForm.last_name).toBe('Pan')
+    expect(wrapper.vm.amendForm.guest_email).toBe('peter@example.com')
   })
 
   it('hides cancelled group rooms from the amend checkbox list', async () => {

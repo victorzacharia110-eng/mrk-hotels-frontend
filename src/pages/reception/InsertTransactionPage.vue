@@ -31,7 +31,7 @@
           <div class="form-group">
             <label>{{ $t('nightAudit.businessDate') }} *</label>
             <input v-model="form.audit_date" type="date" class="input" :max="businessDateStore.current || todayStr"
-              @change="userPickedDate = true; refreshForDate()" />
+              @change="refreshForDate()" />
           </div>
           <div class="form-group">
             <label>{{ $t('nightAudit.guestSearch') }} *</label>
@@ -165,7 +165,7 @@ const { t } = useI18n()
 
 const businessDateStore = useBusinessDateStore()
 const todayStr = new Date().toISOString().slice(0, 10)
-let userPickedDate = false
+let guestSearchRequestId = 0
 
 const form = ref({
   audit_date: todayStr,
@@ -180,24 +180,25 @@ const selectedGuest = ref(null)
 const reservationOptions = ref([])
 const reservationSearching = ref(false)
 
-async function searchReservations(query) {
-  if (!query || query.length < 2) {
-    reservationOptions.value = []
-    return
-  }
+async function searchReservations(query = '') {
+  const requestId = ++guestSearchRequestId
   reservationSearching.value = true
   try {
-    const res = await reservationApi.index({ search: query, status: 'checked_in', per_page: 20 })
-    const rows = res.data?.data || []
+    const term = String(query || '').trim()
+    const params = { status: 'checked_in', per_page: 50 }
+    if (term.length >= 2) params.search = term
+    const res = await reservationApi.index(params)
+    if (requestId !== guestSearchRequestId) return
+    const rows = (res.data?.data || []).filter(r => r.status === 'checked_in')
     reservationOptions.value = rows.map(r => ({
       value: r.reservation_id,
       label: `${r.guest_name || '—'} · ${r.room?.room_number || 'No room'} · ${r.status} · ${r.reservation_id}`,
       _raw: r,
     }))
   } catch {
-    reservationOptions.value = []
+    if (requestId === guestSearchRequestId) reservationOptions.value = []
   } finally {
-    reservationSearching.value = false
+    if (requestId === guestSearchRequestId) reservationSearching.value = false
   }
 }
 
@@ -264,6 +265,7 @@ async function load() {
 async function refreshForDate() {
   await load()
   await checkClosed()
+  await searchReservations('')
 }
 
 async function checkClosed() {
@@ -339,7 +341,7 @@ const businessDatePollTimer = ref(null)
 watch(
   () => businessDateStore.current,
   (date) => {
-    if (userPickedDate || !date || date === form.value.audit_date) return
+    if (!date || date === form.value.audit_date) return
     form.value.audit_date = date
     refreshForDate()
   },
@@ -347,7 +349,7 @@ watch(
 
 onMounted(async () => {
   await businessDateStore.ensureLoaded()
-  if (!userPickedDate && businessDateStore.current) form.value.audit_date = businessDateStore.current
+  if (businessDateStore.current) form.value.audit_date = businessDateStore.current
   await refreshForDate()
   businessDatePollTimer.value = setInterval(() => businessDateStore.reload(), 30000)
 })
