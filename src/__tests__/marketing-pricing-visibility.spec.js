@@ -95,6 +95,23 @@ describe('marketing pricing visibility', () => {
     wrapper.unmount()
   })
 
+  it('does not render hero CTA buttons in the header', async () => {
+    bootstrapGet.mockResolvedValue(
+      marketingPayload({
+        hero_ctas: [
+          { label: 'Schedule Live Demo', url: '#contact' },
+          { label: '21 DAYS FREE TRIAL NOW CLICK HERE TO START', url: '/register' },
+        ],
+      }),
+    )
+    const wrapper = await mountLayout()
+    expect(wrapper.text()).not.toContain('Schedule Live Demo')
+    expect(wrapper.text()).not.toContain('21 DAYS FREE TRIAL NOW CLICK HERE TO START')
+    expect(wrapper.findAll('a[href="#contact"]')).toHaveLength(0)
+    expect(wrapper.findAll('a[href="/register"]')).toHaveLength(0)
+    wrapper.unmount()
+  })
+
   it('redirects direct MRK pricing visits home when disabled', async () => {
     bootstrapGet.mockResolvedValue(marketingPayload({ show_pricing: false }))
     await useMarketingContent().loadBootstrap()

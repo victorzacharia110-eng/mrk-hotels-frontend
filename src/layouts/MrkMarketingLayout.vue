@@ -77,7 +77,6 @@
             <router-link :to="{ name: 'public-home' }" class="mrk-btn mrk-btn-secondary">
               <i class="fas fa-bed" aria-hidden="true"></i> {{ $t('nav.bookStay') }}
             </router-link>
-            <a v-for="cta in headerCtas" :key="cta.label + cta.url" :href="cta.url" class="mrk-btn mrk-btn-primary">{{ cta.label }}</a>
             <router-link to="/login" class="mrk-btn mrk-btn-secondary">{{ $t('marketing.signIn') }}</router-link>
           </div>
         </div>
@@ -123,7 +122,6 @@
               <button type="button" class="mrk-lang-btn" :class="{ active: locale === 'sw' }" :aria-pressed="locale === 'sw' ? 'true' : 'false'" @click="setLocale('sw')">SW</button>
             </div>
           </div>
-          <a v-for="cta in headerCtas" :key="'mcta-' + cta.label + cta.url" :href="cta.url" class="mrk-btn mrk-btn-primary" @click="mobileOpen = false">{{ cta.label }}</a>
         </div>
       </div>
     </header>
@@ -253,12 +251,6 @@ onBeforeUnmount(() => {
 const productPages = computed(() => {
   const pages = bootstrap.value?.pages || []
   return pages.filter((p) => p.show_in_nav && !['home', 'integrations', 'pricing', 'about'].includes(p.slug))
-})
-
-const headerCtas = computed(() => {
-  const fromSettings = getSetting('hero_ctas', [])
-  const list = Array.isArray(fromSettings) ? fromSettings : []
-  return list.filter((cta) => cta && cta.label && cta.url)
 })
 
 const footer = computed(() => {
