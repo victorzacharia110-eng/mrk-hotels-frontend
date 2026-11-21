@@ -721,12 +721,12 @@ function formatBytes(bytes) {
 }
 
 /**
- * Builds the public URL for an attachment, stripping the /api suffix off the API base.
- * @param {Object} att - The attachment record (needs its `file_path`).
+ * Builds the public URL for an attachment, preferring the storage URL supplied by the API.
+ * @param {Object} att - The attachment record (needs `file_url` or `file_path`).
  * @returns {string} The absolute URL of the stored file.
  */
 function attachmentUrl(att) {
-  return avatarUrl(`/storage/${att.file_path}`)
+  return att.file_url || (att.file_path ? avatarUrl(`/storage/${att.file_path}`) : '')
 }
 
 /**

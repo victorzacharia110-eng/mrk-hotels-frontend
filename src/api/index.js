@@ -2905,6 +2905,9 @@ export const tenantApi = {
   update(id, data) {
     return api.put(`${v1}/tenants/${id}`, data);
   },
+  generateRegistrationCode(id) {
+    return api.post(`${v1}/tenants/${id}/registration-code/generate`);
+  },
   /**
    * Approves a pending tenant application.
    * @param {string|number} id - Tenant identifier.

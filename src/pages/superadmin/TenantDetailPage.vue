@@ -20,20 +20,13 @@
           {{ tenant.subdomain }} &middot; {{ [tenant.city, tenant.country].filter(Boolean).join(', ') || $t('superadmin.locationNotSpecified') }}
         </p>
         <p class="muted">{{ tenant.email }} {{ tenant.phone ? '· ' + tenant.phone : '' }}</p>
-        <form class="code-form" @submit.prevent="saveCode">
-          <label for="registration-code">{{ $t('superadmin.registrationCode') }}</label>
-          <input
-            id="registration-code"
-            v-model.trim="codeForm.registration_code"
-            type="text"
-            maxlength="6"
-            class="input input-sm code-input"
-            :placeholder="$t('superadmin.registrationCodePlaceholder')"
-          />
-          <button class="btn btn-sm" :disabled="codeSaving">
-            {{ codeSaving ? $t('common.saving') : $t('superadmin.saveCode') }}
+        <div class="code-form">
+          <span class="code-label">{{ $t('superadmin.registrationCode') }}</span>
+          <span class="code-value mono">{{ tenant.registration_code || $t('superadmin.noRegistrationCode') }}</span>
+          <button class="btn btn-sm code-generate" type="button" :disabled="codeGenerating" @click="generateCode">
+            {{ codeGenerating ? $t('superadmin.generatingCode') : $t('superadmin.generateCode') }}
           </button>
-        </form>
+        </div>
       </div>
       <span class="badge" :class="statusBadge(tenant.status)">{{ tenant.status }}</span>
     </div>
@@ -395,8 +388,7 @@ const savingBranding = ref(false)
 const error = ref('')
 const subForm = ref({ subscription_plan: 'trial', subscription_status: 'active' })
 const taxForm = ref({ tin: '', vrn: '' })
-const codeForm = ref({ registration_code: '' })
-const codeSaving = ref(false)
+const codeGenerating = ref(false)
 const contactForm = ref({ hotel_name: '', contact_person: '', email: '', phone: '', address: '', city: '', country: '' })
 const savingContact = ref(false)
 const brandingFiles = ref({ logo: null, signature: null, stamp: null })
@@ -646,7 +638,6 @@ async function load() {
     subForm.value.subscription_status = tenant.value.subscription_status
     taxForm.value.tin = tenant.value.tin || ''
     taxForm.value.vrn = tenant.value.vrn || ''
-    codeForm.value.registration_code = tenant.value.registration_code || ''
     contactForm.value.hotel_name = tenant.value.hotel_name || ''
     contactForm.value.contact_person = tenant.value.contact_person || ''
     contactForm.value.email = tenant.value.email || ''
@@ -745,19 +736,17 @@ async function saveContact() {
   }
 }
 
-/** Updates the hotel's registration code (the segment inside every document number). */
-async function saveCode() {
-  codeSaving.value = true
+async function generateCode() {
+  codeGenerating.value = true
   error.value = ''
   try {
-    const code = String(codeForm.value.registration_code || '').replace(/\D/g, '').slice(0, 6)
-    const res = await tenantApi.update(route.params.id, { registration_code: code })
-    tenant.value.registration_code = res.data.tenant?.registration_code ?? code
-    notifySuccess(res, t('superadmin.codeSaved'))
+    const res = await tenantApi.generateRegistrationCode(route.params.id)
+    tenant.value.registration_code = res.data.registration_code || res.data.tenant?.registration_code || ''
+    notifySuccess(res, t('superadmin.codeGenerated'))
   } catch (err) {
-    notifyError(err, t('superadmin.codeSaveError'))
+    notifyError(err, t('superadmin.codeGenerateError'))
   } finally {
-    codeSaving.value = false
+    codeGenerating.value = false
   }
 }
 
@@ -951,16 +940,14 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 
-.code-form label {
+.code-label {
   font-size: 13px;
   font-weight: 600;
   color: #888;
 }
 
-.code-input {
-  width: 90px;
-  text-transform: uppercase;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+.code-value {
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 1px;
 }

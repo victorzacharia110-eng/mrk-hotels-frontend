@@ -5,6 +5,7 @@ import i18n from '@/locales/i18n'
 
 const show = vi.fn()
 const updateSubscription = vi.fn()
+const generateRegistrationCode = vi.fn()
 const tenantAnalytics = vi.fn()
 const planIndex = vi.fn()
 
@@ -20,6 +21,7 @@ vi.mock('@/api', () => ({
   tenantApi: {
     show: (...args) => show(...args),
     update: vi.fn(),
+    generateRegistrationCode: (...args) => generateRegistrationCode(...args),
     updateSubscription: (...args) => updateSubscription(...args),
     owners: vi.fn(),
     createOwner: vi.fn(),
@@ -55,6 +57,7 @@ describe('superadmin feature feedback modal', () => {
     closeResult()
     show.mockReset().mockResolvedValue({ data: { tenant: { ...TENANT } } })
     updateSubscription.mockReset().mockResolvedValue({ data: { message: 'Saved' } })
+    generateRegistrationCode.mockReset().mockResolvedValue({ data: { message: 'Generated', registration_code: '654321' } })
     tenantAnalytics.mockReset().mockResolvedValue({ data: {} })
     planIndex.mockReset().mockResolvedValue({
       data: {
@@ -105,5 +108,18 @@ describe('superadmin feature feedback modal', () => {
     expect(state.type).toBe('error')
     expect(state.message).toBe('No permission')
     expect(wrapper.vm.selectedFeatures).toContain('reservations')
+  })
+
+  it('generates the hotel code without offering a manual input', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(wrapper.find('#registration-code').exists()).toBe(false)
+
+    await wrapper.find('button.code-generate').trigger('click')
+    await flushPromises()
+
+    expect(generateRegistrationCode).toHaveBeenCalledWith('t1')
+    expect(wrapper.find('.code-value').text()).toContain('654321')
   })
 })

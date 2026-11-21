@@ -329,10 +329,6 @@
               <span class="receiving-label">{{ $t('bookingPage.hotelName') }}</span>
               <span class="receiving-value">{{ hotelDetails.hotel_name }}</span>
             </div>
-            <div v-if="hotelDetails.registration_code" class="receiving-row">
-              <span class="receiving-label">{{ $t('bookingPage.registrationCode') }}</span>
-              <span class="receiving-value mono">{{ hotelDetails.registration_code }}</span>
-            </div>
             <div v-if="hotelDetails.tin" class="receiving-row">
               <span class="receiving-label">TIN</span>
               <span class="receiving-value mono">{{ hotelDetails.tin }}</span>
@@ -420,7 +416,7 @@
             <ol v-if="bankAccount" class="pay-instr-steps">
               <li>{{ $t('paymentInstructionCard.bankStep1') }}</li>
               <li>{{ $t('paymentInstructionCard.bankStep2') }}</li>
-              <li>{{ $t('paymentInstructionCard.bankStep3', { reference: pendingBooking?.booking_reference || hotelDetails.registration_code || '' }) }}</li>
+              <li>{{ $t('paymentInstructionCard.bankStep3', { reference: pendingBooking?.booking_reference || '' }) }}</li>
             </ol>
             <p v-if="!bankAccount" class="pay-instr-lead warn">{{ $t('paymentInstructionCard.noAccountConfigured') }}</p>
           </div>
