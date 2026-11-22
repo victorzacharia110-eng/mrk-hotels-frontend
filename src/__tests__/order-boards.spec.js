@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { nextTick } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
@@ -95,6 +97,13 @@ describe('OrderDateNav', () => {
     expect(wrapper.find('input[type="date"].date-nav-input').exists()).toBe(true)
     expect(wrapper.find('.nav-btn').exists()).toBe(false)
     expect(wrapper.find('.today-btn').exists()).toBe(false)
+  })
+
+  it('keeps the date input at its intrinsic width in toolbars', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/cashier/OrderDateNav.vue'), 'utf8')
+    expect(source).toMatch(/\.date-nav-input\s*\{[^}]*flex:\s*0 0 auto;/)
+    expect(source).toMatch(/\.date-nav-input\s*\{[^}]*width:\s*auto;/)
+    expect(source).not.toMatch(/min-width:\s*118px/)
   })
 
   it('emits the picked date through v-model and change', async () => {
