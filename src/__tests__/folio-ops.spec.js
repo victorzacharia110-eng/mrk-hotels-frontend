@@ -142,12 +142,21 @@ describe('folio operations on the stay view', () => {
         date: '2026-11-02',
         user: 'Receptionist Vanessa',
       },
+      ...['ADD CHARGES', 'ADJUSTMENT', 'INCLUSION'].map((particular, index) => ({
+        order_id: 93 + index,
+        payment_status: 'billed_to_room',
+        particular,
+        order_number: `ORD-MC-${3 + index}`,
+        total_amount: 7000,
+        date: '2026-11-02',
+        user: 'Receptionist Vanessa',
+      })),
     ]
     await wrapper.vm.$nextTick()
     await wrapper.vm.$nextTick()
 
     const particulars = wrapper.vm.folioEntries.map((e) => e.particular)
-    expect(particulars).toContain(i18n.global.t('folio.extraCharges'))
+    expect(particulars.filter((p) => p === i18n.global.t('folio.extraCharges'))).toHaveLength(4)
     expect(particulars).toContain(i18n.global.t('folio.roomCharge'))
 
     const cells = [...document.querySelectorAll('.sv-folio-table .sv-particular')].map((el) => el.textContent.trim())
@@ -396,10 +405,51 @@ describe('folio operations on the stay view', () => {
     await wrapper.vm.$nextTick()
     expect(wrapper.vm.folioEdit?.entryId).toBe(discount.entryId)
 
+    wrapper.vm.folioEditForm.description = 'Corrected discount'
+    wrapper.vm.folioEditForm.amount = 6000
+    await wrapper.vm.submitEditEntry()
+    await flushPromises()
+    expect(api.reservationApi.folioEntryUpdate).toHaveBeenCalledWith(discount.entryId, {
+      description: 'Corrected discount',
+      amount: -6000,
+    })
+
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     wrapper.vm.requestVoidEntry(discount)
     await flushPromises()
     expect(api.reservationApi.folioEntryVoid).toHaveBeenCalledWith(discount.entryId)
+  })
+
+  it('saves a zero-value inclusion after rewording it', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    payload.folio_entries.push({
+      folio_entry_id: 8,
+      type: 'inclusion',
+      amount: 0,
+      date: '2026-11-02',
+      description: 'inclusion',
+    })
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    const entry = wrapper.vm.folioEntries.find((e) => e.type === 'inclusion')
+    expect(entry.particular).toBe(i18n.global.t('folio.extraCharges'))
+    expect(entry.editable).toBe(true)
+
+    wrapper.vm.requestEditEntry(entry)
+    await wrapper.vm.$nextTick()
+    wrapper.vm.folioEditForm.description = 'Free welcome drink'
+    wrapper.vm.folioEditForm.amount = 0
+    expect(wrapper.vm.folioEditCanSave()).toBe(true)
+
+    await wrapper.vm.submitEditEntry()
+    await flushPromises()
+    expect(api.reservationApi.folioEntryUpdate).toHaveBeenCalledWith(8, {
+      description: 'Free welcome drink',
+      amount: 0,
+    })
   })
 
   it('keeps room-charge edits available to management', async () => {
@@ -475,7 +525,41 @@ describe('folio operations on the stay view', () => {
 
     const row = wrapper.vm.folioEntries.find((e) => e.kind === 'refunded')
     expect(row.balanceNeutral).toBe(true)
+    expect(row.editableByPayment).toBe(false)
     expect(wrapper.vm.folioTotals.paid).toBe(0)
+  })
+
+  it('offers payment edit for pending payments and hides it for terminal payments', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    payload.folio.advance_payment = 0
+    payload.reservation.advance_payment = 0
+    payload.payments = [
+      { payment_id: 9, amount: 50000, payment_method: 'cash', payment_status: 'pending', transaction_reference: 'T-9', date: '2026-11-01' },
+      { payment_id: 10, amount: 40000, payment_method: 'cash', payment_status: 'refunded', transaction_reference: 'T-10', date: '2026-11-01' },
+    ]
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    const pending = wrapper.vm.folioEntries.find((e) => e.kind === 'unsettled_payment')
+    const refunded = wrapper.vm.folioEntries.find((e) => e.kind === 'refunded')
+    expect(pending.editableByPayment).toBe(true)
+    expect(refunded.editableByPayment).toBe(false)
+
+    const pendingMenu = await openRowMenuFor(pending)
+    expect(pendingMenu.textContent).toContain(i18n.global.t('stayview.paymentEdit'))
+    const refundedMenu = await openRowMenuFor(refunded)
+    expect(refundedMenu.textContent).not.toContain(i18n.global.t('stayview.paymentEdit'))
+  })
+
+  it('only offers editable payment statuses in the payment edit form', async () => {
+    await mountDashboard()
+    expect(wrapper.vm.paymentStatusOptions.map((option) => option.value)).toEqual([
+      'pending',
+      'awaiting_confirmation',
+      'completed',
+    ])
   })
 
   it('puts the payment edit for the targeted payment', async () => {
@@ -958,6 +1042,11 @@ describe('folio operations on the stay view', () => {
     wrapper.vm.folio = {
       ...folioPayload(),
       reservation: { ...folioPayload().reservation, check_in_date: '2026-11-01', check_out_date: '2026-11-04' },
+      folio_entries: [
+        ...folioPayload().folio_entries,
+        { folio_entry_id: 11, type: 'adjustment', amount: 5000, date: '2026-11-02', description: 'Manual correction' },
+        { folio_entry_id: 12, type: 'inclusion', amount: 0, date: '2026-11-02', description: 'Free welcome drink' },
+      ],
     }
     await wrapper.vm.openInvoicePreview(activeBar)
     await wrapper.vm.printInvoiceBreakdown()
@@ -970,6 +1059,7 @@ describe('folio operations on the stay view', () => {
     expect(frame.srcdoc).toContain('005eb8') // brand accent & balance figure
     expect(frame.srcdoc).toContain('Room 101')
     expect(frame.srcdoc).toContain('Room &amp; taxes') // a ledger particular with description
+    expect(frame.srcdoc).toContain('Extra Charges') // desk adjustments/inclusions print as extra charges
     expect(frame.srcdoc).toContain('Check in') // dated particulars block
     expect(frame.srcdoc).toContain('Check out')
     expect(frame.srcdoc).toContain('Balance') // totals row labelled like Folio Operations
@@ -1303,5 +1393,103 @@ describe('advance source vendor', () => {
     const deposit = wrapper.vm.folioEntries.find((entry) => entry.kind === 'deposit')
     expect(deposit.detail).toContain(i18n.global.t('paymentFields.methods.mobile_money'))
     expect(deposit.detail).toContain('M-Pesa')
+  })
+
+  it('uses the stay identity snapshot instead of a mismatched guest profile', async () => {
+    await mountDashboard()
+    wrapper.vm.folio.reservation = {
+      ...wrapper.vm.folio.reservation,
+      first_name: 'Amina',
+      last_name: 'Hassan',
+      nationality: 'Kenyan',
+      id_type: 'passport',
+      id_number: 'P-12345',
+      vip_status: true,
+      guest: {
+        full_name: 'RUSSO RUSSO BROTHERS',
+        first_name: 'Russo',
+        last_name: 'Brothers',
+        phone: '255623837099',
+        email: 'emmanuel80@gmail.com',
+        nationality: 'Tanzanian',
+        id_type: 'national_id',
+        id_number: 'OLD-1',
+        vip_status: false,
+      },
+    }
+    await wrapper.vm.$nextTick()
+
+    const values = Object.fromEntries(wrapper.vm.guestGrid.map((row) => [row.label, row.value]))
+    expect(values[i18n.global.t('guests.nationality')]).toBe('Kenyan')
+    expect(values[i18n.global.t('guests.idType')]).toBe('passport')
+    expect(values[i18n.global.t('guests.idNumber')]).toBe('P-12345')
+    expect(values[i18n.global.t('guests.vipStatus')]).toBe(i18n.global.t('guests.typeVip'))
+  })
+
+  it('does not show identity from a guest profile belonging to another guest', async () => {
+    await mountDashboard()
+    wrapper.vm.folio.reservation = {
+      ...wrapper.vm.folio.reservation,
+      first_name: 'Amina',
+      last_name: 'Hassan',
+      guest: {
+        full_name: 'RUSSO RUSSO BROTHERS',
+        first_name: 'Russo',
+        last_name: 'Brothers',
+        phone: '255623837099',
+        email: 'emmanuel80@gmail.com',
+        nationality: 'Tanzanian',
+        id_type: 'national_id',
+        id_number: 'OLD-1',
+        vip_status: false,
+      },
+    }
+    await wrapper.vm.$nextTick()
+
+    const values = Object.fromEntries(wrapper.vm.guestGrid.map((row) => [row.label, row.value]))
+    expect(values[i18n.global.t('guests.nationality')]).toBe('—')
+    expect(values[i18n.global.t('guests.idType')]).toBe('—')
+    expect(values[i18n.global.t('guests.idNumber')]).toBe('—')
+    expect(values[i18n.global.t('guests.vipStatus')]).toBe(i18n.global.t('guests.typeRegular'))
+  })
+
+  it('amends the stay identity snapshot without editing the shared guest profile', async () => {
+    await mountDashboard()
+    wrapper.vm.folio.reservation = {
+      reservation_id: 501,
+      first_name: 'Amina',
+      last_name: 'Hassan',
+      guest_phone: '+255713000222',
+      guest_email: 'amina@example.com',
+      check_in_date: '2026-11-01',
+      check_out_date: '2026-11-04',
+      num_adults: 1,
+      num_children: 0,
+      nationality: 'Tanzanian',
+      id_type: 'national_id',
+      id_number: 'OLD-1',
+      vip_status: false,
+    }
+    await wrapper.vm.$nextTick()
+
+    wrapper.vm.openAmendModal(false)
+    await flushPromises()
+    expect(wrapper.vm.amendForm.id_number).toBe('OLD-1')
+
+    wrapper.vm.amendForm.nationality = 'Kenyan'
+    wrapper.vm.amendForm.id_type = 'passport'
+    wrapper.vm.amendForm.id_number = 'P-12345'
+    wrapper.vm.amendForm.vip_status = true
+    await wrapper.vm.submitAmend()
+    await flushPromises()
+
+    expect(api.reservationApi.update).toHaveBeenCalledTimes(1)
+    expect(api.reservationApi.update.mock.calls[0][1]).toMatchObject({
+      nationality: 'Kenyan',
+      id_type: 'passport',
+      id_number: 'P-12345',
+      vip_status: true,
+    })
+    expect(api.guestApi.update).not.toHaveBeenCalled()
   })
 })

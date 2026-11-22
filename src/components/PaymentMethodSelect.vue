@@ -30,7 +30,7 @@
       :empty-label="$t('paymentFields.selectProvider')"
       required
       :disabled="disabled"
-      @update:model-value="$emit('update:provider', $event)"
+      @update:model-value="onProviderChange"
     >
       <template #option="{ option }">
         <span class="provider-option">
@@ -39,6 +39,7 @@
         </span>
       </template>
     </SearchableSelect>
+    <p v-if="selectedAccountLabel" class="account-hint">{{ selectedAccountLabel }}</p>
   </div>
 
   <!-- Tells the receptionist what the payment status will be on save. -->
@@ -56,6 +57,7 @@ import { useI18n } from 'vue-i18n'
 import {
   PAYMENT_METHODS,
   METHOD_BANK,
+  accountLabel,
   effectivePaymentMethods,
   isAutoPaid,
   providersFor,
@@ -70,13 +72,15 @@ import ProviderLogo from '@/components/ProviderLogo.vue'
 const props = defineProps({
   method: { type: String, default: '' },
   provider: { type: String, default: '' },
+  account: { type: String, default: '' },
+  accounts: { type: Object, default: null },
   required: { type: Boolean, default: true },
   disabled: { type: Boolean, default: false },
   methods: { type: Array, default: () => PAYMENT_METHODS },
 })
 
-// v-model updates for the parent's method and provider values.
-const emit = defineEmits(['update:method', 'update:provider'])
+// v-model updates for the parent's method, provider and account values.
+const emit = defineEmits(['update:method', 'update:provider', 'update:account'])
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -85,7 +89,9 @@ const uid = `pay-${Math.random().toString(36).slice(2, 8)}`
 
 // Derived options and labels: providers available for the chosen method, the
 // method/provider dropdown options, and the label for the provider field.
-const providers = computed(() => providersFor(props.method))
+const accounts = computed(() => props.accounts || authStore.user?.tenant?.payment_accounts || {})
+const providers = computed(() => providersFor(props.method, accounts.value))
+const selectedAccountLabel = computed(() => props.account || accountLabel(props.provider, accounts.value))
 
 const methodOptions = computed(() => {
   const configured = authStore.user?.tenant?.payment_methods || []
@@ -101,7 +107,7 @@ const methodOptions = computed(() => {
 const providerOptions = computed(() =>
   providers.value.map((provider) => ({
     value: provider,
-    label: t(`paymentFields.providers.${provider}`),
+    label: accountLabel(provider, accounts.value) || t(`paymentFields.providers.${provider}`),
   })),
 )
 
@@ -135,6 +141,12 @@ function onMethodChange(value) {
   emit('update:method', value)
   // The old provider belongs to the old method, so drop it.
   emit('update:provider', '')
+  emit('update:account', '')
+}
+
+function onProviderChange(value) {
+  emit('update:provider', value)
+  emit('update:account', accountLabel(value, accounts.value))
 }
 </script>
 
@@ -169,5 +181,11 @@ function onMethodChange(value) {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.account-hint {
+  margin: 6px 0 0;
+  color: #6b7280;
+  font-size: 12px;
 }
 </style>

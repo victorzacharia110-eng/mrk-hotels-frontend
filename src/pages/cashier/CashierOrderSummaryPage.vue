@@ -393,6 +393,7 @@
             <PaymentMethodSelect
               v-model:method="payMethod"
               v-model:provider="payProvider"
+              v-model:account="payAccount"
               :methods="PAYMENT_METHODS"
               :disabled="savingPay"
             />
@@ -531,6 +532,7 @@ const payingOrder = computed(() => payingOrders.value[0] || null)
 const payTotal = computed(() => payingOrders.value.reduce((sum, order) => sum + Number(order.total_amount || 0), 0))
 const payMethod = ref('cash')
 const payProvider = ref('')
+const payAccount = ref('')
 const payRef = ref('')
 const payRefId = `pay-ref-${Date.now()}`
 const savingPay = ref(false)
@@ -798,6 +800,7 @@ function resetPayForm() {
   payError.value = ''
   payMethod.value = 'cash'
   payProvider.value = ''
+  payAccount.value = ''
   payRef.value = ''
   settleMode.value = 'collect'
   postRoom.value = ''
@@ -1162,6 +1165,7 @@ async function confirmPay() {
       const { data } = await orderApi.pay(order.order_id, {
         method: payMethod.value,
         provider: payProvider.value || null,
+        account: payAccount.value || null,
         transaction_reference: payRef.value || null,
       })
       const settled = data.order

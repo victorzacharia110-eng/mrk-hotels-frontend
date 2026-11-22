@@ -53,6 +53,8 @@ const GROUP_ROOMS = [
     last_name: 'Pan',
     guest_email: 'peter@example.com',
     guest_phone: '+255713000333',
+    check_in_date: '2026-11-01',
+    check_out_date: '2026-11-03',
   },
 ]
 
@@ -74,6 +76,7 @@ afterEach(() => {
 beforeEach(() => {
   api.reservationApi.update.mockClear()
   api.reservationApi.groupAmend.mockClear()
+  api.reservationApi.amendIndividualStay.mockClear()
 })
 
 describe('Amend stay for a grouped booking', () => {
@@ -228,11 +231,14 @@ describe('Amend stay for a grouped booking', () => {
     wrapper.vm.amendForm.check_out_date = '2026-11-06'
     await wrapper.vm.submitAmend()
 
-    expect(api.reservationApi.groupAmend).toHaveBeenCalledTimes(1)
-    const [anchorId, payload] = api.reservationApi.groupAmend.mock.calls[0]
-    expect(anchorId).toBe('r1')
-    expect(payload.room_ids).toEqual(['r2'])
-    expect(payload.release_unselected).toBe(false)
+    expect(api.reservationApi.amendIndividualStay).toHaveBeenCalledTimes(1)
+    const [stayId, payload] = api.reservationApi.amendIndividualStay.mock.calls[0]
+    expect(stayId).toBe('r2')
+    expect(payload.check_out_date).toBe('2026-11-06')
+    expect(payload).not.toHaveProperty('room_ids')
+    expect(payload).not.toHaveProperty('release_unselected')
+    expect(payload).not.toHaveProperty('room_id')
+    expect(api.reservationApi.groupAmend).not.toHaveBeenCalled()
   })
 
   it('shows each guest and can focus an individual guest for amendment', async () => {
@@ -268,6 +274,60 @@ describe('Amend stay for a grouped booking', () => {
     expect(wrapper.vm.amendForm.first_name).toBe('Peter')
     expect(wrapper.vm.amendForm.last_name).toBe('Pan')
     expect(wrapper.vm.amendForm.guest_email).toBe('peter@example.com')
+  })
+
+  it('saves the focused guest stay independently and re-points the modal to that guest', async () => {
+    await mountDashboard()
+    const r1 = {
+      reservation_id: 'r1',
+      room_id: 'rm1',
+      room_number: '101',
+      group_id: 'g1',
+      status: 'confirmed',
+      check_in_date: '2026-11-01',
+      check_out_date: '2026-11-03',
+      group: { rooms: GROUP_ROOMS },
+    }
+    const r2 = {
+      ...GROUP_ROOMS[1],
+      room_id: 'rm2',
+      room_number: '102',
+      group_id: 'g1',
+      status: 'confirmed',
+      group: { rooms: GROUP_ROOMS },
+    }
+    wrapper.vm.reservations = [r1, r2]
+    wrapper.vm.activeBar = { id: 'r1', rawStatus: 'confirmed', label: 'Amina Hassan', roomId: 'rm1' }
+    wrapper.vm.folio = {
+      reservation: {
+        reservation_id: 'r1',
+        first_name: 'Amina',
+        last_name: 'Hassan',
+        room_id: 'rm1',
+        check_in_date: '2026-11-01',
+        check_out_date: '2026-11-03',
+        guest_phone: '',
+      },
+    }
+    api.reservationApi.index.mockResolvedValueOnce({ data: { data: [r1, { ...r2, check_out_date: '2026-11-07' }] } })
+    api.reservationApi.amendIndividualStay.mockResolvedValueOnce({ data: { reservation: r2 } })
+    await wrapper.vm.$nextTick()
+
+    wrapper.vm.openAmendModal(false)
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.focusAmendRoom(wrapper.vm.amendGroupRoomOptions[1])
+    wrapper.vm.amendForm.check_out_date = '2026-11-07'
+    await wrapper.vm.submitAmend()
+
+    expect(api.reservationApi.amendIndividualStay).toHaveBeenCalledTimes(1)
+    const [stayId, payload] = api.reservationApi.amendIndividualStay.mock.calls[0]
+    expect(stayId).toBe('r2')
+    expect(payload.check_out_date).toBe('2026-11-07')
+    expect(payload).not.toHaveProperty('room_ids')
+    expect(payload).not.toHaveProperty('release_unselected')
+    expect(payload).not.toHaveProperty('room_id')
+    expect(api.reservationApi.groupAmend).not.toHaveBeenCalled()
+    expect(wrapper.vm.activeBar.id).toBe('r2')
   })
 
   it('hides cancelled group rooms from the amend checkbox list', async () => {

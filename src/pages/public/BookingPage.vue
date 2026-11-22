@@ -317,6 +317,7 @@
         <PaymentMethodSelect
           v-model:method="payment.method"
           v-model:provider="payment.provider"
+          :accounts="paymentAccounts"
           :methods="enabledPaymentMethods"
           :required="true"
         />
@@ -576,7 +577,7 @@ const mobileWalletsWithAccounts = computed(() =>
         provider,
         number: entry.number || '',
         lipa_number: entry.lipa_number || '',
-        name: entry.name || '',
+        name: entry.name || entry.provider_name || '',
         ussd: ussdFor(provider),
         label: t(`paymentFields.providers.${provider}`),
       }
@@ -599,7 +600,8 @@ const payWithLipa = computed(() => {
 /** The registered receiver (endpoint) name shown on the wallet menu. */
 const endpointName = computed(() => {
   if (!MOBILE_MONEY_PROVIDERS.includes(payment.value.provider)) return ''
-  return accountFor(payment.value.provider)?.name || hotelDetails.value?.hotel_name || ''
+  const account = accountFor(payment.value.provider)
+  return account?.name || account?.provider_name || hotelDetails.value?.hotel_name || ''
 })
 
 /** Display name of the selected wallet (e.g. "M-Pesa"). */

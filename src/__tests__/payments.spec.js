@@ -8,6 +8,7 @@ import {
   normalizeCreditAccounts,
   MOBILE_MONEY_PROVIDERS,
   ALL_PROVIDERS,
+  accountLabel,
   providersFor,
   METHOD_MOBILE_MONEY,
   METHOD_BANK,
@@ -71,6 +72,20 @@ describe('payment accounts shape', () => {
     expect(providersFor(METHOD_MOBILE_MONEY)).toEqual(MOBILE_MONEY_PROVIDERS)
     expect(providersFor(METHOD_BANK)).toEqual(['crdb', 'nmb', 'nbc', 'other'])
     expect(providersFor('cash')).toEqual([])
+  })
+
+  it('limits providers to the accounts the hotel registered for that method', () => {
+    const accounts = {
+      mpesa: { number: '0754 111 222', provider_name: 'M-Pesa Business', method: METHOD_MOBILE_MONEY },
+      airtel_money: { number: '0712 000 111', method: 'cash' },
+      crdb: { number: '223 0045 6789', provider_name: 'CRDB Account', method: METHOD_BANK },
+    }
+
+    expect(providersFor(METHOD_MOBILE_MONEY, accounts)).toEqual(['mpesa'])
+    expect(providersFor(METHOD_BANK, accounts)).toEqual(['crdb'])
+    expect(providersFor('cash', accounts)).toEqual([])
+    expect(accountLabel('mpesa', accounts)).toBe('M-Pesa Business · •••• 1222')
+    expect(accountLabel('crdb', accounts)).toBe('CRDB Account · •••• 6789')
   })
 })
 

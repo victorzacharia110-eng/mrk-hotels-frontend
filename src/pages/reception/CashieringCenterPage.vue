@@ -93,7 +93,7 @@
             <td>{{ p.paid_by || '—' }}</td>
             <td>{{ p.reservation?.guest_name || (p.payment_id ? p.reservation_id?.slice(0, 8) : '—') }}</td>
             <td>{{ fmt(p.amount) }}</td>
-            <td class="capitalize">{{ methodLabel(p.payment_method) }}</td>
+            <td class="capitalize">{{ paymentDescriptor(p, authStore.user?.tenant?.payment_accounts) }}</td>
             <td>{{ paymentDate(p) }}</td>
             <td>{{ p.received_by_name || p.user?.name || p.recorded_by?.name || p.created_by?.name || p.recorded_by || '—' }}</td>
             <td>
@@ -150,9 +150,12 @@
           </div>
           <div v-if="requiresProvider(form.payment_method)" class="form-group">
             <label>{{ $t('payments.provider') }}</label>
-            <select v-model="form.payment_provider" class="input">
-              <option v-for="p in providersFor(form.payment_method)" :key="p" :value="p">{{ p.replace('_', ' ') }}</option>
+            <select v-model="form.payment_provider" class="input" @change="providerChanged">
+              <option v-for="p in providersFor(form.payment_method, authStore.user?.tenant?.payment_accounts)" :key="p" :value="p">
+                {{ accountLabel(p, authStore.user?.tenant?.payment_accounts) || providerLabel(p) }}
+              </option>
             </select>
+            <p v-if="form.payment_account" class="muted account-hint">{{ form.payment_account }}</p>
           </div>
           <div class="form-group">
             <label>{{ $t('payments.paidBy') }}</label>
@@ -175,7 +178,17 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { companyApi, paymentApi, reservationApi } from '@/api'
-import { METHOD_CASH, METHOD_CLICKPESA, PAYMENT_METHODS, effectivePaymentMethods, requiresProvider, providersFor } from '@/utils/payments'
+import {
+  METHOD_CASH,
+  METHOD_CLICKPESA,
+  PAYMENT_METHODS,
+  accountLabel,
+  effectivePaymentMethods,
+  paymentDescriptor,
+  providerLabel as providerLabelText,
+  requiresProvider,
+  providersFor,
+} from '@/utils/payments'
 import { useBusinessDateStore } from '@/stores/businessDate'
 import { useAuthStore } from '@/stores/auth'
 
@@ -204,7 +217,7 @@ const methodOptions = computed(() =>
   })),
 )
 
-const form = ref({ reservation_id: null, company_id: null, amount: null, payment_method: METHOD_CASH, payment_provider: null, paid_by: '' })
+const form = ref({ reservation_id: null, company_id: null, amount: null, payment_method: METHOD_CASH, payment_provider: null, payment_account: '', paid_by: '' })
 
 // Companies with an outstanding posted-folio balance — the creditors the
 // Cashiering Center is owed money by and can settle.
@@ -231,15 +244,9 @@ const total = computed(() => Object.values(totals.value).reduce((a, b) => a + b,
 
 const fmt = (n) => `${curCode()} ` + Number(n || 0).toLocaleString()
 
-function methodLabel(m) {
-  const found = methodOptions.value.find((o) => o.value === m)
-  return found ? found.label : String(m || '').replace(/_/g, ' ')
-}
-
 function providerLabel(provider) {
-  return t(`paymentFields.providers.${provider}`) === `paymentFields.providers.${provider}`
-    ? methodLabel(provider)
-    : t(`paymentFields.providers.${provider}`)
+  const key = `paymentFields.providers.${provider}`
+  return t(key) === key ? providerLabelText(provider) : t(key)
 }
 
 function statusLabel(s) {
@@ -257,12 +264,17 @@ function paymentDate(p) {
 
 function methodChanged() {
   form.value.payment_provider = null
+  form.value.payment_account = ''
   if (form.value.payment_method === METHOD_CASH) form.value.payment_provider = null
+}
+
+function providerChanged() {
+  form.value.payment_account = accountLabel(form.value.payment_provider, authStore.user?.tenant?.payment_accounts)
 }
 
 function openRecord() {
   error.value = ''
-  form.value = { reservation_id: guestOptions.value[0]?.reservation_id || null, company_id: null, amount: null, payment_method: METHOD_CASH, payment_provider: null, paid_by: '' }
+  form.value = { reservation_id: guestOptions.value[0]?.reservation_id || null, company_id: null, amount: null, payment_method: METHOD_CASH, payment_provider: null, payment_account: '', paid_by: '' }
   showModal.value = true
 }
 
@@ -270,7 +282,7 @@ function openRecord() {
 // settlement can be received against a specific posted folio balance.
 function openSettleCreditor(c) {
   error.value = ''
-  form.value = { reservation_id: null, company_id: c.company_id, amount: Number(c.current_balance ?? 0) || null, payment_method: METHOD_CASH, payment_provider: null, paid_by: c.name }
+  form.value = { reservation_id: null, company_id: c.company_id, amount: Number(c.current_balance ?? 0) || null, payment_method: METHOD_CASH, payment_provider: null, payment_account: '', paid_by: c.name }
   showModal.value = true
 }
 
@@ -306,6 +318,7 @@ async function savePayment() {
         amount,
         payment_method: form.value.payment_method,
         payment_provider: form.value.payment_provider ?? undefined,
+        payment_account: form.value.payment_account || undefined,
         paid_by: form.value.paid_by || undefined,
       })
     } else {

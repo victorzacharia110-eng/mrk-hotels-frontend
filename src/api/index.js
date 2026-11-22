@@ -795,6 +795,9 @@ export const reservationApi = {
   groupAmend(id, data) {
     return api.put(`${v1}/reservations/${id}/group`, data);
   },
+  amendIndividualStay(id, data) {
+    return api.put(`${v1}/reservations/${id}/individual-stay`, data);
+  },
   /**
    * Cancels a reservation.
    * @param {string|number} id - Reservation identifier.

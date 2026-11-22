@@ -47,7 +47,7 @@ export function normalizePaymentAccount(value) {
   }
   if (value && typeof value === 'object') {
     const out = {}
-    for (const key of ['number', 'lipa_number', 'name']) {
+    for (const key of ['number', 'lipa_number', 'name', 'provider_name', 'method', 'description']) {
       if (value[key] != null && String(value[key]).trim()) out[key] = String(value[key]).trim()
     }
     return Object.keys(out).length ? out : null
@@ -128,11 +128,92 @@ export const PAYMENT_STATUSES = [
   STATUS_REFUNDED,
 ]
 
-/** Providers valid for a method; empty when the method has none. */
-export function providersFor(method) {
+/** Providers valid for a method; tenant accounts narrow the built-in list. */
+export function providersFor(method, accounts) {
+  if (method && !requiresProvider(method)) return []
+  const registered = registeredProviders(accounts, method)
+  if (registered.length) return registered
   if (method === METHOD_MOBILE_MONEY) return MOBILE_MONEY_PROVIDERS
   if (method === METHOD_BANK) return BANK_PROVIDERS
   return []
+}
+
+export function registeredProviders(accounts, method = null) {
+  if (!accounts || typeof accounts !== 'object') return []
+  const known =
+    method === METHOD_MOBILE_MONEY
+      ? MOBILE_MONEY_PROVIDERS
+      : method === METHOD_BANK
+        ? BANK_PROVIDERS
+        : []
+  const providers = []
+
+  for (const [provider, value] of Object.entries(accounts)) {
+    const account = normalizePaymentAccount(value)
+    if (!account) continue
+    if (method && account.method && account.method !== method) continue
+    if (method && !account.method && !known.includes(provider)) continue
+    if (!providers.includes(provider)) providers.push(provider)
+  }
+
+  return providers
+}
+
+export function accountLabel(provider, accounts) {
+  if (!provider) return ''
+  const account = accounts?.[provider] ? normalizePaymentAccount(accounts[provider]) : null
+  const name = account?.provider_name || account?.name || providerLabel(provider)
+  const number = account?.number || account?.lipa_number
+
+  if (!number) return name
+
+  const digits = String(number).replace(/\D/g, '')
+  return `${name} · ${digits ? `•••• ${digits.slice(-4)}` : number}`
+}
+
+export function providerLabel(provider) {
+  return (
+    {
+      airtel_money: 'Airtel Money',
+      mixx_by_yas: 'Mixx by Yas',
+      halopesa: 'Halopesa',
+      mpesa: 'M-Pesa',
+      crdb: 'CRDB Bank',
+      nmb: 'NMB Bank',
+      nbc: 'NBC Bank',
+      other: 'Other Bank',
+    }[provider] || String(provider || '')
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (letter) => letter.toUpperCase())
+  )
+}
+
+export function paymentDescriptor(payment, accounts) {
+  const method = payment?.payment_method || payment?.method || ''
+  const provider = payment?.payment_provider || payment?.provider || ''
+  const account = payment?.payment_account || payment?.account || accountLabel(provider, accounts)
+  const parts = [methodLabel(method)]
+
+  if (provider) parts.push(providerLabel(provider))
+  if (account) parts.push(account)
+
+  return parts.filter(Boolean).join(' · ')
+}
+
+export function methodLabel(method) {
+  return (
+    {
+      cash: 'Cash',
+      mobile_money: 'Mobile Money',
+      bank: 'Bank Transfer',
+      selcom: 'Selcom',
+      card: 'Credit Card',
+      clickpesa: 'ClickPesa',
+      deposit: 'Deposit',
+    }[method] || String(method || '')
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (letter) => letter.toUpperCase())
+  )
 }
 
 /** True when the method needs a provider chosen before it can be saved. */

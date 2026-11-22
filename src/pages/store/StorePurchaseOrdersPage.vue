@@ -31,6 +31,7 @@
               <th>{{ $t('goodsReceived.supplier') }}</th>
               <th>{{ $t('requisitions.items') }}</th>
               <th>{{ $t('purchaseOrders.total') }}</th>
+              <th>{{ $t('purchaseOrders.date') }}</th>
               <th>{{ $t('purchaseOrders.deliveryDate') }}</th>
               <th>{{ $t('common.status') }}</th>
               <th>{{ $t('common.actions') }}</th>
@@ -42,6 +43,7 @@
               <td>{{ po.supplier?.supplier_name || '-' }}</td>
               <td>{{ (po.items || []).length }}</td>
               <td>{{ curCode() }} {{ Number(po.total_amount || 0).toLocaleString() }}</td>
+              <td>{{ formatDate(po.business_date || po.created_at) }}</td>
               <td>{{ formatDate(po.delivery_date) }}</td>
               <td><span class="chip" :class="po.status">{{ poStatusLabel(po.status) }}</span></td>
               <td>
@@ -150,6 +152,7 @@
           <p v-if="detail.rejection_reason" class="void-note"><i class="fas fa-circle-info"></i> rejected: {{ detail.rejection_reason }}</p>
           <p><strong>{{ $t('goodsReceived.supplier') }}:</strong> {{ detail.supplier?.supplier_name || '-' }}</p>
           <p><strong>{{ $t('common.status') }}:</strong> <span class="chip" :class="detail.status">{{ poStatusLabel(detail.status) }}</span></p>
+          <p v-if="detail.business_date || detail.created_at"><strong>{{ $t('purchaseOrders.date') }}:</strong> {{ formatDate(detail.business_date || detail.created_at) }}</p>
           <p v-if="detail.delivery_date"><strong>{{ $t('purchaseOrders.deliveryDate') }}:</strong> {{ formatDate(detail.delivery_date) }}</p>
           <p v-if="detail.delivery_address"><strong>{{ $t('purchaseOrders.deliveryAddress') }}:</strong> {{ detail.delivery_address }}</p>
           <p v-if="detail.notes"><strong>{{ $t('common.notes') }}:</strong> {{ detail.notes }}</p>
@@ -170,16 +173,20 @@
       </div>
     </div>
 
-    <div v-if="pendingVoid" class="sm-modal-backdrop" @click.self="pendingVoid = null">
+    <div v-if="pendingVoid" class="sm-modal-backdrop" @click.self="closeVoidModal">
       <div class="sm-modal">
         <div class="sm-modal-head">
           <h3>{{ $t('purchaseOrders.voidAction') }} · {{ pendingVoid.po_number }}</h3>
-          <button class="sm-modal-close" @click="pendingVoid = null"><i class="fas fa-xmark"></i></button>
+          <button class="sm-modal-close" @click="closeVoidModal"><i class="fas fa-xmark"></i></button>
         </div>
         <div class="sm-modal-body">
-          <p>{{ $t('purchaseOrders.voidGrnConfirm', { count: linkedGrns }) }}</p>
+          <p v-if="linkedGrns">{{ $t('purchaseOrders.voidGrnConfirm', { count: linkedGrns }) }}</p>
+          <p v-else>{{ $t('purchaseOrders.voidConfirm', { reference: pendingVoid.po_number }) }}</p>
+          <label class="sm-label">{{ $t('purchaseOrders.voidReason') }}</label>
+          <textarea v-model="voidReason" rows="3" maxlength="255" class="sm-textarea" :placeholder="$t('storeManager.common.reason')"></textarea>
+          <p v-if="voidError" class="sm-error">{{ voidError }}</p>
           <div class="sm-modal-foot">
-            <button type="button" class="sm-btn ghost" @click="pendingVoid = null">{{ $t('common.cancel') }}</button>
+            <button type="button" class="sm-btn ghost" @click="closeVoidModal">{{ $t('common.cancel') }}</button>
             <button type="button" class="sm-btn danger" @click="confirmVoidPo">{{ $t('common.proceed') }}</button>
           </div>
         </div>
@@ -193,6 +200,7 @@
       <table class="print-meta">
         <tbody>
           <tr><td><strong>{{ $t('goodsReceived.supplier') }}</strong></td><td>{{ printData.supplier?.supplier_name || '-' }}</td></tr>
+          <tr><td><strong>{{ $t('purchaseOrders.date') }}</strong></td><td>{{ formatDate(printData.business_date || printData.created_at) }}</td></tr>
           <tr><td><strong>{{ $t('purchaseOrders.deliveryDate') }}</strong></td><td>{{ formatDate(printData.delivery_date) }}</td></tr>
           <tr v-if="printData.delivery_address"><td><strong>{{ $t('purchaseOrders.deliveryAddress') }}</strong></td><td>{{ printData.delivery_address }}</td></tr>
           <tr><td><strong>{{ $t('common.status') }}</strong></td><td>{{ poStatusLabel(printData.status) }}</td></tr>
@@ -258,6 +266,8 @@ const formError = ref('')
 const printData = ref(null)
 const pendingVoid = ref(null)
 const linkedGrns = ref(0)
+const voidReason = ref('')
+const voidError = ref('')
 
 function todayStr() {
   return workingDateStore.workingDate
@@ -502,6 +512,7 @@ async function save() {
     notes: form.notes || undefined,
     items: form.items.map((i) => ({ item_id: i.item_id, item_name: i.item_name, quantity: i.quantity, unit: i.unit, unit_price: i.unit_price })).filter((i) => i.item_name),
   }
+  if (!editingId.value) payload.business_date = todayStr()
   try {
     const res = editingId.value
       ? await purchaseOrderApi.update(editingId.value, payload)
@@ -573,6 +584,13 @@ async function performVoidPo(po, reason) {
   }
 }
 
+function closeVoidModal() {
+  pendingVoid.value = null
+  linkedGrns.value = 0
+  voidReason.value = ''
+  voidError.value = ''
+}
+
 async function voidPo() {
   const po = detail.value
   if (!isManagementPanel.value) {
@@ -586,23 +604,22 @@ async function voidPo() {
     .catch(() => [])
 
   detail.value = null
-
-  if (!grns.length) {
-    await performVoidPo(po, t('purchaseOrders.voidReasonManagement'))
-    return
-  }
-
+  voidReason.value = ''
+  voidError.value = ''
   linkedGrns.value = grns.length
   pendingVoid.value = po
 }
 
 async function confirmVoidPo() {
   const po = pendingVoid.value
-  const count = linkedGrns.value
-  pendingVoid.value = null
-  linkedGrns.value = 0
+  const reason = voidReason.value.trim()
+  if (!reason) {
+    voidError.value = t('storeManager.common.reasonRequired')
+    return
+  }
+  closeVoidModal()
   if (!po) return
-  await performVoidPo(po, t('purchaseOrders.voidReasonGrn', { count }))
+  await performVoidPo(po, reason)
 }
 
 async function handleRouteIntent() {

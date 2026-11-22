@@ -206,9 +206,12 @@
           </div>
           <div v-if="requiresProvider(receiveForm.payment_method)" class="form-group">
             <label>{{ $t('payments.provider') }}</label>
-            <select v-model="receiveForm.payment_provider" class="input">
-              <option v-for="p in providersFor(receiveForm.payment_method)" :key="p" :value="p">{{ p.replace('_', ' ') }}</option>
+            <select v-model="receiveForm.payment_provider" class="input" @change="receiveProviderChanged">
+              <option v-for="p in providersFor(receiveForm.payment_method, authStore.user?.tenant?.payment_accounts)" :key="p" :value="p">
+                {{ accountLabel(p, authStore.user?.tenant?.payment_accounts) || providerLabel(p) }}
+              </option>
             </select>
+            <p v-if="receiveForm.payment_account" class="muted">{{ receiveForm.payment_account }}</p>
           </div>
           <div v-if="receiveForm.payment_method === 'bank'" class="form-group">
             <label>{{ $t('payments.transactionReference') }}</label>
@@ -318,7 +321,16 @@ import PhoneInput from '@/components/PhoneInput.vue'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
 import { loadLocationData, getCountryName } from '@/utils/locations'
 import { validatePhoneNumber } from '@/utils/phone'
-import { METHOD_CASH, METHOD_CLICKPESA, PAYMENT_METHODS, effectivePaymentMethods, requiresProvider, providersFor } from '@/utils/payments'
+import {
+  METHOD_CASH,
+  METHOD_CLICKPESA,
+  PAYMENT_METHODS,
+  accountLabel,
+  effectivePaymentMethods,
+  providerLabel,
+  requiresProvider,
+  providersFor,
+} from '@/utils/payments'
 import { useTenantCurrency } from '@/utils/currency'
 
 const { curCode } = useTenantCurrency()
@@ -419,7 +431,7 @@ async function loadPostings() {
 const receiveModal = ref(false)
 const receiveSaving = ref(false)
 const receiveError = ref('')
-const receiveForm = ref({ amount: null, payment_method: METHOD_CASH, payment_provider: null, transaction_reference: '', paid_by: '' })
+const receiveForm = ref({ amount: null, payment_method: METHOD_CASH, payment_provider: null, payment_account: '', transaction_reference: '', paid_by: '' })
 
 function openReceive() {
   receiveError.value = ''
@@ -427,6 +439,7 @@ function openReceive() {
     amount: selectedPostingsSum.value > 0 ? selectedPostingsSum.value : null,
     payment_method: METHOD_CASH,
     payment_provider: null,
+    payment_account: '',
     transaction_reference: '',
     paid_by: postingsCompany.value?.name || '',
   }
@@ -435,7 +448,12 @@ function openReceive() {
 
 function receiveMethodChanged() {
   receiveForm.value.payment_provider = null
+  receiveForm.value.payment_account = ''
   if (receiveForm.value.payment_method === METHOD_CASH) receiveForm.value.payment_provider = null
+}
+
+function receiveProviderChanged() {
+  receiveForm.value.payment_account = accountLabel(receiveForm.value.payment_provider, authStore.user?.tenant?.payment_accounts)
 }
 
 async function saveReceive() {
@@ -448,6 +466,7 @@ async function saveReceive() {
       amount,
       payment_method: receiveForm.value.payment_method,
       payment_provider: receiveForm.value.payment_provider ?? undefined,
+      payment_account: receiveForm.value.payment_account || undefined,
       transaction_reference: receiveForm.value.transaction_reference || undefined,
       paid_by: receiveForm.value.paid_by || undefined,
     })

@@ -90,3 +90,47 @@ describe('stay-view task and channel state', () => {
     expect(dashboard).toMatch(/partyRooms\.length > 1/)
   })
 })
+
+describe('payment methods and accounts', () => {
+  const select = read('src/components/PaymentMethodSelect.vue')
+  const dashboard = read('src/pages/dashboards/HotelDashboard.vue')
+  const cashiering = read('src/pages/reception/CashieringCenterPage.vue')
+  const companyData = read('src/pages/reception/CompanyDataPage.vue')
+  const paymentList = read('src/pages/payments/PaymentListPage.vue')
+  const cashierSummary = read('src/pages/cashier/CashierOrderSummaryPage.vue')
+  const receipts = read('src/utils/receipts.js')
+  const reportPage = read('src/pages/reports/ReportPage.vue')
+
+  it('carries tenant-registered accounts through every staff payment form', () => {
+    expect(select).toMatch(/update:account/)
+    expect(select).toMatch(/accountLabel\(provider, accounts\.value\)/)
+    expect(dashboard).toMatch(/v-model:account="paymentForm\.payment_account"/)
+    expect(dashboard).toMatch(/v-model:account="folioOpForm\.payment_account"/)
+    expect(cashiering).toMatch(/payment_account/)
+    expect(companyData).toMatch(/payment_account/)
+    expect(paymentList).toMatch(/v-model:account="form\.payment_account"/)
+    expect(cashierSummary).toMatch(/account: payAccount\.value \|\| null/)
+  })
+
+  it('shows the receiving endpoint in folio, table and receipt output', () => {
+    expect(dashboard).toMatch(/paymentMethodLabel\(payment\?\.payment_method\)/)
+    expect(dashboard).toMatch(/configuredAccountLabel\(payment\?\.payment_provider, accounts\)/)
+    expect(dashboard).toMatch(/advance_payment_account/)
+    expect(paymentList).toMatch(/p\.payment_account/)
+    expect(paymentList).toMatch(/payments\.receivedBy/)
+    expect(receipts).toMatch(/itemRow\('Account:', String\(payment\.account\)\)/)
+  })
+
+  it('reports collections by provider and labels the columns in both locales', () => {
+    expect(reportPage).toMatch(/revenue\.by_provider/)
+    const en = JSON.parse(read('src/locales/en.json'))
+    const sw = JSON.parse(read('src/locales/sw.json'))
+
+    expect(en.payments.account).toBeTruthy()
+    expect(sw.payments.account).toBeTruthy()
+    expect(en.payments.receivedBy).toBeTruthy()
+    expect(sw.payments.receivedBy).toBeTruthy()
+    expect(en.reports.revenueByProvider).toBeTruthy()
+    expect(sw.reports.revenueByProvider).toBeTruthy()
+  })
+})

@@ -95,6 +95,26 @@ describe('StorePurchaseOrdersPage', () => {
     expect(typeof calendar.props('min')).toBe('string')
   })
 
+  it('saves a purchase order on the business date independently of its delivery date', async () => {
+    api.fbDayCloseApi.index.mockResolvedValue({ data: { close_date: '2026-11-20' } })
+    const wrapper = mountPage()
+    await flushPromises()
+    await wrapper.vm.openCreate()
+    await flushPromises()
+    api.purchaseOrderApi.store.mockResolvedValue({ data: { purchase_order: { po_id: 1 } } })
+
+    const line = wrapper.vm.emptyItem()
+    Object.assign(line, { item_id: 1, item_name: 'Bavaria', quantity: 2, unit: 'BTL', unit_price: 3000 })
+    wrapper.vm.form.items = [line]
+    wrapper.vm.form.delivery_date = '2026-11-23'
+    await wrapper.vm.save()
+
+    expect(api.purchaseOrderApi.store).toHaveBeenCalledWith(expect.objectContaining({
+      business_date: '2026-11-20',
+      delivery_date: '2026-11-23',
+    }))
+  })
+
   it('collapses workflow statuses onto the three display states', async () => {
     const wrapper = mountPage()
     await flushPromises()
@@ -199,7 +219,7 @@ describe('StorePurchaseOrdersPage', () => {
     expect(api.purchaseOrderApi.void).not.toHaveBeenCalled()
   })
 
-  it('voids a purchase order directly when it has no active linked receipts', async () => {
+  it('requires a typed reason before voiding a purchase order with no linked receipts', async () => {
     const wrapper = mountPage()
     await flushPromises()
     api.goodsReceivedNoteApi.index.mockResolvedValue({ data: { data: [] } })
@@ -209,7 +229,19 @@ describe('StorePurchaseOrdersPage', () => {
     await wrapper.vm.voidPo()
     await flushPromises()
 
-    expect(api.purchaseOrderApi.void).toHaveBeenCalledWith(5, { reason: 'Voided from the management panel.' })
+    expect(wrapper.vm.pendingVoid.po_id).toBe(5)
+    expect(wrapper.find('.sm-modal textarea.sm-textarea').exists()).toBe(true)
+    expect(api.purchaseOrderApi.void).not.toHaveBeenCalled()
+
+    await wrapper.vm.confirmVoidPo()
+    expect(wrapper.vm.voidError).toBe(i18n.global.t('storeManager.common.reasonRequired'))
+    expect(api.purchaseOrderApi.void).not.toHaveBeenCalled()
+
+    wrapper.vm.voidReason = 'Wrong supplier chosen.'
+    await wrapper.vm.confirmVoidPo()
+    await flushPromises()
+
+    expect(api.purchaseOrderApi.void).toHaveBeenCalledWith(5, { reason: 'Wrong supplier chosen.' })
   })
 
   it('voids linked goods received notes after the operator proceeds', async () => {
@@ -220,10 +252,11 @@ describe('StorePurchaseOrdersPage', () => {
     wrapper.vm.detail = { po_id: 6, po_number: 'PO-0006', items: [] }
 
     await wrapper.vm.voidPo()
+    wrapper.vm.voidReason = 'Supplier cancelled the whole order.'
     await wrapper.vm.confirmVoidPo()
     await flushPromises()
 
-    expect(api.purchaseOrderApi.void).toHaveBeenCalledWith(6, { reason: 'Purchase order voided together with 1 linked goods received note(s).' })
+    expect(api.purchaseOrderApi.void).toHaveBeenCalledWith(6, { reason: 'Supplier cancelled the whole order.' })
   })
 
   it('scales the inherited price by the selected SI unit factor', async () => {

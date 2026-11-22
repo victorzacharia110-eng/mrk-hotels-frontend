@@ -932,7 +932,7 @@
                 </label>
                 <div class="sv-field">
                   <PaymentMethodSelect v-model:method="paymentForm.payment_method"
-                    v-model:provider="paymentForm.payment_provider" />
+                    v-model:provider="paymentForm.payment_provider" v-model:account="paymentForm.payment_account" />
                   <span v-if="paymentErrors.payment_method || paymentErrors.payment_provider" class="sv-field-msg"
                     role="alert"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> {{
                       paymentErrors.payment_method || paymentErrors.payment_provider }}</span>
@@ -1137,6 +1137,34 @@
                     :class="{ 'sv-input-error': amendErrors.guest_email }" />
                   <span v-if="amendErrors.guest_email" class="sv-field-msg" role="alert"><i
                       class="fas fa-circle-exclamation" aria-hidden="true"></i> {{ amendErrors.guest_email }}</span>
+                </label>
+              </div>
+              <div class="sv-field-row">
+                <label class="sv-field">
+                  <span>{{ $t('guests.idTypeOptional') }}</span>
+                  <select v-model="amendForm.id_type" class="input" data-field="id_type">
+                    <option value=""></option>
+                    <option value="national_id">{{ $t('guests.typeNationalId') }}</option>
+                    <option value="passport">{{ $t('guests.typePassport') }}</option>
+                    <option value="driving_license">{{ $t('guests.typeDriverLicense') }}</option>
+                  </select>
+                </label>
+                <label class="sv-field">
+                  <span>{{ $t('guests.idNumber') }}</span>
+                  <input v-model="amendForm.id_number" type="text" class="input" data-field="id_number" />
+                </label>
+              </div>
+              <div class="sv-field-row">
+                <label class="sv-field">
+                  <span>{{ $t('guests.nationality') }}</span>
+                  <input v-model="amendForm.nationality" type="text" class="input" data-field="nationality" />
+                </label>
+                <label class="sv-field">
+                  <span>{{ $t('guests.vipStatus') }}</span>
+                  <label class="sv-checkbox">
+                    <input v-model="amendForm.vip_status" type="checkbox" data-field="vip_status" />
+                    <span>{{ $t('guests.typeVip') }}</span>
+                  </label>
                 </label>
               </div>
               <div class="sv-tab-section">{{ $t('stayview.room') }}</div>
@@ -1344,7 +1372,7 @@
                 </label>
                 <div class="sv-field">
                   <PaymentMethodSelect v-model:method="folioOpForm.payment_method"
-                    v-model:provider="folioOpForm.payment_provider" />
+                    v-model:provider="folioOpForm.payment_provider" v-model:account="folioOpForm.payment_account" />
                 </div>
                 <p class="sv-cap sv-note">{{ $t('stayview.depositHint') }}</p>
               </template>
@@ -1548,7 +1576,7 @@
                 {{ $t('common.close') }}
               </button>
               <button type="button" class="btn btn-primary"
-                :disabled="actionBusy || !folioEditForm.description?.trim() || !(folioEditForm.amount > 0)"
+                :disabled="actionBusy || !folioEditCanSave()"
                 @click="submitEditEntry">
                 <i class="fas fa-check" aria-hidden="true"></i>
                 {{ actionBusy ? $t('common.loading') : $t('folio.save') }}
@@ -2275,7 +2303,7 @@
               <i class="fas fa-pen" aria-hidden="true"></i> {{ $t('folio.edit') }}
             </button>
           </li>
-          <li v-if="entryMenu.entry.kind === 'payment' && entryMenu.entry.payment?.payment_id && canSeeFrontDesk">
+          <li v-if="entryMenu.entry.editableByPayment && canSeeFrontDesk">
             <button type="button" role="menuitem" :disabled="actionBusy"
               @click="closeEntryMenu(); openPaymentEdit(entryMenu.entry)">
               <i class="fas fa-pen" aria-hidden="true"></i> {{ $t('stayview.paymentEdit') }}
@@ -2479,7 +2507,14 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import PhoneInput from '@/components/PhoneInput.vue'
 import CountryCitySelect from '@/components/CountryCitySelect.vue'
-import { requiresProvider, providersFor, PAYMENT_METHODS, PAYMENT_STATUSES, effectivePaymentMethods } from '@/utils/payments'
+import {
+  accountLabel,
+  requiresProvider,
+  providersFor,
+  PAYMENT_METHODS,
+  PAYMENT_STATUSES,
+  effectivePaymentMethods,
+} from '@/utils/payments'
 
 import { folioBreakdown, isFolioRefundEntry } from '@/utils/folio'
 import { displayBookingReference, normalizeBookingReference } from '@/utils/bookingReference'
@@ -2507,6 +2542,8 @@ import { printHtmlSilently } from '@/utils/reportPrint'
 import { saveBlob } from '@/utils/download'
 
 import { useTenantCurrency } from '@/utils/currency'
+
+const EDITABLE_PAYMENT_STATUSES = PAYMENT_STATUSES.filter((status) => !['failed', 'refunded'].includes(status))
 
 const { curCode } = useTenantCurrency()
 
@@ -3452,18 +3489,38 @@ function paymentProviderLabel(provider) {
   return te(key) ? t(key) : String(provider).replace(/_/g, ' ')
 }
 
-/** Payment description that keeps the provider identifier visible in the ledger. */
+/** Endpoint label only when the provider has a registered tenant account. */
+function configuredAccountLabel(provider, accounts) {
+  if (!provider || !accounts?.[provider]) return ''
+  return accountLabel(provider, accounts)
+}
+
+/** Payment description that keeps the provider and registered account visible. */
 function paymentDescription(payment) {
-  const method = paymentMethodLabel(payment?.payment_method)
+  const accounts = authStore.user?.tenant?.payment_accounts
   const provider = paymentProviderLabel(payment?.payment_provider)
-  return provider ? `${method} · ${provider}` : method
+  const rawEndpoint = payment?.payment_account || payment?.account || configuredAccountLabel(payment?.payment_provider, accounts)
+  const endpointParts = String(rawEndpoint || '')
+    .split('·')
+    .map((part) => part.trim())
+    .filter(Boolean)
+  const providerKey = provider.replace(/\s+/g, '').toLowerCase()
+  if (providerKey && endpointParts[0]?.replace(/\s+/g, '').toLowerCase().includes(providerKey)) {
+    endpointParts.shift()
+  }
+  const parts = [paymentMethodLabel(payment?.payment_method)]
+  if (provider) parts.push(provider)
+  if (endpointParts.length) parts.push(endpointParts.join(' · '))
+  return parts.filter(Boolean).join(' · ')
 }
 
 /** Advance source with the receiving vendor kept visible (M-Pesa, CRDB, ...). */
 function advanceSourceLabel(source) {
-  const method = paymentMethodLabel(source?.advance_payment_method)
-  const provider = paymentProviderLabel(source?.advance_payment_provider)
-  return provider ? `${method} · ${provider}` : method
+  return paymentDescription({
+    payment_method: source?.advance_payment_method,
+    payment_provider: source?.advance_payment_provider,
+    payment_account: source?.advance_payment_account,
+  })
 }
 
 /**
@@ -3893,19 +3950,19 @@ const guestGrid = computed(() => {
   const res = folio.value?.reservation || {}
   const guest = res.guest || {}
   const fallback = activeBar.value || {}
+  const normalize = (value) => String(value || '').trim().toLowerCase()
+  const guestName = guest.full_name || [guest.first_name, guest.last_name].filter(Boolean).join(' ')
+  const reservationName = res.guest_name || [res.first_name, res.last_name].filter(Boolean).join(' ')
+  const trustedGuest = guestName && normalize(guestName) !== normalize(reservationName) ? {} : guest
   const show = (v) => (v === undefined || v === null || v === '' ? '—' : String(v))
   return [
-    { label: t('stayview.guestName'), value: show(res.guest_name || res.full_name || guest.full_name || guest.guest_name || fallback.label) },
-    { label: t('stayview.phone'), value: show(formatPhoneGaps(res.guest_phone || guest.phone || fallback.phone)) },
-    // The e-mail of record may live on the guest profile OR the reservation
-    // (an amended stay writes reservation.guest_email even when the profile row
-    // is blank/legacy), so the tab falls across every source before showing —
-    // it must never read "—" while the amended address exists anywhere.
-    { label: t('stayview.email'), value: show(res.guest_email || guest.email || res.guestEmail || fallback.guestEmail || '') },
-    { label: t('guests.nationality'), value: show(res.nationality || res.country || guest.nationality || guest.country) },
-    { label: t('guests.idType'), value: show(res.id_type || guest.id_type) },
-    { label: t('guests.idNumber'), value: show(res.id_number || guest.id_number) },
-    { label: t('guests.vipStatus'), value: show((res.vip_status ?? guest.vip_status) ? t('guests.typeVip') : t('guests.typeRegular')) },
+    { label: t('stayview.guestName'), value: show(res.guest_name || res.full_name || trustedGuest.full_name || trustedGuest.guest_name || fallback.label) },
+    { label: t('stayview.phone'), value: show(formatPhoneGaps(res.guest_phone || trustedGuest.phone || fallback.phone)) },
+    { label: t('stayview.email'), value: show(res.guest_email || trustedGuest.email || res.guestEmail || fallback.guestEmail || '') },
+    { label: t('guests.nationality'), value: show(res.nationality || res.country || trustedGuest.nationality || trustedGuest.country) },
+    { label: t('guests.idType'), value: show(res.id_type || trustedGuest.id_type) },
+    { label: t('guests.idNumber'), value: show(res.id_number || trustedGuest.id_number) },
+    { label: t('guests.vipStatus'), value: show((res.vip_status ?? trustedGuest.vip_status) ? t('guests.typeVip') : t('guests.typeRegular')) },
   ]
 })
 
@@ -4194,7 +4251,7 @@ function buildLedgerEntries(src) {
       balanceNeutral: refunded || !settled,
       kind: refunded ? 'refunded' : (settled ? 'payment' : 'unsettled_payment'),
       payment: p,
-      editableByPayment: p.payment_id != null,
+      editableByPayment: p.payment_id != null && EDITABLE_PAYMENT_STATUSES.includes(p.payment_status),
     })
   }
   // The advance/deposit taken at booking is part of TOTAL PAID but has no
@@ -4391,16 +4448,19 @@ async function confirmCancel(payload) {
 /* ---------------- Stay-view sub-actions (keep the modal open) ---------------- */
 
 /** Runs a stay-view action, keeps the modal open and refreshes folio + chart. */
-async function runStayAction(fn) {
+async function runStayAction(fn, focusId = null) {
   actionBusy.value = true
   actionError.value = ''
+  let result
   try {
-    await fn()
-    if (activeBar.value?.id) await loadFolio(activeBar.value.id)
+    result = await fn()
+    const targetId = focusId || activeBar.value?.id
+    if (focusId) viewingFolio.value = null
+    if (targetId) await loadFolio(targetId)
     // An action may have changed the linked folio too (edit/void of one of its
     // rows); reload it so the toggled ledger stays accurate.
     const viewedId = viewingFolio.value?.reservation?.reservation_id
-    if (viewedId && viewedId !== activeBar.value?.id) {
+    if (viewedId && viewedId !== targetId) {
       const res = await reservationApi.folio(viewedId)
       viewingFolio.value = res.data
     }
@@ -4410,8 +4470,9 @@ async function runStayAction(fn) {
     // re-point the modal at the UPDATED row (e-mail, status, dates, balance)
     // instead of showing stale bar data (e.g. Send-invoice staying disabled
     // after the guest's e-mail arrives via amend-stay).
-    const fresh = reservations.value.find((r) => r.reservation_id === activeBar.value?.id)
+    const fresh = reservations.value.find((r) => r.reservation_id === targetId)
     if (fresh) activeBar.value = toPanelBar(fresh)
+    else if (focusId && result?.data?.reservation) activeBar.value = toPanelBar(result.data.reservation)
   } catch (err) {
     actionError.value = apiErrorMsg(err, t('stayview.actionError'))
   } finally {
@@ -4512,7 +4573,7 @@ function openPaymentModal(mode = 'collect') {
   // to the current folio behind their back, which is exactly what used to turn
   // the current balance negative when settling a related bill.
   payMode.value = mode
-  paymentForm.value = { amount: null, payment_method: 'cash', payment_provider: '', company_id: '', note: '', request_id: genReqId() }
+  paymentForm.value = { amount: null, payment_method: 'cash', payment_provider: '', payment_account: '', company_id: '', note: '', request_id: genReqId() }
   paymentErrors.value = {}
   paymentTouched.value = false
   paymentSnapshot.value = { ...paymentForm.value }
@@ -4598,6 +4659,7 @@ async function submitPayment() {
       amount: f.amount,
       payment_method: f.payment_method,
       payment_provider: f.payment_provider || null,
+      ...(f.payment_account ? { payment_account: f.payment_account } : {}),
       // Desk-taken payments are settled there and then; the old
       // "awaiting confirmation" step is removed for mobile money.
       payment_status: 'completed',
@@ -4628,10 +4690,13 @@ const paymentMethodOptions = computed(() =>
   })),
 )
 const paymentProviderOptions = computed(() =>
-  providersFor(paymentEditForm.value.payment_method).map((p) => ({ value: p, label: t(`paymentFields.providers.${p}`) })),
+  providersFor(paymentEditForm.value.payment_method, authStore.user?.tenant?.payment_accounts).map((p) => ({
+    value: p,
+    label: accountLabel(p, authStore.user?.tenant?.payment_accounts) || t(`paymentFields.providers.${p}`),
+  })),
 )
 const paymentStatusOptions = computed(() =>
-  PAYMENT_STATUSES.filter((s) => s !== 'awaiting_confirmation').map((s) => ({
+  EDITABLE_PAYMENT_STATUSES.map((s) => ({
     value: s,
     label: t(`paymentFields.statuses.${s}`),
   })),
@@ -4648,6 +4713,7 @@ function openPaymentEdit(entry) {
     amount: Number(p.amount ?? 0),
     payment_method: p.payment_method || 'cash',
     payment_provider: p.payment_provider || '',
+    payment_account: p.payment_account || configuredAccountLabel(p.payment_provider, authStore.user?.tenant?.payment_accounts),
     payment_status: p.payment_status || 'completed',
     notes: p.notes || '',
   }
@@ -4680,6 +4746,7 @@ async function submitPaymentEdit() {
     amount: Number(f.amount),
     payment_method: f.payment_method,
     payment_provider: f.payment_provider || null,
+    ...(f.payment_account ? { payment_account: f.payment_account } : {}),
     payment_status: f.payment_status || null,
     notes: f.notes?.trim() || null,
   }
@@ -4761,7 +4828,9 @@ function particularLabel(raw, fallback) {
   const value = String(raw || '').trim()
   if (!value) return fallback
   const key = value.toUpperCase()
-  if (key === 'EXTRA CHARGES') return t('folio.extraCharges')
+  if (['EXTRA CHARGES', 'ADD CHARGES', 'ADD CHARGE', 'ADJUSTMENT', 'INCLUSION', 'DISCOUNT', 'MANUAL CHARGE'].includes(key)) {
+    return t('folio.extraCharges')
+  }
   if (key === 'ROOM CHARGES') return t('folio.roomCharge')
   if (key === 'ROOM POSTING') return t('folio.roomPosting')
   return value
@@ -4769,8 +4838,9 @@ function particularLabel(raw, fallback) {
 
 function folioEntryParticular(entry) {
   if (isFolioRefundEntry(entry.type)) return t('stayview.refundLine')
-  if (isManualFolioType(entry.type)) return t('folio.extraCharges')
-  return particularLabel(entry.particular, folioEntryLabel(entry.type))
+  const raw = entry.particular || (isManualFolioType(entry.type) ? 'EXTRA CHARGES' : null)
+  if (raw) return particularLabel(raw, folioEntryLabel(entry.type))
+  return folioEntryLabel(entry.type)
 }
 
 /** Transfer/split/cut/new-folio mode buttons for the move modal. */
@@ -5004,6 +5074,7 @@ function openFolioOp(op, mode = 'transfer') {
     description: '',
     payment_method: 'cash',
     payment_provider: '',
+    payment_account: '',
     payment_id: '',
     target_reservation_id: '',
     new_room_id: '',
@@ -5045,6 +5116,7 @@ async function submitFolioOp() {
       amount: f.amount,
       payment_method: f.payment_method,
       payment_provider: f.payment_provider || null,
+      ...(f.payment_account ? { payment_account: f.payment_account } : {}),
       payment_status: 'completed',
     }
   } else if (op === 'move') {
@@ -5244,23 +5316,39 @@ function openEditEntry(e) {
   if (!e?.entryId) return
   moreOpen.value = false
   folioEdit.value = e
-  folioEditForm.value = { description: e.description || '', amount: Math.abs(e.amount || 0) }
+  folioEditForm.value = {
+    description: e.description || '',
+    amount: Math.abs(e.amount || 0),
+    type: e.type,
+    credit: Boolean(e.credit),
+  }
   folioEditErrors.value = {}
   actionError.value = ''
 }
 
+function folioEditCanSave() {
+  const amount = Number(folioEditForm.value.amount)
+  return Boolean(folioEditForm.value.description?.trim())
+    && Number.isFinite(amount)
+    && (folioEditForm.value.type === 'inclusion' ? amount >= 0 : amount > 0)
+}
+
 /** Persists the edited row via PUT folio/entries/{id}, then reloads the folio. */
 async function submitEditEntry() {
-  const f = folioEditForm.value
+  const f = { ...folioEditForm.value }
+  const amount = Number(f.amount)
   const errs = {}
   if (!f.description?.trim()) errs.description = t('validations.fieldRequired')
-  if (!(Number(f.amount) > 0)) errs.amount = t('validations.positiveAmount')
+  if (!Number.isFinite(amount) || (f.type === 'inclusion' ? amount < 0 : amount <= 0)) {
+    errs.amount = t('validations.positiveAmount')
+  }
   folioEditErrors.value = errs
   if (Object.keys(errs).length || !folioEdit.value?.entryId) return
   const entryId = folioEdit.value.entryId
   folioEdit.value = null
+  const signedAmount = (f.credit ? -1 : 1) * Math.abs(amount)
   await runStayAction(() =>
-    reservationApi.folioEntryUpdate(entryId, { description: f.description.trim(), amount: Math.abs(Number(f.amount)) }),
+    reservationApi.folioEntryUpdate(entryId, { description: f.description.trim(), amount: signedAmount }),
   )
 }
 
@@ -5305,6 +5393,7 @@ const amendRoomSort = ref('room')
 // Holds the group payload while the desk confirms releasing unticked rooms.
 const amendReleaseConfirm = ref(false)
 const amendPendingPayload = ref(null)
+const amendCompare = ref({})
 
 /** Rooms that will be released (freed) if the amend is saved as-is. */
 const amendReleaseRooms = computed(() =>
@@ -5336,6 +5425,10 @@ const amendGroupRoomOptions = computed(() => {
         guest_email: room.guest_email || '',
         guest_phone: room.guest_phone || '',
         country_code: room.country_code || '',
+        nationality: room.nationality || room.country || '',
+        id_type: room.id_type || '',
+        id_number: room.id_number || '',
+        vip_status: room.vip_status ?? false,
         check_in_date: room.check_in_date || '',
         check_out_date: room.check_out_date || '',
         num_adults: room.num_adults,
@@ -5362,6 +5455,25 @@ async function loadAmendGroupRooms(reservationId) {
   }
 }
 
+function amendGuestFields(room) {
+  const names = String(room.guest_name || '').trim().split(/\s+/)
+  return {
+    first_name: room.first_name || names.shift() || '',
+    last_name: room.last_name || names.join(' ') || '',
+    guest_phone: formatPhoneNational(room.guest_phone || ''),
+    guest_email: room.guest_email || '',
+    country_code: room.country_code || 'TZ',
+    nationality: room.nationality || room.country || '',
+    id_type: room.id_type || '',
+    id_number: room.id_number || '',
+    vip_status: room.vip_status ?? false,
+    check_in_date: room.check_in_date || '',
+    check_out_date: room.check_out_date || '',
+    num_adults: room.num_adults ?? amendForm.value.num_adults,
+    num_children: room.num_children ?? amendForm.value.num_children,
+  }
+}
+
 /** Seeds the active group rooms and ticks the stay being amended. */
 function setAmendGroupRooms(rooms, activeId = null) {
   const activeRooms = rooms.filter((r) => !r.released_at && r.status !== 'cancelled')
@@ -5370,25 +5482,18 @@ function setAmendGroupRooms(rooms, activeId = null) {
   // only the viewed stay starts ticked. Cancelled/released rooms are hidden.
   const current = activeRooms.find((r) => String(r.reservation_id) === String(activeId))
   amendSelectedRoomIds.value = current ? [current.reservation_id] : []
+  amendCompare.value = current ? amendGuestFields(current) : {}
 }
 
 function focusAmendRoom(room) {
   amendSelectedRoomIds.value = [room.value]
   const target = amendGroupRooms.value.find((r) => String(r.reservation_id) === String(room.value))
-  if (!target) return
-  const names = String(room.guest_name || target.guest_name || '').trim().split(/\s+/)
+  const fields = amendGuestFields({ ...target, ...room })
   amendForm.value = {
     ...amendForm.value,
-    first_name: room.first_name || names.shift() || '',
-    last_name: room.last_name || names.join(' ') || '',
-    guest_phone: formatPhoneNational(room.guest_phone || target.guest_phone),
-    guest_email: room.guest_email || target.guest_email || '',
-    country_code: room.country_code || target.country_code || amendForm.value.country_code || 'TZ',
-    check_in_date: room.check_in_date || target.check_in_date || amendForm.value.check_in_date,
-    check_out_date: room.check_out_date || target.check_out_date || amendForm.value.check_out_date,
-    num_adults: room.num_adults ?? target.num_adults ?? amendForm.value.num_adults,
-    num_children: room.num_children ?? target.num_children ?? amendForm.value.num_children,
+    ...fields,
   }
+  amendCompare.value = fields
   amendSnapshot.value = { ...amendForm.value }
   amendTouched.value = false
   amendErrors.value = {}
@@ -5409,7 +5514,19 @@ function openAmendModal(roomMove = false) {
     guest_phone: formatPhoneNational(res.guest_phone),
     country_code: res.country_code || 'TZ',
     guest_email: res.guest_email || res.guest?.email || '',
+    nationality: res.nationality || res.country || res.guest?.nationality || res.guest?.country || '',
+    id_type: res.id_type || res.guest?.id_type || '',
+    id_number: res.id_number || res.guest?.id_number || '',
+    vip_status: res.vip_status ?? res.guest?.vip_status ?? false,
   }
+  amendCompare.value = amendGuestFields({
+    ...res,
+    guest_email: res.guest_email || res.guest?.email || '',
+    nationality: res.nationality || res.country || res.guest?.nationality || res.guest?.country || '',
+    id_type: res.id_type || res.guest?.id_type || '',
+    id_number: res.id_number || res.guest?.id_number || '',
+    vip_status: res.vip_status ?? res.guest?.vip_status ?? false,
+  })
   amendErrors.value = {}
   amendTouched.value = false
   amendSnapshot.value = { ...amendForm.value }
@@ -5452,20 +5569,24 @@ async function submitAmend() {
     num_adults: Number(f.num_adults) || 1,
     num_children: Number(f.num_children) || 0,
   }
-  const res = folio.value?.reservation || {}
-  if (f.first_name !== (res.first_name ?? '') && f.first_name) payload.first_name = f.first_name
-  if (f.last_name !== (res.last_name ?? '') && f.last_name) payload.last_name = f.last_name
+  const compare = amendCompare.value || folio.value?.reservation || {}
+  if (f.first_name !== (compare.first_name ?? '') && f.first_name) payload.first_name = f.first_name
+  if (f.last_name !== (compare.last_name ?? '') && f.last_name) payload.last_name = f.last_name
   if (f.guest_phone) {
     const phoneCheck = validatePhoneNumber(f.guest_phone, f.country_code || 'TZ')
-    if (String(phoneCheck.number || '').replace(/\D/g, '') !== String(res.guest_phone || '').replace(/\D/g, '')) {
+    if (String(phoneCheck.number || '').replace(/\D/g, '') !== String(compare.guest_phone || '').replace(/\D/g, '')) {
       payload.guest_phone = phoneCheck.number
-      if (f.country_code && f.country_code !== (res.country_code || '')) payload.country_code = f.country_code
+      if (f.country_code && f.country_code !== (compare.country_code || '')) payload.country_code = f.country_code
     }
   }
   // The e-mail is sent on every amend that carries one (even when it already
   // matches the reservation) so the folio/Guest-Details/send-invoice always
   // read the address of record from the reservation after an amendment.
   if (f.guest_email) payload.guest_email = f.guest_email
+  if ((f.nationality || '') !== (compare.nationality || '')) payload.nationality = f.nationality || null
+  if ((f.id_type || '') !== (compare.id_type || '')) payload.id_type = f.id_type || null
+  if ((f.id_number || '') !== (compare.id_number || '')) payload.id_number = f.id_number || null
+  if (Boolean(f.vip_status) !== Boolean(compare.vip_status)) payload.vip_status = Boolean(f.vip_status)
   if (amendIsGroup.value && amendIsRoomMove.value) {
     const ids = amendSelectedRoomIds.value.slice()
     if (!ids.length) {
@@ -5479,7 +5600,7 @@ async function submitAmend() {
       release_unselected: false,
     }
     amendModal.value = false
-    await runStayAction(() => reservationApi.groupAmend(activeBar.value.id, groupPayload))
+    await runStayAction(() => reservationApi.groupAmend(activeBar.value.id, groupPayload), ids[0])
     if (actionError.value) amendModal.value = true
     return
   }
@@ -5489,6 +5610,14 @@ async function submitAmend() {
     const ids = amendSelectedRoomIds.value.slice()
     if (!ids.length) {
       amendErrors.value = { ...amendErrors.value, room_id: t('stayview.selectAtLeastOneRoom') }
+      return
+    }
+    if (ids.length === 1) {
+      const individualPayload = { ...payload }
+      delete individualPayload.room_id
+      amendModal.value = false
+      await runStayAction(() => reservationApi.amendIndividualStay(ids[0], individualPayload), ids[0])
+      if (actionError.value) amendModal.value = true
       return
     }
     // Never release the unticked rooms: amending one guest's stay must leave
@@ -6791,9 +6920,9 @@ function bookingSnapshotKeys(form) {
 
 /** Providers (M-Pesa, CRDB, …) valid for the selected advance method. */
 const bookingAdvanceProviderOptions = computed(() =>
-  providersFor(bookingForm.value.advance_payment_method).map((provider) => ({
+  providersFor(bookingForm.value.advance_payment_method, authStore.user?.tenant?.payment_accounts).map((provider) => ({
     value: provider,
-    label: paymentProviderLabel(provider),
+    label: accountLabel(provider, authStore.user?.tenant?.payment_accounts) || paymentProviderLabel(provider),
   })),
 )
 
@@ -6830,6 +6959,7 @@ function resetBookingForm() {
     advance_payment: 0,
     advance_payment_method: '',
     advance_payment_provider: '',
+    advance_payment_account: '',
     advance_payment_date: today,
     company_name: '',
     business_source: 'walk_in',
@@ -6871,7 +7001,16 @@ watch(
 watch(
   () => bookingForm.value.advance_payment_method,
   (method) => {
-    if (!requiresProvider(method)) bookingForm.value.advance_payment_provider = ''
+    if (!requiresProvider(method)) {
+      bookingForm.value.advance_payment_provider = ''
+      bookingForm.value.advance_payment_account = ''
+    }
+  },
+)
+watch(
+  () => bookingForm.value.advance_payment_provider,
+  (provider) => {
+    bookingForm.value.advance_payment_account = configuredAccountLabel(provider, authStore.user?.tenant?.payment_accounts)
   },
 )
 
@@ -7132,9 +7271,11 @@ async function submitBooking(mode = 'reservation') {
     if (!payload.advance_payment_method) {
       delete payload.advance_payment_method
       delete payload.advance_payment_provider
+      delete payload.advance_payment_account
       delete payload.advance_payment_date
     } else if (!requiresProvider(payload.advance_payment_method)) {
       delete payload.advance_payment_provider
+      delete payload.advance_payment_account
     }
     // total_amount is a live two-way binding seeded from bookingTotal (see the
     // watch below), so it always reflects nights × rate unless the desk typed an

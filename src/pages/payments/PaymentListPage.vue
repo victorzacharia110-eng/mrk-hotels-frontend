@@ -29,10 +29,12 @@
           :load-all="loadAllPayments"
           :columns="[
             { key: 'transaction_reference', label: $t('payments.tablePayment') },
-            { key: 'created_at', label: $t('common.date') },
+            { key: 'payment_date', label: $t('payments.paymentDate') },
             { key: 'paid_by', label: $t('payments.tablePayer') },
             { key: 'amount', label: $t('payments.amount') },
-            { key: 'payment_method', label: $t('payments.method') },
+            { key: 'payment_provider', label: $t('payments.provider') },
+            { key: 'payment_account', label: $t('payments.account') },
+            { key: 'received_by_name', label: $t('payments.receivedBy') },
             { key: 'payment_status', label: $t('common.status') },
           ]"
         />
@@ -101,6 +103,7 @@
             <th scope="col">{{ $t('payments.tablePayer') }}</th>
             <th scope="col">{{ $t('payments.amount') }}</th>
             <th scope="col">{{ $t('payments.method') }}</th>
+            <th scope="col">{{ $t('payments.receivedBy') }}</th>
             <th scope="col">{{ $t('common.status') }}</th>
             <th scope="col">{{ $t('common.actions') }}</th>
           </tr>
@@ -119,7 +122,7 @@
               <strong class="mono">{{
                 p.transaction_reference || p.payment_id.slice(0, 8)
               }}</strong>
-              <div class="muted">{{ formatDate(p.created_at) }}</div>
+              <div class="muted">{{ formatDate(p.payment_date || p.created_at) }}</div>
             </td>
             <td>
               <span v-if="p.reservation"
@@ -144,7 +147,9 @@
                 </span>
                 <span v-else class="capitalize">{{ methodLabel(p.payment_method) }}</span>
               </span>
+              <div v-if="p.payment_account" class="muted account-cell">{{ p.payment_account }}</div>
             </td>
+            <td>{{ p.received_by_name || '-' }}</td>
             <td>
               <span class="badge" :class="statusBadge(p.payment_status)">{{
                 p.payment_status
@@ -253,6 +258,7 @@
             <PaymentMethodSelect
               v-model:method="form.payment_method"
               v-model:provider="form.payment_provider"
+              v-model:account="form.payment_account"
             />
             <!-- Cash has no receipt reference; bank and mobile money quote the
                  guest's so the money can be matched later. -->
@@ -305,14 +311,21 @@ import { useBulkSelection } from '@/composables/useBulkSelection'
 import { collectAllRows } from '@/utils/export'
 import PaymentMethodSelect from '@/components/PaymentMethodSelect.vue'
 import ProviderLogo from '@/components/ProviderLogo.vue'
-import { METHOD_CASH, PAYMENT_METHODS, effectivePaymentMethods, requiresProvider } from '@/utils/payments'
+import {
+  METHOD_CASH,
+  PAYMENT_METHODS,
+  accountLabel,
+  effectivePaymentMethods,
+  providerLabel as providerLabelText,
+  requiresProvider,
+} from '@/utils/payments'
 
 import { useTenantCurrency } from '@/utils/currency'
 import { useBusinessDateStore } from '@/stores/businessDate'
 
 const { curCode } = useTenantCurrency()
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const authStore = useAuthStore()
 const businessDateStore = useBusinessDateStore()
 
@@ -370,6 +383,7 @@ const form = reactive({
   amount: null,
   payment_method: 'cash',
   payment_provider: '',
+  payment_account: '',
   transaction_reference: '',
   paid_by: '',
   notes: '',
@@ -381,6 +395,12 @@ watch(
   () => form.payment_method,
   (method) => {
     if (method === METHOD_CASH) form.transaction_reference = ''
+  },
+)
+watch(
+  () => form.payment_provider,
+  (provider) => {
+    form.payment_account = accountLabel(provider, authStore.user?.tenant?.payment_accounts)
   },
 )
 
@@ -505,6 +525,7 @@ function openCreate() {
   form.amount = null
   form.payment_method = 'cash'
   form.payment_provider = ''
+  form.payment_account = ''
   form.transaction_reference = ''
   form.paid_by = ''
   form.notes = ''
@@ -521,7 +542,8 @@ function methodLabel(method) {
 
 /** Translates a payment provider code into its display label. */
 function providerLabel(provider) {
-  return t(`paymentFields.providers.${provider}`)
+  const key = `paymentFields.providers.${provider}`
+  return te(key) ? t(key) : providerLabelText(provider)
 }
 
 /** Closes the record-payment modal. */
@@ -748,6 +770,11 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.account-cell {
+  font-size: 12px;
+  margin-top: 4px;
 }
 
 .pagination {

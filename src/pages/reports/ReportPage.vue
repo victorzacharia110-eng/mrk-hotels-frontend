@@ -470,6 +470,19 @@
             </div>
             <div v-else class="muted">{{ $t('reports.noRevenue') }}</div>
           </div>
+
+          <div class="card dash-section">
+            <div class="section-header-row">
+              <h2><i class="fas fa-chart-pie"></i> {{ $t('reports.revenueByProvider') }}</h2>
+            </div>
+            <div v-if="revenue.by_provider && Object.keys(revenue.by_provider).length" class="method-list">
+              <div v-for="(amount, provider) in revenue.by_provider" :key="provider" class="method-row">
+                <span class="capitalize">{{ String(provider).replace(/_/g, ' ') }}</span>
+                <span class="price">{{ curCode() }} {{ Number(amount).toLocaleString() }}</span>
+              </div>
+            </div>
+            <div v-else class="muted">{{ $t('reports.noRevenue') }}</div>
+          </div>
         </div>
 
         <!-- Daily occupancy rendered as a simple column chart -->

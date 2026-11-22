@@ -192,6 +192,7 @@ export function orderReceiptLines(order, opts = {}) {
     lines.push([padLine('Payment', 'center')])
     lines.push([itemRow('Method:', friendlyLabel(payment.method, PAYMENT_METHOD_LABELS))])
     if (payment.provider) lines.push([itemRow('Provider:', friendlyLabel(payment.provider, PAYMENT_PROVIDER_LABELS))])
+    if (payment.account) lines.push([itemRow('Account:', String(payment.account))])
     if (payment.payment_id) lines.push([itemRow('Receipt No:', String(payment.payment_id))])
     if (payment.transaction_reference) lines.push([itemRow('Reference:', String(payment.transaction_reference))])
     if (payment.status) lines.push([itemRow('Status:', friendlyLabel(payment.status))])
