@@ -3966,35 +3966,38 @@ const guestGrid = computed(() => {
   ]
 })
 
-/** Per-night room charge rows derived from the stay dates and room rate. */
+/** Per-night room charge rows derived from the stay dates and stored bill. */
 const chargeNights = computed(() => {
   const res = folio.value?.reservation || activeBar.value || {}
   const cIn = res.check_in_date || res.arrival_date || res.arrivalIso
   const cOut = res.check_out_date || res.departure_date || res.departureIso
   if (!cIn || !cOut) return []
-  const rate = Number(res.room?.price_per_night || 0)
-  if (!(rate > 0)) return []
+  const total = Number(res.total_amount || 0)
+  if (!(total > 0)) return []
   const nights = []
   for (let d = parseDate(cIn); d < parseDate(cOut); d = addDays(d, 1)) {
-    nights.push({ date: formatDateDMY(d), day: d.toLocaleDateString([], { weekday: 'short' }), rate })
+    nights.push({ date: formatDateDMY(d), day: d.toLocaleDateString([], { weekday: 'short' }) })
   }
-  return nights
+  if (!nights.length) return []
+  const round2 = (v) => Math.round((Number(v) + Number.EPSILON) * 100) / 100
+  const share = round2(total / nights.length)
+  let remaining = total
+  return nights.map((n, i) => {
+    const rate = i === nights.length - 1 ? round2(remaining) : share
+    remaining -= rate
+    return { ...n, rate }
+  })
 })
 const nightTotal = computed(() => chargeNights.value.reduce((s, n) => s + n.rate, 0))
 
 /**
- * Rental (room-rate) rows for the displayed folio. Splitting `total_amount`
- * across the stay's nights keeps the ledger breakdown exact even when the
- * nightly rate is missing from the room, so the rows always sum precisely to
- * the rental half of the top TOTAL ROOM CHARGES card.
+ * Rental rows for the displayed folio. Splitting the stored `total_amount`
+ * across the stay's nights keeps the ledger breakdown exact when a room charge
+ * is edited: the rows always sum to the rental half of the top card, not to a
+ * room rate that can no longer represent the saved bill.
  */
 function buildRentalRows(res) {
   if (!res) return []
-  // A folio that carries no bill of its own (a split/new folio created with a
-  // zero total, or a nothing-owed stay) must never conjure the nightly rent:
-  // it shares the room with the original stay, so the room's price would
-  // otherwise fabricate charges the guest never owes on this folio. Only the
-  // items actually moved onto it make up its bill.
   if (!(Number(res.total_amount || 0) > 0)) return []
   const round2 = (v) => Math.round((Number(v) + Number.EPSILON) * 100) / 100
   const cIn = res.check_in_date || res.arrival_date || res.arrivalIso
@@ -4003,18 +4006,14 @@ function buildRentalRows(res) {
   if (cIn && cOut) {
     for (let d = parseDate(cIn); d < parseDate(cOut); d = addDays(d, 1)) days.push(d)
   }
-  // The nightly rate is the live price of a night: prefer rate × nights so a
-  // stay edit (extend/shorten) reflects at once even when the backend's stored
-  // total_amount is stale. Fall back to the quoted total only when the room
-  // carries no known rate.
-  const nightly = Number(res.room?.price_per_night || 0)
-  const total = nightly > 0 && days.length ? round2(nightly * days.length) : Number(res?.total_amount || 0)
+  const total = Number(res.total_amount || 0)
   if (!(total > 0)) return []
   if (!days.length) return [{ date: null, time: null, day: '', amount: round2(total) }]
   const count = days.length
+  const share = round2(total / count)
   let remaining = total
   return days.map((d, i) => {
-    const amount = i === count - 1 ? round2(remaining) : round2(nightly > 0 ? nightly : total / count)
+    const amount = i === count - 1 ? round2(remaining) : share
     remaining -= amount
     return { date: formatDateDMY(d), time: isoKey(d), day: d.toLocaleDateString([], { weekday: 'short' }), amount }
   })

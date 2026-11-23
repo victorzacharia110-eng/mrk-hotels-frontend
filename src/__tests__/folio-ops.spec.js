@@ -702,6 +702,50 @@ describe('folio operations on the stay view', () => {
     expect(wrapper.vm.folioTotals.charges).toBe(300000)
   })
 
+  it('keeps ledger and night totals in step with edited room charges', async () => {
+    await mountDashboard()
+    const payload = folioPayload()
+    payload.reservation.check_in_date = '2026-11-01'
+    payload.reservation.check_out_date = '2026-11-04'
+    payload.reservation.total_amount = 300000
+    payload.reservation.room.price_per_night = 100000
+    payload.folio.total_amount = 300000
+    payload.folio_entries = [
+      { folio_entry_id: 1, type: 'room_charge', amount: 150000, date: '2026-11-01', description: 'Room & taxes' },
+    ]
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.vm.nightTotal).toBe(300000)
+    expect(wrapper.vm.folioTotals.charges).toBe(300000)
+
+    wrapper.vm.folio = {
+      ...payload,
+      reservation: { ...payload.reservation, total_amount: 250000 },
+      folio: { ...payload.folio, total_amount: 250000 },
+      folio_entries: [{ ...payload.folio_entries[0], amount: 100000 }],
+    }
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.vm.nightTotal).toBe(250000)
+    expect(wrapper.vm.folioTotals.charges).toBe(250000)
+    expect(wrapper.vm.folioEntries.filter((e) => e.rental).reduce((s, e) => s + e.amount, 0)).toBe(150000)
+
+    wrapper.vm.folio = {
+      ...payload,
+      reservation: { ...payload.reservation, total_amount: 350000 },
+      folio: { ...payload.folio, total_amount: 350000 },
+      folio_entries: [{ ...payload.folio_entries[0], amount: 200000 }],
+    }
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.vm.nightTotal).toBe(350000)
+    expect(wrapper.vm.folioTotals.charges).toBe(350000)
+  })
+
   it('keeps a single legacy rental row when the stay has no usable dates', async () => {
     await mountDashboard()
     const payload = folioPayload()
