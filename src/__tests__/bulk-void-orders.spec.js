@@ -103,6 +103,16 @@ describe('open-order card template', () => {
     expect(pad).toMatch(/\$t\('orderTaker\.price'\)/)
     expect(pad).toMatch(/\$t\('orderTaker\.amount'\)/)
     expect(pad).not.toMatch(/item-status-pill|item-advance/)
+
+    const itemsAt = pad.indexOf('<ul class="open-items">')
+    const items = pad.slice(itemsAt, pad.indexOf('</ul>', itemsAt))
+    expect(items).not.toMatch(/pending|bell/i)
+    expect(items).not.toMatch(/<button/)
+  })
+
+  it('renders the relocated bill actions as a horizontal top panel', () => {
+    expect(pad).toMatch(/\.open-bill-actions\s*\{[^}]*display:\s*flex/)
+    expect(en.orderTaker).not.toHaveProperty('markPreparing')
   })
 })
 
@@ -166,6 +176,11 @@ describe('cashier summary: review follow-ups', () => {
   it('shows the void reason on the voided order row', () => {
     expect(cashier).toMatch(/order\.status === 'cancelled' && order\.void_reason/)
     expect(cashier).toMatch(/class="void-reason"/)
+  })
+
+  it('imports the formatter used by the voided order drawer', () => {
+    expect(cashier).toMatch(/import \{[^}]*formatDateTime[^}]*\} from '@\/utils\/dates'/)
+    expect(cashier).toMatch(/formatDateTime\(drawerOrder\.voided_at\)/)
   })
 
   it('closes the detail drawer after a successful void', () => {

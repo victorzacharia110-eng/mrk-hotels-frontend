@@ -491,7 +491,7 @@ import { restorePrinter, printerState, printerSupported } from '@/utils/printer'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { orderPrintLines } from '@/utils/orderPrint'
 import { hasPrintableLines } from '@/utils/receipts'
-import { formatOrderDateTime, formatTime } from '@/utils/dates'
+import { formatDateTime, formatOrderDateTime, formatTime } from '@/utils/dates'
 import { toast } from '@/utils/toast'
 
 const { t, te } = useI18n()

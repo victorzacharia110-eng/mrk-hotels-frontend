@@ -4750,7 +4750,6 @@
     "loadOrdersError": "Failed to load open orders.",
     "markReady": "Ready",
     "markServed": "Served",
-    "markPreparing": "Start preparing",
     "markCompleted": "Complete",
     "collectPayment": "Collect Payment",
     "billToRoom": "Bill to room",

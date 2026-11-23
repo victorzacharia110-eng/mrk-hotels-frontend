@@ -5017,6 +5017,13 @@ function onKey(e) {
   background: #fafafa;
 }
 
+.open-bill-actions {
+  display: flex;
+  align-items: center;
+  border-color: #c7d2fe;
+  background: #eef2ff;
+}
+
 .open-btn {
   display: inline-flex;
   align-items: center;
