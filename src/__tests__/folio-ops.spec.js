@@ -467,6 +467,44 @@ describe('folio operations on the stay view', () => {
     expect(document.querySelector('[role="alertdialog"]')).toBeNull()
   })
 
+  it('blocks folio edits and voids for dates already closed by night audit', async () => {
+    await mountDashboard()
+    const { useAuthStore } = await import('@/stores/auth')
+    const { useBusinessDateStore } = await import('@/stores/businessDate')
+    useAuthStore().user = { user_role: 'manager', full_name: 'Manager', role_level: 80 }
+    useBusinessDateStore().latestClosedDate = '2026-11-03'
+
+    const payload = folioPayload()
+    payload.folio_entries.push({
+      folio_entry_id: 9,
+      type: 'extra_charge',
+      amount: 5000,
+      date: '2026-11-04',
+      description: 'Open charge',
+    })
+    wrapper.vm.folio = payload
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    const closed = wrapper.vm.folioEntries.find((e) => e.entryId === 1)
+    const open = wrapper.vm.folioEntries.find((e) => e.entryId === 9)
+    expect(closed.businessDateClosed).toBe(true)
+    expect(closed.editable).toBe(false)
+    expect(closed.canEditAction).toBe(false)
+    expect(wrapper.vm.canVoidEntry(closed)).toBe(false)
+    expect(open.businessDateClosed).toBe(false)
+    expect(open.editable).toBe(true)
+    expect(wrapper.vm.canVoidEntry(open)).toBe(true)
+
+    api.reservationApi.folioEntryUpdate.mockClear()
+    api.reservationApi.folioEntryVoid.mockClear()
+    wrapper.vm.requestEditEntry(closed)
+    wrapper.vm.requestVoidEntry(closed)
+    await flushPromises()
+    expect(api.reservationApi.folioEntryUpdate).not.toHaveBeenCalled()
+    expect(api.reservationApi.folioEntryVoid).not.toHaveBeenCalled()
+  })
+
   it('lists completed payments and refunds the selected one', async () => {
     await mountDashboard()
     const { useAuthStore } = await import('@/stores/auth')

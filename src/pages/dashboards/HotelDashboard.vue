@@ -2323,7 +2323,7 @@
               <i class="fas fa-download" aria-hidden="true"></i> {{ $t('folio.download') }}
             </button>
           </li>
-          <li v-if="entryMenu.entry.entryId && !entryMenu.entry.moveLine">
+          <li v-if="entryMenu.entry.entryId && !entryMenu.entry.moveLine && !entryMenu.entry.businessDateClosed">
             <button type="button" role="menuitem" class="danger" :disabled="actionBusy"
               @click="requestVoidEntry(entryMenu.entry)">
               <i class="fas fa-trash-can" aria-hidden="true"></i>
@@ -4054,6 +4054,14 @@ function isDonorEmptyFolio(f) {
 
 const donorEmptyFolio = computed(() => isDonorEmptyFolio(ledgerFolio.value))
 
+function isClosedFolioBusinessDate(date) {
+  const latest = businessDateStore.latestClosedDate
+  if (!latest || !date) return false
+  const entryDate = String(date).slice(0, 10)
+  const latestClosed = String(latest).slice(0, 10)
+  return Boolean(entryDate) && entryDate <= latestClosed
+}
+
 function buildLedgerEntries(src) {
   const f = src || null
   if (!f) return []
@@ -4164,10 +4172,12 @@ function buildLedgerEntries(src) {
       : null
     const fromOther = e.source_reservation_id && e.source_reservation_id !== f.reservation?.reservation_id
     const fromPartner = fromOther && !toPartner ? moverInfo(e.source_reservation_id) : null
+    const entryDate = e.business_date || e.date
+    const businessDateClosed = isClosedFolioBusinessDate(entryDate)
     entries.push({
       key: `e${e.folio_entry_id}`,
-      date: e.date,
-      time: e.posted_at || e.date || '',
+      date: entryDate,
+      time: e.posted_at || entryDate || '',
       type: e.type,
       // Desk-added charges (add charge, adjustment, inclusion) all read as
       // EXTRA CHARGES on the folio; their own label stays in the description.
@@ -4205,10 +4215,13 @@ function buildLedgerEntries(src) {
       hasAttachment: Boolean(e.attachment_url && e.folio_entry_id),
       attachmentName: e.attachment_name || '',
       canEditAction: ['room_charge', 'extra_charge', 'adjustment', 'discount', 'inclusion'].includes(e.type)
-        && e.folio_entry_id != null,
+        && e.folio_entry_id != null
+        && !businessDateClosed,
       editable: ['room_charge', 'extra_charge', 'adjustment', 'discount', 'inclusion'].includes(e.type)
         && e.folio_entry_id != null
+        && !businessDateClosed
         && (canManageFolioOps.value || isManualFolioType(e.type) || (!restrictedFolioType(e.type) && !folioLocked.value)),
+      businessDateClosed,
       movedFrom: fromPartner || null,
       movedTo: toPartner || null,
     })
@@ -5259,7 +5272,7 @@ function isManualFolioType(type) {
 }
 
 function canVoidEntry(entry) {
-  if (!entry?.entryId || entry.moveLine) return false
+  if (!entry?.entryId || entry.moveLine || entry.businessDateClosed) return false
   if (entry.hasAttachment) return true
   if (canManageFolioOps.value) return true
   return isManualFolioType(entry.type) || (!restrictedFolioType(entry.type) && !folioLocked.value)
