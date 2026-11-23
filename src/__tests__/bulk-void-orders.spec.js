@@ -199,9 +199,9 @@ describe('cashier summary: review follow-ups', () => {
     expect(pad).toMatch(/continueOrderId\.value = order\.order_id/)
   })
 
-  it('keeps after-midnight tickets on the open business date', () => {
-    expect(cashier).toMatch(/date\.value < workingDateStore\.workingDate\)\s*base\.date = date\.value\s*else\s*base\.from_date = date\.value/)
-    expect(pad).toMatch(/if \(isOpenToday\.value\) params\.from_date = openDate\.value\s+else params\.date = openDate\.value/)
+  it('keeps tickets on the selected business date', () => {
+    expect(cashier).toMatch(/if \(date\.value\) base\.date = date\.value/)
+    expect(pad).toMatch(/if \(openDate\.value\) params\.date = openDate\.value/)
   })
 })
 

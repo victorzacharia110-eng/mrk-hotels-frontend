@@ -759,12 +759,7 @@ async function load() {
   try {
     const base = { per_page: 100, outlet_id: selectedOutlet.value?.outlet_id || undefined }
 
-    // Older dates are exact; the open business date is a lower bound so
-    // tickets created after midnight still join the day that has not closed.
-    if (date.value) {
-      if (date.value < workingDateStore.workingDate) base.date = date.value
-      else base.from_date = date.value
-    }
+    if (date.value) base.date = date.value
 
     const all = []
     let pageNo = 1

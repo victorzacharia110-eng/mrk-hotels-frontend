@@ -271,7 +271,12 @@ describe('food ticket on the waiter order-taker panel', () => {
   it('includes the selected VIP status when creating an order', async () => {
     await sendTicket({ isVip: true })
 
-    expect(api.store).toHaveBeenCalledWith(expect.objectContaining({ is_vip: true }))
+    expect(api.store).toHaveBeenCalledWith(
+      expect.objectContaining({
+        is_vip: true,
+        business_date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      }),
+    )
     expect(api.update).not.toHaveBeenCalled()
   })
 

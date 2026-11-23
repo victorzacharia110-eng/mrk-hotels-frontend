@@ -72,7 +72,7 @@ import OrderDateNav from '@/components/cashier/OrderDateNav.vue'
 import OrderPeekModal from '@/components/cashier/OrderPeekModal.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useWorkingDateStore } from '@/stores/workingDate'
-import { formatTime, localDateOf, todayISO } from '@/utils/dates'
+import { formatTime } from '@/utils/dates'
 
 const { t } = useI18n()
 const workingDateStore = useWorkingDateStore()
@@ -123,18 +123,10 @@ function money(value) {
 async function load() {
   loading.value = true
   try {
-    const params = { order_type: 'takeaway', per_page: 100 }
+    const params = { order_type: 'takeaway', per_page: 100, date: date.value }
     if (selectedOutlet.value?.outlet_id) params.outlet_id = selectedOutlet.value.outlet_id
-    if (date.value && date.value < todayISO()) params.date = date.value
     const { data } = await orderApi.index(params)
-    const rows = data.data || []
-    orders.value = params.date
-      ? rows
-      : rows.filter((o) => {
-          const stamp = o.created_at
-          if (stamp) return localDateOf(stamp) === date.value
-          return String(o.order_date || '').slice(0, 10) === date.value
-        })
+    orders.value = data.data || []
   } finally {
     loading.value = false
   }

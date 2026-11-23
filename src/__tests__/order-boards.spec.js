@@ -162,11 +162,14 @@ describe('Cashier order boards — previous orders by date', () => {
     const yesterday = addDays(today, -1)
     const todays = ORDER({ order_id: 1, order_number: 'TA-TODAY', order_date: today, created_at: `${today}T10:00:00` })
     const old = ORDER({ order_id: 2, order_number: 'TA-OLD', order_date: yesterday, created_at: `${yesterday}T09:00:00` })
-    api.orderIndex.mockResolvedValueOnce({ data: { data: [todays, old] } })
+    api.orderIndex.mockResolvedValueOnce({ data: { data: [todays] } })
 
     const wrapper = mount(CashierTakeAwayPage, { global: { plugins: [i18n] } })
     await flushPromises()
 
+    expect(api.orderIndex).toHaveBeenCalledWith(
+      expect.objectContaining({ order_type: 'takeaway', date: today }),
+    )
     expect(wrapper.text()).toContain('TA-TODAY')
     expect(wrapper.text()).not.toContain('TA-OLD')
     expect(wrapper.text()).toContain(formatTime(todays.created_at))
@@ -196,7 +199,7 @@ describe('Cashier order boards — previous orders by date', () => {
     await flushPromises()
 
     expect(api.orderIndex).toHaveBeenCalledWith(
-      expect.objectContaining({ order_type: 'no_charge', from_date: today }),
+      expect.objectContaining({ order_type: 'no_charge', date: today }),
     )
     expect(wrapper.text()).toContain('NC-TODAY')
     expect(wrapper.text()).not.toContain('NC-OLD')
@@ -264,10 +267,10 @@ describe('Cashier order boards — previous orders by date', () => {
     wrapper.unmount()
   })
 
-  it('No Charge keeps orders created after midnight on the open business date', async () => {
+  it('No Charge filters by the open business date', async () => {
     const today = todayISO()
     const openDate = addDays(today, -1)
-    const lateOrder = ORDER({ order_id: 5, order_number: 'NC-LATE', order_type: 'no_charge', order_date: openDate, created_at: `${today}T00:30:00` })
+    const lateOrder = ORDER({ order_id: 5, order_number: 'NC-LATE', order_type: 'no_charge', order_date: openDate, created_at: `${openDate}T00:30:00` })
     const ensureLoaded = vi.fn().mockResolvedValue()
 
     vi.resetModules()
@@ -281,8 +284,8 @@ describe('Cashier order boards — previous orders by date', () => {
     await flushPromises()
 
     expect(ensureLoaded).toHaveBeenCalled()
-    expect(api.orderIndex.mock.calls[0][0]).toMatchObject({ from_date: openDate })
-    expect(api.orderIndex.mock.calls[0][0]).not.toHaveProperty('date')
+    expect(api.orderIndex.mock.calls[0][0]).toMatchObject({ date: openDate })
+    expect(api.orderIndex.mock.calls[0][0]).not.toHaveProperty('from_date')
     expect(wrapper.text()).toContain('NC-LATE')
     expect(wrapper.text()).not.toContain('NC-OLD')
 

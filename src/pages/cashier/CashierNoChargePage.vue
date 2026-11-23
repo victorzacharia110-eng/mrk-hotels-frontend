@@ -174,10 +174,7 @@ async function load() {
       search: search.value.trim() || undefined,
       status: statusFilter.value || undefined,
     }
-    if (date.value) {
-      if (date.value < workingDateStore.workingDate) params.date = date.value
-      else params.from_date = date.value
-    }
+    if (date.value) params.date = date.value
     const { data } = await orderApi.index(params)
     const rows = data.data || []
     orders.value = rows

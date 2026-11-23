@@ -126,7 +126,11 @@ describe('no-charge account picker (item 7)', () => {
     await placeOrder()
 
     expect(store).toHaveBeenCalledWith(
-      expect.objectContaining({ is_no_charge: true, no_charge_account: 'Uchumi Hotel' }),
+      expect.objectContaining({
+        is_no_charge: true,
+        no_charge_account: 'Uchumi Hotel',
+        business_date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      }),
     )
   })
 

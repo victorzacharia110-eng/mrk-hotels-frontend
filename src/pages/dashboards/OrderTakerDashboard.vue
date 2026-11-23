@@ -1682,10 +1682,7 @@ async function loadOpenOrders() {
       per_page: 50,
       ...waiterScopeParams(),
     }
-    if (openDate.value) {
-      if (isOpenToday.value) params.from_date = openDate.value
-      else params.date = openDate.value
-    }
+    if (openDate.value) params.date = openDate.value
     const res = await orderApi.index(params)
     const rows = Array.isArray(res.data) ? res.data : res.data?.data || []
     const filtered = floorStaffOrders(rows)
@@ -3028,6 +3025,7 @@ async function sendOrder() {
         // shelf the service line happens to name instead of the one the waiter
         // is standing behind.
         outlet_id: selectedOutlet.value?.outlet_id || null,
+        business_date: workingDateStore.workingDate,
         table_number: form.value.table_number || null,
         covers: form.value.covers || null,
         is_vip: !!form.value.is_vip,

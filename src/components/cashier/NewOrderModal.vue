@@ -290,6 +290,7 @@ import SearchableSelect from '@/components/SearchableSelect.vue'
 import AccompanimentManager from '@/components/AccompanimentManager.vue'
 import { usePrintSettingsStore } from '@/stores/printSettings'
 import { useAuthStore } from '@/stores/auth'
+import { useWorkingDateStore } from '@/stores/workingDate'
 import { orderPrintLines } from '@/utils/orderPrint'
 import { hasPrintableLines } from '@/utils/receipts'
 import { isGrillMenuItem, canManageAccompaniments } from '@/utils/menuAccompaniment'
@@ -316,6 +317,8 @@ const emit = defineEmits(['close', 'created'])
 const { t } = useI18n()
 const printStore = usePrintSettingsStore()
 const authStore = useAuthStore()
+const workingDateStore = useWorkingDateStore()
+const businessDate = computed(() => workingDateStore.workingDate)
 
 /** The logged-in cashier/bartender's display name — used to default the waiter. */
 const selfName = computed(
@@ -626,6 +629,7 @@ async function submit() {
     const payload = {
       department: dept.value,
       outlet_id: selectedOutlet.value?.outlet_id || null,
+      business_date: businessDate.value,
       order_type: ORDER_TYPE[props.mode],
       table_number: props.tableNumber,
       ...header,
