@@ -39,8 +39,9 @@
             <button type="button" class="home-drawer-btn" :aria-label="$t('nav.home')" @click="openDepartments">
               <i class="fas fa-home" aria-hidden="true"></i>
             </button>
-            <button class="hamburger side-hamburger" :class="{ active: sideOpen }" @click="openDepartmentPages"
-              :aria-expanded="sideOpen" :aria-label="$t('nav.menuToggle')" aria-controls="staff-drawer">
+            <button v-if="isAppMode && homeOptionSelected" class="hamburger side-hamburger"
+              :class="{ active: sideOpen }" @click="openDepartmentPages" :aria-expanded="sideOpen"
+              :aria-label="$t('nav.menuToggle')" aria-controls="staff-drawer">
               <span></span><span></span><span></span>
             </button>
           </div>
@@ -746,6 +747,7 @@ const navOpen = ref(false)
 const sideOpen = ref(false)
 const drawerMode = ref('pages')
 const activeDepartment = ref('')
+const homeOptionSelected = ref(false)
 const showNotifDropdown = ref(false)
 
 /** Department picker shown by the home icon, with each department's landing page. */
@@ -767,9 +769,9 @@ const departments = computed(() => [
 const departmentModuleKeys = {
   dashboard: ['dashboard', 'overview'],
   'front-desk': [
-    'front-desk', 'reception-reservations', 'reception-payments', 'rates', 'dashboard',
-    'reservations', 'rooms', 'guests', 'payments', 'booking-requisitions', 'night-audit',
-    'distribution', 'activity-log-report', 'overrides', 'reports', 'group-front-desk',
+    'front-desk', 'reception-reservations', 'reception-payments', 'reception-comms', 'reception-admin',
+    'rates', 'dashboard', 'reservations', 'rooms', 'guests', 'payments', 'booking-requisitions',
+    'night-audit', 'distribution', 'activity-log-report', 'overrides', 'reports', 'group-front-desk',
   ],
   'restaurant-bar': [
     'restaurant-bar', 'group-fnb', 'take-order', 'orders', 'menu', 'outlets',
@@ -803,6 +805,9 @@ function openDepartmentPages() {
 
 function selectDepartment(department) {
   activeDepartment.value = department.key
+  homeOptionSelected.value = true
+  openAcc.value = department.key
+  openSubAcc.value = ''
   drawerMode.value = 'pages'
   sideOpen.value = false
   router.push(department.to)
@@ -1708,6 +1713,9 @@ watch(
 async function handleLogout() {
   navOpen.value = false
   outletGateOpen.value = false
+  sideOpen.value = false
+  homeOptionSelected.value = false
+  activeDepartment.value = ''
   await authStore.logout()
   router.push('/')
 }
@@ -1715,6 +1723,11 @@ async function handleLogout() {
 // Close the mobile menu when switching between the app and directory modes.
 watch(isAppMode, () => {
   navOpen.value = false
+  if (!isAppMode.value) {
+    sideOpen.value = false
+    homeOptionSelected.value = false
+    activeDepartment.value = ''
+  }
 })
 
 /**

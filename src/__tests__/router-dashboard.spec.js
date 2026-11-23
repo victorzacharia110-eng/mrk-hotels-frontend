@@ -213,3 +213,56 @@ describe('dashboard in the receptionist sidebar', () => {
     expect(source).toContain("'is-exact': item.exact")
   })
 })
+
+describe('staff drawer entry after choosing a home option', () => {
+  const source = readFileSync(layoutPath, 'utf8')
+
+  it('keeps the home button visible but hides the hamburger until selection', () => {
+    expect(source).toContain('<div v-if="isAppMode" class="app-nav-triggers">')
+    expect(source).toMatch(/<button type="button" class="home-drawer-btn"[\s\S]{0,160}fa-home/)
+    expect(source).toMatch(/<button v-if="isAppMode && homeOptionSelected" class="hamburger side-hamburger"/)
+  })
+
+  it('arms the scoped hamburger in selectDepartment', () => {
+    const start = source.indexOf('function selectDepartment(department) {')
+    const end = source.indexOf('function inferDepartment(path)', start)
+    expect(start).toBeGreaterThan(-1)
+    expect(end).toBeGreaterThan(start)
+    const block = source.slice(start, end)
+    expect(block).toContain('homeOptionSelected.value = true')
+    expect(block).toContain('openAcc.value = department.key')
+    expect(block).toContain('router.push(department.to)')
+  })
+
+  it('keeps the receptionist front-desk groups in the front-desk scope', () => {
+    const start = source.indexOf("  'front-desk': [")
+    const end = source.indexOf("  'restaurant-bar': [", start)
+    expect(start).toBeGreaterThan(-1)
+    expect(end).toBeGreaterThan(start)
+    const block = source.slice(start, end)
+    for (const key of [
+      'reception-reservations',
+      'reception-payments',
+      'reception-comms',
+      'reception-admin',
+      'rates',
+    ]) {
+      expect(block).toContain(`'${key}'`)
+    }
+  })
+
+  it('clears the prepared hamburger on logout and when leaving app mode', () => {
+    const logoutStart = source.indexOf('async function handleLogout() {')
+    const logoutEnd = source.indexOf('// Close the mobile menu', logoutStart)
+    const logoutBlock = source.slice(logoutStart, logoutEnd)
+    expect(logoutBlock).toContain('homeOptionSelected.value = false')
+    expect(logoutBlock).toContain('sideOpen.value = false')
+    expect(logoutBlock).toContain("activeDepartment.value = ''")
+
+    const watcherStart = source.indexOf('watch(isAppMode, () => {')
+    const watcherEnd = source.indexOf('})', watcherStart)
+    const watcherBlock = source.slice(watcherStart, watcherEnd)
+    expect(watcherBlock).toContain('if (!isAppMode.value)')
+    expect(watcherBlock).toContain('homeOptionSelected.value = false')
+  })
+})

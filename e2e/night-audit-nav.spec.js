@@ -6,6 +6,13 @@ test('receptionist uses the night audit accordion: run, insert transaction, and 
   await page.locator('input[type="password"]').fill('password')
   await page.getByRole('button', { name: /sign in/i }).click()
   await expect(page).toHaveURL(/\/app$/)
+  await expect(page.locator('.home-drawer-btn')).toBeVisible()
+  await expect(page.locator('.side-hamburger')).toHaveCount(0)
+
+  await page.locator('.home-drawer-btn').click()
+  await expect(page.locator('#staff-drawer .drawer-department', { hasText: 'Front Desk' })).toBeVisible()
+  await page.locator('#staff-drawer .drawer-department', { hasText: 'Front Desk' }).click()
+  await expect(page.locator('.side-hamburger')).toBeVisible()
 
   // Open the staff drawer and expand the Night Audit accordion group.
   await page.locator('.side-hamburger').click()

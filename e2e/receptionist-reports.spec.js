@@ -16,6 +16,14 @@ test('receptionist sees report browser in staff drawer and loads night audit pil
     await page.waitForTimeout(300)
   }
 
+  await expect(page.locator('.home-drawer-btn')).toBeVisible()
+  await expect(page.locator('.side-hamburger')).toHaveCount(0)
+
+  await page.locator('.home-drawer-btn').click()
+  await expect(page.locator('#staff-drawer .drawer-department', { hasText: 'Front Desk' })).toBeVisible()
+  await page.locator('#staff-drawer .drawer-department', { hasText: 'Front Desk' }).click()
+  await expect(page.locator('.side-hamburger')).toBeVisible()
+
   // Staff drawer (sliding sidebar) holds the module links, grouped in accordions.
   await page.locator('.side-hamburger').click()
   await expect(page.locator('#staff-drawer')).toBeVisible()
