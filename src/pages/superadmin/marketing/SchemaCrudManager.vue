@@ -33,7 +33,7 @@
             <td v-for="col in columns" :key="col.key">{{ displayCell(item, col) }}</td>
             <td>
               <div class="row-actions">
-                <button type="button" class="btn btn-sm btn-secondary" @click="openEdit(item)">Edit</button>
+                <button type="button" class="btn btn-sm btn-secondary" @click="openEdit(item)">{{ editLabel }}</button>
                 <button v-if="canDelete" type="button" class="btn btn-sm btn-danger" @click="remove(item)">Delete</button>
               </div>
             </td>
@@ -45,7 +45,7 @@
     <div v-if="showForm" class="modal-overlay" @click.self="closeForm">
       <div class="modal">
         <div class="modal-head">
-          <h3>{{ editing ? 'Edit' : 'Create' }} {{ itemLabel || title }}</h3>
+          <h3>{{ editing ? editLabel : 'Create' }} {{ itemLabel || title }}</h3>
           <button type="button" class="modal-close" @click="closeForm"><i class="fas fa-xmark"></i></button>
         </div>
 
@@ -122,7 +122,7 @@
           <div class="modal-foot">
             <button type="button" class="btn btn-secondary" @click="closeForm">Cancel</button>
             <button type="submit" class="btn btn-primary" :disabled="saving">
-              {{ saving ? 'Saving...' : 'Save' }}
+              {{ saving ? 'Saving...' : saveLabel }}
             </button>
           </div>
         </form>
@@ -143,6 +143,10 @@ const props = defineProps({
   fields: { type: Array, default: () => [] },
   columns: { type: Array, default: null },
   itemLabel: { type: String, default: '' },
+  editLabel: { type: String, default: 'Edit' },
+  saveLabel: { type: String, default: 'Save' },
+  successMessage: { type: String, default: 'Record updated.' },
+  createSuccessMessage: { type: String, default: 'Record created.' },
   idKey: { type: String, default: 'id' },
   createDefaults: { type: Object, default: () => ({}) },
   optionSources: { type: Object, default: () => ({}) },
@@ -355,6 +359,7 @@ async function save() {
   formError.value = ''
   formErrors.value = []
   success.value = ''
+  let message
   try {
     let payload = parsePayload()
     if (props.onBeforeSave) payload = await props.onBeforeSave(payload, { editing: editing.value, form }) || payload
@@ -363,14 +368,15 @@ async function save() {
     if (editing.value) {
       const id = editing.value[props.idKey]
       await props.api.update(id, body)
-      success.value = 'Record updated.'
+      message = props.successMessage
     } else {
       await props.api.store(body)
-      success.value = 'Record created.'
+      message = props.createSuccessMessage
     }
-    showSuccess(success.value)
     closeForm()
     await load()
+    success.value = message
+    showSuccess(success.value)
   } catch (err) {
     if (err instanceof SyntaxError) {
       formError.value = 'Invalid JSON in one of the fields.'
@@ -392,9 +398,9 @@ async function remove(item) {
   success.value = ''
   try {
     await props.api.destroy(id)
+    await load()
     success.value = 'Record deleted.'
     showSuccess(success.value)
-    await load()
   } catch (err) {
     error.value = actionError(err, 'Failed to delete record')
     showError(error.value)

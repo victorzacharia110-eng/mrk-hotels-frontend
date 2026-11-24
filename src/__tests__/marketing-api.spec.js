@@ -64,6 +64,8 @@ describe('marketingApi', () => {
     expect(api.put).toHaveBeenCalledWith('/v1/marketing/team-members/t1', { name: 'N' })
     await marketingApi.contactSubmissions.index()
     expect(api.get).toHaveBeenCalledWith('/v1/marketing/contact-submissions', { params: undefined })
+    await marketingApi.contactSubmissions.reply('c1', { reply_body: 'Hello' })
+    expect(api.post).toHaveBeenCalledWith('/v1/marketing/contact-submissions/c1/reply', { reply_body: 'Hello' })
   })
 
   it('handles settings and pricing CRUD', async () => {

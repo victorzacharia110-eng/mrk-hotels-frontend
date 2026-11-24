@@ -4275,6 +4275,9 @@ export const marketingApi = {
     update(id, data) {
       return api.put(`${v1}/marketing/contact-submissions/${id}`, data);
     },
+    reply(id, data) {
+      return api.post(`${v1}/marketing/contact-submissions/${id}/reply`, data);
+    },
     destroy(id) {
       return api.delete(`${v1}/marketing/contact-submissions/${id}`);
     },
