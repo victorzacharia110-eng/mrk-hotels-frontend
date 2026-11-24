@@ -310,6 +310,23 @@
     radial-gradient(800px 400px at 100% 0%, #e8fff8 0, transparent 55%);
 }
 
+.mrk-hero-stage {
+  position: relative;
+  overflow: hidden;
+}
+
+.mrk-hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.mrk-hero-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .mrk-eyebrow {
   font-size: 12px;
   font-weight: 700;
@@ -643,10 +660,15 @@ html[data-theme='dark'] .mrk-alert-info { background: #13233d; color: #a9ccff; b
   .mrk-mobile-toggle { display: inline-flex; align-items: center; justify-content: center; }
   .mrk-grid-2, .mrk-grid-3, .mrk-grid-4, .mrk-pricing-toolbar, .mrk-form-grid { grid-template-columns: 1fr; }
   .mrk-footer-inner { grid-template-columns: 1fr 1fr; }
+  .mrk-hero-scene { display: none; }
 }
 
 @media (max-width: 640px) {
   .mrk-section { padding: 48px 0; }
   .mrk-hero { padding: 52px 0 40px; }
   .mrk-footer-inner { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mrk-hero-scene { display: none; }
 }

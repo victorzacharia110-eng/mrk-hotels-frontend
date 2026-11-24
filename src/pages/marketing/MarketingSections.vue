@@ -9,23 +9,26 @@
     >
       <div class="mrk-container">
         <template v-if="section.section_type === 'hero'">
-          <div class="mrk-hero" style="padding:0;background:none;">
-            <div v-if="section.subheading" class="mrk-eyebrow">{{ section.subheading }}</div>
-            <h1 class="mrk-page-title">{{ section.heading || page?.title }}</h1>
-            <p v-if="heroBody(section)" class="mrk-lead">{{ heroBody(section) }}</p>
-            <div v-if="ctas(section).length" class="mrk-actions">
-              <a
-                v-for="cta in ctas(section)"
-                :key="cta.label + cta.url"
-                :href="cta.url"
-                class="mrk-btn"
-                :class="ctaPrimary(cta) ? 'mrk-btn-primary' : 'mrk-btn-secondary'"
-              >{{ cta.label }}</a>
-            </div>
-            <div v-if="stats(section).length" class="mrk-stats">
-              <div v-for="stat in stats(section)" :key="stat.label + stat.value" class="mrk-stat">
-                <div class="mrk-stat-value">{{ stat.value || stat.label }}</div>
-                <div v-if="stat.value" class="mrk-stat-label">{{ stat.label }}</div>
+          <div :ref="setHeroStage" class="mrk-hero-stage" style="padding:0;background:none;">
+            <MarketingHeroScene v-if="heroSceneVisible" class="mrk-hero-scene" />
+            <div class="mrk-hero-content">
+              <div v-if="section.subheading" class="mrk-eyebrow">{{ section.subheading }}</div>
+              <h1 class="mrk-page-title">{{ section.heading || page?.title }}</h1>
+              <p v-if="heroBody(section)" class="mrk-lead">{{ heroBody(section) }}</p>
+              <div v-if="ctas(section).length" class="mrk-actions">
+                <a
+                  v-for="cta in ctas(section)"
+                  :key="cta.label + cta.url"
+                  :href="cta.url"
+                  class="mrk-btn"
+                  :class="ctaPrimary(cta) ? 'mrk-btn-primary' : 'mrk-btn-secondary'"
+                >{{ cta.label }}</a>
+              </div>
+              <div v-if="stats(section).length" class="mrk-stats">
+                <div v-for="stat in stats(section)" :key="stat.label + stat.value" class="mrk-stat">
+                  <div class="mrk-stat-value">{{ stat.value || stat.label }}</div>
+                  <div v-if="stat.value" class="mrk-stat-label">{{ stat.label }}</div>
+                </div>
               </div>
             </div>
           </div>
@@ -232,11 +235,13 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { publicMarketingApi } from '@/api'
 import { translateMarketing } from '@/composables/useMarketingContent'
 import PricingExplorer from './PricingExplorer.vue'
+
+const MarketingHeroScene = defineAsyncComponent(() => import('@/components/marketing/MarketingHeroScene.vue'))
 
 const { t } = useI18n()
 
@@ -244,12 +249,47 @@ const props = defineProps({
   page: { type: Object, default: null },
   integrations: { type: Array, default: () => [] },
   teamMembers: { type: Array, default: () => [] },
+  enableHeroScene: { type: Boolean, default: false },
 })
+
+const heroStage = ref(null)
+const heroSceneVisible = ref(false)
+let heroObserver = null
 
 const contact = reactive({ name: '', email: '', business_name: '', business_address: '' })
 const contactSubmitting = ref(false)
 const contactError = ref('')
 const contactSuccess = ref('')
+
+function setHeroStage(element) {
+  heroStage.value = element
+}
+
+onMounted(() => {
+  if (!props.enableHeroScene || typeof window === 'undefined' || !heroStage.value) return
+  const motionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+  const smallQuery = window.matchMedia?.('(max-width: 960px)')
+  if (motionQuery?.matches || smallQuery?.matches) return
+  if (typeof navigator !== 'undefined') {
+    if ((navigator.hardwareConcurrency || 99) <= 2 || (navigator.deviceMemory || 99) <= 2) return
+  }
+  if (typeof window.IntersectionObserver !== 'function') return
+  heroObserver = new window.IntersectionObserver(
+    (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return
+      heroSceneVisible.value = true
+      heroObserver?.disconnect()
+      heroObserver = null
+    },
+    { rootMargin: '120px' },
+  )
+  heroObserver.observe(heroStage.value)
+})
+
+onBeforeUnmount(() => {
+  heroObserver?.disconnect()
+  heroObserver = null
+})
 
 const activeSections = computed(() =>
   (props.page?.sections || []).filter((section) => section && section.is_active !== false),

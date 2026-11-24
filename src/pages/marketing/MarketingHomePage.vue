@@ -5,6 +5,7 @@
       :page="page"
       :integrations="bootstrap?.integrations || []"
       :team-members="bootstrap?.team_members || []"
+      enable-hero-scene
     />
     <div v-else class="mrk-section"><div class="mrk-container"><div class="mrk-empty">{{ $t('marketingCopy.homeUnavailable') }}</div></div></div>
   </div>
