@@ -147,6 +147,48 @@ const ALL_TILES = [
     descKey: 'backOffice.tiles.import',
     to: { name: 'hotel-import' },
   },
+  {
+    key: 'hotel-marketing',
+    icon: 'fas fa-bullhorn',
+    titleKey: 'hotelMarketing.title',
+    descKey: 'backOffice.tiles.marketing',
+    to: { name: 'hotel-marketing' },
+  },
+  {
+    key: 'night-audit',
+    icon: 'fas fa-moon',
+    titleKey: 'nav.nightAudit',
+    descKey: 'backOffice.tiles.nightAudit',
+    to: { name: 'hotel-night-audit' },
+  },
+  {
+    key: 'activity-log',
+    icon: 'fas fa-clock-rotate-left',
+    titleKey: 'nav.activityLogReport',
+    descKey: 'backOffice.tiles.activityLog',
+    to: { name: 'hotel-activity-log-report' },
+  },
+  {
+    key: 'overrides',
+    icon: 'fas fa-user-shield',
+    titleKey: 'nav.overrideApprovals',
+    descKey: 'backOffice.tiles.overrides',
+    to: { name: 'override-approvals' },
+  },
+  {
+    key: 'reports',
+    icon: 'fas fa-chart-pie',
+    titleKey: 'nav.reportBrowser',
+    descKey: 'backOffice.tiles.reports',
+    to: { name: 'hotel-reports' },
+  },
+  {
+    key: 'booking-com',
+    icon: 'fas fa-plug',
+    titleKey: 'nav.bookingCom',
+    descKey: 'backOffice.tiles.bookingCom',
+    to: { name: 'booking-com' },
+  },
 ]
 
 // The editor behind each tile, loaded on demand and rendered inline in the
@@ -166,6 +208,12 @@ const EDITORS = {
   staff: defineAsyncComponent(() => import('@/pages/staff/StaffListPage.vue')),
   'trusted-devices': defineAsyncComponent(() => import('@/pages/settings/TrustedDevicesPage.vue')),
   import: defineAsyncComponent(() => import('@/pages/imports/ImportPage.vue')),
+  'hotel-marketing': defineAsyncComponent(() => import('@/pages/marketing/HotelMarketingPage.vue')),
+  'night-audit': defineAsyncComponent(() => import('@/pages/reception/NightAuditPage.vue')),
+  'activity-log': defineAsyncComponent(() => import('@/pages/reception/ActivityLogReportPage.vue')),
+  overrides: defineAsyncComponent(() => import('@/pages/overrides/OverrideApprovalsPage.vue')),
+  reports: defineAsyncComponent(() => import('@/pages/reports/ReportBrowserPage.vue')),
+  'booking-com': defineAsyncComponent(() => import('@/pages/integrations/BookingComPage.vue')),
 }
 
 // Keep a tile only when the signed-in role is allowed on the page behind it.
@@ -176,6 +224,12 @@ const ROLE_GATES = {
   menu: ['hotel_admin', 'manager'],
   outlets: ['hotel_admin', 'manager'],
   import: ['hotel_admin'],
+  'hotel-marketing': ['hotel_admin', 'manager'],
+  'night-audit': ['hotel_admin', 'manager'],
+  'activity-log': ['hotel_admin', 'manager'],
+  overrides: ['hotel_admin', 'manager'],
+  reports: ['hotel_admin', 'manager'],
+  'booking-com': ['hotel_admin', 'manager'],
 }
 
 // The categories the editors are filed under, mirroring how the POS Reports
@@ -185,19 +239,19 @@ const GROUPS = [
     key: 'property',
     icon: 'fas fa-building',
     titleKey: 'backOffice.groups.property',
-    tileKeys: ['hotel-info', 'rates', 'store-settings', 'departments', 'categories'],
+    tileKeys: ['hotel-info', 'rates', 'store-settings', 'departments', 'categories', 'hotel-marketing'],
   },
   {
     key: 'operations',
     icon: 'fas fa-gears',
     titleKey: 'backOffice.groups.operations',
-    tileKeys: ['printer', 'menu', 'outlets', 'suppliers'],
+    tileKeys: ['printer', 'menu', 'outlets', 'suppliers', 'night-audit', 'reports', 'booking-com'],
   },
   {
     key: 'access',
     icon: 'fas fa-user-tie',
     titleKey: 'backOffice.groups.access',
-    tileKeys: ['staff', 'trusted-devices'],
+    tileKeys: ['staff', 'trusted-devices', 'activity-log', 'overrides'],
   },
   {
     key: 'data',

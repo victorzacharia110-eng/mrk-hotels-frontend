@@ -5995,6 +5995,7 @@
       "actions": "Actions",
       "amount": "Amount",
       "blockedHint": "Some orders are still running and must be settled first.",
+      "alreadyClosedHint": "This business date is already closed. The night audit has advanced the working date, so there is nothing left to close.",
       "blockingCount": "Blocking orders",
       "blockingHint": "Settlement is done on the Order Summary page. These must be settled/voided before closing.",
       "openSummary": "Order Summary",
@@ -6756,7 +6757,13 @@
       "suppliers": "The supplier records used on purchase orders.",
       "staff": "Add staff, set roles and reset access.",
       "trustedDevices": "Terminals trusted for PIN sign-in.",
-      "import": "Import bulk data from a CSV file."
+      "import": "Import bulk data from a CSV file.",
+      "marketing": "Hotel marketing content, pages and campaigns.",
+      "nightAudit": "Close the business day and advance the working date.",
+      "activityLog": "Daily, weekly and monthly staff activity.",
+      "overrides": "Review and approve check-in overrides.",
+      "reports": "The classic front-desk report browser.",
+      "bookingCom": "Booking.com channel manager connection."
     }
   },
   "order": {

@@ -46,6 +46,7 @@
               <div class="dc-status-note">
                 <i class="fas" :class="closable ? 'fa-circle-check' : 'fa-circle-exclamation'" aria-hidden="true"></i>
                 <span v-if="closable">{{ $t('cashier.dayClose.canCloseHint') }}</span>
+                <span v-else-if="status.already_closed">{{ $t('cashier.dayClose.alreadyClosedHint') }}</span>
                 <span v-else-if="!dayEnded">{{ $t('cashier.dayClose.notEndedHint', { timezone: timezoneLabel })
                   }}</span>
                 <span v-else>{{ $t('cashier.dayClose.blockedHint') }}</span>
@@ -206,7 +207,7 @@ const loadingHistory = ref(false)
 const busy = ref(false)
 const error = ref('')
 const success = ref('')
-const status = ref({ open_date: '', close_date: '', timezone: 'Africa/Dar_es_Salaam', running_orders_count: 0, unsettled_orders_count: 0, can_close: false, close_day_has_ended: false, latest_closed_date: null })
+const status = ref({ open_date: '', close_date: '', timezone: 'Africa/Dar_es_Salaam', running_orders_count: 0, unsettled_orders_count: 0, can_close: false, already_closed: false, status_reason: 'ready', close_day_has_ended: false, latest_closed_date: null })
 const history = ref([])
 const confirmOpen = ref(false)
 

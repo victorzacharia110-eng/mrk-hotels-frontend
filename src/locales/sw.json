@@ -6270,6 +6270,7 @@
       "unsettledOrders": "Oda zisizolipwa",
       "canCloseHint": "Siku hii imeisha na haina oda zinazoendelea au zisizolipwa. Kufunga kunagandisha rekodi za siku hiyo na kuanzisha tarehe mpya ya biashara kwa mifumo yote ya kasino, baati na hesabu.",
       "blockedHint": "Siku hii haiwezi kufungwa bado. Lipia au ghairi oda zote zinazoendelea na zisizolipwa kwanza.",
+      "alreadyClosedHint": "Tarehe hii ya biashara tayari imefungwa. Ukaguzi wa usiku umesogeza tarehe ya kazi, hakuna kilichobaki kufungwa.",
       "notEndedHint": "Tarehe hii haiwezi kufungwa kabla haijaisha. Itafunguka usiku wa manane katika {timezone}, kisha ndipo inaweza kufungwa.",
       "closeDay": "Funga Siku Hii",
       "history": "Siku Zilizofungwa",
@@ -6754,7 +6755,13 @@
       "suppliers": "Wasambazaji wanaotumika kwenye oda za manunuzi.",
       "staff": "Ongeza wafanyakazi, weka majukumu na ruhusa.",
       "trustedDevices": "Vifaa vinavyoruhusiwa kuingia kwa PIN.",
-      "import": "Pakia data nyingi kwa pamoja."
+      "import": "Pakia data nyingi kwa pamoja.",
+      "marketing": "Maudhui ya uuzaji wa hoteli, kurasa na kampeni.",
+      "nightAudit": "Funga siku ya biashara na usongeze tarehe ya kazi.",
+      "activityLog": "Shughuli za wafanyakazi za kila siku, wiki na mwezi.",
+      "overrides": "Kagua na uidhinise ruhusa za kuingia kabla ya wakati.",
+      "reports": "Kivinjari cha ripoti cha kawaida cha mapokezi.",
+      "bookingCom": "Muunganisho wa usimamizi wa njia za Booking.com."
     }
   },
   "order": {

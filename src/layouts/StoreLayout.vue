@@ -771,7 +771,7 @@ const departmentModuleKeys = {
   'front-desk': [
     'front-desk', 'reception-reservations', 'reception-payments', 'reception-comms', 'reception-admin',
     'rates', 'dashboard', 'reservations', 'rooms', 'guests', 'payments', 'booking-requisitions',
-    'night-audit', 'distribution', 'activity-log-report', 'overrides', 'reports', 'group-front-desk',
+    'distribution', 'group-front-desk',
   ],
   'restaurant-bar': [
     'restaurant-bar', 'group-fnb', 'take-order', 'orders', 'menu', 'outlets',
@@ -788,8 +788,8 @@ const departmentModuleKeys = {
   'back-office': [
     'back-office', 'group-admin', 'staff', 'hotel-settings', 'hotel-marketing',
     'trusted-devices', 'activity-log-report', 'overrides', 'imports', 'reports',
-    'printer', 'accounting', 'integrations/booking-com', 'integrations/quickbooks',
-    'integrations/xero',
+    'printer', 'accounting', 'night-audit', 'integrations/booking-com',
+    'integrations/quickbooks', 'integrations/xero',
   ],
 }
 
@@ -817,7 +817,10 @@ function selectDepartment(department) {
 function inferDepartment(path) {
   if (path === '/app/overview') return 'dashboard'
   if (path.startsWith('/app/back-office') || path.startsWith('/app/settings')
-    || path.startsWith('/app/staff') || path.startsWith('/app/import')) return 'back-office'
+    || path.startsWith('/app/staff') || path.startsWith('/app/import')
+    || path.startsWith('/app/night-audit') || path.startsWith('/app/activity-log-report')
+    || path.startsWith('/app/overrides') || path.startsWith('/app/reports')
+    || path.startsWith('/app/integrations/booking-com') || path.startsWith('/app/marketing')) return 'back-office'
   if (path.startsWith('/app/store') || path.startsWith('/app/purchase')
     || path.startsWith('/app/goods-received') || path.startsWith('/app/inventory')
     || path.startsWith('/app/suppliers') || path.startsWith('/app/requisitions')) return 'inventory-procurement'
@@ -1383,7 +1386,12 @@ const visibleModules = computed(() => {
     if (byKey.dashboard) {
       frontDesk.push({ key: 'front-desk-dashboard', to: byKey.dashboard.to, icon: byKey.dashboard.icon, label: t('nav.dashboard') })
     }
-    if (byKey.reservations) frontDesk.push(link('reservations', t('nav.reservations')))
+    if (byKey.reservations) {
+      frontDesk.push(subGroup('front-reservations', 'fas fa-calendar-check', t('nav.reservations'), [
+        { to: byKey.reservations.to, label: t('receptionMenu.manualBooking'), icon: 'fas fa-hotel' },
+        { to: '/app/distribution/channel-logs', label: t('receptionMenu.channelBookings'), icon: 'fas fa-share-nodes' },
+      ]))
+    }
     if (byKey.rooms) frontDesk.push(link('rooms', t('nav.rooms')))
     if (byKey.rooms) frontDesk.push({ key: 'rates', to: '/app/rooms', icon: 'fas fa-tags', label: t('nav.rates') })
     if (byKey.distribution) frontDesk.push(byKey.distribution)
@@ -1398,18 +1406,6 @@ const visibleModules = computed(() => {
         { to: '/app/payments/exchange-rate', label: t('receptionMenu.exchangeRate'), icon: 'fas fa-right-left' },
       ]))
     }
-    if (byKey['night-audit']) frontDesk.push(byKey['night-audit'])
-    // Manager review: the Report Browser belongs to the front desk, not to the
-    // restaurant. It now sits in the ADMINISTRATION sub-menu of the FRONT DESK
-    // dropdown so management can reach it from where the other back-office
-    // front-desk tools live.
-    //
-    // The key moved here is `reports` (nav.reportBrowser -> /app/reports), not
-    // `pos-reports` (nav.posReports -> /app/pos-report-browser). Those are two
-    // separate modules with confusingly similar names; an earlier pass moved the
-    // wrong one and left the Report Browser behind in the restaurant submenu.
-    const administration = pick(['staff', 'hotel-settings', 'hotel-marketing', 'trusted-devices', 'activity-log-report', 'overrides', 'imports', 'reports', 'integrations/booking-com', 'integrations/quickbooks', 'integrations/xero'])
-    if (administration.length) frontDesk.push(subGroup('front-administration', 'fas fa-user-tie', t('accordion.administration'), administration))
     // Management panel review: "just keep one communication tab & requisitions
     // tab ... and remove the rest from the management panel." Both now live in
     // the single COMMUNICATION accordion below, so they are not repeated here.
@@ -1435,8 +1431,8 @@ const visibleModules = computed(() => {
       ]))
     }
     // `reports` (the Report Browser) is deliberately absent: it belongs to the
-    // FRONT DESK administration submenu above, per the manager review. POS
-    // Reports stays here as the department-scoped F&B browser.
+    // BACK OFFICE browser now, per the manager review. POS Reports stays here
+    // as the department-scoped F&B browser.
     const manager = pick(['staff-reports', 'pos-reports', 'item-lookup', 'shift'])
     // Day Close is the cashier panel's F&B business-day close (it used to
     // point at the accounting report); Expense / Income Voucher stay the
