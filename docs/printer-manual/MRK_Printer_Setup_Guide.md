@@ -1,14 +1,15 @@
-# The whole job in five steps
+# The whole job in six steps
 
 <div class="quickref" markdown="1">
 
-Follow these five steps and the till printer is ready. Every step is explained slowly below.
+Follow these six steps and the till printer is ready. Every step is explained slowly below.
 
 1. **Download** `mrk-till-setup.zip` from MRK → **Printer Settings**.
 2. **Extract** the zip into a folder you can find again; keep all four files together.
-3. **Double-click `setup.bat`** and approve the Windows prompt. Do not run the other files by hand.
-4. **Restart the browser**, open **Printer Settings**, select `POS-80C`, then press **Test Print**.
-5. **Confirm no `Allow`/`Block` question appears.** If it does, run `setup.bat` again from a fresh download.
+3. **Make Windows see the printer** and print a Windows test page; add it manually if Windows does not find it.
+4. **Double-click `setup.bat`** and approve the Windows prompt. Do not run the other files by hand.
+5. **Restart the browser**, open **Printer Settings**, select `POS-80C`, then press **Test Print**.
+6. **Confirm no `Allow`/`Block` question appears.** If it does, run `setup.bat` again from a fresh download.
 
 </div>
 
@@ -80,7 +81,83 @@ Do not move `setup.bat` away from the other files. It looks for `setup.ps1` and 
 
 ---
 
-# Part 3 — Run the setup (the important part) {: .part }
+# Part 3 — Make Windows see the printer {: .part }
+
+<div class="os-head win" markdown="1">
+
+<span class="badge win">Windows</span>
+
+Before MRK can print, Windows must show the receipt printer in **Printers & scanners**. Do this once on the till computer, before you run `setup.bat`.
+
+</div>
+
+### A. The printer cable is plugged into this till
+
+<div class="steps" markdown="1">
+
+1. Make sure the printer is switched on, has paper, and its cable is plugged into this till computer.
+2. Unplug the printer cable, wait five seconds, then plug it back into the same USB port.
+3. Press the **Windows key** on the keyboard (or click **Start**), type `Printers & scanners`, then press **Enter**.
+4. On the **Printers & scanners** page, click **Add a printer or scanner**.
+5. Wait while Windows searches. Do not click other buttons while it is looking.
+6. When the printer name appears, normally `POS-80C`, click it once, then click **Add device**.
+7. If the printer does not appear, unplug and plug the cable again, wait 30 seconds, then click **Add a printer or scanner** again.
+8. If it still does not appear, follow **"If Windows still does not show the printer"** just below.
+9. Click the printer name, then click **Open print queue** on Windows 10, or **Printer properties** on Windows 11.
+10. Choose **Print a test page**. A small test page must come out of the receipt printer. If nothing prints, stop here and check the power and cable.
+11. Write down the exact printer name shown by Windows. You will use that same name in MRK Printer Settings.
+
+</div>
+
+### If Windows still does not show the printer — add it manually
+
+<div class="steps" markdown="1">
+
+1. Press the **Windows key**, type `Printers & scanners`, then press **Enter**.
+2. Click **Add a printer or scanner**.
+3. Wait until Windows finishes searching, then click **The printer that I want isn't listed** or **My printer is not shown**.
+4. Choose **Add a printer using a USB port**, or **Use an existing port**, then click **Next**.
+5. In the port list, look for **`USB001`**, `USB002`, or another `USB` port. It may be at the bottom, in the middle, or somewhere else depending on the computer — scroll the whole list slowly. Choose the port that appeared when the printer was plugged in. If you are not sure, unplug and plug the cable again and watch which port changes.
+6. Click **Next**.
+7. Choose **Romeson RM80ZJ** if it is listed. If not, click **Windows Update** and wait. If it is still missing, choose the model written on the printer box, or **Generic / Text Only**. If Windows asks for a driver you do not have, stop and contact MRK support with the printer model.
+8. Type the printer name as **`POS-80C`**, then click **Next**.
+9. Choose **Do not share this printer**, unless you are setting up section B below, then click **Next**.
+10. Click **Print a test page**, then click **Finish**. A small test page must come out before you continue.
+
+</div>
+
+<div class="callout note" markdown="1">
+<div class="callout-title">USB001 is a port, not the printer name</div>
+`USB001` is the "door" Windows uses for the USB cable. It may be `USB002` or `USB003` on another computer. In MRK, select the printer name you typed, normally `POS-80C`, not `USB001`.
+</div>
+
+### B. The printer is shared from another Windows computer
+
+Only do this section if the printer cable is plugged into a **different** computer. If the cable is plugged into this till, skip section B.
+
+<div class="steps" markdown="1">
+
+1. Go to the computer that the printer cable is plugged into.
+2. Press the **Windows key**, type `Advanced sharing settings`, then press **Enter**.
+3. Under **Private networks**, turn on **Network discovery** and **File and printer sharing**.
+4. Click **Save changes**.
+5. Press the **Windows key**, type `Printers & scanners`, then press **Enter**.
+6. Click the receipt printer, then click **Printer properties**.
+7. Open the **Sharing** tab, tick **Share this printer**, type the name `POS-80C`, then click **OK**.
+8. Go back to the till computer. Hold the **Windows key** and press **R**, type the other computer's name like `\\RECEPTION-PC`, then press **Enter**.
+9. When the shared printer appears, right-click it and choose **Connect**. Allow Windows to install any printer driver it asks for.
+10. Print a Windows test page from the till before continuing. If no page comes out, stop and repeat section B on the computer that owns the printer.
+
+</div>
+
+<div class="callout important" markdown="1">
+<div class="callout-title">Do not continue until the Windows test page prints</div>
+A Windows test page proves the till computer can see the printer. MRK and QZ Tray can only use a printer that Windows already knows about.
+</div>
+
+---
+
+# Part 4 — Run the setup (the important part) {: .part }
 
 <div class="os-head win" markdown="1">
 
@@ -113,7 +190,7 @@ It checks whether QZ Tray is installed and installs it if missing; copies MRK's 
 
 ---
 
-# Part 4 — Restart the browser and choose the printer {: .part }
+# Part 5 — Restart the browser and choose the printer {: .part }
 
 <div class="steps" markdown="1">
 
@@ -121,7 +198,7 @@ It checks whether QZ Tray is installed and installs it if missing; copies MRK's 
 2. Open the browser again and sign in to **MRK Hotels**.
 3. Open **Cashier → Printer Settings**.
 4. Check the QZ status shows **Connected**. If it shows **Not connected**, wait a few seconds and press **Refresh**.
-5. In the printer list, choose **`POS-80C`** (the Windows printer name for the receipt printer on the till).
+5. In the printer list, choose the same name Windows showed in Part 3, normally **`POS-80C`**. If Windows showed a different name, choose that exact name instead.
 6. Make sure **Method** is **QZ Tray / USB**. Do not choose **Server** for a USB receipt printer on the till.
 7. Press **Test Print**. A small MRK receipt should come out.
 8. If a QZ `Allow`/`Block` box appears, click nothing. Close it, run `setup.bat` again from a fresh zip, then repeat from step 1.
@@ -135,9 +212,9 @@ This usually means the browser cached the old local API address, not that the pa
 
 ---
 
-# Part 5 — Make it silent (no dialog on every sale) {: .part }
+# Part 6 — Make it silent (no dialog on every sale) {: .part }
 
-Silent printing means the receipt comes out by itself when a bill is settled. It is controlled by the certificate installed in Part 3, not by a browser checkbox.
+Silent printing means the receipt comes out by itself when a bill is settled. It is controlled by the certificate installed in Part 4, not by a browser checkbox.
 
 <div class="steps" markdown="1">
 
@@ -156,7 +233,7 @@ Do not disable Windows SmartScreen, turn off certificate checks, share the setup
 
 ---
 
-# Part 6 — If something is not working {: .part }
+# Part 7 — If something is not working {: .part }
 
 Find what you see in the left column and try the fix on the right. Go slowly, one line at a time.
 
@@ -165,9 +242,12 @@ Find what you see in the left column and try the fix on the right. Go slowly, on
 | `Cannot overwrite variable home...` in PowerShell | You have an older zip. Delete it and the extracted folder, download a fresh `mrk-till-setup.zip` from Printer Settings, then run `setup.bat` again. |
 | A QZ Tray `Allow`/`Block` dialog appears | Run `setup.bat` again from a fresh zip. Do not click **Block**. After it finishes, fully close and reopen the browser. |
 | `Verifying silent printing is configured... NOT CONFIGURED` | The script did not finish or Windows denied permission. Right-click `setup.bat`, choose **Run as administrator**, and let it complete. |
-| The printer is not in the list | Check the power and USB cable. In Windows, open **Printers & scanners**, add the printer, and print a Windows test page. Then come back to MRK and press **Refresh**. |
+| The printer is not in the list | Go back to **Part 3A**. Check the power and cable, add the printer in Windows **Printers & scanners**, and print a Windows test page. Then return to MRK and press **Refresh**. |
+| Windows cannot find the printer | Unplug and plug the cable, wait 30 seconds, then run **Add a printer or scanner** again. If it still does not appear, add it manually using the `USB001`-style port in **Part 3**. |
+| Only `USB001` or `USB002` appears | That is the USB port, not the printer. Choose that port, name the printer `POS-80C`, and select `POS-80C` in MRK. |
+| The Windows test page does not print | Check power, paper, and cable. For a shared printer, confirm **Network discovery** and **File and printer sharing** are on. Do not continue until a Windows test page prints. |
 | QZ status says **Not connected** | Make sure QZ Tray is running in the Windows system tray. Restart it once, then reload Printer Settings. |
-| Test print says **No printer selected** | Choose `POS-80C` in the printer list, press **Save**, then press **Test Print** again. |
+| Test print says **No printer selected** | Choose the exact Windows printer name from Part 3, normally `POS-80C`, press **Save**, then press **Test Print** again. |
 | Login says **invalid credentials** | Press `Ctrl+Shift+R` or use a private window. Do not reuse another staff member's password or OTP. |
 | Receipt prints on another till but not this one | Run `setup.bat` on this till. Every till computer needs its own one-time setup. |
 | The browser still uses `localhost` | Ask reception to use `https://mrk-hotels.com`, hard-refresh, and sign in again. The app must use `https://api.mrk-hotels.com/api`. |
@@ -206,7 +286,11 @@ Send this PDF or the setup steps to staff. **Never** send your MRK password, OTP
 | **`setup.ps1`** | The setup script. It is run by `setup.bat`; you do not need to open it. |
 | **`override.crt`** | MRK's public root certificate that tells QZ Tray the print request really came from MRK. |
 | **Silent printing** | Receipts print automatically when a bill is settled; no `Allow`/`Block` question appears. |
-| **POS-80C** | The Windows printer name selected inside MRK Printer Settings. |
+| **POS-80C** | The usual Windows printer name for the till receipt printer. If Windows shows another name, use that exact name in MRK. |
+| **Printers & scanners** | The Windows page where printers are added and tested. |
+| **Network discovery** | A Windows setting that lets this computer find shared printers on the same network. |
+| **File and printer sharing** | A Windows setting that lets other computers use a printer connected to this computer. |
+| **`USB001`** | The Windows USB port name used when adding a printer manually. It may be `USB002` or `USB003` on a different computer; it is not the printer name. |
 | **OTP** | The one-time code sent to your phone. It is part of your login — never share it. |
 | **ESC/POS** | The language thermal receipt printers understand. |
 
@@ -218,10 +302,11 @@ No problem — help is one message away. When you contact **MRK support**, inclu
 
 1. A **photo** of the PowerShell window (including the exact error line).
 2. A **photo** of the QZ Tray icon/status in Printer Settings.
-3. The **step number** from this guide where it went wrong.
-4. Whether you downloaded a fresh zip and ran `setup.bat` as administrator.
+3. The **part and step number** from this guide where it went wrong.
+4. Whether a Windows test page printed from **Printers & scanners**.
+5. Whether you downloaded a fresh zip and ran `setup.bat` as administrator.
 
-With those four things, we can usually solve it on the first try.
+With those five things, we can usually solve it on the first try.
 
 ---
 
@@ -240,8 +325,9 @@ Use this photo as the reference for a correctly completed till setup. Compare yo
 | Check | What complete looks like |
 | --- | --- |
 | Browser | Open at `https://mrk-hotels.com`, signed in with the till user's own login. |
+| Windows printer | The printer appears in **Printers & scanners** and a Windows test page printed successfully. |
 | QZ status | **Connected** in **Cashier → Printer Settings**. |
-| Printer | The USB receipt printer is selected, normally `POS-80C`. |
+| Printer | The USB receipt printer is selected using the exact Windows printer name, normally `POS-80C`, not `USB001`. |
 | Method | **QZ Tray / USB** — not **Server** for a local USB printer. |
 | Test print | A small MRK receipt comes out of the till printer. |
 | Trust prompt | No QZ Tray `Allow`/`Block` dialog appears. |
@@ -249,5 +335,5 @@ Use this photo as the reference for a correctly completed till setup. Compare yo
 
 <div class="callout tip" markdown="1">
 <div class="callout-title">Ready to use</div>
-If all seven checks match, the till is ready for normal service. Leave QZ Tray running and keep the printer switched on with paper loaded.
+If all eight checks match, the till is ready for normal service. Leave QZ Tray running and keep the printer switched on with paper loaded.
 </div>

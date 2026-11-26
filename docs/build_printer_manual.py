@@ -22,8 +22,8 @@ try:
 except OSError:
     VERSION = "v1.0"
 
-EDITION = "Edition 1.0"
-DATE = "October 2026"
+EDITION = "Edition 1.1"
+DATE = "November 2026"
 
 CSS = """
 @page {
@@ -33,7 +33,7 @@ CSS = """
     content: "MRK Hotels — Printer Setup Guide";
     font-size: 8pt; color: #005EB8; font-weight: bold;
   }
-  @top-right { content: "Windows till &middot; QZ Tray"; font-size: 8pt; color: #94a3b8; }
+  @top-right { content: "Windows till · QZ Tray"; font-size: 8pt; color: #94a3b8; }
   @bottom-center {
     content: "Page " counter(page) " of " counter(pages);
     font-size: 8pt; color: #94a3b8;
