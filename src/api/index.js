@@ -739,6 +739,13 @@ export const hotelSettingsApi = {
   },
 };
 
+/** Server-side ESC/POS printing — sends thermal receipts to a configured network printer. */
+export const printerApi = {
+  printEscPos(data) {
+    return api.post(`${v1}/printer/escpos/print`, data);
+  },
+};
+
 /** Trusted devices — computers/terminals allowed to sign in with a PIN. */
 export const deviceTrustApi = {
   /** Lists the hotel's trusted devices (hotel admins / managers only). */

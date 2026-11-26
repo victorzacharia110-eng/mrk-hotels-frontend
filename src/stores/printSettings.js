@@ -15,12 +15,15 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { printerState, printToPrinter, printPdfToPrinter, targetUsable, targetLabel, listPrinters, connectReason } from "@/utils/printer";
+import { printToServerPrinter } from "@/utils/serverPrinter";
 import { htmlToPdf } from "@/utils/reportPrint";
 
 // localStorage key for the whole settings blob.
 const STORAGE_KEY = "mrk_print_settings";
 
 const DEFAULTS = {
+  // QZ Tray stays the default; `server` sends ESC/POS bytes from the API.
+  printMethod: "qz",
   // Print a receipt / guest check as soon as an order is saved (placed).
   printOnSave: true,
   // Print the guest check when an order is left unsettled (open on a table).
@@ -86,6 +89,8 @@ function migrate(saved) {
   delete next.transport;
   delete next.endpoint;
 
+  if (!["qz", "server"].includes(next.printMethod)) next.printMethod = "qz";
+
   if (!targetUsable(next.tillPrinter) && saved.endpoint) {
     next.tillPrinter = endpointToTarget(saved.endpoint, "Till printer");
   }
@@ -126,6 +131,7 @@ function loadSaved() {
 export const usePrintSettingsStore = defineStore("printSettings", () => {
   const settings = ref(loadSaved());
 
+  const printMethod = computed(() => settings.value.printMethod);
   const printOnSave = computed(() => settings.value.printOnSave);
   const printGuestCheckWhenUnsettled = computed(() => settings.value.printGuestCheckWhenUnsettled);
   const printOnSettle = computed(() => settings.value.printOnSettle);
@@ -176,11 +182,18 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
   }
 
   /**
-   * Sends receipt lines to the till printer through QZ Tray. Returns true when
-   * the job was handed to the printer.
+   * Sends ESC/POS lines through the selected transport. QZ Tray stays the
+   * default; server printing requires a network printer that the API allows.
    */
+  async function dispatchPrint(lines, opts = {}) {
+    if (settings.value.printMethod === "server") {
+      return printToServerPrinter(lines, opts);
+    }
+    return printToPrinter(lines, opts);
+  }
+
   async function print(lines, opts = {}) {
-    return printToPrinter(lines, { ...opts, printer: resolveTillPrinter() });
+    return dispatchPrint(lines, { ...opts, printer: resolveTillPrinter() });
   }
 
   /**
@@ -305,7 +318,7 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
   async function printFoodTicket(lines, department, opts = {}) {
     const { station, ...rest } = opts;
     const profile = resolveTicketPrinter(department, station);
-    return printToPrinter(lines, { ...rest, printer: profile || resolveTillPrinter() });
+    return dispatchPrint(lines, { ...rest, printer: profile || resolveTillPrinter() });
   }
 
   /**
@@ -347,6 +360,7 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
 
   return {
     settings,
+    printMethod,
     printOnSave,
     printGuestCheckWhenUnsettled,
     printOnSettle,
