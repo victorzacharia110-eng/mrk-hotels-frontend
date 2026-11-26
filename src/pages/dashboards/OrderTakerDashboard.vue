@@ -435,11 +435,24 @@
           <button type="button" class="oh-manage" @click="loadOpenOrders">
             <i class="fas fa-rotate" aria-hidden="true"></i> {{ $t('orderTaker.refresh') }}
           </button>
-          <button v-if="selectedVoidable.length" type="button" class="oh-manage oh-danger"
-            :title="$t('orderTaker.void')" :aria-label="$t('orderTaker.void')" @click="openVoidSelected">
-            <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('orderTaker.void') }} ({{ selectedVoidable.length }})
-          </button>
         </div>
+      </div>
+      <div class="open-bulk-actions">
+        <button type="button" class="open-btn ghost" :disabled="printingSelected || !selectedOrders.length"
+          :aria-label="$t('orderTaker.printKot')" @click="printSelectedOrders('kot')">
+          <i class="fas fa-print" aria-hidden="true"></i> {{ $t('orderTaker.printKot') }}
+          <span v-if="selectedOrders.length">({{ selectedOrders.length }})</span>
+        </button>
+        <button type="button" class="open-btn ghost" :disabled="printingSelected || !selectedOrders.length"
+          :aria-label="$t('orderTaker.printReceipt')" @click="printSelectedOrders('receipt')">
+          <i class="fas fa-receipt" aria-hidden="true"></i> {{ $t('orderTaker.printReceipt') }}
+          <span v-if="selectedOrders.length">({{ selectedOrders.length }})</span>
+        </button>
+        <button type="button" class="open-btn ghost danger" :disabled="!selectedVoidable.length"
+          :aria-label="$t('orderTaker.void')" @click="openVoidSelected">
+          <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('orderTaker.void') }}
+          <span v-if="selectedVoidable.length">({{ selectedVoidable.length }})</span>
+        </button>
       </div>
       <div class="open-tools">
         <div class="ot-search">
@@ -475,25 +488,11 @@
                 <i class="fas fa-merge" aria-hidden="true"></i> {{ $t('orderTaker.mergeBill') }}
               </button>
             </template>
-            <button v-if="!['completed', 'cancelled'].includes(order.status)" type="button" class="open-btn ghost"
-              @click="printTicket(order, 'kot')">
-              <i class="fas fa-print" aria-hidden="true"></i> {{ $t('orderTaker.printKot') }}
-            </button>
-            <button v-if="!['completed', 'cancelled'].includes(order.status)" type="button" class="open-btn ghost"
-              @click="printTicket(order, 'receipt')">
-              <i class="fas fa-receipt" aria-hidden="true"></i> {{ $t('orderTaker.printReceipt') }}
-            </button>
-            <button
-              v-if="['pending', 'preparing', 'in_progress', 'processing'].includes(order.status) && order.payment_status === 'unpaid'"
-              type="button" class="open-btn ghost danger" @click="openVoid(order)">
-              <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('orderTaker.void') }}
-            </button>
           </div>
           <header class="open-card-head">
             <label class="open-check">
-              <input type="checkbox" :value="order.order_id" v-model="selectedVoid"
-                :disabled="!(['pending', 'preparing', 'in_progress', 'processing'].includes(order.status) && order.payment_status === 'unpaid')"
-                :aria-label="$t('orderTaker.voidSelected')" />
+              <input type="checkbox" :value="order.order_id" v-model="selectedOrderIds"
+                :aria-label="$t('orderTaker.selectOrder')" />
             </label>
             <div class="open-title">
               <span class="open-order-line">
@@ -746,47 +745,6 @@
               </div>
             </template>
             <p v-else class="accomp-hint">{{ $t('cashier.summary.noSettleAccounts') }}</p>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
-
-    <!-- Void order: confirm + optional reason (the backend stamps a fallback) -->
-    <Teleport to="body">
-      <Transition name="fade">
-        <div v-if="voidTarget" class="cat-pop" :class="{ 'pos-theme': isPosRole }" role="dialog"
-          :aria-label="$t('orderTaker.voidTitle')">
-          <div class="cat-pop-backdrop" @click="voidTarget = null"></div>
-          <div class="cat-pop-panel accomp-panel">
-            <header class="cat-pop-head">
-              <strong>{{ $t('orderTaker.voidTitle') }} · {{ voidTarget.order_number }}</strong>
-              <button type="button" class="cat-pop-close" :aria-label="$t('orderTaker.cancel')"
-                @click="voidTarget = null">
-                <i class="fas fa-times" aria-hidden="true"></i>
-              </button>
-            </header>
-            <p v-if="voidError" class="send-error">{{ voidError }}</p>
-            <p class="accomp-hint">{{ $t('orderTaker.voidHint') }}</p>
-            <p class="void-summary">
-              {{ $t('orderTaker.voidSummary', {
-                currency: curCode(),
-                table: voidTarget.table_number || voidTarget.room_number || '—',
-                total: money(voidTarget.total_amount),
-              }) }}
-            </p>
-            <label class="void-reason">
-              <textarea v-model="voidReason" rows="2" :placeholder="$t('orderTaker.voidReason')"
-                :disabled="voiding"></textarea>
-            </label>
-            <div class="void-actions">
-              <button type="button" class="open-btn ghost" :disabled="voiding" @click="voidTarget = null">
-                {{ $t('orderTaker.cancel') }}
-              </button>
-              <button type="button" class="open-btn danger" :disabled="voiding" @click="confirmVoid">
-                <i class="fas fa-ban" aria-hidden="true"></i>
-                {{ voiding ? $t('orderTaker.sending') : $t('orderTaker.voidOrder') }}
-              </button>
-            </div>
           </div>
         </div>
       </Transition>
@@ -1267,67 +1225,24 @@ function elapsedLabel(order) {
   return t('orderTaker.hrShort', { h: Math.floor(mins / 60), m: mins % 60 })
 }
 
-// Void quick action: confirm + optional reason (the backend requires one, so an
-// empty box falls back to a stamped "voided by <waiter>" note).
-const voidTarget = ref(null)
 const voidReason = ref('')
-const voiding = ref(false)
-const voidError = ref('')
-
-function openVoid(order) {
-  voidTarget.value = order
-  voidReason.value = ''
-  voidError.value = ''
-}
-
-async function confirmVoid() {
-  const order = voidTarget.value
-  if (!order || voiding.value) return
-  voiding.value = true
-  voidError.value = ''
-  try {
-    const reason = voidReason.value.trim() || t('orderTaker.voidBy', { waiter: waiterName.value || '-' })
-    await orderApi.voidOrder(order.order_id, { reason })
-    sentToast.value = t('orderTaker.voidDone', { number: order.order_number })
-    setTimeout(() => (sentToast.value = ''), 3000)
-    voidTarget.value = null
-    // Cloud Print Settings: print a void receipt when an order is cancelled.
-    if (printStore.printOnVoid) {
-      const hotel = authStore.user?.tenant?.hotel_name || 'MRK Hotels'
-      if (!(await printStore.print(await orderPrintLines({ ...order, _payment: undefined }, 'receipt', { hotel })))) {
-        toast(t('orderTaker.noPrinter'), 'error')
-      }
-    }
-    await loadOpenOrders()
-    loadDeptOrders()
-  } catch (err) {
-    voidError.value = err.response?.data?.message || t('common.actionFailed')
-  } finally {
-    voiding.value = false
-  }
-}
-
-// Bulk void: the board's single X voids every order currently listed (honouring
-// the search/status filter). Orders the backend would reject — paid, room-billed
-// or already closed — are skipped, so the button only offers what it can clear.
-// Waiters may void their running tickets too; only the kitchen flow is theirs to
-// read, not to advance, which stays gated in advanceItem().
-const selectedVoid = ref([])
+const selectedOrderIds = ref([])
+const selectedOrders = computed(() => openFiltered.value.filter((o) => selectedOrderIds.value.includes(o.order_id)))
+const printingSelected = ref(false)
 const voidSelectedOpen = ref(false)
 const voidingSelected = ref(false)
 
 /** Double-tapping a card is the touch alternative to ticking its checkbox. */
 function toggleSelectOrder(order) {
-  if (!(['pending', 'preparing', 'in_progress', 'processing'].includes(order.status) && order.payment_status === 'unpaid')) return
-  const index = selectedVoid.value.indexOf(order.order_id)
-  if (index >= 0) selectedVoid.value.splice(index, 1)
-  else selectedVoid.value.push(order.order_id)
+  const index = selectedOrderIds.value.indexOf(order.order_id)
+  if (index >= 0) selectedOrderIds.value.splice(index, 1)
+  else selectedOrderIds.value.push(order.order_id)
 }
 
 /** The ticked orders the void endpoint will accept right now. */
 const selectedVoidable = computed(() =>
   openFiltered.value.filter(
-    (o) => selectedVoid.value.includes(o.order_id) && ['pending', 'preparing', 'in_progress', 'processing'].includes(o.status) && o.payment_status === 'unpaid',
+    (o) => selectedOrderIds.value.includes(o.order_id) && ['pending', 'preparing', 'in_progress', 'processing'].includes(o.status) && o.payment_status === 'unpaid',
   ),
 )
 function openVoidSelected() {
@@ -1369,7 +1284,17 @@ async function confirmVoidSelected() {
   await loadOpenOrders()
   loadDeptOrders()
   loadOrderSummary()
-  selectedVoid.value = []
+  selectedOrderIds.value = []
+}
+
+async function printSelectedOrders(kind) {
+  if (printingSelected.value || !selectedOrders.value.length) return
+  printingSelected.value = true
+  try {
+    for (const order of selectedOrders.value) await printTicket(order, kind)
+  } finally {
+    printingSelected.value = false
+  }
 }
 
 // Reprint from the board: kitchen ticket (KOT) or guest receipt, exactly like
@@ -5081,6 +5006,18 @@ function onKey(e) {
 
 .open-btn.ghost.danger:hover {
   background: #fef2f2;
+}
+
+.open-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.open-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 /* Open-orders board filters: instant search + quick status chips */

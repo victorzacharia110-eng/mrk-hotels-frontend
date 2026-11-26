@@ -42,25 +42,49 @@ describe('open-orders board: void selected only', () => {
     expect(body).toMatch(/orderApi\.voidOrder\(order\.order_id/)
   })
 
-  it('keeps the per-order Void in the top bill-actions panel', () => {
+  it('puts the shared print and void actions above the waiter search', () => {
+    const actionsAt = pad.indexOf('class="open-bulk-actions"')
+    const searchAt = pad.indexOf("$t('orderTaker.searchOpen')")
+    expect(actionsAt, 'shared actions row not found').toBeGreaterThan(-1)
+    expect(searchAt, 'waiter search not found').toBeGreaterThan(actionsAt)
+    const actions = pad.slice(actionsAt, searchAt)
+    expect(actions).toMatch(/@click="printSelectedOrders\('kot'\)"/)
+    expect(actions).toMatch(/@click="printSelectedOrders\('receipt'\)"/)
+    expect(actions).toMatch(/@click="openVoidSelected"/)
+  })
+
+  it('keeps only bill changes in the per-card top panel', () => {
     const panelAt = pad.indexOf('class="open-actions open-bill-actions"')
     const headerAt = pad.indexOf('class="open-card-head"')
-    const splitAt = pad.indexOf('@click="openSplit(order)"')
-    const transferAt = pad.indexOf('@click="openTransfer(order)"')
-    const mergeAt = pad.indexOf('@click="openMerge(order)"')
-    const kotAt = pad.indexOf("@click=\"printTicket(order, 'kot')\"")
-    const receiptAt = pad.indexOf("@click=\"printTicket(order, 'receipt')\"")
-    const voidAt = pad.indexOf('@click="openVoid(order)"')
     expect(panelAt, 'bill-actions panel not found').toBeGreaterThan(-1)
     expect(headerAt, 'card header not found').toBeGreaterThan(panelAt)
-    expect(splitAt).toBeGreaterThan(panelAt)
-    expect(transferAt).toBeGreaterThan(splitAt)
-    expect(mergeAt).toBeGreaterThan(transferAt)
-    expect(kotAt).toBeGreaterThan(mergeAt)
-    expect(receiptAt).toBeGreaterThan(kotAt)
-    expect(voidAt).toBeGreaterThan(receiptAt)
-    expect(voidAt).toBeLessThan(headerAt)
-    expect(pad.slice(voidAt, pad.indexOf('</button>', voidAt))).toMatch(/\$t\('orderTaker\.void'\)/)
+    const panel = pad.slice(panelAt, headerAt)
+    expect(panel).toMatch(/@click="openSplit\(order\)"/)
+    expect(panel).toMatch(/@click="openTransfer\(order\)"/)
+    expect(panel).toMatch(/@click="openMerge\(order\)"/)
+    expect(panel).not.toMatch(/printTicket\(order|openVoid\(order/)
+  })
+
+  it('prints every selected order from one control', () => {
+    const at = pad.indexOf('async function printSelectedOrders')
+    expect(at, 'printSelectedOrders not found').toBeGreaterThan(-1)
+    const body = pad.slice(at, pad.indexOf('\n}\n', at))
+    expect(body).toMatch(/for \(const order of selectedOrders\.value\)/)
+    expect(body).toMatch(/printTicket\(order, kind\)/)
+
+    const selectedAt = pad.indexOf('const selectedOrders = computed')
+    expect(selectedAt, 'selectedOrders not found').toBeGreaterThan(-1)
+    const selectedBody = pad.slice(selectedAt, pad.indexOf('\n\n', selectedAt))
+    expect(selectedBody).toMatch(/openFiltered\.value/)
+    expect(selectedBody).toMatch(/selectedOrderIds\.value\.includes\(o\.order_id\)/)
+  })
+
+  it('uses one checkbox for print and void selection', () => {
+    const checkAt = pad.indexOf('v-model="selectedOrderIds"')
+    expect(checkAt, 'selection checkbox not found').toBeGreaterThan(-1)
+    const checkbox = pad.slice(pad.lastIndexOf('<input', checkAt), pad.indexOf('/>', checkAt))
+    expect(checkbox).not.toMatch(/:disabled=/)
+    expect(pad).toMatch(/orderTaker\.selectOrder/)
   })
 
   it('searches the open-orders board by waiter name only', () => {

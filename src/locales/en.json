@@ -4864,6 +4864,7 @@
     "creditExceeded": "This amount exceeds the company's remaining credit.",
     "amountExceedsBalance": "This amount exceeds the folio's current balance.",
     "searchOpen": "Search by waiter",
+    "selectOrder": "Select order",
     "filterAll": "All",
     "filterRunning": "Running",
     "filterReady": "Ready",
