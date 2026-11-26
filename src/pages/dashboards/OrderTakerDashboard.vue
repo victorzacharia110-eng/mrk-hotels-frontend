@@ -448,6 +448,11 @@
           <i class="fas fa-receipt" aria-hidden="true"></i> {{ $t('orderTaker.printReceipt') }}
           <span v-if="selectedOrders.length">({{ selectedOrders.length }})</span>
         </button>
+        <button type="button" class="open-btn ghost ok" :disabled="paying || !selectedPayable.length"
+          :aria-label="$t('cashier.summary.settle')" @click="openSettleSelected">
+          <i class="fas fa-money-bill" aria-hidden="true"></i> {{ $t('cashier.summary.settle') }}
+          <span v-if="selectedPayable.length">({{ selectedPayable.length }})</span>
+        </button>
         <button type="button" class="open-btn ghost danger" :disabled="!selectedVoidable.length"
           :aria-label="$t('orderTaker.void')" @click="openVoidSelected">
           <i class="fas fa-ban" aria-hidden="true"></i> {{ $t('orderTaker.void') }}
@@ -476,19 +481,6 @@
       <div v-else class="open-grid">
         <article v-for="order in openFiltered" :key="order.order_id" class="open-card"
           @dblclick="toggleSelectOrder(order)">
-          <div class="open-actions open-bill-actions" @dblclick.stop>
-            <template v-if="!['completed', 'cancelled'].includes(order.status) && (order.items || []).length > 1">
-              <button type="button" class="open-btn ghost" @click="openSplit(order)">
-                <i class="fas fa-scissors" aria-hidden="true"></i> {{ $t('orderTaker.split') }}
-              </button>
-              <button type="button" class="open-btn ghost" @click="openTransfer(order)">
-                <i class="fas fa-right-left" aria-hidden="true"></i> {{ $t('orderTaker.transfer') }}
-              </button>
-              <button type="button" class="open-btn ok" @click="openMerge(order)">
-                <i class="fas fa-merge" aria-hidden="true"></i> {{ $t('orderTaker.mergeBill') }}
-              </button>
-            </template>
-          </div>
           <header class="open-card-head">
             <label class="open-check">
               <input type="checkbox" :value="order.order_id" v-model="selectedOrderIds"
@@ -533,20 +525,22 @@
               <i class="fas fa-check" aria-hidden="true"></i> {{ $t('orderTaker.markCompleted') }}
             </button>
           </div>
-          <p class="open-meta">
-            <i class="fas fa-location-dot" aria-hidden="true"></i>
-            {{ order.table_number ? $t('orders.tableN', { number: order.table_number })
-              : order.room_number ? $t('orders.roomN', { number: order.room_number })
-                : order.guest_name || '—' }}
-            · {{ order.waiter_name || '—' }}
-          </p>
-          <p class="open-meta open-time">
-            <i class="fas fa-user" aria-hidden="true"></i>
-            {{ $t('orders.guestName') }}: {{ order.guest_name || '—' }}
-            <template v-if="order.covers">
-              · <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('orderTaker.diners') }}: {{ order.covers }}
-            </template>
-          </p>
+          <div class="open-card-lines">
+            <p class="open-meta">
+              <i class="fas fa-location-dot" aria-hidden="true"></i>
+              {{ order.table_number ? $t('orders.tableN', { number: order.table_number })
+                : order.room_number ? $t('orders.roomN', { number: order.room_number })
+                  : order.guest_name || '—' }}
+              · {{ order.waiter_name || '—' }}
+            </p>
+            <p class="open-meta open-time">
+              <i class="fas fa-user" aria-hidden="true"></i>
+              {{ $t('orders.guestName') }}: {{ order.guest_name || '—' }}
+              <template v-if="order.covers">
+                · <i class="fas fa-utensils" aria-hidden="true"></i> {{ $t('orderTaker.diners') }}: {{ order.covers }}
+              </template>
+            </p>
+          </div>
           <ul class="open-items">
             <li class="open-items-head">
               <span>{{ $t('orderTaker.item') }}</span>
@@ -572,6 +566,18 @@
               <i class="fas fa-wallet" aria-hidden="true"></i> {{ order.settlement_mode }}
             </span>
           </p>
+          <div v-if="!['completed', 'cancelled'].includes(order.status) && (order.items || []).length > 1"
+            class="open-actions open-bill-actions" @dblclick.stop>
+            <button type="button" class="open-btn ghost" @click="openSplit(order)">
+              <i class="fas fa-scissors" aria-hidden="true"></i> {{ $t('orderTaker.split') }}
+            </button>
+            <button type="button" class="open-btn ghost" @click="openTransfer(order)">
+              <i class="fas fa-right-left" aria-hidden="true"></i> {{ $t('orderTaker.transfer') }}
+            </button>
+            <button type="button" class="open-btn ok" @click="openMerge(order)">
+              <i class="fas fa-merge" aria-hidden="true"></i> {{ $t('orderTaker.mergeBill') }}
+            </button>
+          </div>
         </article>
       </div>
     </div>
@@ -1324,6 +1330,15 @@ async function printTicket(order, kind) {
 // may collect payment on a ticket.
 const canCollect = computed(() => authStore.can(60))
 
+const selectedPayable = computed(() =>
+  selectedOrders.value.filter(
+    (order) =>
+      order.payment_status === 'unpaid' &&
+      !['completed', 'cancelled'].includes(order.status) &&
+      canCollect.value,
+  ),
+)
+
 // Floor staff (waiters/bartenders) only see and work their own tickets; the
 // Open Orders board is scoped to them so they never touch another waiter's.
 const isFloorStaff = computed(() => ['waiter', 'bartender'].includes(role.value))
@@ -1682,6 +1697,7 @@ async function advanceOrder(order, status) {
 
 // Collect-payment popup state.
 const payOrder = ref(null)
+const settleQueue = ref([])
 const creditAccounts = ref([])
 const creditorAccounts = computed(() => creditAccounts.value.filter((a) => a.type === 'creditor' && a.is_active !== false))
 const noChargeAccounts = computed(() => creditAccounts.value.filter((a) => a.type === 'no_charge' && a.is_active !== false))
@@ -1708,6 +1724,7 @@ async function settleAccount(account) {
     await loadOpenOrders()
     loadDeptOrders()
     loadOrderSummary()
+    settleNextQueued()
   } catch (err) {
     openError.value = err.response?.data?.message || t('common.actionFailed')
   } finally {
@@ -1839,6 +1856,24 @@ function openPay(order) {
   if (!creditAccounts.value.length) loadCreditAccounts()
 }
 
+function openSettleSelected() {
+  if (paying.value || !selectedPayable.value.length) return
+  const targets = selectedPayable.value
+  settleQueue.value = targets.slice(1).map((order) => order.order_id)
+  openPay(targets[0])
+}
+
+function settleNextQueued() {
+  const nextId = settleQueue.value.shift()
+  if (!nextId) {
+    selectedOrderIds.value = []
+    return
+  }
+  const next = openOrders.value.find((order) => order.order_id === nextId)
+  if (next && next.payment_status === 'unpaid') openPay(next)
+  else settleNextQueued()
+}
+
 /** Records the payment with the tapped method and closes the popup. */
 async function pay(method) {
   if (!payOrder.value || paying.value) return
@@ -1876,6 +1911,7 @@ async function pay(method) {
     setTimeout(() => (sentToast.value = ''), 3000)
     payOrder.value = null
     await loadOpenOrders()
+    settleNextQueued()
   } catch (err) {
     openError.value = err.response?.data?.message || t('common.actionFailed')
   } finally {
@@ -4523,25 +4559,32 @@ function onKey(e) {
 
 .open-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
 }
 
 .open-card {
   background: #fff;
   border: 1px solid #d4d4d8;
-  border-radius: 12px;
-  padding: 14px 16px;
+  border-radius: 14px;
+  padding: 15px 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  box-shadow: 0 2px 6px rgba(24, 24, 27, 0.04);
+}
+
+.open-card:hover {
+  border-color: #a1a1aa;
+  box-shadow: 0 5px 14px rgba(24, 24, 27, 0.08);
 }
 
 .open-card-head {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 8px 10px;
   font-size: 15px;
   color: #27272a;
 }
@@ -4549,9 +4592,9 @@ function onKey(e) {
 .open-title {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
-  flex: 1;
+  flex: 1 1 170px;
 }
 
 .open-order-line {
@@ -4580,10 +4623,20 @@ function onKey(e) {
 .open-when {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 5px;
   font-size: 11px;
-  color: #71717a;
-  white-space: nowrap;
+  color: #52525b;
+  white-space: normal;
+}
+
+.open-card-lines {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px 12px;
+  padding: 9px 0;
+  border-top: 1px solid #f4f4f5;
+  border-bottom: 1px solid #f4f4f5;
 }
 
 /* Waiter account order summary */
@@ -4810,13 +4863,15 @@ function onKey(e) {
 
 .open-meta {
   margin: 0;
-  font-size: 13px;
-  color: #71717a;
+  font-size: 12.5px;
+  color: #52525b;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .open-time {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
 }
 
@@ -4902,6 +4957,11 @@ function onKey(e) {
   text-align: right;
 }
 
+.open-total strong {
+  color: #18181b;
+  font-size: 14px;
+}
+
 .pay-unpaid {
   color: #b91c1c;
   font-weight: 700;
@@ -4933,18 +4993,18 @@ function onKey(e) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 0 0 10px;
-  padding: 10px;
-  border: 1px solid #e4e4e7;
-  border-radius: 10px;
-  background: #fafafa;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .open-bill-actions {
-  display: flex;
   align-items: center;
-  border-color: #c7d2fe;
-  background: #eef2ff;
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid #e4e4e7;
+  border-radius: 0;
 }
 
 .open-btn {
@@ -5008,11 +5068,26 @@ function onKey(e) {
   background: #fef2f2;
 }
 
+.open-btn.ghost.ok {
+  background: transparent;
+  color: #0f766e;
+  border-color: #99f6e4;
+}
+
+.open-btn.ghost.ok:hover {
+  background: #f0fdfa;
+}
+
 .open-bulk-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   margin-bottom: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #d4d4d8;
+  border-radius: 10px;
 }
 
 .open-btn:disabled {

@@ -32,7 +32,7 @@ vi.mock('@/utils/printer', async (importOriginal) => ({
   printToPrinter: vi.fn().mockResolvedValue(true),
 }))
 
-const { printerState, printToPrinter, connectPrinter } = await import('@/utils/printer')
+const { printerState, printToPrinter, connectPrinter, listPrinters } = await import('@/utils/printer')
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -134,6 +134,26 @@ describe('PrinterSettingsPage — setup guide', () => {
     const openBtn = wrapper.findAll('.steps .step')[1].find('.link-btn')
     expect(openBtn.text()).toContain('Open this section')
     await openBtn.trigger('click')
+  })
+
+  it('offers a USB printing method with no network fields', async () => {
+    printerState.connected = true
+    listPrinters.mockResolvedValueOnce(['POS-80C'])
+    usePrintSettingsStore().saveSettings({ printMethod: 'usb' })
+
+    const wrapper = await mountPage()
+    const method = wrapper.find('#print-method')
+    const tillPrinter = wrapper.find('#till-printer')
+
+    expect(method.exists()).toBe(true)
+    expect(method.findAll('option').map((option) => option.element.value)).toEqual(['usb', 'qz', 'server'])
+    expect(wrapper.find('#downloads').exists()).toBe(true)
+    expect(tillPrinter.exists()).toBe(true)
+    expect(wrapper.find('#till-host').exists()).toBe(false)
+    expect(tillPrinter.findAll('option').some((option) => option.text() === 'POS-80C')).toBe(true)
+
+    await tillPrinter.setValue('POS-80C')
+    expect(usePrintSettingsStore().tillPrinter).toMatchObject({ kind: 'system', printer: 'POS-80C' })
   })
 
   it('makes the QZ Tray download the one obvious download', async () => {

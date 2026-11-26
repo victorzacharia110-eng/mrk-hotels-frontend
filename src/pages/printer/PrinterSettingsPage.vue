@@ -26,11 +26,15 @@
       <div class="network-form">
         <label class="fld-label" for="print-method">{{ $t('printer.methodLabel') }}</label>
         <select id="print-method" class="form-control" :value="printMethod" @change="setPrintMethod($event.target.value)">
+          <option value="usb">{{ $t('printer.methodUsb') }}</option>
           <option value="qz">{{ $t('printer.methodQz') }}</option>
           <option value="server">{{ $t('printer.methodServer') }}</option>
         </select>
       </div>
-      <p v-if="printMethod === 'server'" class="notice">
+      <p v-if="usbMethod" class="notice">
+        <i class="fas fa-circle-info"></i> {{ $t('printer.usbHint') }}
+      </p>
+      <p v-if="serverMethod" class="notice">
         <i class="fas fa-circle-info"></i> {{ $t('printer.serverHint') }}
       </p>
     </section>
@@ -40,7 +44,7 @@
       chip each, so a hotel setting the system up for the first time knows
       exactly where they are and what is still missing.
     -->
-    <section v-if="printMethod === 'qz'" class="panel setup-guide">
+    <section v-if="localMethod" class="panel setup-guide">
       <h2><i class="fas fa-list-ol"></i> {{ $t('printer.setupTitle') }}</h2>
       <p class="muted">{{ $t('printer.setupSubtitle') }}</p>
 
@@ -71,7 +75,7 @@
     <!-- QZ Tray is the one thing to install: it is free, open-source and
          cross-platform. The download link is theirs so the operator always
          gets the current, correctly-signed build. -->
-    <section v-if="printMethod === 'qz'" id="downloads" class="panel downloads">
+    <section v-if="localMethod" id="downloads" class="panel downloads">
       <h2><i class="fas fa-download"></i> {{ $t('printer.downloadsTitle') }}</h2>
 
       <a class="download-card primary-card" :href="qzDownloadUrl" target="_blank" rel="noopener">
@@ -95,7 +99,9 @@
 
     <section id="connection" class="panel">
       <h2><i class="fas fa-plug"></i> {{ $t('printer.connectionTitle') }}</h2>
-      <p class="muted">{{ printMethod === 'server' ? $t('printer.serverConnectionHint') : $t('printer.connectionHint') }}</p>
+      <p class="muted">
+        {{ serverMethod ? $t('printer.serverConnectionHint') : usbMethod ? $t('printer.usbConnectionHint') : $t('printer.connectionHint') }}
+      </p>
 
       <div class="status-row">
         <span class="status-dot" :class="statusDot"></span>
@@ -110,7 +116,7 @@
       </p>
 
       <div class="actions">
-        <template v-if="printMethod === 'qz'">
+        <template v-if="localMethod">
           <button class="btn btn-primary" :disabled="connecting" @click="connect">
             <i class="fas fa-plug"></i> {{ connected ? $t('printer.reconnect') : $t('printer.connect') }}
           </button>
@@ -125,8 +131,8 @@
 
       <!-- The till printer (receipts and guest checks). Pick an installed
            printer QZ Tray can see, or point straight at a network printer. -->
-      <div v-if="printMethod === 'qz'" class="network-form">
-        <label class="fld-label" for="till-printer">{{ $t('printer.tillPrinterLabel') }}</label>
+      <div v-if="localMethod" class="network-form">
+        <label class="fld-label" for="till-printer">{{ usbMethod ? $t('printer.usbPrinterLabel') : $t('printer.tillPrinterLabel') }}</label>
         <select id="till-printer" class="form-control" :value="tillPrinterName" @change="setTillPrinter($event.target.value)">
           <option value="">{{ $t('printer.selectPrinter') }}</option>
           <option v-for="name in availablePrinters" :key="name" :value="name">{{ name }}</option>
@@ -137,8 +143,8 @@
         </select>
       </div>
 
-      <div class="network-form">
-        <label class="fld-label" for="till-host">{{ printMethod === 'server' ? $t('printer.serverHostLabel') : $t('printer.orNetwork') }}</label>
+      <div v-if="!usbMethod" class="network-form">
+        <label class="fld-label" for="till-host">{{ serverMethod ? $t('printer.serverHostLabel') : $t('printer.orNetwork') }}</label>
         <div class="inline-fields">
           <input id="till-host" v-model.trim="networkHost" class="form-control" :placeholder="$t('printer.hostLabel')" @change="saveNetwork" />
           <input v-model.trim="networkPort" class="form-control port" :placeholder="$t('printer.portLabel')" @change="saveNetwork" />
@@ -227,11 +233,11 @@
           class="form-control"
           :placeholder="$t('printer.printerName')"
         />
-        <select v-model="newPrinter.kind" class="form-control" :disabled="printMethod === 'server'">
-          <option v-if="printMethod === 'qz'" value="system">{{ $t('printer.systemPrinter') }}</option>
-          <option value="socket">{{ $t('printer.networkPrinter') }}</option>
+        <select v-model="newPrinter.kind" class="form-control" :disabled="printMethod !== 'qz'">
+          <option v-if="localMethod" value="system">{{ $t('printer.systemPrinter') }}</option>
+          <option v-if="!usbMethod" value="socket">{{ $t('printer.networkPrinter') }}</option>
         </select>
-        <select v-if="newPrinter.kind === 'system' && printMethod === 'qz'" v-model="newPrinter.printer" class="form-control">
+        <select v-if="newPrinter.kind === 'system' && localMethod" v-model="newPrinter.printer" class="form-control">
           <option value="">{{ $t('printer.selectPrinter') }}</option>
           <option v-for="name in availablePrinters" :key="name" :value="name">{{ name }}</option>
         </select>
@@ -285,6 +291,7 @@ import {
   printerSupported,
   targetLabel,
   targetUsable,
+  usbTargetUsable,
 } from '@/utils/printer'
 import { serverTargetUsable } from '@/utils/serverPrinter'
 import { qzSigningStatus } from '@/utils/qz'
@@ -305,6 +312,10 @@ const {
   defaultTicketPrinterId,
 } = storeToRefs(printStore)
 const { saveSettings, addTicketPrinter, removeTicketPrinter } = printStore
+
+const serverMethod = computed(() => printMethod.value === 'server')
+const usbMethod = computed(() => printMethod.value === 'usb')
+const localMethod = computed(() => printMethod.value === 'qz' || usbMethod.value)
 
 // Service lines used to be a fixed restaurant/bar pair; `department` is now
 // free text, so the list is read from the service lines the hotel's own menu
@@ -344,6 +355,12 @@ const testPassed = ref(false)
 
 const newPrinter = ref({ name: '', kind: 'system', printer: '', host: '', port: '9100' })
 
+function printerKind() {
+  if (serverMethod.value) return 'socket'
+  if (usbMethod.value) return 'system'
+  return newPrinter.value.kind
+}
+
 // QZ Tray's own download and docs so the operator always gets a current,
 // correctly-signed build rather than a copy bundled with the app.
 const qzDownloadUrl = 'https://qz.io/download/'
@@ -360,7 +377,11 @@ const guideUrl = `${import.meta.env.BASE_URL}mrk-till-setup.zip`
 /** The configured till printer, when it is complete enough for the chosen method. */
 const tillTarget = computed(() => {
   const target = tillPrinter.value
-  const usable = printMethod.value === 'server' ? serverTargetUsable(target) : targetUsable(target)
+  const usable = serverMethod.value
+    ? serverTargetUsable(target)
+    : usbMethod.value
+      ? usbTargetUsable(target)
+      : targetUsable(target)
   return usable ? target : null
 })
 
@@ -372,7 +393,7 @@ const networkPort = ref(String(tillPrinter.value?.kind === 'socket' ? tillPrinte
 
 const canAddPrinter = computed(() => {
   if (!newPrinter.value.name.trim()) return false
-  const kind = printMethod.value === 'server' ? 'socket' : newPrinter.value.kind
+  const kind = printerKind()
   return kind === 'socket' ? Boolean(newPrinter.value.host.trim()) : true
 })
 
@@ -444,10 +465,11 @@ const statusTitle = computed(() => {
 const statusDetail = computed(() => (tillTarget.value ? targetLabel(tillTarget.value) : t('printer.noPrinterHint')))
 
 function setPrintMethod(method) {
-  const next = method === 'server' ? 'server' : 'qz'
+  const next = ['qz', 'usb', 'server'].includes(method) ? method : 'qz'
   saveSettings({ printMethod: next })
-  connected.value = next === 'qz' && printerState.connected
+  connected.value = next !== 'server' && printerState.connected
   testPassed.value = false
+  newPrinter.value.kind = printerKind()
 }
 
 function setFlag(key, value) {
@@ -495,13 +517,13 @@ function saveNetwork() {
 function addPrinter() {
   const name = newPrinter.value.name.trim()
   if (!name) return
-  const kind = printMethod.value === 'server' ? 'socket' : newPrinter.value.kind
+  const kind = printerKind()
   const target =
     kind === 'socket'
       ? { name, kind: 'socket', host: newPrinter.value.host.trim(), port: Number(newPrinter.value.port) || 9100 }
       : { name, kind: 'system', printer: newPrinter.value.printer || name }
   addTicketPrinter(target)
-  newPrinter.value = { name: '', kind: 'system', printer: '', host: '', port: '9100' }
+  newPrinter.value = { name: '', kind: printerKind(), printer: '', host: '', port: '9100' }
 }
 
 /** Connects to QZ Tray and refreshes the list of printers it can see. */
@@ -565,7 +587,7 @@ async function test() {
     } else {
       testPassed.value = true
       connected.value = true
-      if (printMethod.value === 'qz') warnIfSigningBroken()
+      if (localMethod.value) warnIfSigningBroken()
     }
   } finally {
     testing.value = false

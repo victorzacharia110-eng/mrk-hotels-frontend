@@ -170,6 +170,26 @@ describe('print settings — till printer resolution', () => {
     expect(printToPrinter).toHaveBeenCalledWith([['x']], { printer: TILL })
   })
 
+  it('routes USB printing through the local QZ printer', async () => {
+    const store = usePrintSettingsStore()
+    const usbPrinter = { kind: 'system', printer: 'POS-80C', label: 'POS-80C' }
+    store.saveSettings({ printMethod: 'usb', tillPrinter: usbPrinter })
+
+    await expect(store.print([['x']])).resolves.toBe(true)
+    expect(printToPrinter).toHaveBeenCalledWith([['x']], { printer: usbPrinter })
+  })
+
+  it('does not use a network printer for USB printing', async () => {
+    const store = usePrintSettingsStore()
+    store.saveSettings({
+      printMethod: 'usb',
+      tillPrinter: { kind: 'socket', host: '10.0.0.6', port: 9100 },
+    })
+
+    await store.print([['x']])
+    expect(printToPrinter).toHaveBeenCalledWith([['x']], { printer: null })
+  })
+
   it('falls back to the default ticket printer when no till printer is set', async () => {
     const store = usePrintSettingsStore()
     const kitchen = store.addTicketPrinter(KITCHEN)

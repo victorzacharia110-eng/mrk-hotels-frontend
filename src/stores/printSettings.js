@@ -14,12 +14,14 @@
 
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import { printerState, printToPrinter, printPdfToPrinter, targetUsable, targetLabel, listPrinters, connectReason } from "@/utils/printer";
-import { printToServerPrinter } from "@/utils/serverPrinter";
+import { printerState, printToPrinter, printPdfToPrinter, targetUsable, usbTargetUsable, targetLabel, listPrinters, connectReason } from "@/utils/printer";
+import { printToServerPrinter, serverTargetUsable } from "@/utils/serverPrinter";
 import { htmlToPdf } from "@/utils/reportPrint";
 
 // localStorage key for the whole settings blob.
 const STORAGE_KEY = "mrk_print_settings";
+
+const PRINT_METHODS = ["qz", "usb", "server"];
 
 const DEFAULTS = {
   // QZ Tray stays the default; `server` sends ESC/POS bytes from the API.
@@ -84,12 +86,18 @@ function endpointToTarget(endpoint, label) {
  * @param {object} saved  The parsed localStorage blob.
  * @returns {object} A settings object on the current shape.
  */
+function targetUsableForMethod(target, method) {
+  if (method === "server") return serverTargetUsable(target);
+  if (method === "usb") return usbTargetUsable(target);
+  return targetUsable(target);
+}
+
 function migrate(saved) {
   const next = { ...DEFAULTS, ...saved };
   delete next.transport;
   delete next.endpoint;
 
-  if (!["qz", "server"].includes(next.printMethod)) next.printMethod = "qz";
+  if (!PRINT_METHODS.includes(next.printMethod)) next.printMethod = "qz";
 
   if (!targetUsable(next.tillPrinter) && saved.endpoint) {
     next.tillPrinter = endpointToTarget(saved.endpoint, "Till printer");
@@ -174,11 +182,12 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
    */
   function resolveTillPrinter() {
     const s = settings.value;
-    if (targetUsable(s.tillPrinter)) return s.tillPrinter;
+    const usable = (target) => targetUsableForMethod(target, s.printMethod);
+    if (usable(s.tillPrinter)) return s.tillPrinter;
     const printers = s.ticketPrinters || [];
     const preferred = printers.find((p) => p.id === s.defaultTicketPrinterId);
-    if (targetUsable(preferred)) return preferred;
-    return printers.find((p) => targetUsable(p)) || null;
+    if (usable(preferred)) return preferred;
+    return printers.find(usable) || null;
   }
 
   /**
@@ -260,20 +269,21 @@ export const usePrintSettingsStore = defineStore("printSettings", () => {
    * rather than to nothing: a mis-typed ticket still gets in front of the
    * kitchen, which beats it vanishing into a drawer.
    */
-  function resolveTicketPrinter(department, station) {
-    const printers = settings.value.ticketPrinters;
-    const byId = new Map(printers.map((p) => [p.id, p]));
-    // The station's own route wins, then the service line's, then the default.
-    const routed = station
-      ? settings.value.stationRouting?.[station]
-      : settings.value.departmentRouting?.[department];
-    const lineRouted = settings.value.departmentRouting?.[department];
-    return (
-      byId.get(routed) || byId.get(lineRouted) ||
-      byId.get(settings.value.defaultTicketPrinterId) ||
-      null
-    );
-  }
+   function resolveTicketPrinter(department, station) {
+     const printers = settings.value.ticketPrinters;
+     const byId = new Map(printers.map((p) => [p.id, p]));
+     const usable = (p) => targetUsableForMethod(p, settings.value.printMethod);
+     // The station's own route wins, then the service line's, then the default.
+     const routed = station
+       ? settings.value.stationRouting?.[station]
+       : settings.value.departmentRouting?.[department];
+     const lineRouted = settings.value.departmentRouting?.[department];
+     return (
+       [byId.get(routed), byId.get(lineRouted), byId.get(settings.value.defaultTicketPrinterId)].find(usable) ||
+       null
+     );
+   }
+
 
   /**
    * Adds a named printer profile and returns its id.

@@ -2,244 +2,198 @@
 
 <div class="quickref" markdown="1">
 
-Follow these five steps and your printer is ready. Each one is explained slowly, further down.
+Follow these five steps and the till printer is ready. Every step is explained slowly below.
 
-1. **Plug in** the printer and switch it on.
-2. **Add the printer to your computer** — Part 2 (Windows), Part 3 (Mac) or Part 4 (Linux).
-3. **Print a test page** to prove the computer can see the printer.
-4. **Install the MRK printer helper** on the computer the printer is plugged into.
-5. **In MRK**, open *Printer Settings*, choose *Network printer*, paste the address, press *Test Print*.
+1. **Download** `mrk-till-setup.zip` from MRK → **Printer Settings**.
+2. **Extract** the zip into a folder you can find again; keep all four files together.
+3. **Double-click `setup.bat`** and approve the Windows prompt. Do not run the other files by hand.
+4. **Restart the browser**, open **Printer Settings**, select `POS-80C`, then press **Test Print**.
+5. **Confirm no `Allow`/`Block` question appears.** If it does, run `setup.bat` again from a fresh download.
 
-</div>
-
----
-
-# What is CUPS? (in plain words)
-
-**CUPS is the printing manager built into Mac and Linux.** Think of it as the front desk of a hotel: you tell it about the printer **once**, and from then on it takes every receipt and hands it to the printer in the language the printer understands.
-
-On **Windows** the same job is done by Windows itself, so you do not install CUPS there — you simply add the printer in Windows. This guide shows you both, in plain language.
-
-<div class="callout tip" markdown="1">
-<div class="callout-title">Why are we not using "Serial"?</div>
-The earlier **Serial** method tried to talk to the printer directly, and it could not find your printer. CUPS (and Windows' own printer system) uses the printer's proper **driver**, so it sees the printer correctly. This is the reliable route — and it is already built into your computer, so there is nothing extra to buy.
 </div>
 
 ---
 
 # Before you start
 
-Check that you have everything on this list. Keep the printer switched on and the paper roll loaded the whole time.
+Check this list first. Keep the printer switched on and the paper roll loaded the whole time.
 
 | What you need | A little more detail |
 | --- | --- |
-| The receipt printer | Your thermal receipt printer, e.g. the Romeson RM80ZJ or similar. |
-| The power cable | Plugged into a working wall socket. |
-| The USB cable (or network cable) | Connects the printer to the computer. |
-| The computer | The one the printer is plugged into. Keep it switched on to print. |
-| Chrome or Edge browser | Any modern browser works for this guide. |
-| About 15 minutes | Pour a cup of tea first. |
+| The receipt printer | The thermal receipt printer, e.g. Romeson RM80ZJ, plugged into this till computer by USB. |
+| Windows on the till computer | QZ Tray runs on the computer the printer cable is plugged into. Run the setup once on each till. |
+| Chrome or Edge | A current browser with access to `https://mrk-hotels.com`. |
+| The MRK login from reception | Use only your own login. Never ask another user for their password or OTP. |
+| About 10 minutes | Most of that time is waiting for the setup window to finish. |
 
-<div class="callout note" markdown="1">
-<div class="callout-title">Not sure which computer to use?</div>
-Use the computer that the printer's cable is plugged into. We call it **"the printer's computer"** below.
+<div class="callout important" markdown="1">
+<div class="callout-title">Important — this is a per-till setup</div>
+Installing the zip on one computer does **not** configure the other tills. If you move to a different till, or Windows is reinstalled, download the zip again and run `setup.bat` on that computer too.
 </div>
 
 ---
 
-# Part 1 — Plug in the printer {: .part }
+# Part 1 — Download the setup zip {: .part }
 
 <div class="steps" markdown="1">
 
-1. Put the printer on a stable surface near the computer.
-2. Plug the **power cable** into the printer and the wall, then press the printer's power button. The light should come on.
-3. Load the **paper roll** and close the lid.
-4. Plug the **USB cable** into the printer and into the computer. (If you use a network cable instead, plug it in and skip the USB.)
-5. Leave everything switched on.
+1. Sign in to **MRK Hotels** on the till computer.
+2. Open the **cashier** area, then open **Printer Settings**.
+3. Find **Setup guide & printer helper** and click **Till setup (`mrk-till-setup.zip`)**.
+4. Save the file to a place you will remember, such as **Downloads** or the **Desktop**.
+5. If an older copy of `mrk-till-setup.zip` is already on the computer, delete it first. A fresh copy is important — older copies may have the setup bug that caused the PowerShell error.
 
-</div>
-
-<div class="callout tip" markdown="1">
-<div class="callout-title">Tip</div>
-If the printer has a small self-test button, you can press it once to print a test slip. That proves the printer itself is healthy before we set up the computer.
 </div>
 
 <div class="callout note" markdown="1">
-<div class="callout-title">Using a network (Ethernet) cable instead of USB</div>
-Some printers — including the one in this hotel — have a **network socket** as well as USB. You can plug the printer into the network instead of a computer's USB port. When you do, the printer needs its own **fixed IP address** (for example `192.168.1.200`), and the helper is told that address so it can send receipts over the cable. Receipt printers almost always listen on port **9100**. The helper's **set-network-printer.bat** does this for you (Part 5).
+<div class="callout-title">Always use the app link</div>
+Download only from **MRK → Printer Settings** or `https://mrk-hotels.com/mrk-till-setup.zip`. Do not use a copy sent in chat, email, or another till unless support tells you to. The zip changes when we fix setup problems.
 </div>
 
 ---
 
-# Part 2 — Windows (the printer's computer) {: .part }
+# Part 2 — Extract the zip {: .part }
+
+<div class="steps" markdown="1">
+
+1. Open **File Explorer**.
+2. Go to the folder where you saved the zip.
+3. Right-click `mrk-till-setup.zip`.
+4. Choose **Extract All…**
+5. Leave the suggested folder selected, or choose an easy folder such as `C:\Users\Public\Desktop\MRK Till Setup`.
+6. Click **Extract**.
+7. Open the new folder. You should see these four files:
+
+</div>
+
+| File | What it does |
+| --- | --- |
+| `setup.bat` | **The file you double-click.** It starts the setup safely and asks Windows for permission if needed. |
+| `setup.ps1` | The detailed setup script. `setup.bat` runs this for you — do not right-click it directly. |
+| `override.crt` | MRK's public root certificate. The script installs it into QZ Tray so silent printing works. You do not need to open it yourself. |
+| `README.txt` | Short notes about the package. Read it if you like, but it does not replace this guide. |
+
+<div class="callout tip" markdown="1">
+<div class="callout-title">Keep the files together</div>
+Do not move `setup.bat` away from the other files. It looks for `setup.ps1` and `override.crt` in the same folder. If you move one file alone, setup will fail.
+</div>
+
+---
+
+# Part 3 — Run the setup (the important part) {: .part }
 
 <div class="os-head win" markdown="1">
 
 <span class="badge win">Windows</span>
 
-Windows has its **own** printing system, so you do **not** install CUPS here. You simply add the printer, and Windows does the rest.
+This is the step that was missing from the old guide. **Downloading the zip alone does not configure the printer** — you must run `setup.bat` once.
 
 </div>
 
 <div class="steps" markdown="1">
 
-1. Click **Start**, then type **Printers & scanners** and open it.
-2. Click **Add device** (or **Add a printer or scanner**).
-3. Wait a moment while Windows looks for the printer.
-4. If your printer appears in the list, click **Add device** next to it.
-5. If it does **not** appear, click **Add manually** and choose one of these:
-   - **Add a printer using an IP address or hostname** — for a printer connected by network cable.
-   - **Add a local printer or network printer with manual settings** — for a USB printer.
-6. Follow the prompts. Windows will install the **driver** (the printer's software).
-7. When it finishes, open **Printers & scanners**, click your printer, and press **Print test page**.
+1. In the extracted folder, **double-click `setup.bat`**.
+2. If Windows shows **User Account Control** ("Do you want to allow this app to make changes?"), click **Yes**. This is expected once; the script needs permission to install QZ Tray and trust the MRK certificate.
+3. A PowerShell window opens. Leave it alone and let it finish. It may take a minute.
+4. Watch for this line near the end: `Verifying silent printing is configured... OK`. That means QZ Tray is ready.
+5. When the window says **setup complete**, close it.
+6. If the window shows `NOT CONFIGURED`, a red error, or the old `Cannot overwrite variable home` message, close it, delete the folder, download a **fresh** zip from Printer Settings, and start again at Part 2.
 
 </div>
 
 <div class="callout important" markdown="1">
-<div class="callout-title">If Windows asks for a driver, or the printer is shared</div>
-Use the disc or USB stick that came with the printer, or download the driver from the maker's website. If the printer is shared from a **Linux or Mac** computer, choose **Add manually → Add a printer using an IP address or hostname** and type the shared address your support team gives you (it looks like `http://192.168.1.50:631/printers/ReceiptPrinter`).
+<div class="callout-title">Do not click Allow or Block inside QZ Tray</div>
+The setup installs MRK's own certificate so the browser already trusts this till. You should **not** see a QZ Tray `Allow`/`Block` dialog when you test print. If you do, run `setup.bat` again from a fresh zip. Do not click **Block**.
+</div>
+
+<div class="callout note" markdown="1">
+<div class="callout-title">What the script actually does</div>
+It checks whether QZ Tray is installed and installs it if missing; copies MRK's public certificate into QZ Tray's trusted store; clears the stale QZ trust prompt; restarts QZ Tray so the trust takes effect; and leaves the signing private key on the MRK server. The zip contains **no private key** and no MRK password.
 </div>
 
 ---
 
-# Part 3 — Mac {: .part }
-
-<div class="os-head mac" markdown="1">
-
-<span class="badge mac">macOS</span>
-
-Mac computers are **powered by CUPS inside**. The friendly screen below is just the easy face of CUPS.
-
-</div>
+# Part 4 — Restart the browser and choose the printer {: .part }
 
 <div class="steps" markdown="1">
 
-1. Click the **Apple menu** (top-left) → **System Settings**.
-2. Open **Printers & Scanners**.
-3. Click **Add Printer, Scanner, or Fax…**
-4. Find your printer in the list on the left (it usually appears by name, e.g. "Romeson RM80ZJ"). Click it.
-5. Check the **Use** box says the printer's name. Click **Add**.
-6. The printer now appears in the list. Make sure it is set as the **default** (right-click → Set Default).
-7. Click **Print Test Page** to try it.
+1. Close every Chrome or Edge window on the till.
+2. Open the browser again and sign in to **MRK Hotels**.
+3. Open **Cashier → Printer Settings**.
+4. Check the QZ status shows **Connected**. If it shows **Not connected**, wait a few seconds and press **Refresh**.
+5. In the printer list, choose **`POS-80C`** (the Windows printer name for the receipt printer on the till).
+6. Make sure **Method** is **QZ Tray / USB**. Do not choose **Server** for a USB receipt printer on the till.
+7. Press **Test Print**. A small MRK receipt should come out.
+8. If a QZ `Allow`/`Block` box appears, click nothing. Close it, run `setup.bat` again from a fresh zip, then repeat from step 1.
 
+</div>
+
+<div class="callout tip" markdown="1">
+<div class="callout-title">If the login says "invalid credentials"</div>
+This usually means the browser cached the old local API address, not that the password is wrong. Press `Ctrl+Shift+R`, or open a private window and sign in again. If it still fails, ask reception to reset your MRK password — do not borrow someone else's password or OTP.
 </div>
 
 ---
 
-# Part 4 — Linux (the CUPS way) {: .part }
+# Part 5 — Make it silent (no dialog on every sale) {: .part }
 
-<div class="os-head linux" markdown="1">
-
-<span class="badge linux">Linux</span>
-
-On Linux, CUPS is the printer system, and it has its own simple web page you can open in your browser.
-
-</div>
+Silent printing means the receipt comes out by itself when a bill is settled. It is controlled by the certificate installed in Part 3, not by a browser checkbox.
 
 <div class="steps" markdown="1">
 
-1. Make sure the printer is plugged in and switched on (Part 1).
-2. Open **Chrome** or **Edge** and type this address, then press Enter: **http://localhost:631**
-3. Click the **Administration** tab at the top.
-4. Click the **Add Printer** button.
-5. If a small box asks for a **username** and **password**, type your computer's own login (the one you use to sign in). Then Continue.
-6. Under **Local Printers**, click your printer's name. If you do not see it, choose:
-   - **AppSocket/HP JetDirect** — for a printer plugged in by network cable.
-   - **LPD/LPR Host or Printer** — another common network option.
-   Then type the printer's address and click Continue.
-7. In **Name**, type **ReceiptPrinter**. You can also fill in Description and Location.
-8. Tick the box **Share This Printer**.
-9. Click **Continue**.
-10. For **Make**, choose **Raw** (this is the best choice for receipt printers). Click **Continue**.
-11. On the **Set Default Options** page, choose the paper size for the roll (look for an **80mm** or *Roll* size). Click **Set Default Options**.
-12. You are back on the **Printers** page. Click your printer, then **Maintenance → Print Test Page**.
+1. Open **Printer Settings** again.
+2. Find **Print on settle** and leave it **on** if receipts must print automatically.
+3. Press **Test print** once more.
+4. The receipt should appear with **no QZ Tray question at all**.
+5. Do not disable QZ Tray in Windows startup. It must be running whenever the till is in use.
 
 </div>
 
 <div class="callout important" markdown="1">
-<div class="callout-title">Important</div>
-When CUPS asks for a password, it means **your computer's own username and password** — not a new password and not your MRK password. If you never set one, ask whoever set up the computer.
-</div>
-
-<div class="callout tip" markdown="1">
-<div class="callout-title">Make it the main printer</div>
-On the **Printers** page, open your printer and click **Set As Server Default**. That way it is used automatically.
+<div class="callout-title">Silent printing is a security setting — do not work around it</div>
+Do not disable Windows SmartScreen, turn off certificate checks, share the setup zip with other hotels, or copy a certificate from another computer. The only safe fix for a trust prompt is to rerun the official `setup.bat` from a fresh MRK download.
 </div>
 
 ---
 
-# Part 5 — Install the MRK printer helper (all computers) {: .part }
+# Part 6 — If something is not working {: .part }
 
-<div class="os-head all" markdown="1">
-
-<span class="badge all">All systems</span>
-
-The **helper** (we also call it the **bridge**) lives on the printer's computer. It quietly passes each receipt from MRK to the printer. You install it **once**.
-
-</div>
-
-<div class="steps" markdown="1">
-
-1. On the printer's computer, open MRK → **Printer Settings → Setup guide & printer helper** and click **Printer helper (printer-bridge.zip)**. Then **unzip** it (for example to `C:\mrk-printer-bridge`).
-2. **On Windows:** right-click the file **install-start.bat** and choose **Run as administrator**. This is a one-time job.
-3. That's it. The helper starts with the computer every time it is switched on — nothing else to click.
-
-</div>
-
-<div class="callout note" markdown="1">
-<div class="callout-title">If the printer uses a network (Ethernet) cable</div>
-Do the three steps above first, then **right-click `set-network-printer.bat`** and run it. Type the printer's IP address when asked (press Enter to accept port `9100`). The helper then prints straight to the printer over the network — no USB and no Windows driver needed.
-</div>
-
-<div class="callout note" markdown="1">
-<div class="callout-title">On Mac and Linux</div>
-Your MRK support team will give you the matching helper for your system. The idea is exactly the same: start it once and leave it running in the background.
-</div>
-
----
-
-# Part 6 — Tell MRK to use the printer {: .part }
-
-<div class="steps" markdown="1">
-
-1. Sign in to **MRK Hotels**.
-2. Open the **cashier** area, then open **Printer Settings**.
-3. In the **Add printer** row, choose **Network bridge agent**.
-4. In the address box, type the address of the printer's computer, for example:
-   **http://192.168.1.50:9720**
-5. Click **Add**.
-6. Press **Test Print**. A small receipt should come out of the printer.
-
-</div>
-
-<div class="callout tip" markdown="1">
-<div class="callout-title">How to find the computer's address (its "IP address")</div>
-**Windows:** Settings → **Network & internet** → click your connection → **Properties** → find **IPv4 address**.
-**Mac:** System Settings → **Network** → **Details** → **IP Address**.
-**Linux:** System Settings → **Network** → the address shown for your connection.
-It looks like four numbers, such as `192.168.1.50`. Use it in the step above, followed by `:9720`.
-</div>
-
----
-
-# Part 7 — If something is not working {: .part }
-
-Find your problem in the left column and try the fix on the right. Go slowly, one line at a time.
+Find what you see in the left column and try the fix on the right. Go slowly, one line at a time.
 
 | What you see | What to try |
 | --- | --- |
-| The printer is not in the list | Check the power light is on and the cable is pushed in. Try a different USB port. Switch the printer off, wait 10 seconds, and on again. |
-| CUPS asks for a password | Type your **computer's** username and password (not your MRK login). |
-| The test page is blank or prints strange characters | That is normal for a "raw" test page. Try the **Test Print** inside MRK instead — that one is the real receipt. |
-| MRK's Test Print does nothing | Make sure the **helper** is running, the address ends with **:9720**, both computers are on the same network, and the helper's port is allowed through the firewall. |
-| The printer is on a network cable and still nothing | Give the printer a fixed IP, run **set-network-printer.bat** on the helper computer and enter that IP. Check `http://localhost:9720/health` — it should say `"transport":"network"`. |
-| The receipt is very long, or blank | Set the paper size to the **80mm roll** in your printer settings and try again. |
-| It prints on one computer but not another | The **helper** must run on the **printer's** computer, and every other computer must use that computer's address. |
+| `Cannot overwrite variable home...` in PowerShell | You have an older zip. Delete it and the extracted folder, download a fresh `mrk-till-setup.zip` from Printer Settings, then run `setup.bat` again. |
+| A QZ Tray `Allow`/`Block` dialog appears | Run `setup.bat` again from a fresh zip. Do not click **Block**. After it finishes, fully close and reopen the browser. |
+| `Verifying silent printing is configured... NOT CONFIGURED` | The script did not finish or Windows denied permission. Right-click `setup.bat`, choose **Run as administrator**, and let it complete. |
+| The printer is not in the list | Check the power and USB cable. In Windows, open **Printers & scanners**, add the printer, and print a Windows test page. Then come back to MRK and press **Refresh**. |
+| QZ status says **Not connected** | Make sure QZ Tray is running in the Windows system tray. Restart it once, then reload Printer Settings. |
+| Test print says **No printer selected** | Choose `POS-80C` in the printer list, press **Save**, then press **Test Print** again. |
+| Login says **invalid credentials** | Press `Ctrl+Shift+R` or use a private window. Do not reuse another staff member's password or OTP. |
+| Receipt prints on another till but not this one | Run `setup.bat` on this till. Every till computer needs its own one-time setup. |
+| The browser still uses `localhost` | Ask reception to use `https://mrk-hotels.com`, hard-refresh, and sign in again. The app must use `https://api.mrk-hotels.com/api`. |
 
 <div class="callout note" markdown="1">
-<div class="callout-title">Finding the helper</div>
-On Windows, look in the **system tray** (bottom-right) or in **Task Manager** for **MRK** while it is running. If it is not there, run **install-start.bat** again as administrator.
+<div class="callout-title">Finding QZ Tray</div>
+Look in the Windows **system tray** (bottom-right, sometimes behind the `^` arrow). The QZ Tray icon should be present while the till is in use. If it is missing, open the Start menu and search for **QZ Tray**, or rerun `setup.bat`.
 </div>
+
+---
+
+# Security rules for staff
+
+<div class="callout important" markdown="1">
+<div class="callout-title">Share instructions, never credentials</div>
+Send this PDF or the setup steps to staff. **Never** send your MRK password, OTP code, or another staff member's login. If someone cannot sign in, reception should reset their own account.
+</div>
+
+| Rule | Why |
+| --- | --- |
+| Download the zip only from MRK Printer Settings or `https://mrk-hotels.com/mrk-till-setup.zip` | Older or copied zips may contain the PowerShell bug. |
+| Run `setup.bat` only on the till computer that owns the receipt printer | QZ Tray trusts the browser on that machine only. |
+| Do not open, rename, or email `override.crt` | It is a public certificate installed by the script; moving it can break silent printing. |
+| Do not send passwords or OTPs in chat | OTPs are single-use and belong to one staff member. |
+| Do not click **Block** in a QZ dialog | Blocking stops silent receipts; rerun the official setup instead. |
+| Do not reuse another hotel's zip | Each hotel has its own signing key on its own server. |
 
 ---
 
@@ -247,23 +201,53 @@ On Windows, look in the **system tray** (bottom-right) or in **Task Manager** fo
 
 | Word | What it means |
 | --- | --- |
-| **CUPS** | The printing manager on Mac and Linux. Your computer's "front desk" for printers. |
-| **Driver** | The little piece of software that teaches the computer how to talk to one printer. |
-| **Printer queue** | The list of jobs waiting to print, managed by the computer. |
-| **ESC/POS** | The printing language receipt printers understand. |
-| **Thermal printer** | A printer that prints on heat-sensitive paper, like a till slip — no ink. |
-| **IP address** | The computer's number on the network, e.g. `192.168.1.50`. |
-| **Port (9720)** | Like an apartment number on a building — it tells MRK exactly where the helper is listening. |
-| **Helper / bridge** | The small program that passes receipts from MRK to your printer. |
+| **QZ Tray** | The small Windows program that lets the browser print to the local USB printer without a dialogue on every sale. |
+| **`setup.bat`** | The one-click launcher that asks Windows for permission and runs the full setup. |
+| **`setup.ps1`** | The setup script. It is run by `setup.bat`; you do not need to open it. |
+| **`override.crt`** | MRK's public root certificate that tells QZ Tray the print request really came from MRK. |
+| **Silent printing** | Receipts print automatically when a bill is settled; no `Allow`/`Block` question appears. |
+| **POS-80C** | The Windows printer name selected inside MRK Printer Settings. |
+| **OTP** | The one-time code sent to your phone. It is part of your login — never share it. |
+| **ESC/POS** | The language thermal receipt printers understand. |
 
 ---
 
 # Still stuck?
 
-No problem — help is one message away. When you contact **MRK support**, please include:
+No problem — help is one message away. When you contact **MRK support**, include:
 
-1. A **photo** of the printer and its lights.
-2. The **exact step number** where it went wrong.
-3. Any message shown on the screen (a photo is perfect).
+1. A **photo** of the PowerShell window (including the exact error line).
+2. A **photo** of the QZ Tray icon/status in Printer Settings.
+3. The **step number** from this guide where it went wrong.
+4. Whether you downloaded a fresh zip and ran `setup.bat` as administrator.
 
-With those three things, we can usually solve it on the first try.
+With those four things, we can usually solve it on the first try.
+
+---
+
+# Final comparison — completed installation {: .part }
+
+Use this photo as the reference for a correctly completed till setup. Compare your own **Printer Settings** screen and the printed receipt with it before you close this guide.
+
+<div class="reference-image" markdown="1">
+
+![Completed MRK till printer setup reference](printer-manual/completed-installation.jpeg)
+
+<p class="reference-caption">Reference photo from a completed MRK till printer installation.</p>
+
+</div>
+
+| Check | What complete looks like |
+| --- | --- |
+| Browser | Open at `https://mrk-hotels.com`, signed in with the till user's own login. |
+| QZ status | **Connected** in **Cashier → Printer Settings**. |
+| Printer | The USB receipt printer is selected, normally `POS-80C`. |
+| Method | **QZ Tray / USB** — not **Server** for a local USB printer. |
+| Test print | A small MRK receipt comes out of the till printer. |
+| Trust prompt | No QZ Tray `Allow`/`Block` dialog appears. |
+| Staff security | Nobody shared a password, OTP, or another till's setup file. |
+
+<div class="callout tip" markdown="1">
+<div class="callout-title">Ready to use</div>
+If all seven checks match, the till is ready for normal service. Leave QZ Tray running and keep the printer switched on with paper loaded.
+</div>

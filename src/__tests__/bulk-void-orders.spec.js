@@ -42,7 +42,7 @@ describe('open-orders board: void selected only', () => {
     expect(body).toMatch(/orderApi\.voidOrder\(order\.order_id/)
   })
 
-  it('puts the shared print and void actions above the waiter search', () => {
+  it('puts the shared print, settle and void actions above the waiter search', () => {
     const actionsAt = pad.indexOf('class="open-bulk-actions"')
     const searchAt = pad.indexOf("$t('orderTaker.searchOpen')")
     expect(actionsAt, 'shared actions row not found').toBeGreaterThan(-1)
@@ -50,15 +50,31 @@ describe('open-orders board: void selected only', () => {
     const actions = pad.slice(actionsAt, searchAt)
     expect(actions).toMatch(/@click="printSelectedOrders\('kot'\)"/)
     expect(actions).toMatch(/@click="printSelectedOrders\('receipt'\)"/)
+    expect(actions).toMatch(/@click="openSettleSelected"/)
+    expect(actions).toMatch(/cashier\.summary\.settle/)
     expect(actions).toMatch(/@click="openVoidSelected"/)
   })
 
-  it('keeps only bill changes in the per-card top panel', () => {
-    const panelAt = pad.indexOf('class="open-actions open-bill-actions"')
+  it('settles ticked payable tickets from the shared toolbar', () => {
+    const selectedAt = pad.indexOf('const selectedPayable = computed')
+    expect(selectedAt, 'selectedPayable not found').toBeGreaterThan(-1)
+    const selectedBody = pad.slice(selectedAt, pad.indexOf('\n\n', selectedAt))
+    expect(selectedBody).toMatch(/payment_status === 'unpaid'/)
+    expect(selectedBody).toMatch(/canCollect\.value/)
+
+    const settleAt = pad.indexOf('function openSettleSelected')
+    expect(settleAt, 'openSettleSelected not found').toBeGreaterThan(-1)
+    const settleBody = pad.slice(settleAt, pad.indexOf('\n}\n', settleAt))
+    expect(settleBody).toMatch(/openPay\(targets\[0\]\)/)
+    expect(pad).toMatch(/function settleNextQueued/)
+  })
+
+  it('keeps only bill changes in the per-card footer panel', () => {
     const headerAt = pad.indexOf('class="open-card-head"')
-    expect(panelAt, 'bill-actions panel not found').toBeGreaterThan(-1)
-    expect(headerAt, 'card header not found').toBeGreaterThan(panelAt)
-    const panel = pad.slice(panelAt, headerAt)
+    const panelAt = pad.indexOf('class="open-actions open-bill-actions"')
+    expect(headerAt, 'card header not found').toBeGreaterThan(-1)
+    expect(panelAt, 'bill-actions panel not found').toBeGreaterThan(headerAt)
+    const panel = pad.slice(panelAt, pad.indexOf('</article>', panelAt))
     expect(panel).toMatch(/@click="openSplit\(order\)"/)
     expect(panel).toMatch(/@click="openTransfer\(order\)"/)
     expect(panel).toMatch(/@click="openMerge\(order\)"/)
@@ -113,6 +129,10 @@ describe('open-order card template', () => {
     const meta = pad.slice(metaAt, pad.indexOf('</p>', metaAt))
     expect(metaAt).toBeGreaterThan(-1)
     expect(meta).not.toMatch(/fa-clock|formatOrderDateTime/)
+
+    const headAt = pad.indexOf('.open-card-head {')
+    const headRule = pad.slice(headAt, pad.indexOf('}', headAt))
+    expect(headRule).toMatch(/flex-wrap:\s*wrap/)
   })
 
   it('right-aligns the total and keeps double-tap selection', () => {
@@ -134,8 +154,9 @@ describe('open-order card template', () => {
     expect(items).not.toMatch(/<button/)
   })
 
-  it('renders the relocated bill actions as a horizontal top panel', () => {
-    expect(pad).toMatch(/\.open-bill-actions\s*\{[^}]*display:\s*flex/)
+  it('renders relocated bill actions as a plain footer row', () => {
+    expect(pad).toMatch(/\.open-bill-actions\s*\{[^}]*border-top:/)
+    expect(pad).not.toMatch(/\.open-bill-actions\s*\{[^}]*background:\s*#eef2ff/)
     expect(en.orderTaker).not.toHaveProperty('markPreparing')
   })
 })

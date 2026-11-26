@@ -20,6 +20,12 @@ describe('server ESC/POS print method', () => {
     expect(usePrintSettingsStore().printMethod).toBe('qz')
   })
 
+  it('keeps a saved USB printing method', () => {
+    localStorage.setItem('mrk_print_settings', JSON.stringify({ printMethod: 'usb' }))
+
+    expect(usePrintSettingsStore().printMethod).toBe('usb')
+  })
+
   it('sends receipt lines to the API when server printing is selected', async () => {
     const store = usePrintSettingsStore()
     store.saveSettings({

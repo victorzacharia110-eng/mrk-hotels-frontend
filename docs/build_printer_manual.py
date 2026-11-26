@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the MRK Hotels printer setup guide PDF (CUPS & Windows, all systems).
+"""Build the MRK Hotels Windows till printer setup guide PDF.
 
 A standalone, self-contained builder so the dedicated manual styling lives next
 to the manual and does not touch the shared documentation pipeline
@@ -33,7 +33,7 @@ CSS = """
     content: "MRK Hotels — Printer Setup Guide";
     font-size: 8pt; color: #005EB8; font-weight: bold;
   }
-  @top-right { content: "CUPS & Windows"; font-size: 8pt; color: #94a3b8; }
+  @top-right { content: "Windows till &middot; QZ Tray"; font-size: 8pt; color: #94a3b8; }
   @bottom-center {
     content: "Page " counter(page) " of " counter(pages);
     font-size: 8pt; color: #94a3b8;
@@ -175,6 +175,20 @@ code {
   font-size: 10.5pt; letter-spacing: 1px; color: #ffffff;
 }
 .cover .edition { margin-top: 10pt; font-size: 9.5pt; color: #bfdbfe; }
+
+/* Completed-installation reference */
+.reference-image {
+  margin: 12pt 0; padding: 10pt;
+  background: #f8fafc; border: 1px solid #dbe4ee; border-radius: 10pt;
+  page-break-inside: avoid;
+}
+.reference-image img {
+  display: block; width: 100%; max-height: 170mm;
+  object-fit: contain; margin: 0 auto;
+}
+.reference-caption {
+  text-align: center; font-size: 9pt; color: #475569; margin-top: 6pt;
+}
 """
 
 
@@ -190,8 +204,8 @@ def build():
         '<div class="kicker">MRK Hotels</div>'
         "<h1>Printer Setup Guide</h1>"
         '<div class="rule"></div>'
-        '<p class="subtitle">The reliable way &mdash; CUPS &amp; Windows, step by step</p>'
-        '<div class="platforms">Windows &nbsp;&middot;&nbsp; macOS &nbsp;&middot;&nbsp; Linux</div>'
+        '<p class="subtitle">Windows till setup &mdash; from download to silent printing</p>'
+        '<div class="platforms">MRK Hotels &nbsp;&middot;&nbsp; QZ Tray &nbsp;&middot;&nbsp; USB receipt printer</div>'
         f'<p class="edition">{VERSION} &middot; {EDITION} &middot; {DATE}</p>'
         "</section>"
     )

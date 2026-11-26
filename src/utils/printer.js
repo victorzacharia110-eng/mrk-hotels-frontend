@@ -141,6 +141,10 @@ export function targetUsable(target) {
   return Boolean(target.printer)
 }
 
+export function usbTargetUsable(target) {
+  return Boolean(target && target.kind === 'system' && target.printer)
+}
+
 /**
  * The label to show for a target.
  * @param {object} target
