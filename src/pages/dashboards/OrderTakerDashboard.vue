@@ -2151,6 +2151,8 @@ function orderLinesFromOrder(order) {
       subtotal: Number(item.subtotal) || unitPrice * quantity,
       existing: true,
       sent_quantity: quantity,
+      print_on_order: item.print_on_order !== false,
+      printer_station: item.printer_station || 'kitchen',
     }
   })
 }
@@ -2843,6 +2845,8 @@ function commitItem(item, accompaniment) {
       quantity: 1,
       subtotal: Number(item.price),
       sent_quantity: 0,
+      print_on_order: item.print_on_order !== false,
+      printer_station: item.printer_station || 'kitchen',
     })
   }
 }
@@ -2877,12 +2881,12 @@ function removeLine(line) {
  * Sends a food ticket for a brand-new order, routed to the printer configured
  * for the service line the order was placed against.
  *
- * The "print a food ticket on order" flag defaults to on in the store, and the
- * manager's choice is obeyed either way — a waiter turning it off is not
- * second-guessed here.
+ * Enabling additional-item tickets implies the original ticket is wanted too;
+ * otherwise the kitchen gets the follow-up round but never the order it belongs
+ * to. Both switches off keeps the floor silent.
  */
 async function printNewOrderTicket(order) {
-  if (!order || !printStore.printFoodTicketOnOrder) return
+  if (!order || (!printStore.printFoodTicketOnOrder && !printStore.printFoodTicketOnItemAdded)) return
   // One ticket per pass, so a drink filed under the bar printer does not ride
   // into the kitchen (manager review item 4).
   await printStore.printFoodTicketsByStation(

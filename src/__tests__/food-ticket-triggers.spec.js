@@ -173,7 +173,7 @@ describe('food ticket on order — cashier new-order modal', () => {
 
   it('prints a kitchen ticket routed to the order\'s service line', async () => {
     const store = usePrintSettingsStore()
-    const kitchen = store.addTicketPrinter({ name: 'Kitchen', transport: 'network', endpoint: 'http://10.0.0.5:9720' })
+    const kitchen = store.addTicketPrinter({ name: 'Kitchen', kind: 'socket', host: '10.0.0.5', port: 9100, printer: 'Kitchen' })
     store.saveSettings({ printOnSave: false, departmentRouting: { restaurant: kitchen } })
 
     await placeOrder()
@@ -282,7 +282,7 @@ describe('food ticket on the waiter order-taker panel', () => {
 
   it('prints a food ticket when the waiter places a new order', async () => {
     const store = usePrintSettingsStore()
-    const kitchen = store.addTicketPrinter({ name: 'Kitchen', transport: 'network', endpoint: 'http://10.0.0.7:9720' })
+    const kitchen = store.addTicketPrinter({ name: 'Kitchen', kind: 'socket', host: '10.0.0.7', port: 9100, printer: 'Kitchen' })
     store.saveSettings({ departmentRouting: { restaurant: kitchen } })
 
     await sendTicket()
@@ -298,9 +298,20 @@ describe('food ticket on the waiter order-taker panel', () => {
     )
   })
 
+  it('prints the first ticket when only additional-item tickets are enabled', async () => {
+    const store = usePrintSettingsStore()
+    store.saveSettings({ printFoodTicketOnOrder: false, printFoodTicketOnItemAdded: true })
+
+    await sendTicket()
+
+    expect(api.store).toHaveBeenCalledTimes(1)
+    expect(printToPrinter).toHaveBeenCalledTimes(1)
+    expect(printedText()).toContain('KITCHEN ORDER TICKET')
+  })
+
   it('prints the order comment on the new-order kitchen ticket', async () => {
     const store = usePrintSettingsStore()
-    const kitchen = store.addTicketPrinter({ name: 'Kitchen', transport: 'network', endpoint: 'http://10.0.0.7:9720' })
+    const kitchen = store.addTicketPrinter({ name: 'Kitchen', kind: 'socket', host: '10.0.0.7', port: 9100, printer: 'Kitchen' })
     store.saveSettings({ departmentRouting: { restaurant: kitchen } })
     api.store.mockResolvedValue({ data: { order: ORDER({ notes: 'E SPICY' }) } })
 
@@ -358,6 +369,85 @@ describe('food ticket on the waiter order-taker panel', () => {
       ownLiveOrder: ORDER({
         order_id: 'o-live',
         items: [{ menu_item_id: 9, item_name: 'Pizza', quantity: 1, unit_price: 8000, subtotal: 8000 }],
+      }),
+    })
+
+    expect(api.addItems).toHaveBeenCalledTimes(1)
+    expect(printToPrinter).not.toHaveBeenCalled()
+  })
+
+  it('skips the first food ticket when the menu item is set not to print', async () => {
+    api.items.mockResolvedValue({
+      data: {
+        data: [
+          {
+            menu_item_id: 1,
+            item_name: 'Ugali',
+            category: 'Mains',
+            selling_price: 3000,
+            price: 3000,
+            available: true,
+            is_available: true,
+            is_in_stock: true,
+            print_on_order: false,
+            printer_station: 'kitchen',
+          },
+        ],
+      },
+    })
+    api.store.mockResolvedValue({
+      data: {
+        order: ORDER({
+          items: [
+            { menu_item_id: 1, item_name: 'Ugali', quantity: 1, print_on_order: false, printer_station: 'kitchen' },
+          ],
+        }),
+      },
+    })
+
+    await sendTicket()
+
+    expect(api.store).toHaveBeenCalledTimes(1)
+    expect(printToPrinter).not.toHaveBeenCalled()
+  })
+
+  it('skips the item-added ticket when the menu item is set not to print', async () => {
+    const store = usePrintSettingsStore()
+    store.saveSettings({ printFoodTicketOnItemAdded: true })
+    api.items.mockResolvedValue({
+      data: {
+        data: [
+          {
+            menu_item_id: 1,
+            item_name: 'Ugali',
+            category: 'Mains',
+            selling_price: 3000,
+            price: 3000,
+            available: true,
+            is_available: true,
+            is_in_stock: true,
+            print_on_order: false,
+            printer_station: 'kitchen',
+          },
+        ],
+      },
+    })
+    api.addItems.mockResolvedValue({ data: { order: ORDER() } })
+
+    await sendTicket({
+      ownLiveOrder: ORDER({
+        order_id: 'o-live',
+        items: [
+          {
+            menu_item_id: 1,
+            item_name: 'Ugali',
+            quantity: 1,
+            unit_price: 3000,
+            subtotal: 3000,
+            print_on_order: false,
+            printer_station: 'kitchen',
+          },
+        ],
       }),
     })
 
@@ -489,7 +579,7 @@ describe('waiter live tickets and table release', () => {
 
   it('prints only the extra units when an existing line is increased', async () => {
     const store = usePrintSettingsStore()
-    const kitchen = store.addTicketPrinter({ name: 'Kitchen', transport: 'network', endpoint: 'http://10.0.0.7:9720' })
+    const kitchen = store.addTicketPrinter({ name: 'Kitchen', kind: 'socket', host: '10.0.0.7', port: 9100, printer: 'Kitchen' })
     store.saveSettings({ printFoodTicketOnItemAdded: true, departmentRouting: { restaurant: kitchen } })
     const liveOrder = ORDER({ order_id: 'o-live', items: [pizzaLine(2)] })
     api.index.mockResolvedValue({ data: { data: [liveOrder] } })
