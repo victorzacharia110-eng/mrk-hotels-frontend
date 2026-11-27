@@ -209,6 +209,7 @@ export function methodLabel(method) {
       selcom: 'Selcom',
       card: 'Credit Card',
       clickpesa: 'ClickPesa',
+      crypto_wallet: 'Crypto wallet',
       deposit: 'Deposit',
     }[method] || String(method || '')
       .replace(/_/g, ' ')

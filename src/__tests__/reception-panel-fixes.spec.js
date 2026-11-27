@@ -55,6 +55,25 @@ describe('cashiering centre reconciliation', () => {
     expect(en.paymentFields.methods.card).toBe('Credit Card')
     expect(sw.paymentFields.methods.card).toBeTruthy()
   })
+
+  it('labels tenant-specific crypto wallet payments in both locales', () => {
+    const en = JSON.parse(read('src/locales/en.json'))
+    const sw = JSON.parse(read('src/locales/sw.json'))
+
+    expect(en.paymentFields.methods.crypto_wallet).toBeTruthy()
+    expect(sw.paymentFields.methods.crypto_wallet).toBeTruthy()
+  })
+
+  it('falls back to a readable method label when a translation is missing', () => {
+    const orderTaker = read('src/pages/dashboards/OrderTakerDashboard.vue')
+    const orderList = read('src/pages/orders/OrderListPage.vue')
+
+    for (const source of [orderTaker, orderList]) {
+      expect(source).toMatch(/const \{ t, te \} = useI18n\(\)/)
+      expect(source).toMatch(/paymentFields\.methods\.\$\{value\}/)
+      expect(source).toMatch(/replace\(\/_\/g, ' '\)/)
+    }
+  })
 })
 
 describe('payment list filters', () => {

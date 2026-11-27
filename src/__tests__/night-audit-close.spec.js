@@ -9,6 +9,7 @@ import i18n from '@/locales/i18n'
 const close = vi.fn()
 const report = vi.fn()
 const history = vi.fn()
+const logs = vi.fn()
 const checkOut = vi.fn()
 
 vi.mock('@/api', () => ({
@@ -16,6 +17,7 @@ vi.mock('@/api', () => ({
     report: (...a) => report(...a),
     history: (...a) => history(...a),
     close: (...a) => close(...a),
+    logs: (...a) => logs(...a),
   },
   reservationApi: { checkOut: (...a) => checkOut(...a) },
   fbDayCloseApi: { index: vi.fn().mockResolvedValue({ data: {} }) },
@@ -23,6 +25,7 @@ vi.mock('@/api', () => ({
 }))
 
 const NightAuditPage = (await import('@/pages/reception/NightAuditPage.vue')).default
+const NightAuditLogPage = (await import('@/pages/reception/NightAuditLogPage.vue')).default
 
 const REPORT_OPEN = {
   closed: false,
@@ -760,5 +763,55 @@ describe('NightAuditPage — gaps in the record and double bookings', () => {
     const wrapper = await mountPage()
 
     expect(dupPanel(wrapper).text().toLowerCase()).toContain('charged twice')
+  })
+})
+
+describe('NightAuditLogPage — business dates', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    logs.mockResolvedValue({ data: { logs: [] } })
+  })
+
+  async function mountLogPage(entries) {
+    logs.mockResolvedValue({ data: { logs: entries } })
+    const wrapper = mount(NightAuditLogPage, { global: { plugins: [i18n, createPinia()] } })
+    await flushPromises()
+    return wrapper
+  }
+
+  it('renders old ISO dates as DD/MM/YYYY', async () => {
+    const wrapper = await mountLogPage([
+      { log_id: '1', created_at: '2026-09-06T10:00:00.000000Z', old_date: '2026-09-05T00:00:00.000000Z', new_date: '2026-09-06' },
+    ])
+
+    const cells = wrapper.findAll('tbody tr')[0].findAll('td')
+    expect(cells[5].text()).toBe('05/09/2026')
+    expect(cells[6].text()).toBe('06/09/2026')
+  })
+
+  it('reads serialized Carbon dates from older records', async () => {
+    const wrapper = await mountLogPage([
+      {
+        log_id: '2',
+        created_at: '2026-09-06T10:00:00.000000Z',
+        old_date: { date: '2026-09-05T00:00:00.000000Z', timezone_type: 3, timezone: 'UTC' },
+        new_date: '["2026-09-06"]',
+      },
+    ])
+
+    const cells = wrapper.findAll('tbody tr')[0].findAll('td')
+    expect(cells[5].text()).toBe('05/09/2026')
+    expect(cells[6].text()).toBe('06/09/2026')
+  })
+
+  it('keeps an em dash for a missing old date', async () => {
+    const wrapper = await mountLogPage([
+      { log_id: '3', created_at: '2026-09-06T10:00:00.000000Z', old_date: null, new_date: '2026-09-06' },
+    ])
+
+    const cells = wrapper.findAll('tbody tr')[0].findAll('td')
+    expect(cells[5].text()).toBe('—')
+    expect(cells[6].text()).toBe('06/09/2026')
   })
 })

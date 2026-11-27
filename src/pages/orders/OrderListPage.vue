@@ -638,7 +638,7 @@ import { useTenantCurrency } from '@/utils/currency'
 
 const { curCode } = useTenantCurrency()
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const authStore = useAuthStore()
 
 // Permission gates: whether the user may operate and/or collect payments.
@@ -742,10 +742,17 @@ const paymentStatusOptions = [
   { value: 'billed_to_room', label: t('orders.paymentBilledToRoom') },
 ]
 
-const paymentMethodOptions = effectivePaymentMethods(authStore.user?.tenant?.payment_methods, PAYMENT_METHODS).map((method) => ({
-  value: method.value,
-  label: method.label || t(`paymentFields.methods.${method.value}`),
-}))
+function translatedMethodLabel(value) {
+  const key = `paymentFields.methods.${value}`
+  return te(key) ? t(key) : String(value || '').replace(/_/g, ' ')
+}
+
+const paymentMethodOptions = computed(() =>
+  effectivePaymentMethods(authStore.user?.tenant?.payment_methods, PAYMENT_METHODS).map((method) => ({
+    value: method.value,
+    label: method.label || translatedMethodLabel(method.value),
+  })),
+)
 
 /** Menu items as selectable options (id → "name · price"), narrowed by the chosen category. */
 const formCategory = ref('')

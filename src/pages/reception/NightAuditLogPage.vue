@@ -67,8 +67,8 @@
             <td>{{ log.user || '—' }}</td>
             <td>{{ log.role || '—' }}</td>
             <td>{{ log.ip || '—' }}</td>
-            <td>{{ log.old_date || '—' }}</td>
-            <td>{{ log.new_date || '—' }}</td>
+            <td>{{ fmtBusinessDate(log.old_date) }}</td>
+            <td>{{ fmtBusinessDate(log.new_date) }}</td>
           </tr>
         </tbody>
       </table>
@@ -80,6 +80,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { nightAuditApi } from '@/api'
+import { formatDateDMY } from '@/utils/dates'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -105,6 +106,26 @@ function fmtDateTime(iso) {
     year: 'numeric', month: 'short', day: '2-digit',
     hour: '2-digit', minute: '2-digit',
   })
+}
+
+function fmtBusinessDate(value) {
+  let raw = value
+  if (!raw) return '—'
+  if (typeof raw === 'string' && (raw.trim().startsWith('{') || raw.trim().startsWith('['))) {
+    try {
+      raw = JSON.parse(raw)
+    } catch {
+      return raw
+    }
+  }
+  if (Array.isArray(raw)) raw = raw[0]
+  if (raw && typeof raw === 'object') {
+    raw = raw.date ?? raw.audit_date ?? raw.close_date ?? raw.value ?? ''
+  }
+  if (typeof raw !== 'string' || !raw.trim()) return '—'
+  const text = raw.trim()
+  const datePart = text.match(/^\d{4}-\d{2}-\d{2}/)?.[0]
+  return formatDateDMY(datePart || text)
 }
 
 async function load() {

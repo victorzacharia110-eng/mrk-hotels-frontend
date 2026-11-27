@@ -707,7 +707,8 @@
       "bank": "Bank",
       "selcom": "Selcom",
       "card": "Credit Card",
-      "clickpesa": "ClickPesa"
+      "clickpesa": "ClickPesa",
+      "crypto_wallet": "Crypto wallet"
     },
     "providers": {
       "airtel_money": "Airtel Money",

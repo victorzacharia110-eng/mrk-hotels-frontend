@@ -1124,7 +1124,7 @@ import { useTenantCurrency } from '@/utils/currency'
 
 const { curCode } = useTenantCurrency()
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
@@ -1364,10 +1364,17 @@ function floorStaffOrders(rows) {
 // and up — same gate as the backend's `level:60` middleware on that route.
 const canBillToRoom = computed(() => authStore.can(60) && authStore.canOperate)
 
-const paymentMethodOptions = effectivePaymentMethods(authStore.user?.tenant?.payment_methods, PAYMENT_METHODS).map((method) => ({
-  value: method.value,
-  label: method.label || t(`paymentFields.methods.${method.value}`),
-}))
+function translatedMethodLabel(value) {
+  const key = `paymentFields.methods.${value}`
+  return te(key) ? t(key) : String(value || '').replace(/_/g, ' ')
+}
+
+const paymentMethodOptions = computed(() =>
+  effectivePaymentMethods(authStore.user?.tenant?.payment_methods, PAYMENT_METHODS).map((method) => ({
+    value: method.value,
+    label: method.label || translatedMethodLabel(method.value),
+  })),
+)
 
 /** Switches to the open-orders tab and refreshes it. */
 function switchToOpen() {
@@ -1921,7 +1928,7 @@ async function pay(method) {
 
 /** Display label for a payment method code. */
 function methodLabel(code) {
-  return paymentMethodOptions.find((m) => m.value === code)?.label || code
+  return paymentMethodOptions.value.find((m) => m.value === code)?.label || translatedMethodLabel(code)
 }
 
 /** Settlement column on the summary: how the ticket was closed — cash,

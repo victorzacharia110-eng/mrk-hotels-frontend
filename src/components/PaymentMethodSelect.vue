@@ -82,7 +82,7 @@ const props = defineProps({
 // v-model updates for the parent's method, provider and account values.
 const emit = defineEmits(['update:method', 'update:provider', 'update:account'])
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const authStore = useAuthStore()
 // Scopes the label/datalist ids so several instances can coexist on a page.
 const uid = `pay-${Math.random().toString(36).slice(2, 8)}`
@@ -90,6 +90,11 @@ const uid = `pay-${Math.random().toString(36).slice(2, 8)}`
 // Derived options and labels: providers available for the chosen method, the
 // method/provider dropdown options, and the label for the provider field.
 const accounts = computed(() => props.accounts || authStore.user?.tenant?.payment_accounts || {})
+
+function translatedMethodLabel(value) {
+  const key = `paymentFields.methods.${value}`
+  return te(key) ? t(key) : String(value || '').replace(/_/g, ' ')
+}
 const providers = computed(() => providersFor(props.method, accounts.value))
 const selectedAccountLabel = computed(() => props.account || accountLabel(props.provider, accounts.value))
 
@@ -100,7 +105,7 @@ const methodOptions = computed(() => {
     const value = typeof method === 'string' ? method : String(method.value ?? method.key ?? method.name ?? '').trim()
     return {
       value,
-      label: method.label || t(`paymentFields.methods.${value}`),
+      label: method.label || translatedMethodLabel(value),
     }
   }).filter((method) => method.value)
 })

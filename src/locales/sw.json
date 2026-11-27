@@ -707,7 +707,8 @@
       "bank": "Benki",
       "selcom": "Selcom",
       "card": "Kadi ya mkopo",
-      "clickpesa": "ClickPesa"
+      "clickpesa": "ClickPesa",
+      "crypto_wallet": "Sarafu ya kidijitali"
     },
     "providers": {
       "airtel_money": "Airtel Money",
